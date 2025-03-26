@@ -235,7 +235,7 @@
       "name": "Album Color Theme"
     },
     "ambient-mode": {
-      "description": "Applies a lighting effect by casting gentle colors from the video, into your screen’s background",
+      "description": "Applies a lighting effect by casting gentle colors from the video, into your screen's background",
       "menu": {
         "blur-amount": {
           "label": "Blur amount",
@@ -563,8 +563,15 @@
       }
     },
     "navigation": {
-      "description": "Next/Back navigation arrows directly integrated in the interface, like in your favorite browser",
+      "description": "Adds a navbar to navigate YouTube Music",
       "name": "Navigation"
+    },
+    "nightcore": {
+      "description": "Adjust the playback speed with pitch shifting for music (nightcore/daycore effects)",
+      "name": "Speed Control",
+      "templates": {
+        "title": "Speed Control"
+      }
     },
     "no-google-login": {
       "description": "Remove Google login buttons and links from the interface",

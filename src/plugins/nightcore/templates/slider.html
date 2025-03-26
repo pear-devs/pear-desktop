@@ -1,0 +1,93 @@
+<div id="nightcore-container" class="nightcore-container">
+  <div
+    aria-disabled="false"
+    aria-selected="false"
+    class="style-scope menu-item ytmusic-menu-popup-renderer"
+    role="option"
+    tabindex="-1"
+  >
+    <div
+      class="yt-simple-endpoint style-scope ytmusic-menu-navigation-item-renderer"
+      id="navigation-endpoint"
+      tabindex="-1"
+    >
+      <div class="slider-container">
+        <div class="slider-label">
+          <span class="label-text">
+            <ytmd-trans key="plugins.nightcore.templates.title"></ytmd-trans>
+          </span>
+          <span class="label-value">
+            <span id="nightcore-effect-value">Normal (1.00×)</span>
+          </span>
+        </div>
+        <tp-yt-paper-slider
+          aria-disabled="false"
+          aria-label="Speed Effect"
+          aria-valuemax="75"
+          aria-valuemin="-75"
+          aria-valuenow="0"
+          class="volume-slider style-scope ytmusic-player-bar on-hover custom-slider"
+          dir="ltr"
+          id="nightcore-effect-slider"
+          max="75"
+          min="-75"
+          role="slider"
+          step="5"
+          style="display: inherit !important"
+          tabindex="0"
+          title="Speed Effect"
+          value="0"
+        >
+        </tp-yt-paper-slider>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .nightcore-container {
+    padding: 10px 16px;
+    margin-bottom: 8px;
+    background-color: transparent;
+    transition: all 0.2s ease;
+  }
+  
+  .slider-container {
+    margin-bottom: 0;
+  }
+  
+  .slider-label {
+    font-size: 13px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    color: var(--ytmusic-text-color, #fff);
+  }
+  
+  .label-text {
+    font-weight: normal;
+  }
+  
+  .label-value {
+    font-weight: bold;
+    min-width: 100px;
+    text-align: right;
+  }
+  
+  #nightcore-effect-slider {
+    width: 100%;
+    margin: 4px 0;
+    --paper-slider-active-color: var(--ytmusic-slider-active-color, #ff0050);
+    --paper-slider-container-color: var(--ytmusic-slider-container-color, rgba(255, 255, 255, 0.2));
+    --paper-slider-knob-color: var(--ytmusic-slider-knob-color, #ff0050);
+    --paper-slider-pin-color: var(--ytmusic-slider-pin-color, #ff0050);
+    --paper-slider-pin-start-color: var(--ytmusic-slider-pin-start-color, #ff0050);
+    --paper-slider-pin-end-color: var(--ytmusic-slider-pin-end-color, #ff0050);
+    height: 20px;
+  }
+  
+  /* Custom color for sliders based on value */
+  .custom-slider {
+    --paper-slider-active-color: linear-gradient(to right, #4388cc 0%, #cccccc 50%, #7343cc 100%);
+  }
+</style> 
