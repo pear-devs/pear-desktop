@@ -1,18 +1,18 @@
 import { t } from '@/i18n';
 
-import type {
-  BackendContext,
-  PreloadContext,
-  RendererContext,
+import {
+  type BackendContext,
+  type PreloadContext,
+  type RendererContext,
 } from '@/types/contexts';
 
-import type {
-  PluginDef,
-  PluginConfig,
-  PluginLifecycleExtra,
-  PluginLifecycleSimple,
-  PluginLifecycle,
-  RendererPluginLifecycle,
+import {
+  type PluginConfig,
+  type PluginDef,
+  type PluginLifecycle,
+  type PluginLifecycleExtra,
+  type PluginLifecycleSimple,
+  type RendererPluginLifecycle,
 } from '@/types/plugins';
 
 export const LoggerPrefix = '[YTMusic]';
@@ -93,7 +93,6 @@ export const startPlugin = async <Config extends PluginConfig>(
     if (defContext && typeof defContext !== 'function') {
       Object.entries(defContext).forEach(([key, value]) => {
         if (typeof value === 'function') {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-member-access
           defContext[key as keyof typeof defContext] = value.bind(defContext);
         }
       });

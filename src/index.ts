@@ -1,65 +1,54 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import url from 'node:url';
-import fs from 'node:fs';
-
-import {
-  BrowserWindow,
-  app,
-  screen,
-  globalShortcut,
-  session,
-  shell,
-  dialog,
-  ipcMain,
-  protocol,
-  type BrowserWindowConstructorOptions,
-} from 'electron';
+import { languageResources } from 'virtual:i18n';
+import { allPlugins, mainPlugins } from 'virtual:plugins';
+import ErrorHtmlAsset from '@assets/error.html?asset';
 import enhanceWebRequest, {
   type BetterSession,
 } from '@jellybrick/electron-better-web-request';
+import { deepmerge } from 'deepmerge-ts';
+import {
+  app,
+  BrowserWindow,
+  type BrowserWindowConstructorOptions,
+  dialog,
+  globalShortcut,
+  ipcMain,
+  protocol,
+  screen,
+  session,
+  shell,
+} from 'electron';
+import electronDebug from 'electron-debug';
 import is from 'electron-is';
 import unhandled from 'electron-unhandled';
 import { autoUpdater } from 'electron-updater';
-import electronDebug from 'electron-debug';
-import { parse } from 'node-html-parser';
-import { deepmerge } from 'deepmerge-ts';
 import { deepEqual } from 'fast-equals';
-
-import { allPlugins, mainPlugins } from 'virtual:plugins';
-
-import { languageResources } from 'virtual:i18n';
-
+import { parse } from 'node-html-parser';
 import * as config from '@/config';
-
-import { refreshMenu, setApplicationMenu } from '@/menu';
-import { fileExists, injectCSS, injectCSSAsFile } from '@/plugins/utils/main';
-import { isTesting } from '@/utils/testing';
-import { setUpTray } from '@/tray';
-import { setupSongInfo } from '@/providers/song-info';
-import { restart, setupAppControls } from '@/providers/app-controls';
-import {
-  APP_PROTOCOL,
-  handleProtocol,
-  setupProtocolHandler,
-} from '@/providers/protocol-handler';
-
-import musicPlayerCss from '@/music-player.css?inline';
-
+import { loadI18n, setLanguage, t } from '@/i18n';
 import {
   forceLoadMainPlugin,
   forceUnloadMainPlugin,
   getAllLoadedMainPlugins,
   loadAllMainPlugins,
 } from '@/loader/main';
-
-import { LoggerPrefix } from '@/utils';
-import { loadI18n, setLanguage, t } from '@/i18n';
-
-import ErrorHtmlAsset from '@assets/error.html?asset';
-
+import { refreshMenu, setApplicationMenu } from '@/menu';
+import musicPlayerCss from '@/music-player.css?inline';
 import { defaultAuthProxyConfig } from '@/plugins/auth-proxy-adapter/config';
-
-import type { PluginConfig } from '@/types/plugins';
+import { fileExists, injectCSS, injectCSSAsFile } from '@/plugins/utils/main';
+import { restart, setupAppControls } from '@/providers/app-controls';
+import {
+  APP_PROTOCOL,
+  handleProtocol,
+  setupProtocolHandler,
+} from '@/providers/protocol-handler';
+import { setupSongInfo } from '@/providers/song-info';
+import { setUpTray } from '@/tray';
+import { type PluginConfig } from '@/types/plugins';
+import { LoggerPrefix } from '@/utils';
+import { isTesting } from '@/utils/testing';
 
 // Catch errors and log them
 unhandled({
@@ -687,7 +676,6 @@ app.whenReady().then(async () => {
           shortcutDetails.target !== appLocation ||
           shortcutDetails.appUserModelId !== appID
         ) {
-          // eslint-disable-next-line @typescript-eslint/only-throw-error
           throw 'needUpdate';
         }
       } catch (error) {
@@ -946,7 +934,9 @@ function removeContentSecurityPolicy(
         !details.responseHeaders['access-control-allow-origin'] &&
         !details.responseHeaders['Access-Control-Allow-Origin']
       ) {
-        details.responseHeaders['access-control-allow-origin'] = ['https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com'];
+        details.responseHeaders['access-control-allow-origin'] = [
+          'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com',
+        ];
       }
     }
 
@@ -956,6 +946,7 @@ function removeContentSecurityPolicy(
   // When multiple listeners are defined, apply them all
   betterSession.webRequest.setResolver(
     'onHeadersReceived',
+    // biome-ignore lint/suspicious/useAwait: Async function required by setResolver API signature even though no await is used
     async (listeners) => {
       return listeners.reduce(
         async (accumulator, listener) => {

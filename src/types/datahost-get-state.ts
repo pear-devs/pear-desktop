@@ -1,4 +1,4 @@
-import type { PlayerConfig } from '@/types/get-player-response';
+import { type PlayerConfig } from '@/types/get-player-response';
 
 export interface GetState {
   castStatus: CastStatus;
@@ -31,7 +31,6 @@ export interface Download {
   isLeaderTab: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface Entities {}
 
 export interface LikeStatus {

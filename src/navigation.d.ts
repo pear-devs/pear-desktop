@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/** biome-ignore-all lint/suspicious/noExplicitAny: Type definitions for experimental Navigation API use 'any' to match browser API specification */
 
 interface NavigationOptions {
   info: any;

@@ -1,21 +1,17 @@
-import { createRoute } from '@hono/zod-openapi';
-
 import { type NodeWebSocket } from '@hono/node-ws';
-
+import { createRoute } from '@hono/zod-openapi';
+import { type Context, type Next } from 'hono';
+import { type WSContext } from 'hono/ws';
+import { type APIServerConfig } from '@/plugins/api-server/config';
 import {
   registerCallback,
   type SongInfo,
   SongInfoEvent,
 } from '@/providers/song-info';
-
+import { type BackendContext } from '@/types/contexts';
+import { type RepeatMode, type VolumeState } from '@/types/datahost-get-state';
 import { API_VERSION } from '../api-version';
-
-import type { WSContext } from 'hono/ws';
-import type { Context, Next } from 'hono';
-import type { RepeatMode, VolumeState } from '@/types/datahost-get-state';
-import type { HonoApp } from '../types';
-import type { BackendContext } from '@/types/contexts';
-import type { APIServerConfig } from '@/plugins/api-server/config';
+import { type HonoApp } from '../types';
 
 enum DataTypes {
   PlayerInfo = 'PLAYER_INFO',
@@ -130,7 +126,6 @@ export const register = (
     }),
     upgradeWebSocket(() => ({
       onOpen(_, ws) {
-        // "Unsafe argument of type `WSContext<WebSocket>` assigned to a parameter of type `WSContext<WebSocket>`. (@typescript-eslint/no-unsafe-argument)" ????? what?
         sockets.add(ws as WSContext<WebSocket>);
 
         ws.send(

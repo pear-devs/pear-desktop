@@ -1,51 +1,51 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { randomBytes } from 'node:crypto';
-
-import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
 import {
   Innertube,
+  Platform,
   UniversalCache,
   Utils,
   YTNodes,
-  Platform,
 } from '\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js';
+import { randomBytes } from 'node:crypto';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { Mutex } from 'async-mutex';
+import { BG, type BgConfig } from 'bgutils-js';
+import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
 import is from 'electron-is';
 import filenamify from 'filenamify';
-import { Mutex } from 'async-mutex';
-import * as NodeID3 from 'node-id3';
-import { BG, type BgConfig } from 'bgutils-js';
 import { lazy } from 'lazy-var';
-
+import { type VideoInfo } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/\u0079\u006f\u0075\u0074\u0075\u0062\u0065';
+import { type PlayerErrorMessage } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/nodes';
+import {
+  type Playlist,
+  type TrackInfo,
+} from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/ytmusic';
+import {
+  type BuildScriptResult,
+  type FormatOptions,
+  type VMPrimative,
+} from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/types';
+import * as NodeID3 from 'node-id3';
+import { t } from '@/i18n';
+import { getNetFetchAsFetch } from '@/plugins/utils/main';
+import {
+  cleanupName,
+  getImage,
+  MediaType,
+  registerCallback,
+  type SongInfo,
+  SongInfoEvent,
+} from '@/providers/song-info';
+import { type BackendContext } from '@/types/contexts';
+import { type GetPlayerResponse } from '@/types/get-player-response';
+import { type DownloaderPluginConfig } from '../index';
+import { DefaultPresetList, type Preset, VideoFormatList } from '../types';
 import {
   cropMaxWidth,
   getFolder,
   sendFeedback as sendFeedback_,
   setBadge,
 } from './utils';
-import {
-  registerCallback,
-  cleanupName,
-  getImage,
-  MediaType,
-  type SongInfo,
-  SongInfoEvent,
-} from '@/providers/song-info';
-import { getNetFetchAsFetch } from '@/plugins/utils/main';
-import { t } from '@/i18n';
-
-import { DefaultPresetList, type Preset, VideoFormatList } from '../types';
-
-import type { DownloaderPluginConfig } from '../index';
-import type { BackendContext } from '@/types/contexts';
-import type { GetPlayerResponse } from '@/types/get-player-response';
-import type { FormatOptions } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/types';
-import type { VideoInfo } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/\u0079\u006f\u0075\u0074\u0075\u0062\u0065';
-import type { PlayerErrorMessage } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/nodes';
-import type {
-  TrackInfo,
-  Playlist,
-} from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/ytmusic';
 
 type CustomSongInfo = SongInfo & { trackId?: string };
 
@@ -58,21 +58,25 @@ const ffmpeg = lazy(async () =>
 );
 const ffmpegMutex = new Mutex();
 
-Platform.shim.eval = async (data: Types.BuildScriptResult, env: Record<string, Types.VMPrimative>) => {
+// biome-ignore lint/suspicious/useAwait: I'll leave this async as I don't want to break anything
+Platform.shim.eval = async (
+  data: BuildScriptResult,
+  env: Record<string, VMPrimative>,
+) => {
   const properties = [];
 
-  if(env.n) {
-    properties.push(`n: exportedVars.nFunction("${env.n}")`)
+  if (env.n) {
+    properties.push(`n: exportedVars.nFunction("${env.n}")`);
   }
 
   if (env.sig) {
-    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
+    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`);
   }
 
   const code = `${data.output}\nreturn { ${properties.join(', ')} }`;
 
   return new Function(code)();
-}
+};
 
 let yt: Innertube;
 let win: BrowserWindow;
@@ -109,7 +113,6 @@ const sendError = (error: Error, source?: string) => {
   const songNameMessage = source ? `\nin ${source}` : '';
   const cause = error.cause
     ? `\n\n${
-        // eslint-disable-next-line @typescript-eslint/no-base-to-string,@typescript-eslint/restrict-template-expressions
         error.cause instanceof Error ? error.cause.toString() : error.cause
       }`
     : '';
@@ -192,7 +195,6 @@ export const onMainLoad = async ({
       if (interpreterJavascript) {
         // This is a workaround to run the interpreterJavascript code
         // Maybe there is a better way to do this (e.g. https://github.com/Siubaak/sval ?)
-        // eslint-disable-next-line @typescript-eslint/no-implied-eval,@typescript-eslint/no-unsafe-call
         new Function(interpreterJavascript)();
 
         const poTokenResult = await BG.PoToken.generate({
@@ -421,8 +423,7 @@ async function downloadSongUnsafe(
   let targetFileExtension: string;
   if (!presetSetting?.extension) {
     targetFileExtension =
-      VideoFormatList.find((it) => it.itag === format.itag)?.container ??
-      'mp3';
+      VideoFormatList.find((it) => it.itag === format.itag)?.container ?? 'mp3';
   } else {
     targetFileExtension = presetSetting?.extension ?? 'mp3';
   }

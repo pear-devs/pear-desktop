@@ -1,6 +1,7 @@
 import { net } from 'electron';
 
 export const getNetFetchAsFetch = () =>
+  // biome-ignore lint/suspicious/useAwait: Must remain async to match the fetch API signature which returns Promise<Response>
   (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url =
       typeof input === 'string'

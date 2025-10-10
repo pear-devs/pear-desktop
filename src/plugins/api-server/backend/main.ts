@@ -1,24 +1,23 @@
-import { jwt } from 'hono/jwt';
-import { OpenAPIHono as Hono } from '@hono/zod-openapi';
-import { cors } from 'hono/cors';
-import { swaggerUI } from '@hono/swagger-ui';
+/** biome-ignore-all lint/suspicious/noAssignInExpressions: Hono framework patterns use assignment expressions in conditionals for concise route handling */
+
 import { serve } from '@hono/node-server';
 import { createNodeWebSocket } from '@hono/node-ws';
+import { swaggerUI } from '@hono/swagger-ui';
+import { OpenAPIHono as Hono } from '@hono/zod-openapi';
+import { cors } from 'hono/cors';
+import { jwt } from 'hono/jwt';
 
 import { registerCallback } from '@/providers/song-info';
-import { createBackend } from '@/utils';
-
-import { JWTPayloadSchema } from './scheme';
-import { registerAuth, registerControl, registerWebsocket } from './routes';
-
-import { type APIServerConfig, AuthStrategy } from '../config';
-
-import type { BackendType } from './types';
-import type {
-  LikeType,
-  RepeatMode,
-  VolumeState,
+import {
+  type LikeType,
+  type RepeatMode,
+  type VolumeState,
 } from '@/types/datahost-get-state';
+import { createBackend } from '@/utils';
+import { type APIServerConfig, AuthStrategy } from '../config';
+import { registerAuth, registerControl, registerWebsocket } from './routes';
+import { JWTPayloadSchema } from './scheme';
+import { type BackendType } from './types';
 
 export const backend = createBackend<BackendType, APIServerConfig>({
   async start(ctx) {
