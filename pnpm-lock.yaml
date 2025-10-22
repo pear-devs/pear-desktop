@@ -65,19 +65,19 @@ importers:
         version: 2.11.6(electron@38.2.0)
       '@hono/node-server':
         specifier: 1.19.1
-        version: 1.19.1(hono@4.9.6)
+        version: 1.19.1(hono@4.10.2)
       '@hono/node-ws':
         specifier: 1.2.0
-        version: 1.2.0(@hono/node-server@1.19.1(hono@4.9.6))(bufferutil@4.0.9)(hono@4.9.6)(utf-8-validate@6.0.5)
+        version: 1.2.0(@hono/node-server@1.19.1(hono@4.10.2))(bufferutil@4.0.9)(hono@4.10.2)(utf-8-validate@6.0.5)
       '@hono/swagger-ui':
         specifier: 0.5.2
-        version: 0.5.2(hono@4.9.6)
+        version: 0.5.2(hono@4.10.2)
       '@hono/zod-openapi':
         specifier: 1.1.0
-        version: 1.1.0(hono@4.9.6)(zod@4.1.5)
+        version: 1.1.0(hono@4.10.2)(zod@4.1.5)
       '@hono/zod-validator':
         specifier: 0.7.2
-        version: 0.7.2(hono@4.9.6)(zod@4.1.5)
+        version: 0.7.2(hono@4.10.2)(zod@4.1.5)
       '@jellybrick/dbus-next':
         specifier: 0.10.3
         version: 0.10.3
@@ -166,8 +166,8 @@ importers:
         specifier: 18.0.1
         version: 18.0.1
       hono:
-        specifier: 4.9.6
-        version: 4.9.6
+        specifier: 4.10.2
+        version: 4.10.2
       howler:
         specifier: 2.2.4
         version: 2.2.4
@@ -2571,6 +2571,9 @@ packages:
   exponential-backoff@3.1.2:
     resolution: {integrity: sha512-8QxYTVXUkuy7fIIoitQkPwGonB8F3Zj8eEO8Sqg9Zv/bkI7RJAzowee4gr81Hak/dUTpA2Z7VfQgoijjPNlUZA==}
 
+  exponential-backoff@3.1.3:
+    resolution: {integrity: sha512-ZgEeZXj30q+I0EN+CbSSpIyPaJ5HVQD18Z1m+u1FXbAeT94mr1zw50q4q6jiiC447Nl/YTcIYSAftiGqetwXCA==}
+
   extract-zip@2.0.1:
     resolution: {integrity: sha512-GDhU9ntwuKyGXdZBUgTIe+vXnWj0fppUEtMDL0+idd5Sta8TGpHssn/eusA9mrPr9qNDym6SxAYZjNvCn/9RBg==}
     engines: {node: '>= 10.17.0'}
@@ -2869,8 +2872,8 @@ packages:
     resolution: {integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==}
     hasBin: true
 
-  hono@4.9.6:
-    resolution: {integrity: sha512-doVjXhSFvYZ7y0dNokjwwSahcrAfdz+/BCLvAMa/vHLzjj8+CFyV5xteThGUsKdkaasgN+gF2mUxao+SGLpUeA==}
+  hono@4.10.2:
+    resolution: {integrity: sha512-p6fyzl+mQo6uhESLxbF5WlBOAJMDh36PljwlKtP5V1v09NxlqGru3ShK+4wKhSuhuYf8qxMmrivHOa/M7q0sMg==}
     engines: {node: '>=16.9.0'}
 
   hosted-git-info@4.1.0:
@@ -5091,7 +5094,7 @@ snapshots:
   '@electron/node-gyp@https://codeload.github.com/electron/node-gyp/tar.gz/06b29aafb7708acef8b3669835c8a7857ebc92d2':
     dependencies:
       env-paths: 2.2.1
-      exponential-backoff: 3.1.2
+      exponential-backoff: 3.1.3
       glob: 8.1.0
       graceful-fs: 4.2.11
       make-fetch-happen: 10.2.1
@@ -5364,34 +5367,34 @@ snapshots:
     dependencies:
       tldts-experimental: 7.0.12
 
-  '@hono/node-server@1.19.1(hono@4.9.6)':
+  '@hono/node-server@1.19.1(hono@4.10.2)':
     dependencies:
-      hono: 4.9.6
+      hono: 4.10.2
 
-  '@hono/node-ws@1.2.0(@hono/node-server@1.19.1(hono@4.9.6))(bufferutil@4.0.9)(hono@4.9.6)(utf-8-validate@6.0.5)':
+  '@hono/node-ws@1.2.0(@hono/node-server@1.19.1(hono@4.10.2))(bufferutil@4.0.9)(hono@4.10.2)(utf-8-validate@6.0.5)':
     dependencies:
-      '@hono/node-server': 1.19.1(hono@4.9.6)
-      hono: 4.9.6
+      '@hono/node-server': 1.19.1(hono@4.10.2)
+      hono: 4.10.2
       ws: 8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@hono/swagger-ui@0.5.2(hono@4.9.6)':
+  '@hono/swagger-ui@0.5.2(hono@4.10.2)':
     dependencies:
-      hono: 4.9.6
+      hono: 4.10.2
 
-  '@hono/zod-openapi@1.1.0(hono@4.9.6)(zod@4.1.5)':
+  '@hono/zod-openapi@1.1.0(hono@4.10.2)(zod@4.1.5)':
     dependencies:
       '@asteasolutions/zod-to-openapi': 8.1.0(zod@4.1.5)
-      '@hono/zod-validator': 0.7.2(hono@4.9.6)(zod@4.1.5)
-      hono: 4.9.6
+      '@hono/zod-validator': 0.7.2(hono@4.10.2)(zod@4.1.5)
+      hono: 4.10.2
       openapi3-ts: 4.5.0
       zod: 4.1.5
 
-  '@hono/zod-validator@0.7.2(hono@4.9.6)(zod@4.1.5)':
+  '@hono/zod-validator@0.7.2(hono@4.10.2)(zod@4.1.5)':
     dependencies:
-      hono: 4.9.6
+      hono: 4.10.2
       zod: 4.1.5
 
   '@humanfs/core@0.19.1': {}
@@ -7505,6 +7508,8 @@ snapshots:
 
   exponential-backoff@3.1.2: {}
 
+  exponential-backoff@3.1.3: {}
+
   extract-zip@2.0.1:
     dependencies:
       debug: 4.4.1
@@ -7849,7 +7854,7 @@ snapshots:
 
   he@1.2.0: {}
 
-  hono@4.9.6: {}
+  hono@4.10.2: {}
 
   hosted-git-info@4.1.0:
     dependencies:
