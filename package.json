@@ -135,7 +135,7 @@
     "vudio": "2.1.1",
     "x11": "2.3.0",
     "youtubei.js": "15.0.1",
-    "zod": "4.1.5"
+    "zod": "4.1.12"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "1.0.1",
