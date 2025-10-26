@@ -692,6 +692,10 @@
         "button": "Image dans l'image"
       }
     },
+    "pitch-shifter": {
+      "description": "Changez la hauteur de la musique sans affecter la vitesse de lecture",
+      "name": "Changeur de hauteur tonale"
+    },
     "playback-speed": {
       "description": "Écoutez vite, écoutez lentement ! Ajoute un curseur qui contrôle la vitesse de la chanson",
       "name": "Vitesse de lecture",
