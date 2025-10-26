@@ -1,4 +1,5 @@
 import { jaroWinkler } from '@skyra/jaro-winkler';
+
 import { config } from '../renderer/renderer';
 import { LRC } from '../parsers/lrc';
 
@@ -12,9 +13,7 @@ export class SimpMusicLyrics implements LyricProvider {
     title,
     alternativeTitle,
     artist,
-    album,
     songDuration,
-    tags,
   }: SearchSongInfo): Promise<LyricResult | null> {
     let data: SimpMusicSong[] = [];
 
@@ -76,7 +75,9 @@ export class SimpMusicLyrics implements LyricProvider {
         }
       }
 
-      const ratio = Math.max(...permutations.map(([x, y]) => jaroWinkler(x, y)));
+      const ratio = Math.max(
+        ...permutations.map(([x, y]) => jaroWinkler(x, y)),
+      );
       if (ratio < 0.85) continue;
 
       filteredResults.push(item);
