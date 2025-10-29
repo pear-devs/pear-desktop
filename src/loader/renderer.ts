@@ -30,9 +30,9 @@ export const createContext = <Config extends PluginConfig>(
     invoke: (event: string, ...args: unknown[]) =>
       window.ipcRenderer.invoke(event, ...args),
     on: (event: string, listener: CallableFunction) => {
-      window.ipcRenderer.on(event, (_, ...args: unknown[]) => {
+      window.ipcRenderer.on(event, (event, ...args: unknown[]) => {
         // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-        listener(...args);
+        listener(event, ...args);
       });
     },
     removeAllListeners: (event: string) => {
