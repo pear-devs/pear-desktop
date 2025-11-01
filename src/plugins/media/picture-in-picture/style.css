@@ -1,0 +1,43 @@
+/* improve visibility of the player bar elements */
+ytmusic-app-layout.pip ytmusic-player-bar svg,
+ytmusic-app-layout.pip ytmusic-player-bar .time-info,
+ytmusic-app-layout.pip ytmusic-player-bar yt-formatted-string,
+ytmusic-app-layout.pip ytmusic-player-bar .yt-formatted-string {
+  filter: drop-shadow(2px 4px 6px black);
+  color: white !important;
+  fill: white !important;
+}
+
+/* improve the style of the player bar expanding menu */
+ytmusic-app-layout.pip ytmusic-player-expanding-menu {
+  border-radius: 30px;
+  background-color: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(5px) brightness(20%);
+}
+
+/* fix volumeHud position when both in-app-menu and PiP are active */
+.cet-container ytmusic-app-layout.pip #volumeHud {
+  top: 22px !important;
+}
+
+/* make player-bar not draggable if in-app-menu is enabled */
+.cet-container ytmusic-app-layout.pip ytmusic-player-bar {
+  -webkit-app-region: no-drag !important;
+}
+
+/* make player draggable if in-app-menu is enabled */
+.cet-container ytmusic-app-layout.pip #player {
+  -webkit-app-region: drag !important;
+}
+
+/* remove info, thumbnail and menu from player-bar */
+ytmusic-app-layout.pip ytmusic-player-bar .content-info-wrapper,
+ytmusic-app-layout.pip ytmusic-player-bar .thumbnail-image-wrapper,
+ytmusic-app-layout.pip ytmusic-player-bar ytmusic-menu-renderer {
+  display: none !important;
+}
+
+/* disable the video-toggle button when in PiP mode */
+ytmusic-app-layout.pip .video-switch-button {
+  display: none !important;
+}

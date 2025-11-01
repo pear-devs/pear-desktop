@@ -1,0 +1,11 @@
+/* Hide the video player */
+.video-toggle-force-hide #main-panel {
+  display: none !important;
+}
+
+/* Make the side-panel full width */
+.video-toggle-force-hide .side-panel.ytmusic-player-page {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+}

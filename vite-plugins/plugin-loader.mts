@@ -42,7 +42,7 @@ export default function (
     name: 'ytm-plugin-loader',
     load: {
       filter: {
-        id: /(?:\/plugins\/[^/]+\/index\.(?:js|ts|jsx|tsx)|\/plugins\/[^/]+\.(?:js|ts|jsx|tsx))$/,
+        id: /(?:\/plugins\/[^/]+\/[^/]+\/index\.(?:js|ts|jsx|tsx)|\/plugins\/[^/]+\/[^/]+\.(?:js|ts|jsx|tsx))$/,
       },
       handler(id) {
         const fileContent = readFileSync(id, 'utf8');

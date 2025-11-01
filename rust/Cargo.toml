@@ -1,0 +1,25 @@
+[package]
+name = "pear-audio-processor"
+version = "0.1.0"
+edition = "2021"
+authors = ["pear-devs"]
+license = "MIT"
+description = "High-performance audio processing for Pear Desktop using Rust"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+napi = { version = "2.22", features = ["napi8", "serde-json"] }
+napi-derive = "2.22"
+serde = { version = "1.0", features = ["derive"] }
+
+[build-dependencies]
+napi-build = "2.22"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
