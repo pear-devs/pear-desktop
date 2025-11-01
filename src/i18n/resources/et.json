@@ -102,15 +102,40 @@
               "to-help-translate": "Soovid aidata tõlkimisel? Klõpsi siin"
             }
           },
-          "resume-on-start": "Rakenduse käivitamisel jätka viimatiesitatud loo esitamist"
+          "resume-on-start": "Rakenduse käivitamisel jätka viimatiesitatud loo esitamist",
+          "start-at-login": "Käivita sisselogimisel",
+          "starting-page": {
+            "label": "Avaleht",
+            "unset": "Määramata"
+          },
+          "visual-tweaks": {
+            "submenu": {
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "Katkesta",
+                    "remove": "Eemalda"
+                  },
+                  "remove-theme": "Kas oled kindel, et soovid enda loodud kujunduse eemaldada?",
+                  "remove-theme-message": "Sellega saab sinu loodud kujundus eemdladatud"
+                },
+                "label": "Kujundus"
+              }
+            }
+          }
         }
       },
       "plugins": {
+        "enabled": "Kasutusel",
         "label": "Lisamoodulid",
         "new": "UUS"
       },
       "view": {
+        "label": "Vaata",
         "submenu": {
+          "force-reload": "Laadi sundkorras uuesti",
+          "reload": "Laadi uuesti",
+          "reset-zoom": "Tegelik suurus",
           "toggle-fullscreen": "Lülita täisekraanivaade sisse/välja",
           "zoom-in": "Suumi sisse",
           "zoom-out": "Suumi välja"
