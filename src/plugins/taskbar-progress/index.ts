@@ -8,34 +8,46 @@ export default createPlugin({
   restartNeeded: true,
   config: { enabled: false },
 
-  async backend({ window }) {
+  backend({ window }) {
     let lastSongInfo: SongInfo | null = null;
     let progressInterval: ReturnType<typeof setInterval> | null = null;
 
     const updateProgressBar = (songInfo: SongInfo) => {
-      if (!songInfo?.title || typeof songInfo.elapsedSeconds !== 'number' || !songInfo.songDuration) {
+      if (
+        !songInfo?.title ||
+        typeof songInfo.elapsedSeconds !== 'number' ||
+        !songInfo.songDuration
+      ) {
         return;
       }
 
-      if (!lastSongInfo ||
-          songInfo.title !== lastSongInfo.title || 
-          songInfo.elapsedSeconds !== lastSongInfo.elapsedSeconds ||
-          songInfo.isPaused !== lastSongInfo.isPaused) {
+      if (
+        !lastSongInfo ||
+        songInfo.title !== lastSongInfo.title ||
+        songInfo.elapsedSeconds !== lastSongInfo.elapsedSeconds ||
+        songInfo.isPaused !== lastSongInfo.isPaused
+      ) {
         lastSongInfo = songInfo;
       }
 
       const progress = songInfo.elapsedSeconds / songInfo.songDuration;
-      window.setProgressBar(progress, { mode: songInfo.isPaused ? 'paused' : 'normal' });
+      window.setProgressBar(progress, {
+        mode: songInfo.isPaused ? 'paused' : 'normal',
+      });
     };
 
     const startProgressInterval = (songInfo: SongInfo) => {
       stopProgressInterval();
       if (!songInfo.isPaused) {
         progressInterval = setInterval(() => {
-          if (lastSongInfo && !lastSongInfo.isPaused && typeof lastSongInfo.elapsedSeconds === 'number') {
+          if (
+            lastSongInfo &&
+            !lastSongInfo.isPaused &&
+            typeof lastSongInfo.elapsedSeconds === 'number'
+          ) {
             updateProgressBar({
               ...lastSongInfo,
-              elapsedSeconds: lastSongInfo.elapsedSeconds + 1
+              elapsedSeconds: lastSongInfo.elapsedSeconds + 1,
             });
           }
         }, 1000);
@@ -63,5 +75,5 @@ export default createPlugin({
       stopProgressInterval();
       window.setProgressBar(-1);
     };
-  }
+  },
 });
