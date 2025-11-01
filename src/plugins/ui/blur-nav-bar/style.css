@@ -1,0 +1,17 @@
+#nav-bar-background,
+#header.ytmusic-item-section-renderer {
+  background: rgba(0, 0, 0, 0.3) !important;
+  backdrop-filter: blur(8px) !important;
+}
+
+ytmusic-tabs {
+  backdrop-filter: blur(8px) !important;
+}
+
+ytmusic-tabs.stuck {
+  background: rgba(0, 0, 0, 0.3) !important;
+}
+
+#nav-bar-divider {
+  display: none !important;
+}

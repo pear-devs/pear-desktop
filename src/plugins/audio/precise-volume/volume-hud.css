@@ -1,0 +1,13 @@
+#volumeHud {
+  z-index: 999;
+  position: absolute;
+  transition: opacity 0.6s;
+  pointer-events: none;
+  padding: 10px;
+
+  text-shadow: rgba(0, 0, 0, 0.5) 0px 0px 12px;
+}
+
+ytmusic-player[player-ui-state_='MINIPLAYER'] #volumeHud {
+  top: 0 !important;
+}

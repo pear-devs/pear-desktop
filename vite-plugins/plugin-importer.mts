@@ -22,22 +22,28 @@ export const pluginVirtualModuleGenerator = (
 ) => {
   const srcPath = resolve(__dirname, '..', 'src');
   const plugins = globSync([
-    'src/plugins/*/index.{js,ts,jsx,tsx}',
-    'src/plugins/*.{js,ts,jsx,tsx}',
+    'src/plugins/**/index.{js,ts,jsx,tsx}',
+    'src/plugins/**/*.{js,ts,jsx,tsx}',
     '!src/plugins/utils/**/*',
     '!src/plugins/utils/*',
   ]).map((path) => {
     let name = basename(path);
+    let dir = resolve(path, '..');
+    
     if (
       name === 'index.ts' ||
       name === 'index.js' ||
       name === 'index.jsx' ||
       name === 'index.tsx'
     ) {
-      name = basename(resolve(path, '..'));
+      // Get plugin name (skip category directory)
+      // Path structure: src/plugins/{category}/{plugin-name}/index.ts
+      const pluginDir = dir;
+      name = basename(pluginDir);
+      dir = resolve(pluginDir, '..');
+    } else {
+      name = name.replace(extname(name), '');
     }
-
-    name = name.replace(extname(name), '');
 
     return { name, path };
   });
