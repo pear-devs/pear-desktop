@@ -879,6 +879,10 @@
       "description": "Control playback from your Windows taskbar",
       "name": "Taskbar Media Control"
     },
+    "taskbar-progress": {
+      "name": "Taskbar Progress",
+      "description": "Shows the current track playback progress on the taskbar"
+    },
     "touchbar": {
       "description": "Adds a TouchBar widget for macOS users",
       "name": "TouchBar"
