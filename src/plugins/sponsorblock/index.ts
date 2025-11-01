@@ -1,4 +1,5 @@
 import is from 'electron-is';
+import { IpcRendererEvent } from 'electron';
 
 import { createPlugin } from '@/utils';
 
@@ -105,7 +106,7 @@ export default createPlugin({
     },
     resetSegments: () => (currentSegments = []),
     start({ ipc }) {
-      ipc.on('sponsorblock-skip', (segments: Segment[]) => {
+      ipc.on('sponsorblock-skip', (_event: unknown, segments: Segment[]) => {
         currentSegments = segments;
       });
     },
