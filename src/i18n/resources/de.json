@@ -462,8 +462,8 @@
           "label": "Status Text",
           "submenu": {
             "artist": "Hört {artist} zu",
-            "title": "Du hörst {song title}",
-            "pear-desktop": "Hört Pear Desktop"
+            "pear-desktop": "Hört Pear Desktop",
+            "title": "Du hörst {song title}"
           }
         }
       },

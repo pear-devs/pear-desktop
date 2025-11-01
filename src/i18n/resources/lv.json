@@ -456,16 +456,15 @@
         "disconnected": "Atvienojies",
         "hide-duration-left": "Paslēpt cik palika laika",
         "hide-github-button": "Paslēpt GitHub saites pogu",
+        "play-on-pear-desktop": "Atskaņot uz Pear Desktop",
+        "set-inactivity-timeout": "Iestatīt neaktivitātes taimeru",
         "set-status-display-type": {
           "label": "Statusa teksts",
           "submenu": {
             "artist": "Klausos {mākslinieku}",
-            "title": "Klausos {dziesmas nosaukums}",
-            "pear-music": "Pear mūzikas klausīšanās"
+            "title": "Klausos {dziesmas nosaukums}"
           }
-        },
-        "play-on-pear-desktop": "Atskaņot uz Pear Desktop",
-        "set-inactivity-timeout": "Iestatīt neaktivitātes taimeru"
+        }
       },
       "name": "Discord Rich Presence",
       "prompt": {

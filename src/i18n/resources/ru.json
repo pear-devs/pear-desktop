@@ -462,8 +462,8 @@
           "label": "Текст статуса",
           "submenu": {
             "artist": "Слушает {исполнитель}",
-            "title": "Слушает {название трека}",
-            "pear-desktop": "Слушает Pear Desktop"
+            "pear-desktop": "Слушает Pear Desktop",
+            "title": "Слушает {название трека}"
           }
         }
       },

@@ -369,7 +369,7 @@
       "name": "ナビゲーションバーの曇り効果"
     },
     "bypass-age-restrictions": {
-      "description": "ユーチューブの年齢制限を迂回します",
+      "description": "音楽プレーヤーの年齢確認をバイパスする",
       "name": "年齢制限迂回"
     },
     "captions-selector": {
@@ -462,8 +462,8 @@
           "label": "ステータステキスト",
           "submenu": {
             "artist": "{artist}を聴いている",
-            "title": "{曲名}を聴いている",
-            "pear-desktop": "Pear Desktopを聴く"
+            "pear-desktop": "Pear Desktopを聴く",
+            "title": "{曲名}を聴いている"
           }
         }
       },

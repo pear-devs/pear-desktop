@@ -2,7 +2,7 @@
   "common": {
     "console": {
       "plugins": {
-        "execute-failed": "პლაგინის დაყენების შეცდომა {{pluginName}}::{{contextName}}",
+        "execute-failed": "დამატების შესრულების შეცდომა {{pluginName}}::{{contextName}}",
         "executed-at-ms": "პლაგინი {{pluginName}}::{{contextName}} გაეშვა {{ms}} მილიწამში",
         "initialize-failed": "პლაგინის ინიციალიზაცია ვერ მოხდა\"{{pluginName}}\"",
         "load-all": "იტვირთება ყველა პლაგინი",
@@ -37,9 +37,15 @@
       },
       "when-ready": {
         "clearing-cache-after-20s": "აპლიკაციის ქეშის გაწმენდვა"
+      },
+      "window": {
+        "tried-to-render-offscreen": "ფანჯარამ სცადა, ეკრანსმიღმა გახსნილიყო, ფანჯრის ზომა={{windowSize}}, ეკრანის ზომა={{displaySize}}, მდებარეობა={{position}}"
       }
     },
     "dialog": {
+      "hide-menu-enabled": {
+        "detail": "მენიუ დამალულია, გამოიყენეთ 'Alt', რათა გამოაჩინოთ ის (ან 'Escape' თუ იყენებთ აპლიკაციის შიგნითა მენიუს)"
+      },
       "need-to-restart": {
         "buttons": {
           "later": "მოგვიანებით"

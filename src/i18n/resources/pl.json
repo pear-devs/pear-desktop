@@ -153,7 +153,7 @@
               "custom-window-title": {
                 "label": "Niestandardowy tytuł okna",
                 "prompt": {
-                  "label": "Podaj niestandardowy tytuł okna (zostaw puste, aby to wyłączyć):",
+                  "label": "Podaj niestandardowy tytuł okna (zostaw puste, aby to wyłączyć)",
                   "placeholder": "Przykład: Pear Desktop"
                 }
               },
@@ -209,7 +209,7 @@
       "show": "Pokaż okno",
       "tooltip": {
         "default": "Pear Desktop",
-        "with-song-info": "{{title}} (autorstwa {{artist}}) - YT Music"
+        "with-song-info": "{{title}} (autorstwa {{artist}}) - Pear Desktop"
       }
     }
   },
@@ -429,7 +429,7 @@
       "name": "Niestandardowe urządzenie wyjścia",
       "prompt": {
         "device-selector": {
-          "label": "Wybierz wyjście audio które ma być użyte",
+          "label": "Wybierz urządzenie wyjściowe",
           "title": "Wybierz wyjście audio"
         }
       }
@@ -447,7 +447,7 @@
         "connected": "Połączono z Discordem",
         "disconnected": "Odłączono od Discorda"
       },
-      "description": "Pokaż znajomym z Discorda czego słuchasz dzięki Rich Presence",
+      "description": "Pokaż znajomym z Discorda czego słuchasz, dzięki technologii Rich Presence",
       "menu": {
         "auto-reconnect": "Automatyczne wznawianie połączenia",
         "clear-activity": "Wyczyść aktywność",
@@ -462,12 +462,12 @@
           "label": "Opis statusu",
           "submenu": {
             "artist": "Słucha {artist}",
-            "title": "Słucha {song title}",
-            "pear-desktop": "Słucha Pear Desktop"
+            "pear-desktop": "Słucha Pear Desktop",
+            "title": "Słucha {song title}"
           }
         }
       },
-      "name": "Discord Rich Presence",
+      "name": "Aktywność w Discord",
       "prompt": {
         "set-inactivity-timeout": {
           "label": "Podaj limit czasu bezczynności w sekundach:",
