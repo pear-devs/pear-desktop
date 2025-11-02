@@ -71,10 +71,17 @@ unhandled({
 let mainWindow: Electron.BrowserWindow | null;
 autoUpdater.autoDownload = false;
 
-const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
-  app.exit();
+// Allow multi instance
+const ALLOW_MULTI_INSTANCE = process.env.ALLOW_MULTI_INSTANCE;
+if (ALLOW_MULTI_INSTANCE) {
+  console.log("Starting with ALLOW_MULTI_INSTANCE")
+} else {
+  const gotTheLock = app.requestSingleInstanceLock();
+  if (!gotTheLock) {
+    app.exit();
+  }
 }
+
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -634,6 +641,16 @@ const getDefaultLocale = async (locale: string) =>
   Object.keys(await languageResources()).includes(locale) ? locale : null;
 
 app.whenReady().then(async () => {
+  // Use custom profile
+  const CUSTOM_ACCOUNT_PROFILE = process.env.CUSTOM_ACCOUNT_PROFILE;
+  if (CUSTOM_ACCOUNT_PROFILE) {
+    const baseFolder = path.join(app.getPath('userData'), 'Custom Account Profiles');
+    app.setPath('userData', path.join(baseFolder, CUSTOM_ACCOUNT_PROFILE));
+  }
+  let profileName = CUSTOM_ACCOUNT_PROFILE ?? 'default';
+  let appPath = app.getPath('userData')
+  console.log('Using Account Profile: \'${profileName}\' at \'${appPath}\'');
+
   if (!config.get('options.language')) {
     const locale = await getDefaultLocale(app.getLocale());
     if (locale) {
