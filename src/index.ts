@@ -74,7 +74,7 @@ autoUpdater.autoDownload = false;
 // Allow multi instance
 const ALLOW_MULTI_INSTANCE = process.env.ALLOW_MULTI_INSTANCE;
 if (ALLOW_MULTI_INSTANCE) {
-  console.log("Starting with ALLOW_MULTI_INSTANCE")
+  console.log('Starting with ALLOW_MULTI_INSTANCE');
 } else {
   const gotTheLock = app.requestSingleInstanceLock();
   if (!gotTheLock) {
