@@ -652,7 +652,9 @@ app.whenReady().then(async () => {
   }
   const profileName = CUSTOM_ACCOUNT_PROFILE ?? 'default';
   let appPath = app.getPath('userData');
-  console.log('Using Account Profile: \'' + profileName + '\' at \'' + appPath + '\'');
+  console.log(
+    "Using Account Profile: '" + profileName + "' at '" + appPath + "'",
+  );
 
   if (!config.get('options.language')) {
     const locale = await getDefaultLocale(app.getLocale());
