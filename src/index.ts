@@ -82,7 +82,6 @@ if (ALLOW_MULTI_INSTANCE) {
   }
 }
 
-
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'http',
