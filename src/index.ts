@@ -644,7 +644,10 @@ app.whenReady().then(async () => {
   // Use custom profile
   const CUSTOM_ACCOUNT_PROFILE = process.env.CUSTOM_ACCOUNT_PROFILE;
   if (CUSTOM_ACCOUNT_PROFILE) {
-    const baseFolder = path.join(app.getPath('userData'), 'Custom Account Profiles');
+    const baseFolder = path.join(
+      app.getPath('userData'),
+      'Custom Account Profiles',
+    );
     app.setPath('userData', path.join(baseFolder, CUSTOM_ACCOUNT_PROFILE));
   }
   let profileName = CUSTOM_ACCOUNT_PROFILE ?? 'default';
