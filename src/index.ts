@@ -651,7 +651,7 @@ app.whenReady().then(async () => {
     app.setPath('userData', path.join(baseFolder, CUSTOM_ACCOUNT_PROFILE));
   }
   const profileName = CUSTOM_ACCOUNT_PROFILE ?? 'default';
-  let appPath = app.getPath('userData')
+  let appPath = app.getPath('userData');
   console.log('Using Account Profile: \'' + profileName + '\' at \'' + appPath + '\'');
 
   if (!config.get('options.language')) {
