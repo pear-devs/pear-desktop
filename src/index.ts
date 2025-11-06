@@ -650,7 +650,7 @@ app.whenReady().then(async () => {
     );
     app.setPath('userData', path.join(baseFolder, CUSTOM_ACCOUNT_PROFILE));
   }
-  let profileName = CUSTOM_ACCOUNT_PROFILE ?? 'default';
+  const profileName = CUSTOM_ACCOUNT_PROFILE ?? 'default';
   let appPath = app.getPath('userData')
   console.log('Using Account Profile: \'' + profileName + '\' at \'' + appPath + '\'');
 
