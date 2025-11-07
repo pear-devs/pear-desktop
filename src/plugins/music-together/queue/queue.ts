@@ -317,7 +317,7 @@ export class Queue {
           this.broadcast({
             type: 'CLEAR_QUEUE',
             payload: {},
-          })
+          });
           return;
         }
         if (event.type === 'ADD_ITEMS') {

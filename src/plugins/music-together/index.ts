@@ -229,7 +229,9 @@ export default createPlugin<
           }
           case 'SET_INDEX': {
             this.queue?.setIndex(event.payload.index);
-            await this.connection?.broadcast('SET_INDEX', { index: event.payload.index });
+            await this.connection?.broadcast('SET_INDEX', {
+              index: event.payload.index,
+            });
             break;
           }
           case 'ADD_SONGS': {
@@ -251,7 +253,9 @@ export default createPlugin<
             await this.connection?.broadcast('ADD_SONGS', {
               ...event.payload,
               videoList,
-            }, event.after);
+              },
+              event.after,
+            );
 
             const afterevent = event.after?.at(0);
             if (afterevent?.type === 'SET_INDEX') {
@@ -413,7 +417,9 @@ export default createPlugin<
             break;
           }
           case 'SET_INDEX': {
-            await this.connection?.broadcast('SET_INDEX', { index: event.payload.index });
+            await this.connection?.broadcast('SET_INDEX', {
+              index: event.payload.index,
+            });
             break;
           }
           case 'ADD_SONGS': {
@@ -423,7 +429,9 @@ export default createPlugin<
                 ...it,
                 ownerId: it.ownerId ?? this.connection!.id,
               })),
-            }, event.after);
+              },
+              event.after,
+            );
             break;
           }
           case 'REMOVE_SONG': {
