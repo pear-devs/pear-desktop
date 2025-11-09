@@ -150,6 +150,11 @@
           "visual-tweaks": {
             "label": "بصری تبدیلیاں",
             "submenu": {
+              "custom-window-title": {
+                "prompt": {
+                  "placeholder": "مثال: پیئر ڈیسک ٹاپ"
+                }
+              },
               "like-buttons": {
                 "default": "پہلے سے طے شدہ",
                 "force-show": "زبردستی دکھائیں",
@@ -198,7 +203,23 @@
       "play-pause": "چلائیں/روکیں",
       "previous": "پچھلا",
       "quit": "باہر نکلیں",
-      "restart": "ایپ دوبارہ شروع کریں"
+      "restart": "ایپ دوبارہ شروع کریں",
+      "show": "ونڈو دکھائیں",
+      "tooltip": {
+        "default": "پیئر ڈیسک ٹاپ"
+      }
+    }
+  },
+  "plugins": {
+    "ad-speedup": {
+      "description": "اگر کوئی اشتہار چلے تو آواز بند کرکے پلے بیک کی رفتار 16 گناہ کردیں",
+      "name": "اشتہار کی رفتار"
+    },
+    "adblocker": {
+      "description": "شروغ سے تمام اشتہارات اور ٹریکنگ بلاک کردیں",
+      "menu": {
+        "blocker": "بلاکر"
+      }
     }
   }
 }

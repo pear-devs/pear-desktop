@@ -369,7 +369,7 @@
       "name": "模糊導覽列"
     },
     "bypass-age-restrictions": {
-      "description": "繞過 Music Player 年齡驗證",
+      "description": "繞過年齡驗證",
       "name": "繞過年齡驗證"
     },
     "captions-selector": {
@@ -462,8 +462,8 @@
           "label": "狀態樣式",
           "submenu": {
             "artist": "正在聆聽 {artist} 的歌曲",
-            "title": "正在聆聽 {song title}",
-            "pear-desktop": "正在聆聽 Pear Desktop"
+            "pear-desktop": "正在聆聽 Pear Desktop",
+            "title": "正在聆聽 {song title}"
           }
         }
       },
