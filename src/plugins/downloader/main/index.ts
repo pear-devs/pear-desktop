@@ -5,6 +5,7 @@ import { randomBytes } from 'node:crypto';
 import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
 import {
   Innertube,
+  Platform,
   UniversalCache,
   Utils,
   YTNodes,
@@ -129,9 +130,14 @@ export const onMainLoad = async ({
   win = _win;
   config = await getConfig();
 
+  // Set up Platform shim for signature function evaluation
+  Platform.shim.eval = (code: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return eval(code);
+  };
+
   yt = await Innertube.create({
     cache: new UniversalCache(false),
-    player_id: '0004de42',
     cookie: await getCookieFromWindow(win),
     generate_session_locally: true,
     fetch: getNetFetchAsFetch(),
@@ -405,8 +411,7 @@ async function downloadSongUnsafe(
   let targetFileExtension: string;
   if (!presetSetting?.extension) {
     targetFileExtension =
-      VideoFormatList.find((it) => it.itag === format.itag)?.container ??
-      'mp3';
+      VideoFormatList.find((it) => it.itag === format.itag)?.container ?? 'mp3';
   } else {
     targetFileExtension = presetSetting?.extension ?? 'mp3';
   }

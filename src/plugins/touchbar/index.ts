@@ -1,11 +1,12 @@
 import { nativeImage, type NativeImage, TouchBar } from 'electron';
 
+import musicPlayerIcon from '@assets/icon.png?asset&asarUnpack';
+
 import { createPlugin } from '@/utils';
 import { getSongControls } from '@/providers/song-controls';
 import { registerCallback, SongInfoEvent } from '@/providers/song-info';
 import { t } from '@/i18n';
 
-import musicPlayerIcon from '@assets/icon.png?asset&asarUnpack';
 import { Platform } from '@/types/plugins';
 
 export default createPlugin({

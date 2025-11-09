@@ -12,7 +12,9 @@ export const setupAppControls = () => {
   ipcMain.on('peard:reload', () =>
     BrowserWindow.getFocusedWindow()?.webContents.loadURL(config.get('url')),
   );
-  ipcMain.handle('peard:get-path', (_, ...args: string[]) => path.join(...args));
+  ipcMain.handle('peard:get-path', (_, ...args: string[]) =>
+    path.join(...args),
+  );
 };
 
 function restartInternal() {
