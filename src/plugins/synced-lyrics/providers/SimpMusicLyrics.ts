@@ -55,9 +55,6 @@ export class SimpMusicLyrics implements LyricProvider {
     }
 
     if (!Array.isArray(data) || data.length === 0) {
-      if (config()?.showLyricsEvenIfInexact) {
-        return null;
-      }
       return null;
     }
 
