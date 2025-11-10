@@ -1,9 +1,9 @@
 {
   "name": "pear-music",
   "desktopName": "com.github.th_ch.pear_music",
-  "productName": "Pear Desktop",
+  "productName": "YouTube Music",
   "version": "3.11.0",
-  "description": "Pear Desktop App - including custom plugins",
+  "description": "YouTube Music Desktop App - including custom plugins",
   "main": "./dist/main/index.js",
   "type": "module",
   "license": "MIT",

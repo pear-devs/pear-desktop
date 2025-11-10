@@ -1,5 +1,5 @@
 appId: com.github.th-ch.pear-desktop
-productName: Pear Desktop
+productName: YouTube Music
 files:
   - '!*'
   - dist
