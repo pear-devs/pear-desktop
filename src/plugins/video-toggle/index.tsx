@@ -108,6 +108,7 @@ export default createPlugin({
 
   renderer: {
     config: null as VideoTogglePluginConfig | null,
+    setVideoVisible: null as ((visible: boolean) => void) | null,
     applyStyleClass: (config: VideoTogglePluginConfig) => {
       if (config.forceHide) {
         document.body.classList.add('video-toggle-force-hide');
@@ -119,6 +120,7 @@ export default createPlugin({
     },
     async start({ getConfig }) {
       const config = await getConfig();
+      this.config = config;
       this.applyStyleClass(config);
 
       if (config.forceHide) {
@@ -155,9 +157,12 @@ export default createPlugin({
     },
     async onPlayerApiReady(api, { getConfig }) {
       const [showButton, setShowButton] = createSignal(true);
+      const [videoVisible, setVideoVisible] = createSignal(true);
 
       const config = await getConfig();
       this.config = config;
+      setVideoVisible(!config.hideVideo);
+      this.setVideoVisible = setVideoVisible;
 
       const moveVolumeHud = (await window.mainConfig.plugins.isEnabled(
         'precise-volume',
@@ -177,14 +182,11 @@ export default createPlugin({
         () => (
           <Show when={showButton()}>
             <VideoSwitchButton
-              onChange={(e) => {
-                const target = e.target as HTMLInputElement;
-
-                setVideoState(target.checked);
+              initialVideoVisible={videoVisible()}
+              onVideoToggle={(showVideo) => {
+                setVideoVisible(showVideo);
+                setVideoState(showVideo);
               }}
-              onClick={(e) => e.stopPropagation()}
-              songButtonText={t('plugins.video-toggle.templates.button-song')}
-              videoButtonText={t('plugins.video-toggle.templates.button-video')}
             />
           </Show>
         ),
@@ -206,11 +208,6 @@ export default createPlugin({
         }
         window.mainConfig.plugins.setOptions('video-toggle', this.config);
 
-        const checkbox = document.querySelector<HTMLInputElement>(
-          '.video-switch-button-checkbox',
-        ); // custom mode
-        if (checkbox) checkbox.checked = !this.config?.hideVideo;
-
         if (player) {
           player.style.margin = showVideo ? '' : 'auto 0px';
           player.setAttribute(
@@ -218,11 +215,13 @@ export default createPlugin({
             showVideo ? 'OMV_PREFERRED' : 'ATV_PREFERRED',
           );
 
-          document.querySelector<HTMLElement>(
+          const songVideo = document.querySelector<HTMLElement>(
             '#song-video.ytmusic-player',
-          )!.style.display = showVideo ? 'block' : 'none';
-          document.querySelector<HTMLElement>('#song-image')!.style.display =
-            showVideo ? 'none' : 'block';
+          );
+          const songImage = document.querySelector<HTMLElement>('#song-image');
+
+          if (songVideo) songVideo.style.display = showVideo ? 'block' : 'none';
+          if (songImage) songImage.style.display = showVideo ? 'none' : 'block';
 
           if (showVideo && video && !video.style.top) {
             video.style.top = `${
@@ -328,28 +327,37 @@ export default createPlugin({
           video?.addEventListener('peard:src-changed', videoStarted);
           observeThumbnail();
           videoStarted();
-          switch (config.align) {
-            case 'right': {
-              switchButtonContainer.style.justifyContent = 'flex-end';
-              return;
-            }
 
-            case 'middle': {
-              switchButtonContainer.style.justifyContent = 'center';
-              return;
-            }
-
-            default:
-            case 'left': {
-              switchButtonContainer.style.justifyContent = 'flex-start';
-            }
-          }
+          const alignmentMap = {
+            right: 'flex-end',
+            middle: 'center',
+            left: 'flex-start',
+          };
+          switchButtonContainer.style.justifyContent =
+            alignmentMap[config.align] || alignmentMap.left;
         }, 0);
       }
     },
     onConfigChange(newConfig) {
       this.config = newConfig;
       this.applyStyleClass(newConfig);
+
+      if (this.setVideoVisible) {
+        this.setVideoVisible(!newConfig.hideVideo);
+      }
+
+      const switchButtonContainer = document.querySelector<HTMLElement>(
+        '#ytmd-video-toggle-switch-button-container',
+      );
+      if (switchButtonContainer) {
+        const alignmentMap = {
+          right: 'flex-end',
+          middle: 'center',
+          left: 'flex-start',
+        };
+        switchButtonContainer.style.justifyContent =
+          alignmentMap[newConfig.align] || alignmentMap.left;
+      }
     },
   },
 });
