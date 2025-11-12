@@ -45,7 +45,7 @@
   },
   "pnpm": {
     "overrides": {
-      "vite": "npm:rolldown-vite@7.1.8",
+      "vite": "npm:rolldown-vite@7.2.5",
       "node-gyp": "11.4.2",
       "xml2js": "0.6.2",
       "node-fetch": "3.3.2",
@@ -173,7 +173,7 @@
     "typescript": "5.9.2",
     "typescript-eslint": "8.43.0",
     "utf-8-validate": "6.0.5",
-    "vite": "npm:rolldown-vite@7.1.8",
+    "vite": "npm:rolldown-vite@7.2.5",
     "vite-plugin-inspect": "11.3.3",
     "vite-plugin-resolve": "2.5.2",
     "vite-plugin-solid": "2.11.8",
