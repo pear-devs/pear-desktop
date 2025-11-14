@@ -44,7 +44,7 @@ importers:
         version: 1.0.1(@types/node@24.3.0)
       '@electron/remote':
         specifier: 2.1.3
-        version: 2.1.3(electron@38.2.0)
+        version: 2.1.3(electron@38.7.0)
       '@ffmpeg.wasm/core-mt':
         specifier: 0.12.0
         version: 0.12.0
@@ -59,10 +59,10 @@ importers:
         version: 2.0.5
       '@ghostery/adblocker-electron':
         specifier: 2.11.6
-        version: 2.11.6(electron@38.2.0)
+        version: 2.11.6(electron@38.7.0)
       '@ghostery/adblocker-electron-preload':
         specifier: 2.11.6
-        version: 2.11.6(electron@38.2.0)
+        version: 2.11.6(electron@38.7.0)
       '@hono/node-server':
         specifier: 1.19.1
         version: 1.19.1(hono@4.9.6)
@@ -119,7 +119,7 @@ importers:
         version: 14.0.0
       custom-electron-prompt:
         specifier: 1.5.8
-        version: 1.5.8(electron@38.2.0)
+        version: 1.5.8(electron@38.7.0)
       deepmerge-ts:
         specifier: 7.1.5
         version: 7.1.5
@@ -302,8 +302,8 @@ importers:
         specifier: 0.38.23
         version: 0.38.23
       electron:
-        specifier: 38.2.0
-        version: 38.2.0
+        specifier: 38.7.0
+        version: 38.7.0
       electron-builder:
         specifier: 26.0.12
         version: 26.0.12(electron-builder-squirrel-windows@26.0.12)
@@ -1379,31 +1379,15 @@ packages:
       eslint: ^8.57.0 || ^9.0.0
       typescript: '>=4.8.4 <6.0.0'
 
-  '@typescript-eslint/project-service@8.42.0':
-    resolution: {integrity: sha512-vfVpLHAhbPjilrabtOSNcUDmBboQNrJUiNAGoImkZKnMjs2TIcWG33s4Ds0wY3/50aZmTMqJa6PiwkwezaAklg==}
-    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-    peerDependencies:
-      typescript: '>=4.8.4 <6.0.0'
-
   '@typescript-eslint/project-service@8.43.0':
     resolution: {integrity: sha512-htB/+D/BIGoNTQYffZw4uM4NzzuolCoaA/BusuSIcC8YjmBYQioew5VUZAYdAETPjeed0hqCaW7EHg+Robq8uw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
       typescript: '>=4.8.4 <6.0.0'
 
-  '@typescript-eslint/scope-manager@8.42.0':
-    resolution: {integrity: sha512-51+x9o78NBAVgQzOPd17DkNTnIzJ8T/O2dmMBLoK9qbY0Gm52XJcdJcCl18ExBMiHo6jPMErUQWUv5RLE51zJw==}
-    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-
   '@typescript-eslint/scope-manager@8.43.0':
     resolution: {integrity: sha512-daSWlQ87ZhsjrbMLvpuuMAt3y4ba57AuvadcR7f3nl8eS3BjRc8L9VLxFLk92RL5xdXOg6IQ+qKjjqNEimGuAg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-
-  '@typescript-eslint/tsconfig-utils@8.42.0':
-    resolution: {integrity: sha512-kHeFUOdwAJfUmYKjR3CLgZSglGHjbNTi1H8sTYRYV2xX6eNz4RyJ2LIgsDLKf8Yi0/GL1WZAC/DgZBeBft8QAQ==}
-    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-    peerDependencies:
-      typescript: '>=4.8.4 <6.0.0'
 
   '@typescript-eslint/tsconfig-utils@8.43.0':
     resolution: {integrity: sha512-ALC2prjZcj2YqqL5X/bwWQmHA2em6/94GcbB/KKu5SX3EBDOsqztmmX1kMkvAJHzxk7TazKzJfFiEIagNV3qEA==}
@@ -1418,31 +1402,14 @@ packages:
       eslint: ^8.57.0 || ^9.0.0
       typescript: '>=4.8.4 <6.0.0'
 
-  '@typescript-eslint/types@8.42.0':
-    resolution: {integrity: sha512-LdtAWMiFmbRLNP7JNeY0SqEtJvGMYSzfiWBSmx+VSZ1CH+1zyl8Mmw1TT39OrtsRvIYShjJWzTDMPWZJCpwBlw==}
-    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-
   '@typescript-eslint/types@8.43.0':
     resolution: {integrity: sha512-vQ2FZaxJpydjSZJKiSW/LJsabFFvV7KgLC5DiLhkBcykhQj8iK9BOaDmQt74nnKdLvceM5xmhaTF+pLekrxEkw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-
-  '@typescript-eslint/typescript-estree@8.42.0':
-    resolution: {integrity: sha512-ku/uYtT4QXY8sl9EDJETD27o3Ewdi72hcXg1ah/kkUgBvAYHLwj2ofswFFNXS+FL5G+AGkxBtvGt8pFBHKlHsQ==}
-    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-    peerDependencies:
-      typescript: '>=4.8.4 <6.0.0'
 
   '@typescript-eslint/typescript-estree@8.43.0':
     resolution: {integrity: sha512-7Vv6zlAhPb+cvEpP06WXXy/ZByph9iL6BQRBDj4kmBsW98AqEeQHlj/13X+sZOrKSo9/rNKH4Ul4f6EICREFdw==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
-      typescript: '>=4.8.4 <6.0.0'
-
-  '@typescript-eslint/utils@8.42.0':
-    resolution: {integrity: sha512-JnIzu7H3RH5BrKC4NoZqRfmjqCIS1u3hGZltDYJgkVdqAezl4L9d1ZLw+36huCujtSBSAirGINF/S4UxOcR+/g==}
-    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-    peerDependencies:
-      eslint: ^8.57.0 || ^9.0.0
       typescript: '>=4.8.4 <6.0.0'
 
   '@typescript-eslint/utils@8.43.0':
@@ -1451,10 +1418,6 @@ packages:
     peerDependencies:
       eslint: ^8.57.0 || ^9.0.0
       typescript: '>=4.8.4 <6.0.0'
-
-  '@typescript-eslint/visitor-keys@8.42.0':
-    resolution: {integrity: sha512-3WbiuzoEowaEn8RSnhJBrxSwX8ULYE9CXaPepS2C2W3NSA5NNIvBaslpBSBElPq0UGr0xVJlXFWOAKIkyylydQ==}
-    engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
   '@typescript-eslint/visitor-keys@8.43.0':
     resolution: {integrity: sha512-T+S1KqRD4sg/bHfLwrpF/K3gQLBM1n7Rp7OjjikjTEssI2YJzQpi5WXoynOaQ93ERIuq3O8RBTOUYDKszUCEHw==}
@@ -2319,8 +2282,8 @@ packages:
     resolution: {integrity: sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg==}
     engines: {node: '>=8.0.0'}
 
-  electron@38.2.0:
-    resolution: {integrity: sha512-Cw5Mb+N5NxsG0Hc1qr8I65Kt5APRrbgTtEEn3zTod30UNJRnAE1xbGk/1NOaDn3ODzI/MYn6BzT9T9zreP7xWA==}
+  electron@38.7.0:
+    resolution: {integrity: sha512-ZHrhfzceUgZwdi6Cd8VS/A10ljIjiHOY5KwZ4iJ5D+JuUYMeS/Uvxbrr1WqjnZUwGe9aUjQHFsxeS3gBWGalOw==}
     engines: {node: '>= 12.20.55'}
     hasBin: true
 
@@ -4481,10 +4444,6 @@ packages:
   tinycolor2@1.6.0:
     resolution: {integrity: sha512-XPaBkWQJdsf3pLKJV9p4qN/S+fm2Oj8AIPo1BTUhg5oxkvm9+SVEGFdhyOz7tTdUTfvxMiAs4sp6/eZO2Ew+pw==}
 
-  tinyglobby@0.2.14:
-    resolution: {integrity: sha512-tX5e7OM1HnYr2+a2C/4V0htOcSQcoSTH9KgJnVvNm5zm/cyEWKJ7j7YutsH9CxMdtOkkLFy2AHrMci9IM8IPZQ==}
-    engines: {node: '>=12.0.0'}
-
   tinyglobby@0.2.15:
     resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
     engines: {node: '>=12.0.0'}
@@ -5143,9 +5102,9 @@ snapshots:
       - bluebird
       - supports-color
 
-  '@electron/remote@2.1.3(electron@38.2.0)':
+  '@electron/remote@2.1.3(electron@38.7.0)':
     dependencies:
-      electron: 38.2.0
+      electron: 38.7.0
 
   '@electron/universal@3.0.1':
     dependencies:
@@ -5336,16 +5295,16 @@ snapshots:
     dependencies:
       '@ghostery/adblocker-extended-selectors': 2.11.6
 
-  '@ghostery/adblocker-electron-preload@2.11.6(electron@38.2.0)':
+  '@ghostery/adblocker-electron-preload@2.11.6(electron@38.7.0)':
     dependencies:
       '@ghostery/adblocker-content': 2.11.6
-      electron: 38.2.0
+      electron: 38.7.0
 
-  '@ghostery/adblocker-electron@2.11.6(electron@38.2.0)':
+  '@ghostery/adblocker-electron@2.11.6(electron@38.7.0)':
     dependencies:
       '@ghostery/adblocker': 2.11.6
-      '@ghostery/adblocker-electron-preload': 2.11.6(electron@38.2.0)
-      electron: 38.2.0
+      '@ghostery/adblocker-electron-preload': 2.11.6(electron@38.7.0)
+      electron: 38.7.0
       tldts-experimental: 7.0.12
 
   '@ghostery/adblocker-extended-selectors@2.11.6': {}
@@ -5858,7 +5817,7 @@ snapshots:
   '@stylistic/eslint-plugin@5.3.1(eslint@9.35.0)':
     dependencies:
       '@eslint-community/eslint-utils': 4.8.0(eslint@9.35.0)
-      '@typescript-eslint/types': 8.42.0
+      '@typescript-eslint/types': 8.43.0
       eslint: 9.35.0
       eslint-visitor-keys: 4.2.1
       espree: 10.4.0
@@ -5879,7 +5838,7 @@ snapshots:
     dependencies:
       minimatch: 10.0.3
       path-browserify: 1.0.1
-      tinyglobby: 0.2.14
+      tinyglobby: 0.2.15
 
   '@tybys/wasm-util@0.10.0':
     dependencies:
@@ -5920,7 +5879,7 @@ snapshots:
 
   '@types/electron-localshortcut@3.1.3':
     dependencies:
-      electron: 38.2.0
+      electron: 38.7.0
     transitivePeerDependencies:
       - supports-color
 
@@ -6013,15 +5972,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/project-service@8.42.0(typescript@5.9.2)':
-    dependencies:
-      '@typescript-eslint/tsconfig-utils': 8.42.0(typescript@5.9.2)
-      '@typescript-eslint/types': 8.42.0
-      debug: 4.4.1
-      typescript: 5.9.2
-    transitivePeerDependencies:
-      - supports-color
-
   '@typescript-eslint/project-service@8.43.0(typescript@5.9.2)':
     dependencies:
       '@typescript-eslint/tsconfig-utils': 8.43.0(typescript@5.9.2)
@@ -6031,19 +5981,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/scope-manager@8.42.0':
-    dependencies:
-      '@typescript-eslint/types': 8.42.0
-      '@typescript-eslint/visitor-keys': 8.42.0
-
   '@typescript-eslint/scope-manager@8.43.0':
     dependencies:
       '@typescript-eslint/types': 8.43.0
       '@typescript-eslint/visitor-keys': 8.43.0
-
-  '@typescript-eslint/tsconfig-utils@8.42.0(typescript@5.9.2)':
-    dependencies:
-      typescript: 5.9.2
 
   '@typescript-eslint/tsconfig-utils@8.43.0(typescript@5.9.2)':
     dependencies:
@@ -6061,25 +6002,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/types@8.42.0': {}
-
   '@typescript-eslint/types@8.43.0': {}
-
-  '@typescript-eslint/typescript-estree@8.42.0(typescript@5.9.2)':
-    dependencies:
-      '@typescript-eslint/project-service': 8.42.0(typescript@5.9.2)
-      '@typescript-eslint/tsconfig-utils': 8.42.0(typescript@5.9.2)
-      '@typescript-eslint/types': 8.42.0
-      '@typescript-eslint/visitor-keys': 8.42.0
-      debug: 4.4.1
-      fast-glob: 3.3.3
-      is-glob: 4.0.3
-      minimatch: 9.0.5
-      semver: 7.7.2
-      ts-api-utils: 2.1.0(typescript@5.9.2)
-      typescript: 5.9.2
-    transitivePeerDependencies:
-      - supports-color
 
   '@typescript-eslint/typescript-estree@8.43.0(typescript@5.9.2)':
     dependencies:
@@ -6097,17 +6020,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/utils@8.42.0(eslint@9.35.0)(typescript@5.9.2)':
-    dependencies:
-      '@eslint-community/eslint-utils': 4.8.0(eslint@9.35.0)
-      '@typescript-eslint/scope-manager': 8.42.0
-      '@typescript-eslint/types': 8.42.0
-      '@typescript-eslint/typescript-estree': 8.42.0(typescript@5.9.2)
-      eslint: 9.35.0
-      typescript: 5.9.2
-    transitivePeerDependencies:
-      - supports-color
-
   '@typescript-eslint/utils@8.43.0(eslint@9.35.0)(typescript@5.9.2)':
     dependencies:
       '@eslint-community/eslint-utils': 4.8.0(eslint@9.35.0)
@@ -6118,11 +6030,6 @@ snapshots:
       typescript: 5.9.2
     transitivePeerDependencies:
       - supports-color
-
-  '@typescript-eslint/visitor-keys@8.42.0':
-    dependencies:
-      '@typescript-eslint/types': 8.42.0
-      eslint-visitor-keys: 4.2.1
 
   '@typescript-eslint/visitor-keys@8.43.0':
     dependencies:
@@ -6803,9 +6710,9 @@ snapshots:
 
   csstype@3.1.3: {}
 
-  custom-electron-prompt@1.5.8(electron@38.2.0):
+  custom-electron-prompt@1.5.8(electron@38.7.0):
     dependencies:
-      electron: 38.2.0
+      electron: 38.7.0
 
   data-uri-to-buffer@4.0.1: {}
 
@@ -7135,7 +7042,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@38.2.0:
+  electron@38.7.0:
     dependencies:
       '@electron/get': 2.0.3
       '@types/node': 22.17.2
@@ -7337,7 +7244,7 @@ snapshots:
       get-tsconfig: 4.10.1
       is-bun-module: 2.0.0
       stable-hash-x: 0.2.0
-      tinyglobby: 0.2.14
+      tinyglobby: 0.2.15
       unrs-resolver: 1.11.1
     optionalDependencies:
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.43.0(eslint@9.35.0)(typescript@5.9.2))(eslint-import-resolver-typescript@4.4.4)(eslint@9.35.0)
@@ -7395,7 +7302,7 @@ snapshots:
 
   eslint-plugin-solid@0.14.5(eslint@9.35.0)(typescript@5.9.2):
     dependencies:
-      '@typescript-eslint/utils': 8.42.0(eslint@9.35.0)(typescript@5.9.2)
+      '@typescript-eslint/utils': 8.43.0(eslint@9.35.0)(typescript@5.9.2)
       eslint: 9.35.0
       estraverse: 5.3.0
       is-html: 2.0.0
@@ -8627,7 +8534,7 @@ snapshots:
       proc-log: 5.0.0
       semver: 7.7.2
       tar: 7.4.3
-      tinyglobby: 0.2.14
+      tinyglobby: 0.2.15
       which: 5.0.0
     transitivePeerDependencies:
       - supports-color
@@ -9487,11 +9394,6 @@ snapshots:
   tiny-typed-emitter@2.1.0: {}
 
   tinycolor2@1.6.0: {}
-
-  tinyglobby@0.2.14:
-    dependencies:
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
 
   tinyglobby@0.2.15:
     dependencies:
