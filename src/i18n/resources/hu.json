@@ -459,8 +459,8 @@
           "label": "Tevékenység szöveg",
           "submenu": {
             "artist": "Hallgatja: {artist}",
-            "title": "Hallgatja: {song title}",
-            "pear-desktop": "Hallgatja: Pear Desktop"
+            "pear-desktop": "Hallgatja: Pear Desktop",
+            "title": "Hallgatja: {song title}"
           }
         }
       },
@@ -730,7 +730,7 @@
         }
       },
       "description": "Lehetővé teszi a videó minőségének megváltoztatását egy gombbal a videó fedvényen",
-      "name": "Videóminőség modosító"
+      "name": "Videóminőség módosító"
     },
     "scrobbler": {
       "description": "Scrobbling támogatás hozzáadása (pl. last.fm, ListenBrainz)",

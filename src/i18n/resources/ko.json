@@ -208,8 +208,8 @@
       "restart": "앱 재시작",
       "show": "창 표시",
       "tooltip": {
-        "default": "유튜브 뮤직",
-        "with-song-info": "유튜브 뮤직: {{artist}} - {{title}}"
+        "default": "피어 데스크톱",
+        "with-song-info": "피어 데스크톱: {{artist}} - {{title}}"
       }
     }
   },
@@ -369,7 +369,7 @@
       "name": "탐색 바 흐림 효과"
     },
     "bypass-age-restrictions": {
-      "description": "유튜브의 나이 제한을 우회합니다",
+      "description": "음악 플레이어의 연령 확인 우회합니다",
       "name": "나이 제한 우회"
     },
     "captions-selector": {
