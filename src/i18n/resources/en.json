@@ -802,6 +802,10 @@
       "description": "Automatically skip silences sections in songs",
       "name": "Skip Silences"
     },
+    "skip-live-songs": {
+      "description": "Automatically tries to skip renditions of songs",
+      "name": "Skip Live Songs"
+    },
     "sponsorblock": {
       "description": "Automatically Skips non-music parts like intro/outro or parts of music videos where the song isn't playing",
       "name": "SponsorBlock"
