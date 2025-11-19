@@ -26,7 +26,6 @@ export const nonStudioPatterns = [
   /day\s+on\s+the\s+green/i, // Day on the Green
   // Famous venues/festivals
   /\b(wembley|glastonbury|woodstock|coachella)\b/i, // Wembley, Glastonbury, Woodstock, Coachella
-  
   // Dates and locations
   /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d+/i, // "September 22", "August 31"
   /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/,           // Date formats: 09/22/2024, 9-22-24
