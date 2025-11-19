@@ -28,7 +28,7 @@ export const nonStudioPatterns = [
   /\b(wembley|glastonbury|woodstock|coachella)\b/i, // Wembley, Glastonbury, Woodstock, Coachella
   // Dates and locations
   /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d+/i, // "September 22", "August 31"
-  /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/,           // Date formats: 09/22/2024, 9-22-24
+  /\b\d{1,2}[/-]\d{1,2}[/-]\d{2,4}\b/, // Date formats: 09/22/2024, 9-22-24
   /\b[A-Z][a-z]+,\s*[A-Z]{2}\b/,                 // Locations: "Oakland, CA", "London, UK"
   /\b[A-Z][a-z]+\s+City\b/i,                      // Cities: "Mexico City", "New York City"
   /\b(tokyo|paris|berlin|sydney)\b/i,             // More cities
