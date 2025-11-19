@@ -15,7 +15,9 @@ export default createPlugin({
   renderer: {
     lastSkippedVideoId: '',
 
-    _skipLiveHandler: undefined as unknown as ((songInfo: SongInfo) => void) | undefined,
+    _skipLiveHandler: undefined as unknown as
+      | ((songInfo: SongInfo) => void)
+      | undefined,
 
     start({ ipc }) {
       console.debug('[Skip Live Songs] Renderer started');
