@@ -4,6 +4,7 @@ import { createPlugin } from '@/utils';
 import type { SongInfo } from '@/providers/song-info';
 
 import { nonStudioPatterns } from './patterns';
+
 import type { SongInfo } from '@/providers/song-info';
 
 export default createPlugin({
