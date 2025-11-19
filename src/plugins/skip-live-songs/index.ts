@@ -47,7 +47,9 @@ export default createPlugin({
 
         // Mark as attempted so we don't loop repeatedly
         this.lastSkippedVideoId = songInfo.videoId;
-        console.info(`[Skip Live Songs] Skipping non-studio song: "${titleToCheck}" (id: ${songInfo.videoId})`);
+        console.info(
+          `[Skip Live Songs] Skipping non-studio song: "${titleToCheck}" (id: ${songInfo.videoId})`,
+        );
 
         let clicked = false;
         for (const sel of SELECTORS) {
