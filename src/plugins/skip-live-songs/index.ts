@@ -65,7 +65,9 @@ export default createPlugin({
         }
 
         if (!clicked) {
-          console.warn('[Skip Live Songs] Could not find next button with any configured selector');
+          console.warn(
+            '[Skip Live Songs] Could not find next button with any configured selector',
+          );
         }
       };
 
