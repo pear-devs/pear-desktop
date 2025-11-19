@@ -21,7 +21,7 @@ export const nonStudioPatterns = [
   /\b(acoustic|unplugged|rehearsal|demo)\b/i,     // Acoustic, Unplugged, Rehearsal, Demo
   
   // Venues
-  /\b(arena|stadium|center|centre|hall)\b/i,      // Arena, Stadium, Center, Hall
+  /\b(arena|stadium|center|centre|hall)\b/i, // Arena, Stadium, Center, Hall
   /\bmadison\s+square\s+garden\b/i, // Madison Square Garden
   /day\s+on\s+the\s+green/i, // Day on the Green
   // Famous venues/festivals
