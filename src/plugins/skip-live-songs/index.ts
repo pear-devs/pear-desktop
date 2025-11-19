@@ -54,7 +54,9 @@ export default createPlugin({
           const button = document.querySelector<HTMLElement>(sel);
           if (button) {
             button.click();
-            console.debug(`[Skip Live Songs] Clicked next button using selector: ${sel}`);
+            console.debug(
+              `[Skip Live Songs] Clicked next button using selector: ${sel}`,
+            );
             clicked = true;
             break;
           }
