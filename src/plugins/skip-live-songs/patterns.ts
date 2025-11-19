@@ -10,7 +10,7 @@ export const nonStudioPatterns = [
   /[\(\[]live[\)\]]/i, // "(Live)" or "[Live]" in parentheses/brackets
   /live\s+(at|from|in|on|with|@)/i, // "Live at", "Live from", "Live in", etc.
   /live\s+with\b/i, // "Live with" (e.g. "Live with the SFSO")
-  /-\s*live\s*$/i,                                // "- Live" at the end of title
+  /-\s*live\s*$/i, // "- Live" at the end of title
   /:\s*live\s*$/i,                                // ": Live" at the end of title
   
   // Concert/Performance indicators
