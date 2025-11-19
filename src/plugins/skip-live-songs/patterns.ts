@@ -23,7 +23,7 @@ export const nonStudioPatterns = [
   // Venues
   /\b(arena|stadium|center|centre|hall)\b/i,      // Arena, Stadium, Center, Hall
   /\bmadison\s+square\s+garden\b/i, // Madison Square Garden
-  /day\s+on\s+the\s+green/i,                      // Day on the Green
+  /day\s+on\s+the\s+green/i, // Day on the Green
   
   // Famous venues/festivals
   /\b(wembley|glastonbury|woodstock|coachella)\b/i, // Wembley, Glastonbury, Woodstock, Coachella
