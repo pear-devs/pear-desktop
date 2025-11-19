@@ -1,6 +1,6 @@
 /**
  * Patterns to detect non-studio recordings
- * 
+ *
  * Add or modify patterns here to customize what gets skipped.
  * All patterns are not case-sensitive.
  */
