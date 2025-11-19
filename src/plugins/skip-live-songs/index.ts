@@ -80,7 +80,9 @@ export default createPlugin({
       if (this._skipLiveHandler) {
         ipc.removeAllListeners('peard:update-song-info');
         this._skipLiveHandler = undefined;
-        console.debug('[Skip Live Songs] Renderer stopped and listeners removed');
+        console.debug(
+          '[Skip Live Songs] Renderer stopped and listeners removed',
+        );
       }
     },
   },
