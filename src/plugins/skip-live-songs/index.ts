@@ -39,7 +39,9 @@ export default createPlugin({
         // Skip if we've already attempted this video id
         if (songInfo.videoId === this.lastSkippedVideoId) return;
 
-        const isNonStudio = nonStudioPatterns.some(pattern => pattern.test(titleToCheck));
+        const isNonStudio = nonStudioPatterns.some((pattern) =>
+          pattern.test(titleToCheck),
+        );
 
         if (!isNonStudio) return; // studio version — nothing to do
 
