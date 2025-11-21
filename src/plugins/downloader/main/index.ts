@@ -8,6 +8,7 @@ import {
   UniversalCache,
   Utils,
   YTNodes,
+  Platform,
 } from '\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js';
 import is from 'electron-is';
 import filenamify from 'filenamify';
@@ -56,6 +57,22 @@ const ffmpeg = lazy(async () =>
   }),
 );
 const ffmpegMutex = new Mutex();
+
+Platform.shim.eval = async (data: Types.BuildScriptResult, env: Record<string, Types.VMPrimative>) => {
+  const properties = [];
+
+  if(env.n) {
+    properties.push(`n: exportedVars.nFunction("${env.n}")`)
+  }
+
+  if (env.sig) {
+    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
+  }
+
+  const code = `${data.output}\nreturn { ${properties.join(', ')} }`;
+
+  return new Function(code)();
+}
 
 let yt: Innertube;
 let win: BrowserWindow;
@@ -131,7 +148,6 @@ export const onMainLoad = async ({
 
   yt = await Innertube.create({
     cache: new UniversalCache(false),
-    player_id: '0004de42',
     cookie: await getCookieFromWindow(win),
     generate_session_locally: true,
     fetch: getNetFetchAsFetch(),
