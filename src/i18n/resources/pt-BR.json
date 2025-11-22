@@ -564,6 +564,27 @@
       "description": "Torna o controle deslizante de volume exponencial para que seja mais fácil selecionar volumes mais baixos.",
       "name": "Volume Exponencial"
     },
+    "global-keybinds": {
+      "name": "Teclas de atalho globais",
+      "description": "Defina teclas de atalho globais para controlar a reprodução mesmo quando o aplicativo não estiver em foco",
+      "management": "Gerenciar teclas de atalho globais",
+      "dubleTapToogleWindowVisibility": {
+        "label": "Ativar toque duplo em Play/Pause para alternar a visibilidade da janela",
+        "tooltip": "Quando ativado, tocar duas vezes na tecla Play/Pause mostrará/ocultará a janela do aplicativo"
+      },
+      "prompt": {
+        "title": "Teclas de atalho globais",
+        "label": "Escolha as teclas de atalho globais:",
+        "volume-up": "Aumentar volume",
+        "volume-down": "Diminuir volume",
+        "next-track": "Próxima faixa",
+        "previous-track": "Faixa anterior",
+        "like-track": "Curtir faixa",
+        "dislike-track": "Não curtir faixa",
+        "toogle-play": "Reproduzir / Pausar",
+        "toogle-window-visibility": "Mostrar/Ocultar janela (Toque duplo)"
+      }
+    },
     "in-app-menu": {
       "description": "Dá às barras de menu uma aparência elegante, escura ou com a cor do álbum",
       "menu": {
