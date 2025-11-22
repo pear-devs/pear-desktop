@@ -1,5 +1,6 @@
 import { globalShortcut, ipcMain, type MenuItem } from 'electron';
 import prompt, { type KeybindOptions } from 'custom-electron-prompt';
+
 import { eventRace } from './utils';
 
 import { createPlugin } from '@/utils';
