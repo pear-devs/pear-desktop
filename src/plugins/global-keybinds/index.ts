@@ -1,5 +1,6 @@
 import { globalShortcut, ipcMain } from 'electron';
 import prompt, { type KeybindOptions } from 'custom-electron-prompt';
+
 import type { BackendContext } from '@/types/contexts';
 
 import { eventRace } from './utils';
