@@ -215,7 +215,7 @@ export default createPlugin({
         globalShortcut.unregisterAll();
       });
 
-      ipcMain.on('global-keybinds:refresh', async () => {
+      ipcMain.on('global-keybinds:refresh', () => {
         registerShortcuts({
           getConfig,
           ipc,
