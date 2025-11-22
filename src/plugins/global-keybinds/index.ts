@@ -1,14 +1,13 @@
 import { globalShortcut, ipcMain } from 'electron';
 import prompt, { type KeybindOptions } from 'custom-electron-prompt';
 
-import type { BackendContext } from '@/types/contexts';
-
 import { eventRace } from './utils';
 import { createPlugin } from '@/utils';
 
 import promptOptions from '@/providers/prompt-options';
 import { onPlayerApiReady } from './renderer';
 import { t } from '@/i18n';
+import type { BackendContext } from '@/types/contexts';
 
 export type GlobalKeybindsPluginConfig = {
   enabled: boolean;
