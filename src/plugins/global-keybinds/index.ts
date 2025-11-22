@@ -2,7 +2,7 @@ import { globalShortcut, ipcMain } from 'electron';
 import prompt, { type KeybindOptions } from 'custom-electron-prompt';
 
 import { eventRace } from './utils';
-
+import type { BackendContext } from '@/types/contexts';
 import { createPlugin } from '@/utils';
 
 import promptOptions from '@/providers/prompt-options';
@@ -59,7 +59,7 @@ export default createPlugin({
   addedVersion: '3.12.x',
   restartNeeded: false,
   config: Object.assign({}, defaultConfig),
-  menu: async ({ setConfig, getConfig, window, refresh }) => {
+  menu: async ({ setConfig, getConfig, window }) => {
     const config = await getConfig();
 
     function changeOptions(
@@ -159,13 +159,7 @@ export default createPlugin({
         getConfig,
         ipc,
         window,
-      }: {
-        getConfig: () =>
-          | Promise<GlobalKeybindsPluginConfig>
-          | GlobalKeybindsPluginConfig;
-        ipc: any;
-        window: Electron.BrowserWindow;
-      }) {
+      }: BackendContext<GlobalKeybindsPluginConfig>) {
         globalShortcut.unregisterAll();
         const config = await getConfig();
 
@@ -180,13 +174,16 @@ export default createPlugin({
           return accelerator.replace(/'(.)'/g, '$1');
         }
 
-        Object.entries(config).forEach(([key, value]: [string, any]) => {
+        Object.entries(config).forEach(([key, value]) => {
+          if (key === 'enabled' || key === 'dubleTapToogleWindowVisibility')
+            return;
+          const keybind = value as KeybindsOptions;
+
           try {
-            if (key === 'enabled') return;
-            if (!value?.value) return;
+            if (!keybind?.value) return;
             if (key === 'tooglePlay' && config.dubleTapToogleWindowVisibility) {
               globalShortcut.register(
-                parseAcelerator(value.value),
+                parseAcelerator(keybind.value),
                 eventRace({
                   single: () => {
                     ipc.send(key, true);
@@ -200,7 +197,7 @@ export default createPlugin({
               return;
             }
 
-            globalShortcut.register(parseAcelerator(value.value), () => {
+            globalShortcut.register(parseAcelerator(keybind.value), () => {
               console.log(
                 `Global Keybinds Plugin: Triggered shortcut for ${key}`,
               );
@@ -208,7 +205,7 @@ export default createPlugin({
             });
           } catch (error) {
             console.error(
-              `Global Keybinds Plugin: Error registering shortcut ${value.value}: ${error}`,
+              `Global Keybinds Plugin: Error registering shortcut ${keybind.value}: ${error}`,
             );
           }
         });
@@ -219,10 +216,18 @@ export default createPlugin({
       });
 
       ipcMain.on('global-keybinds:refresh', async () => {
-        registerShortcuts({ getConfig, ipc, window });
+        registerShortcuts({
+          getConfig,
+          ipc,
+          window,
+        } as BackendContext<GlobalKeybindsPluginConfig>);
       });
 
-      await registerShortcuts({ getConfig, ipc, window });
+      await registerShortcuts({
+        getConfig,
+        ipc,
+        window,
+      } as BackendContext<GlobalKeybindsPluginConfig>);
     },
     stop() {
       globalShortcut.unregisterAll();
