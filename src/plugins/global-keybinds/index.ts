@@ -7,6 +7,7 @@ import { createPlugin } from '@/utils';
 import promptOptions from '@/providers/prompt-options';
 import { onPlayerApiReady } from './renderer';
 import { t } from '@/i18n';
+
 import type { BackendContext } from '@/types/contexts';
 
 export type GlobalKeybindsPluginConfig = {
