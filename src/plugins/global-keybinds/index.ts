@@ -205,7 +205,8 @@ export default createPlugin({
             });
           } catch (error) {
             console.error(
-              `Global Keybinds Plugin: Error registering shortcut ${keybind.value}: ${error}`,
+              `Global Keybinds Plugin: Error registering shortcut ${keybind.value}:`,
+              error,
             );
           }
         });
