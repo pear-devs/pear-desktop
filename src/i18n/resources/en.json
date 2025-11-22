@@ -692,6 +692,10 @@
         "button": "Picture-in-picture"
       }
     },
+    "pitch-shifter": {
+      "description": "Adds real-time pitch control slider for YouTube Music",
+      "name": "Pitch Shifter"
+    },
     "playback-speed": {
       "description": "Listen fast, listen slow! Adds a slider that controls song speed",
       "name": "Playback Speed",
