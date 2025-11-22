@@ -1,4 +1,4 @@
-import { globalShortcut, ipcMain, type MenuItem } from 'electron';
+import { globalShortcut, ipcMain } from 'electron';
 import prompt, { type KeybindOptions } from 'custom-electron-prompt';
 import { eventRace } from './utils';
 
@@ -7,7 +7,6 @@ import { createPlugin } from '@/utils';
 import promptOptions from '@/providers/prompt-options';
 import { onPlayerApiReady } from './renderer';
 import { t } from '@/i18n';
-import { restart } from '@/providers/app-controls';
 
 export type GlobalKeybindsPluginConfig = {
   enabled: boolean;

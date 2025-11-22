@@ -1,5 +1,5 @@
 export function eventRace(
-  { single, double }: { single: Function; double: Function },
+  { single, double }: { single: () => void; double: () => void },
   time = 200,
 ) {
   let timeout: NodeJS.Timeout | null = null;

@@ -9,7 +9,7 @@ function $<E extends Element = Element>(selector: string) {
 
 let api: MusicPlayer;
 
-export const onPlayerApiReady = async (
+export const onPlayerApiReady = (
   playerApi: MusicPlayer,
   context: RendererContext<GlobalKeybindsPluginConfig>,
 ) => {
