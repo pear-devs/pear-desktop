@@ -4,7 +4,6 @@ import { createPlugin } from '@/utils';
 import type { SongInfo } from '@/providers/song-info';
 import { nonStudioPatterns } from './patterns';
 
-
 export default createPlugin({
   name: () => t('plugins.skip-live-songs.name'),
   description: () => t('plugins.skip-live-songs.description'),
