@@ -3,7 +3,7 @@ import KuromojiAnalyzer from 'kuroshiro-analyzer-kuromoji';
 import Kuroshiro from 'kuroshiro';
 import { romanize as esHangulRomanize } from 'es-hangul';
 import hanja from 'hanja';
-import * as pinyin from 'tiny-pinyin';
+import { pinyin } from 'pinyin-pro';
 import { romanize as romanizeThaiFrag } from '@dehoist/romanize-thai';
 import { lazy } from 'lazy-var';
 import { detect } from 'tinyld';
@@ -182,9 +182,7 @@ export const romanizeHangul = (line: string) =>
   esHangulRomanize(hanja.translate(line, 'SUBSTITUTION'));
 
 export const romanizeChinese = (line: string) => {
-  return line.replaceAll(/[\u4E00-\u9FFF]+/g, (match) =>
-    pinyin.convertToPinyin(match, ' ', true),
-  );
+  return line.replaceAll(/[\u4E00-\u9FFF]+/g, (match) => pinyin(match));
 };
 
 const thaiSegmenter = Intl.Segmenter.supportedLocalesOf('th').includes('th')
