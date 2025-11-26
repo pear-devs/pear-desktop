@@ -111,6 +111,9 @@ importers:
       butterchurn-presets:
         specifier: 3.0.0-beta.4
         version: 3.0.0-beta.4
+      chinese-conv:
+        specifier: ^4.0.0
+        version: 4.0.0
       color:
         specifier: 5.0.0
         version: 5.0.0
@@ -1901,6 +1904,10 @@ packages:
   chalk@5.0.1:
     resolution: {integrity: sha512-Fo07WOYGqMfCWHOzSXOt2CxDbC6skS/jO9ynEcmpANMoPrD+W1r1K6Vx7iNm+AQmETU1Xr2t+n8nzkV9t6xh3w==}
     engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
+
+  chinese-conv@4.0.0:
+    resolution: {integrity: sha512-PVBMzvv6CtX1cubaDXfxYscIdbOAHPuY/E2vnfJIzOACX+xIW4NRKRlNsZVI2p5KxGsXyUp7tVHfvQlqZ4yx/w==}
+    engines: {node: ^20.19.0 || >=22.12.0}
 
   chownr@2.0.0:
     resolution: {integrity: sha512-bIomtDF5KGpdogkLd9VspvFzk9KfpyyGlS8YFVZl7TGPBHL5snIOnxeshwVgPteQ9b4Eydl+pVbIyE1DcvCWgQ==}
@@ -6641,6 +6648,8 @@ snapshots:
       supports-color: 7.2.0
 
   chalk@5.0.1: {}
+
+  chinese-conv@4.0.0: {}
 
   chownr@2.0.0: {}
 

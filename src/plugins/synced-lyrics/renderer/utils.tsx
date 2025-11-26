@@ -7,6 +7,7 @@ import * as pinyin from 'tiny-pinyin';
 import { romanize as romanizeThaiFrag } from '@dehoist/romanize-thai';
 import { lazy } from 'lazy-var';
 import { detect } from 'tinyld';
+import { sify, tify } from 'chinese-conv';
 
 import { waitForElement } from '@/utils/wait-for-element';
 import { LyricsRenderer, setIsVisible } from './renderer';
@@ -82,6 +83,22 @@ export const canonicalize = (text: string) => {
       )
       .trim()
   );
+};
+
+export const convertChineseCharacter = (
+  text: string,
+  mode: 'simplifiedToTraditional' | 'traditionalToSimplified',
+) => {
+  if (!hasChinese([text])) return text;
+
+  switch (mode) {
+    case 'simplifiedToTraditional':
+      return tify(text);
+    case 'traditionalToSimplified':
+      return sify(text);
+    default:
+      return text;
+  }
 };
 
 export const simplifyUnicode = (text?: string) =>
