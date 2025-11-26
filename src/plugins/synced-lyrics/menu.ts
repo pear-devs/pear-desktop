@@ -37,7 +37,7 @@ export const menu = async (
               click() {
                 ctx.setConfig({ preferredProvider: provider });
               },
-            } as const),
+            }) as const,
         ),
       ],
     },
