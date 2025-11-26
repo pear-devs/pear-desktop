@@ -37,7 +37,7 @@ export const menu = async (
               click() {
                 ctx.setConfig({ preferredProvider: provider });
               },
-            }) as const,
+            } as const),
         ),
       ],
     },
@@ -155,7 +155,9 @@ export const menu = async (
     },
     {
       label: t('plugins.synced-lyrics.menu.convert-chinese-character.label'),
-      toolTip: t('plugins.synced-lyrics.menu.convert-chinese-character.tooltip'),
+      toolTip: t(
+        'plugins.synced-lyrics.menu.convert-chinese-character.tooltip',
+      ),
       type: 'submenu',
       submenu: [
         {
@@ -166,7 +168,9 @@ export const menu = async (
             'plugins.synced-lyrics.menu.convert-chinese-character.submenu.disabled.tooltip',
           ),
           type: 'radio',
-          checked: config.convertChineseCharacter === 'disabled' || config.convertChineseCharacter === undefined,
+          checked:
+            config.convertChineseCharacter === 'disabled' ||
+            config.convertChineseCharacter === undefined,
           click() {
             ctx.setConfig({
               convertChineseCharacter: 'disabled',
