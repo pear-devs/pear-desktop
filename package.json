@@ -166,7 +166,7 @@
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-prettier": "5.5.4",
     "eslint-plugin-solid": "0.14.5",
-    "glob": "11.0.3",
+    "glob": "11.1.0",
     "node-gyp": "11.4.2",
     "playwright": "1.55.0",
     "ts-morph": "27.0.0",
