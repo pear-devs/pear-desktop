@@ -3,7 +3,7 @@
     "console": {
       "plugins": {
         "execute-failed": "Erweiterung {{pluginName}}::{{contextName}} konnte nicht ausgeführt werden",
-        "executed-at-ms": "Erweiterung {{pluginName}}::{{contextName}} ausgeführt in {{ms}}ms",
+        "executed-at-ms": "Erweiterung {{pluginName}}::{{contextName}} in {{ms}}ms ausgeführt",
         "initialize-failed": "Initialisierung der Erweiterung \"{{pluginName}}\" fehlgeschlagen",
         "load-all": "Lade alle Erweiterungen",
         "load-failed": "Laden der Erweiterung \"{{pluginName}}\" fehlgeschlagen",

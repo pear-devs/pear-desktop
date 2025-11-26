@@ -337,7 +337,7 @@
       }
     },
     "audio-compressor": {
-      "description": "Apply compression k audiu (snižuje hlasitost nejhlasitěších částí signálu and zvyšuje hlasitost nejjemnějších částí)",
+      "description": "Aplikuje kompresi k audiu (snižuje hlasitost nejhlasitěších částí signálu a zvyšuje hlasitost nejjemnějších částí)",
       "name": "Audio kompresor"
     },
     "auth-proxy-adapter": {
@@ -462,8 +462,8 @@
           "label": "Text statusu",
           "submenu": {
             "artist": "Poslouchám: {artist}",
-            "title": "Poslouchám {song title}",
-            "pear-desktop": "Poslouchám Pear Desktop"
+            "pear-desktop": "Poslouchám Pear Desktop",
+            "title": "Poslouchám {song title}"
           }
         }
       },

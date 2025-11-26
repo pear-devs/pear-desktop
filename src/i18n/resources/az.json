@@ -123,7 +123,7 @@
           },
           "language": {
             "dialog": {
-              "message": "Dil yenidən başladılandan sonra dəyişəcək",
+              "message": "Dil yenidən başlatmadan sonra dəyişiləcək",
               "title": "Dil dəyişdirildi"
             },
             "label": "Dil",
@@ -131,9 +131,11 @@
               "to-help-translate": "Tərcüməyə kömək etmək istəyirsiniz? Buraya basın"
             }
           },
-          "resume-on-start": "Tətbiq başladıqda son mahnını davam etdir",
+          "resume-on-start": "Tətbiq başladıqda son mahnıdan davam et",
+          "single-instance-lock": "Tək proqram kilidi",
+          "start-at-login": "Giriş səhifəsində başlat",
           "starting-page": {
-            "label": "Başlanğıc səhifəsi",
+            "label": "Giriş səhifəsi",
             "unset": "Təyin edilməyib"
           },
           "tray": {
