@@ -415,7 +415,8 @@ const routes = {
     method: 'get',
     path: `/api/${API_VERSION}/queue/next`,
     summary: 'get next song info',
-    description: 'Get information about the next song in the queue (relative index +1)',
+    description:
+      'Get information about the next song in the queue (relative index +1)',
     responses: {
       200: {
         description: 'Success',
