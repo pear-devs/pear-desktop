@@ -9,7 +9,7 @@ import { TimerManager } from './timer-manager';
 import {
   buildDiscordButtons,
   padHangulFields,
-  truncateString,
+  sanitizeActivityText,
   isSeek,
 } from './utils';
 
@@ -99,13 +99,13 @@ export class DiscordService {
     const activityInfo: SetActivity = {
       type: ActivityType.Listening,
       statusDisplayType: config.statusDisplayType,
-      details: truncateString(songInfo.alternativeTitle ?? songInfo.title, 128), // Song title
+      details: sanitizeActivityText(songInfo.alternativeTitle ?? songInfo.title), // Song title
       detailsUrl: songInfo.url ?? undefined,
-      state: truncateString(songInfo.tags?.at(0) ?? songInfo.artist, 128), // Artist name
+      state: sanitizeActivityText(songInfo.tags?.at(0) ?? songInfo.artist), // Artist name
       stateUrl: songInfo.artistUrl,
       largeImageKey: songInfo.imageSrc ?? undefined,
       largeImageText: songInfo.album
-        ? truncateString(songInfo.album, 128)
+        ? sanitizeActivityText(songInfo.album)
         : undefined,
       buttons: buildDiscordButtons(config, songInfo),
     };

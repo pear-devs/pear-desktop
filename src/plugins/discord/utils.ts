@@ -18,6 +18,26 @@ export const truncateString = (str: string, length: number): string => {
 };
 
 /**
+ * Sanitizes a string for Discord Activity.
+ * @param input - The string to sanitize.
+ * @returns The sanitized string.
+ */
+export function sanitizeActivityText(input: string): string {
+  if (!input) {
+    throw new Error("Activity text cannot be empty.");
+  }
+
+  const trimmed = input.trim();
+  let safeString = truncateString(trimmed, 128);
+
+  if (safeString.length < 2) {
+    safeString = safeString + "⠀"; // change if you have better replacement
+  }
+
+  return safeString;
+}
+
+/**
  * Builds the array of buttons for the Discord Rich Presence activity.
  * @param config - The plugin configuration.
  * @param songInfo - The current song information.
