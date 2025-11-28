@@ -10,13 +10,16 @@
 <!--[![AUR](https://img.shields.io/aur/version/pear-desktop-bin?color=blueviolet&style=for-the-badge)](https://aur.archlinux.org/packages/pear-desktop-bin)-->
 [![Known Vulnerabilities](https://snyk.io/test/github/pear-devs/pear-desktop/badge.svg)](https://snyk.io/test/github/pear-devs/pear-desktop)
 
-</div>
-
 ## :warning: [Pear Desktop is NOT affiliated with YouTube Music or Google](#disclaimer-of-non-affiliation)
+
+![Pear Desktop running](/web/screenshot.png)
+</div>
 
 ## Index
 
 - [Features](#features)
+  - [Additional Settings](#additional-settings)
+  - [Many Plugins](#plugins)
 - [Translation](#translation)
 - [Download](#download)
   - [Arch Linux](#arch-linux)
@@ -25,13 +28,68 @@
 - [Themes](#themes)
 - [Development](#development)
   - [Building your own plugins](#building-your-own-plugins)
-    - [Creating a plugin](#creating-a-plugin)
-    - [Common use cases](#common-use-cases)
   - [Building from source](#building-from-source)
     - [PNPM Commands](#pnpm-commands)
 - [License](#license)
 - [FAQ](#faq)
 - [Disclaimer of non-affiliation](#disclaimer-of-non-affiliation)
+
+# Features
+
+## Additional Settings
+
+- Resume the last playing song on app start
+- Set the default page to start the app on
+- [Theming](#themes) to load custom CSS
+- Tray Applet
+
+## Plugins
+
+<details>
+  <summary>Show plugin list</summary>
+
+- Ad blocker: Block ads within the application
+- Album Actions: (TODO, add desc)
+- Album Color Theme: (TODO, add desc)
+- Ambient Mode: Add a soft glow around album art
+- Amuse: (TODO, add desc)
+- API Server: (TODO, add desc)
+- Audio Compressor: (TODO, add desc)
+- Auth Proxy Adapter: (TODO, add desc)
+- Blur Navigation bar: Add a blur affect to the navigation bar
+- Bypass Age Restrictions: (TODO, add desc)
+- Captions Selector: (TODO, add desc)
+- Compact Sidebar: (TODO: I'm not sure what this does, given its functionality can be achieved in the native UI)
+- Crossfade: (TODO: Verify this works at all? I didn't notice anything)
+- Custom Output Device: Specify an output device manually within the app
+- Disable Autoplay: Stop music from autoplaying when switching to a new song
+- Discord Rich Presence: Integrate with Discord RPC (Show currently playing in activities)
+- Downloader: Utilities to download your music
+- Equalizer: (TODO, add desc)
+- Exponential Volume: Change volume exponentially instead of linearly
+- In-App Menu: Add the alt menu to the top of the (in app) UI
+- Lumia Stream: (TODO, add desc)
+- Music Together: (TODO, add desc)
+- Navigation: Add forward/back buttons to the top right corner
+- No Google Login: Bypass the Google account requirement
+- Notifications: Send system notifications when the track changes
+- Performance improvement: (TODO: This shouldn't be a plugin, but natively integrated)
+- Picture-in-Picture: Use the PIP UI instead of the main UI
+- Playback Speed: Change the playback speed
+- Precise Volume: Map the in-app volume slider to keys
+- Scrobbler: Scrobble Music to [Last.fm](https://last.fm) or [ListenBrainz](https://listenbrainz.org/)
+- Shortcuts (MPRIS): **[Linux Only]** Use the [MPRIS](https://specifications.freedesktop.org/mpris/latest/) specification for shortcuts
+- Skip Disliked Songs: Force YouTube Music to skip disliked songs
+- Skip Silences: Skip silences in tracks
+- SponsorBlock: (TODO: add desc)
+- Synced Lyrics: Highlight Lyrics with the current time in the song
+- Tuna OBS: (TODO: add desc)
+- Unobtrusive Player: (TODO, add desc)
+- Video Quality Changer: Add a resolution option to videos playing
+- Video Toggle: More granular settings for tracks that have music videos available
+- Visualizer: Replace album art with a visualizer
+
+</details>
 
 ## Translation
 
@@ -109,6 +167,9 @@ Using plugins, you can:
 Create a folder in `src/plugins/YOUR-PLUGIN-NAME`:
 
 - `index.ts`: the main file of the plugin
+
+<details>
+  <summary>Show example code</summary>
 
 ```typescript
 import style from './style.css?inline'; // import style as inline
@@ -212,6 +273,8 @@ export default createPlugin({
   } // define renderer hook
 });
 ```
+
+</details>
 
 - communicating between the front and back: can be done using the ipcMain module from electron. See `index.ts` file and
   example in `sponsorblock` plugin.
