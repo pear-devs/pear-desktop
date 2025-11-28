@@ -24,18 +24,18 @@ export const truncateString = (str: string, length: number): string => {
  */
 export function sanitizeActivityText(input?: string): string {
   if (!input) {
-    return "undefined";
+    return 'undefined';
   }
 
   const trimmed = input.trim();
   let safeString = truncateString(trimmed, 128);
 
   if (safeString.length <= 0) {
-    return "undefined";
+    return 'undefined';
   }
 
   if (safeString.length < 2) {
-    safeString = safeString + "⠀"; // change if you have better replacement
+    safeString = safeString + '⠀'; // change if you have better replacement
   }
 
   return safeString;
