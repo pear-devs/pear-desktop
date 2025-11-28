@@ -20,15 +20,19 @@ export const truncateString = (str: string, length: number): string => {
 /**
  * Sanitizes a string for Discord Activity.
  * @param input - The string to sanitize.
- * @returns The sanitized string.
+ * @returns The sanitized string or undefined.
  */
-export function sanitizeActivityText(input: string): string {
+export function sanitizeActivityText(input?: string): string {
   if (!input) {
-    throw new Error("Activity text cannot be empty.");
+    return "undefined";
   }
 
   const trimmed = input.trim();
   let safeString = truncateString(trimmed, 128);
+
+  if (safeString.length <= 0) {
+    return "undefined";
+  }
 
   if (safeString.length < 2) {
     safeString = safeString + "⠀"; // change if you have better replacement
