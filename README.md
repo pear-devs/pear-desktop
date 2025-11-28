@@ -48,46 +48,46 @@
 <details>
   <summary>Show plugin list</summary>
 
-- Ad blocker: Block ads within the application
-- Album Actions: (TODO, add desc)
-- Album Color Theme: (TODO, add desc)
-- Ambient Mode: Add a soft glow around album art
-- Amuse: (TODO, add desc)
-- API Server: (TODO, add desc)
-- Audio Compressor: (TODO, add desc)
-- Auth Proxy Adapter: (TODO, add desc)
-- Blur Navigation bar: Add a blur affect to the navigation bar
-- Bypass Age Restrictions: (TODO, add desc)
-- Captions Selector: (TODO, add desc)
-- Compact Sidebar: (TODO: I'm not sure what this does, given its functionality can be achieved in the native UI)
-- Crossfade: (TODO: Verify this works at all? I didn't notice anything)
-- Custom Output Device: Specify an output device manually within the app
-- Disable Autoplay: Stop music from autoplaying when switching to a new song
-- Discord Rich Presence: Integrate with Discord RPC (Show currently playing in activities)
-- Downloader: Utilities to download your music
-- Equalizer: (TODO, add desc)
-- Exponential Volume: Change volume exponentially instead of linearly
-- In-App Menu: Add the alt menu to the top of the (in app) UI
-- Lumia Stream: (TODO, add desc)
-- Music Together: (TODO, add desc)
-- Navigation: Add forward/back buttons to the top right corner
-- No Google Login: Bypass the Google account requirement
-- Notifications: Send system notifications when the track changes
-- Performance improvement: (TODO: This shouldn't be a plugin, but natively integrated)
-- Picture-in-Picture: Use the PIP UI instead of the main UI
-- Playback Speed: Change the playback speed
-- Precise Volume: Map the in-app volume slider to keys
-- Scrobbler: Scrobble Music to [Last.fm](https://last.fm) or [ListenBrainz](https://listenbrainz.org/)
-- Shortcuts (MPRIS): **[Linux Only]** Use the [MPRIS](https://specifications.freedesktop.org/mpris/latest/) specification for shortcuts
-- Skip Disliked Songs: Force YouTube Music to skip disliked songs
-- Skip Silences: Skip silences in tracks
-- SponsorBlock: (TODO: add desc)
-- Synced Lyrics: Highlight Lyrics with the current time in the song
-- Tuna OBS: (TODO: add desc)
-- Unobtrusive Player: (TODO, add desc)
-- Video Quality Changer: Add a resolution option to videos playing
-- Video Toggle: More granular settings for tracks that have music videos available
-- Visualizer: Replace album art with a visualizer
+- **Ad blocker**: Block ads within the application
+- **Album Actions**: Perform bulk actions for all tracks in an album or playlist
+- **Album Color Theme**: Applies a dynamic theme and visual effects based on the album color palette
+- **Ambient Mode**: Add a soft glow around album art
+- **Amuse**: (TODO, add desc)
+- **API Server**: (TODO, add desc)
+- **Audio Compressor**: Apply [Dynamic Range Compression](https://en.wikipedia.org/wiki/Dynamic_range_compression) to audio (Average the volume of music)
+- **Auth Proxy Adapter**: (TODO, add desc)
+- **Blur Navigation bar**: Add a blur affect to the navigation bar
+- **Bypass Age Restrictions**: Bypass YouTube's age restriction
+- **Captions Selector**: Enable Captions
+- **Compact Sidebar**: Force the sidebar to always be compact
+- **Crossfade**: Crossfade songs when changing tracks
+- **Custom Output Device**: Specify an output device manually within the app
+- **Disable Autoplay**: Stop music from autoplaying when switching to a new song
+- **Discord Rich Presence**: Integrate with Discord RPC (Show currently playing in activities)
+- **Downloader**: Utilities to download your music
+- **Equalizer**: Add an [equalizer](https://en.wikipedia.org/wiki/Audio_equalization) to adjust the tone of audio
+- **Exponential Volume**: Change volume exponentially instead of linearly
+- **In-App Menu**: Add the alt menu to the top of the (in app) UI
+- **Lumia Stream**: Enable [Lumia Stream](https://lumiastream.com/) integration
+- **Music Together**: Share a playlist with others. When the host plays a song, everyone else will hear the same song
+- **Navigation**: Add forward/back buttons to the top right corner
+- **No Google Login:** Bypass the Google account requirement
+- **Notifications**: Send system notifications when the track changes
+- **Performance improvement**: (TODO: This shouldn't be a plugin, but natively integrated)
+- **Picture-in-Picture**: Add an option to enable PiP (Show album art or the music video in its own window)
+- **Playback Speed**: Change the playback speed
+- **Precise Volume**: Map the in-app volume slider to keys
+- **Scrobbler**: Scrobble Music to [Last.fm](https://last.fm) or [ListenBrainz](https://listenbrainz.org/)
+- **Shortcuts (MPRIS)**: **[Linux Only]** Use the [MPRIS](https://specifications.freedesktop.org/mpris/latest/) specification for shortcuts
+- **Skip Disliked Songs**: Force YouTube Music to skip disliked songs
+- **Skip Silences**: Skip silences in tracks
+- **SponsorBlock**: Automatically Skips non-music parts like intro/outro or parts of music videos where the song isn't playing
+- **Synced Lyrics**: Highlight Lyrics with the current time in the song
+- **Tuna OBS**: Integration with the [Tuna plugin for OBS](https://obsproject.com/forum/resources/tuna.843/)
+- **Unobtrusive Player**: Prevents the player from popping up when playing a song
+- **Video Quality Changer**: Add a resolution option to videos playing
+- **Video Toggle**: More granular settings for tracks that have music videos available
+- **Visualizer**: Replace album art with a visualizer
 
 </details>
 
