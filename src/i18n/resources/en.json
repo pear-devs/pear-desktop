@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Enable seekbar theming"
       },
       "name": "Album Color Theme"
     },

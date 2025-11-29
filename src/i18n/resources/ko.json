@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "재생바 색조 변경 활성화"
       },
       "name": "앨범 컬러 기반 테마"
     },
