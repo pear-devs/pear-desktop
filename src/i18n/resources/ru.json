@@ -456,6 +456,7 @@
         "disconnected": "Отключено",
         "hide-duration-left": "Скрыть сколько осталось времени",
         "hide-github-button": "Скрыть ссылку на GitHub",
+        "show-youtube-user": "Показать информацию пользователя YouTube Music",
         "play-on-pear-desktop": "Воспроизвести на Pear Desktop",
         "set-inactivity-timeout": "Поставить таймер неактивности",
         "set-status-display-type": {
