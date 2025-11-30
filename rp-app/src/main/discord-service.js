@@ -191,6 +191,12 @@ class DiscordService {
       payload.type = activity.type;
     }
 
+    // Status display type - controls what shows in "Listening to X" / "Playing X"
+    // 0 = App Name, 1 = State field, 2 = Details field
+    if (activity.statusDisplayType !== undefined) {
+      payload.statusDisplayType = activity.statusDisplayType;
+    }
+
     // Details (first line)
     if (activity.details && activity.details.trim()) {
       payload.details = this._truncate(activity.details, 128);

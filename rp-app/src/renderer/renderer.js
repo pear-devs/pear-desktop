@@ -9,6 +9,7 @@ const statusText = document.querySelector('.status-text');
 
 // Activity fields
 const activityType = document.getElementById('activityType');
+const statusDisplayType = document.getElementById('statusDisplayType');
 const details = document.getElementById('details');
 const state = document.getElementById('state');
 const largeImageKey = document.getElementById('largeImageKey');
@@ -103,6 +104,7 @@ function getActivityData() {
 
   return {
     type: parseInt(activityType.value),
+    statusDisplayType: parseInt(statusDisplayType.value),
     details: details.value,
     state: state.value,
     largeImageKey: largeImageKey.value,
