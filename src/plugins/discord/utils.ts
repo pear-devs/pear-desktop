@@ -18,24 +18,21 @@ export const truncateString = (str: string, length: number): string => {
 };
 
 /**
- * Sanitizes a string for Discord Activity.
+ * Sanitizes a string for Discord Rich Presence activity, ensuring it meets length requirements.
  * @param input - The string to sanitize.
- * @returns The sanitized string or undefined.
+ * @param fallback - A fallback string to use if the input is empty or whitespace. Defaults to 'undefined'.
+ * @returns The sanitized string, compliant with Discord's requirements.
  */
-export function sanitizeActivityText(input?: string): string {
-  if (!input) {
-    return 'undefined';
-  }
+export function sanitizeActivityText(input: string | undefined, fallback: string = 'undefined'): string {
+  const text = (input && input.trim()) ? input.trim() : fallback.trim();
+  let safeString = truncateString(text, 128);
 
-  const trimmed = input.trim();
-  let safeString = truncateString(trimmed, 128);
-
-  if (safeString.length <= 0) {
-    return 'undefined';
+  if (safeString.length === 0) {
+    return 'undefined'; // change if necessary
   }
 
   if (safeString.length < 2) {
-    safeString = safeString + '⠀'; // change if you have better replacement
+    safeString = safeString.padEnd(2, '⠀'); // change if necessary
   }
 
   return safeString;
