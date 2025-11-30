@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:;">
+  <title>Discord Rich Presence</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Discord Rich Presence</h1>
+      <div class="status" id="status">
+        <span class="status-dot disconnected"></span>
+        <span class="status-text">Disconnected</span>
+      </div>
+    </header>
+
+    <main>
+      <!-- Client ID Section -->
+      <section class="section">
+        <h2>Discord Application</h2>
+        <div class="form-group">
+          <label for="clientId">Application ID</label>
+          <input type="text" id="clientId" placeholder="Enter your Discord App ID">
+          <small>Get it from <a href="#" onclick="require('electron').shell.openExternal('https://discord.com/developers/applications')">Discord Developer Portal</a></small>
+        </div>
+        <div class="button-group">
+          <button id="connectBtn" class="btn btn-primary">Connect</button>
+          <button id="disconnectBtn" class="btn btn-secondary" disabled>Disconnect</button>
+        </div>
+      </section>
+
+      <!-- Activity Type -->
+      <section class="section">
+        <h2>Activity Type</h2>
+        <div class="form-group">
+          <select id="activityType">
+            <option value="0">Playing</option>
+            <option value="1">Streaming</option>
+            <option value="2">Listening</option>
+            <option value="3">Watching</option>
+            <option value="5">Competing</option>
+          </select>
+        </div>
+      </section>
+
+      <!-- Text Fields -->
+      <section class="section">
+        <h2>Text</h2>
+        <div class="form-group">
+          <label for="details">Details (Line 1)</label>
+          <input type="text" id="details" placeholder="What are you doing?" maxlength="128">
+        </div>
+        <div class="form-group">
+          <label for="state">State (Line 2)</label>
+          <input type="text" id="state" placeholder="Additional info" maxlength="128">
+        </div>
+      </section>
+
+      <!-- Images -->
+      <section class="section">
+        <h2>Images</h2>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="largeImageKey">Large Image</label>
+            <input type="text" id="largeImageKey" placeholder="Image key or URL">
+          </div>
+          <div class="form-group">
+            <label for="largeImageText">Large Image Text</label>
+            <input type="text" id="largeImageText" placeholder="Hover text" maxlength="128">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="smallImageKey">Small Image</label>
+            <input type="text" id="smallImageKey" placeholder="Image key or URL">
+          </div>
+          <div class="form-group">
+            <label for="smallImageText">Small Image Text</label>
+            <input type="text" id="smallImageText" placeholder="Hover text" maxlength="128">
+          </div>
+        </div>
+      </section>
+
+      <!-- Timestamps -->
+      <section class="section">
+        <h2>Timestamp</h2>
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="useTimestamp">
+            <span>Show timestamp</span>
+          </label>
+        </div>
+        <div class="form-group" id="timestampOptions" style="display: none;">
+          <label>Mode</label>
+          <div class="radio-group">
+            <label class="radio-label">
+              <input type="radio" name="timestampMode" value="elapsed" checked>
+              <span>Elapsed time</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="timestampMode" value="remaining">
+              <span>Remaining time</span>
+            </label>
+          </div>
+        </div>
+        <div class="form-group" id="endTimeGroup" style="display: none;">
+          <label for="endTime">Duration (seconds)</label>
+          <input type="number" id="endTime" placeholder="e.g., 300 for 5 minutes" min="1">
+        </div>
+      </section>
+
+      <!-- Buttons -->
+      <section class="section">
+        <h2>Buttons</h2>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="button1Label">Button 1 Label</label>
+            <input type="text" id="button1Label" placeholder="Join Game" maxlength="32">
+          </div>
+          <div class="form-group">
+            <label for="button1Url">Button 1 URL</label>
+            <input type="text" id="button1Url" placeholder="https://...">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="button2Label">Button 2 Label</label>
+            <input type="text" id="button2Label" placeholder="Watch Stream" maxlength="32">
+          </div>
+          <div class="form-group">
+            <label for="button2Url">Button 2 URL</label>
+            <input type="text" id="button2Url" placeholder="https://...">
+          </div>
+        </div>
+      </section>
+
+      <!-- Actions -->
+      <section class="section actions">
+        <button id="updateBtn" class="btn btn-success" disabled>Update Presence</button>
+        <button id="clearBtn" class="btn btn-warning" disabled>Clear Presence</button>
+      </section>
+    </main>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
