@@ -197,14 +197,22 @@ class DiscordService {
       payload.statusDisplayType = activity.statusDisplayType;
     }
 
-    // Details (first line)
+    // Details (first line) - min 2 chars required
     if (activity.details && activity.details.trim()) {
-      payload.details = this._truncate(activity.details, 128);
+      payload.details = this._padToMinLength(this._truncate(activity.details, 128));
+    }
+    // Details URL (makes details clickable)
+    if (activity.detailsUrl && activity.detailsUrl.trim()) {
+      payload.detailsUrl = activity.detailsUrl;
     }
 
-    // State (second line)
+    // State (second line) - min 2 chars required
     if (activity.state && activity.state.trim()) {
-      payload.state = this._truncate(activity.state, 128);
+      payload.state = this._padToMinLength(this._truncate(activity.state, 128));
+    }
+    // State URL (makes state clickable)
+    if (activity.stateUrl && activity.stateUrl.trim()) {
+      payload.stateUrl = activity.stateUrl;
     }
 
     // Large image
@@ -212,7 +220,7 @@ class DiscordService {
       payload.largeImageKey = activity.largeImageKey;
     }
     if (activity.largeImageText && activity.largeImageText.trim()) {
-      payload.largeImageText = this._truncate(activity.largeImageText, 128);
+      payload.largeImageText = this._padToMinLength(this._truncate(activity.largeImageText, 128));
     }
 
     // Small image
@@ -220,7 +228,7 @@ class DiscordService {
       payload.smallImageKey = activity.smallImageKey;
     }
     if (activity.smallImageText && activity.smallImageText.trim()) {
-      payload.smallImageText = this._truncate(activity.smallImageText, 128);
+      payload.smallImageText = this._padToMinLength(this._truncate(activity.smallImageText, 128));
     }
 
     // Timestamps
@@ -261,6 +269,19 @@ class DiscordService {
     if (!str) return str;
     if (str.length <= maxLength) return str;
     return str.substring(0, maxLength - 3) + '...';
+  }
+
+  /**
+   * Pad string to minimum length (Discord requires min 2 chars)
+   * Uses Unicode Hangul filler character (invisible)
+   */
+  _padToMinLength(str, minLength = 2) {
+    if (!str) return str;
+    const FILLER = '\u3164'; // Hangul filler (invisible)
+    if (str.length > 0 && str.length < minLength) {
+      return str + FILLER.repeat(minLength - str.length);
+    }
+    return str;
   }
 
   /**

@@ -58,14 +58,27 @@
       <!-- Text Fields -->
       <section class="section">
         <h2>Text</h2>
-        <div class="form-group">
-          <label for="details">Details (Line 1)</label>
-          <input type="text" id="details" placeholder="What are you doing?" maxlength="128">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="details">Details (Line 1)</label>
+            <input type="text" id="details" placeholder="What are you doing?" maxlength="128" minlength="2">
+          </div>
+          <div class="form-group">
+            <label for="detailsUrl">Details URL</label>
+            <input type="text" id="detailsUrl" placeholder="https://... (clickable link)">
+          </div>
         </div>
-        <div class="form-group">
-          <label for="state">State (Line 2)</label>
-          <input type="text" id="state" placeholder="Additional info" maxlength="128">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="state">State (Line 2)</label>
+            <input type="text" id="state" placeholder="Additional info" maxlength="128" minlength="2">
+          </div>
+          <div class="form-group">
+            <label for="stateUrl">State URL</label>
+            <input type="text" id="stateUrl" placeholder="https://... (clickable link)">
+          </div>
         </div>
+        <small>Text fields must be at least 2 characters. URLs make the text clickable.</small>
       </section>
 
       <!-- Images -->

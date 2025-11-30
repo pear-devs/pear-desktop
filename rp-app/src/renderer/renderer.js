@@ -11,7 +11,9 @@ const statusText = document.querySelector('.status-text');
 const activityType = document.getElementById('activityType');
 const statusDisplayType = document.getElementById('statusDisplayType');
 const details = document.getElementById('details');
+const detailsUrl = document.getElementById('detailsUrl');
 const state = document.getElementById('state');
+const stateUrl = document.getElementById('stateUrl');
 const largeImageKey = document.getElementById('largeImageKey');
 const largeImageText = document.getElementById('largeImageText');
 const smallImageKey = document.getElementById('smallImageKey');
@@ -106,7 +108,9 @@ function getActivityData() {
     type: parseInt(activityType.value),
     statusDisplayType: parseInt(statusDisplayType.value),
     details: details.value,
+    detailsUrl: detailsUrl.value,
     state: state.value,
+    stateUrl: stateUrl.value,
     largeImageKey: largeImageKey.value,
     largeImageText: largeImageText.value,
     smallImageKey: smallImageKey.value,
