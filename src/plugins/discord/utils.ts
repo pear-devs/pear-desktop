@@ -28,7 +28,7 @@ export function sanitizeActivityText(input: string | undefined, fallback: string
   let safeString = truncateString(text, 128);
 
   if (safeString.length === 0) {
-    return 'undefined'; // change if necessary
+    return fallback;
   }
 
   if (safeString.length < 2) {
