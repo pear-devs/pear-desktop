@@ -17,6 +17,6 @@ export type BackendType = {
   injectWebSocket?: (server: ReturnType<typeof serve>) => void;
 
   init: (ctx: BackendContext<APIServerConfig>) => void;
-  run: (hostname: string, port: number) => void;
+  run: (config: APIServerConfig) => void;
   end: () => void;
 };
