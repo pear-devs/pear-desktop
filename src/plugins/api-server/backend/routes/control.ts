@@ -422,13 +422,7 @@ const routes = {
         description: 'Success',
         content: {
           'application/json': {
-            schema: z.object({
-              title: z.string().optional(),
-              videoId: z.string().optional(),
-              thumbnail: z.any().optional(),
-              lengthText: z.any().optional(),
-              shortBylineText: z.any().optional(),
-            }),
+            schema: SongInfoSchema,
           },
         },
       },
