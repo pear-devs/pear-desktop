@@ -229,34 +229,58 @@ export default createPlugin({
         );
       });
 
-      document.body.style.setProperty(
+      const setMixedColorProperty = (
+        element: HTMLElement,
+        property: string,
+        color: string,
+        key: string,
+        alpha: number,
+        ratioMultiply?: number,
+      ) => {
+        element.style.setProperty(
+          property,
+          getMixedColor(color, key, alpha, ratioMultiply),
+          'important',
+        );
+      };
+
+      setMixedColorProperty(
+        document.body,
         'background',
-        getMixedColor('rgba(3, 3, 3)', DARK_COLOR_KEY, alpha),
-        'important',
+        'rgba(3, 3, 3)',
+        DARK_COLOR_KEY,
+        alpha,
       );
-      document.documentElement.style.setProperty(
+      setMixedColorProperty(
+        document.documentElement,
         '--ytmusic-background',
-        // #030303
-        getMixedColor('rgba(3, 3, 3)', DARK_COLOR_KEY, alpha),
-        'important',
+        'rgba(3, 3, 3)', // #030303
+        DARK_COLOR_KEY,
+        alpha,
       );
-
-      document.documentElement.style.setProperty(
+      setMixedColorProperty(
+        document.documentElement,
         '--paper-progress-active-color-1',
-        getMixedColor('#f03', COLOR_KEY, alpha, 1.75),
-        'important',
+        '#f03',
+        COLOR_KEY,
+        alpha,
+        1.75,
       );
-
-      document.documentElement.style.setProperty(
+      setMixedColorProperty(
+        document.documentElement,
         '--paper-progress-active-color-2',
-        getMixedColor('#ff2791', COLOR_KEY, alpha, 1.75),
-        'important',
+        '#ff2791',
+        COLOR_KEY,
+        alpha,
+        1.75,
       );
-
-      document.documentElement.style.setProperty(
+      setMixedColorProperty(
+        document.documentElement,
         '--yt-spec-inverted-background',
-        getMixedColor('#f3f3f3', COLOR_KEY, alpha, 1.75),
-        'important',
+        '#f3f3f3',
+        COLOR_KEY,
+        alpha,
+        1.75,
       );
     },
   },
