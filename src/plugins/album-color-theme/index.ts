@@ -219,69 +219,32 @@ export default createPlugin({
         '--paper-progress-active-color-1': '#f03',
         '--paper-progress-active-color-2': '#ff2791',
         '--yt-spec-inverted-background': '#f3f3f3',
+        'background': 'rgba(3, 3, 3)',
+        '--ytmusic-background': 'rgba(3, 3, 3)',
       };
+
+      const colorKeyMap: Record<string, string> = {
+        'background': DARK_COLOR_KEY,
+        '--ytmusic-background': DARK_COLOR_KEY,
+      };
+
+      const ratioMap: Record<string, number> = {
+        '--paper-progress-active-color-1': 1.75,
+        '--paper-progress-active-color-2': 1.75,
+        '--yt-spec-inverted-background': 1.75,
+      };
+
       const getMixedColor = (this as Renderer).getMixedColor.bind(this);
       Object.entries(variableMap).map(([variable, color]) => {
+        const key = colorKeyMap[variable] ?? COLOR_KEY;
+        const ratio = ratioMap[variable] ?? undefined;
+
         document.documentElement.style.setProperty(
           variable,
-          getMixedColor(color, COLOR_KEY, alpha),
+          getMixedColor(color, key, alpha, ratio),
           'important',
         );
       });
-
-      const setMixedColorProperty = (
-        element: HTMLElement,
-        property: string,
-        color: string,
-        key: string,
-        alpha: number,
-        ratioMultiply?: number,
-      ) => {
-        element.style.setProperty(
-          property,
-          getMixedColor(color, key, alpha, ratioMultiply),
-          'important',
-        );
-      };
-
-      setMixedColorProperty(
-        document.body,
-        'background',
-        'rgba(3, 3, 3)',
-        DARK_COLOR_KEY,
-        alpha,
-      );
-      setMixedColorProperty(
-        document.documentElement,
-        '--ytmusic-background',
-        'rgba(3, 3, 3)', // #030303
-        DARK_COLOR_KEY,
-        alpha,
-      );
-      setMixedColorProperty(
-        document.documentElement,
-        '--paper-progress-active-color-1',
-        '#f03',
-        COLOR_KEY,
-        alpha,
-        1.75,
-      );
-      setMixedColorProperty(
-        document.documentElement,
-        '--paper-progress-active-color-2',
-        '#ff2791',
-        COLOR_KEY,
-        alpha,
-        1.75,
-      );
-      setMixedColorProperty(
-        document.documentElement,
-        '--yt-spec-inverted-background',
-        '#f3f3f3',
-        COLOR_KEY,
-        alpha,
-        1.75,
-      );
     },
   },
 });
