@@ -461,7 +461,9 @@
         "set-status-display-type": {
           "label": "Статус",
           "submenu": {
-            "pear-desktop": "Відтворення з Pear Desktop"
+            "artist": "Ви слухаєте {artist}",
+            "pear-desktop": "Відтворення з Pear Desktop",
+            "title": "Ви слухаєте {song title}"
           }
         }
       },
@@ -731,7 +733,12 @@
         }
       },
       "description": "Дозволяє змінювати якість відео за допомогою кнопки на відео оверлеї",
-      "name": "Зміна якості відео"
+      "name": "Зміна якості відео",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "Відкрити налаштування якості плеєру"
+        }
+      }
     },
     "scrobbler": {
       "description": "Додає підтримку скроблінгу (last.fm, Listenbrainz тощо)",
@@ -750,6 +757,7 @@
         "listenbrainz": {
           "token": "Ввести токен користувача ListenBrainz"
         },
+        "scrobble-alternative-artist": "Використати іншого виконавця",
         "scrobble-alternative-title": "Використовувати альтернативні назви",
         "scrobble-other-media": "Скробилити інші медіа"
       },
@@ -835,6 +843,14 @@
           "label": "Зробити текст пісні ідеально синхронізованим",
           "tooltip": "Обчисли до мілісекунд відображення наступного рядка (може мати невеликий вплив на продуктивність)"
         },
+        "preferred-provider": {
+          "label": "Пріорітетний Провайдер",
+          "none": {
+            "label": "Жоден",
+            "tooltip": "Нема провайдера за замовчуванням"
+          },
+          "tooltip": "Оберіть якого провайдера використовувати за замовчуванням"
+        },
         "romanization": {
           "label": "Транслітерувати текст пісень",
           "tooltip": "Якщо текст пісні іншою мовою, спробувати його відобразити латинською версією."
@@ -867,6 +883,27 @@
       "description": "Додає віджет TouchBar для користувачів macOS",
       "name": "TouchBar"
     },
+    "transparent-player": {
+      "description": "Зробити вікно програми прозорим",
+      "menu": {
+        "opacity": {
+          "label": "Прозорість",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Тип",
+          "submenu": {
+            "acrylic": "Акриловий",
+            "mica": "Міка",
+            "none": "Жоден",
+            "tabbed": "З роздільниками"
+          }
+        }
+      },
+      "name": "Прозорий Плеєр"
+    },
     "tuna-obs": {
       "description": "Інтеграція з плагіном Tuna для OBS",
       "name": "Tuna OBS"
@@ -898,7 +935,8 @@
       },
       "name": "Перемикач відео",
       "templates": {
-        "button-song": "Пісня"
+        "button-song": "Пісня",
+        "button-video": "Відео"
       }
     },
     "visualizer": {

@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "启用进度条主题"
       },
       "name": "专辑配色主题"
     },
@@ -462,8 +463,8 @@
           "label": "状态文本",
           "submenu": {
             "artist": "在听 {artist}",
-            "title": "在听 {song title}",
-            "pear-desktop": "在听 Pear Desktop"
+            "pear-desktop": "在听 Pear Desktop",
+            "title": "在听 {song title}"
           }
         }
       },

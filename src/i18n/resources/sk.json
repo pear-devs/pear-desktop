@@ -462,7 +462,7 @@
           "label": "Text stavu",
           "submenu": {
             "artist": "Aktuálne si prehráva {artist}",
-            "pear-desktop": "Aktuálne prehráva Pear Desktop",
+            "pear-desktop": "Počúvať Pear Desktop",
             "title": "Aktuálne si prehráva {song title}"
           }
         }
@@ -731,6 +731,13 @@
             "title": "Výber kvality videa"
           }
         }
+      },
+      "description": "Umožňuje zmeniť kvalitu videa pomocou tlačidla v prekrytí videa",
+      "name": "Zmena kvality videa",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "Otvoriť nastavenia kvality prehrávača"
+        }
       }
     },
     "scrobbler": {
@@ -771,12 +778,38 @@
     "shortcuts": {
       "description": "Povoľuje nastaviť globálne klávesové skratky pre prehrávanie (Prehrať/Pozastaviť/Ďalšie/Predošlé) a vypínať media OSD prepisovaním media kľúčov, zapne Ctrl/CMD + F pre vyhľadávanie, zapne Linux MPRIS podporu pre media kľúče a vlastné klávesové skratky pre pokročilých používateľov.",
       "menu": {
-        "override-media-keys": "Prepísať Media Kľúče"
+        "override-media-keys": "Prepísať Media Kľúče",
+        "set-keybinds": "Globálne ovládanie skladieb"
+      },
+      "name": "Skratky (& MPRIS)",
+      "prompt": {
+        "keybind": {
+          "keybind-options": {
+            "next": "Ďalšia",
+            "play-pause": "Prehrať / Pauza",
+            "previous": "Predošlá"
+          },
+          "label": "Zvoliť globálne klávesové skratky na ovládanie skladieb:",
+          "title": "Globálne klávesové skratky"
+        }
       }
+    },
+    "skip-disliked-songs": {
+      "description": "Preskakuje skladby označené Nepáči sa",
+      "name": "Preskakovať skladby označené Nepáči sa"
+    },
+    "skip-silences": {
+      "description": "Automaticky preskakovať tiché časti v hudbe",
+      "name": "Preskakuj tiché časti"
+    },
+    "sponsorblock": {
+      "description": "Automaticky preskakuje nehudbné časti ako intro/outro, alebo tie časti videoklipov v ktorých nehrá hudba",
+      "name": "Sponzorský blok"
     },
     "synced-lyrics": {
       "description": "Poskytuje synchronizované texty k skladbám, pričom používa poskytovateľov ako LRClib.",
       "errors": {
+        "fetch": "⚠️\t\tPri získavaní textu sa vyskytla chyba. \n\tSkúste znova neskôr.",
         "not-found": "⚠️Pre túto skladbu nebol nájdený žiadny text."
       },
       "menu": {
