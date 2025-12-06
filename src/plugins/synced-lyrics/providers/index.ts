@@ -7,6 +7,7 @@ export enum ProviderNames {
   LRCLib = 'LRCLib',
   MusixMatch = 'MusixMatch',
   LyricsGenius = 'LyricsGenius',
+  SimpMusicLyrics = 'SimpMusic Lyrics',
   // Megalobiz = 'Megalobiz',
 }
 
