@@ -23,7 +23,7 @@ mac:
   icon: assets/generated/icons/mac/icon.icns
   compression: maximum
 win:
-  icon: assets/generated/icons/win/icon.ico
+  icon: assets/icon.png
   target:
     - target: nsis-web
       arch:
