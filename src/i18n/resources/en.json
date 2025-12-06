@@ -323,6 +323,22 @@
         },
         "port": {
           "label": "Port"
+        },
+        "https": {
+          "label": "HTTPS & Certificates",
+          "submenu": {
+            "enable-https": {
+              "label": "Enable HTTPS"
+            },
+            "cert": {
+              "label": "Certificate file (.crt/.pem)",
+              "dialogTitle": "Select HTTPS certificate file"
+            },
+            "key": {
+              "label": "Private key file (.key/.pem)",
+              "dialogTitle": "Select HTTPS private key file"
+            }
+          }
         }
       },
       "name": "API Server [Beta]",
