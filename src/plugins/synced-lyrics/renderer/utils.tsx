@@ -3,10 +3,11 @@ import KuromojiAnalyzer from 'kuroshiro-analyzer-kuromoji';
 import Kuroshiro from 'kuroshiro';
 import { romanize as esHangulRomanize } from 'es-hangul';
 import hanja from 'hanja';
-import * as pinyin from 'tiny-pinyin';
+import { pinyin } from 'pinyin-pro';
 import { romanize as romanizeThaiFrag } from '@dehoist/romanize-thai';
 import { lazy } from 'lazy-var';
 import { detect } from 'tinyld';
+import { sify, tify } from 'chinese-conv';
 
 import { waitForElement } from '@/utils/wait-for-element';
 import { LyricsRenderer, setIsVisible } from './renderer';
@@ -82,6 +83,22 @@ export const canonicalize = (text: string) => {
       )
       .trim()
   );
+};
+
+export const convertChineseCharacter = (
+  text: string,
+  mode: 'simplifiedToTraditional' | 'traditionalToSimplified',
+) => {
+  if (!hasChinese([text])) return text;
+
+  switch (mode) {
+    case 'simplifiedToTraditional':
+      return tify(text);
+    case 'traditionalToSimplified':
+      return sify(text);
+    default:
+      return text;
+  }
 };
 
 export const simplifyUnicode = (text?: string) =>
@@ -165,9 +182,7 @@ export const romanizeHangul = (line: string) =>
   esHangulRomanize(hanja.translate(line, 'SUBSTITUTION'));
 
 export const romanizeChinese = (line: string) => {
-  return line.replaceAll(/[\u4E00-\u9FFF]+/g, (match) =>
-    pinyin.convertToPinyin(match, ' ', true),
-  );
+  return line.replaceAll(/[\u4E00-\u9FFF]+/g, (match) => pinyin(match));
 };
 
 const thaiSegmenter = Intl.Segmenter.supportedLocalesOf('th').includes('th')
