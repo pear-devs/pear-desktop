@@ -1,0 +1,6 @@
+.ytmusic-pivot-bar-renderer[tab-id='FEmusic_liked'],
+ytmusic-guide-signin-promo-renderer,
+a[href='/music_premium'],
+.sign-in-link {
+  display: none !important;
+}
