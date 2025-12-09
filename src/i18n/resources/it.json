@@ -787,7 +787,9 @@
           "keybind-options": {
             "next": "Prossimo",
             "play-pause": "Riproduci / Pausa",
-            "previous": "Precedente"
+            "previous": "Precedente",
+            "like": "Mi piace",
+            "dislike": "Non mi piace"
           },
           "label": "Scegli combinazioni di tasti per il controllo dei brani:",
           "title": "Combinazioni di tasti"

@@ -788,7 +788,9 @@
           "keybind-options": {
             "next": "Suivant",
             "play-pause": "Lecture / Pause",
-            "previous": "Précédent"
+            "previous": "Précédent",
+            "like": "J'aime",
+            "dislike": "Je n'aime pas"
           },
           "label": "Choisissez les raccourcis clavier globaux pour le contrôle des morceaux :",
           "title": "Raccourcis clavier globaux"

@@ -359,7 +359,9 @@
         "keybind": {
           "keybind-options": {
             "next": "შემდეგი",
-            "previous": "წინა"
+            "previous": "წინა",
+            "like": "მომწონს",
+            "dislike": "არ მომწონს"
           }
         }
       }

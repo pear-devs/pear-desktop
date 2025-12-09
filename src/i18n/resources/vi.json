@@ -787,7 +787,9 @@
           "keybind-options": {
             "next": "Tiếp theo",
             "play-pause": "Phát / Tạm dừng",
-            "previous": "Trước đó"
+            "previous": "Trước đó",
+            "like": "Thích",
+            "dislike": "Không thích"
           },
           "label": "Chọn tổ hợp phím chung để kiểm soát bài hát:",
           "title": "Tổ hợp phím chung"

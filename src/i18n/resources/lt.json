@@ -690,7 +690,9 @@
           "keybind-options": {
             "next": "Kitas",
             "play-pause": "Paleisti / Pristabdyti",
-            "previous": "Ankstesnis"
+            "previous": "Ankstesnis",
+            "like": "Patinka",
+            "dislike": "Nepatinka"
           },
           "label": "Pasirinkti Pasaulinius Klavišus Dainų Kontroliavimui:",
           "title": "Pasauliniai Klavišai"

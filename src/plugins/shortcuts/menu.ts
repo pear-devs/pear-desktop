@@ -51,8 +51,18 @@ export const onMenu = async ({
             'next',
             config.global?.next,
           ),
+          kb(
+            t('plugins.shortcuts.prompt.keybind.keybind-options.like'),
+            'like',
+            config.global?.like,
+          ),
+          kb(
+            t('plugins.shortcuts.prompt.keybind.keybind-options.dislike'),
+            'dislike',
+            config.global?.dislike,
+          ),
         ],
-        height: 270,
+        height: 350,
         ...promptOptions(),
       },
       win,
@@ -62,11 +72,12 @@ export const onMenu = async ({
       const newConfig = { ...config };
 
       for (const { value, accelerator } of output) {
+        // Empty accelerator string clears the keybind
         newConfig.global[value as keyof ShortcutsPluginConfig['global']] =
-          accelerator;
+          accelerator || '';
       }
 
-      setConfig(config);
+      setConfig(newConfig);
     }
     // Else -> pressed cancel
   }

@@ -787,7 +787,9 @@
           "keybind-options": {
             "next": "Następny",
             "play-pause": "Odtwarzanie / Pauza",
-            "previous": "Poprzedni"
+            "previous": "Poprzedni",
+            "like": "Lubię",
+            "dislike": "Nie lubię"
           },
           "label": "Wybierz globalne skróty klawiszowe do sterowania utworami:",
           "title": "Globalne skróty klawiszowe"

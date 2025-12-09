@@ -523,7 +523,9 @@
           "keybind-options": {
             "next": "Neste",
             "play-pause": "Spill av/pause",
-            "previous": "Forrige"
+            "previous": "Forrige",
+            "like": "Liker",
+            "dislike": "Liker ikke"
           },
           "label": "Velg kontroller for spor i hele programmet:",
           "title": "Tastaturtilknytninger i hele programmet"

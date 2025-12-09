@@ -35,6 +35,7 @@ let api: (Element & MusicPlayer) | null = null;
 let isPluginLoaded = false;
 let isApiLoaded = false;
 let firstDataLoaded = false;
+let hasAppliedDisableAutoplayOnce = false;
 
 registerWindowDefaultTrustedTypePolicy();
 
@@ -123,6 +124,19 @@ async function onApiLoaded() {
         ?.updateLikeStatus(status);
     },
   );
+  // Handler to click like/dislike buttons directly (for notifications)
+  window.ipcRenderer.on('peard:click-like-button', () => {
+    const likeButton = document.querySelector<HTMLButtonElement>(
+      '#like-button-renderer #button-shape-like > button',
+    );
+    likeButton?.click();
+  });
+  window.ipcRenderer.on('peard:click-dislike-button', () => {
+    const dislikeButton = document.querySelector<HTMLButtonElement>(
+      '#like-button-renderer #button-shape-dislike > button',
+    );
+    dislikeButton?.click();
+  });
   window.ipcRenderer.on('peard:switch-repeat', (_, repeat = 1) => {
     for (let i = 0; i < repeat; i++) {
       document
@@ -315,6 +329,36 @@ async function onApiLoaded() {
   const audioContext = new AudioContext();
   const audioSource = audioContext.createMediaElementSource(video);
   audioSource.connect(audioContext.destination);
+
+  // Check if disable-autoplay is enabled and applyOnce is true - pause and mute early
+  // This runs before plugins are initialized to prevent loud audio on startup
+  // CRITICAL: Only run once to prevent pausing on every song change
+  if (!hasAppliedDisableAutoplayOnce) {
+    try {
+      const disableAutoplayConfig = await window.mainConfig.get('plugins.disable-autoplay') as { enabled?: boolean; applyOnce?: boolean } | undefined;
+      if (disableAutoplayConfig?.enabled && disableAutoplayConfig?.applyOnce) {
+        console.log('[renderer.ts] Applying disable-autoplay pause (first time only)');
+        hasAppliedDisableAutoplayOnce = true;
+        // Mute and pause immediately to prevent loud audio on startup
+        const video = document.querySelector<HTMLVideoElement>('video');
+        if (video) {
+          const wasMuted = video.muted;
+          video.muted = true;
+          api?.pauseVideo();
+          // Unmute after a short delay to ensure pause is applied
+          setTimeout(() => {
+            video.muted = wasMuted;
+          }, 300);
+        } else {
+          api?.pauseVideo();
+        }
+      }
+    } catch {
+      // Config might not be available yet, ignore
+    }
+  } else {
+    console.log('[renderer.ts] Skipping disable-autoplay pause (already applied once)');
+  }
 
   for (const [id, plugin] of Object.entries(getAllLoadedRendererPlugins())) {
     if (typeof plugin.renderer !== 'function') {
