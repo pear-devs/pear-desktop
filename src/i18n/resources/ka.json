@@ -219,8 +219,12 @@
           "submenu": {
             "percent": "{{size}}%"
           }
+        },
+        "use-fullscreen": {
+          "label": "სრული ეკრანის გამოყენება"
         }
-      }
+      },
+      "name": "გარემოს რეჟიმი"
     },
     "amuse": {
       "name": "გაკვირვება"
@@ -324,6 +328,13 @@
         "status": {
           "disconnected": "გათიშული"
         }
+      },
+      "toast": {
+        "closed": "Music Together-ის ორგანიზატორი დაიხურა",
+        "disconnected": "Music Together-ის კავშირი გათიშულია",
+        "host-failed": "Music Together-ის გამოცხადება ვერ მოხერხდა",
+        "id-copied": "გამოსაცხადებელი ID დაკოპირებულია ბუფერში",
+        "id-copy-failed": "გამოსაცხადებელი ID-ის ვერ დაკოპირდა ბუფერში"
       }
     },
     "navigation": {

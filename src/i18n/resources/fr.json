@@ -153,7 +153,7 @@
               "custom-window-title": {
                 "label": "Titre de fenêtre personnalisé",
                 "prompt": {
-                  "label": "Entrés un titre de fenêtre : (Laissé vide pour déactiver)",
+                  "label": "Entrer un titre de fenêtre : (Laissé vide pour désactiver)",
                   "placeholder": "Exemple : Pear Desktop"
                 }
               },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Activer le thème sur la barre de progression"
       },
       "name": "Thème de couleur d'album"
     },
@@ -290,7 +291,7 @@
       "description": "Ajout de la prise en charge de Pear Desktop pour le widget Amuse now playing de 6K Labs",
       "name": "Amuse",
       "response": {
-        "query": "Le serveur API Amuse est en cours d'exécution. Envoyez une requête GET /query pour obtenir des informations sur la chanson."
+        "query": "Le serveur API d'Amuse est en cours d'exécution. GET /query pour obtenir des informations sur les chansons."
       }
     },
     "api-server": {
@@ -302,7 +303,7 @@
             "deny": "Interdire"
           },
           "message": "Autoriser {{ID}} ({{origin}}) à accéder à l'API ?",
-          "title": "Requête d'autorisation d'API"
+          "title": "Demande d'autorisation à l'API"
         }
       },
       "menu": {
@@ -310,7 +311,7 @@
           "label": "Plan d'autorisation",
           "submenu": {
             "auth-at-first": {
-              "label": "Autoriser à la première requête"
+              "label": "Autoriser lors de la première requête"
             },
             "none": {
               "label": "Pas d'autorisation"
@@ -331,7 +332,7 @@
           "title": "Nom d'hôte"
         },
         "port": {
-          "label": "Entrez le port du serveur de l'API :",
+          "label": "Entrez le port du serveur API :",
           "title": "Port"
         }
       }
@@ -392,7 +393,7 @@
       "toast": {
         "caption-changed": "Sous-titres changés en {{language}}",
         "caption-disabled": "Sous-titres désactivés",
-        "no-captions": "Aucun sous-titre disponible pour cette chanson"
+        "no-captions": "Aucun sous-titres disponibles pour cette chanson"
       }
     },
     "compact-sidebar": {
@@ -462,8 +463,8 @@
           "label": "Texte d'état",
           "submenu": {
             "artist": "Écoute {artiste}",
-            "title": "Écoute {titre de la chanson}",
-            "pear-desktop": "Écoute Pear Desktop"
+            "pear-desktop": "Écoute Pear Desktop",
+            "title": "Écoute {titre de la chanson}"
           }
         }
       },
@@ -636,7 +637,7 @@
       "name": "Navigation",
       "templates": {
         "back": {
-          "title": "Revenir à la page précédente"
+          "title": "Aller à la page précédente"
         },
         "forward": {
           "title": "Aller à la page suivante"
@@ -909,7 +910,7 @@
       "name": "Tuna OBS"
     },
     "unobtrusive-player": {
-      "description": "Empêche le lecteur de s'afficher quand un chanson est en lecture",
+      "description": "Empêche le lecteur de s'afficher quand une chanson est en cours de lecture",
       "name": "Lecteur Non-Intrusif"
     },
     "video-toggle": {

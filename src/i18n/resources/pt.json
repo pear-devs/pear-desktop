@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Ativar temas na barra de reprodução"
       },
       "name": "Tema de cores do álbum"
     },
@@ -462,8 +463,8 @@
           "label": "Texto de estado",
           "submenu": {
             "artist": "A ouvir {artist}",
-            "title": "A ouvir {song title}",
-            "pear-desktop": "A reproduzir Pear Desktop"
+            "pear-desktop": "A reproduzir Pear Desktop",
+            "title": "A ouvir {song title}"
           }
         }
       },

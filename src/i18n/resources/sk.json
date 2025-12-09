@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Povoliť farebnú tému aj v seekbare"
       },
       "name": "Farebná téma albumu"
     },
