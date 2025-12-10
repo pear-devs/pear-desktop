@@ -1,7 +1,19 @@
 import { createPlugin } from '@/utils';
-// @ts-ignore
 import style from './style.css?inline';
-import { getLyrics, LyricResult } from './lyrics';
+import { getLyrics, type LyricResult } from './lyrics';
+
+// 1. Define the Config structure
+interface Config {
+  enabled: boolean;
+  perfectSync: boolean;
+  romanize: boolean;
+}
+
+// 2. Define the PluginContext structure
+interface PluginContext {
+  getConfig: () => Promise<Config>;
+  setConfig: (config: Config) => void;
+}
 
 export default createPlugin({
   name: 'Better Fullscreen',
@@ -9,7 +21,7 @@ export default createPlugin({
   config: {
     enabled: true,
     perfectSync: false,
-    romanize: false
+    romanize: false,
   },
   stylesheets: [style],
 
@@ -21,18 +33,17 @@ export default createPlugin({
         type: 'checkbox',
         checked: config.enabled,
         click: () => setConfig({ ...config, enabled: !config.enabled }),
-      }
+      },
     ];
   },
 
   renderer: {
-    async start(ctx: any) {
-      let config = await ctx.getConfig(); 
+    async start(ctx: PluginContext) {
+      const config = await ctx.getConfig();
       let isFullscreen = false;
       let lyrics: LyricResult | null = null;
-      let lastSrc = ''; 
+      let lastSrc = '';
       let retryCount = 0;
-      
       const html = `
         <div id="bfs-container">
           <div class="bfs-bg-layer">
@@ -137,7 +148,7 @@ export default createPlugin({
         settingsBtn: document.getElementById('bfs-settings-btn'),
         settingsModal: document.getElementById('bfs-settings-modal'),
         optSync: document.getElementById('bfs-opt-sync') as HTMLInputElement,
-        optRoman: document.getElementById('bfs-opt-roman') as HTMLInputElement
+        optRoman: document.getElementById('bfs-opt-roman') as HTMLInputElement,
       };
 
       const updateColors = () => {
@@ -146,12 +157,10 @@ export default createPlugin({
           if (!ctx) return;
           ctx.drawImage(ui.art, 0, 0, 50, 50);
           const data = ctx.getImageData(0, 0, 50, 50).data;
-          
           const getC = (x:number, y:number) => {
-             const i = (y * 50 + x) * 4;
-             return `rgb(${data[i]}, ${data[i+1]}, ${data[i+2]})`;
+             const i = ((y * 50) + x) * 4;
+            return `rgb(${data[i]}, ${data[i+1]}, ${data[i+2]})`;
           };
-          
           document.documentElement.style.setProperty('--bfs-c1', getC(25, 25));
           document.documentElement.style.setProperty('--bfs-c2', getC(10, 10));
           document.documentElement.style.setProperty('--bfs-c3', getC(40, 40));
@@ -163,7 +172,6 @@ export default createPlugin({
       const renderLyrics = () => {
         if (!ui.lines) return;
         ui.lines.innerHTML = '';
-        
         if (!lyrics) {
           ui.lines.innerHTML = `
             <div class="bfs-empty">
@@ -174,10 +182,12 @@ export default createPlugin({
               </button>
             </div>
           `;
-          document.getElementById('bfs-force-fetch')?.addEventListener('click', () => {
-             const title = ui.title?.innerText;
-             const artist = ui.artist?.innerText;
-             const video = document.querySelector('video');
+          document
+            .getElementById('bfs-force-fetch')
+            ?.addEventListener('click', () => {
+              const title = ui.title?.innerText;
+              const artist = ui.artist?.innerText;
+              const video = document.querySelector('video');
              if(title && artist && video) {
                ui.lines!.innerHTML = '<div class="bfs-empty">Searching...</div>';
                performFetch(title, artist, video.duration);
