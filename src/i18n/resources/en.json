@@ -476,6 +476,22 @@
         }
       }
     },
+    "slack-status": {
+      "description": "Sets your Slack status to the currently playing song",
+      "menu": {
+        "set-token": "Set Token",
+        "token": "Slack API Token",
+        "clear-activity-after-timeout": "Clear activity after timeout",
+        "set-inactivity-timeout": "Set inactivity timeout"
+      },
+      "name": "Slack Status",
+      "prompt": {
+        "set-inactivity-timeout": {
+          "label": "Enter inactivity timeout in seconds:",
+          "title": "Set inactivity timeout"
+        }
+      }
+    },
     "downloader": {
       "backend": {
         "dialog": {
