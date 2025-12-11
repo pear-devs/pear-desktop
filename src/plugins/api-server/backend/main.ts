@@ -85,6 +85,10 @@ export const backend = createBackend<BackendType, APIServerConfig>({
 
     // middlewares
     this.app.use('/api/*', async (ctx, next) => {
+      if (ctx.req.path.endsWith('/ws')) {
+        return await next();
+      }
+
       const config = await backendCtx.getConfig();
 
       if (config.authStrategy !== AuthStrategy.NONE) {
@@ -95,6 +99,10 @@ export const backend = createBackend<BackendType, APIServerConfig>({
       await next();
     });
     this.app.use('/api/*', async (ctx, next) => {
+      if (ctx.req.path.endsWith('/ws')) {
+        return await next();
+      }
+
       const result = await JWTPayloadSchema.spa(await ctx.get('jwtPayload'));
       const config = await backendCtx.getConfig();
 
