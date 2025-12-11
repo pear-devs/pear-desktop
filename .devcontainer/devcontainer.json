@@ -6,16 +6,7 @@
 	"image": "mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm",
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	"features": {},
-	"postCreateCommand": "sh .devcontainer/post-create.sh",
-	"containerEnv": {
-		"DISPLAY": "unix:0"
-	},
-	"mounts": [
-		"source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,consistency=cached"
-	],
-	"runArgs": [
-		"--privileged"
-	]
+	"postCreateCommand": "pnpm install --frozen-lockfile"
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
 	// Configure tool-specific properties.
