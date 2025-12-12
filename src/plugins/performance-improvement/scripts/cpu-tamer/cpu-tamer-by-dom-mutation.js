@@ -24,9 +24,9 @@ SOFTWARE.
 
 */
 
-/* eslint-disable */
+/** biome-ignore-all lint: Third-party library maintained externally, modifications should be avoided to ease future updates */
 
-export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
+export const injectCpuTamerByDomMutation = (__CONTEXT__) => {
   'use strict';
 
   const win = this instanceof Window ? this : window;
@@ -37,9 +37,12 @@ export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
   win[hkey_script] = true;
 
   /** @type {globalThis.PromiseConstructor} */
-  const Promise = (async () => { })().constructor; // hacks Promise in WaterFox Classic and "Promise.resolve(0)" nevers resolve.
+  const Promise = (async () => {})().constructor; // hacks Promise in WaterFox Classic and "Promise.resolve(0)" nevers resolve.
   const PromiseExternal = ((resolve_, reject_) => {
-    const h = (resolve, reject) => { resolve_ = resolve; reject_ = reject };
+    const h = (resolve, reject) => {
+      resolve_ = resolve;
+      reject_ = reject;
+    };
     return class PromiseExternal extends Promise {
       constructor(cb = h) {
         super(cb);
@@ -79,13 +82,19 @@ export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
     const waitFn = requestAnimationFrame; // shall have been binded to window
     try {
       let mx = 16; // MAX TRIAL
-      const frameId = 'vanillajs-iframe-v1'
+      const frameId = 'vanillajs-iframe-v1';
       let frame = document.getElementById(frameId);
       let removeIframeFn = null;
       if (!frame) {
         frame = document.createElement('iframe');
         frame.id = frameId;
-        const blobURL = typeof webkitCancelAnimationFrame === 'function' && typeof kagi === 'undefined' ? (frame.src = URL.createObjectURL(new Blob([], { type: 'text/html' }))) : null; // avoid Brave Crash
+        const blobURL =
+          typeof webkitCancelAnimationFrame === 'function' &&
+          typeof kagi === 'undefined'
+            ? (frame.src = URL.createObjectURL(
+                new Blob([], { type: 'text/html' }),
+              ))
+            : null; // avoid Brave Crash
         frame.sandbox = 'allow-same-origin'; // script cannot be run inside iframe but API can be obtained from iframe
         let n = document.createElement('noscript'); // wrap into NOSCRPIT to avoid reflow (layouting)
         n.appendChild(frame);
@@ -96,26 +105,48 @@ export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
 
         removeIframeFn = (setTimeout) => {
           const removeIframeOnDocumentReady = (e) => {
-            e && win.removeEventListener("DOMContentLoaded", removeIframeOnDocumentReady, false);
+            e &&
+              win.removeEventListener(
+                'DOMContentLoaded',
+                removeIframeOnDocumentReady,
+                false,
+              );
             e = n;
             n = win = removeIframeFn = 0;
             setTimeout ? setTimeout(() => e.remove(), 200) : e.remove();
-          }
+          };
           if (!setTimeout || document.readyState !== 'loading') {
             removeIframeOnDocumentReady();
           } else {
-            win.addEventListener("DOMContentLoaded", removeIframeOnDocumentReady, false);
+            win.addEventListener(
+              'DOMContentLoaded',
+              removeIframeOnDocumentReady,
+              false,
+            );
           }
-        }
+        };
       }
       while (!frame.contentWindow && mx-- > 0) await new Promise(waitFn);
       const fc = frame.contentWindow;
-      if (!fc) throw "window is not found."; // throw error if root is null due to exceeding MAX TRIAL
+      if (!fc) throw 'window is not found.'; // throw error if root is null due to exceeding MAX TRIAL
       try {
-        const { requestAnimationFrame, setInterval, setTimeout, clearInterval, clearTimeout } = fc;
-        const res = { requestAnimationFrame, setInterval, setTimeout, clearInterval, clearTimeout };
+        const {
+          requestAnimationFrame,
+          setInterval,
+          setTimeout,
+          clearInterval,
+          clearTimeout,
+        } = fc;
+        const res = {
+          requestAnimationFrame,
+          setInterval,
+          setTimeout,
+          clearInterval,
+          clearTimeout,
+        };
         for (let k in res) res[k] = res[k].bind(win); // necessary
-        if (removeIframeFn) Promise.resolve(res.setTimeout).then(removeIframeFn);
+        if (removeIframeFn)
+          Promise.resolve(res.setTimeout).then(removeIframeFn);
         return res;
       } catch (e) {
         if (removeIframeFn) removeIframeFn();
@@ -127,28 +158,27 @@ export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
     }
   };
 
-
   const { _setAttribute, _insertBefore, _hasAttribute } = (() => {
     let _setAttribute = Element.prototype.setAttribute;
     try {
       _setAttribute = ShadyDOM.nativeMethods.setAttribute || _setAttribute;
-    } catch (e) { }
+    } catch (e) {}
     let _hasAttribute = Element.prototype.hasAttribute;
     try {
       _hasAttribute = ShadyDOM.nativeMethods.hasAttribute || _hasAttribute;
-    } catch (e) { }
+    } catch (e) {}
     let _insertBefore = Node.prototype.insertBefore;
     try {
       _insertBefore = ShadyDOM.nativeMethods.insertBefore || _insertBefore;
-    } catch (e) { }
-    return { _setAttribute, _insertBefore, _hasAttribute};
+    } catch (e) {}
+    return { _setAttribute, _insertBefore, _hasAttribute };
   })();
 
-  cleanContext(win).then(__CONTEXT__ => {
-
+  cleanContext(win).then((__CONTEXT__) => {
     if (!__CONTEXT__) return null;
 
-    const { setTimeout, setInterval, clearTimeout, clearInterval } = __CONTEXT__;
+    const { setTimeout, setInterval, clearTimeout, clearInterval } =
+      __CONTEXT__;
 
     /*
     /-** @type {Function|null} *-/
@@ -160,14 +190,22 @@ export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
       if (!_dm) {
         _dm = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
         _dm.id = 'd-m';
-        _insertBefore.call(document.documentElement, _dm, document.documentElement.firstChild);
+        _insertBefore.call(
+          document.documentElement,
+          _dm,
+          document.documentElement.firstChild,
+        );
       }
       const dm = _dm;
       dm._setAttribute = _setAttribute;
       dm._hasAttribute = _hasAttribute;
       let j = 0;
       let attributeName_;
-      while (dm._hasAttribute(attributeName_ = `dm-${Math.floor(Math.random() * 314159265359 + 314159265359).toString(36)}`)) {
+      while (
+        dm._hasAttribute(
+          (attributeName_ = `dm-${Math.floor(Math.random() * 314159265359 + 314159265359).toString(36)}`),
+        )
+      ) {
         // none
       }
       const attributeName = attributeName_;
@@ -180,9 +218,16 @@ export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
           sr_.resolve();
         }
       });
-      mo.observe(document, { childList: true, subtree: true, attributes: true });
+      mo.observe(document, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+      });
       return () => {
-        return sr || (sr = (dm._setAttribute(attributeName, ++j), (new PromiseExternal()))); // mutationcallback in next macrotask
+        return (
+          sr ||
+          (sr = (dm._setAttribute(attributeName, ++j), new PromiseExternal()))
+        ); // mutationcallback in next macrotask
       };
     };
 
@@ -196,7 +241,7 @@ export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
       const dmResolve = async (rX) => {
         await dmSN();
         rX.resolved = true;
-        const t = dmix = (dmix & 1073741823) + 1;
+        const t = (dmix = (dmix & 1073741823) + 1);
         return rX.resolve(t), t;
       };
       const eFunc = async () => {
@@ -210,12 +255,13 @@ export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
         } else {
           const vP = !uP ? (dmPromiseP = new PromiseExternal()) : null;
           const vQ = !uQ ? (dmPromiseQ = new PromiseExternal()) : null;
-          if (uQ) await uQ; else if (uP) await uP;
+          if (uQ) await uQ;
+          else if (uP) await uP;
           if (vP) t = await dmResolve(vP);
           if (vQ) t = await dmResolve(vQ);
         }
         return t;
-      }
+      };
       const inExec = new Set();
       const wFunc = async (handler, wStore) => {
         try {
@@ -237,9 +283,15 @@ export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
       };
       const sFunc = (propFunc) => {
         return (func, ms = 0, ...args) => {
-          if (typeof func === 'function') { // ignore all non-function parameter (e.g. string)
+          if (typeof func === 'function') {
+            // ignore all non-function parameter (e.g. string)
             const wStore = { dt: Date.now() };
-            return (wStore.cid = propFunc(wFunc, ms, (args.length > 0 ? func.bind(null, ...args) : func), wStore));
+            return (wStore.cid = propFunc(
+              wFunc,
+              ms,
+              args.length > 0 ? func.bind(null, ...args) : func,
+              wStore,
+            ));
           } else {
             return propFunc(func, ms, ...args);
           }
@@ -262,8 +314,9 @@ export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
         win.setInterval.toString = setInterval.toString.bind(setInterval);
         win.clearTimeout.toString = clearTimeout.toString.bind(clearTimeout);
         win.clearInterval.toString = clearInterval.toString.bind(clearInterval);
-      } catch (e) { console.warn(e) }
-
+      } catch (e) {
+        console.warn(e);
+      }
     })();
 
     /*
@@ -277,5 +330,4 @@ export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
         }, 125);
     */
   });
-
-});
+};

@@ -4,8 +4,17 @@ import { setTheme } from 'mdui/functions/setTheme.js';
 import 'mdui/mdui.css';
 import 'mdui';
 
-import { startingPages } from './providers/extracted-data';
-import { setupSongInfo } from './providers/song-info-front';
+import { t as i18t, loadI18n, setLanguage } from '@/i18n';
+import { type MusicPlayer } from '@/types/music-player';
+import { type MusicPlayerAppElement } from '@/types/music-player-app-element';
+import { type QueueResponse } from '@/types/music-player-desktop-internal';
+import { type PluginConfig } from '@/types/plugins';
+import { type QueueElement } from '@/types/queue';
+import { type SearchBoxElement } from '@/types/search-box-element';
+import {
+  defaultTrustedTypePolicy,
+  registerWindowDefaultTrustedTypePolicy,
+} from '@/utils/trusted-types';
 import {
   createContext,
   forceLoadRendererPlugin,
@@ -14,20 +23,8 @@ import {
   getLoadedRendererPlugin,
   loadAllRendererPlugins,
 } from './loader/renderer';
-
-import { loadI18n, setLanguage, t as i18t } from '@/i18n';
-
-import {
-  defaultTrustedTypePolicy,
-  registerWindowDefaultTrustedTypePolicy,
-} from '@/utils/trusted-types';
-
-import type { PluginConfig } from '@/types/plugins';
-import type { MusicPlayer } from '@/types/music-player';
-import type { QueueElement } from '@/types/queue';
-import type { QueueResponse } from '@/types/music-player-desktop-internal';
-import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
-import type { SearchBoxElement } from '@/types/search-box-element';
+import { startingPages } from './providers/extracted-data';
+import { setupSongInfo } from './providers/song-info-front';
 
 setTheme('dark');
 
@@ -94,9 +91,9 @@ async function onApiLoaded() {
   window.ipcRenderer.on('peard:seek-by', (_, t: number) => api!.seekBy(t));
   window.ipcRenderer.on('peard:shuffle', () => {
     document
-      .querySelector<
-        HTMLElement & { queue: { shuffle: () => void } }
-      >('ytmusic-player-bar')
+      .querySelector<HTMLElement & { queue: { shuffle: () => void } }>(
+        'ytmusic-player-bar',
+      )
       ?.queue.shuffle();
   });
 
@@ -126,17 +123,17 @@ async function onApiLoaded() {
   window.ipcRenderer.on('peard:switch-repeat', (_, repeat = 1) => {
     for (let i = 0; i < repeat; i++) {
       document
-        .querySelector<
-          HTMLElement & { onRepeatButtonClick: () => void }
-        >('ytmusic-player-bar')
+        .querySelector<HTMLElement & { onRepeatButtonClick: () => void }>(
+          'ytmusic-player-bar',
+        )
         ?.onRepeatButtonClick();
     }
   });
   window.ipcRenderer.on('peard:update-volume', (_, volume: number) => {
     document
-      .querySelector<
-        HTMLElement & { updateVolume: (volume: number) => void }
-      >('ytmusic-player-bar')
+      .querySelector<HTMLElement & { updateVolume: (volume: number) => void }>(
+        'ytmusic-player-bar',
+      )
       ?.updateVolume(volume);
   });
 
@@ -175,9 +172,9 @@ async function onApiLoaded() {
 
   window.ipcRenderer.on('peard:toggle-mute', (_) => {
     document
-      .querySelector<
-        HTMLElement & { onVolumeClick: () => void }
-      >('ytmusic-player-bar')
+      .querySelector<HTMLElement & { onVolumeClick: () => void }>(
+        'ytmusic-player-bar',
+      )
       ?.onVolumeClick();
   });
 

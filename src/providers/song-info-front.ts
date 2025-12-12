@@ -1,16 +1,13 @@
-import { singleton } from './decorators';
-
-import { LikeType, type GetState } from '@/types/datahost-get-state';
-
-import type { MusicPlayer } from '@/types/music-player';
-import type {
-  AlbumDetails,
-  PlayerOverlays,
-  VideoDataChangeValue,
+import { type GetState, LikeType } from '@/types/datahost-get-state';
+import { type MusicPlayer } from '@/types/music-player';
+import {
+  type AlbumDetails,
+  type PlayerOverlays,
+  type VideoDataChangeValue,
 } from '@/types/player-api-events';
-
-import type { SongInfo } from './song-info';
-import type { VideoDataChanged } from '@/types/video-data-changed';
+import { type VideoDataChanged } from '@/types/video-data-changed';
+import { singleton } from './decorators';
+import { type SongInfo } from './song-info';
 
 const DATAUPDATED_FALLBACK_TIMEOUT_MS = 1500;
 
@@ -246,7 +243,6 @@ export const setupSongInfo = (api: MusicPlayer) => {
   const videoEventDispatcher = async (
     name: string,
     videoData: VideoDataChangeValue,
-    // eslint-disable-next-line @typescript-eslint/require-await
   ) =>
     document.dispatchEvent(
       new CustomEvent<VideoDataChanged>('videodatachange', {

@@ -1,14 +1,12 @@
 import crypto from 'node:crypto';
 
 import { BrowserWindow, dialog, net } from 'electron';
-
-import { ScrobblerBase } from './base';
-
 import { t } from '@/i18n';
+import { type SongInfo } from '@/providers/song-info';
 
-import type { ScrobblerPluginConfig } from '../index';
-import type { SetConfType } from '../main';
-import type { SongInfo } from '@/providers/song-info';
+import { type ScrobblerPluginConfig } from '../index';
+import { type SetConfType } from '../main';
+import { ScrobblerBase } from './base';
 
 interface LastFmData {
   method: string;
@@ -255,6 +253,7 @@ const createToken = async ({
 let authWindowOpened = false;
 let latestAuthResult = false;
 
+// biome-ignore lint/suspicious/useAwait: Function returns a Promise and contains nested async callbacks for window navigation
 const authenticate = async (
   config: ScrobblerPluginConfig,
   mainWindow: BrowserWindow,

@@ -1,12 +1,12 @@
+import delay from 'delay';
 import {
   type DataConnection,
   Peer,
   type PeerError,
   PeerErrorType,
 } from 'peerjs';
-import delay from 'delay';
 
-import type { Permission, Profile, VideoData } from './types';
+import { type Permission, type Profile, type VideoData } from './types';
 
 export type ConnectionEventMap = {
   ADD_SONGS: { videoList: VideoData[]; index?: number };
@@ -123,6 +123,7 @@ export class Connection {
   }
 
   /* public */
+  // biome-ignore lint/suspicious/useAwait: Method returns a promise to maintain async API consistency for future enhancements
   async waitForReady() {
     return this.waitOpen.promise;
   }
@@ -188,6 +189,7 @@ export class Connection {
   }
 
   /* privates */
+  // biome-ignore lint/suspicious/useAwait: Method returns a promise to maintain async API consistency with other connection methods
   private async registerConnection(conn: DataConnection) {
     return new Promise<DataConnection>((resolve, reject) => {
       this.peer.once('error', (err) => {

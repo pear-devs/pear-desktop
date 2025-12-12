@@ -24,7 +24,7 @@ SOFTWARE.
 
 */
 
-/* eslint-disable */
+/** biome-ignore-all lint: Third-party library maintained externally, modifications should be avoided to ease future updates */
 
 export const rm3 = {};
 
@@ -54,7 +54,7 @@ export const injectRm3 = () => {
     ); // [[debug]]
   };
 
-  const insp = (o) => o ? o.polymerController || o.inst || o || 0 : o || 0;
+  const insp = (o) => (o ? o.polymerController || o.inst || o || 0 : o || 0);
   const indr = (o) => insp(o).$ || o.$ || 0;
 
   const getProto = (element) => {
@@ -339,9 +339,9 @@ export const injectRm3 = () => {
 
     // rm3.list = [];
 
-    const operations = rm3.operations = new Set(); // to find out the "oldest elements"
+    const operations = (rm3.operations = new Set()); // to find out the "oldest elements"
 
-    const availablePools = rm3.availablePools = new Map(); // those "old elements" can be used
+    const availablePools = (rm3.availablePools = new Map()); // those "old elements" can be used
     let lastTimeCheck = 0;
 
     const reuseRecord_ = new LimitedSizeSet(256); // [[debug]]
@@ -419,7 +419,7 @@ export const injectRm3 = () => {
 
             let availablePool = availablePools.get(eKey);
             if (!availablePool)
-              availablePools.set(eKey, availablePool = new LinkedArray());
+              availablePools.set(eKey, (availablePool = new LinkedArray()));
             if (!(availablePool instanceof LinkedArray)) throw new Error();
             DEBUG_OPT &&
               console.log(3885, 'add key', eKey, availablePools.size);
@@ -431,7 +431,7 @@ export const injectRm3 = () => {
             // }, 8000)
             let pivotNode = pivotNodes.get(availablePool);
             if (!pivotNode)
-              pivotNodes.set(availablePool, pivotNode = availablePool.head); // cached the previous newest node (head) as pivotNode
+              pivotNodes.set(availablePool, (pivotNode = availablePool.head)); // cached the previous newest node (head) as pivotNode
 
             availablePool.insertBeforeNode(pivotNode, entryRecord); // head = newest, tail = oldest
           }
