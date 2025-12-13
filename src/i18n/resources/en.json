@@ -788,7 +788,9 @@
           "keybind-options": {
             "next": "Next",
             "play-pause": "Play / Pause",
-            "previous": "Previous"
+            "previous": "Previous",
+            "like": "Like",
+            "dislike": "Dislike"
           },
           "label": "Choose Global Keybinds for Songs Control:",
           "title": "Global Keybinds"

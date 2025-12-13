@@ -778,7 +778,9 @@
           "keybind-options": {
             "next": "Következő",
             "play-pause": "Lejátszás / Szünet",
-            "previous": "Előző"
+            "previous": "Előző",
+            "like": "Tetszik",
+            "dislike": "Nem tetszik"
           },
           "label": "Globális billentyűparancsok választása a dalok vezérléséhez:",
           "title": "Globális gyorsbillentyűk"

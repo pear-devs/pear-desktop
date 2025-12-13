@@ -787,7 +787,9 @@
           "keybind-options": {
             "next": "Sljedeće",
             "play-pause": "Pokreni / Zaustavi",
-            "previous": "Prijethodno"
+            "previous": "Prijethodno",
+            "like": "Sviđa mi se",
+            "dislike": "Ne sviđa mi se"
           },
           "label": "Odaberi globalne prečace za upravljanje pjesmama:",
           "title": "Globalni prečaci na tipkovnici"

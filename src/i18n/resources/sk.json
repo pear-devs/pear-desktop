@@ -788,7 +788,9 @@
           "keybind-options": {
             "next": "Ďalšia",
             "play-pause": "Prehrať / Pauza",
-            "previous": "Predošlá"
+            "previous": "Predošlá",
+            "like": "Páči sa mi",
+            "dislike": "Nepáči sa mi"
           },
           "label": "Zvoliť globálne klávesové skratky na ovládanie skladieb:",
           "title": "Globálne klávesové skratky"

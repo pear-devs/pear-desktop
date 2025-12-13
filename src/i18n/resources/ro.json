@@ -787,7 +787,9 @@
           "keybind-options": {
             "next": "Următorul",
             "play-pause": "Redă / Pauză",
-            "previous": "Anteriorul"
+            "previous": "Anteriorul",
+            "like": "Îmi place",
+            "dislike": "Nu îmi place"
           },
           "label": "Alege combinația de taste globală pentru controlul melodiilor:",
           "title": "Scurtături pe tastatură globale"

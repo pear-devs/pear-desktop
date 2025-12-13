@@ -787,7 +787,9 @@
           "keybind-options": {
             "next": "Sledeće",
             "play-pause": "Pusti / Pauziraj",
-            "previous": "Prethodno"
+            "previous": "Prethodno",
+            "like": "Свиђа ми се",
+            "dislike": "Не свиђа ми се"
           },
           "label": "Izaberi globalne prečice za upravljanje pesmama:",
           "title": "Globalne prečice na tastaturi"

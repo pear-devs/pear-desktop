@@ -787,7 +787,9 @@
           "keybind-options": {
             "next": "Següent",
             "play-pause": "Reproduir / Pausar",
-            "previous": "Anterior"
+            "previous": "Anterior",
+            "like": "M'agrada",
+            "dislike": "No m'agrada"
           },
           "label": "Tria combinacions de tecles per controlar les cançons:",
           "title": "Dreceres globals"

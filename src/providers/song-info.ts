@@ -4,6 +4,8 @@ import { Mutex } from 'async-mutex';
 
 import * as config from '@/config';
 
+import { LikeType } from '@/types/datahost-get-state';
+
 import type { GetPlayerResponse } from '@/types/get-player-response';
 
 export enum MediaType {
@@ -44,6 +46,8 @@ export interface SongInfo {
   playlistId?: string;
   mediaType: MediaType;
   tags?: string[];
+  isLiked?: boolean;
+  isDisliked?: boolean;
 }
 
 // Grab the native image using the src
@@ -174,6 +178,7 @@ export enum SongInfoEvent {
   VideoSrcChanged = 'peard:video-src-changed',
   PlayOrPaused = 'peard:play-or-paused',
   TimeChanged = 'peard:time-changed',
+  LikeChanged = 'peard:like-changed',
 }
 
 // This variable will be filled with the callbacks once they register
@@ -249,6 +254,25 @@ const registerProvider = (win: BrowserWindow) => {
     if (tempSongInfo) {
       for (const c of callbacks) {
         c(tempSongInfo, SongInfoEvent.TimeChanged);
+      }
+    }
+  });
+
+  ipcMain.on('peard:like-changed', async (_, likeStatus: LikeType) => {
+    const tempSongInfo = await dataMutex.runExclusive<SongInfo | null>(() => {
+      if (!songInfo) {
+        return null;
+      }
+
+      songInfo.isLiked = likeStatus === LikeType.Like;
+      songInfo.isDisliked = likeStatus === LikeType.Dislike;
+
+      return songInfo;
+    });
+
+    if (tempSongInfo) {
+      for (const c of callbacks) {
+        c(tempSongInfo, SongInfoEvent.LikeChanged);
       }
     }
   });

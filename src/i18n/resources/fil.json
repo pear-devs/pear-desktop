@@ -765,7 +765,9 @@
           "keybind-options": {
             "next": "Susunod",
             "play-pause": "Mag-play / Mag-pause",
-            "previous": "Nakaraan"
+            "previous": "Nakaraan",
+            "like": "Gusto",
+            "dislike": "Hindi gusto"
           },
           "label": "Pumili ng Global na Keybind para sa Songs Control:",
           "title": "Global na mga Keybind"

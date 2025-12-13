@@ -787,7 +787,9 @@
           "keybind-options": {
             "next": "次",
             "play-pause": "再生/一時停止",
-            "previous": "前の"
+            "previous": "前の",
+            "like": "いいね",
+            "dislike": "よくないね"
           },
           "label": "曲コントロールのグローバルキーバインドを選択:",
           "title": "グローバル キーバインド"

@@ -787,7 +787,9 @@
           "keybind-options": {
             "next": "Volgende",
             "play-pause": "Afspelen / Pauzeren",
-            "previous": "Vorige"
+            "previous": "Vorige",
+            "like": "Vind ik leuk",
+            "dislike": "Vind ik niet leuk"
           },
           "label": "Kies globale toetsen voor nummer bediening:",
           "title": "Globale toetsen"

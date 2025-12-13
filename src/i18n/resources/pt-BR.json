@@ -788,7 +788,9 @@
           "keybind-options": {
             "next": "Próximo",
             "play-pause": "Reproduzir / Pausar",
-            "previous": "Anterior"
+            "previous": "Anterior",
+            "like": "Curtir",
+            "dislike": "Descurtir"
           },
           "label": "Escolha atalhos de teclado globais para controle de músicas:",
           "title": "Atalhos de teclado global"

@@ -788,7 +788,9 @@
           "keybind-options": {
             "next": "다음",
             "play-pause": "재생 / 일시정지",
-            "previous": "이전"
+            "previous": "이전",
+            "like": "좋아요",
+            "dislike": "싫어요"
           },
           "label": "노래 조작을 위한 전역 키를 선택하세요:",
           "title": "전역 키 지정"
