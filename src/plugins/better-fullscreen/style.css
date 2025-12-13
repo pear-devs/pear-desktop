@@ -1,0 +1,295 @@
+:root {
+  /* Default colors */
+  --bfs-c1: #444;
+  --bfs-c2: #555;
+  --bfs-c3: #666;
+  --bfs-c4: #333;
+  --bfs-c5: #222;
+  --bfs-font: "YouTube Sans", Roboto, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+#bfs-container {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  z-index: 2147483647; background: #000;
+  color: #fff; opacity: 0; pointer-events: none; visibility: hidden;
+  font-family: var(--bfs-font);
+  transition: opacity 0.4s ease;
+  overflow: hidden;
+}
+
+body.bfs-active #bfs-container {
+  opacity: 1; pointer-events: all; visibility: visible;
+}
+
+/* --- Multi-Color Animated Background --- */
+.bfs-bg-layer {
+  position: absolute; inset: 0; z-index: 0;
+  background: #050505; overflow: hidden;
+}
+
+.bfs-blob {
+  position: absolute; border-radius: 50%;
+  filter: blur(80px); opacity: 0.6;
+  animation: bfs-float 20s infinite alternate ease-in-out;
+  transform-origin: center center;
+}
+
+/* 5 Blobs for richer color */
+.bfs-blob-1 { width: 70vw; height: 70vw; background: var(--bfs-c1); top: -20%; left: -10%; animation-delay: 0s; }
+.bfs-blob-2 { width: 60vw; height: 60vw; background: var(--bfs-c2); top: -10%; right: -20%; animation-delay: -5s; }
+.bfs-blob-3 { width: 60vw; height: 60vw; background: var(--bfs-c3); bottom: -20%; left: -10%; animation-delay: -10s; }
+.bfs-blob-4 { width: 50vw; height: 50vw; background: var(--bfs-c4); bottom: -10%; right: -10%; animation-delay: -15s; }
+.bfs-blob-5 { width: 40vw; height: 40vw; background: var(--bfs-c5); top: 30%; left: 30%; animation-delay: -7s; opacity: 0.4; }
+
+@keyframes bfs-float {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  50% { transform: translate(30px, -30px) scale(1.1) rotate(5deg); }
+  100% { transform: translate(-20px, 20px) scale(0.95) rotate(-5deg); }
+}
+
+.bfs-overlay {
+  position: absolute; inset: 0; z-index: 1;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(50px);
+}
+
+/* --- Layout --- */
+.bfs-content {
+  position: relative; z-index: 10; width: 100%; height: 100%;
+  display: grid; grid-template-columns: 55% 45%;
+  align-items: center;
+}
+
+/* --- Left Side: Lyrics --- */
+.bfs-lyrics-section {
+  height: 100vh; position: relative;
+  display: flex; flex-direction: column;
+  padding-left: 8vw;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+}
+
+.bfs-visualizer-icon {
+  position: absolute; top: 50%; left: 8vw;
+  transform: translateY(-220px);
+  display: flex; gap: 4px; align-items: flex-end;
+  height: 24px; width: 30px; 
+  opacity: 0; transition: opacity 0.5s ease;
+  z-index: 20; pointer-events: none;
+}
+.bfs-visualizer-icon.show { opacity: 1; }
+
+.bfs-viz-bar {
+  width: 4px; background: #fff; border-radius: 2px;
+  animation: bfs-bounce 1s infinite ease-in-out;
+}
+.bfs-viz-bar:nth-child(1) { height: 12px; animation-delay: 0s; }
+.bfs-viz-bar:nth-child(2) { height: 24px; animation-delay: 0.2s; }
+.bfs-viz-bar:nth-child(3) { height: 16px; animation-delay: 0.4s; }
+@keyframes bfs-bounce { 0%, 100% { transform: scaleY(0.5); } 50% { transform: scaleY(1); } }
+
+.bfs-lyrics-scroll {
+  height: 100%; overflow-y: auto; scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+.bfs-lyrics-scroll::-webkit-scrollbar { display: none; }
+
+.bfs-lyrics-wrapper {
+  padding: 50vh 0; width: 100%; max-width: 900px;
+}
+
+/* Lyric Lines */
+.bfs-line {
+  font-size: 3.4rem; font-weight: 700; line-height: 1.3;
+  margin-bottom: 35px; color: rgba(255,255,255,0.5);
+  cursor: pointer; transform-origin: left center;
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  filter: blur(0.5px); transform: scale(0.98);
+  display: flex; flex-direction: column; align-items: flex-start;
+}
+
+.bfs-line.active {
+  color: #fff; opacity: 1; filter: blur(0); transform: scale(1);
+  text-shadow: 0 0 40px rgba(0,0,0,0.3);
+}
+
+.bfs-line:hover:not(.active) { color: rgba(255,255,255,0.8); filter: blur(0); }
+
+/* Romaji Styling */
+.bfs-romaji {
+  display: block;
+  font-size: 0.55em;
+  font-weight: normal;
+  color: rgba(255, 255, 255, 0.75); 
+  margin-top: 8px;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+}
+
+/* Instrumental Icon */
+.bfs-line.instrumental {
+  height: 60px; display: flex; flex-direction: row; align-items: center; margin-bottom: 40px;
+}
+.bfs-viz-icon {
+  display: flex; gap: 6px; align-items: flex-end;
+  height: 30px; width: 40px; opacity: 0.5; transition: opacity 0.3s;
+}
+.bfs-line.active .bfs-viz-icon { opacity: 1; }
+
+.bfs-empty { font-size: 1.8rem; opacity: 0.5; font-weight: 500; display: flex; flex-direction: column; gap: 15px; align-items: flex-start; }
+.bfs-refresh-btn {
+  font-size: 1rem; padding: 10px 20px; border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1);
+  color: #fff; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; gap: 8px;
+}
+.bfs-refresh-btn:hover { background: rgba(255,255,255,0.25); border-color: #fff; }
+
+/* --- Meta & Controls --- */
+.bfs-meta-section {
+  padding: 4vw; display: flex; flex-direction: column; 
+  justify-content: center; align-items: center;
+  height: 100vh; box-sizing: border-box;
+}
+
+.bfs-art {
+  width: 100%; max-width: 380px; aspect-ratio: 1/1;
+  border-radius: 8px; 
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
+  margin-bottom: 40px; background: #222; overflow: hidden;
+  transition: transform 0.5s ease;
+  flex-shrink: 1; max-height: 40vh;
+}
+.bfs-art img { width: 100%; height: 100%; object-fit: cover; }
+
+.bfs-info { margin-bottom: 40px; text-align: left; width: 100%; max-width: 380px; flex-shrink: 0; }
+.bfs-title {
+  font-size: 2rem; font-weight: 700; margin-bottom: 8px; color: #fff;
+  line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+/* ARTIST FONT BIGGER */
+.bfs-artist {
+  font-size: 1.4rem;
+  font-weight: normal;
+  color: rgba(255,255,255,0.7);
+}
+
+.bfs-controls-container { width: 100%; max-width: 380px; flex-shrink: 0; }
+
+.bfs-progress-row {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 25px;
+  font-size: 0.8rem; font-weight: 500; color: rgba(255,255,255,0.5); font-variant-numeric: tabular-nums;
+}
+.bfs-bar-bg {
+  flex-grow: 1; height: 4px; background: rgba(255,255,255,0.2); border-radius: 4px; cursor: pointer;
+}
+.bfs-bar-fill { height: 100%; background: #fff; width: 0%; border-radius: 4px; }
+
+.bfs-buttons {
+  display: flex; align-items: center; justify-content: center; gap: 40px; width: 100%;
+}
+.bfs-btn {
+  background: none; border: none; color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: transform 0.2s;
+}
+.bfs-btn:hover { transform: scale(1.1); }
+.bfs-play-btn svg { width: 56px; height: 56px; fill: currentColor; }
+.bfs-skip-btn svg { width: 28px; height: 28px; fill: currentColor; opacity: 0.7; }
+
+/* Top Buttons */
+#bfs-close {
+  position: absolute; top: 30px; right: 30px;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(255,255,255,0.1); border: none; color: #fff;
+  cursor: pointer; z-index: 100; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(10px); opacity: 0; transition: opacity 0.3s ease, background 0.2s;
+}
+.bfs-corner-zone {
+  position: absolute; top: 0; width: 150px; height: 150px; z-index: 99;
+}
+.bfs-zone-left { left: 0; }
+.bfs-zone-right { right: 0; }
+
+.bfs-zone-right:hover ~ #bfs-close, #bfs-close:hover { opacity: 1; }
+.bfs-zone-left:hover ~ #bfs-settings-btn, #bfs-settings-btn:hover { opacity: 1; }
+
+#bfs-close:hover { background: rgba(255,255,255,0.25); }
+
+#bfs-settings-btn {
+  position: absolute; top: 30px; left: 30px;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(255,255,255,0.1); border: none; color: #fff;
+  cursor: pointer; z-index: 100; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(10px); opacity: 0; transition: opacity 0.3s ease, background 0.2s;
+}
+#bfs-settings-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* Settings Modal */
+#bfs-settings-modal {
+  position: absolute; top: 85px; left: 30px;
+  width: 280px; background: rgba(30, 30, 30, 0.95);
+  backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px; padding: 15px; z-index: 200;
+  transform-origin: top left; transform: scale(0.95); 
+  opacity: 0; pointer-events: none; transition: all 0.2s;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+}
+#bfs-settings-modal.active { opacity: 1; pointer-events: all; transform: scale(1); }
+
+.bfs-setting-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.9); font-size: 0.9rem; font-weight: 500;
+}
+.bfs-setting-item:last-child { border-bottom: none; }
+
+.bfs-toggle { position: relative; width: 40px; height: 22px; cursor: pointer; }
+.bfs-toggle input { opacity: 0; width: 0; height: 0; }
+.bfs-slider {
+  position: absolute; inset: 0; background-color: rgba(255,255,255,0.2);
+  border-radius: 22px; transition: .3s;
+}
+.bfs-slider:before {
+  position: absolute; content: ""; height: 16px; width: 16px;
+  left: 3px; bottom: 3px; background-color: white;
+  border-radius: 50%; transition: .3s;
+}
+.bfs-toggle input:checked + .bfs-slider { background-color: #3b82f6; }
+.bfs-toggle input:checked + .bfs-slider:before { transform: translateX(18px); }
+
+/* --- TRIGGER BUTTON ON ALBUM ART --- */
+#bfs-trigger {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  z-index: 9999 !important;
+  width: 48px; height: 48px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  
+  opacity: 0; 
+  pointer-events: none;
+  transform: scale(0.9);
+  transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+#song-image:hover #bfs-trigger,
+ytmusic-player:hover #bfs-trigger,
+#bfs-trigger:hover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+#bfs-trigger:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+#bfs-canvas { display: none; }
