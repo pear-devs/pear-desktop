@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Arama çubuğu temalarını etkinleştir"
       },
       "name": "Albüm Renk Teması"
     },
@@ -462,8 +463,8 @@
           "label": "Durum metni",
           "submenu": {
             "artist": "{artist} Dinleniyor",
-            "title": "{song title} Dinleniyor",
-            "pear-desktop": "Pear Desktop Dinleniyor"
+            "pear-desktop": "Pear Desktop Dinleniyor",
+            "title": "{song title} Dinleniyor"
           }
         }
       },
