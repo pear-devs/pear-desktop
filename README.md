@@ -75,13 +75,13 @@ this [wiki page](https://wiki.archlinux.org/index.php/Arch_User_Repository#Insta
 You can install the app using Homebrew (see the [cask definition](https://github.com/pear-devs/pear-desktop-homebrew)):
 
 ```bash
-brew install pear-devs/pear-desktop
+brew install pear-devs/dev/pear-desktop+
 ```
 
 If you install the app manually and get an error "is damaged and can’t be opened." when launching the app, run the following in the Terminal:
 
 ```bash
-/usr/bin/xattr -cr /Applications/Pear\ Desktop.app
+/usr/bin/xattr -cr /Applications/YouTube\ Music.app
 ```
 
 ### Windows
