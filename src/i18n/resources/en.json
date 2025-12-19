@@ -342,7 +342,7 @@
       "name": "Audio Compressor"
     },
     "audio-stream": {
-      "description": "Stream PCM audio data over HTTP for external processing or recording",
+      "description": "Stream audio as PCM data over HTTP for external applications",
       "menu": {
         "port": {
           "label": "Port"
