@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Suchleisten-Design aktivieren"
       },
       "name": "Thema aus Albumfarbe"
     },
@@ -606,7 +607,7 @@
         "permission": {
           "all": "Gästen erlauben, Wiederhabeliste und Player zu bedienen",
           "host-only": "Nur der Host kann die Playlist und den Player kontrollieren",
-          "playlist": "Gäste das Kontrollieren der Playlist erlauben"
+          "playlist": "Gästen das Kontrollieren der Playlist erlauben"
         },
         "set-permission": "Kontrollberechtigung ändern",
         "status": {

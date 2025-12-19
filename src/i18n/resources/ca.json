@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Activar el tema en la barra de progrés"
       },
       "name": "Tema de color de l'àlbum"
     },
@@ -462,8 +463,8 @@
           "label": "Text d'estat",
           "submenu": {
             "artist": "Escoltant {artist}",
-            "title": "Escoltant {song title}",
-            "pear-desktop": "Escoltant Pear Desktop"
+            "pear-desktop": "Escoltant Pear Desktop",
+            "title": "Escoltant {song title}"
           }
         }
       },

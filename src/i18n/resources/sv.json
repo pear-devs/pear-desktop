@@ -86,7 +86,7 @@
           "copy-current-url": "Kopiera nuvarande länk",
           "go-back": "Gå tillbaka",
           "go-forward": "Gå framåt",
-          "quit": "Avsluta",
+          "quit": "Stäng",
           "restart": "Starta om appen"
         }
       },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}} %"
           }
-        }
+        },
+        "enable-seekbar": "Aktivera temaanpassning av uppspelningsreglaget"
       },
       "name": "Albumfärgtema"
     },
@@ -462,8 +463,8 @@
           "label": "Statusmeddelande",
           "submenu": {
             "artist": "Lyssnar på {artist}",
-            "title": "Lyssnar på {song title}",
-            "pear-desktop": "Lyssnar på Pear Desktop"
+            "pear-desktop": "Lyssnar på Pear Desktop",
+            "title": "Lyssnar på {song title}"
           }
         }
       },
