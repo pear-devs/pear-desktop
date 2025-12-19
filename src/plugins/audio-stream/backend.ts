@@ -78,7 +78,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
         configLength.writeUInt32BE(configBuffer.length, 0);
 
         this.clients.forEach((client, clientId) => {
-          try {
+            try {
             if (client.response.writable && !client.response.destroyed) {
                 client.response.write(configLength);
                 client.response.write(configBuffer);
