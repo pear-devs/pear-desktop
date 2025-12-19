@@ -114,7 +114,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
             channels: this.audioConfig.channels,
           },
           data: pcmBuffer,
-        };
+          };
 
           // Add to buffer for new clients
         this.pcmBuffer.push(chunk);
