@@ -116,7 +116,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
           data: pcmBuffer,
         };
 
-        // Add to buffer for new clients
+          // Add to buffer for new clients
         this.pcmBuffer.push(chunk);
         if (this.pcmBuffer.length > this.maxBufferSize) {
           this.pcmBuffer.shift();
