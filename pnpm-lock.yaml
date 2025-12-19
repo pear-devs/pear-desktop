@@ -145,8 +145,8 @@ importers:
         specifier: 6.6.2
         version: 6.6.2
       es-hangul:
-        specifier: 2.3.5
-        version: 2.3.5
+        specifier: 2.3.8
+        version: 2.3.8
       fast-average-color:
         specifier: 9.5.0
         version: 9.5.0
@@ -2334,8 +2334,8 @@ packages:
   es-get-iterator@1.1.3:
     resolution: {integrity: sha512-sPZmqHBe6JIiTfN5q2pEi//TwxmAFHwj/XEuYjTuse78i8KxaqMTTzxPoFKuzRpDpTJ+0NAbpfenkmH2rePtuw==}
 
-  es-hangul@2.3.5:
-    resolution: {integrity: sha512-1Fdd5jr48/6/BxU4ucMpByaI2dbFhonipsCgAHYi1UbAGNLT0ELwBj1cdepl9j9ERsDS9nf4Zy4tPSEccaOEOw==}
+  es-hangul@2.3.8:
+    resolution: {integrity: sha512-VrJuqYBC7W04aKYjCnswomuJNXQRc0q33SG1IltVrRofi2YEE6FwVDPlsEJIdKbHwsOpbBL/mk9sUaBxVpbd+w==}
 
   es-object-atoms@1.1.1:
     resolution: {integrity: sha512-FGgH2h8zKNim9ljj7dankFPcICIK9Cp5bm+c2gQSYePhpaG5+esrLODihIorn+Pe6FGJzWhXQotPv73jTaldXA==}
@@ -7158,7 +7158,7 @@ snapshots:
       isarray: 2.0.5
       stop-iteration-iterator: 1.1.0
 
-  es-hangul@2.3.5: {}
+  es-hangul@2.3.8: {}
 
   es-object-atoms@1.1.1:
     dependencies:
