@@ -74,7 +74,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
             channels: config.channels,
         });
         const configBuffer = Buffer.from(configJson, 'utf-8');
-        const configLength = Buffer.allocUnsafe(4);
+          const configLength = Buffer.allocUnsafe(4);
         configLength.writeUInt32BE(configBuffer.length, 0);
 
         this.clients.forEach((client, clientId) => {
