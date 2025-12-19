@@ -396,6 +396,17 @@
         "no-captions": "No captions available for this song"
       }
     },
+    "clock": {
+      "description": "Add a clock to the navigation bar",
+      "name": "Clock",
+      "menu": {
+        "format": {
+          "label": "Format",
+          "display-seconds": "Display Seconds",
+          "24-hour-format": "24-Hour Format"
+        }
+      }
+    },
     "compact-sidebar": {
       "description": "Always set the sidebar in compact mode",
       "name": "Compact Sidebar"
