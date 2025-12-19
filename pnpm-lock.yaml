@@ -74,10 +74,10 @@ importers:
         version: 0.5.2(hono@4.10.3)
       '@hono/zod-openapi':
         specifier: 1.1.0
-        version: 1.1.0(hono@4.10.3)(zod@4.1.5)
+        version: 1.1.0(hono@4.10.3)(zod@4.2.1)
       '@hono/zod-validator':
         specifier: 0.7.2
-        version: 0.7.2(hono@4.10.3)(zod@4.1.5)
+        version: 0.7.2(hono@4.10.3)(zod@4.2.1)
       '@jellybrick/dbus-next':
         specifier: 0.10.3
         version: 0.10.3
@@ -253,8 +253,8 @@ importers:
         specifier: ^16.0.1
         version: 16.0.1
       zod:
-        specifier: 4.1.5
-        version: 4.1.5
+        specifier: 4.2.1
+        version: 4.2.1
     devDependencies:
       '@eslint/js':
         specifier: 9.35.0
@@ -1598,10 +1598,6 @@ packages:
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
     engines: {node: '>=8'}
-
-  ansi-regex@6.1.0:
-    resolution: {integrity: sha512-7HSX4QQb4CspciLpVFwyRe79O3xsIZDDLER21kERQ71oaPodF8jL725AgJMFAYbooIqolJoRLuM81SpeUkpkvA==}
-    engines: {node: '>=12'}
 
   ansi-regex@6.2.2:
     resolution: {integrity: sha512-Bq3SmSpyFHaWjPk8If9yc6svM8c56dB5BAtW4Qbw5jHTwwXXcTLoRMkpDJp6VL0XzlWaCHTXrkFURMYmD0sLqg==}
@@ -4383,10 +4379,6 @@ packages:
     resolution: {integrity: sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A==}
     engines: {node: '>=8'}
 
-  strip-ansi@7.1.0:
-    resolution: {integrity: sha512-iq6eVVI64nQQTRYq2KtEg2d2uU7LElhTJwsH4YzIHZshxlgZms/wIc4VoDQTlG/IvVIrBKG06CrZnp0qv7hkcQ==}
-    engines: {node: '>=12'}
-
   strip-ansi@7.1.2:
     resolution: {integrity: sha512-gmBGslpoQJtgnMAvOVqGZpEz9dyoKTCzy2nfz/n8aIFhN/jCE/rCmcxabB6jOOHV+0WNnylOxaxBQPSvcWklhA==}
     engines: {node: '>=12'}
@@ -4862,8 +4854,8 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
-  zod@4.1.5:
-    resolution: {integrity: sha512-rcUUZqlLJgBC33IT3PNMgsCq6TzLQEG/Ei/KTCU0PedSWRMAXoOUN+4t/0H+Q8bdnLPdqUYnvboJT0bn/229qg==}
+  zod@4.2.1:
+    resolution: {integrity: sha512-0wZ1IRqGGhMP76gLqz8EyfBXKk0J2qo2+H3fi4mcUP/KtTocoX08nmIAHl1Z2kJIZbZee8KOpBCSNPRgauucjw==}
 
 snapshots:
 
@@ -4876,10 +4868,10 @@ snapshots:
 
   '@assemblyscript/loader@0.17.14': {}
 
-  '@asteasolutions/zod-to-openapi@8.1.0(zod@4.1.5)':
+  '@asteasolutions/zod-to-openapi@8.1.0(zod@4.2.1)':
     dependencies:
       openapi3-ts: 4.5.0
-      zod: 4.1.5
+      zod: 4.2.1
 
   '@babel/code-frame@7.27.1':
     dependencies:
@@ -5359,18 +5351,18 @@ snapshots:
     dependencies:
       hono: 4.10.3
 
-  '@hono/zod-openapi@1.1.0(hono@4.10.3)(zod@4.1.5)':
+  '@hono/zod-openapi@1.1.0(hono@4.10.3)(zod@4.2.1)':
     dependencies:
-      '@asteasolutions/zod-to-openapi': 8.1.0(zod@4.1.5)
-      '@hono/zod-validator': 0.7.2(hono@4.10.3)(zod@4.1.5)
+      '@asteasolutions/zod-to-openapi': 8.1.0(zod@4.2.1)
+      '@hono/zod-validator': 0.7.2(hono@4.10.3)(zod@4.2.1)
       hono: 4.10.3
       openapi3-ts: 4.5.0
-      zod: 4.1.5
+      zod: 4.2.1
 
-  '@hono/zod-validator@0.7.2(hono@4.10.3)(zod@4.1.5)':
+  '@hono/zod-validator@0.7.2(hono@4.10.3)(zod@4.2.1)':
     dependencies:
       hono: 4.10.3
-      zod: 4.1.5
+      zod: 4.2.1
 
   '@humanfs/core@0.19.1': {}
 
@@ -6195,8 +6187,6 @@ snapshots:
       string-width: 4.2.3
 
   ansi-regex@5.0.1: {}
-
-  ansi-regex@6.1.0: {}
 
   ansi-regex@6.2.2: {}
 
@@ -9306,7 +9296,7 @@ snapshots:
     dependencies:
       eastasianwidth: 0.2.0
       emoji-regex: 9.2.2
-      strip-ansi: 7.1.0
+      strip-ansi: 7.1.2
 
   string.prototype.trim@1.2.10:
     dependencies:
@@ -9342,10 +9332,6 @@ snapshots:
   strip-ansi@6.0.1:
     dependencies:
       ansi-regex: 5.0.1
-
-  strip-ansi@7.1.0:
-    dependencies:
-      ansi-regex: 6.1.0
 
   strip-ansi@7.1.2:
     dependencies:
@@ -9778,7 +9764,7 @@ snapshots:
     dependencies:
       ansi-styles: 6.2.1
       string-width: 5.1.2
-      strip-ansi: 7.1.0
+      strip-ansi: 7.1.2
 
   wrappy@1.0.2: {}
 
@@ -9846,4 +9832,4 @@ snapshots:
 
   zod@3.25.76: {}
 
-  zod@4.1.5: {}
+  zod@4.2.1: {}
