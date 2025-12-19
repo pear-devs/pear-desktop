@@ -72,7 +72,7 @@
     "@foobar404/wave": "2.0.5",
     "@ghostery/adblocker-electron": "2.11.6",
     "@ghostery/adblocker-electron-preload": "2.11.6",
-    "@hono/node-server": "1.19.1",
+    "@hono/node-server": "1.19.7",
     "@hono/node-ws": "1.2.0",
     "@hono/swagger-ui": "0.5.2",
     "@hono/zod-openapi": "1.1.0",
