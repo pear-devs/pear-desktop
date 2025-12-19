@@ -80,7 +80,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
               client.response.write(configBuffer);
                 console.log(
                 LoggerPrefix,
-                `[Audio Stream] Sent updated config to client ${client.ip}`,
+                  `[Audio Stream] Sent updated config to client ${client.ip}`,
               );
             }
           } catch (error) {
