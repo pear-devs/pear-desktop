@@ -54,7 +54,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
       'audio-stream:config',
       (config: { sampleRate: number; bitDepth: number; channels: number }) => {
         const oldConfig = this.audioConfig;
-      this.audioConfig = config;
+        this.audioConfig = config;
       console.log(
         LoggerPrefix,
         `[Audio Stream] Received audio config:`,
