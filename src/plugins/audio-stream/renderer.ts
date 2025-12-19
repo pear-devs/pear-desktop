@@ -1,6 +1,8 @@
 import { createRenderer } from '@/utils';
-import type { MusicPlayer } from '@/types/music-player';
+
 import type { RendererContext } from '@/types/contexts';
+import type { MusicPlayer } from '@/types/music-player';
+
 import type { AudioStreamConfig } from './config';
 
 type ProcessingQueueItem = {
@@ -84,13 +86,17 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
     // NOTE: ScriptProcessorNode is deprecated and can cause timing issues/crackling.
     // For best results, consider migrating to AudioWorkletNode in the future.
     // Use buffer size from config for latency control
-    const scriptProcessor = audioContext.createScriptProcessor(bufferSize, channels, channels);
-    
+    const scriptProcessor = audioContext.createScriptProcessor(
+      bufferSize,
+      channels,
+      channels,
+    );
+
     // No batching - send immediately to minimize latency
     // Base64 encoding is deferred to async queue to prevent blocking
     this.batchBuffer = null;
     this.batchCount = 0;
-    
+
     // Reset processing queue
     this.processingQueue = [];
     this.isProcessing = false;
@@ -100,7 +106,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
       const bytes = new Uint8Array(buffer);
       const chunkSize = 0x8000; // 32KB chunks
       let binary = '';
-      
+
       // Process in chunks to avoid call stack overflow with spread operator
       for (let i = 0; i < bytes.length; i += chunkSize) {
         const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
@@ -114,14 +120,14 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
     // Increased queue size to handle bursts better
     const MAX_QUEUE_SIZE = 16; // Increased from 8 to handle bursts
     const ITEMS_PER_TICK = 2; // Process 2 items per tick for better throughput
-    
+
     const processQueue = () => {
       if (this.isProcessing || this.processingQueue.length === 0 || !this.context) {
         return;
       }
 
       this.isProcessing = true;
-      
+
       // Process multiple items per tick to keep up with audio callback rate
       let itemsProcessed = 0;
       const processBatch = () => {
@@ -138,7 +144,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
             } else {
               buffer = item.buffer.buffer;
             }
-            
+
             // Base64 encoding happens outside audio callback
             const pcmDataBase64 = arrayBufferToBase64(buffer);
 
@@ -154,9 +160,9 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
             itemsProcessed++;
           }
         }
-        
+
         this.isProcessing = false;
-        
+
         // Schedule next batch if queue still has items
         if (this.processingQueue.length > 0) {
           // Use immediate microtask for low latency when queue is small
@@ -168,7 +174,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
           }
         }
       };
-      
+
       // Start processing immediately
       processBatch();
     };
@@ -189,7 +195,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
         // 32-bit PCM: convert float32 (-1.0 to 1.0) to int32 (-2147483648 to 2147483647)
         const pcm32 = new Int32Array(length * numberOfChannels);
         const MAX_INT32 = 2147483647;
-        
+
         // Optimized loop - process channels interleaved
         for (let channel = 0; channel < numberOfChannels; channel++) {
           const channelData = inputBuffer.getChannelData(channel);
@@ -200,19 +206,20 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
             const clamped = sample < -1 ? -1 : sample > 1 ? 1 : sample;
             const scaled = Math.round(clamped * MAX_INT32);
             // Clamp to int32 range
-            pcm32[i * numberOfChannels + channel] = scaled < -2147483648 
-              ? -2147483648 
-              : scaled > MAX_INT32 
-                ? MAX_INT32 
-                : scaled;
+            pcm32[i * numberOfChannels + channel] =
+              scaled < -2147483648
+                ? -2147483648
+                : scaled > MAX_INT32
+                  ? MAX_INT32
+                  : scaled;
           }
         }
         pcmArray = pcm32;
       } else {
         // 16-bit PCM: highly optimized conversion
         const pcm16 = new Int16Array(length * numberOfChannels);
-        const MAX_INT16 = 0x7FFF;
-        
+        const MAX_INT16 = 0x7fff;
+
         // Optimize for common case (stereo)
         if (numberOfChannels === 2) {
           const leftChannel = inputBuffer.getChannelData(0);
@@ -222,7 +229,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
             // Clamp and convert with minimal branching
             const left = leftChannel[i];
             const right = rightChannel[i];
-            
+
             // Fast clamp: Math.max(-1, Math.min(1, sample))
             const leftClamped = left < -1 ? -1 : left > 1 ? 1 : left;
             const rightClamped = right < -1 ? -1 : right > 1 ? 1 : right;
@@ -254,7 +261,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
           // Remove oldest items (FIFO) until we have room
           this.processingQueue.shift();
         }
-        
+
         this.processingQueue.push({
           buffer: pcmArray,
           metadata: {
@@ -325,7 +332,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
           },
           data: pcmDataBase64,
         });
-      } catch (error) {
+      } catch {
         // Ignore flush errors
       }
       this.batchBuffer = null;
@@ -335,7 +342,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
     if (this.scriptProcessor) {
       try {
         this.scriptProcessor.disconnect();
-      } catch (error) {
+      } catch {
         // Ignore disconnect errors
       }
       this.scriptProcessor = undefined;
@@ -345,18 +352,18 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
     this.audioSource = undefined;
   },
 
-  async onConfigChange(config: AudioStreamConfig) {
+  onConfigChange(config: AudioStreamConfig) {
     const wasEnabled = this.config?.enabled;
     const oldBitDepth = this.config?.bitDepth;
     const oldChannels = this.config?.channels;
     const oldBufferSize = this.config?.bufferSize;
-    
+
     // Check if quality/latency settings changed
-    const qualityChanged = 
+    const qualityChanged =
       oldBitDepth !== config.bitDepth ||
       oldChannels !== config.channels ||
       oldBufferSize !== config.bufferSize;
-    
+
     this.config = config;
 
     if (config.enabled && !wasEnabled) {
@@ -381,7 +388,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
       if (this.scriptProcessor) {
         try {
           this.scriptProcessor.disconnect();
-        } catch (error) {
+        } catch {
           // Ignore disconnect errors
         }
         this.scriptProcessor = undefined;
@@ -394,7 +401,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
       if (this.audioContext && this.audioSource) {
         // Stop current streaming
         this.isStreaming = false;
-        
+
         // Clear processing queue to prevent sending stale data
         this.processingQueue = [];
         this.isProcessing = false;
@@ -411,7 +418,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
           }
           this.scriptProcessor = undefined;
         }
-        
+
         // Use requestAnimationFrame to ensure cleanup is complete before restarting
         requestAnimationFrame(() => {
           // Double-check we're not streaming and have valid references

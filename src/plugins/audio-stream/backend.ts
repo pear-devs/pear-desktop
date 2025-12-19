@@ -1,10 +1,12 @@
 import { createServer, IncomingMessage, ServerResponse } from 'node:http';
+
 import { ipcMain } from 'electron';
-import { createBackend } from '@/utils';
-import { LoggerPrefix } from '@/utils';
+
+import { createBackend, LoggerPrefix } from '@/utils';
+
+import type { BackendContext } from '@/types/contexts';
 
 import type { AudioStreamConfig } from './config';
-import type { BackendContext } from '@/types/contexts';
 
 type ClientInfo = {
   response: ServerResponse;
@@ -56,7 +58,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
         `[Audio Stream] Received audio config:`,
         config,
       );
-      
+
       // If config changed and we have clients, broadcast the new config to all existing clients
       if (oldConfig && this.clients.size > 0) {
         const configJson = JSON.stringify({
@@ -68,7 +70,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
         const configBuffer = Buffer.from(configJson, 'utf-8');
         const configLength = Buffer.allocUnsafe(4);
         configLength.writeUInt32BE(configBuffer.length, 0);
-        
+
         this.clients.forEach((client, clientId) => {
           try {
             if (client.response.writable && !client.response.destroyed) {
@@ -97,7 +99,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
       try {
         // Decode base64 to buffer
         const pcmBuffer = Buffer.from(data.data, 'base64');
-        
+
         const chunk = {
           metadata: {
             timestamp: data.metadata.timestamp || Date.now(),
@@ -116,7 +118,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
 
         // Send to all connected clients
         const clientsToRemove: string[] = [];
-        
+
         // Pre-compute metadata to avoid repeated JSON.stringify
         const metadataJson = JSON.stringify(chunk.metadata);
         const metadataBuffer = Buffer.from(metadataJson, 'utf-8');
@@ -133,7 +135,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
               // Single write call is more efficient than multiple writes
               const canWrite = client.response.write(combinedBuffer);
               client.lastActivity = Date.now();
-              
+
               // Handle backpressure - if write returns false, buffer is full
               // Don't remove client, just skip this write to prevent blocking
               if (!canWrite) {
@@ -164,7 +166,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
           if (client) {
             try {
               client.response.end();
-            } catch (error) {
+            } catch {
               // Ignore errors when closing
             }
           }
@@ -188,15 +190,15 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
     // Remove IPC listeners
     ipcMain.removeAllListeners('audio-stream:config');
     ipcMain.removeAllListeners('audio-stream:pcm-data');
-    
+
     this.stopServer();
   },
 
-  async onConfigChange(config: AudioStreamConfig) {
+  onConfigChange(config: AudioStreamConfig) {
     const wasEnabled = this.oldConfig?.enabled ?? false;
     const portChanged = this.oldConfig?.port !== config.port;
     const hostnameChanged = this.oldConfig?.hostname !== config.hostname;
-    
+
     // If port or hostname changed and server is enabled, restart it
     if (config.enabled && (portChanged || hostnameChanged || !wasEnabled)) {
       this.stopServer();
@@ -205,7 +207,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
       // If disabled, stop the server
       this.stopServer();
     }
-    
+
     this.oldConfig = config;
   },
 
@@ -244,14 +246,14 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
         if ('setReceiveBufferSize' in socket && typeof socket.setReceiveBufferSize === 'function') {
           try {
             (socket as any).setReceiveBufferSize(1024 * 1024); // 1MB receive buffer
-          } catch (e) {
+          } catch {
             // Ignore if not supported
           }
         }
         if ('setSendBufferSize' in socket && typeof socket.setSendBufferSize === 'function') {
           try {
             (socket as any).setSendBufferSize(1024 * 1024); // 1MB send buffer
-          } catch (e) {
+          } catch {
             // Ignore if not supported
           }
         }
@@ -290,7 +292,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
         const configBuffer = Buffer.from(configJson, 'utf-8');
         const configLength = Buffer.allocUnsafe(4);
         configLength.writeUInt32BE(configBuffer.length, 0);
-        
+
         try {
           res.write(configLength);
           res.write(configBuffer);
@@ -310,7 +312,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
           const metadataBuffer = Buffer.from(metadataJson, 'utf-8');
           const metadataLength = Buffer.allocUnsafe(4);
           metadataLength.writeUInt32BE(metadataBuffer.length, 0);
-          
+
           res.write(metadataLength);
           res.write(metadataBuffer);
           res.write(chunk.data);

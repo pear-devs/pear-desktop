@@ -3,13 +3,13 @@ import prompt from 'custom-electron-prompt';
 import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 
+import type { MenuContext } from '@/types/contexts';
+import type { MenuTemplate } from '@/menu';
+
 import {
   type AudioStreamConfig,
   defaultAudioStreamConfig,
 } from './config';
-
-import type { MenuContext } from '@/types/contexts';
-import type { MenuTemplate } from '@/menu';
 
 // Quality and latency presets
 const SAMPLE_RATES = [44100, 48000, 96000];
@@ -33,7 +33,7 @@ export const onMenu = async ({
 
         const currentPort = config.port || defaultAudioStreamConfig.port;
         const streamUrl = `http://localhost:${currentPort}/stream`;
-        
+
         const newPort =
           (await prompt(
             {

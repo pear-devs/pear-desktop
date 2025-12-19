@@ -1,9 +1,11 @@
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
-import { backend } from './backend';
-import { renderer } from './renderer';
-import { onMenu } from './menu';
+
 import { defaultAudioStreamConfig } from './config';
+import { backend } from './backend';
+import { onMenu } from './menu';
+import { renderer } from './renderer';
+
 import type { AudioStreamConfig } from './config';
 
 export default createPlugin({
@@ -15,6 +17,4 @@ export default createPlugin({
   renderer,
   menu: onMenu,
 });
-
-
 
