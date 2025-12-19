@@ -71,7 +71,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
             type: 'config',
           sampleRate: config.sampleRate,
           bitDepth: config.bitDepth,
-          channels: config.channels,
+            channels: config.channels,
         });
         const configBuffer = Buffer.from(configJson, 'utf-8');
         const configLength = Buffer.allocUnsafe(4);
