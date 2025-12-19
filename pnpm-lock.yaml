@@ -68,7 +68,7 @@ importers:
         version: 1.19.7(hono@4.10.3)
       '@hono/node-ws':
         specifier: 1.2.0
-        version: 1.2.0(@hono/node-server@1.19.7(hono@4.10.3))(bufferutil@4.0.9)(hono@4.10.3)(utf-8-validate@6.0.5)
+        version: 1.2.0(@hono/node-server@1.19.7(hono@4.10.3))(bufferutil@4.0.9)(hono@4.10.3)(utf-8-validate@6.0.6)
       '@hono/swagger-ui':
         specifier: 0.5.2
         version: 0.5.2(hono@4.10.3)
@@ -98,7 +98,7 @@ importers:
         version: 1.1.1
       '@xhayper/discord-rpc':
         specifier: 1.3.0
-        version: 1.3.0(bufferutil@4.0.9)(utf-8-validate@6.0.5)
+        version: 1.3.0(bufferutil@4.0.9)(utf-8-validate@6.0.6)
       async-mutex:
         specifier: 0.5.0
         version: 0.5.0
@@ -356,8 +356,8 @@ importers:
         specifier: 8.43.0
         version: 8.43.0(eslint@9.35.0)(typescript@5.9.2)
       utf-8-validate:
-        specifier: 6.0.5
-        version: 6.0.5
+        specifier: 6.0.6
+        version: 6.0.6
       vite:
         specifier: npm:rolldown-vite@7.3.0
         version: rolldown-vite@7.3.0(@types/node@24.3.0)(yaml@2.8.1)
@@ -372,7 +372,7 @@ importers:
         version: 2.11.8(rolldown-vite@7.3.0(@types/node@24.3.0)(yaml@2.8.1))(solid-js@1.9.9)
       ws:
         specifier: 8.18.3
-        version: 8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5)
+        version: 8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.6)
 
 packages:
 
@@ -4619,8 +4619,8 @@ packages:
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
-  utf-8-validate@6.0.5:
-    resolution: {integrity: sha512-EYZR+OpIXp9Y1eG1iueg8KRsY8TuT8VNgnanZ0uA3STqhHQTLwbl+WX76/9X5OY12yQubymBpaBSmMPkSTQcKA==}
+  utf-8-validate@6.0.6:
+    resolution: {integrity: sha512-q3l3P9UtEEiAHcsgsqTgf9PPjctrDWoIXW3NpOHFdRDbLvu4DLIcxHangJ4RLrWkBcKjmcs/6NkerI8T/rE4LA==}
     engines: {node: '>=6.14.2'}
 
   utf8-byte-length@1.0.5:
@@ -5338,11 +5338,11 @@ snapshots:
     dependencies:
       hono: 4.10.3
 
-  '@hono/node-ws@1.2.0(@hono/node-server@1.19.7(hono@4.10.3))(bufferutil@4.0.9)(hono@4.10.3)(utf-8-validate@6.0.5)':
+  '@hono/node-ws@1.2.0(@hono/node-server@1.19.7(hono@4.10.3))(bufferutil@4.0.9)(hono@4.10.3)(utf-8-validate@6.0.6)':
     dependencies:
       '@hono/node-server': 1.19.7(hono@4.10.3)
       hono: 4.10.3
-      ws: 8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5)
+      ws: 8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.6)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -6105,12 +6105,12 @@ snapshots:
 
   '@vladfrangu/async_event_emitter@2.4.6': {}
 
-  '@xhayper/discord-rpc@1.3.0(bufferutil@4.0.9)(utf-8-validate@6.0.5)':
+  '@xhayper/discord-rpc@1.3.0(bufferutil@4.0.9)(utf-8-validate@6.0.6)':
     dependencies:
       '@discordjs/rest': 2.5.1
       '@vladfrangu/async_event_emitter': 2.4.6
       discord-api-types: 0.38.37
-      ws: 8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5)
+      ws: 8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.6)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -9606,7 +9606,7 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  utf-8-validate@6.0.5:
+  utf-8-validate@6.0.6:
     dependencies:
       node-gyp-build: 4.8.4
 
@@ -9766,10 +9766,10 @@ snapshots:
 
   wrappy@1.0.2: {}
 
-  ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.5):
+  ws@8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.6):
     optionalDependencies:
       bufferutil: 4.0.9
-      utf-8-validate: 6.0.5
+      utf-8-validate: 6.0.6
 
   wsl-utils@0.1.0:
     dependencies:
