@@ -1,10 +1,7 @@
 import Store from 'electron-store';
-
-import { defaultConfig as defaults } from './defaults';
-
 import { DefaultPresetList, type Preset } from '@/plugins/downloader/types';
-
-import type { SyncedLyricsPluginConfig } from '@/plugins/synced-lyrics/types';
+import { type SyncedLyricsPluginConfig } from '@/plugins/synced-lyrics/types';
+import { defaultConfig as defaults } from './defaults';
 
 export type IStore = InstanceType<
   typeof import('conf').default<Record<string, unknown>>
@@ -231,7 +228,7 @@ const migrations = {
     }
 
     // Include custom options
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: Plugin configurations have dynamic structures that vary by plugin type
     const plugins: Record<string, any> = {
       adblocker: {
         enabled: true,
@@ -246,7 +243,6 @@ const migrations = {
     };
 
     for (const enabledPlugin of enabledPlugins) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       plugins[enabledPlugin] = {
         ...plugins[enabledPlugin],
         enabled: true,

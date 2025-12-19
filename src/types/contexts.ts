@@ -1,10 +1,10 @@
-import type {
-  IpcMain,
-  IpcRenderer,
-  WebContents,
-  BrowserWindow,
+import {
+  type BrowserWindow,
+  type IpcMain,
+  type IpcRenderer,
+  type WebContents,
 } from 'electron';
-import type { PluginConfig } from '@/types/plugins';
+import { type PluginConfig } from '@/types/plugins';
 
 export interface BaseContext<Config extends PluginConfig> {
   getConfig: () => Promise<Config> | Config;
@@ -29,7 +29,6 @@ export interface MenuContext<Config extends PluginConfig>
   refresh: () => Promise<void> | void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface PreloadContext<Config extends PluginConfig>
   extends BaseContext<Config> {}
 

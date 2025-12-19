@@ -1,13 +1,9 @@
-import { deepmerge } from 'deepmerge-ts';
-
 import { rendererPlugins } from 'virtual:plugins';
-
-import { LoggerPrefix, startPlugin, stopPlugin } from '@/utils';
-
+import { deepmerge } from 'deepmerge-ts';
 import { t } from '@/i18n';
-
-import type { RendererContext } from '@/types/contexts';
-import type { PluginConfig, PluginDef } from '@/types/plugins';
+import { type RendererContext } from '@/types/contexts';
+import { type PluginConfig, type PluginDef } from '@/types/plugins';
+import { LoggerPrefix, startPlugin, stopPlugin } from '@/utils';
 
 const unregisterStyleMap: Record<string, (() => void)[]> = {};
 const loadedPluginMap: Record<
@@ -31,7 +27,6 @@ export const createContext = <Config extends PluginConfig>(
       window.ipcRenderer.invoke(event, ...args),
     on: (event: string, listener: CallableFunction) => {
       window.ipcRenderer.on(event, (_, ...args: unknown[]) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         listener(...args);
       });
     },

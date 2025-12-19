@@ -1,12 +1,12 @@
-import emptyStyle from './empty-player.css?inline';
+import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
-import { type Visualizer } from './visualizers/visualizer';
+import emptyStyle from './empty-player.css?inline';
 import {
   ButterchurnVisualizer as butterchurn,
   VudioVisualizer as vudio,
   WaveVisualizer as wave,
 } from './visualizers';
-import { t } from '@/i18n';
+import { type Visualizer } from './visualizers/visualizer';
 
 type WaveColor = {
   gradient: string[];
@@ -151,7 +151,7 @@ export default createPlugin({
     async onPlayerApiReady(_, { getConfig }) {
       const config = await getConfig();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // biome-ignore lint/suspicious/noExplicitAny: Visualizer constructors accept varying argument types depending on the visualizer implementation
       let visualizerType: { new (...args: any[]): Visualizer<unknown> } = vudio;
 
       if (config.type === 'wave') {
