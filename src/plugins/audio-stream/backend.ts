@@ -62,7 +62,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
         console.log(
           LoggerPrefix,
           `[Audio Stream] Received audio config:`,
-        config,
+          config,
       );
 
       // If config changed and we have clients, broadcast the new config to all existing clients
