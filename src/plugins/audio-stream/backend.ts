@@ -50,7 +50,9 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
     this.oldConfig = config;
 
     // Listen for audio configuration
-    ctx.ipc.on('audio-stream:config', (config: { sampleRate: number; bitDepth: number; channels: number }) => {
+    ctx.ipc.on(
+      'audio-stream:config',
+      (config: { sampleRate: number; bitDepth: number; channels: number }) => {
       const oldConfig = this.audioConfig;
       this.audioConfig = config;
       console.log(
