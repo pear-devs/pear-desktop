@@ -78,7 +78,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
             if (client.response.writable && !client.response.destroyed) {
                 client.response.write(configLength);
               client.response.write(configBuffer);
-              console.log(
+                console.log(
                 LoggerPrefix,
                 `[Audio Stream] Sent updated config to client ${client.ip}`,
               );
