@@ -65,7 +65,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
           config,
       );
 
-      // If config changed and we have clients, broadcast the new config to all existing clients
+        // If config changed and we have clients, broadcast the new config to all existing clients
       if (oldConfig && this.clients.size > 0) {
         const configJson = JSON.stringify({
             type: 'config',
