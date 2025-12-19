@@ -87,7 +87,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
                   `[Audio Stream] Sent updated config to client ${client.ip}`,
                 );
             }
-          } catch (error) {
+            } catch (error) {
               console.error(
               LoggerPrefix,
               `[Audio Stream] Error sending updated config to client ${client.ip}:`,
