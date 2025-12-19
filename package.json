@@ -169,7 +169,7 @@
     "glob": "11.1.0",
     "node-gyp": "11.4.2",
     "playwright": "1.55.1",
-    "ts-morph": "27.0.0",
+    "ts-morph": "27.0.2",
     "typescript": "5.9.2",
     "typescript-eslint": "8.43.0",
     "utf-8-validate": "6.0.5",
