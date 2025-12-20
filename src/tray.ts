@@ -10,7 +10,7 @@ import { restart } from './providers/app-controls';
 import { registerCallback, SongInfoEvent } from './providers/song-info';
 import { getSongControls } from './providers/song-controls';
 
-import { t } from '@/i18n';
+import { APPLICATION_NAME, t } from '@/i18n';
 
 import type { MenuTemplate } from './menu';
 
@@ -67,7 +67,11 @@ export const setUpTray = (app: Electron.App, win: Electron.BrowserWindow) => {
 
   tray = new Tray(defaultTrayIcon);
 
-  tray.setToolTip(t('main.tray.tooltip.default'));
+  tray.setToolTip(
+    t('main.tray.tooltip.default', {
+      applicationName: APPLICATION_NAME,
+    }),
+  );
 
   // MacOS only
   tray.setIgnoreDoubleClickEvents(true);
@@ -138,6 +142,7 @@ export const setUpTray = (app: Electron.App, win: Electron.BrowserWindow) => {
         t('main.tray.tooltip.with-song-info', {
           artist: songInfo.artist,
           title: songInfo.title,
+          applicationName: APPLICATION_NAME,
         }),
       );
 

@@ -33,25 +33,25 @@
         "css-file-not-found": "Arquivo CSS \"{{cssFile}}\" não existe, ignorando"
       },
       "unresponsive": {
-        "details": "Erro de falta de resposta!\n{{error}}"
+        "details": "Erro por falta de resposta!\n{{error}}"
       },
       "when-ready": {
         "clearing-cache-after-20s": "Limpando cache do aplicativo"
       },
       "window": {
-        "tried-to-render-offscreen": "A janela tentou renderizar fora da tela, tamanho da janela={{windowSize}}, tamanho da tela={{displaySize}}, posição={{position}}"
+        "tried-to-render-offscreen": "A janela tentou renderizar fora dos parâmetros da tela, tamanho da janela={{windowSize}}, tamanho da tela={{displaySize}}, posição={{position}}"
       }
     },
     "dialog": {
       "hide-menu-enabled": {
         "detail": "O menu está oculto, use 'Alt' para mostrá-lo (ou 'Esc' ao usar o menu dentro do aplicativo)",
-        "message": "Ocultar menu está ativado",
-        "title": "Ocultar menu ativado"
+        "message": "Ocultar Menu está ativado",
+        "title": "Ocultar Menu ativado"
       },
       "need-to-restart": {
         "buttons": {
           "later": "Depois",
-          "restart-now": "Reiniciar agora"
+          "restart-now": "Reiniciar Agora"
         },
         "detail": "O plugin \"{{pluginName}}\" requer uma reinicialização para entrar em vigor",
         "message": "\"{{pluginName}}\" precisa reiniciar",
@@ -84,7 +84,7 @@
         "label": "Navegação",
         "submenu": {
           "copy-current-url": "Copiar URL atual",
-          "go-back": "Voltar",
+          "go-back": "Retornar",
           "go-forward": "Avançar",
           "quit": "Sair",
           "restart": "Reiniciar aplicativo"
@@ -154,7 +154,7 @@
                 "label": "Título da janela customizado",
                 "prompt": {
                   "label": "Insira título customizado para a janela: (deixe em branco para desabilitar)",
-                  "placeholder": "Exemplo: Pear Desktop"
+                  "placeholder": "Exemplo: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Reiniciar aplicativo",
       "show": "Mostrar janela",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Ativar personalização da barra de progresso"
       },
       "name": "Tema da cor do álbum"
     },
@@ -287,7 +288,7 @@
       "name": "Modo ambiente"
     },
     "amuse": {
-      "description": "Adiciona suporte ao Pear Desktop ao widget 'Reproduzindo agora' do Amuse da 6K Labs",
+      "description": "Adiciona suporte ao {{applicationName}} ao widget 'Reproduzindo agora' do Amuse da 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Servidor API do Amuse em execução. GET /query para obter informações da música."
@@ -373,7 +374,7 @@
       "name": "Ignorar restrições de idade"
     },
     "captions-selector": {
-      "description": "Seletor de legendas para faixas de áudio do Pear Desktop",
+      "description": "Seletor de legendas para faixas de áudio do {{applicationName}}",
       "menu": {
         "autoload": "Selecionar automaticamente a última legenda usada",
         "disable-captions": "Sem legendas por padrão"
@@ -456,14 +457,14 @@
         "disconnected": "Desconectado",
         "hide-duration-left": "Ocultar duração restante",
         "hide-github-button": "Ocultar botão do GitHub",
-        "play-on-pear-desktop": "Reproduzir no Pear Desktop",
+        "play-on-application": "Reproduzir no {{applicationName}}",
         "set-inactivity-timeout": "Definir tempo limite de inatividade",
         "set-status-display-type": {
           "label": "Texto de status",
           "submenu": {
             "artist": "Ouvindo {artist}",
-            "title": "Ouvindo {song title}",
-            "pear-desktop": "Ouvindo Pear Desktop"
+            "application": "Ouvindo {{applicationName}}",
+            "title": "Ouvindo {song title}"
           }
         }
       },

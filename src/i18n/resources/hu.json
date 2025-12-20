@@ -154,7 +154,7 @@
                 "label": "Saját ablak cím",
                 "prompt": {
                   "label": "Kérem az egyéni ablak címét: (hagyd üresen a kikapcsoláshoz)",
-                  "placeholder": "Példa: Pear Desktop"
+                  "placeholder": "Példa: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "YT Music újraindítása",
       "show": "Ablak megjelenítése",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Ambient mód"
     },
     "amuse": {
-      "description": "Hozzáadja a Pear Desktop támogatását az Amuse \"now playing\" widgethez a 6K Labs által",
+      "description": "Hozzáadja a {{applicationName}} támogatását az Amuse \"now playing\" widgethez a 6K Labs által",
       "name": "Amuse",
       "response": {
         "query": "Az Amuse API szerver fut. Használja a GET /query kérést a dalinformációk lekéréséhez."
@@ -371,7 +371,7 @@
       "name": "Korellenőrzés kihagyása"
     },
     "captions-selector": {
-      "description": "Felirat választó a Pear Desktop zenékhez",
+      "description": "Felirat választó a {{applicationName}} zenékhez",
       "menu": {
         "autoload": "Automatikusan kiválasztja az utoljára használt feliratot",
         "disable-captions": "Alapértelmezetten nincsenek feliratok"
@@ -453,13 +453,13 @@
         "disconnected": "Nincs Kapcsolódva",
         "hide-duration-left": "Hátralévő idő elrejtése",
         "hide-github-button": "GitHub url gombjának elrejtése",
-        "play-on-pear-desktop": "Lejátszás a Pear Desktop-on",
+        "play-on-application": "Lejátszás a {{applicationName}}-on",
         "set-inactivity-timeout": "Inaktivitási időkorlát beállítása",
         "set-status-display-type": {
           "label": "Tevékenység szöveg",
           "submenu": {
             "artist": "Hallgatja: {artist}",
-            "pear-desktop": "Hallgatja: Pear Desktop",
+            "application": "Hallgatja: {{applicationName}}",
             "title": "Hallgatja: {song title}"
           }
         }

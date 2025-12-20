@@ -154,7 +154,7 @@
                 "label": "自定义窗口标题",
                 "prompt": {
                   "label": "输入自定义窗口标题：（留空表示停用）",
-                  "placeholder": "示例：Pear Desktop"
+                  "placeholder": "示例：{{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "重启应用",
       "show": "显示窗口",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "启用进度条主题"
       },
       "name": "专辑配色主题"
     },
@@ -287,7 +288,7 @@
       "name": "沉浸模式"
     },
     "amuse": {
-      "description": "为 6K Labs 的 Amuse 正在播放小部件添加 Pear Desktop 支持",
+      "description": "为 6K Labs 的 Amuse 正在播放小部件添加 {{applicationName}} 支持",
       "name": "Amuse",
       "response": {
         "query": "Amuse API服务器已在运行。使用 /query 以获取歌曲信息。"
@@ -373,7 +374,7 @@
       "name": "绕过年龄验证"
     },
     "captions-selector": {
-      "description": "Pear Desktop 音轨字幕选择器",
+      "description": "{{applicationName}} 音轨字幕选择器",
       "menu": {
         "autoload": "自动选择上次使用的字幕",
         "disable-captions": "默认无字幕"
@@ -456,14 +457,14 @@
         "disconnected": "已断开连接",
         "hide-duration-left": "隐藏剩余时长",
         "hide-github-button": "隐藏 GitHub 链接按钮",
-        "play-on-pear-desktop": "转至 Pear Desktop 播放",
+        "play-on-application": "转至 {{applicationName}} 播放",
         "set-inactivity-timeout": "设置非活跃时长",
         "set-status-display-type": {
           "label": "状态文本",
           "submenu": {
             "artist": "在听 {artist}",
-            "title": "在听 {song title}",
-            "pear-desktop": "在听 Pear Desktop"
+            "application": "在听 {{applicationName}}",
+            "title": "在听 {song title}"
           }
         }
       },

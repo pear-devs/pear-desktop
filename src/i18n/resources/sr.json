@@ -154,7 +154,7 @@
                 "label": "Prilagođeni naziv prozora",
                 "prompt": {
                   "label": "Unesite prilagođeni naslov prozora: (ostavite prazno da onemogućite)",
-                  "placeholder": "Primer: Pear Desktop"
+                  "placeholder": "Primer: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Ponovo pokreni aplikaciju",
       "show": "Prikaži prozor",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Ambijentalni režim"
     },
     "amuse": {
-      "description": "Dodaje podršku za 'Amuse now' vidžet (6K Labs) u Pear Desktop",
+      "description": "Dodaje podršku za 'Amuse now' vidžet (6K Labs) u {{applicationName}}",
       "name": "Zabavi",
       "response": {
         "query": "Amuse API server je pokrenut. Koristite GET /query da biste dobili informacije o numeri."
@@ -373,7 +373,7 @@
       "name": "Preskoči starosna ograničenja"
     },
     "captions-selector": {
-      "description": "Odabir prevoda za numere/audio trake na Pear Desktop",
+      "description": "Odabir prevoda za numere/audio trake na {{applicationName}}",
       "menu": {
         "autoload": "Automatski odaberi prethodno odabrani prevod",
         "disable-captions": "Podrazumevano bez prevoda"
@@ -456,14 +456,14 @@
         "disconnected": "Nije povezano",
         "hide-duration-left": "Sakrij preostalo vreme",
         "hide-github-button": "Sakrij dugme sa GitHub linkom",
-        "play-on-pear-desktop": "Reprodukuj na Pear Desktop",
+        "play-on-application": "Reprodukuj na {{applicationName}}",
         "set-inactivity-timeout": "Podesi tajmer za neaktivnost",
         "set-status-display-type": {
           "label": "Tekst statusa",
           "submenu": {
             "artist": "Slušanje {artist}",
             "title": "Slušanje {song title}",
-            "pear-desktop": "Slušanje Pear Desktop"
+            "application": "Slušanje {{applicationName}}"
           }
         }
       },

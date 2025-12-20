@@ -1,0 +1,10 @@
+<svg width="180" height="180" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" id="icon-play">
+  <defs>
+    <linearGradient id="grad-play" x1="10%" y1="10%" x2="90%" y2="90%">
+      <stop offset="0%" style="stop-color:#FF512F; stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:#DD2476; stop-opacity:1"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="90" fill="url(#grad-play)"/>
+  <path d="M85 70 L130 100 L85 130 Z" fill="white" stroke="white" stroke-width="4" stroke-linejoin="round"/>
+</svg>
