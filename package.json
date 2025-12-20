@@ -121,7 +121,7 @@
     "node-html-parser": "7.0.1",
     "node-id3": "0.2.9",
     "peerjs": "1.5.5",
-    "semver": "7.7.2",
+    "semver": "7.7.3",
     "serve": "14.2.5",
     "socks": "2.8.7",
     "solid-element": "1.9.1",
