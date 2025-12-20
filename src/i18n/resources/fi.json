@@ -757,7 +757,9 @@
       "prompt": {
         "keybind": {
           "keybind-options": {
-            "previous": "Edellinen"
+            "previous": "Edellinen",
+            "like": "Tykkää",
+            "dislike": "En tykkää"
           }
         }
       }

@@ -787,7 +787,9 @@
           "keybind-options": {
             "next": "Další",
             "play-pause": "Přehrát / Pozastavit",
-            "previous": "Předchozí"
+            "previous": "Předchozí",
+            "like": "Líbí se mi",
+            "dislike": "Nelíbí se mi"
           },
           "label": "Vybrat globální klávesnicové zkratky pro ovládání písniček:",
           "title": "Globální klávesnicové zkratky"

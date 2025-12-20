@@ -46,6 +46,13 @@ export const getSongControls = (win: BrowserWindow) => {
     playPause: () => win.webContents.send('peard:toggle-play'),
     like: () => win.webContents.send('peard:update-like', LikeType.Like),
     dislike: () => win.webContents.send('peard:update-like', LikeType.Dislike),
+    clickLikeButton: () => win.webContents.send('peard:click-like-button'),
+    clickDislikeButton: () => win.webContents.send('peard:click-dislike-button'),
+    getLikeStatus: async () => {
+      return (await win.webContents.executeJavaScript(
+        `document.querySelector('#like-button-renderer')?.getAttribute('like-status') || 'INDIFFERENT'`,
+      )) as string;
+    },
     seekTo: (seconds: ArgsType<number>) => {
       const secondsNumber = parseNumberFromArgsType(seconds);
       if (secondsNumber !== null) {

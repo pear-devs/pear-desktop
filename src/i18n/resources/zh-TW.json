@@ -788,7 +788,9 @@
           "keybind-options": {
             "next": "下一首",
             "play-pause": "播放／暫停",
-            "previous": "上一首"
+            "previous": "上一首",
+            "like": "喜歡",
+            "dislike": "不喜歡"
           },
           "label": "選擇全域音樂控制快捷鍵：",
           "title": "全域快捷鍵"

@@ -787,7 +787,9 @@
           "keybind-options": {
             "next": "Selanjutnya",
             "play-pause": "Main / Jeda",
-            "previous": "Sebelumnya"
+            "previous": "Sebelumnya",
+            "like": "Suka",
+            "dislike": "Tidak suka"
           },
           "label": "Pilih Pintasan Global untuk Pengendali Lagu:",
           "title": "Pintasan Global"

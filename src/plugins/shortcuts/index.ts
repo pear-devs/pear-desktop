@@ -7,6 +7,8 @@ export type ShortcutMappingType = {
   previous: string;
   playPause: string;
   next: string;
+  like: string;
+  dislike: string;
 };
 export type ShortcutsPluginConfig = {
   enabled: boolean;
@@ -26,11 +28,15 @@ export default createPlugin({
       previous: '',
       playPause: '',
       next: '',
+      like: '',
+      dislike: '',
     },
     local: {
       previous: '',
       playPause: '',
       next: '',
+      like: '',
+      dislike: '',
     },
   } as ShortcutsPluginConfig,
   menu: onMenu,

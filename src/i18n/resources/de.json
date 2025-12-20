@@ -788,7 +788,9 @@
           "keybind-options": {
             "next": "Nächstes",
             "play-pause": "Weiter / Pause",
-            "previous": "Vorheriges"
+            "previous": "Vorheriges",
+            "like": "Gefällt mir",
+            "dislike": "Gefällt mir nicht"
           },
           "label": "Wähle globale Tastenkombinationen für die Liedsteuerung:",
           "title": "Globale Tastenkombinationen"

@@ -788,7 +788,9 @@
           "keybind-options": {
             "next": "下一曲",
             "play-pause": "播放/暂停",
-            "previous": "上一曲"
+            "previous": "上一曲",
+            "like": "喜欢",
+            "dislike": "不喜欢"
           },
           "label": "为歌曲控制选择全局按键绑定：",
           "title": "全局按键绑定"

@@ -692,7 +692,9 @@
           "keybind-options": {
             "next": "Næst",
             "play-pause": "Spila / Hlé",
-            "previous": "Fyrri"
+            "previous": "Fyrri",
+            "like": "Líkar",
+            "dislike": "Líkar ekki"
           },
           "label": "Veldu Alþjóðlegslyklabind fyrir Lagastýringu:",
           "title": "Alþjóðlegslyklabindingar"

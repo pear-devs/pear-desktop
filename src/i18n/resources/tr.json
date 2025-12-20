@@ -788,7 +788,9 @@
           "keybind-options": {
             "next": "İler",
             "play-pause": "Oynat / Durdur",
-            "previous": "Önceki"
+            "previous": "Önceki",
+            "like": "Beğen",
+            "dislike": "Beğenme"
           },
           "label": "Şarkı Kontrolü için Genel Tuş Atamaları'nı seçin:",
           "title": "Genel Tuş Atamaları"

@@ -788,7 +788,9 @@
           "keybind-options": {
             "next": "Siguiente",
             "play-pause": "Reproducir / Pausa",
-            "previous": "Anterior"
+            "previous": "Anterior",
+            "like": "Me gusta",
+            "dislike": "No me gusta"
           },
           "label": "Elija combinaciones de teclas para el control de las canciones:",
           "title": "Atajos de teclado globales"

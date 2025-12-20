@@ -788,7 +788,9 @@
           "keybind-options": {
             "next": "Nästa",
             "play-pause": "Spela / Pausa",
-            "previous": "Föregående"
+            "previous": "Föregående",
+            "like": "Gillar",
+            "dislike": "Gillar inte"
           },
           "label": "Välj globala kortkommandon för kontroll av låtar:",
           "title": "Globala kortkommandon"
