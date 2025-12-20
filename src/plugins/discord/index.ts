@@ -39,6 +39,12 @@ export type DiscordPluginConfig = {
    * Controls which field is displayed in the Discord status text
    */
   statusDisplayType: (typeof StatusDisplayType)[keyof typeof StatusDisplayType];
+  /**
+   * Show YouTube Music user avatar and username in Discord Rich Presence
+   * 
+   * @default true
+   */
+  showYouTubeUser: boolean;
 };
 
 export default createPlugin({
@@ -54,6 +60,7 @@ export default createPlugin({
     hideGitHubButton: false,
     hideDurationLeft: false,
     statusDisplayType: StatusDisplayType.Details,
+    showYouTubeUser: true,
   } as DiscordPluginConfig,
   menu: onMenu,
   backend,

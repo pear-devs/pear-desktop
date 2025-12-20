@@ -77,6 +77,16 @@ export const onMenu = async ({
       },
     },
     {
+      label: t('plugins.discord.menu.show-youtube-user'),
+      type: 'checkbox',
+      checked: config.showYouTubeUser,
+      click(item: Electron.MenuItem) {
+        setConfig({
+          showYouTubeUser: item.checked,
+        });
+      },
+    },
+    {
       label: t('plugins.discord.menu.hide-github-button'),
       type: 'checkbox',
       checked: config.hideGitHubButton,
