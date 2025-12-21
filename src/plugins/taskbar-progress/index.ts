@@ -66,9 +66,9 @@ const startProgressInterval = (songInfo: SongInfo, window: BrowserWindow) => {
         typeof lastSongInfo.elapsedSeconds === 'number' &&
         intervalStart !== null
       ) {
+        const timeDelta = (performance.now() - intervalStart) / 1000;
         const elapsedSeconds = Math.floor(
-          lastSongInfo.elapsedSeconds +
-          (performance.now() - intervalStart) / 1000,
+          lastSongInfo.elapsedSeconds + timeDelta,
         );
         updateProgressBar(
           {
