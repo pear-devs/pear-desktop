@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { BrowserWindow } from 'electron';
+
 import { createPlugin } from '@/utils';
 import {
   registerCallback,
@@ -8,6 +8,7 @@ import {
 } from '@/providers/song-info';
 import { t } from '@/i18n';
 
+import type { BrowserWindow } from 'electron';
 
 const requiredSongInfoSchema = z.object({
   title: z.string().min(1),
@@ -66,8 +67,8 @@ const startProgressInterval = (songInfo: SongInfo, window: BrowserWindow) => {
         intervalStart !== null
       ) {
         const elapsedSeconds = Math.floor(
-          lastSongInfo.elapsedSeconds + 
-          ((performance.now() - intervalStart) / 1000),
+          lastSongInfo.elapsedSeconds +
+          (performance.now() - intervalStart) / 1000,
         );
         updateProgressBar(
           {
