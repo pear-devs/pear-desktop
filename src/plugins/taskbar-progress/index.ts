@@ -1,79 +1,111 @@
 import { createPlugin } from '@/utils';
-import { registerCallback, type SongInfo } from '@/providers/song-info';
+import { registerCallback, getCurrentSongInfo, type SongInfo } from '@/providers/song-info';
 import { t } from '@/i18n';
+import { z } from 'zod';
+
+const requiredSongInfoSchema = z.object({
+  title: z.string().min(1),
+  elapsedSeconds: z.number().optional(),
+  songDuration: z.number(),
+  isPaused: z.boolean().optional(),
+});
+
+let lastSongInfo: SongInfo | null = null;
+let progressInterval: ReturnType<typeof setInterval> | null = null;
+let isEnabled = false;
+let intervalStart: number | null = null;
+
+const stopProgressInterval = () => {
+  if (progressInterval) {
+    clearInterval(progressInterval);
+    progressInterval = null;
+    intervalStart = null;
+  }
+};
+
+const updateProgressBar = (songInfo: SongInfo, window: any) => {
+  const validated = requiredSongInfoSchema.safeParse(songInfo);
+
+  if (!validated.success) {
+    return;
+  }
+
+  const { title, elapsedSeconds, songDuration, isPaused } = validated.data;
+
+  if (
+    !lastSongInfo ||
+    title !== lastSongInfo.title ||
+    elapsedSeconds !== lastSongInfo.elapsedSeconds ||
+    isPaused !== lastSongInfo.isPaused
+  ) {
+    lastSongInfo = songInfo;
+  }
+
+  const progress = (elapsedSeconds ?? 0) / songDuration;
+  window.setProgressBar(progress, {
+    mode: isPaused ? 'paused' : 'normal',
+  });
+};
+
+const startProgressInterval = (songInfo: SongInfo, window: any) => {
+  stopProgressInterval();
+  if (!songInfo.isPaused) {
+    intervalStart = performance.now();
+    progressInterval = setInterval(() => {
+      if (
+        lastSongInfo &&
+        !lastSongInfo.isPaused &&
+        typeof lastSongInfo.elapsedSeconds === 'number' &&
+        intervalStart !== null
+      ) {
+        const elapsedSeconds = Math.floor(
+          lastSongInfo.elapsedSeconds + (performance.now() - intervalStart) / 1000,
+        );
+        updateProgressBar(
+          {
+            ...lastSongInfo,
+            elapsedSeconds,
+          },
+          window,
+        );
+      }
+    }, 1000);
+  }
+};
 
 export default createPlugin({
   name: () => t('plugins.taskbar-progress.name'),
   description: () => t('plugins.taskbar-progress.description'),
-  restartNeeded: true,
+  restartNeeded: false,
   config: { enabled: false },
 
-  backend({ window }) {
-    let lastSongInfo: SongInfo | null = null;
-    let progressInterval: ReturnType<typeof setInterval> | null = null;
+  backend: {
+    start({ window }) {
+      isEnabled = true;
 
-    const updateProgressBar = (songInfo: SongInfo) => {
-      if (
-        !songInfo?.title ||
-        typeof songInfo.elapsedSeconds !== 'number' ||
-        !songInfo.songDuration
-      ) {
-        return;
+      const currentSongInfo = getCurrentSongInfo();
+      if (currentSongInfo?.title) {
+        updateProgressBar(currentSongInfo, window);
+        if (!currentSongInfo.isPaused) {
+          startProgressInterval(currentSongInfo, window);
+        }
       }
 
-      if (
-        !lastSongInfo ||
-        songInfo.title !== lastSongInfo.title ||
-        songInfo.elapsedSeconds !== lastSongInfo.elapsedSeconds ||
-        songInfo.isPaused !== lastSongInfo.isPaused
-      ) {
-        lastSongInfo = songInfo;
-      }
-
-      const progress = songInfo.elapsedSeconds / songInfo.songDuration;
-      window.setProgressBar(progress, {
-        mode: songInfo.isPaused ? 'paused' : 'normal',
+      registerCallback((songInfo) => {
+        if (!isEnabled || !songInfo?.title) return;
+        updateProgressBar(songInfo, window);
+        if (songInfo.isPaused) {
+          stopProgressInterval();
+        } else {
+          startProgressInterval(songInfo, window);
+        }
       });
-    };
+    },
 
-    const startProgressInterval = (songInfo: SongInfo) => {
-      stopProgressInterval();
-      if (!songInfo.isPaused) {
-        progressInterval = setInterval(() => {
-          if (
-            lastSongInfo &&
-            !lastSongInfo.isPaused &&
-            typeof lastSongInfo.elapsedSeconds === 'number'
-          ) {
-            updateProgressBar({
-              ...lastSongInfo,
-              elapsedSeconds: lastSongInfo.elapsedSeconds + 1,
-            });
-          }
-        }, 1000);
-      }
-    };
-
-    const stopProgressInterval = () => {
-      if (progressInterval) {
-        clearInterval(progressInterval);
-        progressInterval = null;
-      }
-    };
-
-    registerCallback((songInfo) => {
-      if (!songInfo?.title) return;
-      updateProgressBar(songInfo);
-      if (songInfo.isPaused) {
-        stopProgressInterval();
-      } else {
-        startProgressInterval(songInfo);
-      }
-    });
-
-    return () => {
+    stop({ window }) {
+      isEnabled = false;
       stopProgressInterval();
       window.setProgressBar(-1);
-    };
+    },
   },
 });
