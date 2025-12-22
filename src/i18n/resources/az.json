@@ -148,7 +148,7 @@
             "submenu": {
               "custom-window-title": {
                 "prompt": {
-                  "placeholder": "Nümunə: Pear Desktop"
+                  "placeholder": "Nümunə: {{applicationName}}"
                 }
               },
               "like-buttons": {

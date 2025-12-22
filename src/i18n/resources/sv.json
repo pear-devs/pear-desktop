@@ -86,7 +86,7 @@
           "copy-current-url": "Kopiera nuvarande länk",
           "go-back": "Gå tillbaka",
           "go-forward": "Gå framåt",
-          "quit": "Avsluta",
+          "quit": "Stäng",
           "restart": "Starta om appen"
         }
       },
@@ -154,7 +154,7 @@
                 "label": "Anpassad titel på fönstret",
                 "prompt": {
                   "label": "Ange anpassad fönstertitel: (lämna tomt för att inaktivera)",
-                  "placeholder": "Exempelvis: Pear Desktop"
+                  "placeholder": "Exempelvis: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Starta om appen",
       "show": "Visa fönster",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} – {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}} %"
           }
-        }
+        },
+        "enable-seekbar": "Aktivera temaanpassning av uppspelningsreglaget"
       },
       "name": "Albumfärgtema"
     },
@@ -287,7 +288,7 @@
       "name": "Ambiensläge"
     },
     "amuse": {
-      "description": "Lägger till stöd för Pear Desktop i Amuse ‘Now Playing’-widgeten av 6K Labs",
+      "description": "Lägger till stöd för {{applicationName}} i Amuse ‘Now Playing’-widgeten av 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API-servern körs. Använd GET /query för att hämta information om låt."
@@ -373,7 +374,7 @@
       "name": "Hoppa Över Åldersbegränsningar"
     },
     "captions-selector": {
-      "description": "Välj textning för Pear Desktop-ljudspår",
+      "description": "Välj textning för {{applicationName}}-ljudspår",
       "menu": {
         "autoload": "Välj automatiskt senast använda textning",
         "disable-captions": "Ingen textning som standard"
@@ -456,14 +457,14 @@
         "disconnected": "Frånkopplad",
         "hide-duration-left": "Dölj återstående tid",
         "hide-github-button": "Dölj knapp för GitHub-länk",
-        "play-on-pear-desktop": "Spela på Pear Desktop",
+        "play-on-application": "Spela på {{applicationName}}",
         "set-inactivity-timeout": "Ställ in inaktivitetstid",
         "set-status-display-type": {
           "label": "Statusmeddelande",
           "submenu": {
             "artist": "Lyssnar på {artist}",
-            "title": "Lyssnar på {song title}",
-            "pear-desktop": "Lyssnar på Pear Desktop"
+            "application": "Lyssnar på {{applicationName}}",
+            "title": "Lyssnar på {song title}"
           }
         }
       },

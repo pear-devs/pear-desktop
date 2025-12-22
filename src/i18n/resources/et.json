@@ -154,7 +154,7 @@
                 "label": "Kohandatud akna tiitel",
                 "prompt": {
                   "label": "Sisesta kohandatud akna tiitel: (jäta täitmata, et välja lülitada)",
-                  "placeholder": "Näide: Pear Desktop"
+                  "placeholder": "Näide: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Käivita rakendus uuesti",
       "show": "Näita akent",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
