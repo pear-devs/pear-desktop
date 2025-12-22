@@ -484,12 +484,7 @@ export const mainMenuTemplate = async (
             availableLanguages
               .map(
                 (lang): Electron.MenuItemConstructorOptions => ({
-                  label: `${
-                    langResources[lang].translation.language?.name ?? 'Unknown'
-                  } (${
-                    langResources[lang].translation.language?.['local-name'] ??
-                    'Unknown'
-                  })`,
+                  label: `${langResources[lang].translation.language?.name ?? 'Unknown'} (${langResources[lang].translation.language?.['local-name'] ?? 'Unknown'})`,
                   type: 'checkbox',
                   checked: (config.get('options.language') ?? 'en') === lang,
                   click() {
