@@ -36,7 +36,7 @@ export default createPlugin({
     const previousStatePaused = null;
 
     const data: LumiaData = {
-      origin: 'peardesktop',
+      origin: '\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u006d\u0075\u0073\u0069\u0063',
       eventType: 'switchSong',
     };
 

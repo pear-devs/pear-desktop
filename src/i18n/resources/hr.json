@@ -154,7 +154,7 @@
                 "label": "Prilagođeni naslov prozora",
                 "prompt": {
                   "label": "Unesi prilagođeni naslov prozora: (ostavi prazno za onemogućiti)",
-                  "placeholder": "Primjer: Pear Desktop"
+                  "placeholder": "Primjer: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Ponovo Pokreni Aplikaciju",
       "show": "Prikaži prozor",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Ambijentalni Način"
     },
     "amuse": {
-      "description": "Dodaje podršku za Pear Desktop za widget \"sada reproducira\" od Amuse od strane 6K Labs",
+      "description": "Dodaje podršku za {{applicationName}} za widget \"sada reproducira\" od Amuse od strane 6K Labs",
       "name": "Zabavljati",
       "response": {
         "query": "Amuse API poslužitelj je pokrenut. Koristi GET /query za dohvat informacija o pjesmi."
@@ -373,7 +373,7 @@
       "name": "Zaobiđi dobna ograničenja"
     },
     "captions-selector": {
-      "description": "Izbornik titlova za audiozapise od Pear Desktopa",
+      "description": "Izbornik titlova za audiozapise od {{applicationName}}a",
       "menu": {
         "autoload": "Automatski izaberi posljednje korištene titlove",
         "disable-captions": "Bez titlova"
@@ -456,13 +456,13 @@
         "disconnected": "Odspojen",
         "hide-duration-left": "Sakrij preostalo vrijeme",
         "hide-github-button": "Sakrij gumb sa GitHub poveznicom",
-        "play-on-pear-desktop": "Reproduciraj na Pear Desktopu",
+        "play-on-application": "Reproduciraj na {{applicationName}}u",
         "set-inactivity-timeout": "Postavi vremensko ograničenje neaktivnosti (inactivity timeout)",
         "set-status-display-type": {
           "label": "Tekst statusa",
           "submenu": {
             "artist": "Slušate {glazbenika}",
-            "pear-desktop": "Slušate Pear Desktop",
+            "application": "Slušate {{applicationName}}",
             "title": "Slušate {naslov pjesme}"
           }
         }

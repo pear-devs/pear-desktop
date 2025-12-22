@@ -154,7 +154,7 @@
                 "label": "Prilagođeni naslov prozora",
                 "prompt": {
                   "label": "Unesite vlastiti naslov prozora: (ostavite prazno za isključenje)",
-                  "placeholder": "Primjer: Pear Desktop"
+                  "placeholder": "Primjer: {{applicationName}}"
                 }
               },
               "like-buttons": {

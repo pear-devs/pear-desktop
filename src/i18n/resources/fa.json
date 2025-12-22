@@ -154,7 +154,7 @@
                 "label": "عنوان پنجره سفارشى",
                 "prompt": {
                   "label": "عنوان پنجره سفارشى را وارد کنىد: (خالى بزارىد تا غىرفعال شود)",
-                  "placeholder": "مثال :Pear Desktop"
+                  "placeholder": "مثال :{{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "راه‌اندازی مجدد برنامه",
       "show": "نمایش پنجره",
       "tooltip": {
-        "default": "پىر دسکتاپ",
-        "with-song-info": "پىر دسکتاپ: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "حالت محیطی"
     },
     "amuse": {
-      "description": "حالا ویجت Amuse از Pear Desktop هم پشتیبانی می‌کنه! (توسط 6K Labs)",
+      "description": "حالا ویجت Amuse از {{applicationName}} هم پشتیبانی می‌کنه! (توسط 6K Labs)",
       "name": "Amuse",
       "response": {
         "query": "سرور Amuse فعال است. برای دریافت اطلاعات آهنگ، از آدرس /query استفاده کنید."
@@ -456,13 +456,13 @@
         "disconnected": "اتصال قطع شد",
         "hide-duration-left": "مخفی کردن مدت زمان باقی‌مانده",
         "hide-github-button": "مخفی کردن دکمه لینک گیت هاب",
-        "play-on-pear-desktop": "پخش در یوتیوب موزیک",
+        "play-on-application": "پخش در یوتیوب موزیک",
         "set-inactivity-timeout": "تنظیم زمان عدم فعالیت",
         "set-status-display-type": {
           "label": "متن وضعىت",
           "submenu": {
             "artist": "به {artist} گوش مىکند",
-            "pear-desktop": "به پىر دسکتاپ گوش مىکند",
+            "application": "به پىر دسکتاپ گوش مىکند",
             "title": "به {song title} گوش مىکند"
           }
         }

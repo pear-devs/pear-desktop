@@ -22,7 +22,7 @@ import { startingPages } from './providers/extracted-data';
 import promptOptions from './providers/prompt-options';
 
 import { getAllMenuTemplate, loadAllMenuPlugins } from './loader/menu';
-import { setLanguage, t } from '@/i18n';
+import { APPLICATION_NAME, setLanguage, t } from '@/i18n';
 
 import packageJson from '../package.json';
 
@@ -235,6 +235,9 @@ export const mainMenuTemplate = async (
                       type: 'text',
                       placeholder: t(
                         'main.menu.options.submenu.visual-tweaks.submenu.custom-window-title.prompt.placeholder',
+                        {
+                          applicationName: APPLICATION_NAME,
+                        },
                       ),
                     },
                     width: 500,

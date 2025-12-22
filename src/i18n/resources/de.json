@@ -3,7 +3,7 @@
     "console": {
       "plugins": {
         "execute-failed": "Erweiterung {{pluginName}}::{{contextName}} konnte nicht ausgeführt werden",
-        "executed-at-ms": "Erweiterung {{pluginName}}::{{contextName}} ausgeführt in {{ms}}ms",
+        "executed-at-ms": "Erweiterung {{pluginName}}::{{contextName}} in {{ms}}ms ausgeführt",
         "initialize-failed": "Initialisierung der Erweiterung \"{{pluginName}}\" fehlgeschlagen",
         "load-all": "Lade alle Erweiterungen",
         "load-failed": "Laden der Erweiterung \"{{pluginName}}\" fehlgeschlagen",
@@ -154,7 +154,7 @@
                 "label": "Benutzerdefinierter Fenstertitel",
                 "prompt": {
                   "label": "Benutzerdefinierten Fenstertitel eingeben: (zum Deaktivieren leer lassen)",
-                  "placeholder": "Beispiel: Pear Desktop"
+                  "placeholder": "Beispiel: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Anwendung neu starten",
       "show": "Fenster anzeigen",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Suchleisten-Design aktivieren"
       },
       "name": "Thema aus Albumfarbe"
     },
@@ -320,6 +321,22 @@
         "hostname": {
           "label": "Hostname"
         },
+        "https": {
+          "label": "HTTPS & Zertifikate",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "HTTPS Zertifikat Datei auswählen",
+              "label": "Zertifikate Datei (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "HTTPS aktivieren"
+            },
+            "key": {
+              "dialogTitle": "HTTPS privaten Schlüssel Datei auswählen",
+              "label": "Privater Schlüssel Datei (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
@@ -373,7 +390,7 @@
       "name": "Altersbeschränkungen umgehen"
     },
     "captions-selector": {
-      "description": "Untertitelwähler für Pear Desktop-Audio-Lieder",
+      "description": "Untertitelwähler für {{applicationName}}-Audio-Lieder",
       "menu": {
         "autoload": "Wähle automatisch den zuletzt verwendeten Untertitel",
         "disable-captions": "Standardmäßig keine Untertitel"
@@ -456,13 +473,13 @@
         "disconnected": "Getrennt",
         "hide-duration-left": "Verbleibende Zeit verstecken",
         "hide-github-button": "Knopf mit Link zu GitHub ausblenden",
-        "play-on-pear-desktop": "Auf Pear Desktop abspielen",
+        "play-on-application": "Auf {{applicationName}} abspielen",
         "set-inactivity-timeout": "Inaktivitätstimeout setzen",
         "set-status-display-type": {
           "label": "Status Text",
           "submenu": {
             "artist": "Hört {artist} zu",
-            "pear-desktop": "Hört Pear Desktop",
+            "application": "Hört {{applicationName}}",
             "title": "Du hörst {song title}"
           }
         }
@@ -606,7 +623,7 @@
         "permission": {
           "all": "Gästen erlauben, Wiederhabeliste und Player zu bedienen",
           "host-only": "Nur der Host kann die Playlist und den Player kontrollieren",
-          "playlist": "Gäste das Kontrollieren der Playlist erlauben"
+          "playlist": "Gästen das Kontrollieren der Playlist erlauben"
         },
         "set-permission": "Kontrollberechtigung ändern",
         "status": {

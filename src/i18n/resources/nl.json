@@ -154,7 +154,7 @@
                 "label": "Aangepaste venstertitel",
                 "prompt": {
                   "label": "Voer aangepaste venstertitel in: (laat leeg om uit te schakelen)",
-                  "placeholder": "Voorbeeld: Pear Desktop"
+                  "placeholder": "Voorbeeld: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Herstarten App",
       "show": "Weergeven Venster",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Omgevingsmodus"
     },
     "amuse": {
-      "description": "Voegt Pear Desktop ondersteuning toe voor de Amuse now playing widget van 6K Labs",
+      "description": "Voegt {{applicationName}} ondersteuning toe voor de Amuse now playing widget van 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API server loopt. Gebruik /query voor nummer informatie."
@@ -373,7 +373,7 @@
       "name": "Leeftijdsbeperkingen Omzeilen"
     },
     "captions-selector": {
-      "description": "Ondertitelkeuze voor Pear Desktop-audiotracks",
+      "description": "Ondertitelkeuze voor {{applicationName}}-audiotracks",
       "menu": {
         "autoload": "Automatisch de laatst gebruikte ondertitel selecteren",
         "disable-captions": "Standaard geen ondertitels"
@@ -456,14 +456,14 @@
         "disconnected": "Verbinding verbroken",
         "hide-duration-left": "Verberg resterende tijd",
         "hide-github-button": "GitHub-knop verbergen",
-        "play-on-pear-desktop": "Afspelen op Pear Desktop",
+        "play-on-application": "Afspelen op {{applicationName}}",
         "set-inactivity-timeout": "Inactiviteitstime-out instellen",
         "set-status-display-type": {
           "label": "Status tekst",
           "submenu": {
             "artist": "Naar {artist} aan het luisteren",
             "title": "Naar {song title} aan het luisteren",
-            "pear-desktop": "Naar Pear Desktop aan het luisteren"
+            "application": "Naar {{applicationName}} aan het luisteren"
           }
         }
       },

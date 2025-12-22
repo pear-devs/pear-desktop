@@ -53,7 +53,7 @@
           "later": "Nanti",
           "restart-now": "Restart Sekarang"
         },
-        "detail": "Plugin {{pluginName}} perlu dimulakan semula untuk berkuatkuasa",
+        "detail": "\"{{pluginName}}\" plugin memerlukan mula semula untuk ambil keberkesanan",
         "message": "\"{{pluginName}}\" perlu dimulakan semula",
         "title": "Mulakan Semula Diperlukan"
       },
@@ -74,7 +74,7 @@
           "ok": "OK"
         },
         "detail": "Versi baharu kini tersedia dan boleh dimuat turun di {{downloadLink}}",
-        "message": "Versi baharu tersedia",
+        "message": "Versi baharu kini tersedia",
         "title": "Kemas Kini Tersedia"
       }
     },
@@ -154,7 +154,7 @@
                 "label": "Tajuk tetingkap tersuai",
                 "prompt": {
                   "label": "Masukkan tajuk tetingkap tersuai: (biarkan kosong untuk matikan)",
-                  "placeholder": "Contoh: Pear Desktop"
+                  "placeholder": "Contoh: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Mulakan Semula Aplikasi",
       "show": "Papar tetingkap",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop : {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Mod Sekitaran"
     },
     "amuse": {
-      "description": "Menambahkan sokongan Pear Desktop untuk widget sedang dimain Amuse oleh 6K Labs",
+      "description": "Menambahkan sokongan {{applicationName}} untuk widget sedang dimain Amuse oleh 6K Labs",
       "name": "Terhibur",
       "response": {
         "query": "API server Amuse telah berjalan. GET /query untuk mendapatkan maklumat lagu."
@@ -373,7 +373,7 @@
       "name": "Pintas Sekatan Umur"
     },
     "captions-selector": {
-      "description": "Pemilih kapsyen untuk trek audio Pear Desktop",
+      "description": "Pemilih kapsyen untuk trek audio {{applicationName}}",
       "menu": {
         "autoload": "Pilih kapsyen terakhir diguna secara automatik",
         "disable-captions": "Tiada kapsyen secara lalai"
@@ -456,14 +456,14 @@
         "disconnected": "Tidak disambungkan",
         "hide-duration-left": "Sembunyikan tempoh yang tinggal",
         "hide-github-button": "Sembunyikan Butang pautan GitHub",
-        "play-on-pear-desktop": "Main di Pear Desktop",
+        "play-on-application": "Main di {{applicationName}}",
         "set-inactivity-timeout": "Tetapkan tamat masa tidak aktif",
         "set-status-display-type": {
           "label": "Teks status",
           "submenu": {
             "artist": "Sedang mendengar {artist}",
-            "title": "Sedang mendengar {tajuk lagu}",
-            "pear-desktop": "Mendengar Pear Desktop"
+            "application": "Mendengar {{applicationName}}",
+            "title": "Sedang mendengar {tajuk lagu}"
           }
         }
       },
@@ -499,7 +499,7 @@
           "converting": "Menukarkan…",
           "done": "Selesai: {{filePath}}",
           "download-info": "Memuat turun {{artist}} - {{title}} [{{videoId}}",
-          "download-progress": "Muat turun: {{peratus}}%",
+          "download-progress": "Muat turun: {{percent}}%",
           "downloading": "Memuat turun…",
           "downloading-counter": "Memuat turun {{current}}/{{total}}…",
           "downloading-playlist": "Memuat turun senarai main \"{{playlistTitle}}\" - {{playlistSize}} lagu ({{playlistId}})",
@@ -510,7 +510,7 @@
           "playlist-has-only-one-song": "Senarai main hanya mempunyai satu item, memuat turunnya terus",
           "playlist-id-not-found": "ID senarai main tidak dijumpai",
           "playlist-is-empty": "Senarai main kosong",
-          "playlist-is-mix-or-private": "Ralat dalam mendapatkan senarai info main: pastikan ia tidak peribadi atau di dalam senarai main \"Campuran untuk anda\"\n\n{{ralat}}",
+          "playlist-is-mix-or-private": "Ralat dalam mendapatkan senarai info main: pastikan ia tidak peribadi atau di dalam senarai main \"Campuran untuk anda\"\n\n{{error}}",
           "preparing-file": "Menyediakan fail…",
           "saving": "Menyimpan…",
           "trying-to-get-playlist-id": "Mencuba untuk mendapatkan ID senarai main: {{playlistId}}",
@@ -622,7 +622,31 @@
         "id-copy-failed": "Gagal menyalin ID Hos ke papan keratan"
       }
     },
+    "navigation": {
+      "name": "Navigasi"
+    },
+    "notifications": {
+      "name": "Notifikasi"
+    },
+    "scrobbler": {
+      "dialog": {
+        "lastfm": {
+          "auth-failed": {
+            "title": "Atuntikasi Gagal"
+          }
+        }
+      },
+      "prompt": {
+        "lastfm": {
+          "api-key": "kunci API Last.fm",
+          "api-secret": "rahasia API Last.fm"
+        }
+      }
+    },
     "synced-lyrics": {
+      "errors": {
+        "not-found": "⚠️ Tak ada liriks untuk lagu ini."
+      },
       "menu": {
         "show-lyrics-even-if-inexact": {
           "label": "Tunjukkan lirik walaupun tidak tepat",
