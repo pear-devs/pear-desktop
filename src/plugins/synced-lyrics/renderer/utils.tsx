@@ -182,7 +182,9 @@ export const romanizeHangul = (line: string) =>
   esHangulRomanize(hanja.translate(line, 'SUBSTITUTION'));
 
 export const romanizeChinese = (line: string) => {
-  return line.replaceAll(/[\u4E00-\u9FFF]+/g, (match) => pinyin(match, { separator: ' ' }));
+  return line.replaceAll(/[\u4E00-\u9FFF]+/g, (match) => {
+    return pinyin(match, { separator: ' ' });
+  });
 };
 
 const thaiSegmenter = Intl.Segmenter.supportedLocalesOf('th').includes('th')
