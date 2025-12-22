@@ -92,7 +92,7 @@ export const SyncedLine = (props: SyncedLineProps) => {
     if (convertChineseText && convertChineseText !== 'disabled') {
       line = convertChineseCharacter(line, convertChineseText);
     }
-    return line;
+    return line.trim();
   });
 
   const [romanization, setRomanization] = createSignal('');
