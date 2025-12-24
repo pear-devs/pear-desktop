@@ -107,6 +107,7 @@ protocol.registerSchemesAsPrivileged([
 
 // Ozone platform hint: Required for Wayland support
 app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
+
 // SharedArrayBuffer: Required for downloader (@ffmpeg/core-mt)
 // OverlayScrollbar: Required for overlay scrollbars
 // UseOzonePlatform: Required for Wayland support
@@ -115,27 +116,38 @@ app.commandLine.appendSwitch(
   'enable-features',
   'OverlayScrollbar,SharedArrayBuffer,UseOzonePlatform,WaylandWindowDecorations',
 );
+
 // Disable Fluent Scrollbar (for OverlayScrollbar)
-app.commandLine.appendSwitch('disable-features', 'FluentScrollbar');
-if (config.get('options.disableHardwareAcceleration')) {
-  if (is.dev()) {
-    console.log('Disabling hardware acceleration');
+const disabledFeatures = ['FluentScrollbar'];
+let disableHardwareAcceleration = config.get(
+  'options.disableHardwareAcceleration',
+);
+
+// Linux specific fixes
+if (is.linux()) {
+  // Stops chromium from launching its own MPRIS service
+  if (await config.plugins.isEnabled('shortcuts')) {
+    disabledFeatures.push('MediaSessionService');
   }
 
+  // https://github.com/electron/electron/issues/15947
+  if (await config.plugins.isEnabled('transparent-player')) {
+    disableHardwareAcceleration = true;
+    app.commandLine.appendSwitch('enable-transparent-visuals');
+    app.commandLine.appendSwitch('enable-unsafe-swiftshader');
+  }
+
+  // Overrides WM_CLASS for X11 to correspond to icon filename
+  app.setName('com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063');
+}
+
+if (disableHardwareAcceleration) {
+  if (is.dev()) console.log('Disabling hardware acceleration');
   app.disableHardwareAcceleration();
 }
 
-if (is.linux()) {
-  // Overrides WM_CLASS for X11 to correspond to icon filename
-  app.setName(
-    'com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063',
-  );
-
-  // Stops chromium from launching its own MPRIS service
-  if (await config.plugins.isEnabled('shortcuts')) {
-    app.commandLine.appendSwitch('disable-features', 'MediaSessionService');
-  }
-}
+// Apply disabled features
+app.commandLine.appendSwitch('disable-features', disabledFeatures.join(','));
 
 if (config.get('options.proxy')) {
   const authProxyEnabled = await config.plugins.isEnabled('auth-proxy-adapter');
