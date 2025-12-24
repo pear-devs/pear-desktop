@@ -92,7 +92,6 @@
     "conf": "14.0.0",
     "custom-electron-prompt": "1.5.8",
     "deepmerge-ts": "7.1.5",
-    "delay": "6.0.0",
     "electron-debug": "4.1.0",
     "electron-is": "3.0.0",
     "electron-localshortcut": "3.2.1",
