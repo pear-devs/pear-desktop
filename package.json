@@ -56,7 +56,6 @@
       "vudio@2.1.1": "patches/vudio@2.1.1.patch",
       "@malept/flatpak-bundler@0.4.0": "patches/@malept__flatpak-bundler@0.4.0.patch",
       "kuromoji@0.1.2": "patches/kuromoji@0.1.2.patch",
-      "file-type@16.5.4": "patches/file-type@16.5.4.patch",
       "electron-is@3.0.0": "patches/electron-is@3.0.0.patch",
       "mdui@2.1.4": "patches/mdui@2.1.4.patch"
     },
@@ -80,7 +79,6 @@
     "@jellybrick/dbus-next": "0.10.3",
     "@jellybrick/electron-better-web-request": "2.0.0",
     "@jellybrick/mpris-service": "2.1.5",
-    "@jimp/plugin-color": "1.6.0",
     "@mdui/icons": "^1.0.3",
     "@skyra/jaro-winkler": "1.1.1",
     "@xhayper/discord-rpc": "1.3.0",
@@ -110,7 +108,6 @@
     "howler": "2.2.4",
     "html-to-text": "9.0.5",
     "i18next": "25.5.2",
-    "jimp": "1.6.0",
     "keyboardevent-from-electron-accelerator": "2.0.0",
     "keyboardevents-areequal": "0.2.2",
     "kuromoji": "0.1.2",
