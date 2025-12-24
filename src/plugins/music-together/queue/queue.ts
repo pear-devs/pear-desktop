@@ -316,7 +316,7 @@ export class Queue {
           this.ignoreFlag = true;
           this.broadcast({
             type: 'CLEAR_QUEUE',
-            payload: {},
+            payload: null,
           });
           return;
         }

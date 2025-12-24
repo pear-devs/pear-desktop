@@ -3,7 +3,7 @@ import { type DataConnection, Peer, type PeerError } from 'peerjs';
 import type { Permission, Profile, VideoData } from './types';
 
 export type ConnectionEventMap = {
-  CLEAR_QUEUE: {};
+  CLEAR_QUEUE: null;
   ADD_SONGS: { videoList: VideoData[]; index?: number };
   REMOVE_SONG: { index: number };
   MOVE_SONG: { fromIndex: number; toIndex: number };
@@ -101,11 +101,11 @@ export class Connection {
     this.peer.on('error', (err) => {
       if (err.type === 'network') {
         setTimeout(() => {
-        try {
-          this.peer.reconnect();
+          try {
+            this.peer.reconnect();
           } catch {}
         }, 10000);
-          return;
+        return;
       }
 
       this.waitOpen.reject(err);
@@ -168,7 +168,9 @@ export class Connection {
     after?: ConnectionEventUnion[],
   ) {
     await Promise.all(
-      this.getConnections().map((conn) => conn.send({ type, payload, after })),
+      this.getConnections().map(
+        (conn) => conn.send({ type, payload, after }) ?? Promise.resolve(),
+      ),
     );
   }
 
