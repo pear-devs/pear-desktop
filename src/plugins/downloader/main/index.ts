@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
+import vm from 'node:vm';
 
 import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
 import {
@@ -9,6 +10,7 @@ import {
   Utils,
   YTNodes,
   Platform,
+  type Types,
 } from '\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js';
 import is from 'electron-is';
 import filenamify from 'filenamify';
@@ -58,21 +60,24 @@ const ffmpeg = lazy(async () =>
 );
 const ffmpegMutex = new Mutex();
 
-Platform.shim.eval = async (data: Types.BuildScriptResult, env: Record<string, Types.VMPrimative>) => {
+Platform.shim.eval = (
+  data: Types.BuildScriptResult,
+  env: Record<string, Types.VMPrimative>,
+) => {
   const properties = [];
-
-  if(env.n) {
-    properties.push(`n: exportedVars.nFunction("${env.n}")`)
+  if (env.n) {
+    properties.push(`n: exportedVars.nFunction("${env.n}")`);
   }
-
   if (env.sig) {
-    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
+    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`);
   }
 
   const code = `${data.output}\nreturn { ${properties.join(', ')} }`;
-
-  return new Function(code)();
-}
+  return vm.runInNewContext(
+    `(() => { ${code} })()`,
+    Object.create(null) as vm.Context,
+  ) as Types.EvalResult;
+};
 
 let yt: Innertube;
 let win: BrowserWindow;
@@ -190,10 +195,7 @@ export const onMainLoad = async ({
           .privateDoNotAccessOrElseSafeScriptWrappedValue;
 
       if (interpreterJavascript) {
-        // This is a workaround to run the interpreterJavascript code
-        // Maybe there is a better way to do this (e.g. https://github.com/Siubaak/sval ?)
-        // eslint-disable-next-line @typescript-eslint/no-implied-eval,@typescript-eslint/no-unsafe-call
-        new Function(interpreterJavascript)();
+        vm.runInNewContext(interpreterJavascript, globalThis);
 
         const poTokenResult = await BG.PoToken.generate({
           program: bgChallenge.program,
@@ -421,8 +423,7 @@ async function downloadSongUnsafe(
   let targetFileExtension: string;
   if (!presetSetting?.extension) {
     targetFileExtension =
-      VideoFormatList.find((it) => it.itag === format.itag)?.container ??
-      'mp3';
+      VideoFormatList.find((it) => it.itag === format.itag)?.container ?? 'mp3';
   } else {
     targetFileExtension = presetSetting?.extension ?? 'mp3';
   }
