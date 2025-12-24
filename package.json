@@ -46,7 +46,7 @@
   "pnpm": {
     "overrides": {
       "vite": "npm:rolldown-vite@7.3.0",
-      "node-gyp": "11.4.2",
+      "node-gyp": "11.5.0",
       "xml2js": "0.6.2",
       "node-fetch": "3.3.2",
       "@electron/universal": "3.0.2",
@@ -167,7 +167,7 @@
     "eslint-plugin-prettier": "5.5.4",
     "eslint-plugin-solid": "0.14.5",
     "glob": "11.1.0",
-    "node-gyp": "11.4.2",
+    "node-gyp": "11.5.0",
     "playwright": "1.55.1",
     "ts-morph": "27.0.2",
     "typescript": "5.9.3",

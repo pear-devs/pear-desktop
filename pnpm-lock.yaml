@@ -6,7 +6,7 @@ settings:
 
 overrides:
   vite: npm:rolldown-vite@7.3.0
-  node-gyp: 11.4.2
+  node-gyp: 11.5.0
   xml2js: 0.6.2
   node-fetch: 3.3.2
   '@electron/universal': 3.0.2
@@ -341,8 +341,8 @@ importers:
         specifier: 11.1.0
         version: 11.1.0
       node-gyp:
-        specifier: 11.4.2
-        version: 11.4.2
+        specifier: 11.5.0
+        version: 11.5.0
       playwright:
         specifier: 1.55.1
         version: 1.55.1
@@ -3628,8 +3628,8 @@ packages:
     resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
     hasBin: true
 
-  node-gyp@11.4.2:
-    resolution: {integrity: sha512-3gD+6zsrLQH7DyYOUIutaauuXrcyxeTPyQuZQCQoNPZMHMMS5m4y0xclNpvYzoK3VNzuyxT6eF4mkIL4WSZ1eQ==}
+  node-gyp@11.5.0:
+    resolution: {integrity: sha512-ra7Kvlhxn5V9Slyus0ygMa2h+UqExPqUIkfk7Pc8QTLT956JLSy51uWFwHtIYy0vI8cB4BDhc/S03+880My/LQ==}
     engines: {node: ^18.17.0 || >=20.5.0}
     hasBin: true
 
@@ -8534,7 +8534,7 @@ snapshots:
 
   node-gyp-build@4.8.4: {}
 
-  node-gyp@11.4.2:
+  node-gyp@11.5.0:
     dependencies:
       env-paths: 2.2.1
       exponential-backoff: 3.1.3
