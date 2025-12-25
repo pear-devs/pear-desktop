@@ -288,7 +288,7 @@
       "name": "Ambiente-Modus"
     },
     "amuse": {
-      "description": "Fügt Unterstützung für das Amuse \"Spielt gerade\"-Widget von 6K Labs hinzu",
+      "description": "Fügt {{applicationName}} Unterstützung für das Amuse \"Spielt gerade\"-Widget von 6K Labs hinzu",
       "name": "Amuse",
       "response": {
         "query": "Amuse API-Server läuft. /query für Liedinformationen."
