@@ -126,6 +126,7 @@ if (config.get('options.disableHardwareAcceleration')) {
 }
 
 if (is.linux()) {
+  app.commandLine.appendSwitch('enable-transparent-visuals');
   // Overrides WM_CLASS for X11 to correspond to icon filename
   app.setName(
     'com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063',
@@ -163,11 +164,12 @@ electronDebug({
   showDevTools: false, // Disable automatic devTools on new window
 });
 
-let icon = 'assets/icon.png';
+const iconPath = app.getAppPath();
+let icon = path.join(iconPath, 'assets/icon.png');
 if (process.platform === 'win32') {
-  icon = 'assets/generated/icons/win/icon.ico';
+  icon = path.join(iconPath, 'assets/generated/icons/win/icon.ico');
 } else if (process.platform === 'darwin') {
-  icon = 'assets/generated/icons/mac/icon.icns';
+  icon = path.join(iconPath, 'assets/generated/icons/mac/icon.icns');
 }
 
 function onClosed() {
@@ -323,6 +325,7 @@ async function createMainWindow() {
   const windowMaximized = config.get('window-maximized');
   const windowPosition: Electron.Point = config.get('window-position');
   const useInlineMenu = await config.plugins.isEnabled('in-app-menu');
+  const isTransparentPlayerEnabled = await config.plugins.isEnabled('transparent-player');
 
   const defaultTitleBarOverlayOptions: Electron.TitleBarOverlay = {
     color: '#00000000',
@@ -349,11 +352,13 @@ async function createMainWindow() {
 
   const electronWindowSettings: Electron.BrowserWindowConstructorOptions = {
     icon,
+    title: 'Youtube Music',
     width: windowSize.width,
     height: windowSize.height,
     minWidth: 325,
     minHeight: 425,
-    backgroundColor: '#000',
+    backgroundColor: is.linux() && isTransparentPlayerEnabled ? '#00000000' : '#000',
+    transparent: is.linux() && isTransparentPlayerEnabled,
     show: false,
     webPreferences: {
       contextIsolation: true,
@@ -361,10 +366,10 @@ async function createMainWindow() {
       ...(isTesting()
         ? undefined
         : {
-            // Sandbox is only enabled in tests for now
-            // See https://www.electronjs.org/docs/latest/tutorial/sandbox#preload-scripts
-            sandbox: false,
-          }),
+          // Sandbox is only enabled in tests for now
+          // See https://www.electronjs.org/docs/latest/tutorial/sandbox#preload-scripts
+          sandbox: false,
+        }),
     },
     ...decorations,
   };
@@ -492,7 +497,7 @@ async function createMainWindow() {
         ...defaultTitleBarOverlayOptions,
         height: Math.floor(
           defaultTitleBarOverlayOptions.height! *
-            win.webContents.getZoomFactor(),
+          win.webContents.getZoomFactor(),
         ),
       });
     }
