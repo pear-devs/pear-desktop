@@ -369,7 +369,7 @@ async function createMainWindow() {
         ? undefined
         : {
             // Sandbox is only enabled in tests for now
-          // See https://www.electronjs.org/docs/latest/tutorial/sandbox#preload-scripts
+            // See https://www.electronjs.org/docs/latest/tutorial/sandbox#preload-scripts
           sandbox: false,
         }),
     },
