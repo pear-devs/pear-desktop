@@ -358,7 +358,8 @@ async function createMainWindow() {
     height: windowSize.height,
     minWidth: 325,
     minHeight: 425,
-    backgroundColor: is.linux() && isTransparentPlayerEnabled ? '#00000000' : '#000',
+    backgroundColor:
+      is.linux() && isTransparentPlayerEnabled ? '#00000000' : '#000',
     transparent: is.linux() && isTransparentPlayerEnabled,
     show: false,
     webPreferences: {
