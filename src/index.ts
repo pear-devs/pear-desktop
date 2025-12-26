@@ -368,7 +368,7 @@ async function createMainWindow() {
       ...(isTesting()
         ? undefined
         : {
-          // Sandbox is only enabled in tests for now
+            // Sandbox is only enabled in tests for now
           // See https://www.electronjs.org/docs/latest/tutorial/sandbox#preload-scripts
           sandbox: false,
         }),
