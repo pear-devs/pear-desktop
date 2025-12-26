@@ -18,7 +18,6 @@ export type VisualizerPluginConfig = {
   type: 'butterchurn' | 'vudio' | 'wave';
   butterchurn: {
     preset: string;
-    renderingFrequencyInMs: number;
     blendTimeInSeconds: number;
   };
   vudio: {
@@ -57,17 +56,23 @@ export type VisualizerPluginConfig = {
   };
 };
 
+type RenderProps = {
+  visualizerInstance: Visualizer | null;
+  audioContext: AudioContext | null;
+  audioSource: MediaElementAudioSourceNode | null;
+  observer: ResizeObserver | null;
+};
+
 export default createPlugin({
   name: () => t('plugins.visualizer.name'),
   description: () => t('plugins.visualizer.description'),
-  restartNeeded: true,
+  restartNeeded: false,
   config: {
     enabled: false,
     type: 'butterchurn',
     // Config per visualizer
     butterchurn: {
       preset: 'martin [shadow harlequins shape code] - fata morgana',
-      renderingFrequencyInMs: 500,
       blendTimeInSeconds: 2.7,
     },
     vudio: {
@@ -148,81 +153,91 @@ export default createPlugin({
   },
 
   renderer: {
-    async onPlayerApiReady(_, { getConfig }) {
-      const config = await getConfig();
+    props: {
+      visualizerInstance: null,
+      audioContext: null,
+      audioSource: null,
+      observer: null,
+    } as RenderProps,
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let visualizerType: { new (...args: any[]): Visualizer<unknown> } = vudio;
+    createVisualizer(
+      this: { props: RenderProps },
+      config: VisualizerPluginConfig,
+    ) {
+      this.props.visualizerInstance?.destroy();
+      this.props.visualizerInstance = null;
 
+      if (!this.props.audioContext || !this.props.audioSource) return;
+      if (!config.enabled) return;
+
+      const video = document.querySelector<
+        HTMLVideoElement & { captureStream(): MediaStream }
+      >('video');
+      if (!video) {
+        return;
+      }
+
+      const visualizerContainer =
+        document.querySelector<HTMLElement>('#player');
+      if (!visualizerContainer) {
+        return;
+      }
+
+      let canvas = document.querySelector<HTMLCanvasElement>('#visualizer');
+      if (!canvas) {
+        canvas = document.createElement('canvas');
+        canvas.id = 'visualizer';
+        visualizerContainer?.prepend(canvas);
+      }
+
+      const gainNode = this.props.audioContext.createGain();
+      gainNode.gain.value = 1.25;
+      this.props.audioSource.connect(gainNode);
+
+      let visualizerType: {
+        new (...args: ConstructorParameters<typeof vudio>): Visualizer;
+      } = vudio;
       if (config.type === 'wave') {
         visualizerType = wave;
       } else if (config.type === 'butterchurn') {
         visualizerType = butterchurn;
       }
+      this.props.visualizerInstance = new visualizerType(
+        this.props.audioContext,
+        this.props.audioSource,
+        canvas,
+        gainNode,
+        video.captureStream(),
+        config,
+      );
 
+      const resizeVisualizer = () => {
+        if (canvas && visualizerContainer) {
+          const { width, height } =
+            window.getComputedStyle(visualizerContainer);
+          canvas.width = Math.ceil(parseFloat(width));
+          canvas.height = Math.ceil(parseFloat(height));
+        }
+        this.props.visualizerInstance?.resize(canvas.width, canvas.height);
+      };
+      resizeVisualizer();
+
+      this.props.observer?.disconnect();
+      this.props.observer = new ResizeObserver(resizeVisualizer);
+      this.props.observer.observe(visualizerContainer);
+    },
+
+    onConfigChange(newConfig) {
+      this.createVisualizer(newConfig);
+    },
+
+    onPlayerApiReady(_, { getConfig }) {
       document.addEventListener(
         'peard:audio-can-play',
-        (e) => {
-          const video = document.querySelector<
-            HTMLVideoElement & { captureStream(): MediaStream }
-          >('video');
-          if (!video) {
-            return;
-          }
-
-          const visualizerContainer =
-            document.querySelector<HTMLElement>('#player');
-          if (!visualizerContainer) {
-            return;
-          }
-
-          let canvas = document.querySelector<HTMLCanvasElement>('#visualizer');
-          if (!canvas) {
-            canvas = document.createElement('canvas');
-            canvas.id = 'visualizer';
-            visualizerContainer?.prepend(canvas);
-          }
-
-          const resizeCanvas = () => {
-            if (canvas) {
-              canvas.width = visualizerContainer.clientWidth;
-              canvas.height = visualizerContainer.clientHeight;
-            }
-          };
-
-          resizeCanvas();
-
-          const gainNode = e.detail.audioContext.createGain();
-          gainNode.gain.value = 1.25;
-          e.detail.audioSource.connect(gainNode);
-
-          const visualizer = new visualizerType(
-            e.detail.audioContext,
-            e.detail.audioSource,
-            visualizerContainer,
-            canvas,
-            gainNode,
-            video.captureStream(),
-            config,
-          );
-
-          const resizeVisualizer = (width: number, height: number) => {
-            resizeCanvas();
-            visualizer.resize(width, height);
-          };
-
-          resizeVisualizer(canvas.width, canvas.height);
-          const visualizerContainerObserver = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-              resizeVisualizer(
-                entry.contentRect.width,
-                entry.contentRect.height,
-              );
-            }
-          });
-          visualizerContainerObserver.observe(visualizerContainer);
-
-          visualizer.render();
+        async (e) => {
+          this.props.audioContext = e.detail.audioContext;
+          this.props.audioSource = e.detail.audioSource;
+          this.createVisualizer(await getConfig());
         },
         { passive: true },
       );
