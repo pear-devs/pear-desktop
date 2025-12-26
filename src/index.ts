@@ -370,7 +370,7 @@ async function createMainWindow() {
         : {
             // Sandbox is only enabled in tests for now
             // See https://www.electronjs.org/docs/latest/tutorial/sandbox#preload-scripts
-          sandbox: false,
+            sandbox: false,
         }),
     },
     ...decorations,
