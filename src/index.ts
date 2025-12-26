@@ -499,7 +499,7 @@ async function createMainWindow() {
         ...defaultTitleBarOverlayOptions,
         height: Math.floor(
           defaultTitleBarOverlayOptions.height! *
-          win.webContents.getZoomFactor(),
+            win.webContents.getZoomFactor(),
         ),
       });
     }
