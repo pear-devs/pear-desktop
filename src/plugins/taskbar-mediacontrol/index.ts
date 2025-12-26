@@ -1,5 +1,4 @@
-import { type NativeImage, nativeImage, nativeTheme } from 'electron';
-import { Jimp, JimpMime } from 'jimp';
+import { nativeImage } from 'electron';
 
 import playIcon from '@assets/media-icons-black/play.png?asset&asarUnpack';
 import pauseIcon from '@assets/media-icons-black/pause.png?asset&asarUnpack';
@@ -13,7 +12,6 @@ import {
   type SongInfo,
   SongInfoEvent,
 } from '@/providers/song-info';
-import { type mediaIcons } from '@/types/media-icons';
 import { t } from '@/i18n';
 import { Platform } from '@/types/plugins';
 
@@ -26,52 +24,16 @@ export default createPlugin({
     enabled: false,
   },
 
-  async backend({ window }) {
+  backend({ window }) {
     let currentSongInfo: SongInfo;
 
     const { playPause, next, previous } = getSongControls(window);
 
-    // Util
-    const getImagePath = (kind: keyof typeof mediaIcons): string => {
-      switch (kind) {
-        case 'play':
-          return playIcon;
-        case 'pause':
-          return pauseIcon;
-        case 'next':
-          return nextIcon;
-        case 'previous':
-          return previousIcon;
-        default:
-          return '';
-      }
-    };
-
-    const getNativeImage = async (
-      kind: keyof typeof mediaIcons,
-    ): Promise<NativeImage> => {
-      const imagePath = getImagePath(kind);
-
-      if (imagePath) {
-        const jimpImageBuffer = await Jimp.read(imagePath).then((img) => {
-          if (imagePath && nativeTheme.shouldUseDarkColors) {
-            return img.invert().getBuffer(JimpMime.png);
-          }
-          return img.getBuffer(JimpMime.png);
-        });
-
-        return nativeImage.createFromBuffer(jimpImageBuffer);
-      }
-
-      // return empty image
-      return nativeImage.createEmpty();
-    };
-
     const images = {
-      play: await getNativeImage('play'),
-      pause: await getNativeImage('pause'),
-      next: await getNativeImage('next'),
-      previous: await getNativeImage('previous'),
+      play: nativeImage.createFromPath(playIcon),
+      pause: nativeImage.createFromPath(pauseIcon),
+      next: nativeImage.createFromPath(nextIcon),
+      previous: nativeImage.createFromPath(previousIcon),
     };
 
     const setThumbar = (songInfo: SongInfo) => {
