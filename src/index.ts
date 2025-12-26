@@ -325,7 +325,8 @@ async function createMainWindow() {
   const windowMaximized = config.get('window-maximized');
   const windowPosition: Electron.Point = config.get('window-position');
   const useInlineMenu = await config.plugins.isEnabled('in-app-menu');
-  const isTransparentPlayerEnabled = await config.plugins.isEnabled('transparent-player');
+  const isTransparentPlayerEnabled =
+    await config.plugins.isEnabled('transparent-player');
 
   const defaultTitleBarOverlayOptions: Electron.TitleBarOverlay = {
     color: '#00000000',
