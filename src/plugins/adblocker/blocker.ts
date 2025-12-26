@@ -6,7 +6,7 @@ import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import { app, net } from 'electron';
 
 const SOURCES = [
-    'https://raw.githubusercontent.com/kbinani/adblock-youtube-ads/master/signed.txt',
+  'https://raw.githubusercontent.com/kbinani/adblock-youtube-ads/master/signed.txt',
     // UBlock Origin
     'https://raw.githubusercontent.com/ghostery/adblocker/master/packages/adblocker/assets/ublock-origin/filters.txt',
     'https://raw.githubusercontent.com/ghostery/adblocker/master/packages/adblocker/assets/ublock-origin/quick-fixes.txt',
