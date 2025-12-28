@@ -20,7 +20,7 @@ mac:
       arch:
         - x64
         - arm64
-  icon: assets/generated/icons/mac/icon.icns
+  icon: assets/generated/icons/mac/icon.icon
   compression: maximum
 win:
   icon: assets/generated/icons/win/icon.ico
