@@ -109,7 +109,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
         const chunk = {
           metadata: {
             timestamp: data.metadata.timestamp || Date.now(),
-            sampleRate: this.audioConfig.sampleRate,
+              sampleRate: this.audioConfig.sampleRate,
             bitDepth: this.audioConfig.bitDepth,
             channels: this.audioConfig.channels,
           },
