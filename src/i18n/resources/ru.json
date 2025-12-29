@@ -461,8 +461,8 @@
         "set-status-display-type": {
           "label": "Текст статуса",
           "submenu": {
-            "artist": "Слушает {исполнитель}",
             "application": "Слушает {{applicationName}}",
+            "artist": "Слушает {исполнитель}",
             "title": "Слушает {название трека}"
           }
         }

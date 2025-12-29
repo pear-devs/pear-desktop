@@ -461,8 +461,8 @@
         "set-status-display-type": {
           "label": "متن وضعىت",
           "submenu": {
-            "artist": "به {artist} گوش مىکند",
             "application": "به پىر دسکتاپ گوش مىکند",
+            "artist": "به {artist} گوش مىکند",
             "title": "به {song title} گوش مىکند"
           }
         }

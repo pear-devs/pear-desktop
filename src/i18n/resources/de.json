@@ -288,7 +288,7 @@
       "name": "Ambiente-Modus"
     },
     "amuse": {
-      "description": "Fügt Unterstützung für das Amuse \"Spielt gerade\"-Widget von 6K Labs hinzu",
+      "description": "Fügt {{applicationName}} Unterstützung für das Amuse \"Spielt gerade\"-Widget von 6K Labs hinzu",
       "name": "Amuse",
       "response": {
         "query": "Amuse API-Server läuft. /query für Liedinformationen."
@@ -320,6 +320,22 @@
         },
         "hostname": {
           "label": "Hostname"
+        },
+        "https": {
+          "label": "HTTPS & Zertifikate",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "HTTPS Zertifikat Datei auswählen",
+              "label": "Zertifikate Datei (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "HTTPS aktivieren"
+            },
+            "key": {
+              "dialogTitle": "HTTPS privaten Schlüssel Datei auswählen",
+              "label": "Privater Schlüssel Datei (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -462,8 +478,8 @@
         "set-status-display-type": {
           "label": "Status Text",
           "submenu": {
-            "artist": "Hört {artist} zu",
             "application": "Hört {{applicationName}}",
+            "artist": "Hört {artist} zu",
             "title": "Du hörst {song title}"
           }
         }

@@ -5,10 +5,10 @@
         "execute-failed": "Mislukt om plugin {{pluginName}}::{{contextName}} uit te voeren",
         "executed-at-ms": "Plugin {{pluginName}}::{{contextName}} uitgevoerd in {{ms}}ms",
         "initialize-failed": "Initialisatie van plugin \"{{pluginName}}\" mislukt",
-        "load-all": "Alle plugins laden",
+        "load-all": "Alle plugins aan het laden",
         "load-failed": "Mislukt om plugin \"{{pluginName}}\" te laden",
         "loaded": "Plugin \"{{pluginName}}\" geladen",
-        "unload-failed": "Mislukt om plugin \"{{pluginName}}\" te lossen",
+        "unload-failed": "Mislukt om plugin \"{{pluginName}}\" te ontladen",
         "unloaded": "Plugin \"{{pluginName}}\" gelost"
       }
     }
@@ -461,9 +461,9 @@
         "set-status-display-type": {
           "label": "Status tekst",
           "submenu": {
+            "application": "Naar {{applicationName}} aan het luisteren",
             "artist": "Naar {artist} aan het luisteren",
-            "title": "Naar {song title} aan het luisteren",
-            "application": "Naar {{applicationName}} aan het luisteren"
+            "title": "Naar {song title} aan het luisteren"
           }
         }
       },

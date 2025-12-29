@@ -461,8 +461,8 @@
         "set-status-display-type": {
           "label": "स्टेटस टेक्स्ट",
           "submenu": {
-            "artist": "{artist} को सुन रहे है",
             "application": "{{applicationName}} सुन रहे है",
+            "artist": "{artist} को सुन रहे है",
             "title": "{song title} सुन रहे है"
           }
         }

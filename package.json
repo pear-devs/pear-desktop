@@ -155,7 +155,7 @@
     "del-cli": "6.0.0",
     "discord-api-types": "0.38.37",
     "electron": "38.7.2",
-    "electron-builder": "26.0.12",
+    "electron-builder": "26.4.0",
     "electron-builder-squirrel-windows": "26.0.12",
     "electron-devtools-installer": "4.0.0",
     "electron-vite": "4.0.1",

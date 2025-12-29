@@ -321,6 +321,22 @@
         "hostname": {
           "label": "Nombre del host"
         },
+        "https": {
+          "label": "HTTPS & Certificados",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Selecciona el archivo de certificado HTTPS",
+              "label": "Archivo de certificado (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Habilitar HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Selecciona el archivo de clave privada HTTPS",
+              "label": "Archivo de clave privada (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Puerto"
         }
@@ -462,8 +478,8 @@
         "set-status-display-type": {
           "label": "Texto de estado",
           "submenu": {
-            "artist": "Escuchando a {artist}",
             "application": "Escuchando {{applicationName}}",
+            "artist": "Escuchando a {artist}",
             "title": "Escuchando {song title}"
           }
         }
