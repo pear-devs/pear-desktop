@@ -23,6 +23,8 @@ import { getSongControls } from '@/providers/song-controls';
 import * as config from '@/config';
 import { LoggerPrefix } from '@/utils';
 
+import { APPLICATION_NAME } from '@/i18n';
+
 import type { RepeatMode, VolumeState } from '@/types/datahost-get-state';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';
 
@@ -70,8 +72,8 @@ class YTPlayer extends MprisPlayer {
 
 function setupMPRIS() {
   const instance = new YTPlayer({
-    name: 'PearDesktop',
-    identity: 'Pear Desktop',
+    name: '\u0059\u006f\u0075\u0074\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063',
+    identity: APPLICATION_NAME,
     supportedMimeTypes: ['audio/mpeg'],
     supportedInterfaces: ['player'],
   });
@@ -80,7 +82,8 @@ function setupMPRIS() {
   instance.canQuit = false;
   instance.canUsePlayerControls = true;
   instance.supportedUriSchemes = ['http', 'https'];
-  instance.desktopEntry = 'pear-desktop';
+  instance.desktopEntry =
+    '\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063';
   return instance;
 }
 

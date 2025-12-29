@@ -154,7 +154,7 @@
                 "label": "Título de janela personalizado",
                 "prompt": {
                   "label": "Introduza um título: (deixe em branco para desativar)",
-                  "placeholder": "Exemplo: Pear Desktop"
+                  "placeholder": "Exemplo: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Reiniciar aplicação",
       "show": "Mostrar janela",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -288,7 +288,7 @@
       "name": "Modo ambiente"
     },
     "amuse": {
-      "description": "Adiciona suporte ao Pear Desktop para o widget Amuse now playing de 6K Labs",
+      "description": "Adiciona suporte ao {{applicationName}} para o widget Amuse now playing de 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "O servidor da API Amuse está a ser executado. GET/query para obter informações sobre a faixa."
@@ -320,6 +320,22 @@
         },
         "hostname": {
           "label": "Nome do anfitrião"
+        },
+        "https": {
+          "label": "HTTPS e Certificados",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Selecionar arquivo do certificado HTTPS",
+              "label": "Arquivo do certificado (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Ativar HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Selecionar arquivo da chave privada HTTPS",
+              "label": "Arquivo da chave privada (.key/.pen)"
+            }
+          }
         },
         "port": {
           "label": "Porta"
@@ -374,7 +390,7 @@
       "name": "Ignorar restrições de idade"
     },
     "captions-selector": {
-      "description": "Seletor de legendas para as faixas de áudio do Pear Desktop",
+      "description": "Seletor de legendas para as faixas de áudio do {{applicationName}}",
       "menu": {
         "autoload": "Selecionar automaticamente a última legenda utilizada",
         "disable-captions": "Sem legendas por omissão"
@@ -457,13 +473,13 @@
         "disconnected": "Desconectado",
         "hide-duration-left": "Ocultar tempo restante",
         "hide-github-button": "Ocultar botão GitHub",
-        "play-on-pear-desktop": "Reproduzir em Pear Desktop",
+        "play-on-application": "Reproduzir em {{applicationName}}",
         "set-inactivity-timeout": "Definir tempo de inatividade",
         "set-status-display-type": {
           "label": "Texto de estado",
           "submenu": {
+            "application": "A reproduzir {{applicationName}}",
             "artist": "A ouvir {artist}",
-            "pear-desktop": "A reproduzir Pear Desktop",
             "title": "A ouvir {song title}"
           }
         }

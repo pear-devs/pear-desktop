@@ -154,7 +154,7 @@
                 "label": "Özel pencere başlığı",
                 "prompt": {
                   "label": "Özel pencere başlığı girin: (devre dışı bırakmak için boş bırakın)",
-                  "placeholder": "Örnek: Pear Desktop"
+                  "placeholder": "Örnek: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Yeniden başlat",
       "show": "Pencereyi görüntüle",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -288,7 +288,7 @@
       "name": "Ambiyans Modu"
     },
     "amuse": {
-      "description": "6K Labs'ın Amuse oynatma widget'ı için Pear Desktop desteği ekler",
+      "description": "6K Labs'ın Amuse oynatma widget'ı için {{applicationName}} desteği ekler",
       "name": "Amuse",
       "response": {
         "query": "Amuse API sunucusu çalışıyor. Şarkı bilgilerini almak için GET /query kullanabilirsiniz."
@@ -374,7 +374,7 @@
       "name": "Yaş doğrulamasını atla"
     },
     "captions-selector": {
-      "description": "Pear Desktop için altyazı seçici",
+      "description": "{{applicationName}} için altyazı seçici",
       "menu": {
         "autoload": "Son kullanılan altyazıyı otomatik olarak seç",
         "disable-captions": "Varsayılan olarak altyazı yok"
@@ -457,13 +457,13 @@
         "disconnected": "Bağlantı kesildi",
         "hide-duration-left": "Kalan süreyi gizle",
         "hide-github-button": "GitHub bağlantısını gizle",
-        "play-on-pear-desktop": "Pear Desktop de oynat",
+        "play-on-application": "{{applicationName}} de oynat",
         "set-inactivity-timeout": "Hareketsizlik zaman aşımını ayarla",
         "set-status-display-type": {
           "label": "Durum metni",
           "submenu": {
             "artist": "{artist} Dinleniyor",
-            "pear-desktop": "Pear Desktop Dinleniyor",
+            "application": "{{applicationName}} Dinleniyor",
             "title": "{song title} Dinleniyor"
           }
         }

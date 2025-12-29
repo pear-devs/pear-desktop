@@ -154,7 +154,7 @@
                 "label": "Niestandardowy tytuł okna",
                 "prompt": {
                   "label": "Podaj niestandardowy tytuł okna (zostaw puste, aby to wyłączyć)",
-                  "placeholder": "Przykład: Pear Desktop"
+                  "placeholder": "Przykład: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Uruchom ponownie aplikację",
       "show": "Pokaż okno",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "{{title}} (autorstwa {{artist}}) - Pear Desktop"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{artist}} - (autorstwa {{artist}}) - {{applicationName}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Zezwól stylowanie paska wyszukiwań"
       },
       "name": "Motyw kolorów albumu"
     },
@@ -287,14 +288,14 @@
       "name": "Tryb otoczenia"
     },
     "amuse": {
-      "description": "Wspiera integrację Pear Desktop z widgetami Amuse (od 6K Labs)",
+      "description": "Wspiera integrację {{applicationName}} z widgetami Amuse (od 6K Labs)",
       "name": "Amuse",
       "response": {
         "query": "Serwer API Amuse działa. Użyj metody GET do /query, aby zdobyć informację o utworze."
       }
     },
     "api-server": {
-      "description": "Pozwala na kontrolowanie Pear Desktop poprzez podłączenie specjalnego serwera API",
+      "description": "Pozwala na kontrolowanie {{applicationName}} poprzez podłączenie specjalnego serwera API",
       "dialog": {
         "request": {
           "buttons": {
@@ -320,11 +321,27 @@
         "hostname": {
           "label": "Nazwa hosta (IP)"
         },
+        "https": {
+          "label": "HTTPS i Certyfikaty",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Wybierz plik certyfikatu HTTPS",
+              "label": "Certyfikat (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Zezwól HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Wybierz plik prywatnego klucza HTTPS",
+              "label": "Klucz prywatny (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
       },
-      "name": "Pear Desktop API",
+      "name": "{{applicationName}} API",
       "prompt": {
         "hostname": {
           "label": "Wpisz nazwę hosta (IP, np. 0.0.0.0), który będzie użyty do serwera API:",
@@ -373,7 +390,7 @@
       "name": "Omiń ograniczenia wiekowe"
     },
     "captions-selector": {
-      "description": "Selektor napisów dla ścieżek audio Pear Desktop",
+      "description": "Selektor napisów dla ścieżek audio {{applicationName}}",
       "menu": {
         "autoload": "Automatycznie wybierz ostatnio używanych napisów",
         "disable-captions": "Domyślnie, brak napisów"
@@ -456,13 +473,13 @@
         "disconnected": "Odłączono",
         "hide-duration-left": "Ukryj pozostały czas trwania",
         "hide-github-button": "Ukryj przycisk do GitHub",
-        "play-on-pear-desktop": "Odtwórz w Pear Desktop",
+        "play-on-application": "Odtwórz w {{applicationName}}",
         "set-inactivity-timeout": "Ustaw limit czasu bezczynności",
         "set-status-display-type": {
           "label": "Opis statusu",
           "submenu": {
+            "application": "Słucha {{applicationName}}",
             "artist": "Słucha {artist}",
-            "pear-desktop": "Słucha Pear Desktop",
             "title": "Słucha {song title}"
           }
         }

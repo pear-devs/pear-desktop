@@ -154,7 +154,7 @@
                 "label": "사용자 정의 앱 제목",
                 "prompt": {
                   "label": "앱 제목으로 표시할 내용 : (빈 칸 일시 비활성화)",
-                  "placeholder": "예: Pear Desktop"
+                  "placeholder": "예: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "앱 재시작",
       "show": "창 표시",
       "tooltip": {
-        "default": "피어 데스크톱",
-        "with-song-info": "피어 데스크톱: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -288,7 +288,7 @@
       "name": "앰비언트 모드"
     },
     "amuse": {
-      "description": "6K Labs Amuse의 'now playing' 위젯에 Pear Desktop 지원 추가",
+      "description": "6K Labs Amuse의 'now playing' 위젯에 {{applicationName}} 지원 추가",
       "name": "Amuse",
       "response": {
         "query": "Amuse API 서버가 실행 중입니다. GET /query로 노래 정보를 가져오세요."
@@ -374,7 +374,7 @@
       "name": "나이 제한 우회"
     },
     "captions-selector": {
-      "description": "Pear Desktop 트랙용 자막 선택기입니다",
+      "description": "{{applicationName}} 트랙용 자막 선택기입니다",
       "menu": {
         "autoload": "마지막으로 사용한 자막을 자동으로 선택",
         "disable-captions": "기본 자막 제거"
@@ -457,13 +457,13 @@
         "disconnected": "연결 해제 됨",
         "hide-duration-left": "남은 재생 시간 숨기기",
         "hide-github-button": "GitHub 링크 버튼 숨기기",
-        "play-on-pear-desktop": "유튜브 뮤직에서 재생",
+        "play-on-application": "유튜브 뮤직에서 재생",
         "set-inactivity-timeout": "비활성 시간 제한 설정",
         "set-status-display-type": {
           "label": "상태 텍스트",
           "submenu": {
             "artist": "{아티스트} 듣는 중",
-            "pear-desktop": "Pear Desktop 듣는 중",
+            "application": "{{applicationName}} 듣는 중",
             "title": "{곡 제목} 듣는 중"
           }
         }

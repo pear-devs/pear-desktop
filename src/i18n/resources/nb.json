@@ -261,7 +261,7 @@
       "name": "Omgå aldersgrense"
     },
     "captions-selector": {
-      "description": "Undertekstverktøy for lydspor i Pear Desktop",
+      "description": "Undertekstverktøy for lydspor i {{applicationName}}",
       "menu": {
         "autoload": "Auto-velg sist brukte undertekst",
         "disable-captions": "Ingen undertekst som forvalg"
@@ -326,7 +326,7 @@
         "disconnected": "Frakoblet",
         "hide-duration-left": "Skjul gjenværende tid",
         "hide-github-button": "Skjul GitHub-lenkeknapp",
-        "play-on-pear-desktop": "Spill på Pear Desktop",
+        "play-on-application": "Spill på {{applicationName}}",
         "set-inactivity-timeout": "Sett tid før tidsavbrudd"
       },
       "name": "Rik tilstedeværelse for Discord",

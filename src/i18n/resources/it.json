@@ -154,7 +154,7 @@
                 "label": "Personalizza titolo finestra",
                 "prompt": {
                   "label": "Inserisci un titolo della finestra personalizzato: (lascia vuoto per disattivare)",
-                  "placeholder": "Esempio: Pear Desktop"
+                  "placeholder": "Esempio: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Riavvia l'app",
       "show": "Mostra finestra",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Modalità Ambiente"
     },
     "amuse": {
-      "description": "Aggiunge il supporto a Pear Desktop per il widget Amuse Now Playing di 6K Labs",
+      "description": "Aggiunge il supporto a {{applicationName}} per il widget Amuse Now Playing di 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Il server API di Amuse è in funzione. GET /query per ottenere informazioni sui brani."
@@ -373,7 +373,7 @@
       "name": "Aggira i limiti d'età"
     },
     "captions-selector": {
-      "description": "Selettore sottotitolo per le tracce audio di Pear Desktop",
+      "description": "Selettore sottotitolo per le tracce audio di {{applicationName}}",
       "menu": {
         "autoload": "Seleziona automaticamente l'ultimo sottotitolo utilizzato",
         "disable-captions": "Disattiva i sottotitoli"
@@ -456,14 +456,14 @@
         "disconnected": "Disconnesso",
         "hide-duration-left": "Nascondi la durata rimasta",
         "hide-github-button": "Nascondi il pulsante link a GitHub",
-        "play-on-pear-desktop": "Riproduci su Pear Desktop",
+        "play-on-application": "Riproduci su {{applicationName}}",
         "set-inactivity-timeout": "Imposta il timeout di inattività",
         "set-status-display-type": {
           "label": "Testo dello status",
           "submenu": {
             "artist": "Stai ascoltando {artist}",
             "title": "Stai ascoltando {song title}",
-            "pear-desktop": "Ascoltando Pear Desktop"
+            "application": "Ascoltando {{applicationName}}"
           }
         }
       },

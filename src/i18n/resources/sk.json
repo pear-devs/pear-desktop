@@ -154,7 +154,7 @@
                 "label": "Vlastný názov okna",
                 "prompt": {
                   "label": "Napíšte vlastný názov okna: (nechajte prázdne pre vypnutie)",
-                  "placeholder": "Napríklad: Pear Desktop"
+                  "placeholder": "Napríklad: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Reštartovať aplikáciu",
       "show": "Zobraziť okno",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -288,7 +288,7 @@
       "name": "Ambientný mód"
     },
     "amuse": {
-      "description": "Pridáva Pear Desktop podporu pre Amuse práve prehráva widget od 6K Labs",
+      "description": "Pridáva {{applicationName}} podporu pre Amuse práve prehráva widget od 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API server beží. GET /query to get song info."
@@ -374,7 +374,7 @@
       "name": "Obísť vekové obmedzenia"
     },
     "captions-selector": {
-      "description": "Selektor titulkov pre zvukové stopy Pear Desktop",
+      "description": "Selektor titulkov pre zvukové stopy {{applicationName}}",
       "menu": {
         "autoload": "Automatický výber naposledy použitých titulkov",
         "disable-captions": "Žiadne titulky"
@@ -457,13 +457,13 @@
         "disconnected": "Odpojené",
         "hide-duration-left": "Skryť zostávajúcu dobu trvania",
         "hide-github-button": "Skryť tlačidlo s odkazom na GitHub",
-        "play-on-pear-desktop": "Spustiť na Pear Desktop",
+        "play-on-application": "Spustiť na {{applicationName}}",
         "set-inactivity-timeout": "Nastaviť časový limit nečinnosti",
         "set-status-display-type": {
           "label": "Text stavu",
           "submenu": {
             "artist": "Aktuálne si prehráva {artist}",
-            "pear-desktop": "Počúvať Pear Desktop",
+            "application": "Počúvať {{applicationName}}",
             "title": "Aktuálne si prehráva {song title}"
           }
         }
