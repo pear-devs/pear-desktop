@@ -77,7 +77,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
           const configLength = Buffer.allocUnsafe(4);
         configLength.writeUInt32BE(configBuffer.length, 0);
 
-        this.clients.forEach((client, clientId) => {
+        this.clients.forEach((client) => {
             try {
             if (client.response.writable && !client.response.destroyed) {
                 client.response.write(configLength);
@@ -187,6 +187,86 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
       }
     });
 
+    // New: Listen for binary PCM data (ArrayBuffer / Uint8Array / Buffer)
+    ctx.ipc.on('audio-stream:pcm-binary', (data: { metadata: any; data: any }) => {
+      if (!this.audioConfig) return;
+
+      try {
+        let pcmBuffer: Buffer;
+
+        // Accept Node Buffer, Uint8Array, or plain ArrayBuffer
+        if (Buffer.isBuffer(data.data)) {
+          pcmBuffer = data.data as Buffer;
+        } else if (data.data instanceof Uint8Array) {
+          pcmBuffer = Buffer.from(data.data.buffer, data.data.byteOffset, data.data.byteLength);
+        } else if (data.data && data.data instanceof ArrayBuffer) {
+          pcmBuffer = Buffer.from(data.data);
+        } else {
+          // Fallback: try to create buffer from whatever was sent
+          pcmBuffer = Buffer.from(data.data);
+        }
+
+        const chunk = {
+          metadata: {
+            timestamp: data.metadata?.timestamp || Date.now(),
+            sampleRate: this.audioConfig.sampleRate,
+            bitDepth: this.audioConfig.bitDepth,
+            channels: this.audioConfig.channels,
+          },
+          data: pcmBuffer,
+        };
+
+        this.pcmBuffer.push(chunk);
+        if (this.pcmBuffer.length > this.maxBufferSize) this.pcmBuffer.shift();
+
+        const clientsToRemove: string[] = [];
+
+        const metadataJson = JSON.stringify(chunk.metadata);
+        const metadataBuffer = Buffer.from(metadataJson, 'utf-8');
+        const metadataLength = Buffer.allocUnsafe(4);
+        metadataLength.writeUInt32BE(metadataBuffer.length, 0);
+
+        const combinedBuffer = Buffer.concat([metadataLength, metadataBuffer, pcmBuffer]);
+
+        this.clients.forEach((client, clientId) => {
+          try {
+            if (client.response.writable && !client.response.destroyed) {
+              const canWrite = client.response.write(combinedBuffer);
+              client.lastActivity = Date.now();
+              if (!canWrite) {
+                if (!client.response.listenerCount('drain')) {
+                  client.response.once('drain', () => {});
+                }
+              }
+            } else {
+              clientsToRemove.push(clientId);
+            }
+          } catch (error) {
+            console.error(
+              LoggerPrefix,
+              `[Audio Stream] Error sending PCM data to client ${client.ip}:`,
+              error,
+            );
+            clientsToRemove.push(clientId);
+          }
+        });
+
+        clientsToRemove.forEach((clientId) => {
+          const client = this.clients.get(clientId);
+          if (client) {
+            try { client.response.end(); } catch {}
+          }
+          this.clients.delete(clientId);
+        });
+      } catch (error) {
+        console.error(
+          LoggerPrefix,
+          '[Audio Stream] Error processing PCM binary data:',
+          error,
+        );
+      }
+    });
+
     if (config.enabled) {
       this.startServer(config);
     }
@@ -196,6 +276,7 @@ export const backend = createBackend<BackendType, AudioStreamConfig>({
     // Remove IPC listeners
     ipcMain.removeAllListeners('audio-stream:config');
     ipcMain.removeAllListeners('audio-stream:pcm-data');
+    ipcMain.removeAllListeners('audio-stream:pcm-binary');
 
     this.stopServer();
   },
