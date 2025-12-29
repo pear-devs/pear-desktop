@@ -72,8 +72,6 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
     const bitDepth = config.bitDepth || 16;
     // Use actual number of channels from the audio source
     const channels = config.channels || 2;
-    // Use buffer size from config
-    const bufferSize = config.bufferSize || 2048;
 
     // Send audio configuration to backend
     this.context.ipc.send('audio-stream:config', {
@@ -82,39 +80,16 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
       channels,
     });
 
-    // Create ScriptProcessorNode for PCM capture
-    // NOTE: ScriptProcessorNode is deprecated and can cause timing issues/crackling.
-    // For best results, consider migrating to AudioWorkletNode in the future.
-    // Use buffer size from config for latency control
-    const scriptProcessor = audioContext.createScriptProcessor(
-      bufferSize,
-      channels,
-      channels,
-    );
-
-    // No batching - send immediately to minimize latency
-    // Base64 encoding is deferred to async queue to prevent blocking
+    // Prefer AudioWorkletNode for stable timing and higher-quality capture.
+    // We create a small inline AudioWorkletProcessor via a Blob so bundling
+    // doesn't need extra files. The worklet interleaves and converts to
+    // Int16 and posts transferable ArrayBuffers to the main thread.
     this.batchBuffer = null;
     this.batchCount = 0;
-
-    // Reset processing queue
     this.processingQueue = [];
     this.isProcessing = false;
 
-    // Optimized base64 conversion - process in chunks to avoid stack overflow
-    const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
-      const bytes = new Uint8Array(buffer);
-      const chunkSize = 0x8000; // 32KB chunks
-      let binary = '';
-
-      // Process in chunks to avoid call stack overflow with spread operator
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
-        // Use apply with Array.from for better performance and stack safety
-        binary += String.fromCharCode.apply(null, Array.from(chunk));
-      }
-      return btoa(binary);
-    };
+    
 
     // Process queue with limited items per tick to prevent blocking
     // Increased queue size to handle bursts better
@@ -145,13 +120,11 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
               buffer = item.buffer.buffer;
             }
 
-            // Base64 encoding happens outside audio callback
-            const pcmDataBase64 = arrayBufferToBase64(buffer);
-
-            // Send PCM data to backend
-            this.context!.ipc.send('audio-stream:pcm-data', {
+            // Send binary PCM to backend (avoid base64 to reduce CPU/GC)
+            const uint8 = new Uint8Array(buffer);
+            this.context!.ipc.send('audio-stream:pcm-binary', {
               metadata: item.metadata,
-              data: pcmDataBase64,
+              data: uint8,
             });
             
             itemsProcessed++;
@@ -179,112 +152,114 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
       processBatch();
     };
 
-    scriptProcessor.onaudioprocess = (event) => {
-      if (!this.isStreaming) {
-        return;
-      }
-
-      const inputBuffer = event.inputBuffer;
-      const numberOfChannels = inputBuffer.numberOfChannels;
-      const length = inputBuffer.length;
-
-      // Convert Float32Array to PCM - optimized conversion
-      let pcmArray: Int16Array | Int32Array;
-
-      if (bitDepth === 32) {
-        // 32-bit PCM: convert float32 (-1.0 to 1.0) to int32 (-2147483648 to 2147483647)
-        const pcm32 = new Int32Array(length * numberOfChannels);
-        const MAX_INT32 = 2147483647;
-
-        // Optimized loop - process channels interleaved
-        for (let channel = 0; channel < numberOfChannels; channel++) {
-          const channelData = inputBuffer.getChannelData(channel);
-          for (let i = 0; i < length; i++) {
-            const sample = channelData[i];
-            // Clamp to [-1, 1] range and convert to int32
-            // Use MAX_INT32 for scaling (2147483647), clamp result to valid int32 range
-            const clamped = sample < -1 ? -1 : sample > 1 ? 1 : sample;
-            const scaled = Math.round(clamped * MAX_INT32);
-            // Clamp to int32 range
-            pcm32[i * numberOfChannels + channel] =
-              scaled < -2147483648
-                ? -2147483648
-                : scaled > MAX_INT32
-                  ? MAX_INT32
-                  : scaled;
-          }
-        }
-        pcmArray = pcm32;
-      } else {
-        // 16-bit PCM: highly optimized conversion
-        const pcm16 = new Int16Array(length * numberOfChannels);
-        const MAX_INT16 = 0x7fff;
-
-        // Optimize for common case (stereo)
-        if (numberOfChannels === 2) {
-          const leftChannel = inputBuffer.getChannelData(0);
-          const rightChannel = inputBuffer.getChannelData(1);
-          
-          for (let i = 0; i < length; i++) {
-            // Clamp and convert with minimal branching
-            const left = leftChannel[i];
-            const right = rightChannel[i];
-
-            // Fast clamp: Math.max(-1, Math.min(1, sample))
-            const leftClamped = left < -1 ? -1 : left > 1 ? 1 : left;
-            const rightClamped = right < -1 ? -1 : right > 1 ? 1 : right;
-            
-            // Convert to int16 (interleaved: L, R, L, R, ...)
-            pcm16[i * 2] = Math.round(leftClamped * MAX_INT16);
-            pcm16[i * 2 + 1] = Math.round(rightClamped * MAX_INT16);
-          }
-        } else {
-          // Generic case for mono or other channel counts
-          for (let channel = 0; channel < numberOfChannels; channel++) {
-            const channelData = inputBuffer.getChannelData(channel);
-            for (let i = 0; i < length; i++) {
-              const sample = channelData[i];
-              const clamped = sample < -1 ? -1 : sample > 1 ? 1 : sample;
-              pcm16[i * numberOfChannels + channel] = Math.round(clamped * MAX_INT16);
-            }
-          }
-        }
-        pcmArray = pcm16;
-      }
-
-      // Queue immediately for async processing (don't block audio callback)
-      // No batching to minimize latency - each buffer is sent immediately
-      if (this.context) {
-        // Drop oldest items if queue is too long to prevent buildup and stuttering
-        // More aggressive dropping to prevent queue buildup
-        while (this.processingQueue.length >= MAX_QUEUE_SIZE) {
-          // Remove oldest items (FIFO) until we have room
-          this.processingQueue.shift();
-        }
-
-        this.processingQueue.push({
-          buffer: pcmArray,
-          metadata: {
-            timestamp: Date.now(),
-            sampleRate,
-            bitDepth,
-            channels: numberOfChannels,
-          },
-        });
-
-        // Trigger async processing if not already running
-        // Use queueMicrotask for immediate processing with minimal delay
-        if (!this.isProcessing) {
-          queueMicrotask(processQueue);
-        }
+    // Create AudioWorklet module inline (avoids bundling extra files).
+    const workletCode = `class PCMProcessor extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.port.onmessage = (e) => {
+      if (e.data && e.data.sampleRate) {
+        this._sampleRate = e.data.sampleRate;
       }
     };
+  }
 
-    // Connect audio source to script processor, then to destination
-    audioSource.connect(scriptProcessor);
-    scriptProcessor.connect(audioContext.destination);
+  process(inputs) {
+    try {
+      const input = inputs[0];
+      if (!input || input.length === 0) return true;
 
-    this.scriptProcessor = scriptProcessor;
+      const channels = input.length;
+      const frames = input[0].length;
+      const interleaved = new Int16Array(frames * channels);
+      const MAX_INT16 = 0x7fff;
+
+      if (channels === 2) {
+        const left = input[0];
+        const right = input[1];
+        for (let i = 0; i < frames; i++) {
+          const l = left[i] < -1 ? -1 : left[i] > 1 ? 1 : left[i];
+          const r = right[i] < -1 ? -1 : right[i] > 1 ? 1 : right[i];
+          interleaved[i * 2] = Math.round(l * MAX_INT16);
+          interleaved[i * 2 + 1] = Math.round(r * MAX_INT16);
+        }
+      } else {
+        for (let ch = 0; ch < channels; ch++) {
+          const data = input[ch];
+          for (let i = 0; i < frames; i++) {
+            const s = data[i] < -1 ? -1 : data[i] > 1 ? 1 : data[i];
+            interleaved[i * channels + ch] = Math.round(s * MAX_INT16);
+          }
+        }
+      }
+
+      this.port.postMessage({
+        buffer: interleaved.buffer,
+        metadata: {
+          timestamp: Date.now(),
+          sampleRate: this._sampleRate || 48000,
+          bitDepth: 16,
+          channels: channels,
+        }
+      }, [interleaved.buffer]);
+    } catch (err) {
+      // keep audio thread alive
+    }
+    return true;
+  }
+}
+registerProcessor('pcm-processor', PCMProcessor);
+`;
+
+    const blob = new Blob([workletCode], { type: 'application/javascript' });
+    const blobUrl = URL.createObjectURL(blob);
+
+    try {
+      audioContext.audioWorklet.addModule(blobUrl).then(() => {
+        const workletNode = new AudioWorkletNode(audioContext, 'pcm-processor', {
+          numberOfInputs: 1,
+          numberOfOutputs: 0,
+          channelCount: channels,
+        });
+
+        workletNode.port.postMessage({ sampleRate });
+
+        workletNode.port.onmessage = (event) => {
+          if (!this.isStreaming || !this.context) return;
+
+          try {
+            const ab = event.data.buffer as ArrayBuffer;
+            const metadata = event.data.metadata || {};
+
+            while (this.processingQueue.length >= MAX_QUEUE_SIZE) {
+              this.processingQueue.shift();
+            }
+
+            this.processingQueue.push({
+              buffer: new Int16Array(ab),
+              metadata: {
+                timestamp: metadata.timestamp || Date.now(),
+                sampleRate: metadata.sampleRate || sampleRate,
+                bitDepth: metadata.bitDepth || 16,
+                channels: metadata.channels || channels,
+              },
+            });
+
+            if (!this.isProcessing) queueMicrotask(processQueue);
+          } catch (err) {
+            console.error('[Audio Stream] Worklet message error:', err);
+          }
+        };
+
+        audioSource.connect(workletNode);
+
+        this.scriptProcessor = undefined;
+        this.isStreaming = true;
+      }).catch((err) => {
+        console.error('[Audio Stream] Failed to add audio worklet module:', err);
+      });
+    } catch (err) {
+      console.error('[Audio Stream] AudioWorklet setup failed:', err);
+    }
     this.isStreaming = true;
 
     console.log(
@@ -303,17 +278,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
     // Flush any remaining batched data
     if (this.batchBuffer && this.batchBuffer.length > 0 && this.context) {
       try {
-        // Optimized base64 conversion
-        const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
-          const bytes = new Uint8Array(buffer);
-          const chunkSize = 0x8000; // 32KB chunks
-          let binary = '';
-          for (let i = 0; i < bytes.length; i += chunkSize) {
-            const chunk = bytes.subarray(i, i + chunkSize);
-            binary += String.fromCharCode.apply(null, Array.from(chunk));
-          }
-          return btoa(binary);
-        };
+        
 
         let buffer: ArrayBuffer;
         if (this.batchBuffer.buffer instanceof SharedArrayBuffer) {
@@ -322,15 +287,15 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
         } else {
           buffer = this.batchBuffer.buffer;
         }
-        const pcmDataBase64 = arrayBufferToBase64(buffer);
-        this.context.ipc.send('audio-stream:pcm-data', {
+        const uint8 = new Uint8Array(buffer);
+        this.context.ipc.send('audio-stream:pcm-binary', {
           metadata: {
             timestamp: Date.now(),
             sampleRate: this.config?.sampleRate || 48000,
             bitDepth: this.config?.bitDepth || 16,
             channels: 2,
           },
-          data: pcmDataBase64,
+          data: uint8,
         });
       } catch {
         // Ignore flush errors
