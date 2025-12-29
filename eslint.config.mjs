@@ -72,7 +72,7 @@ export default tsEslint.config(
       'prefer-promise-reject-errors': 'off',
       'stylistic/quotes': ['error', 'single', {
         avoidEscape: true,
-        allowTemplateLiterals: false,
+        allowTemplateLiterals: 'never',
       }],
       'stylistic/quote-props': ['error', 'consistent'],
       'stylistic/semi': ['error', 'always'],
