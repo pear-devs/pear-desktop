@@ -37,11 +37,7 @@ const stopProgressInterval = () => {
 
 const updateProgressBar = async (songInfo: SongInfo, window: BrowserWindow) => {
   const validated = requiredSongInfoSchema.safeParse(songInfo);
-
-  if (!validated.success) {
-    console.log('early return');
-    return;
-  }
+  if (!validated.success) return;
 
   const { title, elapsedSeconds, songDuration, isPaused } = validated.data;
 
