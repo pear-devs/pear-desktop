@@ -169,7 +169,6 @@
     "eslint-plugin-solid": "0.14.5",
     "glob": "11.1.0",
     "node-gyp": "11.4.2",
-    "playwright": "1.55.1",
     "ts-morph": "27.0.2",
     "typescript": "5.9.3",
     "typescript-eslint": "8.43.0",
