@@ -68,7 +68,7 @@ const setProgressBar = async (
   }
 };
 
-const updateProgressBar = async (songInfo: SongInfo, window: BrowserWindow) => {
+const updateProgressBar = (songInfo: SongInfo, window: BrowserWindow) => {
   const validated = requiredSongInfoSchema.safeParse(songInfo);
   if (!validated.success) return;
 
