@@ -1,7 +1,7 @@
 import { z } from 'zod';
+import dbus from '@jellybrick/dbus-next';
 
 import { createPlugin } from '@/utils';
-import dbus from '@jellybrick/dbus-next';
 import {
   registerCallback,
   getCurrentSongInfo,
