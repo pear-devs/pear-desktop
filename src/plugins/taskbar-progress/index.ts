@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { createPlugin } from '@/utils';
+import dbus from '@jellybrick/dbus-next';
 import {
   registerCallback,
   getCurrentSongInfo,
@@ -19,8 +20,12 @@ const requiredSongInfoSchema = z.object({
 
 let lastSongInfo: SongInfo | null = null;
 let progressInterval: ReturnType<typeof setInterval> | null = null;
+let hasRegisteredCallback = false;
 let isEnabled = false;
 let intervalStart: number | null = null;
+
+let isLinux;
+let bus: ReturnType<(typeof dbus)['sessionBus']>;
 
 const stopProgressInterval = () => {
   if (progressInterval) {
@@ -30,10 +35,11 @@ const stopProgressInterval = () => {
   }
 };
 
-const updateProgressBar = (songInfo: SongInfo, window: BrowserWindow) => {
+const updateProgressBar = async (songInfo: SongInfo, window: BrowserWindow) => {
   const validated = requiredSongInfoSchema.safeParse(songInfo);
 
   if (!validated.success) {
+    console.log('early return');
     return;
   }
 
@@ -52,7 +58,30 @@ const updateProgressBar = (songInfo: SongInfo, window: BrowserWindow) => {
   const options: { mode: 'normal' | 'paused' } = {
     mode: isPaused ? 'paused' : 'normal',
   };
+
   window.setProgressBar(progress, options);
+
+  isLinux ??= (await import('electron-is')).linux();
+  if (isLinux) {
+    bus ??= dbus.sessionBus();
+
+    const signal = new dbus.Message({
+      type: dbus.MessageType.SIGNAL,
+      path: '/', // I don't know what should be put as a path, but anything works
+      interface: 'com.canonical.Unity.LauncherEntry',
+      member: 'Update',
+      signature: 'sa{sv}',
+      body: [
+        'application://com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063.desktop',
+        {
+          'progress': new dbus.Variant('d', progress),
+          'progress-visible': new dbus.Variant('b', !isPaused),
+        },
+      ],
+    });
+
+    bus.send(signal);
+  }
 };
 
 const startProgressInterval = (songInfo: SongInfo, window: BrowserWindow) => {
@@ -100,15 +129,19 @@ export default createPlugin({
         }
       }
 
-      registerCallback((songInfo) => {
-        if (!isEnabled || !songInfo?.title) return;
-        updateProgressBar(songInfo, window);
-        if (songInfo.isPaused) {
-          stopProgressInterval();
-        } else {
-          startProgressInterval(songInfo, window);
-        }
-      });
+      if (!hasRegisteredCallback) {
+        hasRegisteredCallback = true;
+
+        registerCallback((songInfo) => {
+          if (!isEnabled || !songInfo?.title) return;
+          updateProgressBar(songInfo, window);
+          if (songInfo.isPaused) {
+            stopProgressInterval();
+          } else {
+            startProgressInterval(songInfo, window);
+          }
+        });
+      }
     },
 
     stop({ window }) {
