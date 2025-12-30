@@ -35,6 +35,32 @@ const stopProgressInterval = () => {
   }
 };
 
+const setProgressBar = (progress: number, options: { mode: 'normal' | 'paused' } = { mode: 'normal' }) => {
+  window.setProgressBar(progress, options);
+
+  isLinux ??= (await import('electron-is')).linux();
+  if (isLinux) {
+    bus ??= dbus.sessionBus();
+
+    const signal = new dbus.Message({
+      type: dbus.MessageType.SIGNAL,
+      path: '/', // I don't know what should be put as a path, but anything works
+      interface: 'com.canonical.Unity.LauncherEntry',
+      member: 'Update',
+      signature: 'sa{sv}',
+      body: [
+        'application://com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063.desktop',
+        {
+          'progress': new dbus.Variant('d', progress),
+          'progress-visible': new dbus.Variant('b', options.mode === 'normal' && progress > 0),
+        },
+      ],
+    });
+
+    bus.send(signal);
+  }
+};
+
 const updateProgressBar = async (songInfo: SongInfo, window: BrowserWindow) => {
   const validated = requiredSongInfoSchema.safeParse(songInfo);
   if (!validated.success) return;
@@ -55,29 +81,7 @@ const updateProgressBar = async (songInfo: SongInfo, window: BrowserWindow) => {
     mode: isPaused ? 'paused' : 'normal',
   };
 
-  window.setProgressBar(progress, options);
-
-  isLinux ??= (await import('electron-is')).linux();
-  if (isLinux) {
-    bus ??= dbus.sessionBus();
-
-    const signal = new dbus.Message({
-      type: dbus.MessageType.SIGNAL,
-      path: '/', // I don't know what should be put as a path, but anything works
-      interface: 'com.canonical.Unity.LauncherEntry',
-      member: 'Update',
-      signature: 'sa{sv}',
-      body: [
-        'application://com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063.desktop',
-        {
-          'progress': new dbus.Variant('d', progress),
-          'progress-visible': new dbus.Variant('b', !isPaused),
-        },
-      ],
-    });
-
-    bus.send(signal);
-  }
+  setProgressBar(progress, options);
 };
 
 const startProgressInterval = (songInfo: SongInfo, window: BrowserWindow) => {
@@ -143,7 +147,7 @@ export default createPlugin({
     stop({ window }) {
       isEnabled = false;
       stopProgressInterval();
-      window.setProgressBar(-1);
+      setProgressBar(-1);
     },
   },
 });
