@@ -411,7 +411,7 @@ async function onApiLoaded() {
   if (window.mainConfig.get('options.swapLikeButtonsOrder')) {
     const style = document.createElement('style');
     style.textContent = `
-      ytmusic-like-button-renderer#like-button-renderer {
+      #like-button-renderer {
         display: inline-flex;
         flex-direction: row-reverse;
       }`;
