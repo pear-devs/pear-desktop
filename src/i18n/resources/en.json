@@ -154,6 +154,7 @@
                 "default": "Default",
                 "force-show": "Force show",
                 "hide": "Hide",
+                "swap": "Swap like buttons order",
                 "label": "Like buttons"
               },
               "custom-window-title": {

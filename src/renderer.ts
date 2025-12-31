@@ -406,6 +406,18 @@ async function onApiLoaded() {
 
     document.head.appendChild(style);
   }
+
+  // Swap like button order
+  if (window.mainConfig.get('options.swapLikeButtonsOrder')) {
+    const style = document.createElement('style');
+    style.textContent = `
+      ytmusic-like-button-renderer#like-button-renderer {
+        display: inline-flex;
+        flex-direction: row-reverse;
+      }`;
+
+    document.head.appendChild(style);
+  }
 }
 
 /**
