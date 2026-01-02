@@ -2,7 +2,7 @@ import { t } from '@/i18n';
 
 import { getSongInfo } from '@/providers/song-info-front';
 
-import { lyricsStore, retrySearch } from '../../providers';
+import { lyricsStore, retrySearch } from '../store';
 
 interface ErrorDisplayProps {
   error: Error;
@@ -45,7 +45,6 @@ export const ErrorDisplay = (props: ErrorDisplayProps) => {
       </pre>
 
       <yt-button-renderer
-        onClick={() => retrySearch(lyricsStore.provider, getSongInfo())}
         data={{
           icon: { iconType: 'REFRESH' },
           isDisabled: false,
@@ -54,6 +53,7 @@ export const ErrorDisplay = (props: ErrorDisplayProps) => {
             simpleText: t('plugins.synced-lyrics.refetch-btn.normal')
           },
         }}
+        onClick={() => retrySearch(lyricsStore.provider, getSongInfo())}
         style={{
           'margin-top': '1em',
           'width': '100%'

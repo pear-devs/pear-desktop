@@ -33,25 +33,25 @@
         "css-file-not-found": "Arquivo CSS \"{{cssFile}}\" não existe, ignorando"
       },
       "unresponsive": {
-        "details": "Erro de falta de resposta!\n{{error}}"
+        "details": "Erro por falta de resposta!\n{{error}}"
       },
       "when-ready": {
         "clearing-cache-after-20s": "Limpando cache do aplicativo"
       },
       "window": {
-        "tried-to-render-offscreen": "A janela tentou renderizar fora da tela, tamanho da janela={{windowSize}}, tamanho da tela={{displaySize}}, posição={{position}}"
+        "tried-to-render-offscreen": "A janela tentou renderizar fora dos parâmetros da tela, tamanho da janela={{windowSize}}, tamanho da tela={{displaySize}}, posição={{position}}"
       }
     },
     "dialog": {
       "hide-menu-enabled": {
         "detail": "O menu está oculto, use 'Alt' para mostrá-lo (ou 'Esc' ao usar o menu dentro do aplicativo)",
-        "message": "Ocultar menu está ativado",
-        "title": "Ocultar menu ativado"
+        "message": "Ocultar Menu está ativado",
+        "title": "Ocultar Menu ativado"
       },
       "need-to-restart": {
         "buttons": {
           "later": "Depois",
-          "restart-now": "Reiniciar agora"
+          "restart-now": "Reiniciar Agora"
         },
         "detail": "O plugin \"{{pluginName}}\" requer uma reinicialização para entrar em vigor",
         "message": "\"{{pluginName}}\" precisa reiniciar",
@@ -84,7 +84,7 @@
         "label": "Navegação",
         "submenu": {
           "copy-current-url": "Copiar URL atual",
-          "go-back": "Voltar",
+          "go-back": "Retornar",
           "go-forward": "Avançar",
           "quit": "Sair",
           "restart": "Reiniciar aplicativo"
@@ -150,6 +150,13 @@
           "visual-tweaks": {
             "label": "Ajustes visuais",
             "submenu": {
+              "custom-window-title": {
+                "label": "Título da janela customizado",
+                "prompt": {
+                  "label": "Insira título customizado para a janela: (deixe em branco para desabilitar)",
+                  "placeholder": "Exemplo: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "Padrão",
                 "force-show": "Forçar exibir",
@@ -201,8 +208,8 @@
       "restart": "Reiniciar aplicativo",
       "show": "Mostrar janela",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -230,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Ativar personalização da barra de progresso"
       },
       "name": "Tema da cor do álbum"
     },
@@ -280,7 +288,7 @@
       "name": "Modo ambiente"
     },
     "amuse": {
-      "description": "Adiciona suporte ao YouTube Music ao widget 'Reproduzindo agora' do Amuse da 6K Labs",
+      "description": "Adiciona suporte ao {{applicationName}} ao widget 'Reproduzindo agora' do Amuse da 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Servidor API do Amuse em execução. GET /query para obter informações da música."
@@ -362,11 +370,11 @@
       "name": "Desfocar barra de navegação"
     },
     "bypass-age-restrictions": {
-      "description": "Pular a verificação de idade do YouTube",
+      "description": "Pular a verificação de idade do Music Player",
       "name": "Ignorar restrições de idade"
     },
     "captions-selector": {
-      "description": "Seletor de legendas para faixas de áudio do YouTube Music",
+      "description": "Seletor de legendas para faixas de áudio do {{applicationName}}",
       "menu": {
         "autoload": "Selecionar automaticamente a última legenda usada",
         "disable-captions": "Sem legendas por padrão"
@@ -414,6 +422,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Configure um dispositivo de saída de mídia personalizado para músicas",
+      "menu": {
+        "device-selector": "Selecionar dispositivo"
+      },
+      "name": "Dispositivo de saída personalizado",
+      "prompt": {
+        "device-selector": {
+          "label": "Escolha o dispositivo de saída de mídia que será usado",
+          "title": "Selecionar dispositivo de saída"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Faz a música começar no modo \"pausado\"",
       "menu": {
@@ -436,8 +457,16 @@
         "disconnected": "Desconectado",
         "hide-duration-left": "Ocultar duração restante",
         "hide-github-button": "Ocultar botão do GitHub",
-        "play-on-youtube-music": "Reproduzir no YouTube Music",
-        "set-inactivity-timeout": "Definir tempo limite de inatividade"
+        "play-on-application": "Reproduzir no {{applicationName}}",
+        "set-inactivity-timeout": "Definir tempo limite de inatividade",
+        "set-status-display-type": {
+          "label": "Texto de status",
+          "submenu": {
+            "artist": "Ouvindo {artist}",
+            "application": "Ouvindo {{applicationName}}",
+            "title": "Ouvindo {song title}"
+          }
+        }
       },
       "name": "Rich Presence do Discord",
       "prompt": {
@@ -729,6 +758,7 @@
         "listenbrainz": {
           "token": "Insira o token de usuário ListenBrainz"
         },
+        "scrobble-alternative-artist": "Use artistas alternativos",
         "scrobble-alternative-title": "Usar títulos alternativos",
         "scrobble-other-media": "Scrobble outras mídias"
       },
@@ -814,6 +844,14 @@
           "label": "Deixa as letras perfeitamente sincronizadas",
           "tooltip": "Calcular até o milissegundo a exibição da próxima linha (pode ter um pequeno impacto no desempenho)"
         },
+        "preferred-provider": {
+          "label": "Provedor Preferido",
+          "none": {
+            "label": "Nenhum",
+            "tooltip": "Sem provedor preferido"
+          },
+          "tooltip": "Escolha o provedor padrão para uso"
+        },
         "romanization": {
           "label": "Letras romanizadas",
           "tooltip": "Se as letras estiverem em um idioma diferente, tente exibir uma versão latina."
@@ -845,6 +883,27 @@
     "touchbar": {
       "description": "Adiciona um widget TouchBar para usuários do macOS",
       "name": "TouchBar"
+    },
+    "transparent-player": {
+      "description": "Faz a janela do app transparente",
+      "menu": {
+        "opacity": {
+          "label": "Opacidade",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Tipo",
+          "submenu": {
+            "acrylic": "Acrílico",
+            "mica": "Mica",
+            "none": "Nenhum",
+            "tabbed": "Em abas"
+          }
+        }
+      },
+      "name": "Player transparente"
     },
     "tuna-obs": {
       "description": "Integração com o plugin Tuna do OBS",

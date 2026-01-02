@@ -1,5 +1,5 @@
 {
-  "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
+  "extends": "./node_modules/@electron-toolkit/tsconfig/tsconfig.node.json",
   "compilerOptions": {
     "target": "esnext",
     "lib": ["dom", "dom.iterable", "es2022"],
@@ -25,7 +25,8 @@
   "exclude": ["./dist"],
   "include": [
     "electron.vite.config.mts",
+    "playwright.config.ts",
     "./src/**/*",
-    "*.config.*js",
+    "*.config.*js"
   ]
 }

@@ -2,14 +2,14 @@
   "common": {
     "console": {
       "plugins": {
-        "execute-failed": "Misslyckades med att köra plugin {{pluginName}}::{{contextName}}",
-        "executed-at-ms": "Plugin {{pluginName}}::{{contextName}} kördes på {{ms}} ms",
-        "initialize-failed": "Misslyckades med att initialisera pluginen \"{{pluginName}}\"",
-        "load-all": "Laddar alla pluginer",
-        "load-failed": "Misslyckades med att ladda pluginen \"{{pluginName}}\"",
-        "loaded": "Pluginen \"{{pluginName}}\" laddad",
-        "unload-failed": "Misslyckades med att avlasta pluginen \"{{pluginName}}\"",
-        "unloaded": "Pluginen \"{{pluginName}}\" avlastad"
+        "execute-failed": "Misslyckades med att köra tillägget {{pluginName}}::{{contextName}}",
+        "executed-at-ms": "Tillägget {{pluginName}}::{{contextName}} kördes på {{ms}}ms",
+        "initialize-failed": "Misslyckades med att initialisera tillägget \"{{pluginName}}\"",
+        "load-all": "Laddar alla tillägg",
+        "load-failed": "Misslyckades med att ladda tillägget \"{{pluginName}}\"",
+        "loaded": "Tillägget \"{{pluginName}}\" laddades in",
+        "unload-failed": "Kunde inte inaktivera {{pluginName}}-tillägget",
+        "unloaded": "{{pluginName}}-tillägget inaktiverat"
       }
     }
   },
@@ -21,7 +21,7 @@
   "main": {
     "console": {
       "did-finish-load": {
-        "dev-tools": "Laddning klar. DevTools öppnad"
+        "dev-tools": "Laddning slutförd. Utvecklarverktyg öppnad"
       },
       "i18n": {
         "loaded": "i18n laddad"
@@ -45,16 +45,16 @@
     "dialog": {
       "hide-menu-enabled": {
         "detail": "Menyn är dold, använd 'Alt' för att visa den (eller 'Escape' om du använder inbyggd meny)",
-        "message": "Dölj Meny är aktiverat",
-        "title": "Dölj Meny aktiverad"
+        "message": "Dölj meny är aktiverad",
+        "title": "Dölj meny aktiverad"
       },
       "need-to-restart": {
         "buttons": {
           "later": "Senare",
           "restart-now": "Starta om nu"
         },
-        "detail": "\"{{pluginName}}\" pluginen kräver en omstart för att träda i kraft",
-        "message": "\"{{pluginName}}\" behöver startas om",
+        "detail": "\"{{pluginName}}\"-tillägget kräver en omstart för att träda i kraft",
+        "message": "\"{{pluginName}}\"-tillägget behöver startas om",
         "title": "Omstart krävs"
       },
       "unresponsive": {
@@ -84,17 +84,17 @@
         "label": "Navigering",
         "submenu": {
           "copy-current-url": "Kopiera nuvarande länk",
-          "go-back": "Föregående",
-          "go-forward": "Nästa",
-          "quit": "Lämna",
+          "go-back": "Gå tillbaka",
+          "go-forward": "Gå framåt",
+          "quit": "Stäng",
           "restart": "Starta om appen"
         }
       },
       "options": {
-        "label": "Valmöjligheter",
+        "label": "Alternativ",
         "submenu": {
           "advanced-options": {
-            "label": "Avancerade valmöjligheter",
+            "label": "Avancerade alternativ",
             "submenu": {
               "auto-reset-app-cache": "Nollställ appcache när appen startar",
               "disable-hardware-acceleration": "Stäng av hårdvaruacceleration",
@@ -114,60 +114,627 @@
           },
           "always-on-top": "Alltid överst",
           "auto-update": "Uppdatera automatiskt",
+          "hide-menu": {
+            "dialog": {
+              "message": "Menyn kommer att döljas efter omstart, använd [Alt] för att visa menyn (eller [`] vid användning av menyn inuti applikationen)",
+              "title": "Dölj meny aktiverad"
+            },
+            "label": "Dölj meny"
+          },
           "language": {
             "dialog": {
               "message": "Språket ändras efter omstart",
               "title": "Språket har ändrats"
             },
-            "label": "Språk"
+            "label": "Språk",
+            "submenu": {
+              "to-help-translate": "Vill du hjälpa till att översätta? Klicka här"
+            }
           },
-          "resume-on-start": "Fortsätt spela när appen öppnas"
+          "resume-on-start": "Fortsätt spela när appen öppnas",
+          "single-instance-lock": "Lås enskild instans",
+          "start-at-login": "Starta vid inloggning",
+          "starting-page": {
+            "label": "Startsidа",
+            "unset": "Ej inställt"
+          },
+          "tray": {
+            "label": "Systemfält",
+            "submenu": {
+              "disabled": "Inaktiverad",
+              "enabled-and-hide-app": "Aktiverad och dölj app",
+              "enabled-and-show-app": "Aktiverad och visa app",
+              "play-pause-on-click": "Spela/Pausa vid klick"
+            }
+          },
+          "visual-tweaks": {
+            "label": "Visuella justeringar",
+            "submenu": {
+              "custom-window-title": {
+                "label": "Anpassad titel på fönstret",
+                "prompt": {
+                  "label": "Ange anpassad fönstertitel: (lämna tomt för att inaktivera)",
+                  "placeholder": "Exempelvis: {{applicationName}}"
+                }
+              },
+              "like-buttons": {
+                "default": "Standard",
+                "force-show": "Tvinga fram visning",
+                "hide": "Dölj",
+                "label": "Gilla-knappar"
+              },
+              "remove-upgrade-button": "Ta bort knappen för uppgradering",
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "Avbryt",
+                    "remove": "Ta bort"
+                  },
+                  "remove-theme": "Vill du verkligen radera det anpassade temat?",
+                  "remove-theme-message": "Det här raderar ditt anpassade tema"
+                },
+                "label": "Tema",
+                "submenu": {
+                  "import-css-file": "Importera anpassad CSS-fil",
+                  "no-theme": "Inget tema"
+                }
+              }
+            }
+          }
         }
+      },
+      "plugins": {
+        "enabled": "Aktiverad",
+        "label": "Tillägg",
+        "new": "NY"
+      },
+      "view": {
+        "label": "Visa",
+        "submenu": {
+          "force-reload": "Tvinga omladdning",
+          "reload": "Ladda om",
+          "reset-zoom": "Verklig storlek",
+          "toggle-fullscreen": "Växla helskärm",
+          "zoom-in": "Zooma in",
+          "zoom-out": "Zooma ut"
+        }
+      }
+    },
+    "tray": {
+      "next": "Nästa",
+      "play-pause": "Spela/Pausa",
+      "previous": "Föregående",
+      "quit": "Stäng",
+      "restart": "Starta om appen",
+      "show": "Visa fönster",
+      "tooltip": {
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
   "plugins": {
+    "ad-speedup": {
+      "description": "Om en annons spelas, tystas ljudet och uppspelningshastigheten sätts till 16×",
+      "name": "Snabba upp annonser"
+    },
+    "adblocker": {
+      "description": "Blockerar annonser och spårning automatiskt",
+      "menu": {
+        "blocker": "Blockerare"
+      },
+      "name": "Annonsblockerare"
+    },
+    "album-actions": {
+      "description": "Lägger till knappar för Undislike, Dislike, Like och Unlike för att använda detta på alla spår i en spellista eller ett album",
+      "name": "Albumåtgärder"
+    },
+    "album-color-theme": {
+      "description": "Använder ett dynamiskt tema och visuella effekter baserat på albumets färgpalett",
+      "menu": {
+        "color-mix-ratio": {
+          "label": "Färgblandningsförhållande",
+          "submenu": {
+            "percent": "{{ratio}} %"
+          }
+        },
+        "enable-seekbar": "Aktivera temaanpassning av uppspelningsreglaget"
+      },
+      "name": "Albumfärgtema"
+    },
+    "ambient-mode": {
+      "description": "Ger en ljuseffekt genom att försiktigt kasta färger från videon på skärmens bakgrund",
+      "menu": {
+        "blur-amount": {
+          "label": "Oskärpa",
+          "submenu": {
+            "pixels": "{{blurAmount}} pixlar"
+          }
+        },
+        "buffer": {
+          "label": "Buffert",
+          "submenu": {
+            "buffer": "{{buffer}}"
+          }
+        },
+        "opacity": {
+          "label": "Opacitet",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "quality": {
+          "label": "Kvalitet",
+          "submenu": {
+            "pixels": "{{quality}} pixlar"
+          }
+        },
+        "size": {
+          "label": "Storlek",
+          "submenu": {
+            "percent": "{{size}}%"
+          }
+        },
+        "smoothness-transition": {
+          "label": "Mjuk övergång",
+          "submenu": {
+            "during": "Under {{interpolationTime}} s"
+          }
+        },
+        "use-fullscreen": {
+          "label": "Använder helskärm"
+        }
+      },
+      "name": "Ambiensläge"
+    },
+    "amuse": {
+      "description": "Lägger till stöd för {{applicationName}} i Amuse ‘Now Playing’-widgeten av 6K Labs",
+      "name": "Amuse",
+      "response": {
+        "query": "Amuse API-servern körs. Använd GET /query för att hämta information om låt."
+      }
+    },
+    "api-server": {
+      "description": "Lägger till en API-server för att styra spelaren",
+      "dialog": {
+        "request": {
+          "buttons": {
+            "allow": "Tillåt",
+            "deny": "Avvisa"
+          },
+          "message": "Tillåt {{ID}} ({{origin}}) att få åtkomst till API:et?",
+          "title": "Förfrågan om API-åtkomst"
+        }
+      },
+      "menu": {
+        "auth-strategy": {
+          "label": "Metod för åtkomstkontroll",
+          "submenu": {
+            "auth-at-first": {
+              "label": "Ge åtkomst vid första begäran"
+            },
+            "none": {
+              "label": "Ingen åtkomstkontroll"
+            }
+          }
+        },
+        "hostname": {
+          "label": "Värdnamn"
+        },
+        "https": {
+          "label": "HTTPS och certifikat",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Välj HTTPS-certifikatfil",
+              "label": "Certifikatfil (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Aktivera HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Välj privat nyckelfil (.key/.pem)",
+              "label": "Privat nyckelfil (.key/.pem)"
+            }
+          }
+        },
+        "port": {
+          "label": "Port"
+        }
+      },
+      "name": "API-server [Beta]",
+      "prompt": {
+        "hostname": {
+          "label": "Ange värdnamnet (t.ex. 0.0.0.0) för API-servern:",
+          "title": "Värdnamn"
+        },
+        "port": {
+          "label": "Ange porten för API-servern:",
+          "title": "Port"
+        }
+      }
+    },
+    "audio-compressor": {
+      "description": "Applicera komprimering på ljudet (sänker volymen på de starkaste delarna av signalen och höjer volymen på de svagaste delarna)",
+      "name": "Ljudkompressor"
+    },
+    "auth-proxy-adapter": {
+      "description": "Stöd för användning av autentiseringsproxy-tjänster",
+      "menu": {
+        "disable": "Inaktivera proxy-adapter",
+        "enable": "Aktivera proxy-adapter",
+        "hostname": {
+          "label": "Värdnamn"
+        },
+        "port": {
+          "label": "Port"
+        }
+      },
+      "name": "Adapter För Autentiseringsproxy",
+      "prompt": {
+        "hostname": {
+          "label": "Ange värdnamn för lokal proxyserver (kräver omstart):",
+          "title": "Proxy-värdnamn"
+        },
+        "port": {
+          "label": "Ange port för lokal proxyserver (kräver omstart):",
+          "title": "Port för proxy"
+        }
+      }
+    },
+    "blur-nav-bar": {
+      "description": "Gör navigeringsfältet transparent och suddigt",
+      "name": "Suddigt Navigeringsfält"
+    },
+    "bypass-age-restrictions": {
+      "description": "Hoppa över Music Player åldersverifiering",
+      "name": "Hoppa Över Åldersbegränsningar"
+    },
+    "captions-selector": {
+      "description": "Välj textning för {{applicationName}}-ljudspår",
+      "menu": {
+        "autoload": "Välj automatiskt senast använda textning",
+        "disable-captions": "Ingen textning som standard"
+      },
+      "name": "Textväljare",
+      "prompt": {
+        "selector": {
+          "label": "Aktuellt textningsspråk: {{language}}",
+          "none": "Inget",
+          "title": "Välj textspråk"
+        }
+      },
+      "templates": {
+        "title": "Öppna textväljaren"
+      },
+      "toast": {
+        "caption-changed": "Textning ändrad till {{language}}",
+        "caption-disabled": "Textning inaktiverad",
+        "no-captions": "Inga undertexter tillgängliga för denna låt"
+      }
+    },
+    "compact-sidebar": {
+      "description": "Sätt alltid sidomenyn i kompakt läge",
+      "name": "Kompakt Sidomeny"
+    },
+    "crossfade": {
+      "description": "Mjuk övergång mellan låtar",
+      "menu": {
+        "advanced": "Avancerat"
+      },
+      "name": "Mjuk Övergång [Beta]",
+      "prompt": {
+        "options": {
+          "multi-input": {
+            "fade-in-duration": "Fade-in-varaktighet (ms)",
+            "fade-out-duration": "Fade-out-varaktighet (ms)",
+            "fade-scaling": {
+              "label": "Fade-skalning",
+              "linear": "Linjär",
+              "logarithmic": "Logaritmisk"
+            },
+            "seconds-before-end": "Övergång i sekunder före slutet"
+          },
+          "title": "Övergångsinställningar"
+        }
+      }
+    },
+    "custom-output-device": {
+      "description": "Konfigurera en anpassad utdataenhet för låtar",
+      "menu": {
+        "device-selector": "Välj enhet"
+      },
+      "name": "Anpassad Utdataenhet",
+      "prompt": {
+        "device-selector": {
+          "label": "Välj den utdataenhet som ska användas",
+          "title": "Välj utdataenhet"
+        }
+      }
+    },
+    "disable-autoplay": {
+      "description": "Starta låt i \"pausat\" läge",
+      "menu": {
+        "apply-once": "Gäller endast vid uppstart"
+      },
+      "name": "Inaktivera Automatisk Uppspelning"
+    },
+    "discord": {
+      "backend": {
+        "already-connected": "Försökte ansluta med aktiv anslutning",
+        "connected": "Ansluten till Discord",
+        "disconnected": "Frånkopplad från Discord"
+      },
+      "description": "Visa dina vänner vad du lyssnar på med Aktivitetsdelning",
+      "menu": {
+        "auto-reconnect": "Automatisk återanslutning",
+        "clear-activity": "Rensa aktivitet",
+        "clear-activity-after-timeout": "Rensa aktivitet efter tidsgräns",
+        "connected": "Ansluten",
+        "disconnected": "Frånkopplad",
+        "hide-duration-left": "Dölj återstående tid",
+        "hide-github-button": "Dölj knapp för GitHub-länk",
+        "play-on-application": "Spela på {{applicationName}}",
+        "set-inactivity-timeout": "Ställ in inaktivitetstid",
+        "set-status-display-type": {
+          "label": "Statusmeddelande",
+          "submenu": {
+            "application": "Lyssnar på {{applicationName}}",
+            "artist": "Lyssnar på {artist}",
+            "title": "Lyssnar på {song title}"
+          }
+        }
+      },
+      "name": "Discord Aktivitetsdelning",
+      "prompt": {
+        "set-inactivity-timeout": {
+          "label": "Ange inaktivitetstid i sekunder:",
+          "title": "Ställ in inaktivitetstid"
+        }
+      }
+    },
+    "downloader": {
+      "backend": {
+        "dialog": {
+          "error": {
+            "buttons": {
+              "ok": "OK"
+            },
+            "message": "Hoppsan! Nedladdningen misslyckades…",
+            "title": "Fel vid nedladdning!"
+          },
+          "start-download-playlist": {
+            "buttons": {
+              "ok": "OK"
+            },
+            "detail": "({{playlistSize}} låtar)",
+            "message": "Laddar ner {{playlistTitle}}-spellistan",
+            "title": "Nedladdning påbörjad"
+          }
+        },
+        "feedback": {
+          "conversion-progress": "Konvertering: {{percent}}%",
+          "converting": "Konverterar…",
+          "done": "Klart: {{filePath}}",
+          "download-info": "Laddar ner {{artist}} - {{title}} [{{videoId}}",
+          "download-progress": "Nedladdning: {{percent}}%",
+          "downloading": "Laddar ner…",
+          "downloading-counter": "Laddar ner {{current}}/{{total}}…",
+          "downloading-playlist": "Laddar ner {{playlistTitle}}-spellistan — {{playlistSize}} spår ({{playlistId}})",
+          "error-while-downloading": "Fel vid nedladdning \"{{author}} - {{title}}\": {{error}}",
+          "folder-already-exists": "Mappen {{playlistFolder}} finns redan",
+          "getting-playlist-info": "Hämtar information om spellista…",
+          "loading": "Laddar…",
+          "playlist-has-only-one-song": "Spellistan innehåller bara ett objekt. Laddar ner direkt.",
+          "playlist-id-not-found": "Hittade inget ID för spellista",
+          "playlist-is-empty": "Spellistan är tom",
+          "playlist-is-mix-or-private": "Fel vid hämtning av spellisteinformation. Se till att den inte är privat eller en 'Mixed for you'-spellista\n\n{{error}}",
+          "preparing-file": "Förbereder fil…",
+          "saving": "Sparar…",
+          "trying-to-get-playlist-id": "Försöker hämta spelliste-ID: {{playlistId}}",
+          "video-id-not-found": "Videon hittades inte",
+          "writing-id3": "Skriver ID3-taggar…"
+        }
+      },
+      "description": "Laddar ner MP3 / originalljud direkt från gränssnittet",
+      "menu": {
+        "choose-download-folder": "Välj nedladdningsmapp",
+        "download-finish-settings": {
+          "label": "Ladda ner när klart",
+          "prompt": {
+            "last-percent": "Efter x procent",
+            "last-seconds": "Senaste x sekunderna",
+            "title": "Ställ in när nedladdning ska ske"
+          },
+          "submenu": {
+            "advanced": "Avancerat",
+            "enabled": "Aktiverad",
+            "mode": "Tidsläge",
+            "percent": "Procent",
+            "seconds": "Sekunder"
+          }
+        },
+        "download-playlist": "Ladda ner spellista",
+        "presets": "Förinställningar",
+        "skip-existing": "Hoppa över befintliga filer"
+      },
+      "name": "Nedladdare",
+      "renderer": {
+        "can-not-update-progress": "Kan inte uppdatera förlopp"
+      },
+      "templates": {
+        "button": "Ladda ner"
+      }
+    },
+    "equalizer": {
+      "description": "Lägger till en equalizer i spelaren",
+      "menu": {
+        "presets": {
+          "label": "Förinställningar",
+          "list": {
+            "bass-booster": "Basförstärkning"
+          }
+        }
+      },
+      "name": "Equalizer"
+    },
+    "exponential-volume": {
+      "description": "Gör volymreglaget exponentiellt så att det blir lättare att välja lägre volymer.",
+      "name": "Exponentiell Volym"
+    },
+    "in-app-menu": {
+      "description": "Ger menyrader ett snyggt, mörkt, eller albumfärgat utseende",
+      "menu": {
+        "hide-dom-window-controls": "Dölj DOM-fönsterkontroller"
+      },
+      "name": "Meny I Appen"
+    },
+    "lumiastream": {
+      "description": "Lägger till stöd för Lumia Stream",
+      "name": "Lumia Stream [Beta]"
+    },
+    "lyrics-genius": {
+      "description": "Lägger till stöd för texter till de flesta låtar",
+      "menu": {
+        "romanized-lyrics": "Romiserade texter"
+      },
+      "name": "Texter från Genius",
+      "renderer": {
+        "fetched-lyrics": "Hämtade texter från Genius"
+      }
+    },
+    "music-together": {
+      "description": "Dela en spellista med andra. När värden spelar en låt kommer alla andra höra samma låt",
+      "dialog": {
+        "enter-host": "Ange värd-ID"
+      },
+      "internal": {
+        "save": "Spara",
+        "track-source": "Ljudkälla",
+        "unknown-user": "Okänd användare"
+      },
+      "menu": {
+        "click-to-copy-id": "Kopiera värd-ID",
+        "close": "Stäng \"Music Together\"",
+        "connected-users": "Anslutna användare",
+        "disconnect": "Koppla från \"Music Together\"",
+        "empty-user": "Inga anslutna användare",
+        "host": "Värd för \"Music Together\"",
+        "join": "Gå med i \"Music Together\"",
+        "permission": {
+          "all": "Tillåt gäster att styra spellista och spelare",
+          "host-only": "Endast värden kan styra spellista och spelare",
+          "playlist": "Tillåt gäster att styra spellistan"
+        },
+        "set-permission": "Ändra behörighet för styrning",
+        "status": {
+          "disconnected": "Frånkopplad",
+          "guest": "Ansluten som gäst",
+          "host": "Ansluten som värd"
+        }
+      },
+      "name": "Music Together [Beta]",
+      "toast": {
+        "add-song-failed": "Misslyckades med att lägga till låt",
+        "closed": "\"Music Together\" stängdes",
+        "disconnected": "\"Music Together\" frånkopplad",
+        "host-failed": "Misslyckades med att vara värd för \"Music Together\"",
+        "id-copied": "Värd-ID kopierat till urklipp",
+        "id-copy-failed": "Misslyckades med att kopiera värd-ID till urklipp",
+        "join-failed": "Misslyckades med att gå med i \"Music Together\"",
+        "joined": "Gick med i \"Music Together\"",
+        "permission-changed": "Behörighet för \"Music Together\" ändrad till \"{{permission}}\"",
+        "remove-song-failed": "Misslyckades med att radera låt",
+        "user-connected": "{{name}} gick med i \"Music Together\"",
+        "user-disconnected": "{{name}} lämnade \"Music Together\""
+      }
+    },
     "navigation": {
-      "name": "Navigering"
+      "description": "Direkt integrering av Nästa-/Tillbaka-navigeringspilar i gränssnittet, som i din favoritwebbläsare",
+      "name": "Navigering",
+      "templates": {
+        "back": {
+          "title": "Gå till föregående sida"
+        },
+        "forward": {
+          "title": "Gå till nästa sida"
+        }
+      }
     },
     "no-google-login": {
-      "name": "Inget Google Login"
+      "description": "Ta bort Google-inloggningsknappar och länkar från gränssnittet",
+      "name": "Ingen Google-inloggning"
     },
     "notifications": {
+      "description": "Visa en notis när en låt börjar spelas (interaktiva notiser finns på Windows)",
+      "menu": {
+        "interactive": "Interaktiva notiser",
+        "interactive-settings": {
+          "label": "Interaktiva inställningar",
+          "submenu": {
+            "hide-button-text": "Dölj knapptext",
+            "refresh-on-play-pause": "Uppdatera vid Play/Pause",
+            "tray-controls": "Öppna/stäng vid klick i systemfältet"
+          }
+        },
+        "priority": "Notisprioritet",
+        "toast-style": "Stil för \"toast\"-notiser",
+        "unpause-notification": "Visa notis när uppspelning återupptas"
+      },
       "name": "Notiser"
     },
+    "performance-improvement": {
+      "description": "Förbättra prestanda genom att aktivera experimentella skript",
+      "name": "Prestandaförbättring [Beta]"
+    },
     "picture-in-picture": {
+      "description": "Tillåter appen att växla till bild-i-bild-läge",
       "menu": {
+        "always-on-top": "Alltid överst",
         "hotkey": {
           "label": "Snabbkommando",
           "prompt": {
             "keybind-options": {
               "hotkey": "Snabbkommando"
             },
+            "label": "Välj ett snabbkommando för att växla bild-i-bild-läge",
             "title": "Bild-I-Bild genväg"
           }
-        }
+        },
+        "save-window-position": "Spara fönsterposition",
+        "save-window-size": "Spara fönsterstorlek",
+        "use-native-pip": "Använd webbläsarens inbyggda bild-i-bild"
       },
-      "name": "Bild-I-Bild",
+      "name": "Bild-i-bild",
       "templates": {
         "button": "Bild-i-bild"
       }
     },
     "playback-speed": {
+      "description": "Lägger till ett reglage för att ändra uppspelningshastighet",
       "name": "Uppspelningshastighet",
       "templates": {
-        "button": "Hasighet"
+        "button": "Hastighet"
       }
     },
     "precise-volume": {
+      "description": "Styr ljudstyrkan exakt med mushjul/snabbtangenter, med anpassat skärmlager och justerbara volymsteg",
+      "menu": {
+        "arrows-shortcuts": "Kontroller för lokala piltangenter",
+        "custom-volume-steps": "Ställ in egna volymsteg",
+        "global-shortcuts": "Globala snabbkommandon"
+      },
+      "name": "Noggrann Volymkontroll",
       "prompt": {
         "global-shortcuts": {
           "keybind-options": {
-            "decrease": "Minska Volym",
-            "increase": "Öka Volym"
-          }
+            "decrease": "Sänk volymen",
+            "increase": "Öka volymen"
+          },
+          "label": "Välj globala kortkommandon för volym:",
+          "title": "Globala kortkommandon för volym"
         },
         "volume-steps": {
+          "label": "Välj volymsteg för ökning/minskning",
           "title": "Volymsteg"
         }
       }
@@ -176,54 +743,225 @@
       "backend": {
         "dialog": {
           "quality-changer": {
-            "detail": "Nuvarande kvalité: {{quality}}",
-            "message": "Välj Video Kvalité:",
-            "title": "Välj Video Kvalité"
+            "detail": "Nuvarande kvalitet: {{quality}}",
+            "message": "Välj videokvalitet:",
+            "title": "Välj videokvalitet"
           }
+        }
+      },
+      "description": "Tillåter att ändra videokvalitet med en knapp i videons overlay",
+      "name": "Videokvalitetsväxlare",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "Öppna kvalitetsväxlare för spelaren"
         }
       }
     },
     "scrobbler": {
+      "description": "Lägg till scrobbling-stöd (t.ex. last.fm, Listenbrainz)",
+      "dialog": {
+        "lastfm": {
+          "auth-failed": {
+            "message": "Misslyckades att autentisera med Last.fm\nDölj popup-fönstret till nästa omstart.",
+            "title": "Autentisering misslyckades"
+          }
+        }
+      },
+      "menu": {
+        "lastfm": {
+          "api-settings": "Last.fm API-inställningar"
+        },
+        "listenbrainz": {
+          "token": "Ange ListenBrainz användartoken"
+        },
+        "scrobble-alternative-artist": "Använd alternativa artister",
+        "scrobble-alternative-title": "Använd alternativa titlar",
+        "scrobble-other-media": "Scrobbla annan media"
+      },
+      "name": "Scrobbler",
       "prompt": {
         "lastfm": {
-          "api-key": "Last.fm API nyckel"
+          "api-key": "Last.fm API nyckel",
+          "api-secret": "Last.fm API-hemlighet"
         },
         "listenbrainz": {
           "token": {
+            "label": "Ange din ListenBrainz användartoken:",
             "title": "ListenBrainz token"
           }
         }
       }
     },
     "shortcuts": {
+      "description": "Tillåter inställning av globala kortkommandon för uppspelning (spela/pausa/nästa/föregående) och inaktiverar medie-OSD genom att åsidosätta medietangenter. Aktiverar Ctrl/CMD + F för sökning. Aktiverar Linux MPRIS-stöd för medietangenter och anpassade kortkommandon för avancerade användare",
+      "menu": {
+        "override-media-keys": "Åsidosätt medietangenter",
+        "set-keybinds": "Ställ in globala kontroller för låtar"
+      },
+      "name": "Genvägar (& MPRIS)",
       "prompt": {
         "keybind": {
           "keybind-options": {
             "next": "Nästa",
             "play-pause": "Spela / Pausa",
             "previous": "Föregående"
-          }
+          },
+          "label": "Välj globala kortkommandon för kontroll av låtar:",
+          "title": "Globala kortkommandon"
         }
       }
     },
+    "skip-disliked-songs": {
+      "description": "Hoppar över låtar du inte gillar",
+      "name": "Hoppa Över Låtar Du Inte Gillar"
+    },
+    "skip-silences": {
+      "description": "Hoppa automatiskt över tysta partier i låtar",
+      "name": "Hoppa Över Tysta Partier"
+    },
+    "sponsorblock": {
+      "description": "Hoppar automatiskt över icke-musikdelar som intro/outro eller delar av musikvideor där ingen musik spelas",
+      "name": "Blockera Sponsorer"
+    },
+    "synced-lyrics": {
+      "description": "Visar synkroniserade låttexter med hjälp av tjänster som LRClib.",
+      "errors": {
+        "fetch": "⚠️ Ett fel uppstod när texterna skulle hämtas.\n\tFörsök igen senare.",
+        "not-found": "⚠️ Inga texter hittades för denna låt."
+      },
+      "menu": {
+        "default-text-string": {
+          "label": "Standardtecken mellan låttexter",
+          "tooltip": "Välj standardtecken att använda för mellanrummet mellan låttexter"
+        },
+        "line-effect": {
+          "label": "Linjeeffekt",
+          "submenu": {
+            "fancy": {
+              "label": "Stiligt",
+              "tooltip": "Använd stora, app-liknande effekter på den aktuella raden"
+            },
+            "focus": {
+              "label": "Fokus",
+              "tooltip": "Gör endast den aktuella raden vit"
+            },
+            "offset": {
+              "label": "Förskjutning",
+              "tooltip": "Förskjut den aktuella raden åt höger"
+            },
+            "scale": {
+              "label": "Skala",
+              "tooltip": "Skala den aktuella raden"
+            }
+          },
+          "tooltip": "Välj effekt att applicera på den aktuella raden"
+        },
+        "precise-timing": {
+          "label": "Gör låttexterna perfekt synkroniserade",
+          "tooltip": "Beräkna till millisekunden när nästa rad ska visas (kan ha en liten inverkan på prestanda)"
+        },
+        "preferred-provider": {
+          "label": "Föredragen leverantör",
+          "none": {
+            "label": "Ingen",
+            "tooltip": "Ingen föredragen leverantör"
+          },
+          "tooltip": "Välj standardleverantör att använda"
+        },
+        "romanization": {
+          "label": "Romanisera låttexter",
+          "tooltip": "Om låttexterna är på ett annat språk, försök visa en latinsk version."
+        },
+        "show-lyrics-even-if-inexact": {
+          "label": "Visa låttexter även om de inte är exakta",
+          "tooltip": "Om låten inte hittas försöker tillägget igen med en annan sökförfrågan.\nResultatet från det andra försöket kanske inte är exakt."
+        },
+        "show-time-codes": {
+          "label": "Visa tidskoder",
+          "tooltip": "Visa tidskoderna bredvid låttexterna"
+        }
+      },
+      "name": "Synkroniserade Låttexter",
+      "refetch-btn": {
+        "fetching": "Hämtar...",
+        "normal": "Hämta låttexter igen"
+      },
+      "warnings": {
+        "duration-mismatch": "⚠️ - Texterna kan vara osynkroniserade på grund av en skillnad i spårlängd.",
+        "inexact": "⚠️ - Låttexterna för den här låten kanske inte är exakta",
+        "instrumental": "⚠️ - Det här är en instrumentallåt"
+      }
+    },
+    "taskbar-mediacontrol": {
+      "description": "Kontrollera uppspelning från aktivitetsfältet i Windows",
+      "name": "Mediakontroll i aktivitetsfältet"
+    },
+    "touchbar": {
+      "description": "Lägger till en TouchBar-widget för macOS-användare",
+      "name": "TouchBar"
+    },
+    "transparent-player": {
+      "description": "Gör appfönstret genomskinligt",
+      "menu": {
+        "opacity": {
+          "label": "Opacitet",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Typ",
+          "submenu": {
+            "acrylic": "Akryl",
+            "mica": "Mica",
+            "none": "Ingen",
+            "tabbed": "Flikad"
+          }
+        }
+      },
+      "name": "Genomskinlig Spelare"
+    },
+    "tuna-obs": {
+      "description": "Integration med OBS-pluginprogrammet Tuna",
+      "name": "Tuna OBS"
+    },
+    "unobtrusive-player": {
+      "description": "Undviker att spelaren visas när musik spelas",
+      "name": "Diskret Spelare"
+    },
     "video-toggle": {
+      "description": "Lägger till en knapp för att växla mellan video/musik-läge. Kan också valfritt ta bort hela videofliken",
       "menu": {
         "align": {
+          "label": "Justering",
           "submenu": {
             "left": "Vänster",
             "middle": "Mitten",
             "right": "Höger"
           }
         },
+        "force-hide": "Tvinga borttagning av videoflik",
         "mode": {
+          "label": "Läge",
           "submenu": {
-            "disabled": "Inaktiverad"
+            "custom": "Anpassad växling",
+            "disabled": "Inaktiverad",
+            "native": "Inbyggd växling"
           }
         }
       },
+      "name": "Video PÅ/AV",
       "templates": {
-        "button-song": "Låt"
+        "button-song": "Låt",
+        "button-video": "Video"
       }
+    },
+    "visualizer": {
+      "description": "Lägger till en visualisering i spelaren",
+      "menu": {
+        "visualizer-type": "Visualiseringstyp"
+      },
+      "name": "Visualiserare"
     }
   }
 }

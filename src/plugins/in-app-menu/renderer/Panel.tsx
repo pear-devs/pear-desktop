@@ -1,4 +1,4 @@
-import { createSignal, JSX, Show, splitProps, mergeProps } from 'solid-js';
+import { createSignal, type JSX, Show, splitProps, mergeProps } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import { css } from 'solid-styled-components';
 import { Transition } from 'solid-transition-group';
@@ -6,7 +6,7 @@ import {
   autoUpdate,
   flip,
   offset,
-  OffsetOptions,
+  type OffsetOptions,
   size,
 } from '@floating-ui/dom';
 import { useFloating } from 'solid-floating-ui';
@@ -149,17 +149,17 @@ export const Panel = (props: PanelProps) => {
     <Portal>
       <Transition
         appear
-        enterClass={animationStyle().enter}
         enterActiveClass={animationStyle().enterActive}
-        exitToClass={animationStyle().exitTo}
+        enterClass={animationStyle().enter}
         exitActiveClass={animationStyle().exitActive}
+        exitToClass={animationStyle().exitTo}
       >
         <Show when={local.open}>
           <ul
             {...leftProps}
+            class={panelStyle()}
             data-ytmd-sub-panel={true}
             ref={setPanel}
-            class={panelStyle()}
             style={{
               '--offset-x': `${position.x}px`,
               '--offset-y': `${position.y}px`,

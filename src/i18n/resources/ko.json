@@ -150,6 +150,13 @@
           "visual-tweaks": {
             "label": "시각적 변경",
             "submenu": {
+              "custom-window-title": {
+                "label": "사용자 정의 앱 제목",
+                "prompt": {
+                  "label": "앱 제목으로 표시할 내용 : (빈 칸 일시 비활성화)",
+                  "placeholder": "예: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "기본",
                 "force-show": "강제로 표시",
@@ -201,8 +208,8 @@
       "restart": "앱 재시작",
       "show": "창 표시",
       "tooltip": {
-        "default": "유튜브 뮤직",
-        "with-song-info": "유튜브 뮤직: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -230,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "재생바 색조 변경 활성화"
       },
       "name": "앨범 컬러 기반 테마"
     },
@@ -280,7 +288,7 @@
       "name": "앰비언트 모드"
     },
     "amuse": {
-      "description": "6K Labs Amuse의 'now playing' 위젯에 YouTube Music 지원 추가",
+      "description": "6K Labs Amuse의 'now playing' 위젯에 {{applicationName}} 지원 추가",
       "name": "Amuse",
       "response": {
         "query": "Amuse API 서버가 실행 중입니다. GET /query로 노래 정보를 가져오세요."
@@ -334,7 +342,7 @@
       "name": "오디오 컴프레서"
     },
     "auth-proxy-adapter": {
-      "description": "인증 프록시 서비스 사용 지원",
+      "description": "아이디/패스워드가 필요한 프록시를 지원합니다",
       "menu": {
         "disable": "프록시 어댑터 차단",
         "enable": "프록시 어댑터 허용",
@@ -362,11 +370,11 @@
       "name": "탐색 바 흐림 효과"
     },
     "bypass-age-restrictions": {
-      "description": "유튜브의 나이 제한을 우회합니다",
+      "description": "음악 플레이어의 연령 확인 우회합니다",
       "name": "나이 제한 우회"
     },
     "captions-selector": {
-      "description": "YouTube Music 트랙용 자막 선택기입니다",
+      "description": "{{applicationName}} 트랙용 자막 선택기입니다",
       "menu": {
         "autoload": "마지막으로 사용한 자막을 자동으로 선택",
         "disable-captions": "기본 자막 제거"
@@ -414,6 +422,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "미디어 출력 장치 구성",
+      "menu": {
+        "device-selector": "장치 선택"
+      },
+      "name": "출력 장치 커스텀",
+      "prompt": {
+        "device-selector": {
+          "label": "사용할 미디어 출력 장치를 선택하세요",
+          "title": "출력 장치 선택"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "노래를 '일시 정지' 모드로 시작하게 합니다",
       "menu": {
@@ -436,8 +457,16 @@
         "disconnected": "연결 해제 됨",
         "hide-duration-left": "남은 재생 시간 숨기기",
         "hide-github-button": "GitHub 링크 버튼 숨기기",
-        "play-on-youtube-music": "유튜브 뮤직에서 재생",
-        "set-inactivity-timeout": "비활성 시간 제한 설정"
+        "play-on-application": "유튜브 뮤직에서 재생",
+        "set-inactivity-timeout": "비활성 시간 제한 설정",
+        "set-status-display-type": {
+          "label": "상태 텍스트",
+          "submenu": {
+            "artist": "{아티스트} 듣는 중",
+            "application": "{{applicationName}} 듣는 중",
+            "title": "{곡 제목} 듣는 중"
+          }
+        }
       },
       "name": "디스코드 활동 상태",
       "prompt": {
@@ -729,6 +758,7 @@
         "listenbrainz": {
           "token": "ListenBrainz 유저 토큰 입력"
         },
+        "scrobble-alternative-artist": "대체 아티스트 명 사용",
         "scrobble-alternative-title": "대체 제목 사용하기",
         "scrobble-other-media": "다른 미디어 스크로블하기"
       },
@@ -814,6 +844,14 @@
           "label": "가사를 최대한 정교하게 동기화",
           "tooltip": "다음 줄의 표시를 밀리초 단위로 계산합니다 (성능에 약간의 영향을 미칠 수 있음)"
         },
+        "preferred-provider": {
+          "label": "선호하는 가사 제공자",
+          "none": {
+            "label": "없음",
+            "tooltip": "선호하는 가사 제공자 없음"
+          },
+          "tooltip": "사용할 기본 가사 제공자를 선택하세요"
+        },
         "romanization": {
           "label": "가사 로마자 변환",
           "tooltip": "가사가 영어가 아닌 언어로 되어있는 경우, 로마자 표기를 표시합니다."
@@ -845,6 +883,27 @@
     "touchbar": {
       "description": "macOS 사용자를 위한 TouchBar 위젯을 추가합니다",
       "name": "TouchBar"
+    },
+    "transparent-player": {
+      "description": "애플리케이션 창을 투명하게 만듭니다",
+      "menu": {
+        "opacity": {
+          "label": "불투명도",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "종류",
+          "submenu": {
+            "acrylic": "아크릴",
+            "mica": "미카",
+            "none": "없음",
+            "tabbed": "탭"
+          }
+        }
+      },
+      "name": "투명 플레이어"
     },
     "tuna-obs": {
       "description": "OBS의 확장인 Tuna와의 통합을 활성화합니다",

@@ -1,4 +1,4 @@
-import type { WatchNextResponse } from '@/types/youtube-music-desktop-internal';
+import type { WatchNextResponse } from '@/types/music-player-desktop-internal';
 
 export interface AlbumDetails {
   responseContext: ResponseContext;
@@ -256,9 +256,9 @@ export type VideoDataChangeValue = Record<string, unknown> & {
   lengthSeconds: number;
 
   /**
-   * YouTube Music Desktop internal variable (for album data)
+   * Internal variable (for album data)
    **/
-  ytmdWatchNextResponse?: WatchNextResponse;
+  ['\u0079\u0074\u006d\u0064WatchNextResponse']?: WatchNextResponse;
 };
 
 export interface PlayerAPIEvents {

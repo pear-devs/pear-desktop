@@ -1,0 +1,89 @@
+/**
+ * Overriding default style
+ */
+
+/* Allow window dragging */
+ytmusic-nav-bar {
+  position: relative;
+}
+ytmusic-nav-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+
+  -webkit-user-select: none;
+  -webkit-app-region: drag;
+}
+
+ytmusic-nav-bar > .left-content > *,
+ytmusic-nav-bar > .center-content > *,
+ytmusic-nav-bar > .right-content > * {
+  -webkit-app-region: no-drag;
+}
+
+iron-icon,
+ytmusic-pivot-bar-item-renderer,
+.tab-title,
+a {
+  -webkit-app-region: no-drag;
+}
+
+/* custom style for navbar */
+ytmusic-app-layout {
+  --ytmusic-nav-bar-height: 90px;
+}
+
+/* Disable Image Selection */
+img {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Hide cast button which doesn't work */
+ytmusic-cast-button {
+  display: none !important;
+}
+
+/* Remove useless inaccessible button on top-right corner of the video player */
+.ytp-chrome-top-buttons {
+  display: none !important;
+}
+
+/* Make the logo un-draggable */
+ytmusic-nav-bar > div.left-content > a,
+ytmusic-nav-bar > div.left-content > a > picture > img {
+  -webkit-user-drag: none;
+}
+
+/* yt-music bugs */
+tp-yt-paper-item.ytmusic-guide-entry-renderer::before {
+  border-radius: 8px !important;
+}
+
+/* fix video player align */
+#av-id {
+  padding-bottom: 0;
+}
+
+#av-id ~ #player.ytmusic-player-page:not([player-ui-state='FULLSCREEN']) {
+  margin-top: auto !important;
+  margin-bottom: auto !important;
+  margin-left: var(--ytmusic-player-page-vertical-padding);
+  margin-right: var(--ytmusic-player-page-vertical-padding);
+  max-height: calc(100% - (var(--ytmusic-player-page-vertical-padding) * 2));
+  max-width: calc(100% - var(--ytmusic-player-page-vertical-padding) * 2);
+}
+
+/* macos traffic lights fix */
+:where([data-os*='Macintosh']) ytmusic-app-layout#layout ytmusic-nav-bar {
+  padding-top: var(--ytmusic-nav-bar-offset, 0);
+}
+:where([data-os*='Macintosh']) ytmusic-app-layout#layout {
+  --ytmusic-nav-bar-offset: 24px;
+  --ytmusic-nav-bar-height: calc(90px + var(--ytmusic-nav-bar-offset, 0));
+}
+
+tp-yt-iron-dropdown,
+tp-yt-paper-dialog {
+  app-region: no-drag;
+}

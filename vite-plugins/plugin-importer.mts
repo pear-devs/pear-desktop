@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { globSync } from 'glob';
 import { Project } from 'ts-morph';
 
+import { Platform } from '../src/types/plugins';
+
 const kebabToCamel = (text: string) =>
   text.replace(/-(\w)/g, (_, letter: string) => letter.toUpperCase());
 
@@ -74,6 +76,12 @@ export const pluginVirtualModuleGenerator = (
       }
 
       writer.blankLine();
+      if (mode === 'main' || mode === 'preload') {
+        writer.writeLine("import * as is from 'electron-is';");
+        writer.writeLine('globalThis.electronIs = is;');
+      }
+      writer.write(supportsPlatform.toString());
+      writer.blankLine();
 
       // Context-specific exports
       writer.writeLine(`let ${mode}PluginsCache = null;`);
@@ -95,7 +103,7 @@ export const pluginVirtualModuleGenerator = (
       }
       writer.writeLine('  ]);');
       writer.writeLine(
-        '  resolve(pluginEntries.filter((entry) => entry).reduce((acc, [name, plg]) => { acc[name] = plg; return acc; }, {}));',
+        '  resolve(pluginEntries.filter((entry) => entry && supportsPlatform(entry[1])).reduce((acc, [name, plg]) => { acc[name] = plg; return acc; }, {}));',
       );
       writer.writeLine(`  return await ${mode}PluginsCache;`);
       writer.writeLine('};');
@@ -117,7 +125,7 @@ export const pluginVirtualModuleGenerator = (
       }
       writer.writeLine('  ]);');
       writer.writeLine(
-        '  resolve(stubEntries.reduce((acc, [name, plg]) => { acc[name] = plg; return acc; }, {}));',
+        '  resolve(stubEntries.filter(entry => entry && supportsPlatform(entry[1])).reduce((acc, [name, plg]) => { acc[name] = plg; return acc; }, {}));',
       );
       writer.writeLine('  return await promise;');
       writer.writeLine('};');
@@ -128,3 +136,17 @@ export const pluginVirtualModuleGenerator = (
 
   return src.getText();
 };
+
+function supportsPlatform({ platform }: { platform: string }) {
+  if (typeof platform !== 'number') return true;
+
+  const is = globalThis.electronIs;
+
+  if (is.windows()) return (platform & Platform.Windows) !== 0;
+  if (is.macOS()) return (platform & Platform.macOS) !== 0;
+  if (is.linux()) return (platform & Platform.Linux) !== 0;
+  if (is.freebsd()) return (platform & Platform.Freebsd) !== 0;
+
+  // unknown platform
+  return false;
+}

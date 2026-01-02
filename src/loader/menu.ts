@@ -1,7 +1,7 @@
 import { deepmerge } from 'deepmerge-ts';
 import { allPlugins } from 'virtual:plugins';
 
-import config from '@/config';
+import * as config from '@/config';
 import { setApplicationMenu } from '@/menu';
 
 import { LoggerPrefix } from '@/utils';

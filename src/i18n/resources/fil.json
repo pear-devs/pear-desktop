@@ -97,7 +97,7 @@
             "label": "Mga advance na opsyon",
             "submenu": {
               "auto-reset-app-cache": "I-reset ang app cache kapag nagsisimula ang app",
-              "disable-hardware-acceleration": "Di paganahin ang pagpapabilis ng hardware",
+              "disable-hardware-acceleration": "Di-paganahin ang pagpapabilis ng hardware",
               "edit-config-json": "I-edit ang config.json",
               "override-user-agent": "I-override ang User-Agent",
               "restart-on-config-changes": "I-restart kada may pagbabago sa config",
@@ -150,6 +150,13 @@
           "visual-tweaks": {
             "label": "Mga Biswal na Tweak",
             "submenu": {
+              "custom-window-title": {
+                "label": "Custom na window title",
+                "prompt": {
+                  "label": "I-enter ang custom na window tile: (iwanang blanko para di-mapagana)",
+                  "placeholder": "Halimbawa: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "Default",
                 "force-show": "Pilitang ipakita",
@@ -201,8 +208,8 @@
       "restart": "I-restart ang App",
       "show": "Ipakita ang window",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -280,7 +287,7 @@
       "name": "Ambient Mode"
     },
     "amuse": {
-      "description": "Nagdaragdag ng suporta sa YouTube Music para sa Amuse now playing widget ng 6K Labs",
+      "description": "Nagdaragdag ng suporta sa {{applicationName}} para sa Amuse now playing widget ng 6K Labs",
       "response": {
         "query": "Tumatakbo ang Amuse API server. Gamitin ang GET /query para makuha ang impo ng kanta."
       }
@@ -332,16 +339,37 @@
       "description": "Ilapat ang compression sa audio (pinababa ang volume ng pinakamalakas na bahagi ng signal at pinapataas ang volume ng pinakamalambot na bahagi)",
       "name": "Compressor ng Audio"
     },
+    "auth-proxy-adapter": {
+      "description": "Suporta para sa paggamit ng authentication proxy services",
+      "menu": {
+        "disable": "Huwag paganahin ang Proxy Adapter",
+        "enable": "Paganahin ang Proxy Adapter",
+        "port": {
+          "label": "Port"
+        }
+      },
+      "name": "Auth Proxy Adapter",
+      "prompt": {
+        "hostname": {
+          "label": "Ilagay ang pangalan ng host para sa local proxy server (kinailangang mag-restart):",
+          "title": "Hostname ng Proxy"
+        },
+        "port": {
+          "label": "Ilagay ang port para sa local proxy server (kinailangang mag-restart):",
+          "title": "Port ng Proxy"
+        }
+      }
+    },
     "blur-nav-bar": {
       "description": "Gawing transparent at malabo ang bar ng nabigasyon",
       "name": "Palabuin ang Bar ng Nabigasyon"
     },
     "bypass-age-restrictions": {
-      "description": "I-bypass ang pag-verify ng edad ng YouTube",
+      "description": "I-bypass ang pag-verify ng edad ng Music Player",
       "name": "I-bypass ang Restriksyon sa Edad"
     },
     "captions-selector": {
-      "description": "Tagapili ng caption para sa mga audio track ng YouTube Music",
+      "description": "Tagapili ng caption para sa mga audio track ng {{applicationName}}",
       "menu": {
         "autoload": "Awtomatikong piliin ang huling ginamit na caption",
         "disable-captions": "Walang mga caption bilang default"
@@ -356,6 +384,11 @@
       },
       "templates": {
         "title": "Bumukas ng pagpilian ng caption"
+      },
+      "toast": {
+        "caption-changed": "Binago ang caption sa {{language}}",
+        "caption-disabled": "Di-napagana ang mga caption",
+        "no-captions": "Walang captions ay available para sa kantang ito"
       }
     },
     "compact-sidebar": {
@@ -378,12 +411,25 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "I-configure ang custom na output media device para sa mga kanta",
+      "menu": {
+        "device-selector": "Pumili ng Device"
+      },
+      "name": "Custom na Output Device",
+      "prompt": {
+        "device-selector": {
+          "label": "Pumili ng output media device na gagamitin",
+          "title": "Pumili ng Output Device"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Gawing simulan ang kanta sa \"naka-pause\" na mode",
       "menu": {
         "apply-once": "Nalalapat lamang sa startup"
       },
-      "name": "Patayin ang Pag-Autoplay"
+      "name": "Di-paganahin ang Autoplay"
     },
     "discord": {
       "backend": {
@@ -400,9 +446,17 @@
         "disconnected": "Nadiskonekta",
         "hide-duration-left": "Itago ang natitirang oras",
         "hide-github-button": "Itago ang button na GitHub link",
-        "play-on-youtube-music": "Patugtugin sa YouTube Music",
-        "set-inactivity-timeout": "I-set ang inactivity timeout"
+        "play-on-application": "Patugtugin sa {{applicationName}}",
+        "set-inactivity-timeout": "I-set ang inactivity timeout",
+        "set-status-display-type": {
+          "submenu": {
+            "artist": "Nakikinig sa {artist}",
+            "title": "Nakikinig sa {song title}",
+            "application": "Kumikinig sa {{applicationName}}"
+          }
+        }
       },
+      "name": "Discord Rich Presence",
       "prompt": {
         "set-inactivity-timeout": {
           "label": "Ilagay ang inactivity timeout sa ilang segundo:",
@@ -414,10 +468,16 @@
       "backend": {
         "dialog": {
           "error": {
+            "buttons": {
+              "ok": "OK"
+            },
             "message": "Kainis! Paumanhin, nabigo ang pag-download…",
             "title": "Nagkaroon ng error sa pag-download!"
           },
           "start-download-playlist": {
+            "buttons": {
+              "ok": "OK"
+            },
             "detail": "({{playlistSize}} na mga kanta)",
             "message": "Dina-download ang Playlist na {{playlistTitle}}",
             "title": "Nasimulan na ang pag-download"
@@ -459,6 +519,7 @@
           },
           "submenu": {
             "enabled": "Napagana na",
+            "mode": "Sukatan ng oras",
             "percent": "Porsyento",
             "seconds": "Segundo"
           }
@@ -467,29 +528,36 @@
         "presets": "Mga preset",
         "skip-existing": "Laktawan ang mga kasalukuyang file"
       },
+      "name": "Taga-download",
       "renderer": {
         "can-not-update-progress": "Hindi ma-update ang progress"
       },
       "templates": {
-        "button": "Mag-download"
+        "button": "I-download"
       }
     },
     "equalizer": {
       "description": "Nagdaragdag ng equalizer sa player",
       "menu": {
         "presets": {
-          "label": "Mga Preset"
+          "label": "Mga Preset",
+          "list": {
+            "bass-booster": "Taga-boost ng Bass"
+          }
         }
-      }
+      },
+      "name": "Equalizer"
     },
     "exponential-volume": {
-      "description": "Ginagawang exponential ang volume slider para mas madaling pumili ng mas mababang volume."
+      "description": "Ginagawang exponential ang volume slider para mas madaling pumili ng mas mababang volume.",
+      "name": "Exponential na Volume"
     },
     "in-app-menu": {
       "description": "Nagbibigay sa mga menu-bar ng magarbo, madilim o kulay ng album",
       "menu": {
         "hide-dom-window-controls": "Itago ang mga DOM window control"
-      }
+      },
+      "name": "In-App na Menu"
     },
     "lumiastream": {
       "description": "Nabibigay suporta sa Lumia Stream",
@@ -497,6 +565,7 @@
     },
     "lyrics-genius": {
       "description": "Nagdaragdag ng suporta sa lyrics para sa karamihan ng kanta",
+      "name": "Lyrics Genius",
       "renderer": {
         "fetched-lyrics": "Kinuha ang lyrics para sa Genius"
       }
@@ -508,6 +577,7 @@
       },
       "internal": {
         "save": "I-save",
+        "track-source": "Source ng Track",
         "unknown-user": "Di-kilalang User"
       },
       "menu": {
@@ -530,6 +600,7 @@
           "host": "Nakakonekta bilang Host"
         }
       },
+      "name": "Music Together [Beta]",
       "toast": {
         "add-song-failed": "Nabigong magdagdag ng kanta",
         "closed": "Nakasara ang Music Together",
@@ -547,7 +618,15 @@
     },
     "navigation": {
       "description": "Ang Next/Back navigation na arrow ay direktang magamit sa interface, katulad sa iyong paboritong browser",
-      "name": "Nabigasyon"
+      "name": "Nabigasyon",
+      "templates": {
+        "back": {
+          "title": "Pumunta sa nakaraang page"
+        },
+        "forward": {
+          "title": "Pumunta sa susunod na page"
+        }
+      }
     },
     "no-google-login": {
       "description": "Tanggalin ang mga Google login na button at mga link mula sa interface",
@@ -605,8 +684,10 @@
       "description": "Kontrolin nang wasto ang volume gamit ang mousewheel/mga hotkey, na may custom HUD at customizable na volume step",
       "menu": {
         "arrows-shortcuts": "Lokal na Arrow-key na Kontrol",
-        "custom-volume-steps": "I-set ang custom na Volume Step"
+        "custom-volume-steps": "I-set ang custom na Volume Step",
+        "global-shortcuts": "Global na mga Hotkey"
       },
+      "name": "Eksaktong Volume",
       "prompt": {
         "global-shortcuts": {
           "keybind-options": {
@@ -630,7 +711,13 @@
           }
         }
       },
-      "description": "Payagang mapapalitan ang kalidad ng video na may button sa video overlay"
+      "description": "Payagang mapapalitan ang kalidad ng video na may button sa video overlay",
+      "name": "Taga-palit sa quality ng video",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "Buksan ang taga-palit ng quality"
+        }
+      }
     },
     "scrobbler": {
       "description": "Idagdag ang scrobbling support (last.fm, Listenbrains, atbp.)",
@@ -649,6 +736,7 @@
         "listenbrainz": {
           "token": "Ilagay ang user token ng ListenBrainz"
         },
+        "scrobble-alternative-artist": "Gumamit ng mga alternatibong artist",
         "scrobble-alternative-title": "Gumamit ng alternatibong mga title",
         "scrobble-other-media": "Mag-Scrobble ng ibang media"
       },
@@ -679,7 +767,8 @@
             "play-pause": "Mag-play / Mag-pause",
             "previous": "Nakaraan"
           },
-          "label": "Pumili ng Global na Keybind para sa Songs Control:"
+          "label": "Pumili ng Global na Keybind para sa Songs Control:",
+          "title": "Global na mga Keybind"
         }
       }
     },
@@ -713,12 +802,15 @@
               "tooltip": "Gumamit ng malaki, mala-app na effect sa kasalukuyang linya"
             },
             "focus": {
+              "label": "Focus",
               "tooltip": "Gawing puti lamang ang kasalukuyang linya"
             },
             "offset": {
+              "label": "Offset",
               "tooltip": "I-offset sa kanan ang kasalukuyang linya"
             },
             "scale": {
+              "label": "Scale",
               "tooltip": "I-scale ang kasalukuyang linya"
             }
           },
@@ -727,6 +819,14 @@
         "precise-timing": {
           "label": "Gawing perpektong naka-sync ang lyrics",
           "tooltip": "Kalkulahin sa millisecond ang pagpapakita ng susunod na linya (maaaring magkaroon ng maliit na epekto sa performance)"
+        },
+        "preferred-provider": {
+          "label": "Napiling Provider",
+          "none": {
+            "label": "Wala",
+            "tooltip": "Walang napiling provider"
+          },
+          "tooltip": "Pumili ng default na provider para gagamitin"
         },
         "romanization": {
           "label": "I-romanize ang lyrics",
@@ -758,6 +858,19 @@
     "touchbar": {
       "description": "Idaragdag ang TouchBar na widget para sa mga user ng macOS"
     },
+    "transparent-player": {
+      "description": "Gawing transparent ang app window",
+      "menu": {
+        "type": {
+          "label": "Uri",
+          "submenu": {
+            "none": "Wala",
+            "tabbed": "Naka-tab"
+          }
+        }
+      },
+      "name": "Transparent na Player"
+    },
     "tuna-obs": {
       "description": "Integrasyon kasama ang Tuna na OBS plugin"
     },
@@ -779,10 +892,11 @@
         "force-hide": "Piliting tanggalin ang video tab",
         "mode": {
           "submenu": {
-            "disabled": "Naka-disable"
+            "disabled": "Di-napagana"
           }
         }
       },
+      "name": "Pag-toggle ng Video",
       "templates": {
         "button-song": "Kanta"
       }
@@ -791,7 +905,8 @@
       "description": "Idaragdag ng visualizer sa player",
       "menu": {
         "visualizer-type": "Uri ng Visualizer"
-      }
+      },
+      "name": "Taga-visualize"
     }
   }
 }

@@ -1,5 +1,5 @@
 import is from 'electron-is';
-import { MenuItem } from 'electron';
+import { type MenuItem } from 'electron';
 
 import { snakeToCamel, ToastStyles, urgencyLevels } from './utils';
 

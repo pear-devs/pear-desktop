@@ -150,6 +150,11 @@
           "visual-tweaks": {
             "label": "תיקונים חזותיים",
             "submenu": {
+              "custom-window-title": {
+                "prompt": {
+                  "placeholder": "לדוגמה: שולחן כתיבה אגסי"
+                }
+              },
               "like-buttons": {
                 "default": "ברירת מחדל",
                 "force-show": "הפעל בכוח",
@@ -201,8 +206,8 @@
       "restart": "הפעל מחדש",
       "show": "הראה חלון",
       "tooltip": {
-        "default": "יוטיוב מיוזיק",
-        "with-song-info": "יוטיוב מיוזיק: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -212,7 +217,7 @@
       "name": "הגבר מהירות פרסומת"
     },
     "adblocker": {
-      "description": "חסום את כל המודעות והמעקב מחוץ לקופסה",
+      "description": "חסום את כל המודעות והמעקבים",
       "menu": {
         "blocker": "חוסם"
       },
@@ -244,6 +249,7 @@
           }
         },
         "buffer": {
+          "label": "חוצץ",
           "submenu": {
             "buffer": "{{buffer}}"
           }
@@ -279,7 +285,7 @@
       "name": "מצב אווירה"
     },
     "amuse": {
-      "description": "מוסיף תמיכה ב-YouTube Music עבור הווידג'ט של Amuse המתנגן כעת על ידי 6K Labs",
+      "description": "מוסיף תמיכה ב-{{applicationName}} עבור הווידג'ט של Amuse המתנגן כעת על ידי 6K Labs",
       "name": "משעשע",
       "response": {
         "query": "שרת ה-API של Amuse פועל. קבל מידע על השיר באמצעות GET /query."
@@ -365,7 +371,7 @@
       "name": "עקוף את ההחמרות של הגיל"
     },
     "captions-selector": {
-      "description": "בורר כתוביות עבור רצועות אודיו של YouTube Music",
+      "description": "בורר כתוביות עבור רצועות אודיו של {{applicationName}}",
       "menu": {
         "autoload": "בחר אוטומטי את הכתובית האחרונה שנבחרה",
         "disable-captions": "ברירת מחד ללא כתוביות"
@@ -380,6 +386,11 @@
       },
       "templates": {
         "title": "פתח בחירת כתוביות"
+      },
+      "toast": {
+        "caption-changed": "תרגום שונה ל {{שפה}}",
+        "caption-disabled": "תרגום בוטל",
+        "no-captions": "אין תרגום זמין לשיר הזה"
       }
     },
     "compact-sidebar": {
@@ -391,9 +402,11 @@
       "menu": {
         "advanced": "מתקדם"
       },
+      "name": "התפיידות צלב[בית]",
       "prompt": {
         "options": {
           "multi-input": {
+            "fade-in-duration": "תתפייד בזמן[מילישניות]",
             "fade-scaling": {
               "linear": "לינארי",
               "logarithmic": "לוגריתמי"
@@ -419,7 +432,7 @@
         "connected": "מחובר",
         "disconnected": "מנותק",
         "hide-github-button": "הסתר את לחצן הקישור של GitHub",
-        "play-on-youtube-music": "הפעל ביוטיוב מיוזיק",
+        "play-on-application": "הפעל ביוטיוב מיוזיק",
         "set-inactivity-timeout": "הגדר פסק זמן לחוסר פעילות"
       }
     },

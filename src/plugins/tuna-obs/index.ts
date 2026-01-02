@@ -3,7 +3,7 @@ import { net } from 'electron';
 import is from 'electron-is';
 
 import { createPlugin } from '@/utils';
-import registerCallback from '@/providers/song-info';
+import { registerCallback } from '@/providers/song-info';
 import { t } from '@/i18n';
 
 interface Data {
@@ -72,8 +72,8 @@ export default createPlugin({
           });
       };
 
-      ipc.on('ytmd:player-api-loaded', () =>
-        ipc.send('ytmd:setup-time-changed-listener'),
+      ipc.on('peard:player-api-loaded', () =>
+        ipc.send('peard:setup-time-changed-listener'),
       );
 
       registerCallback((songInfo) => {

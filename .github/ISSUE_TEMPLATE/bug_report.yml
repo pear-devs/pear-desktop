@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a YouTube Music bug
+description: Report a Pear Desktop bug
 title: "[Bug]: "
 labels: "bug :beetle:"
 body:
@@ -8,17 +8,17 @@ body:
     label: Preflight Checklist
     description: Please ensure you've completed all of the following.
     options:
-      - label: I use the latest version of YouTube Music (Application).
+      - label: I use the latest version of Pear Desktop (Application).
         required: true
-      - label: I have searched the [issue tracker](https://github.com/th-ch/youtube-music/issues) for a bug report that matches the one I want to file, without success.
+      - label: I have searched the [issue tracker](https://github.com/pear-devs/pear-desktop/issues) for a bug report that matches the one I want to file, without success.
         required: true
-      - label: I understand that **th-ch/youtube-music has NO affiliation with Google or YouTube**
+      - label: I understand that **pear-devs/pear-desktop has NO affiliation with Google or YouTube**
         required: true
 - type: input
   attributes:
-    label: YouTube Music (Application) Version
+    label: Pear Desktop (Application) Version
     description: |
-      What version of the YouTube Music Application are you using?
+      What version of the Pear Desktop Application are you using?
 
       Note: Please check if this issue is reproducible with the latest stable release.
     placeholder: 2.0.0
@@ -28,7 +28,7 @@ body:
   attributes:
     label: Checklists
     options:
-      - label: I use the portable version of the YouTube Music Application.
+      - label: I use the portable version of the Pear Desktop Application.
       - label: I can reproduce this issue in the [official version of (WEB) YTM](https://music.youtube.com).
 - type: dropdown
   attributes:
@@ -60,8 +60,8 @@ body:
     required: true
 - type: input
   attributes:
-    label: Last Known Working YouTube Music (Application) version
-    description: (If applicable) What is the last version of YouTube Music this worked in?
+    label: Last Known Working Pear Desktop (Application) version
+    description: (If applicable) What is the last version of Pear Desktop this worked in?
     placeholder: 1.20.0
 - type: textarea
   attributes:
@@ -92,4 +92,4 @@ body:
 - type: textarea
   attributes:
     label: Additional Information
-    description: If your problem needs further explanation, or if the issue you're seeing cannot be reproduced in a gist, please add more information here. 
+    description: If your problem needs further explanation, or if the issue you're seeing cannot be reproduced in a gist, please add more information here.

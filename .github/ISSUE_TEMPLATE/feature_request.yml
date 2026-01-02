@@ -1,5 +1,5 @@
 name: Feature Request
-description: Suggest an idea for YouTube Music
+description: Suggest an idea for Pear Desktop
 title: "[Feature Request]: "
 labels: "enhancement :sparkles:"
 body:
@@ -8,9 +8,9 @@ body:
     label: Preflight Checklist
     description: Please ensure you've completed all of the following.
     options:
-      - label: I use the latest version of YouTube Music (Application).
+      - label: I use the latest version of Pear Desktop (Application).
         required: true
-      - label: I have searched the [issue tracker](https://github.com/th-ch/youtube-music/issues) for a feature request that matches the one I want to file, without success.
+      - label: I have searched the [issue tracker](https://github.com/pear-devs/pear-desktop/issues) for a feature request that matches the one I want to file, without success.
         required: true
 - type: textarea
   attributes:

@@ -21,7 +21,7 @@
   "main": {
     "console": {
       "did-finish-load": {
-        "dev-tools": "Загрузка завершена. DevTools открыт"
+        "dev-tools": "Загрузка завершена. DevTools открыты"
       },
       "i18n": {
         "loaded": "i18n загружен"
@@ -53,9 +53,9 @@
           "later": "Позже",
           "restart-now": "Перезапустить сейчас"
         },
-        "detail": "Перезагрузите приложение для включения плагина {{pluginName}}",
-        "message": "{{pluginName}} нуждается в перезагрузке",
-        "title": "Нужна перезагрузка"
+        "detail": "Перезапустите приложение для включения плагина {{pluginName}}",
+        "message": "Перезапуск для применения плагина {{pluginName}}",
+        "title": "Нужен перезапуск"
       },
       "unresponsive": {
         "buttons": {
@@ -150,13 +150,20 @@
           "visual-tweaks": {
             "label": "Визуальные настройки",
             "submenu": {
+              "custom-window-title": {
+                "label": "Собственное название окна",
+                "prompt": {
+                  "label": "Введите собственное название окна: (оставьте пустым, чтобы отключить)",
+                  "placeholder": "Например: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "Default",
                 "force-show": "Всегда показывать",
                 "hide": "Скрывать",
                 "label": "Кнопка лайка"
               },
-              "remove-upgrade-button": "Убрать кнопку Youtube Premium",
+              "remove-upgrade-button": "Убрать кнопку Premium",
               "theme": {
                 "dialog": {
                   "button": {
@@ -184,8 +191,8 @@
       "view": {
         "label": "Вид",
         "submenu": {
-          "force-reload": "Принудительная перезагрузка",
-          "reload": "Перезагрузить",
+          "force-reload": "Принудительный перезапуск",
+          "reload": "Перезапустить",
           "reset-zoom": "Текущий размер",
           "toggle-fullscreen": "Включить полноэкранный режим",
           "zoom-in": "Приблизить",
@@ -198,11 +205,11 @@
       "play-pause": "Пауза/Продолжить",
       "previous": "Предыдущий",
       "quit": "Выйти",
-      "restart": "Перезагрузить приложение",
+      "restart": "Перезапустить приложение",
       "show": "Показать окно",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -362,11 +369,11 @@
       "name": "Размытие панели навигации"
     },
     "bypass-age-restrictions": {
-      "description": "Обход проверки возраста на YouTube",
+      "description": "Обход проверки возраста на Music Player",
       "name": "Обход возрастных ограничений"
     },
     "captions-selector": {
-      "description": "Выбор субтитров для аудиотреков в YouTube Music",
+      "description": "Выбор субтитров для аудиотреков в {{applicationName}}",
       "menu": {
         "autoload": "Автоматически выбирать последние использованные субтитры",
         "disable-captions": "Без субтитров по умолчанию"
@@ -414,6 +421,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Настройка устройства вывода медиа для песен",
+      "menu": {
+        "device-selector": "Выберите устройство"
+      },
+      "name": "Пользовательское устройство вывода",
+      "prompt": {
+        "device-selector": {
+          "label": "Выберите устройство вывода медиа, которое будет использоваться",
+          "title": "Выберите устройство вывода"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Запускает песню сразу на паузе",
       "menu": {
@@ -436,8 +456,16 @@
         "disconnected": "Отключено",
         "hide-duration-left": "Скрыть сколько осталось времени",
         "hide-github-button": "Скрыть ссылку на GitHub",
-        "play-on-youtube-music": "Воспроизвести на YouTube Music",
-        "set-inactivity-timeout": "Поставить таймер неактивности"
+        "play-on-application": "Воспроизвести на {{applicationName}}",
+        "set-inactivity-timeout": "Поставить таймер неактивности",
+        "set-status-display-type": {
+          "label": "Текст статуса",
+          "submenu": {
+            "application": "Слушает {{applicationName}}",
+            "artist": "Слушает {исполнитель}",
+            "title": "Слушает {название трека}"
+          }
+        }
       },
       "name": "Discord Rich Presence",
       "prompt": {
@@ -729,6 +757,7 @@
         "listenbrainz": {
           "token": "Введите токен пользователя ListenBrainz"
         },
+        "scrobble-alternative-artist": "Использовать альтернативных исполнителей",
         "scrobble-alternative-title": "Использовать альтернативные названия",
         "scrobble-other-media": "Скробблинг других медиа"
       },
@@ -814,6 +843,14 @@
           "label": "Идеально синхронизировать слова",
           "tooltip": "До миллисекунды рассчитывает отображение следующей строки(может оказать небольшое влияние на производительность)"
         },
+        "preferred-provider": {
+          "label": "Предпочитаемый источник",
+          "none": {
+            "label": "Никакой",
+            "tooltip": "Нет предпочитаемого источника"
+          },
+          "tooltip": "Выберите источник по умолчанию"
+        },
         "romanization": {
           "label": "Романизировать слова",
           "tooltip": "Если слова на другом языке, пытаться отображать версию на латинице."
@@ -845,6 +882,27 @@
     "touchbar": {
       "description": "Добавляет виджет тачбара для пользователей macOS",
       "name": "Тачбар"
+    },
+    "transparent-player": {
+      "description": "Делает окно приложения прозрачным",
+      "menu": {
+        "opacity": {
+          "label": "Непрозрачность",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Тип",
+          "submenu": {
+            "acrylic": "Акриловый",
+            "mica": "Слюдяной",
+            "none": "Отключено",
+            "tabbed": "Страничный"
+          }
+        }
+      },
+      "name": "Прозрачный плеер"
     },
     "tuna-obs": {
       "description": "Интеграция с плагином Tuna от OBS",

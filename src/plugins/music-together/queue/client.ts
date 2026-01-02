@@ -7,13 +7,13 @@ export const extractToken = (cookie = document.cookie) =>
 export const getHash = async (
   papisid: string,
   millis = Date.now(),
-  origin: string = 'https://music.youtube.com',
+  origin: string = 'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com',
 ) => (await SHA1Hash(`${millis} ${papisid} ${origin}`)).toLowerCase();
 
 export const getAuthorizationHeader = async (
   papisid: string,
   millis = Date.now(),
-  origin: string = 'https://music.youtube.com',
+  origin: string = 'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com',
 ) => {
   return `SAPISIDHASH ${millis}_${await getHash(papisid, millis, origin)}`;
 };

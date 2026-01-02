@@ -37,7 +37,7 @@ export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
   win[hkey_script] = true;
 
   /** @type {globalThis.PromiseConstructor} */
-  const Promise = (async () => { })().constructor; // YouTube hacks Promise in WaterFox Classic and "Promise.resolve(0)" nevers resolve.
+  const Promise = (async () => { })().constructor; // hacks Promise in WaterFox Classic and "Promise.resolve(0)" nevers resolve.
   const PromiseExternal = ((resolve_, reject_) => {
     const h = (resolve, reject) => { resolve_ = resolve; reject_ = reject };
     return class PromiseExternal extends Promise {
@@ -89,7 +89,7 @@ export const injectCpuTamerByDomMutation = ((__CONTEXT__) => {
         frame.sandbox = 'allow-same-origin'; // script cannot be run inside iframe but API can be obtained from iframe
         let n = document.createElement('noscript'); // wrap into NOSCRPIT to avoid reflow (layouting)
         n.appendChild(frame);
-        while (!document.documentElement && mx-- > 0) await new Promise(waitFn); // requestAnimationFrame here could get modified by YouTube engine
+        while (!document.documentElement && mx-- > 0) await new Promise(waitFn); // requestAnimationFrame here could get modified by the engine
         const root = document.documentElement;
         root.appendChild(n); // throw error if root is null due to exceeding MAX TRIAL
         if (blobURL) Promise.resolve().then(() => URL.revokeObjectURL(blobURL));

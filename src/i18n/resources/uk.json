@@ -150,6 +150,13 @@
           "visual-tweaks": {
             "label": "Візуальні налаштування",
             "submenu": {
+              "custom-window-title": {
+                "label": "Налаштування заголовка вікна",
+                "prompt": {
+                  "label": "Введіть власний заголовок вікна: (залиште порожнім, щоб вимкнути)",
+                  "placeholder": "Приклад: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "За замовчуванням",
                 "force-show": "Завжди показувати",
@@ -201,8 +208,8 @@
       "restart": "Перезапустити програму",
       "show": "Показати вікно",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -280,7 +287,7 @@
       "name": "Режим навколишнього середовища"
     },
     "amuse": {
-      "description": "Додає підтримку YouTube Music для віджета Amuse now playing від 6K Labs",
+      "description": "Додає підтримку {{applicationName}} для віджета Amuse now playing від 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Сервер Amuse API запущено. Запит GET /query для отримання інформації про пісню."
@@ -362,11 +369,11 @@
       "name": "Розмиття панелі навігації"
     },
     "bypass-age-restrictions": {
-      "description": "Обхід перевірки віку на YouTube",
+      "description": "Обхід перевірки віку на Music Player",
       "name": "Обхід вікових обмежень"
     },
     "captions-selector": {
-      "description": "Вибір субтитрів для аудіодоріжок YouTube Music",
+      "description": "Вибір субтитрів для аудіодоріжок {{applicationName}}",
       "menu": {
         "autoload": "Автоматичний вибір останніх використаних субтитрів",
         "disable-captions": "За замовчуванням субтитри відсутні"
@@ -381,6 +388,11 @@
       },
       "templates": {
         "title": "Відкрити селектор субтитрів"
+      },
+      "toast": {
+        "caption-changed": "Субтитри змінені на {{language}}",
+        "caption-disabled": "Субтитри відключені",
+        "no-captions": "Субтитри не доступні для цієї пісні"
       }
     },
     "compact-sidebar": {
@@ -409,6 +421,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Налаштування власного пристрою для відтворення пісень",
+      "menu": {
+        "device-selector": "Обрати пристрій"
+      },
+      "name": "Спеціальний пристрій виводу",
+      "prompt": {
+        "device-selector": {
+          "label": "Оберіть пристрій для виводу медіа",
+          "title": "Оберіть пристрій виводу"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Запуск пісні в режимі \"пауза\"",
       "menu": {
@@ -431,8 +456,16 @@
         "disconnected": "Від'єднано",
         "hide-duration-left": "Приховати тривалість, яка залишилася",
         "hide-github-button": "Приховати посилання на GitHub",
-        "play-on-youtube-music": "Слухати на YouTube Music",
-        "set-inactivity-timeout": "Встановити тайм-аут бездіяльності"
+        "play-on-application": "Слухати на {{applicationName}}",
+        "set-inactivity-timeout": "Встановити тайм-аут бездіяльності",
+        "set-status-display-type": {
+          "label": "Статус",
+          "submenu": {
+            "artist": "Ви слухаєте {artist}",
+            "application": "Відтворення з {{applicationName}}",
+            "title": "Ви слухаєте {song title}"
+          }
+        }
       },
       "name": "Активність Discord",
       "prompt": {
@@ -600,7 +633,15 @@
     },
     "navigation": {
       "description": "Стрілки навігації Вперед/Назад безпосередньо інтегровані в інтерфейс, як у вашому браузері, який ви використовуєте",
-      "name": "Навігація"
+      "name": "Навігація",
+      "templates": {
+        "back": {
+          "title": "Перейти на минулу сторінку"
+        },
+        "forward": {
+          "title": "Перейти на наступну сторінку"
+        }
+      }
     },
     "no-google-login": {
       "description": "Видалити кнопки та посилання для входу через Google з інтерфейсу",
@@ -692,7 +733,12 @@
         }
       },
       "description": "Дозволяє змінювати якість відео за допомогою кнопки на відео оверлеї",
-      "name": "Зміна якості відео"
+      "name": "Зміна якості відео",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "Відкрити налаштування якості плеєру"
+        }
+      }
     },
     "scrobbler": {
       "description": "Додає підтримку скроблінгу (last.fm, Listenbrainz тощо)",
@@ -711,6 +757,7 @@
         "listenbrainz": {
           "token": "Ввести токен користувача ListenBrainz"
         },
+        "scrobble-alternative-artist": "Використати іншого виконавця",
         "scrobble-alternative-title": "Використовувати альтернативні назви",
         "scrobble-other-media": "Скробилити інші медіа"
       },
@@ -762,7 +809,7 @@
     "synced-lyrics": {
       "description": "Додає синхронізовані тексти до пісень використовуючи провайдери, такі як LRClib.",
       "errors": {
-        "fetch": "⚠️ - При завантаженні слів пісні сталась помилка. Спробуйте пізніше.",
+        "fetch": "⚠️ - При завантаженні слів пісні сталась помилка.\nСпробуйте будь ласка пізніше.",
         "not-found": "⚠️ До цієї пісні текст не знайдено."
       },
       "menu": {
@@ -796,6 +843,14 @@
           "label": "Зробити текст пісні ідеально синхронізованим",
           "tooltip": "Обчисли до мілісекунд відображення наступного рядка (може мати невеликий вплив на продуктивність)"
         },
+        "preferred-provider": {
+          "label": "Пріорітетний Провайдер",
+          "none": {
+            "label": "Жоден",
+            "tooltip": "Нема провайдера за замовчуванням"
+          },
+          "tooltip": "Оберіть якого провайдера використовувати за замовчуванням"
+        },
         "romanization": {
           "label": "Транслітерувати текст пісень",
           "tooltip": "Якщо текст пісні іншою мовою, спробувати його відобразити латинською версією."
@@ -828,6 +883,27 @@
       "description": "Додає віджет TouchBar для користувачів macOS",
       "name": "TouchBar"
     },
+    "transparent-player": {
+      "description": "Зробити вікно програми прозорим",
+      "menu": {
+        "opacity": {
+          "label": "Прозорість",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Тип",
+          "submenu": {
+            "acrylic": "Акриловий",
+            "mica": "Міка",
+            "none": "Жоден",
+            "tabbed": "З роздільниками"
+          }
+        }
+      },
+      "name": "Прозорий Плеєр"
+    },
     "tuna-obs": {
       "description": "Інтеграція з плагіном Tuna для OBS",
       "name": "Tuna OBS"
@@ -859,7 +935,8 @@
       },
       "name": "Перемикач відео",
       "templates": {
-        "button-song": "Пісня"
+        "button-song": "Пісня",
+        "button-video": "Відео"
       }
     },
     "visualizer": {

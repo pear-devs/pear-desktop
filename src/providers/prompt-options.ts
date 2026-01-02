@@ -1,8 +1,8 @@
-import youtubeMusicTrayIcon from '@assets/youtube-music-tray.png?asset&asarUnpack';
+import trayIcon from '@assets/tray.png?asset&asarUnpack';
 
 const promptOptions = {
   customStylesheet: 'dark',
-  icon: youtubeMusicTrayIcon,
+  icon: trayIcon,
 };
 
 export default () => promptOptions;

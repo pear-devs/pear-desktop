@@ -154,7 +154,7 @@
                 "label": "Prilagođeni naziv prozora",
                 "prompt": {
                   "label": "Unesite prilagođeni naslov prozora: (ostavite prazno da onemogućite)",
-                  "placeholder": "Primer: YouTube Muzika"
+                  "placeholder": "Primer: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Ponovo pokreni aplikaciju",
       "show": "Prikaži prozor",
       "tooltip": {
-        "default": "YouTube Muzika",
-        "with-song-info": "YouTube Muzika: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Omogući postavljanje teme \"seekbar\"-a"
       },
       "name": "Paleta boja albuma"
     },
@@ -287,7 +288,7 @@
       "name": "Ambijentalni režim"
     },
     "amuse": {
-      "description": "Dodaje podršku za 'Amuse now' vidžet (6K Labs) u YouTube Muziku",
+      "description": "Dodaje podršku za 'Amuse now' vidžet (6K Labs) u {{applicationName}}",
       "name": "Zabavi",
       "response": {
         "query": "Amuse API server je pokrenut. Koristite GET /query da biste dobili informacije o numeri."
@@ -319,6 +320,22 @@
         },
         "hostname": {
           "label": "Ime host-a"
+        },
+        "https": {
+          "label": "HTTPS i Sertifikati",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Izaberi HTTPS datoteku sertifikata",
+              "label": "Datoteka sertifikata (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Omogući HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Izaberi HTTPS datoteku privatnog ključa",
+              "label": "Datoteka privatnog ključa (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -369,11 +386,11 @@
       "name": "Zamuti navigacioni meni"
     },
     "bypass-age-restrictions": {
-      "description": "Preskoči starosnu verifikaciju za YouTube",
+      "description": "Preskoči starosnu verifikaciju za Music Player",
       "name": "Preskoči starosna ograničenja"
     },
     "captions-selector": {
-      "description": "Odabir prevoda za numere/audio trake na YouTube Muzici",
+      "description": "Odabir prevoda za numere/audio trake na {{applicationName}}",
       "menu": {
         "autoload": "Automatski odaberi prethodno odabrani prevod",
         "disable-captions": "Podrazumevano bez prevoda"
@@ -421,6 +438,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Konfigurišite prilagođeni izlazni medijski uređaj za pesme",
+      "menu": {
+        "device-selector": "Izaberite uređaj"
+      },
+      "name": "Prilagođeni izlazni uređaj",
+      "prompt": {
+        "device-selector": {
+          "label": "Izaberite izlazni medijski uređaj koji će se koristiti",
+          "title": "Izaberite izlazni uređaj"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Numere se pokreću u pauziranom režimu",
       "menu": {
@@ -443,8 +473,16 @@
         "disconnected": "Nije povezano",
         "hide-duration-left": "Sakrij preostalo vreme",
         "hide-github-button": "Sakrij dugme sa GitHub linkom",
-        "play-on-youtube-music": "Reprodukuj na YouTube Muzici",
-        "set-inactivity-timeout": "Podesi tajmer za neaktivnost"
+        "play-on-application": "Reprodukuj na {{applicationName}}",
+        "set-inactivity-timeout": "Podesi tajmer za neaktivnost",
+        "set-status-display-type": {
+          "label": "Tekst statusa",
+          "submenu": {
+            "application": "Slušanje {{applicationName}}",
+            "artist": "Slušanje {artist}",
+            "title": "Slušanje {song title}"
+          }
+        }
       },
       "name": "Discord Bogato Prisustvo",
       "prompt": {
@@ -736,6 +774,7 @@
         "listenbrainz": {
           "token": "Unesi korisnički žeton za ListenBrainz"
         },
+        "scrobble-alternative-artist": "Koristi alternativne izvođače",
         "scrobble-alternative-title": "Koristi alternativne naslove",
         "scrobble-other-media": "Učetkaj druge medije"
       },
@@ -821,6 +860,14 @@
           "label": "Učini da tekst pesme bude savršeno usklađen",
           "tooltip": "Izračunaj do milisekunde prikaz sledeće linije teksta (može malo uticati na učinak)"
         },
+        "preferred-provider": {
+          "label": "Preferirani dobavljač",
+          "none": {
+            "label": "Nijedan",
+            "tooltip": "Bez preferiranog dobavljača"
+          },
+          "tooltip": "Izaberite podrazumevanog dobavljača kog ćete koristiti"
+        },
         "romanization": {
           "label": "Romanizuj tekstove pesama",
           "tooltip": "Ako je tekst pesme na drugom jeziku, pokušaj da ga prikažeš u latiničnoj varijanti."
@@ -852,6 +899,27 @@
     "touchbar": {
       "description": "Dodaje dodatak dodirne trake za macOS korisnike",
       "name": "Dodirna Traka"
+    },
+    "transparent-player": {
+      "description": "Čini prozor aplikacije transparentnim",
+      "menu": {
+        "opacity": {
+          "label": "Neprozirnost",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Tip",
+          "submenu": {
+            "acrylic": "Akrilan",
+            "mica": "Mika",
+            "none": "Nijedan",
+            "tabbed": "Kartice"
+          }
+        }
+      },
+      "name": "Transparentni plejer"
     },
     "tuna-obs": {
       "description": "Integracija sa OBS-ovim Tuna dodatkom",

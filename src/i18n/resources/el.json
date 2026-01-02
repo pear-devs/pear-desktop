@@ -150,6 +150,13 @@
           "visual-tweaks": {
             "label": "Οπτικές προσαρμογές",
             "submenu": {
+              "custom-window-title": {
+                "label": "Προσαρμοσμένος τίτλος παραθύρου",
+                "prompt": {
+                  "label": "Εισαγωγή προσαρμοσμένου τίτλου παραθύρου: (κενό για απενεργοποίηση)",
+                  "placeholder": "Παράδειγμα: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "Προεπιλογή",
                 "force-show": "Επιβολή εμφάνισης",
@@ -201,8 +208,8 @@
       "restart": "Επανεκκίνηση εφαρμογής",
       "show": "Εμφάνιση παραθύρου",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -280,7 +287,7 @@
       "name": "Λειτουργία περιβάλλοντος"
     },
     "amuse": {
-      "description": "Προσθέτει υποστήριξη YouTube Music στο widget Amuse now playing από την 6K Labs",
+      "description": "Προσθέτει υποστήριξη {{applicationName}} στο widget Amuse now playing από την 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Ο διακομιστής Amuse API εκτελείται. GET /query για να λάβετε πληροφορίες για το τραγούδι."
@@ -362,11 +369,11 @@
       "name": "Θόλωμα γραμμής πλοήγησης"
     },
     "bypass-age-restrictions": {
-      "description": "Παράκαμψη επαλήθευσης ηλικίας στο YouTube",
+      "description": "Παράκαμψη επαλήθευσης ηλικίας στο Music Player",
       "name": "Παράκαμψη ηλικιακών περιορισμών"
     },
     "captions-selector": {
-      "description": "Επιλογέας λεζάντας για μουσικά κομμάτια ήχου του YouTube",
+      "description": "Επιλογέας λεζάντας για μουσικά κομμάτια ήχου του {{applicationName}}",
       "menu": {
         "autoload": "Αυτόματη επιλογή της τελευταίας χρησιμοποιούμενης λεζάντας",
         "disable-captions": "Χωρίς λεζάντες από προεπιλογή"
@@ -381,6 +388,11 @@
       },
       "templates": {
         "title": "Ανοίξτε τον επιλογέα λεζάντας"
+      },
+      "toast": {
+        "caption-changed": "Λεζάντα άλλαξε σε {{language}}",
+        "caption-disabled": "Λεζάντες απενεργοποιήθηκαν",
+        "no-captions": "Λεζάντες μη διαθέσιμες για αυτό το τραγούδι"
       }
     },
     "compact-sidebar": {
@@ -431,7 +443,7 @@
         "disconnected": "Αποσυνδεδεμένο",
         "hide-duration-left": "Απόκρυψη της διάρκειας που απομένει",
         "hide-github-button": "Απόκρυψη κουμπιού συνδέσμου GitHub",
-        "play-on-youtube-music": "Αναπαραγωγή στο YouTube Music",
+        "play-on-application": "Αναπαραγωγή στο {{applicationName}}",
         "set-inactivity-timeout": "Ορισμός χρονικού ορίου αδράνειας"
       },
       "name": "Discord Πλούσια παρουσία",
@@ -600,7 +612,15 @@
     },
     "navigation": {
       "description": "Βέλη πλοήγησης Επόμενο/Πίσω ενσωματωμένα απευθείας στο περιβάλλον εργασίας, όπως στο αγαπημένο σας πρόγραμμα περιήγησης",
-      "name": "Πλοήγηση"
+      "name": "Πλοήγηση",
+      "templates": {
+        "back": {
+          "title": "Μετάβαση στην προηγούμενη σελίδα"
+        },
+        "forward": {
+          "title": "Μετάβαση στην επόμενη σελίδα"
+        }
+      }
     },
     "no-google-login": {
       "description": "Αφαίρεση των κουμπιών και των συνδέσμων σύνδεσης Google από το περιβάλλον εργασίας",
@@ -692,7 +712,12 @@
         }
       },
       "description": "Επιτρέπει την αλλαγή της ποιότητας βίντεο με ένα κουμπί στην επικάλυψη βίντεο",
-      "name": "Αλλαγή ποιότητας βίντεο"
+      "name": "Αλλαγή ποιότητας βίντεο",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "Άνοιγμα ρυθμίσεων ποιότητας αναπαραγωγέα"
+        }
+      }
     },
     "scrobbler": {
       "description": "Προσθήκη υποστήριξης scrobbling (κ.λπ. last.fm, Listenbrainz)",
@@ -859,7 +884,8 @@
       },
       "name": "Εναλλαγή βίντεο",
       "templates": {
-        "button-song": "Τραγούδι"
+        "button-song": "Τραγούδι",
+        "button-video": "Βίντεο"
       }
     },
     "visualizer": {

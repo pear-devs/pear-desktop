@@ -19,9 +19,9 @@ export const createContext = <Config extends PluginConfig>(
   id: string,
 ): RendererContext<Config> => ({
   getConfig: () =>
-    window.ipcRenderer.invoke('ytmd:get-config', id) as Promise<Config>,
+    window.ipcRenderer.invoke('peard:get-config', id) as Promise<Config>,
   setConfig: async (newConfig) => {
-    await window.ipcRenderer.invoke('ytmd:set-config', id, newConfig);
+    await window.ipcRenderer.invoke('peard:set-config', id, newConfig);
   },
   ipc: {
     send: (event: string, ...args: unknown[]) => {

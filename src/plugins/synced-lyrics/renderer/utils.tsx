@@ -1,15 +1,11 @@
 import { render } from 'solid-js/web';
-
 import KuromojiAnalyzer from 'kuroshiro-analyzer-kuromoji';
 import Kuroshiro from 'kuroshiro';
-
 import { romanize as esHangulRomanize } from 'es-hangul';
 import hanja from 'hanja';
-
-import pinyin from 'tiny-pinyin';
-
+import * as pinyin from 'tiny-pinyin';
+import { romanize as romanizeThaiFrag } from '@dehoist/romanize-thai';
 import { lazy } from 'lazy-var';
-
 import { detect } from 'tinyld';
 
 import { waitForElement } from '@/utils/wait-for-element';
@@ -155,26 +151,9 @@ const hasKorean = (lines: string[]) =>
 const hasChinese = (lines: string[]) =>
   lines.some((line) => /[\u4E00-\u9FFF]+/.test(line));
 
-export const romanize = async (line: string) => {
-  const lang = detect(line);
-
-  const handlers: Record<string, (line: string) => Promise<string> | string> = {
-    ja: romanizeJapanese,
-    ko: romanizeHangul,
-    zh: romanizeChinese,
-  };
-
-  const NO_OP = (l: string) => l;
-  const handler = handlers[lang] ?? NO_OP;
-
-  line = await handler(line);
-
-  if (hasJapanese([line])) line = await romanizeJapanese(line);
-  if (hasKorean([line])) line = romanizeHangul(line);
-  if (hasChinese([line])) line = romanizeChinese(line);
-
-  return line;
-};
+// https://en.wikipedia.org/wiki/Thai_(Unicode_block)
+const hasThai = (lines: string[]) =>
+  lines.some((line) => /[\u0E00-\u0E7F]+/.test(line));
 
 export const romanizeJapanese = async (line: string) =>
   (await kuroshiro.get()).convert(line, {
@@ -189,4 +168,48 @@ export const romanizeChinese = (line: string) => {
   return line.replaceAll(/[\u4E00-\u9FFF]+/g, (match) =>
     pinyin.convertToPinyin(match, ' ', true),
   );
+};
+
+const thaiSegmenter = Intl.Segmenter.supportedLocalesOf('th').includes('th')
+  ? new Intl.Segmenter('th', { granularity: 'word' })
+  : null;
+
+export const romanizeThai = (line: string) => {
+  if (!thaiSegmenter) return romanizeThaiFrag(line);
+
+  const segments = Array.from(thaiSegmenter.segment(line));
+  const latin = segments
+    .map((segment) =>
+      segment.isWordLike
+        ? romanizeThaiFrag(segment.segment)
+        : segment.segment.trim(),
+    )
+    .join(' ')
+    .trim();
+
+  return latin;
+};
+
+const handlers: Record<string, (line: string) => Promise<string> | string> = {
+  ja: romanizeJapanese,
+  ko: romanizeHangul,
+  zh: romanizeChinese,
+  th: romanizeThai,
+};
+
+export const romanize = async (line: string) => {
+  const lang = detect(line);
+
+  const handler = handlers[lang];
+  if (handler) {
+    return handler(line);
+  }
+
+  // fallback
+  if (hasJapanese([line])) line = await romanizeJapanese(line);
+  if (hasKorean([line])) line = romanizeHangul(line);
+  if (hasChinese([line])) line = romanizeChinese(line);
+  if (hasThai([line])) line = romanizeThai(line);
+
+  return line;
 };

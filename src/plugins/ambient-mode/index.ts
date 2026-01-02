@@ -3,7 +3,7 @@ import style from './style.css?inline';
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 import { menu } from './menu';
-import { AmbientModePluginConfig } from './types';
+import { type AmbientModePluginConfig } from './types';
 import { waitForElement } from '@/utils/wait-for-element';
 
 const defaultConfig: AmbientModePluginConfig = {

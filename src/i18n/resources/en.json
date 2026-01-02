@@ -160,7 +160,7 @@
                 "label": "Custom window title",
                 "prompt": {
                   "label": "Enter custom window title: (leave empty to disable)",
-                  "placeholder": "Example: YouTube Music"
+                  "placeholder": "Example: {{applicationName}}"
                 }
               },
               "remove-upgrade-button": "Remove upgrade button",
@@ -208,8 +208,8 @@
       "restart": "Restart App",
       "show": "Show window",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Enable seekbar theming"
       },
       "name": "Album Color Theme"
     },
@@ -287,7 +288,7 @@
       "name": "Ambient Mode"
     },
     "amuse": {
-      "description": "Adds YouTube Music support for the Amuse now playing widget by 6K Labs",
+      "description": "Adds {{applicationName}} support for the Amuse now playing widget by 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API server is running. GET /query to get song info."
@@ -322,6 +323,22 @@
         },
         "port": {
           "label": "Port"
+        },
+        "https": {
+          "label": "HTTPS & Certificates",
+          "submenu": {
+            "enable-https": {
+              "label": "Enable HTTPS"
+            },
+            "cert": {
+              "label": "Certificate file (.crt/.pem)",
+              "dialogTitle": "Select HTTPS certificate file"
+            },
+            "key": {
+              "label": "Private key file (.key/.pem)",
+              "dialogTitle": "Select HTTPS private key file"
+            }
+          }
         }
       },
       "name": "API Server [Beta]",
@@ -369,11 +386,11 @@
       "name": "Blur Navigation Bar"
     },
     "bypass-age-restrictions": {
-      "description": "Bypass YouTube's age verification",
+      "description": "Bypass Music Player's age verification",
       "name": "Bypass Age Restrictions"
     },
     "captions-selector": {
-      "description": "Caption selector for YouTube Music audio tracks",
+      "description": "Caption selector for {{applicationName}} audio tracks",
       "menu": {
         "autoload": "Automatically select last used caption",
         "disable-captions": "No captions by default"
@@ -421,6 +438,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Configure a custom output media device for songs",
+      "menu": {
+        "device-selector": "Select Device"
+      },
+      "name": "Custom Output Device",
+      "prompt": {
+        "device-selector": {
+          "label": "Choose the output media device to be used",
+          "title": "Select Output Device"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Makes song start in \"paused\" mode",
       "menu": {
@@ -443,8 +473,16 @@
         "disconnected": "Disconnected",
         "hide-duration-left": "Hide duration left",
         "hide-github-button": "Hide GitHub link Button",
-        "play-on-youtube-music": "Play on YouTube Music",
-        "set-inactivity-timeout": "Set inactivity timeout"
+        "play-on-application": "Play on {{applicationName}}",
+        "set-inactivity-timeout": "Set inactivity timeout",
+        "set-status-display-type": {
+          "label": "Status text",
+          "submenu": {
+            "application": "Listening to {{applicationName}}",
+            "artist": "Listening to {artist}",
+            "title": "Listening to {song title}"
+          }
+        }
       },
       "name": "Discord Rich Presence",
       "prompt": {
@@ -748,6 +786,7 @@
           "token": "Enter ListenBrainz user token"
         },
         "scrobble-alternative-title": "Use alternative titles",
+        "scrobble-alternative-artist": "Use alternative artists",
         "scrobble-other-media": "Scrobble other media"
       },
       "name": "Scrobbler",
@@ -802,6 +841,14 @@
         "not-found": "⚠️ No lyrics found for this song."
       },
       "menu": {
+        "preferred-provider": {
+          "label": "Preferred Provider",
+          "tooltip": "Choose the default provider to use",
+          "none": {
+            "label": "None",
+            "tooltip": "No preferred provider"
+          }
+        },
         "default-text-string": {
           "label": "Default character between lyrics",
           "tooltip": "Choose the default character to use for the gap between lyrics"
@@ -863,6 +910,27 @@
     "touchbar": {
       "description": "Adds a TouchBar widget for macOS users",
       "name": "TouchBar"
+    },
+    "transparent-player": {
+      "description": "Makes the app window transparent",
+      "name": "Transparent Player",
+      "menu": {
+        "opacity": {
+          "label": "Opacity",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Type",
+          "submenu": {
+            "acrylic": "Acrylic",
+            "mica": "Mica",
+            "tabbed": "Tabbed",
+            "none": "None"
+          }
+        }
+      }
     },
     "tuna-obs": {
       "description": "Integration with OBS's plugin Tuna",

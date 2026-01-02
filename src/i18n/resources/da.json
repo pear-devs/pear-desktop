@@ -8,7 +8,8 @@
         "load-all": "Indlæser alle plugins",
         "load-failed": "Fejl ved indlæsning af plugin \"{{pluginName}}\"",
         "loaded": "Plugin \"{{pluginName}}\" indlæst",
-        "unload-failed": "Fejl ved unload af plugin \"{{pluginName}}\""
+        "unload-failed": "Fejl ved aflæsning af plugin \"{{pluginNavn}}\"",
+        "unloaded": "Plugin \"{{pluginNavn}}\" aflæssede"
       }
     }
   },
@@ -98,6 +99,7 @@
               "auto-reset-app-cache": "Nulstil app cache når appen starter",
               "disable-hardware-acceleration": "Deaktiver hardware acceleration",
               "edit-config-json": "Rediger config.json",
+              "override-user-agent": "Erstat Bruger-Agent",
               "restart-on-config-changes": "Genstart ved config ændringer",
               "set-proxy": {
                 "label": "Indstil proxy",
@@ -130,22 +132,34 @@
             }
           },
           "resume-on-start": "Genoptag sidste sang når appen starter",
+          "single-instance-lock": "Enkeltinstans lås",
           "start-at-login": "Start ved login",
           "starting-page": {
             "label": "Startside",
             "unset": "Ikke valgt"
           },
           "tray": {
+            "label": "Bakke",
             "submenu": {
               "disabled": "Deaktiveret",
+              "enabled-and-hide-app": "Bakke aktiveret, og skjul programvindue",
               "enabled-and-show-app": "Aktiver og vis app",
               "play-pause-on-click": "Start/Stop ved klik"
             }
           },
           "visual-tweaks": {
+            "label": "Visuelle Justeringer",
             "submenu": {
+              "custom-window-title": {
+                "label": "Tilpasset vindues titel",
+                "prompt": {
+                  "label": "Indtast tilpasset vindues titel: (lad være top for deaktiveret)",
+                  "placeholder": "Eksempel: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "Standard",
+                "force-show": "Tving visning",
                 "hide": "Skjul",
                 "label": "Like knapper"
               },
@@ -153,11 +167,15 @@
               "theme": {
                 "dialog": {
                   "button": {
+                    "cancel": "Annuller",
                     "remove": "Fjern"
-                  }
+                  },
+                  "remove-theme": "Er du sikker på at du til fjerne det brugerdefinerede tema?",
+                  "remove-theme-message": "Dette vil fjerne det brugerdefinerede tema"
                 },
                 "label": "Tema",
                 "submenu": {
+                  "import-css-file": "Importer brugerdefinerede CSS fil",
                   "no-theme": "Intet tema"
                 }
               }
@@ -173,6 +191,7 @@
       "view": {
         "label": "Vis",
         "submenu": {
+          "force-reload": "Tving Genindlæs",
           "reload": "Genindlæs",
           "zoom-in": "Zoom ind",
           "zoom-out": "Zoom ud"
@@ -187,8 +206,8 @@
       "restart": "Genstart app",
       "show": "Vis vindue",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },

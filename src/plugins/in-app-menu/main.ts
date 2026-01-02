@@ -3,10 +3,10 @@ import { register } from 'electron-localshortcut';
 import {
   BrowserWindow,
   Menu,
-  MenuItem,
+  type MenuItem,
   ipcMain,
   nativeImage,
-  WebContents,
+  type WebContents,
 } from 'electron';
 
 import type { BackendContext } from '@/types/contexts';
@@ -54,7 +54,7 @@ export const onMainLoad = ({
     return target;
   };
 
-  ipcMain.handle('ytmd:menu-event', (event, commandId: number) => {
+  ipcMain.handle('peard:menu-event', (event, commandId: number) => {
     const target = getMenuItemById(commandId);
     if (target)
       (

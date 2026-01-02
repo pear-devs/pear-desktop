@@ -1,5 +1,5 @@
-import { globalShortcut, MenuItem } from 'electron';
-import prompt, { KeybindOptions } from 'custom-electron-prompt';
+import { globalShortcut, type MenuItem } from 'electron';
+import prompt, { type KeybindOptions } from 'custom-electron-prompt';
 
 import hudStyle from './volume-hud.css?inline';
 import { createPlugin } from '@/utils';

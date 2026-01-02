@@ -31,6 +31,15 @@
       },
       "theme": {
         "css-file-not-found": "CSS faili „{{cssFile}}“ pole olemas, seega eirame eelistust"
+      },
+      "unresponsive": {
+        "details": "Tõrge ei vasta!\n{{error}}"
+      },
+      "when-ready": {
+        "clearing-cache-after-20s": "Programmi vahemälu kustutamine"
+      },
+      "window": {
+        "tried-to-render-offscreen": "Akent prooviti renderdada väljaspool ekraani, windowSize={{windowSize}}, displaySize={{displaySize}}, position={{position}}"
       }
     },
     "dialog": {
@@ -89,8 +98,28 @@
             "submenu": {
               "auto-reset-app-cache": "Rakenduse käivitamisel lähtesta puhverdatud andmed",
               "disable-hardware-acceleration": "Lülita raudvaraline kiirendamine välja",
-              "edit-config-json": "Muuda config.json faili"
+              "edit-config-json": "Muuda config.json faili",
+              "override-user-agent": "Jõudlusta User-Agent",
+              "restart-on-config-changes": "Taaskäivita pärast konfiguratsiooni muutmist",
+              "set-proxy": {
+                "label": "Määra proxy",
+                "prompt": {
+                  "label": "Sisesta proxy aadress: (jäta täitmata, et välja lülitada)",
+                  "placeholder": "Näide: SOCKS5://127.0.0.1:9999",
+                  "title": "Määra proxy"
+                }
+              },
+              "toggle-dev-tools": "Lülita sisse arendaja tööriistad"
             }
+          },
+          "always-on-top": "Alati esiplaanil",
+          "auto-update": "Automaatsed uuendused",
+          "hide-menu": {
+            "dialog": {
+              "message": "Järgmisel käivitamisel jääb menüü peidetuks, kasutage [Alt] klahvi, et näidata (või [`], kui kasutate rakendusesisest menüüd)",
+              "title": "Menüü peitmine on sisse lülitatud"
+            },
+            "label": "Peida menüü"
           },
           "language": {
             "dialog": {
@@ -102,15 +131,69 @@
               "to-help-translate": "Soovid aidata tõlkimisel? Klõpsi siin"
             }
           },
-          "resume-on-start": "Rakenduse käivitamisel jätka viimatiesitatud loo esitamist"
+          "resume-on-start": "Rakenduse käivitamisel jätka viimatiesitatud loo esitamist",
+          "single-instance-lock": "Ühe instantsi lukk",
+          "start-at-login": "Käivita sisselogimisel",
+          "starting-page": {
+            "label": "Avaleht",
+            "unset": "Määramata"
+          },
+          "tray": {
+            "label": "Trey",
+            "submenu": {
+              "disabled": "Välja lülitatud",
+              "enabled-and-hide-app": "Sisse lülitatud ja rakendus peidetud",
+              "enabled-and-show-app": "Sisse lülitatud ja rakendus nähtav",
+              "play-pause-on-click": "Mängi/Peata klõpsates"
+            }
+          },
+          "visual-tweaks": {
+            "label": "Visuaalsed muudatused",
+            "submenu": {
+              "custom-window-title": {
+                "label": "Kohandatud akna tiitel",
+                "prompt": {
+                  "label": "Sisesta kohandatud akna tiitel: (jäta täitmata, et välja lülitada)",
+                  "placeholder": "Näide: {{applicationName}}"
+                }
+              },
+              "like-buttons": {
+                "default": "Vaikimisi",
+                "force-show": "Sunni näitama",
+                "hide": "Peida",
+                "label": "Meeldib nupud"
+              },
+              "remove-upgrade-button": "Eemalda upgrade nupp",
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "Katkesta",
+                    "remove": "Eemalda"
+                  },
+                  "remove-theme": "Kas oled kindel, et soovid enda loodud kujunduse eemaldada?",
+                  "remove-theme-message": "Sellega saab sinu loodud kujundus eemdladatud"
+                },
+                "label": "Kujundus",
+                "submenu": {
+                  "import-css-file": "Impordi kohandatud CSS fail",
+                  "no-theme": "Ilma kujunduseta"
+                }
+              }
+            }
+          }
         }
       },
       "plugins": {
+        "enabled": "Kasutusel",
         "label": "Lisamoodulid",
         "new": "UUS"
       },
       "view": {
+        "label": "Vaata",
         "submenu": {
+          "force-reload": "Laadi sundkorras uuesti",
+          "reload": "Laadi uuesti",
+          "reset-zoom": "Tegelik suurus",
           "toggle-fullscreen": "Lülita täisekraanivaade sisse/välja",
           "zoom-in": "Suumi sisse",
           "zoom-out": "Suumi välja"
@@ -125,8 +208,8 @@
       "restart": "Käivita rakendus uuesti",
       "show": "Näita akent",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -142,8 +225,28 @@
       },
       "name": "Reklaamiblokeerija"
     },
-    "ambient-mode": {
+    "album-actions": {
+      "description": "Lisab Undislike, Ebameeldiv, Meeldiv ja Unlike nupud selle rakendamiseks kõikidele loendisse või albumisse kuuluvatele lauludele.",
+      "name": "Albumi aktsioonid"
+    },
+    "album-color-theme": {
+      "description": "Rakendab dünaamilist teemat ja visuaalseid efekte, mis põhinevad albumi värvipalettil",
       "menu": {
+        "color-mix-ratio": {
+          "label": "Värvide segamissuhe",
+          "submenu": {
+            "percent": "{{suhe}}%"
+          }
+        }
+      },
+      "name": "Albumi värviteema"
+    },
+    "ambient-mode": {
+      "description": "Rakendab valgusefekti, projitseerides videost õrnad värvid ekraani taustale",
+      "menu": {
+        "blur-amount": {
+          "label": "Hägusus"
+        },
         "opacity": {
           "submenu": {
             "percent": "{{opacity}}%"

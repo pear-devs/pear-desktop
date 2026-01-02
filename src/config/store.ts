@@ -1,6 +1,6 @@
 import Store from 'electron-store';
 
-import defaults from './defaults';
+import { defaultConfig as defaults } from './defaults';
 
 import { DefaultPresetList, type Preset } from '@/plugins/downloader/types';
 
@@ -112,7 +112,10 @@ const migrations = {
   '>=2.1.3'(store: IStore) {
     const listenAlong = store.get('plugins.discord.listenAlong');
     if (listenAlong !== undefined) {
-      store.set('plugins.discord.playOnYouTubeMusic', listenAlong);
+      store.set(
+        'plugins.discord.playOn\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063',
+        listenAlong,
+      );
       store.delete('plugins.discord.listenAlong');
     }
   },
@@ -257,7 +260,7 @@ const migrations = {
   },
 };
 
-export default new Store({
+export const store = new Store({
   defaults: {
     ...defaults,
     // README: 'plugin' uses deepmerge to populate the default values, so it is not necessary to include it here

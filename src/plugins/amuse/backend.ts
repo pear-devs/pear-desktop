@@ -4,7 +4,7 @@ import { type Context, Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { serve } from '@hono/node-server';
 
-import registerCallback, { type SongInfo } from '@/providers/song-info';
+import { registerCallback, type SongInfo } from '@/providers/song-info';
 import { createBackend } from '@/utils';
 
 import type { AmuseSongInfo } from './types';

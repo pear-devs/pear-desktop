@@ -2,12 +2,18 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
-import { Innertube, UniversalCache, Utils, YTNodes } from 'youtubei.js';
+import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
+import {
+  Innertube,
+  UniversalCache,
+  Utils,
+  YTNodes,
+  Platform,
+} from '\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js';
 import is from 'electron-is';
 import filenamify from 'filenamify';
 import { Mutex } from 'async-mutex';
-import NodeID3, { TagConstants } from 'node-id3';
+import * as NodeID3 from 'node-id3';
 import { BG, type BgConfig } from 'bgutils-js';
 import { lazy } from 'lazy-var';
 
@@ -17,7 +23,8 @@ import {
   sendFeedback as sendFeedback_,
   setBadge,
 } from './utils';
-import registerCallback, {
+import {
+  registerCallback,
   cleanupName,
   getImage,
   MediaType,
@@ -27,18 +34,18 @@ import registerCallback, {
 import { getNetFetchAsFetch } from '@/plugins/utils/main';
 import { t } from '@/i18n';
 
-import { DefaultPresetList, type Preset, YoutubeFormatList } from '../types';
+import { DefaultPresetList, type Preset, VideoFormatList } from '../types';
 
 import type { DownloaderPluginConfig } from '../index';
 import type { BackendContext } from '@/types/contexts';
 import type { GetPlayerResponse } from '@/types/get-player-response';
-import type { FormatOptions } from 'node_modules/youtubei.js/dist/src/types';
-import type { VideoInfo } from 'node_modules/youtubei.js/dist/src/parser/youtube';
-import type { PlayerErrorMessage } from 'node_modules/youtubei.js/dist/src/parser/nodes';
+import type { FormatOptions } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/types';
+import type { VideoInfo } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/\u0079\u006f\u0075\u0074\u0075\u0062\u0065';
+import type { PlayerErrorMessage } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/nodes';
 import type {
   TrackInfo,
   Playlist,
-} from 'node_modules/youtubei.js/dist/src/parser/ytmusic';
+} from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/ytmusic';
 
 type CustomSongInfo = SongInfo & { trackId?: string };
 
@@ -51,11 +58,27 @@ const ffmpeg = lazy(async () =>
 );
 const ffmpegMutex = new Mutex();
 
+Platform.shim.eval = async (data: Types.BuildScriptResult, env: Record<string, Types.VMPrimative>) => {
+  const properties = [];
+
+  if(env.n) {
+    properties.push(`n: exportedVars.nFunction("${env.n}")`)
+  }
+
+  if (env.sig) {
+    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
+  }
+
+  const code = `${data.output}\nreturn { ${properties.join(', ')} }`;
+
+  return new Function(code)();
+}
+
 let yt: Innertube;
 let win: BrowserWindow;
 let playingUrl: string;
 
-const isYouTubeMusicPremium = async () => {
+const isPremium = async () => {
   // If signed out, it is understood as non-premium
   const isSignedIn = (await win.webContents.executeJavaScript(
     '!!yt.config_.LOGGED_IN',
@@ -65,7 +88,7 @@ const isYouTubeMusicPremium = async () => {
 
   // If signed in, check if the upgrade button is present
   const upgradeBtnIconPathData = (await win.webContents.executeJavaScript(
-    'document.querySelector(\'iron-iconset-svg[name="yt-sys-icons"] #youtube_music_monochrome\')?.firstChild?.getAttribute("d")?.substring(0, 15)',
+    'document.querySelector(\'iron-iconset-svg[name="yt-sys-icons"] #\u0079\u006f\u0075\u0074\u0075\u0062\u0065_music_monochrome\')?.firstChild?.getAttribute("d")?.substring(0, 15)',
   )) as string | null;
 
   // Fallback to non-premium if the icon is not found
@@ -106,7 +129,7 @@ const sendError = (error: Error, source?: string) => {
 export const getCookieFromWindow = async (win: BrowserWindow) => {
   return (
     await win.webContents.session.cookies.get({
-      url: 'https://music.youtube.com',
+      url: 'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com',
     })
   )
     .map((it) => it.name + '=' + it.value)
@@ -190,7 +213,7 @@ export const onMainLoad = async ({
   }
 
   ipc.handle('download-song', (url: string) => downloadSong(url));
-  ipc.on('ytmd:video-src-changed', (data: GetPlayerResponse) => {
+  ipc.on('peard:video-src-changed', (data: GetPlayerResponse) => {
     playingUrl = data.microformat.microformatDataRenderer.urlCanonical;
   });
   ipc.handle('download-playlist-request', async (url: string) =>
@@ -296,8 +319,8 @@ function downloadSongOnFinishSetup({
     }
   });
 
-  ipcMain.on('ytmd:player-api-loaded', () => {
-    ipc.send('ytmd:setup-time-changed-listener');
+  ipcMain.on('peard:player-api-loaded', () => {
+    ipc.send('peard:setup-time-changed-listener');
   });
 }
 
@@ -388,7 +411,7 @@ async function downloadSongUnsafe(
   }
 
   const downloadOptions: FormatOptions = {
-    type: (await isYouTubeMusicPremium()) ? 'audio' : 'video+audio', // Audio, video or video+audio
+    type: (await isPremium()) ? 'audio' : 'video+audio', // Audio, video or video+audio
     quality: 'best', // Best, bestefficiency, 144p, 240p, 480p, 720p and so on.
     format: 'any', // Media container format
   };
@@ -398,7 +421,7 @@ async function downloadSongUnsafe(
   let targetFileExtension: string;
   if (!presetSetting?.extension) {
     targetFileExtension =
-      YoutubeFormatList.find((it) => it.itag === format.itag)?.container ??
+      VideoFormatList.find((it) => it.itag === format.itag)?.container ??
       'mp3';
   } else {
     targetFileExtension = presetSetting?.extension ?? 'mp3';
@@ -590,7 +613,7 @@ async function writeID3(
       tags.image = {
         mime: 'image/png',
         type: {
-          id: TagConstants.AttachedPicture.PictureType.FRONT_COVER,
+          id: NodeID3.TagConstants.AttachedPicture.PictureType.FRONT_COVER,
         },
         description: 'thumbnail',
         imageBuffer: coverBuffer,

@@ -14,8 +14,8 @@ export const VideoSwitchButton = (props: VideoSwitchButtonProps) => (
   >
     <input
       checked={true}
-      id="video-toggle-video-switch-button-checkbox"
       class="video-switch-button-checkbox"
+      id="video-toggle-video-switch-button-checkbox"
       type="checkbox"
     />
     <label

@@ -5,10 +5,10 @@
         "execute-failed": "Mislukt om plugin {{pluginName}}::{{contextName}} uit te voeren",
         "executed-at-ms": "Plugin {{pluginName}}::{{contextName}} uitgevoerd in {{ms}}ms",
         "initialize-failed": "Initialisatie van plugin \"{{pluginName}}\" mislukt",
-        "load-all": "Alle plugins laden",
+        "load-all": "Alle plugins aan het laden",
         "load-failed": "Mislukt om plugin \"{{pluginName}}\" te laden",
         "loaded": "Plugin \"{{pluginName}}\" geladen",
-        "unload-failed": "Mislukt om plugin \"{{pluginName}}\" te lossen",
+        "unload-failed": "Mislukt om plugin \"{{pluginName}}\" te ontladen",
         "unloaded": "Plugin \"{{pluginName}}\" gelost"
       }
     }
@@ -150,6 +150,13 @@
           "visual-tweaks": {
             "label": "Visuele Aanpassingen",
             "submenu": {
+              "custom-window-title": {
+                "label": "Aangepaste venstertitel",
+                "prompt": {
+                  "label": "Voer aangepaste venstertitel in: (laat leeg om uit te schakelen)",
+                  "placeholder": "Voorbeeld: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "Standaard",
                 "force-show": "Forceren weergeven",
@@ -163,12 +170,12 @@
                     "cancel": "Annuleren",
                     "remove": "Verwijderen"
                   },
-                  "remove-theme": "Weet je zeker dat je het aangepaste thema wilt verwijderen?",
-                  "remove-theme-message": "Dit verwijderd het aangepaste thema"
+                  "remove-theme": "Weet je zeker dat je het aangepaste thema wil verwijderen?",
+                  "remove-theme-message": "Dit verwijdert het aangepaste thema"
                 },
                 "label": "Thema",
                 "submenu": {
-                  "import-css-file": "Aangepast CSS-bestand importeren",
+                  "import-css-file": "Importeer aangepast CSS-bestand",
                   "no-theme": "Geen thema"
                 }
               }
@@ -178,16 +185,16 @@
       },
       "plugins": {
         "enabled": "Ingeschakeld",
-        "label": "Plugins",
+        "label": "Invoegtoepassingen",
         "new": "NIEUW"
       },
       "view": {
-        "label": "Weergave",
+        "label": "Bekijken",
         "submenu": {
           "force-reload": "Forceer Herladen",
           "reload": "Herladen",
           "reset-zoom": "Ware Grootte",
-          "toggle-fullscreen": "Volledig Scherm Wisselen",
+          "toggle-fullscreen": "Volledig Scherm Ja/Nee",
           "zoom-in": "Inzoomen",
           "zoom-out": "Uitzoomen"
         }
@@ -195,31 +202,31 @@
     },
     "tray": {
       "next": "Volgende",
-      "play-pause": "Afspelen/Pauzeren",
+      "play-pause": "Afspelen/Pauze",
       "previous": "Vorige",
-      "quit": "Afsluiten",
-      "restart": "Applicatie Opnieuw Opstarten",
-      "show": "Venster Weergeven",
+      "quit": "Verlaat",
+      "restart": "Herstarten App",
+      "show": "Weergeven Venster",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
   "plugins": {
     "ad-speedup": {
-      "description": "Wanneer een advertentie afspeelt, dempt het geluid en versnelt de playback naar 16x",
-      "name": "Snellere advertenties"
+      "description": "Bij het afspelen van een advertentie wordt het geluid gedempt en wordt de afspeelsnelheid wordt verhoogd naar 16x",
+      "name": "Advertenties versnellen"
     },
     "adblocker": {
-      "description": "Blokkeer alle advertenties en tracking vanuit de doos",
+      "description": "Blokkeer alle advertenties en trackers buiten het kader",
       "menu": {
         "blocker": "Blokkeerder"
       },
       "name": "Advertentieblokkeerder"
     },
     "album-actions": {
-      "description": "Voegt knoppen toe voor Ondisliken, Disliken, Liken en Ontliken om dit toe te passen op alle nummers in een afspeellijst of album",
+      "description": "Voegt niet-Niet Leuk, Niet Leuk, Leuk, niet-Leuk knoppen toe om dit toe te passen op alle nummers in een afspeellijst of album",
       "name": "Albumacties"
     },
     "album-color-theme": {
@@ -280,7 +287,7 @@
       "name": "Omgevingsmodus"
     },
     "amuse": {
-      "description": "Voegt YouTube Music ondersteuning toe voor de Amuse now playing widget van 6K Labs",
+      "description": "Voegt {{applicationName}} ondersteuning toe voor de Amuse now playing widget van 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API server loopt. Gebruik /query voor nummer informatie."
@@ -362,11 +369,11 @@
       "name": "Vervagen Navigatiebalk"
     },
     "bypass-age-restrictions": {
-      "description": "Omzeil de leeftijdsverificatie van YouTube",
+      "description": "Omzeil de leeftijdsverificatie van Music Player",
       "name": "Leeftijdsbeperkingen Omzeilen"
     },
     "captions-selector": {
-      "description": "Ondertitelkeuze voor YouTube Music-audiotracks",
+      "description": "Ondertitelkeuze voor {{applicationName}}-audiotracks",
       "menu": {
         "autoload": "Automatisch de laatst gebruikte ondertitel selecteren",
         "disable-captions": "Standaard geen ondertitels"
@@ -414,6 +421,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Configureer een aangepast media uitvoerapparaat voor liedjes",
+      "menu": {
+        "device-selector": "Selecteer je apparaat"
+      },
+      "name": "Aangepast uitvoerapparaat",
+      "prompt": {
+        "device-selector": {
+          "label": "Kies het uitvoermedia-apparaat dat gebruikt zal worden",
+          "title": "Selecteer het uitvoermedia"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Zorgt ervoor dat nummers starten in 'gepauzeerde' modus",
       "menu": {
@@ -436,8 +456,16 @@
         "disconnected": "Verbinding verbroken",
         "hide-duration-left": "Verberg resterende tijd",
         "hide-github-button": "GitHub-knop verbergen",
-        "play-on-youtube-music": "Afspelen op YouTube Music",
-        "set-inactivity-timeout": "Inactiviteitstime-out instellen"
+        "play-on-application": "Afspelen op {{applicationName}}",
+        "set-inactivity-timeout": "Inactiviteitstime-out instellen",
+        "set-status-display-type": {
+          "label": "Status tekst",
+          "submenu": {
+            "application": "Naar {{applicationName}} aan het luisteren",
+            "artist": "Naar {artist} aan het luisteren",
+            "title": "Naar {song title} aan het luisteren"
+          }
+        }
       },
       "name": "Discord Rich Presence",
       "prompt": {
@@ -729,6 +757,7 @@
         "listenbrainz": {
           "token": "Voer het ListenBrainz-gebruikerstoken in"
         },
+        "scrobble-alternative-artist": "Gebruik alternatieve artiesten",
         "scrobble-alternative-title": "Gebruik alternatieve titels",
         "scrobble-other-media": "Scrobble andere media"
       },
@@ -814,6 +843,14 @@
           "label": "Zorg ervoor dat de songteksten perfect gesynchroniseerd zijn",
           "tooltip": "Bereken tot op de milliseconde de weergave van de volgende regel (kan een kleine impact hebben op de prestaties)"
         },
+        "preferred-provider": {
+          "label": "Voorkeur van Provider",
+          "none": {
+            "label": "Geen",
+            "tooltip": "Geen provider beschikbaar"
+          },
+          "tooltip": "Kies de standaardprovider om te gebruiken"
+        },
         "romanization": {
           "label": "Romaniseer songtekst",
           "tooltip": "Als de songtekst in een andere taal is, probeer dan een Latijnse versie weer te geven."
@@ -845,6 +882,27 @@
     "touchbar": {
       "description": "Voegt een TouchBar-widget toe voor macOS-gebruikers",
       "name": "TouchBar"
+    },
+    "transparent-player": {
+      "description": "Maakt de applicatiescherm doorzichtbaar",
+      "menu": {
+        "opacity": {
+          "label": "Dekking",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Soort",
+          "submenu": {
+            "acrylic": "Acrylic",
+            "mica": "Mica",
+            "none": "Geen",
+            "tabbed": "Tabbed"
+          }
+        }
+      },
+      "name": "Doorzichtige muziek speler"
     },
     "tuna-obs": {
       "description": "Integratie met OBS's plug-in Tuna",

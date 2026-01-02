@@ -81,26 +81,26 @@ export default createPlugin<
           <>
             <Show when={showUnDislike()}>
               <UnDislikeButton
-                onClick={this.loadFullList}
                 maskSize={unDislikeMaskSize()}
+                onClick={this.loadFullList}
               />
             </Show>
             <Show when={showDislike()}>
               <DislikeButton
-                onClick={this.loadFullList}
                 maskSize={dislikeMaskSize()}
+                onClick={this.loadFullList}
               />
             </Show>
             <Show when={showLike()}>
               <LikeButton
-                onClick={this.loadFullList}
                 maskSize={likeMaskSize()}
+                onClick={this.loadFullList}
               />
             </Show>
             <Show when={showUnLike()}>
               <UnLikeButton
-                onClick={this.loadFullList}
                 maskSize={unLikeMaskSize()}
+                onClick={this.loadFullList}
               />
             </Show>
           </>
