@@ -2,6 +2,11 @@ import { jaroWinkler } from '@skyra/jaro-winkler';
 
 import { config } from '../renderer/renderer';
 import { LRC } from '../parsers/lrc';
+import {
+  ensureLeadingPaddingEmptyLine,
+  ensureTrailingEmptyLine,
+  mergeConsecutiveEmptySyncedLines,
+} from '../shared/lines';
 
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
 
@@ -77,61 +82,59 @@ export class LRCLib implements LyricProvider {
     }
 
     const filteredResults = [];
+    const SIM_THRESHOLD = 0.9;
     for (const item of data) {
+      // quick duration guard to avoid expensive similarity on far-off matches
+      if (Math.abs(item.duration - songDuration) > 15) continue;
+      if (item.instrumental) continue;
+
       const { artistName } = item;
 
-      const artists = artist.split(/[&,]/g).map((i) => i.trim());
-      const itemArtists = artistName.split(/[&,]/g).map((i) => i.trim());
+      const artists = artist
+        .split(/[&,]/g)
+        .map((i) => i.trim().toLowerCase())
+        .filter(Boolean);
+      const itemArtists = artistName
+        .split(/[&,]/g)
+        .map((i) => i.trim().toLowerCase())
+        .filter(Boolean);
 
-      // Try to match using artist name first
-      const permutations = [];
-      for (const artistA of artists) {
-        for (const artistB of itemArtists) {
-          permutations.push([artistA.toLowerCase(), artistB.toLowerCase()]);
+      // fast path: any exact artist match
+      let ratio = 0;
+      if (artists.some((a) => itemArtists.includes(a))) {
+        ratio = 1;
+      } else {
+        // compute best pairwise similarity with early exit
+        outer: for (const a of artists) {
+          for (const b of itemArtists) {
+            const r = jaroWinkler(a, b);
+            if (r > ratio) ratio = r;
+            if (ratio >= 0.97) break outer; // good enough, stop early
+          }
         }
       }
 
-      for (const artistA of itemArtists) {
-        for (const artistB of artists) {
-          permutations.push([artistA.toLowerCase(), artistB.toLowerCase()]);
-        }
-      }
-
-      let ratio = Math.max(...permutations.map(([x, y]) => jaroWinkler(x, y)));
-
-      // If direct artist match is below threshold and we have tags, try matching with tags
-      if (ratio <= 0.9 && tags && tags.length > 0) {
-        // Filter out the artist from tags to avoid duplicate comparisons
-        const filteredTags = tags.filter(
-          (tag) => tag.toLowerCase() !== artist.toLowerCase(),
+      // If direct artist match is below threshold and we have tags, compare tags too
+      if (ratio <= SIM_THRESHOLD && tags && tags.length > 0) {
+        const artistSet = new Set(artists);
+        const filteredTags = Array.from(
+          new Set(
+            tags
+              .map((t) => t.trim().toLowerCase())
+              .filter((t) => t && !artistSet.has(t)),
+          ),
         );
 
-        const tagPermutations = [];
-        // Compare each tag with each item artist
-        for (const tag of filteredTags) {
-          for (const itemArtist of itemArtists) {
-            tagPermutations.push([tag.toLowerCase(), itemArtist.toLowerCase()]);
+        outerTags: for (const t of filteredTags) {
+          for (const b of itemArtists) {
+            const r = jaroWinkler(t, b);
+            if (r > ratio) ratio = r;
+            if (ratio >= 0.97) break outerTags;
           }
-        }
-
-        // Compare each item artist with each tag
-        for (const itemArtist of itemArtists) {
-          for (const tag of filteredTags) {
-            tagPermutations.push([itemArtist.toLowerCase(), tag.toLowerCase()]);
-          }
-        }
-
-        if (tagPermutations.length > 0) {
-          const tagRatio = Math.max(
-            ...tagPermutations.map(([x, y]) => jaroWinkler(x, y)),
-          );
-
-          // Use the best match ratio between direct artist match and tag match
-          ratio = Math.max(ratio, tagRatio);
         }
       }
 
-      if (ratio <= 0.9) continue;
+      if (ratio <= SIM_THRESHOLD) continue;
       filteredResults.push(item);
     }
 
@@ -157,21 +160,36 @@ export class LRCLib implements LyricProvider {
 
     const raw = closestResult.syncedLyrics;
     const plain = closestResult.plainLyrics;
-    if (!raw && !plain) {
-      return null;
+
+    if (raw) {
+      // Prefer synced
+      const parsed = LRC.parse(raw).lines.map((l) => ({
+        ...l,
+        status: 'upcoming' as const,
+      }));
+      const merged = mergeConsecutiveEmptySyncedLines(parsed);
+      const withLeading = ensureLeadingPaddingEmptyLine(merged, 300, 'span');
+      const finalLines = ensureTrailingEmptyLine(
+        withLeading,
+        'midpoint',
+        songDuration * 1000,
+      );
+
+      return {
+        title: closestResult.trackName,
+        artists: closestResult.artistName.split(/[&,]/g),
+        lines: finalLines,
+      };
+    } else if (plain) {
+      // Fallback to plain if no synced
+      return {
+        title: closestResult.trackName,
+        artists: closestResult.artistName.split(/[&,]/g),
+        lyrics: plain,
+      };
     }
 
-    return {
-      title: closestResult.trackName,
-      artists: closestResult.artistName.split(/[&,]/g),
-      lines: raw
-        ? LRC.parse(raw).lines.map((l) => ({
-            ...l,
-            status: 'upcoming' as const,
-          }))
-        : undefined,
-      lyrics: plain,
-    };
+    return null;
   }
 }
 

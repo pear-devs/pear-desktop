@@ -42,21 +42,25 @@ export const menu = async (
       ],
     },
     {
-      label: t('plugins.synced-lyrics.menu.precise-timing.label'),
-      toolTip: t('plugins.synced-lyrics.menu.precise-timing.tooltip'),
-      type: 'checkbox',
-      checked: config.preciseTiming,
-      click(item) {
-        ctx.setConfig({
-          preciseTiming: item.checked,
-        });
-      },
-    },
-    {
       label: t('plugins.synced-lyrics.menu.line-effect.label'),
       toolTip: t('plugins.synced-lyrics.menu.line-effect.tooltip'),
       type: 'submenu',
       submenu: [
+        {
+          label: t(
+            'plugins.synced-lyrics.menu.line-effect.submenu.enhanced.label',
+          ),
+          toolTip: t(
+            'plugins.synced-lyrics.menu.line-effect.submenu.enhanced.tooltip',
+          ),
+          type: 'radio',
+          checked: config.lineEffect === 'enhanced',
+          click() {
+            ctx.setConfig({
+              lineEffect: 'enhanced',
+            });
+          },
+        },
         {
           label: t(
             'plugins.synced-lyrics.menu.line-effect.submenu.fancy.label',
@@ -124,23 +128,52 @@ export const menu = async (
       toolTip: t('plugins.synced-lyrics.menu.default-text-string.tooltip'),
       type: 'submenu',
       submenu: [
-        { label: '♪', value: '♪' },
-        { label: '" "', value: ' ' },
-        { label: '...', value: ['.', '..', '...'] },
-        { label: '•••', value: ['•', '••', '•••'] },
-        { label: '———', value: '———' },
-      ].map(({ label, value }) => ({
-        label,
-        type: 'radio',
-        checked:
-          typeof value === 'string'
-            ? config.defaultTextString === value
-            : JSON.stringify(config.defaultTextString) ===
-              JSON.stringify(value),
-        click() {
-          ctx.setConfig({ defaultTextString: value });
+        ...[
+          { label: '•••', value: ['•', '•', '•'] },
+          { label: '...', value: ['.', '.', '.'] },
+          { label: '♪', value: '♪' },
+          { label: '———', value: '———' },
+          { label: '(𝑏𝑙𝑎𝑛𝑘)', value: '\u00A0' },
+        ].map(
+          ({ label, value }) =>
+            ({
+              label,
+              type: 'radio',
+              checked:
+                JSON.stringify(config.defaultTextString) ===
+                JSON.stringify(value),
+              enabled: config.showEmptyLineSymbols,
+              click() {
+                ctx.setConfig({ defaultTextString: value });
+              },
+            }) as const,
+        ),
+        { type: 'separator' },
+        {
+          label: t('plugins.synced-lyrics.menu.show-empty-line-symbols.label'),
+          toolTip: t(
+            'plugins.synced-lyrics.menu.show-empty-line-symbols.tooltip',
+          ),
+          type: 'checkbox',
+          checked: config.showEmptyLineSymbols ?? false,
+          click(item) {
+            ctx.setConfig({
+              showEmptyLineSymbols: item.checked,
+            });
+          },
         },
-      })),
+      ],
+    },
+    {
+      label: t('plugins.synced-lyrics.menu.precise-timing.label'),
+      toolTip: t('plugins.synced-lyrics.menu.precise-timing.tooltip'),
+      type: 'checkbox',
+      checked: config.preciseTiming,
+      click(item) {
+        ctx.setConfig({
+          preciseTiming: item.checked,
+        });
+      },
     },
     {
       label: t('plugins.synced-lyrics.menu.romanization.label'),

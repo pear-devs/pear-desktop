@@ -845,6 +845,10 @@
         "line-effect": {
           "label": "Line effect",
           "submenu": {
+            "enhanced": {
+              "label": "Enhanced",
+              "tooltip": "A refined lyric effect for smoother, more enjoyable reading."
+            },
             "fancy": {
               "label": "Fancy",
               "tooltip": "Use large, app-like effects on the current line"
@@ -864,9 +868,13 @@
           },
           "tooltip": "Choose the effect to apply to the current line"
         },
+        "show-empty-line-symbols": {
+          "label": "Show character between lyrics",
+          "tooltip": "Choose whether to always display the character between empty lyric lines."
+        },
         "precise-timing": {
           "label": "Make the lyrics perfectly synced",
-          "tooltip": "Calculate to the milisecond the display of the next line (can have a small impact on performance)"
+          "tooltip": "Calculate to the millisecond the display of the next line (can have a small impact on performance)"
         },
         "romanization": {
           "label": "Romanize lyrics",
