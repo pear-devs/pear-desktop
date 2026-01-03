@@ -1,12 +1,16 @@
-import { net } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+
+import { net } from 'electron';
+
 import { SlackApiClient, SlackError } from './slack-api-client';
 import { createBackend } from '@/utils';
-import registerCallback, { SongInfoEvent } from '@/providers/song-info';
+import { registerCallback, SongInfoEvent } from '@/providers/song-info';
 import { t } from '@/i18n';
+
 import type { SongInfo } from '@/providers/song-info';
+import type { BackendContext } from '@/types/contexts';
 
 // Plugin config type
 export interface SlackNowPlayingConfig {
@@ -22,17 +26,27 @@ export interface SlackNowPlayingConfig {
  * @param config The object to check
  * @returns True if the object is a valid SlackNowPlayingConfig
  */
-function isSlackNowPlayingConfig(config: unknown): config is SlackNowPlayingConfig {
+function isSlackNowPlayingConfig(
+  config: unknown,
+): config is SlackNowPlayingConfig {
   if (!config || typeof config !== 'object') return false;
 
   const c = config as Partial<SlackNowPlayingConfig>;
-  return typeof c.enabled === 'boolean' &&
-         typeof c.token === 'string' &&
-         typeof c.cookieToken === 'string' &&
-         typeof c.emojiName === 'string';
+  return (
+    typeof c.enabled === 'boolean' &&
+    typeof c.token === 'string' &&
+    typeof c.cookieToken === 'string' &&
+    typeof c.emojiName === 'string'
+  );
 }
 
-const defaultEmojis = [':cd:', ':headphones:', ':musical_note:', ':notes:', ':radio:'];
+const defaultEmojis = [
+  ':cd:',
+  ':headphones:',
+  ':musical_note:',
+  ':notes:',
+  ':radio:',
+];
 
 // Cache to store album art file paths by URL to avoid repeated downloads
 type AlbumArtCache = {
@@ -50,7 +64,7 @@ const state = {
   albumArtCache: {} as AlbumArtCache, // Cache album art files
   cacheExpiryMs: 30 * 60 * 1000, // Cache expiry time (30 minutes)
   cacheCleanupTimer: undefined as NodeJS.Timeout | undefined, // Timer for periodic cache cleanup
-  context: undefined as any, // Store the plugin context
+  context: undefined as BackendContext<SlackNowPlayingConfig> | undefined, // Store the plugin context
   currentConfig: undefined as SlackNowPlayingConfig | undefined, // Current configuration
 };
 
@@ -71,7 +85,8 @@ async function cleanupTempFiles(): Promise<void> {
   for (const filePath of state.tempFiles) {
     try {
       // Check if the file exists before attempting to delete it
-      await fsPromises.access(filePath, fs.constants.F_OK)
+      await fsPromises
+        .access(filePath, fs.constants.F_OK)
         .then(() => fsPromises.unlink(filePath))
         .then(() => {
           // Remove the file from the set once it's deleted
@@ -83,7 +98,7 @@ async function cleanupTempFiles(): Promise<void> {
             console.error(`Error deleting temporary file ${filePath}:`, error);
           }
         });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Catch any unexpected errors
       if (error instanceof Error) {
         console.error(`Error during cleanup of ${filePath}:`, error.message);
@@ -113,7 +128,7 @@ async function cleanupExpiredCache(): Promise<void> {
         await fsPromises.access(cacheEntry.filePath, fs.constants.F_OK);
         await fsPromises.unlink(cacheEntry.filePath);
         state.tempFiles.delete(cacheEntry.filePath);
-      } catch (error: any) {
+      } catch {
         // Ignore errors if the file doesn't exist or is in use
       }
     }
@@ -147,19 +162,23 @@ function validateConfig(config: SlackNowPlayingConfig): ValidationResult {
   if (!config.cookieToken) {
     errors.push('Missing Slack cookie token');
   } else if (!config.cookieToken.startsWith('xoxd-')) {
-    errors.push('Invalid Slack cookie token format (should start with "xoxd-")');
+    errors.push(
+      'Invalid Slack cookie token format (should start with "xoxd-")',
+    );
   }
 
   // Check emoji name
   if (!config.emojiName) {
     errors.push('Missing custom emoji name');
   } else if (!/^[a-z0-9_-]+$/.test(config.emojiName)) {
-    errors.push('Invalid emoji name format (should only contain lowercase letters, numbers, hyphens, and underscores)');
+    errors.push(
+      'Invalid emoji name format (should only contain lowercase letters, numbers, hyphens, and underscores)',
+    );
   }
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -168,10 +187,14 @@ function validateConfig(config: SlackNowPlayingConfig): ValidationResult {
  * @param config The configuration to validate
  * @throws Error if the configuration is invalid
  */
-function assertValidConfig(config: SlackNowPlayingConfig): asserts config is SlackNowPlayingConfig {
+function assertValidConfig(
+  config: SlackNowPlayingConfig,
+): asserts config is SlackNowPlayingConfig {
   const result = validateConfig(config);
   if (!result.valid) {
-    throw new Error(`Invalid Slack Now Playing configuration: ${result.errors.join(', ')}`);
+    throw new Error(
+      `Invalid Slack Now Playing configuration: ${result.errors.join(', ')}`,
+    );
   }
 }
 
@@ -180,12 +203,17 @@ function assertValidConfig(config: SlackNowPlayingConfig): asserts config is Sla
  * @param songInfo Information about the current song
  * @param config Plugin configuration
  */
-async function setNowPlaying(songInfo: SongInfo, config: SlackNowPlayingConfig) {
+async function setNowPlaying(
+  songInfo: SongInfo,
+  config: SlackNowPlayingConfig,
+) {
   try {
     // Validate configuration
     const validationResult = validateConfig(config);
     if (!validationResult.valid) {
-      console.error(`Cannot set Slack status: ${validationResult.errors.join(', ')}`);
+      console.error(
+        `Cannot set Slack status: ${validationResult.errors.join(', ')}`,
+      );
       return;
     }
 
@@ -196,7 +224,8 @@ async function setNowPlaying(songInfo: SongInfo, config: SlackNowPlayingConfig) 
 
     const title = songInfo.alternativeTitle ?? songInfo.title;
     const artistPart = songInfo.artist || 'Unknown Artist';
-    const truncatedArtist = artistPart.length > 50 ? artistPart.substring(0, 50) + '...' : artistPart;
+    const truncatedArtist =
+      artistPart.length > 50 ? artistPart.substring(0, 50) + '...' : artistPart;
 
     // Use localized version of the status text
     let statusText = t('plugins.slack-now-playing.status-text')
@@ -204,29 +233,40 @@ async function setNowPlaying(songInfo: SongInfo, config: SlackNowPlayingConfig) 
       .replace('{{title}}', title);
 
     // Ensure the status text doesn't exceed Slack's limit
-    if (statusText.length > 97) statusText = statusText.substring(0, 97) + '...';
+    if (statusText.length > 97)
+      statusText = statusText.substring(0, 97) + '...';
 
     // Calculate expiration time (current time + remaining song duration)
     const elapsed = songInfo.elapsedSeconds ?? 0;
     const remaining = Math.max(0, Math.floor(songInfo.songDuration - elapsed));
     const expirationTime = Math.floor(Date.now() / 1000) + remaining;
 
-    await updateSlackStatusWithEmoji(statusText, expirationTime, songInfo, config);
-  } catch (error: any) {
+    await updateSlackStatusWithEmoji(
+      statusText,
+      expirationTime,
+      songInfo,
+      config,
+    );
+  } catch (error: unknown) {
     // Provide more detailed error information based on error type
     if (error instanceof Error) {
       console.error(`Error setting Slack status: ${error.message}`, {
         name: error.name,
-        stack: error.stack
+        stack: error.stack,
       });
     } else {
       console.error(`Error setting Slack status: ${String(error)}`);
     }
 
     // Re-throw specific errors that should be handled by the caller
-    if (error instanceof Error &&
-        (error.message.includes('token') || error.message.includes('authentication'))) {
-      throw new Error('Slack authentication failed. Please check your API token and cookie token.');
+    if (
+      error instanceof Error &&
+      (error.message.includes('token') ||
+        error.message.includes('authentication'))
+    ) {
+      throw new Error(
+        'Slack authentication failed. Please check your API token and cookie token.',
+      );
     }
   }
 }
@@ -249,7 +289,9 @@ async function updateSlackStatusWithEmoji(
     // Validate configuration
     const validationResult = validateConfig(config);
     if (!validationResult.valid) {
-      throw new Error(`Cannot update Slack status: ${validationResult.errors.join(', ')}`);
+      throw new Error(
+        `Cannot update Slack status: ${validationResult.errors.join(', ')}`,
+      );
     }
 
     const client = new SlackApiClient(config.token, config.cookieToken);
@@ -273,7 +315,6 @@ async function updateSlackStatusWithEmoji(
     // Update state with the new status and emoji
     state.lastStatus = statusText;
     state.lastEmoji = statusEmoji;
-
   } catch (error: unknown) {
     // Handle SlackError specifically
     if (error instanceof SlackError) {
@@ -287,7 +328,7 @@ async function updateSlackStatusWithEmoji(
     else if (error instanceof Error) {
       console.error(`Error updating Slack status: ${error.message}`, {
         name: error.name,
-        stack: error.stack
+        stack: error.stack,
       });
     } else {
       console.error(`Error updating Slack status: ${String(error)}`);
@@ -298,8 +339,11 @@ async function updateSlackStatusWithEmoji(
   }
 }
 
-async function getStatusEmoji(songInfo: SongInfo, config: SlackNowPlayingConfig): Promise<string> {
-  if (songInfo.imageSrc && await uploadEmojiToSlack(songInfo, config)) {
+async function getStatusEmoji(
+  songInfo: SongInfo,
+  config: SlackNowPlayingConfig,
+): Promise<string> {
+  if (songInfo.imageSrc && (await uploadEmojiToSlack(songInfo, config))) {
     return `:${config.emojiName}:`;
   }
 
@@ -313,12 +357,17 @@ async function getStatusEmoji(songInfo: SongInfo, config: SlackNowPlayingConfig)
  * @param config Plugin configuration
  * @returns True if the emoji was successfully uploaded, false otherwise
  */
-async function uploadEmojiToSlack(songInfo: SongInfo, config: SlackNowPlayingConfig): Promise<boolean> {
+async function uploadEmojiToSlack(
+  songInfo: SongInfo,
+  config: SlackNowPlayingConfig,
+): Promise<boolean> {
   try {
     // Validate configuration
     const validationResult = validateConfig(config);
     if (!validationResult.valid) {
-      console.error(`Cannot upload emoji to Slack: ${validationResult.errors.join(', ')}`);
+      console.error(
+        `Cannot upload emoji to Slack: ${validationResult.errors.join(', ')}`,
+      );
       return false;
     }
 
@@ -346,11 +395,13 @@ async function uploadEmojiToSlack(songInfo: SongInfo, config: SlackNowPlayingCon
       // Read the file as a Buffer and append directly to FormData
       const fileBuffer = await fs.promises.readFile(filePath);
       const filename = path.basename(filePath) || 'emoji.png';
-      const imageFile = new File([fileBuffer], filename);
+      // Convert Buffer to Uint8Array for File constructor compatibility
+      const imageFile = new File([new Uint8Array(fileBuffer)], filename);
       formData.append('image', imageFile, filename);
-
-    } catch (fileError: any) {
-      console.error(`Error preparing album art file: ${fileError instanceof Error ? fileError.message : String(fileError)}`);
+    } catch (fileError: unknown) {
+      console.error(
+        `Error preparing album art file: ${fileError instanceof Error ? fileError.message : String(fileError)}`,
+      );
       return false;
     }
 
@@ -364,31 +415,46 @@ async function uploadEmojiToSlack(songInfo: SongInfo, config: SlackNowPlayingCon
         const errorCode = apiError.responseData.error;
 
         if (errorCode === 'invalid_name') {
-          console.error(`Invalid emoji name: ${config.emojiName}. Emoji names can only contain lowercase letters, numbers, hyphens, and underscores.`);
+          console.error(
+            `Invalid emoji name: ${config.emojiName}. Emoji names can only contain lowercase letters, numbers, hyphens, and underscores.`,
+          );
         } else if (errorCode === 'too_large') {
-          console.error('Album art image is too large for Slack emoji (max 128KB).');
+          console.error(
+            'Album art image is too large for Slack emoji (max 128KB).',
+          );
         } else if (errorCode === 'name_taken') {
-          console.error(`Emoji name '${config.emojiName}' is already taken. This should not happen as we check for existing emojis.`);
+          console.error(
+            `Emoji name '${config.emojiName}' is already taken. This should not happen as we check for existing emojis.`,
+          );
         } else {
-          console.error(`Error uploading emoji: ${errorCode}`, apiError.responseData);
+          console.error(
+            `Error uploading emoji: ${errorCode}`,
+            apiError.responseData,
+          );
         }
         // Log the full Slack error response for diagnostics
         console.error('Slack error full response:', apiError.responseData);
-
       } else {
-        console.error(`Error uploading emoji to Slack: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
+        console.error(
+          `Error uploading emoji to Slack: ${apiError instanceof Error ? apiError.message : String(apiError)}`,
+        );
       }
       return false;
     }
   } catch (error: unknown) {
     // Handle any other unexpected errors
     if (error instanceof Error) {
-      console.error(`Unexpected error uploading emoji to Slack: ${error.message}`, {
-        name: error.name,
-        stack: error.stack
-      });
+      console.error(
+        `Unexpected error uploading emoji to Slack: ${error.message}`,
+        {
+          name: error.name,
+          stack: error.stack,
+        },
+      );
     } else {
-      console.error(`Unexpected error uploading emoji to Slack: ${String(error)}`);
+      console.error(
+        `Unexpected error uploading emoji to Slack: ${String(error)}`,
+      );
     }
     return false;
   }
@@ -418,7 +484,7 @@ async function saveAlbumArtToFile(songInfo: SongInfo): Promise<string | null> {
           // Verify the file still exists
           await fs.promises.access(cachedImage.filePath, fs.constants.F_OK);
           return cachedImage.filePath;
-        } catch (error: any) {
+        } catch {
           // File doesn't exist anymore, remove from cache
           delete state.albumArtCache[imageUrl];
         }
@@ -429,7 +495,7 @@ async function saveAlbumArtToFile(songInfo: SongInfo): Promise<string | null> {
         try {
           await fs.promises.unlink(cachedImage.filePath);
           state.tempFiles.delete(cachedImage.filePath);
-        } catch (error: any) {
+        } catch {
           // Ignore errors if the file doesn't exist
         }
       }
@@ -448,11 +514,15 @@ async function saveAlbumArtToFile(songInfo: SongInfo): Promise<string | null> {
       response = await net.fetch(imageUrl);
 
       if (!response.ok) {
-        console.error(`Failed to fetch album art: HTTP ${response.status} ${response.statusText}`);
+        console.error(
+          `Failed to fetch album art: HTTP ${response.status} ${response.statusText}`,
+        );
         return null;
       }
     } catch (fetchError) {
-      console.error(`Network error fetching album art: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`);
+      console.error(
+        `Network error fetching album art: ${fetchError instanceof Error ? fetchError.message : String(fetchError)}`,
+      );
       return null;
     }
 
@@ -466,7 +536,9 @@ async function saveAlbumArtToFile(songInfo: SongInfo): Promise<string | null> {
         return null;
       }
     } catch (bufferError) {
-      console.error(`Error processing album art data: ${bufferError instanceof Error ? bufferError.message : String(bufferError)}`);
+      console.error(
+        `Error processing album art data: ${bufferError instanceof Error ? bufferError.message : String(bufferError)}`,
+      );
       return null;
     }
 
@@ -482,20 +554,22 @@ async function saveAlbumArtToFile(songInfo: SongInfo): Promise<string | null> {
       // Add to cache
       state.albumArtCache[imageUrl] = {
         filePath,
-        timestamp: now
+        timestamp: now,
       };
 
       return filePath;
     } catch (fileError) {
-      console.error(`Error writing album art to file: ${fileError instanceof Error ? fileError.message : String(fileError)}`);
+      console.error(
+        `Error writing album art to file: ${fileError instanceof Error ? fileError.message : String(fileError)}`,
+      );
       return null;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Catch any other unexpected errors
     if (error instanceof Error) {
       console.error(`Error saving album art to file: ${error.message}`, {
         name: error.name,
-        stack: error.stack
+        stack: error.stack,
       });
     } else {
       console.error(`Error saving album art to file: ${String(error)}`);
@@ -509,12 +583,16 @@ async function saveAlbumArtToFile(songInfo: SongInfo): Promise<string | null> {
  * @param config Plugin configuration
  * @returns True if the emoji doesn't exist or was successfully deleted, false otherwise
  */
-async function ensureEmojiDoesNotExist(config: SlackNowPlayingConfig): Promise<boolean> {
+async function ensureEmojiDoesNotExist(
+  config: SlackNowPlayingConfig,
+): Promise<boolean> {
   try {
     // Validate configuration
     const validationResult = validateConfig(config);
     if (!validationResult.valid) {
-      console.error(`Cannot check emoji existence: ${validationResult.errors.join(', ')}`);
+      console.error(
+        `Cannot check emoji existence: ${validationResult.errors.join(', ')}`,
+      );
       return false;
     }
 
@@ -529,27 +607,39 @@ async function ensureEmojiDoesNotExist(config: SlackNowPlayingConfig): Promise<b
       if (!response || !response.emoji) {
         return false;
       }
-      if (response.emoji && typeof response.emoji === 'object' && config.emojiName in response.emoji) {
+      if (
+        response.emoji &&
+        typeof response.emoji === 'object' &&
+        config.emojiName in response.emoji
+      ) {
         // Emoji already exists, attempting to delete it
         return await deleteExistingEmoji(config);
       } else {
         // Emoji doesn't exist, no need to delete
         return true;
       }
-    } catch (apiError: any) {
+    } catch (apiError: unknown) {
       // Handle specific API error types
       if (apiError instanceof SlackError) {
         const errorCode = apiError.responseData?.error;
 
         if (errorCode === 'invalid_auth' || errorCode === 'token_expired') {
-          console.error('Slack authentication failed. Please check your API token and cookie token.');
+          console.error(
+            'Slack authentication failed. Please check your API token and cookie token.',
+          );
         } else if (errorCode === 'rate_limited') {
-          console.error('Slack API rate limit exceeded. Please try again later.');
+          console.error(
+            'Slack API rate limit exceeded. Please try again later.',
+          );
         } else {
-          console.error(`Error checking emoji list: ${errorCode || apiError.message}`);
+          console.error(
+            `Error checking emoji list: ${errorCode || apiError.message}`,
+          );
         }
       } else {
-        console.error(`[Slack] Error checking emoji list: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
+        console.error(
+          `[Slack] Error checking emoji list: ${apiError instanceof Error ? apiError.message : String(apiError)}`,
+        );
         if (apiError instanceof SlackError && apiError.responseData) {
           console.error('[Slack] Slack error response:', apiError.responseData);
         }
@@ -559,12 +649,17 @@ async function ensureEmojiDoesNotExist(config: SlackNowPlayingConfig): Promise<b
   } catch (error: unknown) {
     // Handle any other unexpected errors
     if (error instanceof Error) {
-      console.error(`[Slack] Unexpected error in ensureEmojiDoesNotExist: ${error.message}`, {
-        name: error.name,
-        stack: error.stack
-      });
+      console.error(
+        `[Slack] Unexpected error in ensureEmojiDoesNotExist: ${error.message}`,
+        {
+          name: error.name,
+          stack: error.stack,
+        },
+      );
     } else {
-      console.error(`[Slack] Unexpected error in ensureEmojiDoesNotExist: ${String(error)}`);
+      console.error(
+        `[Slack] Unexpected error in ensureEmojiDoesNotExist: ${String(error)}`,
+      );
     }
     return false;
   }
@@ -575,12 +670,16 @@ async function ensureEmojiDoesNotExist(config: SlackNowPlayingConfig): Promise<b
  * @param config Plugin configuration
  * @returns True if the emoji was successfully deleted or doesn't exist, false otherwise
  */
-async function deleteExistingEmoji(config: SlackNowPlayingConfig): Promise<boolean> {
+async function deleteExistingEmoji(
+  config: SlackNowPlayingConfig,
+): Promise<boolean> {
   try {
     // Validate configuration
     const validationResult = validateConfig(config);
     if (!validationResult.valid) {
-      console.error(`Cannot delete emoji: ${validationResult.errors.join(', ')}`);
+      console.error(
+        `Cannot delete emoji: ${validationResult.errors.join(', ')}`,
+      );
       return false;
     }
 
@@ -594,7 +693,7 @@ async function deleteExistingEmoji(config: SlackNowPlayingConfig): Promise<boole
       // If we got here, the request was successful
       // Emoji deleted successfully
       return true;
-    } catch (apiError: any) {
+    } catch (apiError: unknown) {
       // Handle specific API error types
       if (apiError instanceof SlackError && apiError.responseData) {
         const errorCode = apiError.responseData.error;
@@ -602,10 +701,13 @@ async function deleteExistingEmoji(config: SlackNowPlayingConfig): Promise<boole
         // Consider 'emoji_not_found' as a successful outcome
         if (errorCode === 'emoji_not_found') {
           // Emoji not found, no need to delete
-          console.error(`Unexpected error deleting emoji: ${apiError.message}`, {
-            name: apiError.name,
-            stack: apiError.stack
-          });
+          console.error(
+            `Unexpected error deleting emoji: ${apiError.message}`,
+            {
+              name: apiError.name,
+              stack: apiError.stack,
+            },
+          );
           return true;
         }
       }
@@ -615,12 +717,17 @@ async function deleteExistingEmoji(config: SlackNowPlayingConfig): Promise<boole
   } catch (error: unknown) {
     // Handle any other unexpected errors
     if (error instanceof Error) {
-      console.error(`[Slack] Unexpected error in deleteExistingEmoji: ${error.message}`, {
-        name: error.name,
-        stack: error.stack
-      });
+      console.error(
+        `[Slack] Unexpected error in deleteExistingEmoji: ${error.message}`,
+        {
+          name: error.name,
+          stack: error.stack,
+        },
+      );
     } else {
-      console.error(`[Slack] Unexpected error in deleteExistingEmoji: ${String(error)}`);
+      console.error(
+        `[Slack] Unexpected error in deleteExistingEmoji: ${String(error)}`,
+      );
     }
     return false;
   }
@@ -638,14 +745,14 @@ function registerExitHandlers(): void {
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
-      } catch (error: any) {
+      } catch {
         // Can't log during exit event, but we tried our best to clean up
       }
     }
   });
 
   // Handle other termination signals
-  ['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach(signal => {
+  ['SIGINT', 'SIGTERM', 'SIGQUIT'].forEach((signal) => {
     process.on(signal, async () => {
       await cleanupTempFiles();
       process.exit(0);
@@ -660,7 +767,7 @@ export const backend = createBackend({
    */
   async start(ctx) {
     // Store the context and window for later use
-    state.context = ctx;
+    state.context = ctx as BackendContext<SlackNowPlayingConfig>;
     state.window = ctx.window;
 
     // Register exit handlers for cleanup
@@ -671,7 +778,7 @@ export const backend = createBackend({
     const cacheCleanupTimer = setInterval(async () => {
       try {
         await cleanupExpiredCache();
-      } catch (error: any) {
+      } catch {
         // Ignore errors in the background task
       }
     }, cacheCleanupInterval);
@@ -684,7 +791,8 @@ export const backend = createBackend({
     state.currentConfig = initialConfig as SlackNowPlayingConfig;
 
     // Register callback to listen for song changes
-    registerCallback(async (songInfo, event) => {
+
+    registerCallback(async (songInfo: SongInfo, event: SongInfoEvent) => {
       // Skip time change events
       if (event === SongInfoEvent.TimeChanged) return;
 
@@ -714,38 +822,49 @@ export const backend = createBackend({
         if (!validationResult.valid) {
           // Log a warning only on the first occurrence to avoid spamming the console
           if (!state.lastStatus) {
-            console.warn(`Slack Now Playing configuration validation failed: ${validationResult.errors.join(', ')}`);
+            console.warn(
+              `Slack Now Playing configuration validation failed: ${validationResult.errors.join(', ')}`,
+            );
           }
           return;
         }
 
         // Process the song info with the latest config
-        await setNowPlaying(songInfo, config)
-          .catch(error => {
-            // Handle specific error types
-            if (error instanceof Error) {
-              // Check for authentication errors
-              if (error.message.includes('authentication') || error.message.includes('token')) {
-                console.error('Slack authentication failed. Please check your API token and cookie token.');
-              }
-              // Check for rate limiting errors
-              else if (error.message.includes('rate limit') || error.message.includes('rate_limited')) {
-                console.error('Slack API rate limit exceeded. Please try again later.');
-              }
-              // Generic error handling
-              else {
-                console.error(`Error in Slack Now Playing: ${error.message}`);
-              }
-            } else {
-              console.error(`Error in Slack Now Playing: ${String(error)}`);
+        await setNowPlaying(songInfo, config).catch((error) => {
+          // Handle specific error types
+          if (error instanceof Error) {
+            // Check for authentication errors
+            if (
+              error.message.includes('authentication') ||
+              error.message.includes('token')
+            ) {
+              console.error(
+                'Slack authentication failed. Please check your API token and cookie token.',
+              );
             }
-          });
-      } catch (error: any) {
+            // Check for rate limiting errors
+            else if (
+              error.message.includes('rate limit') ||
+              error.message.includes('rate_limited')
+            ) {
+              console.error(
+                'Slack API rate limit exceeded. Please try again later.',
+              );
+            }
+            // Generic error handling
+            else {
+              console.error(`Error in Slack Now Playing: ${error.message}`);
+            }
+          } else {
+            console.error(`Error in Slack Now Playing: ${String(error)}`);
+          }
+        });
+      } catch (error: unknown) {
         // Handle unexpected errors in the callback itself
         if (error instanceof Error) {
           console.error(`Error processing song info: ${error.message}`, {
             name: error.name,
-            stack: error.stack
+            stack: error.stack,
           });
         } else {
           console.error(`Error processing song info: ${String(error)}`);
@@ -786,7 +905,7 @@ export const backend = createBackend({
       try {
         // Get the latest configuration
         const latestConfig = await state.context.getConfig();
-        const config = latestConfig as SlackNowPlayingConfig;
+        const config = latestConfig;
 
         // Update the stored configuration
         state.currentConfig = config;
@@ -796,10 +915,12 @@ export const backend = createBackend({
           // Use assertValidConfig to validate the configuration
           assertValidConfig(config);
           // Configuration updated successfully
-        } catch (error: any) {
-          console.warn(`Slack Now Playing configuration validation failed: ${error instanceof Error ? error.message : String(error)}`);
+        } catch (error: unknown) {
+          console.warn(
+            `Slack Now Playing configuration validation failed: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Error updating Slack Now Playing configuration:', error);
       }
     }

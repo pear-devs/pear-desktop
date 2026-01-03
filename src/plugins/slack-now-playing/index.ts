@@ -1,6 +1,6 @@
 import { createPlugin } from '@/utils';
 import { onMenu } from './menu';
-import { backend, SlackNowPlayingConfig } from './main';
+import { backend, type SlackNowPlayingConfig } from './main';
 import { t } from '@/i18n';
 
 export default createPlugin({

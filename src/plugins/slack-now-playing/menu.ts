@@ -1,5 +1,6 @@
 import prompt from 'custom-electron-prompt';
-import { BrowserWindow, dialog } from 'electron';
+import { type BrowserWindow, dialog } from 'electron';
+
 import promptOptions from '@/providers/prompt-options';
 import { t } from '@/i18n';
 
@@ -34,19 +35,23 @@ function validateConfig(config: SlackNowPlayingConfig): ValidationResult {
   if (!config.cookieToken) {
     errors.push('Missing Slack cookie token');
   } else if (!config.cookieToken.startsWith('xoxd-')) {
-    errors.push('Invalid Slack cookie token format (should start with "xoxd-")');
+    errors.push(
+      'Invalid Slack cookie token format (should start with "xoxd-")',
+    );
   }
 
   // Check emoji name
   if (!config.emojiName) {
     errors.push('Missing custom emoji name');
   } else if (!/^[a-z0-9_-]+$/.test(config.emojiName)) {
-    errors.push('Invalid emoji name format (should only contain lowercase letters, numbers, hyphens, and underscores)');
+    errors.push(
+      'Invalid emoji name format (should only contain lowercase letters, numbers, hyphens, and underscores)',
+    );
   }
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 }
 
@@ -141,7 +146,7 @@ async function promptSlackNowPlayingOptions(
 
       // Save the config even if it has validation errors
       // This allows users to save partial configurations
-      await setConfig(updatedOptions);
+      setConfig(updatedOptions);
 
       // Config has been saved successfully
     } catch (error) {
@@ -157,11 +162,11 @@ async function promptSlackNowPlayingOptions(
   }
 }
 
-export const onMenu = async ({
+export const onMenu = ({
   window,
   getConfig,
   setConfig,
-}: MenuContext<SlackNowPlayingConfig>): Promise<MenuTemplate> => {
+}: MenuContext<SlackNowPlayingConfig>): MenuTemplate => {
   return [
     {
       label: t('plugins.slack-now-playing.menu.settings'),
