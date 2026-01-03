@@ -1,7 +1,4 @@
-// Using native fetch instead of Electron's net.fetch because:
-// 1. net.fetch/session.fetch restrict Cookie headers (Chromium security)
-// 2. Native fetch in Node.js 18+ allows Cookie headers
-// 3. This runs in the main process where Node.js fetch is available
+import { session } from 'electron';
 
 /**
  * Standard response format from Slack API endpoints
@@ -171,6 +168,8 @@ export class SlackApiClient {
   private readonly rateLimits: Map<string, RateLimitInfo> = new Map();
   /** Default rate limit (20 requests per minute for most endpoints) */
   private readonly defaultRateLimit = { maxRequests: 20, windowMs: 60 * 1000 };
+  /** Dedicated session for Slack API requests */
+  private slackSession: Electron.Session | null = null;
 
   /**
    * Create a new Slack API client
@@ -180,6 +179,29 @@ export class SlackApiClient {
   constructor(token: string, cookie: string) {
     this.token = token;
     this.cookie = cookie;
+  }
+
+  /**
+   * Get or create a dedicated session for Slack API requests
+   * Sets the authentication cookie with proper URL encoding
+   */
+  private async getSlackSession(): Promise<Electron.Session> {
+    if (this.slackSession) return this.slackSession;
+
+    this.slackSession = session.fromPartition('persist:slack-api');
+
+    // Set the URL-encoded cookie in the session
+    await this.slackSession.cookies.set({
+      url: 'https://slack.com',
+      name: 'd',
+      value: encodeURIComponent(this.cookie),
+      domain: '.slack.com',
+      path: '/',
+      secure: true,
+      httpOnly: true,
+    });
+
+    return this.slackSession;
   }
 
   /**
@@ -210,16 +232,12 @@ export class SlackApiClient {
 
   /**
    * Get the base headers required for all Slack API requests
-   * @returns Headers object with authentication information
+   * @returns Headers object (cookie is handled via session)
    */
   private getBaseHeaders(): Record<string, string> {
-    // Note: Token is sent in request body, not Authorization header
-    // This matches how Slack's internal API expects authentication
-    // URL-encode the cookie value to handle special characters like + and /
-    const encodedCookie = encodeURIComponent(this.cookie);
-    return {
-      'Cookie': `d=${encodedCookie}`,
-    };
+    // Cookie is set via session.cookies.set() - credentials: 'include' sends it
+    // Token is sent in request body, not Authorization header
+    return {};
   }
 
   /**
@@ -278,14 +296,18 @@ export class SlackApiClient {
     }
 
     try {
+      // Get the Slack session with cookie already set
+      const slackSession = await this.getSlackSession();
+
       // Update rate limit tracking
       this.updateRateLimit(endpoint);
 
-      // Use native fetch (Node.js 18+) which allows Cookie headers
-      const res = await fetch(url, {
+      // Use session.fetch with credentials: 'include' to send session cookies
+      const res = await slackSession.fetch(url, {
         method: 'POST',
         headers,
         body: payload,
+        credentials: 'include',
       });
       const json = (await res.json()) as SlackApiResponse<T>;
 
@@ -481,13 +503,17 @@ export class SlackApiClient {
       }
       const fetchUrl = `${url}?${searchParams.toString()}`;
 
+      // Get the Slack session with cookie already set
+      const slackSession = await this.getSlackSession();
+
       // Update rate limit tracking
       this.updateRateLimit(endpoint);
 
-      // Use native fetch (Node.js 18+) which allows Cookie headers
-      const res = await fetch(fetchUrl, {
+      // Use session.fetch with credentials: 'include' to send session cookies
+      const res = await slackSession.fetch(fetchUrl, {
         method: 'GET',
         headers,
+        credentials: 'include',
       });
       const json = (await res.json()) as SlackApiResponse<T>;
 
