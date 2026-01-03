@@ -154,6 +154,62 @@ export const menu = async (
       },
     },
     {
+      label: t('plugins.synced-lyrics.menu.convert-chinese-character.label'),
+      toolTip: t(
+        'plugins.synced-lyrics.menu.convert-chinese-character.tooltip',
+      ),
+      type: 'submenu',
+      submenu: [
+        {
+          label: t(
+            'plugins.synced-lyrics.menu.convert-chinese-character.submenu.disabled.label',
+          ),
+          toolTip: t(
+            'plugins.synced-lyrics.menu.convert-chinese-character.submenu.disabled.tooltip',
+          ),
+          type: 'radio',
+          checked:
+            config.convertChineseCharacter === 'disabled' ||
+            config.convertChineseCharacter === undefined,
+          click() {
+            ctx.setConfig({
+              convertChineseCharacter: 'disabled',
+            });
+          },
+        },
+        {
+          label: t(
+            'plugins.synced-lyrics.menu.convert-chinese-character.submenu.simplified-to-traditional.label',
+          ),
+          toolTip: t(
+            'plugins.synced-lyrics.menu.convert-chinese-character.submenu.simplified-to-traditional.tooltip',
+          ),
+          type: 'radio',
+          checked: config.convertChineseCharacter === 'simplifiedToTraditional',
+          click() {
+            ctx.setConfig({
+              convertChineseCharacter: 'simplifiedToTraditional',
+            });
+          },
+        },
+        {
+          label: t(
+            'plugins.synced-lyrics.menu.convert-chinese-character.submenu.traditional-to-simplified.label',
+          ),
+          toolTip: t(
+            'plugins.synced-lyrics.menu.convert-chinese-character.submenu.traditional-to-simplified.tooltip',
+          ),
+          type: 'radio',
+          checked: config.convertChineseCharacter === 'traditionalToSimplified',
+          click() {
+            ctx.setConfig({
+              convertChineseCharacter: 'traditionalToSimplified',
+            });
+          },
+        },
+      ],
+    },
+    {
       label: t('plugins.synced-lyrics.menu.show-time-codes.label'),
       toolTip: t('plugins.synced-lyrics.menu.show-time-codes.tooltip'),
       type: 'checkbox',
