@@ -565,6 +565,10 @@
         "button": "Télécharger"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Téléchargeur (yt-dlp)",
+      "description": "Télécharge les fichiers MP3/source audio directement depuis l'interface. Une version du plugin de téléchargement qui utilise yt-dlp.exe. Vous pouvez définir un chemin personnalisé vers l'exécutable ainsi qu'une chaîne de cookies afin d'améliorer la réussite des téléchargements en incluant des cookies valides."
+    },
     "equalizer": {
       "description": "Ajoute un égaliseur au lecteur",
       "menu": {
@@ -965,3 +969,4 @@
     }
   }
 }
+

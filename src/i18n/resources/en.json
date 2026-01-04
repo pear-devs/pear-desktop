@@ -565,6 +565,10 @@
         "button": "Download"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Downloader (yt-dlp)",
+      "description": "Downloads MP3 / source audio directly from the interface. A version of the downloader plugin that uses yt-dlp.exe. You can set a custom path for the executable and a cookies string to improve successful downloads by including valid cookies."
+    },
     "equalizer": {
       "description": "Adds an equalizer to the player",
       "menu": {

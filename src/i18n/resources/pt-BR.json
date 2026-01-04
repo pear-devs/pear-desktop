@@ -549,6 +549,10 @@
         "button": "Baixar"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Downloader (yt-dlp)",
+      "description": "Faça download do MP3 / fonte de áudio diretamente da interface. Uma versão do plugin de download que usa o yt-dlp.exe. Você pode definir um caminho personalizado para o executável e uma string de cookies para aumentar o sucesso dos downloads ao incluir cookies válidos."
+    },
     "equalizer": {
       "description": "Adiciona um equalizador ao player",
       "menu": {
@@ -949,3 +953,4 @@
     }
   }
 }
+

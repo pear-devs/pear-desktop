@@ -565,6 +565,10 @@
         "button": "Pobierz"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Pobieranie (yt-dlp)",
+      "description": "Pobiera MP3/ źródło audio bezpośrednio z interfejsu. Wersja wtyczki pobierania, która korzysta z yt-dlp.exe. Możesz ustawić własną ścieżkę do pliku wykonywalnego oraz ciąg cookies, aby zwiększyć skuteczność pobierania poprzez dołączenie poprawnych cookies."
+    },
     "equalizer": {
       "description": "Dodaje equalizer do odtwarzacza",
       "menu": {
@@ -965,3 +969,4 @@
     }
   }
 }
+

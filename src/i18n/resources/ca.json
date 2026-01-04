@@ -549,6 +549,10 @@
         "button": "Descarrega"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Descàrregues (yt-dlp)",
+      "description": "Descarrega el MP3 / àudio d'origen directament des de la interfície. Una versió del connector de descàrrega que utilitza yt-dlp.exe. Pots establir un camí personalitzat per a l'executable i una cadena de cookies per millorar l'èxit de les descàrregues incloent cookies vàlides."
+    },
     "equalizer": {
       "description": "Afegeix un equalitzador al reproductor",
       "menu": {
@@ -949,3 +953,4 @@
     }
   }
 }
+

@@ -565,6 +565,10 @@
         "button": "下载"
       }
     },
+    "downloader-ytdlp": {
+      "name": "下载器 (yt-dlp)",
+      "description": "在界面内直接下载 MP3 / 源音频. 使用 yt-dlp.exe 的下载器插件版本。你可以为可执行文件设置自定义路径，并设置 cookies 字符串，通过包含有效 cookies 来提高下载成功率。"
+    },
     "equalizer": {
       "description": "为播放器添加均衡器",
       "menu": {
@@ -965,3 +969,4 @@
     }
   }
 }
+

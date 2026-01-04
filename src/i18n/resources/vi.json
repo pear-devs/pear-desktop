@@ -555,6 +555,10 @@
         "button": "Tải xuống"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Trình tải xuống (yt-dlp)",
+      "description": "Tải xuống MP3 / âm thanh nguồn trực tiếp từ giao diện. Phiên bản của plugin tải xuống sử dụng yt-dlp.exe. Bạn có thể đặt đường dẫn tùy chỉnh tới tệp thực thi và một chuỗi cookies để tăng khả năng tải xuống thành công bằng cách bao gồm cookies hợp lệ."
+    },
     "equalizer": {
       "description": "Thêm bộ chỉnh âm để điều chỉnh âm thanh cho trình phát nhạc",
       "menu": {
@@ -955,3 +959,4 @@
     }
   }
 }
+
