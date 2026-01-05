@@ -20,6 +20,24 @@ export const onMenu = async ({
   setConfig,
 }: MenuContext<DownloaderPluginConfig>): Promise<MenuTemplate> => {
   const config = await getConfig();
+  const _engineKey = 'plugins.downloader.menu.engine.label';
+  const engineTranslated = t(_engineKey);
+  const engineLabel =
+    typeof engineTranslated === 'string' && !engineTranslated.includes(_engineKey)
+      ? engineTranslated
+      : 'Download Method';
+  const _ytdlpKey = 'plugins.downloader.menu.engine.ytdlp-path';
+  const ytdlpTranslated = t(_ytdlpKey);
+  const ytdlpLabel =
+    typeof ytdlpTranslated === 'string' && !ytdlpTranslated.includes(_ytdlpKey)
+      ? ytdlpTranslated
+      : 'Path of yt-dlp';
+  const _ffmpegKey = 'plugins.downloader.menu.engine.ffmpeg-path';
+  const ffmpegTranslated = t(_ffmpegKey);
+  const ffmpegLabel =
+    typeof ffmpegTranslated === 'string' && !ffmpegTranslated.includes(_ffmpegKey)
+      ? ffmpegTranslated
+      : 'Path of ffmpeg';
 
   return [
     {
@@ -205,6 +223,55 @@ export const onMenu = async ({
           setConfig({ selectedPreset: preset });
         },
       })),
+    },
+    {
+      label: engineLabel,
+      type: 'submenu',
+      submenu: [
+        {
+          label: 'youtube.js',
+          type: 'radio',
+          checked: (config.engine ?? defaultConfig.engine) !== 'yt-dlp',
+          click() {
+            setConfig({ engine: 'youtube.js' });
+          },
+        },
+        {
+          label: 'yt-dlp',
+          type: 'radio',
+          checked: (config.engine ?? defaultConfig.engine) === 'yt-dlp',
+          click() {
+            setConfig({ engine: 'yt-dlp' });
+          },
+        },
+        {
+          type: 'separator',
+        },
+        {
+          label: ytdlpLabel,
+          click() {
+            const result = dialog.showOpenDialogSync({
+              properties: ['openFile'],
+              defaultPath: config.ytdlpPath ?? defaultConfig.ytdlpPath,
+            });
+            if (result && result[0]) {
+              setConfig({ ytdlpPath: result[0] });
+            }
+          },
+        },
+        {
+          label: ffmpegLabel,
+          click() {
+            const result = dialog.showOpenDialogSync({
+              properties: ['openFile'],
+              defaultPath: config.ytdlpFfmpegPath ?? '',
+            });
+            if (result && result[0]) {
+              setConfig({ ytdlpFfmpegPath: result[0] });
+            }
+          },
+        },
+      ],
     },
     {
       label: t('plugins.downloader.menu.skip-existing'),

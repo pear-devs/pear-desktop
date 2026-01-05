@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
 import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
+import { spawn, spawnSync } from 'node:child_process';
 import {
   Innertube,
   UniversalCache,
@@ -438,6 +439,135 @@ async function downloadSongUnsafe(
 
   if (config.skipExisting && existsSync(filePath)) {
     sendFeedback(null, -1);
+    return;
+  }
+
+  // If configured to use yt-dlp, delegate downloading to the external binary
+  if ((config.engine ?? 'youtube.js') === 'yt-dlp') {
+    const findYtdlpExecutable = async (preferred?: string) => {
+      const candidates: (string | undefined)[] = [];
+      if (preferred) candidates.push(preferred);
+      candidates.push('/usr/bin/yt-dlp', '/usr/local/bin/yt-dlp', 'yt-dlp');
+
+      for (const c of candidates) {
+        if (!c) continue;
+        try {
+          // Try running `--version` to check it's executable
+          const res = spawnSync(c, ['--version'], { encoding: 'utf8', stdio: 'ignore' });
+          if (res && res.status === 0) return c;
+        } catch (_) {
+          // ignore and try next
+        }
+      }
+      return null;
+    };
+
+    const ytdlpExecutable = await findYtdlpExecutable(config.ytdlpPath ?? undefined);
+    if (!ytdlpExecutable) {
+      dialog.showMessageBox(win, {
+        type: 'error',
+        buttons: ['OK'],
+        title: t('plugins.downloader.backend.dialog.ytdlp-not-found.title') || 'yt-dlp introuvable',
+        message:
+          t('plugins.downloader.backend.dialog.ytdlp-not-found.message') ||
+          "yt-dlp n'a pas été trouvé ou n'est pas exécutable. Le chemin doit inclure le nom de l'exécutable (par ex. /usr/bin/yt-dlp/yt-dlp_linux ou /usr/bin/yt-dlp). Vérifiez l'installation ou indiquez le chemin complet dans le menu du plugin.",
+      });
+      return;
+    }
+    const baseName = filename.replace(new RegExp(`\\.${targetFileExtension}$`), '');
+    const outputTemplate =
+      targetFileExtension === 'mp3'
+        ? join(dir, `${baseName}.mp3`)
+        : join(dir, `${baseName}.%(ext)s`);
+
+    const urlToDownload = isId ? `https://www.youtube.com/watch?v=${id}` : idOrUrl;
+
+    const args: string[] = ['--no-playlist', '--add-metadata', '--embed-thumbnail', '--output', outputTemplate];
+
+    if (targetFileExtension === 'mp3') {
+      args.unshift('--extract-audio', '--audio-format', 'mp3', '--audio-quality', '0');
+    } else {
+      args.unshift('-f', 'best');
+    }
+
+    // If user provided ffmpeg/ffprobe location for yt-dlp, pass it through
+    if (config.ytdlpFfmpegPath) {
+      args.push('--ffmpeg-location', config.ytdlpFfmpegPath);
+    }
+
+    sendFeedback(t('plugins.downloader.backend.feedback.downloading'), 2);
+
+    await new Promise<void>((resolve, reject) => {
+      try {
+        const proc = spawn(ytdlpExecutable, [...args, urlToDownload], {
+          stdio: ['ignore', 'pipe', 'pipe'],
+        });
+
+        const outChunks: string[] = [];
+        const errChunks: string[] = [];
+
+        proc.stdout.on('data', (d) => {
+          const s = String(d);
+          outChunks.push(s);
+          sendFeedback(s);
+        });
+        proc.stderr.on('data', (d) => {
+          const s = String(d);
+          errChunks.push(s);
+          sendFeedback(s);
+        });
+
+        proc.on('close', (code) => {
+          const out = outChunks.join('');
+          const err = errChunks.join('');
+          if (code === 0) {
+            sendFeedback(null, -1);
+            resolve();
+            return;
+          }
+
+          const tail = (str: string, max = 2000) =>
+            str.length > max ? '...\n' + str.slice(-max) : str;
+
+          dialog.showMessageBox(win, {
+            type: 'error',
+            buttons: ['OK'],
+            defaultId: 0,
+            title:
+              t('plugins.downloader.backend.dialog.ytdlp-error.title') ||
+              `yt-dlp erreur`,
+            message:
+              t('plugins.downloader.backend.dialog.ytdlp-error.message') ||
+              `yt-dlp a échoué avec le code ${code}`,
+            detail:
+              t('plugins.downloader.backend.dialog.ytdlp-error.detail') ||
+              `Derniers messages d'erreur:\n${tail(err)}\n\nSortie:\n${tail(out)}`,
+          });
+
+          reject(new Error(`yt-dlp exited with code ${code}: ${tail(err, 500)}`));
+        });
+
+        proc.on('error', (err: NodeJS.ErrnoException) => {
+          if (err.code === 'EACCES') {
+            dialog.showMessageBox(win, {
+              type: 'error',
+              buttons: ['OK'],
+              title:
+                t('plugins.downloader.backend.dialog.ytdlp-permission.title') ||
+                'Permission refusée',
+              message:
+                t('plugins.downloader.backend.dialog.ytdlp-permission.message') ||
+                `Impossible d'exécuter ${ytdlpExecutable} (EACCES). Rendre le fichier exécutable : chmod +x ${ytdlpExecutable} ou choisissez un autre chemin dans le menu du plugin.`,
+            });
+          }
+          reject(err);
+        });
+      } catch (err) {
+        reject(err);
+      }
+    });
+
+    // ytdlp already wrote the file to disk using the output template. We're done.
     return;
   }
 
