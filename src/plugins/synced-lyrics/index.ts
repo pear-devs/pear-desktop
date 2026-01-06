@@ -11,7 +11,7 @@ import type { SyncedLyricsPluginConfig } from './types';
 export default createPlugin({
   name: () => t('plugins.synced-lyrics.name'),
   description: () => t('plugins.synced-lyrics.description'),
-  authors: ['Non0reo', 'ArjixWasTaken', 'KimJammer', 'Strvm'],
+  authors: ['Non0reo', 'ArjixWasTaken', 'KimJammer', 'Strvm', 'robroid'],
   restartNeeded: true,
   addedVersion: '3.5.X',
   config: {
@@ -19,8 +19,9 @@ export default createPlugin({
     preciseTiming: true,
     showLyricsEvenIfInexact: true,
     showTimeCodes: false,
-    defaultTextString: '♪',
-    lineEffect: 'fancy',
+    defaultTextString: '•••',
+    lineEffect: 'enhanced',
+    showEmptyLineSymbols: true,
     romanization: true,
   } satisfies SyncedLyricsPluginConfig as SyncedLyricsPluginConfig,
 

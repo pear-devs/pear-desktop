@@ -27,7 +27,7 @@
   --lyrics-padding: 0;
 
   /* Typography */
-  --lyrics-font-family: Satoshi, Avenir, -apple-system, BlinkMacSystemFont,
+  --lyrics-font-family: "Satoshi", Avenir, -apple-system, BlinkMacSystemFont,
     Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Open Sans, Helvetica Neue,
     sans-serif;
   --lyrics-font-size: clamp(1.4rem, 1.1vmax, 3rem);
@@ -52,12 +52,22 @@
   --lyrics-animations: lyrics-glow var(--lyrics-glow-duration) forwards,
     lyrics-wobble var(--lyrics-wobble-duration) forwards;
   --lyrics-scale-duration: 0.166s;
+  --lyrics-scale-hover-duration: 0.3s;
   --lyrics-opacity-transition: 0.33s;
   --lyrics-glow-duration: var(--lyrics-duration);
   --lyrics-wobble-duration: calc(var(--lyrics-duration) / 2);
 
   /* Colors */
   --glow-color: rgba(255, 255, 255, 0.5);
+
+  /* Other */
+  --lyrics-hover-scale: 1;
+  --lyrics-hover-opacity: 0.33;
+  --lyrics-hover-empty-opacity: 1;
+
+  --lyrics-empty-opacity: 1;
+
+  --lyrics-will-change: auto;
 }
 
 .lyric-container {
@@ -70,28 +80,76 @@
   text-align: left !important;
 }
 
-.synced-line {
+.synced-line,
+.synced-emptyline {
   width: var(--lyrics-width, 100%);
 
   & .text-lyrics {
     cursor: pointer;
     /*fix cuted lyrics-glow and romanized j at line start */
     padding-left: 1.5rem;
+    transform-origin: center left;
+    transition: transform var(--lyrics-scale-hover-duration) ease-in-out,
+                opacity var(--lyrics-opacity-transition) ease;
+    /* will-change fixes jitter but may impact performance, remove if needed */
+    will-change: var(--lyrics-will-change);
+
+    & > span > span {
+      transition: transform var(--lyrics-scale-hover-duration) ease-in-out,
+                  opacity var(--lyrics-opacity-transition) ease;
+    }
+
+    & > .romaji {
+      color: var(--ytmusic-text-secondary) !important;
+      font-size: calc(var(--lyrics-font-size) * 0.7) !important;
+      font-style: italic !important;
+    }
   }
 
-  & .text-lyrics > .romaji {
-    color: var(--ytmusic-text-secondary) !important;
-    font-size: calc(var(--lyrics-font-size) * 0.7) !important;
-    font-style: italic !important;
+  &.final-empty .text-lyrics {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    height: 1em;
+    display: block;
   }
+
+  &.no-padding .text-lyrics {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    height: 0.3em;
+    overflow: hidden;
+  }
+}
+
+/* Current lines */
+.synced-line.current .text-lyrics > span > span,
+.synced-emptyline.current .text-lyrics > span > span {
+  opacity: var(--lyrics-active-opacity);
+  animation: var(--lyrics-animations);
+}
+
+/* Non current empty lines */
+.synced-emptyline:not(.current) .text-lyrics {
+  opacity: var(--lyrics-empty-opacity);
+}
+
+/* Hover effects for non-current lines (enhanced only) */
+.enhanced-lyrics .synced-line:not(.current):hover .text-lyrics,
+.enhanced-lyrics .synced-emptyline:not(.current):hover .text-lyrics {
+  opacity: 1 !important;
+  transform: scale(var(--lyrics-hover-scale));
+}
+
+.enhanced-lyrics .synced-line:not(.current):hover .text-lyrics > span > span,
+.enhanced-lyrics .synced-emptyline:not(.current):hover .text-lyrics > span > span {
+  opacity: var(--lyrics-hover-opacity, var(--lyrics-hover-empty-opacity)) !important;
 }
 
 .synced-lyrics {
   display: block;
-  justify-content: left;
   text-align: left;
   margin: 0.5rem 20px 0.5rem 0;
-  transition: all 0.3s ease-in-out;
+  transition: all 0.3s ease;
 }
 
 .warning-lyrics {
@@ -106,10 +164,8 @@
   line-height: var(--lyrics-line-height) !important;
   padding-top: var(--lyrics-padding);
   padding-bottom: var(--lyrics-padding);
-  scale: var(--lyrics-inactive-scale);
-  translate: var(--lyrics-inactive-offset);
-  transition: scale var(--lyrics-scale-duration), translate 0.3s ease-in-out;
-
+  transform: scale(var(--lyrics-inactive-scale)) translate(var(--lyrics-inactive-offset));
+  transition: transform var(--lyrics-scale-duration) ease-in-out;
   display: block;
   text-align: left;
   margin: var(--global-margin) 0;
@@ -117,9 +173,8 @@
 
   &.lrc-header {
     color: var(--ytmusic-color-grey5) !important;
-    scale: 0.9;
+    transform: scale(0.9) translate(var(--lyrics-inactive-offset));
     height: fit-content;
-    padding: 0;
     padding-block: 0.2em;
   }
 
@@ -130,7 +185,8 @@
   }
 }
 
-.text-lyrics > span > span {
+.text-lyrics > span > span,
+.text-lyrics .placeholder {
   display: inline-block;
   white-space: pre-wrap;
   opacity: var(--lyrics-inactive-opacity);
@@ -139,8 +195,7 @@
 
 .current .text-lyrics {
   font-weight: var(--lyrics-active-font-weight) !important;
-  scale: var(--lyrics-active-scale);
-  translate: var(--lyrics-active-offset);
+  transform: scale(var(--lyrics-active-scale)) translate(var(--lyrics-active-offset));
 }
 
 .current .text-lyrics > span > span {
@@ -200,8 +255,8 @@
   cursor: pointer;
   width: 5px;
   height: 5px;
-  margin: 0 4px 0;
-  border-radius: 200px;
+  margin: 0 4px;
+  border-radius: 50%;
   border: 1px solid #6e7c7c7f;
 }
 
@@ -229,6 +284,24 @@ div:has(> .lyrics-picker) {
     transition: top 325ms ease-in-out;
 
     backdrop-filter: blur(5px);
+  }
+}
+
+.fade {
+  opacity: 0;
+  transition: var(--lyrics-opacity-transition) ease;
+
+  &.show {
+    opacity: var(--lyrics-active-opacity);
+  }
+
+  &.dim {
+    opacity: var(--lyrics-inactive-opacity);
+  }
+
+  &,
+  .placeholder {
+    animation-name: none;
   }
 }
 

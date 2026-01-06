@@ -1,3 +1,9 @@
+import {
+  ensureLeadingPaddingEmptyLine,
+  ensureTrailingEmptyLine,
+  mergeConsecutiveEmptySyncedLines,
+} from '../shared/lines';
+
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
 import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
 
@@ -52,13 +58,14 @@ export class YTMusic implements LyricProvider {
 
     const synced = syncedLines?.length && syncedLines[0]?.cueRange
       ? syncedLines.map((it) => ({
-        time: this.millisToTime(parseInt(it.cueRange.startTimeMilliseconds)),
-        timeInMs: parseInt(it.cueRange.startTimeMilliseconds),
-        duration: parseInt(it.cueRange.endTimeMilliseconds) -
-          parseInt(it.cueRange.startTimeMilliseconds),
-        text: it.lyricLine.trim() === '♪' ? '' : it.lyricLine.trim(),
-        status: 'upcoming' as const,
-      }))
+          time: this.millisToTime(parseInt(it.cueRange.startTimeMilliseconds)),
+          timeInMs: parseInt(it.cueRange.startTimeMilliseconds),
+          duration:
+            parseInt(it.cueRange.endTimeMilliseconds) -
+            parseInt(it.cueRange.startTimeMilliseconds),
+          text: it.lyricLine.trim() === '♪' ? '' : it.lyricLine.trim(),
+          status: 'upcoming' as const,
+        }))
       : undefined;
 
     const plain = !synced
@@ -67,41 +74,40 @@ export class YTMusic implements LyricProvider {
         : contents?.messageRenderer
         ? contents?.messageRenderer?.text?.runs?.map((it) => it.text).join('\n')
         : contents?.sectionListRenderer?.contents?.[0]
-          ?.musicDescriptionShelfRenderer?.description?.runs?.map((it) =>
-            it.text
-          )?.join('\n')
+          ?.musicDescriptionShelfRenderer?.description?.runs
+          ?.map((it) => it.text)
+          ?.join('\n')
       : undefined;
 
     if (typeof plain === 'string' && plain === 'Lyrics not available') {
       return null;
     }
 
-    if (synced?.length && synced[0].timeInMs > 300) {
-      synced.unshift({
-        duration: 0,
-        text: '',
-        time: '00:00.00',
-        timeInMs: 0,
-        status: 'upcoming' as const,
-      });
-    }
+    const processed = synced
+      ? (() => {
+          const merged = mergeConsecutiveEmptySyncedLines(synced);
+          const withLeading = ensureLeadingPaddingEmptyLine(merged, 300, 'span');
+          return ensureTrailingEmptyLine(withLeading, 'lastEnd');
+        })()
+      : undefined;
 
     return {
       title,
       artists: [artist],
 
       lyrics: plain,
-      lines: synced,
+      lines: processed,
     };
   }
 
   private millisToTime(millis: number) {
     const minutes = Math.floor(millis / 60000);
-    const seconds = Math.floor((millis - minutes * 60 * 1000) / 1000);
-    const remaining = (millis - minutes * 60 * 1000 - seconds * 1000) / 10;
+    const seconds = Math.floor((millis % 60000) / 1000);
+    const centiseconds = Math.floor((millis % 1000) / 10);
+
     return `${minutes.toString().padStart(2, '0')}:${seconds
       .toString()
-      .padStart(2, '0')}.${remaining.toString().padStart(2, '0')}`;
+      .padStart(2, '0')}.${centiseconds.toString().padStart(2, '0')}`;
   }
 
   // RATE LIMITED (2 req per sec)
