@@ -22,7 +22,7 @@ export class DiscordService {
   /**
    * Discord RPC client instance.
    */
-  rpc = new DiscordClient({ clientId });
+  rpc!: DiscordClient;
   /**
    * Indicates if the service is ready to send activity updates.
    */
@@ -61,6 +61,21 @@ export class DiscordService {
     this.config = config;
     this.mainWindow = mainWindow;
     this.autoReconnect = config?.autoReconnect ?? true; // Default autoReconnect to true
+
+    this.initializeRpc();
+  }
+
+  private initializeRpc() {
+    if (this.rpc) {
+      try {
+        this.rpc.destroy();
+      } catch {
+        // ignored
+      }
+      this.rpc.removeAllListeners();
+    }
+
+    this.rpc = new DiscordClient({ clientId });
 
     this.rpc.on('connected', () => {
       if (dev()) {
@@ -192,6 +207,7 @@ export class DiscordService {
               resolve();
             })
             .catch(() => {
+              this.initializeRpc();
               this.connectRecursive();
             });
         },
@@ -236,6 +252,9 @@ export class DiscordService {
       this.resetInfo();
 
       if (this.autoReconnect) {
+        // For some reason @xhayper/discord-rpc leaves a dangling listener on connection failure
+        // so we destroy and recreate the RPC client before reconnecting.
+        this.initializeRpc();
         this.connectRecursive();
       } else if (showErrorDialog && this.mainWindow) {
         // connection failed
@@ -250,12 +269,11 @@ export class DiscordService {
     this.autoReconnect = false;
     this.timerManager.clear(TimerKey.DiscordConnectRetry);
     this.timerManager.clear(TimerKey.ClearActivity);
-    if (this.rpc.isConnected) {
-      try {
-        this.rpc.destroy();
-      } catch {
-        // ignored
-      }
+    try {
+      this.rpc.removeAllListeners();
+      this.rpc.destroy();
+    } catch {
+      // ignored
     }
     this.resetInfo(); // Reset internal state
   }
