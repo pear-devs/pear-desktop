@@ -149,7 +149,7 @@
     "@types/html-to-text": "9.0.4",
     "@types/semver": "7.7.1",
     "@types/trusted-types": "2.0.7",
-    "bufferutil": "4.0.9",
+    "bufferutil": "4.1.0",
     "builtin-modules": "5.0.0",
     "cross-env": "10.0.0",
     "del-cli": "6.0.0",
