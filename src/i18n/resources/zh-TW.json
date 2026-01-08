@@ -154,7 +154,7 @@
                 "label": "自訂窗口標題",
                 "prompt": {
                   "label": "輸入自訂視窗標題: (留空將其停用)",
-                  "placeholder": "例如: Pear Desktop"
+                  "placeholder": "例如: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "重新啟動應用程式",
       "show": "顯示視窗",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "啟用進度條主題樣式"
       },
       "name": "隨歌曲色調變更主題"
     },
@@ -287,7 +288,7 @@
       "name": "微光效果"
     },
     "amuse": {
-      "description": "加入支援 6K Labs 的 Amuse OBS 外掛以取得 Pear Desktop 現正播放資訊",
+      "description": "加入支援 6K Labs 的 Amuse OBS 外掛以取得 {{applicationName}} 現正播放資訊",
       "name": "Amuse",
       "response": {
         "query": "Amuse API 伺服器正在運作中，使用 /query 以取得歌曲資訊。"
@@ -373,7 +374,7 @@
       "name": "繞過年齡驗證"
     },
     "captions-selector": {
-      "description": "Pear Desktop 音軌字幕選項",
+      "description": "{{applicationName}} 音軌字幕選項",
       "menu": {
         "autoload": "自動選擇上次使用的字幕",
         "disable-captions": "預設無字幕"
@@ -456,13 +457,13 @@
         "disconnected": "已斷開連線",
         "hide-duration-left": "隱藏音樂剩餘時間狀態",
         "hide-github-button": "隱藏 GitHub 頁面按鈕",
-        "play-on-pear-desktop": "顯示 Play on Pear Desktop 按鈕",
+        "play-on-application": "顯示 Play on {{applicationName}} 按鈕",
         "set-inactivity-timeout": "設定閒置狀態時長",
         "set-status-display-type": {
           "label": "狀態樣式",
           "submenu": {
             "artist": "正在聆聽 {artist} 的歌曲",
-            "pear-desktop": "正在聆聽 Pear Desktop",
+            "application": "正在聆聽 {{applicationName}}",
             "title": "正在聆聽 {song title}"
           }
         }

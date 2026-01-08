@@ -154,7 +154,7 @@
                 "label": "Judul jendela kustom",
                 "prompt": {
                   "label": "Masukkan judul jendela kustom (kosongkan untuk menonaktifkan)",
-                  "placeholder": "Contoh: Pear Desktop"
+                  "placeholder": "Contoh: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Restart aplikasi",
       "show": "Tampilkan jendela",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Mode ambient"
     },
     "amuse": {
-      "description": "Menambahkan dukungan Pear Desktop untuk widget Amuse yang sedang diputar oleh 6K Labs",
+      "description": "Menambahkan dukungan {{applicationName}} untuk widget Amuse yang sedang diputar oleh 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Server API Amuse sedang berjalan. GET /query untuk mendapatkan info lagu."
@@ -373,7 +373,7 @@
       "name": "Lewati batasan umur"
     },
     "captions-selector": {
-      "description": "Pemilih caption untuk trek audio Pear Desktop",
+      "description": "Pemilih caption untuk trek audio {{applicationName}}",
       "menu": {
         "autoload": "Pilih caption terakhir secara otomatis",
         "disable-captions": "Tidak ada caption secara default"
@@ -456,14 +456,14 @@
         "disconnected": "Terputus",
         "hide-duration-left": "Sembunyikan sisa durasi",
         "hide-github-button": "Sembunyikan tombol link GitHub",
-        "play-on-pear-desktop": "Mainkan di Pear Desktop",
+        "play-on-application": "Mainkan di {{applicationName}}",
         "set-inactivity-timeout": "Tetapkan batas waktu tidak aktif",
         "set-status-display-type": {
           "label": "Teks status",
           "submenu": {
             "artist": "Sedang mendengarkan {artist}",
             "title": "Sedang mendengarkan {song title}",
-            "pear-desktop": "Sedang mendengarkan Pear Desktop"
+            "application": "Sedang mendengarkan {{applicationName}}"
           }
         }
       },

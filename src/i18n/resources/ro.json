@@ -154,7 +154,7 @@
                 "label": "Titlul ferestrei personalizate",
                 "prompt": {
                   "label": "Introduceți titlul ferestrei personalizate: (lăsați gol pentru a dezactiva)",
-                  "placeholder": "Exemplu: Pear Desktop"
+                  "placeholder": "Exemplu: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Reporneste aplicatia",
       "show": "Arata fereastra",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Mod ambiental"
     },
     "amuse": {
-      "description": "Adauga suport Pear Desktop pentru Amuse se redă acum widget de 6K Labs",
+      "description": "Adauga suport {{applicationName}} pentru Amuse se redă acum widget de 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Server-ul API-ului Amuse rulează. GET /query pentru a obține informații despre melodie."
@@ -373,7 +373,7 @@
       "name": "Ignoră restricțiile de vârstă"
     },
     "captions-selector": {
-      "description": "Selector de subtitrări pentru piesele audio de pe Pear Desktop",
+      "description": "Selector de subtitrări pentru piesele audio de pe {{applicationName}}",
       "menu": {
         "autoload": "Selectează automat ultima subtitrare folosită",
         "disable-captions": "Fără subtitrări în mod implicit"
@@ -456,14 +456,14 @@
         "disconnected": "Deconectat",
         "hide-duration-left": "Ascunde timpul rămas",
         "hide-github-button": "Ascunde butonul cu link-ul GitHub",
-        "play-on-pear-desktop": "Redă pe Pear Desktop",
+        "play-on-application": "Redă pe {{applicationName}}",
         "set-inactivity-timeout": "Setează intervalul de inactivitate",
         "set-status-display-type": {
           "label": "Text stare",
           "submenu": {
             "artist": "Ascultând {artist}",
             "title": "Ascultând {song title}",
-            "pear-desktop": "Ascultând Pear Desktop"
+            "application": "Ascultând {{applicationName}}"
           }
         }
       },
