@@ -1,3 +1,35 @@
+# Fork Information
+
+## Purpose of This Fork
+
+This fork adds back the **adblocker plugin** and implements a new **ytdlp-based downloader plugin** that provides more reliable downloading functionality compared to the previous youtube.js implementation.
+
+### Key Changes
+- **Adblocker Plugin**: Restores ad-blocking capabilities using Cliqz adblocker
+- **Downloader (ytdlp)**: New implementation using yt-dlp for robust video/audio downloads
+
+## Keeping Your Feature Branch Updated
+
+**To keep your feature branch updated with upstream changes:**
+```bash
+git checkout master
+git fetch upstream
+git merge upstream/master
+git push origin master
+git checkout feature/adblocker-and-downloader-plugins
+git rebase master  # Cleanly applies your changes on top of latest master
+git push --force-with-lease origin feature/adblocker-and-downloader-plugins
+```
+
+**When ready to create a PR to upstream:**
+1. Make sure your feature branch is rebased on latest upstream/master (steps above)
+2. Push to your fork: `git push origin feature/adblocker-and-downloader-plugins`
+3. Go to https://github.com/pear-devs/pear-desktop and create a PR from your fork's branch
+
+Using `rebase` keeps a clean, linear history which is preferred for PRs.
+
+---
+
 <div align="center" markdown="1">
    <sup>Special thanks to:</sup>
    <br>
