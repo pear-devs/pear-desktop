@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Abilita tematizzazione della seekbar"
       },
       "name": "Tema abbinato a colore album"
     },
@@ -319,6 +320,22 @@
         },
         "hostname": {
           "label": "Hostname"
+        },
+        "https": {
+          "label": "HTTPS & Certificati",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Seleziona file di certificato HTTPS",
+              "label": "File di certificato (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Abilita HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Seleziona il file della chiave privata HTTPS",
+              "label": "File della chiave privata (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Porta"
@@ -461,9 +478,9 @@
         "set-status-display-type": {
           "label": "Testo dello status",
           "submenu": {
+            "application": "Ascoltando {{applicationName}}",
             "artist": "Stai ascoltando {artist}",
-            "title": "Stai ascoltando {song title}",
-            "application": "Ascoltando {{applicationName}}"
+            "title": "Stai ascoltando {song title}"
           }
         }
       },
@@ -870,7 +887,7 @@
       },
       "name": "Testi sincronizzati",
       "refetch-btn": {
-        "fetching": "Sto recuperando...",
+        "fetching": "Caricamento...",
         "normal": "Recupera i testi"
       },
       "warnings": {
