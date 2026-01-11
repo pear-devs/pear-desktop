@@ -1,5 +1,7 @@
 import { createRenderer } from '@/utils';
 
+import workletCode from './StreamProcessor.js?raw';
+
 import type { RendererContext } from '@/types/contexts';
 import type { MusicPlayer } from '@/types/music-player';
 
@@ -26,8 +28,41 @@ type RendererProperties = {
   batchCount: number;
   processingQueue: ProcessingQueueItem[];
   isProcessing: boolean;
-  startStreaming: (audioContext: AudioContext, audioSource: AudioNode) => void;
+  startStreaming: (
+    ipc: RendererContext<{ enabled: boolean }>['ipc'],
+    audioContext: AudioContext,
+    audioSource: AudioNode,
+  ) => void;
 };
+
+function writeString(view: DataView, offset: number, str: string) {
+  for (let i = 0; i < str.length; i++) {
+    view.setUint8(offset + i, str.charCodeAt(i));
+  }
+}
+
+function createWavHeader(
+  sampleRate: number,
+  numChannels: number,
+  dataLength: number,
+) {
+  const header = new ArrayBuffer(44);
+  const view = new DataView(header);
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + dataLength, true); // file size - 8
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true); // subchunk1 size (16 for PCM)
+  view.setUint16(20, 1, true); // audio format (1 = PCM)
+  view.setUint16(22, numChannels, true); // number of channels
+  view.setUint32(24, sampleRate, true); // sample rate
+  view.setUint32(28, sampleRate * numChannels * 2, true); // byte rate
+  view.setUint16(32, numChannels * 2, true); // block align
+  view.setUint16(34, 16, true); // bits per sample
+  writeString(view, 36, 'data');
+  view.setUint32(40, dataLength, true); // data chunk size
+  return new Uint8Array(header);
+}
 
 export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
   isStreaming: false,
@@ -36,7 +71,10 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
   processingQueue: [],
   isProcessing: false,
 
-  async onPlayerApiReady(_: MusicPlayer, context: RendererContext<AudioStreamConfig>) {
+  async onPlayerApiReady(
+    _: MusicPlayer,
+    context: RendererContext<AudioStreamConfig>,
+  ) {
     this.context = context;
     this.config = await context.getConfig();
 
@@ -48,15 +86,21 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
     document.addEventListener(
       'peard:audio-can-play',
       (e) => {
-        this.startStreaming(e.detail.audioContext, e.detail.audioSource);
+        this.startStreaming(
+          context.ipc,
+          e.detail.audioContext,
+          e.detail.audioSource,
+        );
       },
       { once: true, passive: true },
     );
   },
 
   startStreaming(
+    ipc: RendererContext<{ enabled: boolean }>['ipc'],
     audioContext: AudioContext,
     audioSource: AudioNode,
+    bufferSize = 4096,
   ) {
     if (this.isStreaming || !this.context) {
       return;
@@ -65,207 +109,68 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
     this.audioContext = audioContext;
     this.audioSource = audioSource;
 
-    // Get fresh config to ensure we have the latest values
-    const config = this.config!;
-    // Use the actual AudioContext sample rate, not config (audio might be resampled)
     const sampleRate = audioContext.sampleRate;
-    const bitDepth = config.bitDepth || 16;
-    // Use actual number of channels from the audio source
-    const channels = config.channels || 2;
-
-    // Send audio configuration to backend
-    this.context.ipc.send('audio-stream:config', {
-      sampleRate,
-      bitDepth,
-      channels,
-    });
-
-    // Prefer AudioWorkletNode for stable timing and higher-quality capture.
-    // We create a small inline AudioWorkletProcessor via a Blob so bundling
-    // doesn't need extra files. The worklet interleaves and converts to
-    // Int16 and posts transferable ArrayBuffers to the main thread.
-    this.batchBuffer = null;
-    this.batchCount = 0;
-    this.processingQueue = [];
-    this.isProcessing = false;
-
-    
-
-    // Process queue with limited items per tick to prevent blocking
-    // Increased queue size to handle bursts better
-    const MAX_QUEUE_SIZE = 16; // Increased from 8 to handle bursts
-    const ITEMS_PER_TICK = 2; // Process 2 items per tick for better throughput
-
-    const processQueue = () => {
-      if (this.isProcessing || this.processingQueue.length === 0 || !this.context) {
-        return;
-      }
-
-      this.isProcessing = true;
-
-      // Process multiple items per tick to keep up with audio callback rate
-      let itemsProcessed = 0;
-      const processBatch = () => {
-        while (itemsProcessed < ITEMS_PER_TICK && this.processingQueue.length > 0 && this.context) {
-          const item = this.processingQueue.shift();
-          if (!item) break;
-          
-          try {
-            // Convert to regular ArrayBuffer (handle SharedArrayBuffer case)
-            let buffer: ArrayBuffer;
-            if (item.buffer.buffer instanceof SharedArrayBuffer) {
-              buffer = new ArrayBuffer(item.buffer.buffer.byteLength);
-              new Uint8Array(buffer).set(new Uint8Array(item.buffer.buffer));
-            } else {
-              buffer = item.buffer.buffer;
-            }
-
-            // Send binary PCM to backend (avoid base64 to reduce CPU/GC)
-            const uint8 = new Uint8Array(buffer);
-            this.context!.ipc.send('audio-stream:pcm-binary', {
-              metadata: item.metadata,
-              data: uint8,
-            });
-            
-            itemsProcessed++;
-          } catch (error) {
-            console.error('[Audio Stream] Error processing queue item:', error);
-            itemsProcessed++;
-          }
-        }
-
-        this.isProcessing = false;
-
-        // Schedule next batch if queue still has items
-        if (this.processingQueue.length > 0) {
-          // Use immediate microtask for low latency when queue is small
-          // Use setTimeout(0) for larger queues to prevent blocking
-          if (this.processingQueue.length > 8) {
-            setTimeout(processQueue, 0);
-          } else {
-            queueMicrotask(processQueue);
-          }
-        }
-      };
-
-      // Start processing immediately
-      processBatch();
-    };
-
-    // Create AudioWorklet module inline (avoids bundling extra files).
-    const workletCode = `class PCMProcessor extends AudioWorkletProcessor {
-  constructor() {
-    super();
-    this.port.onmessage = (e) => {
-      if (e.data && e.data.sampleRate) {
-        this._sampleRate = e.data.sampleRate;
-      }
-    };
-  }
-
-  process(inputs) {
-    try {
-      const input = inputs[0];
-      if (!input || input.length === 0) return true;
-
-      const channels = input.length;
-      const frames = input[0].length;
-      const interleaved = new Int16Array(frames * channels);
-      const MAX_INT16 = 0x7fff;
-
-      if (channels === 2) {
-        const left = input[0];
-        const right = input[1];
-        for (let i = 0; i < frames; i++) {
-          const l = left[i] < -1 ? -1 : left[i] > 1 ? 1 : left[i];
-          const r = right[i] < -1 ? -1 : right[i] > 1 ? 1 : right[i];
-          interleaved[i * 2] = Math.round(l * MAX_INT16);
-          interleaved[i * 2 + 1] = Math.round(r * MAX_INT16);
-        }
-      } else {
-        for (let ch = 0; ch < channels; ch++) {
-          const data = input[ch];
-          for (let i = 0; i < frames; i++) {
-            const s = data[i] < -1 ? -1 : data[i] > 1 ? 1 : data[i];
-            interleaved[i * channels + ch] = Math.round(s * MAX_INT16);
-          }
-        }
-      }
-
-      this.port.postMessage({
-        buffer: interleaved.buffer,
-        metadata: {
-          timestamp: Date.now(),
-          sampleRate: this._sampleRate || 48000,
-          bitDepth: 16,
-          channels: channels,
-        }
-      }, [interleaved.buffer]);
-    } catch (err) {
-      // keep audio thread alive
-    }
-    return true;
-  }
-}
-registerProcessor('pcm-processor', PCMProcessor);
-`;
 
     const blob = new Blob([workletCode], { type: 'application/javascript' });
     const blobUrl = URL.createObjectURL(blob);
 
     try {
-      audioContext.audioWorklet.addModule(blobUrl).then(() => {
-        const workletNode = new AudioWorkletNode(audioContext, 'pcm-processor', {
-          numberOfInputs: 1,
-          numberOfOutputs: 0,
-          channelCount: channels,
-        });
+      audioContext.audioWorklet
+        .addModule(blobUrl)
+        .then(() => {
+          const workletNode = new AudioWorkletNode(
+            audioContext,
+            'recorder-processor',
+            {
+              sampleRate: this.config!.sampleRate,
+              bufferSize: bufferSize,
+            },
+          );
 
-        workletNode.port.postMessage({ sampleRate });
+          workletNode.port.onmessage = (event) => {
+            // Received a Float32Array of interleaved stereo samples from the worklet
+            const float32Data = event.data;
 
-        workletNode.port.onmessage = (event) => {
-          if (!this.isStreaming || !this.context) return;
-
-          try {
-            const ab = event.data.buffer as ArrayBuffer;
-            const metadata = event.data.metadata || {};
-
-            while (this.processingQueue.length >= MAX_QUEUE_SIZE) {
-              this.processingQueue.shift();
+            // Convert floats [-1,1] to 16-bit PCM
+            const int16Buffer = new ArrayBuffer(float32Data.length * 2);
+            const view = new DataView(int16Buffer);
+            for (let i = 0; i < float32Data.length; i++) {
+              const s = Math.max(-1, Math.min(1, float32Data[i])); // clamp
+              // Scale to 16-bit signed range
+              view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
             }
+            const pcmData = new Uint8Array(int16Buffer);
 
-            this.processingQueue.push({
-              buffer: new Int16Array(ab),
-              metadata: {
-                timestamp: metadata.timestamp || Date.now(),
-                sampleRate: metadata.sampleRate || sampleRate,
-                bitDepth: metadata.bitDepth || 16,
-                channels: metadata.channels || channels,
-              },
-            });
+            // Build WAV header (16-bit, stereo, given sample rate, data length = pcmData.byteLength)
+            const wavHeader = createWavHeader(
+              audioContext.sampleRate,
+              2,
+              pcmData.byteLength,
+            );
 
-            if (!this.isProcessing) queueMicrotask(processQueue);
-          } catch (err) {
-            console.error('[Audio Stream] Worklet message error:', err);
-          }
-        };
+            // Combine header + PCM data into one Uint8Array
+            const wavChunk = new Uint8Array(wavHeader.length + pcmData.length);
+            wavChunk.set(wavHeader, 0);
+            wavChunk.set(pcmData, wavHeader.length);
 
-        audioSource.connect(workletNode);
+            ipc.send('audio-stream:pcm-binary', wavChunk);
+          };
 
-        this.scriptProcessor = undefined;
-        this.isStreaming = true;
-      }).catch((err) => {
-        console.error('[Audio Stream] Failed to add audio worklet module:', err);
-      });
+          audioSource.connect(workletNode);
+          this.isStreaming = true;
+        })
+        .catch((err) => {
+          console.error(
+            '[Audio Stream] Failed to add audio worklet module:',
+            err,
+          );
+        });
     } catch (err) {
       console.error('[Audio Stream] AudioWorklet setup failed:', err);
     }
     this.isStreaming = true;
 
-    console.log(
-      '[Audio Stream] Started PCM streaming:',
-      `${sampleRate}Hz, ${bitDepth}-bit, ${channels} channel(s)`,
-    );
+    console.log('[Audio Stream] Started PCM streaming:');
   },
 
   stop() {
@@ -278,8 +183,6 @@ registerProcessor('pcm-processor', PCMProcessor);
     // Flush any remaining batched data
     if (this.batchBuffer && this.batchBuffer.length > 0 && this.context) {
       try {
-        
-
         let buffer: ArrayBuffer;
         if (this.batchBuffer.buffer instanceof SharedArrayBuffer) {
           buffer = new ArrayBuffer(this.batchBuffer.buffer.byteLength);
@@ -288,15 +191,7 @@ registerProcessor('pcm-processor', PCMProcessor);
           buffer = this.batchBuffer.buffer;
         }
         const uint8 = new Uint8Array(buffer);
-        this.context.ipc.send('audio-stream:pcm-binary', {
-          metadata: {
-            timestamp: Date.now(),
-            sampleRate: this.config?.sampleRate || 48000,
-            bitDepth: this.config?.bitDepth || 16,
-            channels: 2,
-          },
-          data: uint8,
-        });
+        this.context.ipc.send('audio-stream:pcm-binary', uint8);
       } catch {
         // Ignore flush errors
       }
@@ -335,13 +230,21 @@ registerProcessor('pcm-processor', PCMProcessor);
       // Wait for audio to be ready if not already streaming
       if (!this.isStreaming && this.audioContext && this.audioSource) {
         // Already have audio context, start immediately
-        this.startStreaming(this.audioContext, this.audioSource);
+        this.startStreaming(
+          this.context!.ipc,
+          this.audioContext,
+          this.audioSource,
+        );
       } else if (!this.isStreaming) {
         // Wait for audio to be ready
         document.addEventListener(
           'peard:audio-can-play',
           (e) => {
-            this.startStreaming(e.detail.audioContext, e.detail.audioSource);
+            this.startStreaming(
+              this.context!.ipc,
+              e.detail.audioContext,
+              e.detail.audioSource,
+            );
           },
           { once: true, passive: true },
         );
@@ -361,7 +264,12 @@ registerProcessor('pcm-processor', PCMProcessor);
 
       this.audioContext = undefined;
       this.audioSource = undefined;
-    } else if (config.enabled && wasEnabled && qualityChanged && this.isStreaming) {
+    } else if (
+      config.enabled &&
+      wasEnabled &&
+      qualityChanged &&
+      this.isStreaming
+    ) {
       // Quality/latency settings changed while streaming - restart with new settings
       if (this.audioContext && this.audioSource) {
         // Stop current streaming
@@ -370,11 +278,11 @@ registerProcessor('pcm-processor', PCMProcessor);
         // Clear processing queue to prevent sending stale data
         this.processingQueue = [];
         this.isProcessing = false;
-        
+
         // Store references before cleanup
         const audioContext = this.audioContext;
         const audioSource = this.audioSource;
-        
+
         if (this.scriptProcessor) {
           try {
             this.scriptProcessor.disconnect();
@@ -387,13 +295,17 @@ registerProcessor('pcm-processor', PCMProcessor);
         // Use requestAnimationFrame to ensure cleanup is complete before restarting
         requestAnimationFrame(() => {
           // Double-check we're not streaming and have valid references
-          if (audioContext && audioSource && !this.isStreaming && this.context) {
+          if (
+            audioContext &&
+            audioSource &&
+            !this.isStreaming &&
+            this.context
+          ) {
             // Restart with new settings - this will send new config to backend
-            this.startStreaming(audioContext, audioSource);
+            this.startStreaming(this.context.ipc, audioContext, audioSource);
           }
         });
       }
     }
   },
 });
-

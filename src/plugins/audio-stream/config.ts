@@ -20,5 +20,3 @@ export const defaultAudioStreamConfig: AudioStreamConfig = {
   channels: 2, // Stereo
   bufferSize: 2048, // Low latency buffer size
 };
-
-
