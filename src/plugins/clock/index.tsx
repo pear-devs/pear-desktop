@@ -17,7 +17,7 @@ const defaultConfig: ClockPluginConfig = {
 export default createPlugin({
   name: () => t('plugins.clock.name'),
   description: () => t('plugins.clock.description'),
-  restartNeeded: true,
+  restartNeeded: false,
   config: defaultConfig,
   stylesheets: [style],
   menu: async ({ getConfig, setConfig }): Promise<MenuTemplate> => {
@@ -100,6 +100,7 @@ export default createPlugin({
     },
     stop() {
       this.clockContainer.remove();
+      this.clockContainer.replaceChildren();
       if (this.interval) {
         clearInterval(this.interval);
       }
