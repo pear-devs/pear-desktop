@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto';
 
 import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
 import { spawn, spawnSync } from 'node:child_process';
+import { which } from 'which';
 import {
   Innertube,
   UniversalCache,
@@ -447,7 +448,14 @@ async function downloadSongUnsafe(
     const findYtdlpExecutable = async (preferred?: string) => {
       const candidates: (string | undefined)[] = [];
       if (preferred) candidates.push(preferred);
-      candidates.push('/usr/bin/yt-dlp', '/usr/local/bin/yt-dlp', 'yt-dlp');
+      
+      // Try to find yt-dlp using the which command
+      try {
+        const foundPath = await which('yt-dlp', { nothrow: true });
+        if (foundPath) return foundPath;
+      } catch (_) {
+        // ignore if which fails
+      }
 
       for (const c of candidates) {
         if (!c) continue;
@@ -462,7 +470,25 @@ async function downloadSongUnsafe(
       return null;
     };
 
+    const findFfmpegExecutable = async (preferred?: string) => {
+      const candidates: (string | undefined)[] = [];
+      if (preferred) candidates.push(preferred);
+      
+      // Try to find ffmpeg using the which command
+      try {
+        const foundPath = await which('ffmpeg', { nothrow: true });
+        if (foundPath) return foundPath;
+      } catch (_) {
+        // ignore if which fails
+      }
+      
+      return null;
+    };
+
     const ytdlpExecutable = await findYtdlpExecutable(config.ytdlpPath ?? undefined);
+    const ffmpegPath = await findFfmpegExecutable(config.ytdlpFfmpegPath ?? undefined);
+    
+    // Check if both yt-dlp and ffmpeg are available
     if (!ytdlpExecutable) {
       dialog.showMessageBox(win, {
         type: 'error',
@@ -470,10 +496,23 @@ async function downloadSongUnsafe(
         title: t('plugins.downloader.backend.dialog.ytdlp-not-found.title') || 'yt-dlp introuvable',
         message:
           t('plugins.downloader.backend.dialog.ytdlp-not-found.message') ||
-          "yt-dlp n'a pas été trouvé ou n'est pas exécutable. Le chemin doit inclure le nom de l'exécutable (par ex. /usr/bin/yt-dlp/yt-dlp_linux ou /usr/bin/yt-dlp). Vérifiez l'installation ou indiquez le chemin complet dans le menu du plugin.",
+          "yt-dlp n'a pas été trouvé. Veuillez installer yt-dlp ou indiquer le chemin complet dans le menu du plugin.",
       });
       return;
     }
+    
+    if (!ffmpegPath) {
+      dialog.showMessageBox(win, {
+        type: 'error',
+        buttons: ['OK'],
+        title: t('plugins.downloader.backend.dialog.ffmpeg-not-found.title') || 'ffmpeg introuvable',
+        message:
+          t('plugins.downloader.backend.dialog.ffmpeg-not-found.message') ||
+          "ffmpeg n'a pas été trouvé. Veuillez installer ffmpeg ou indiquer le chemin complet dans le menu du plugin.",
+      });
+      return;
+    }
+    
     const baseName = filename.replace(new RegExp(`\\.${targetFileExtension}$`), '');
     const outputTemplate =
       targetFileExtension === 'mp3'
@@ -490,10 +529,8 @@ async function downloadSongUnsafe(
       args.unshift('-f', 'best');
     }
 
-    // If user provided ffmpeg/ffprobe location for yt-dlp, pass it through
-    if (config.ytdlpFfmpegPath) {
-      args.push('--ffmpeg-location', config.ytdlpFfmpegPath);
-    }
+    // Pass ffmpeg location to yt-dlp
+    args.push('--ffmpeg-location', ffmpegPath);
 
     sendFeedback(t('plugins.downloader.backend.feedback.downloading'), 2);
 

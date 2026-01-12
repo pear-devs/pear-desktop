@@ -33,7 +33,7 @@ export type DownloaderPluginConfig = {
 export const defaultConfig: DownloaderPluginConfig = {
   enabled: false,
   engine: 'youtube.js',
-  ytdlpPath: '/usr/bin/yt-dlp',
+  ytdlpPath: undefined,
   ytdlpFfmpegPath: undefined,
   downloadFolder: undefined,
   downloadOnFinish: {
