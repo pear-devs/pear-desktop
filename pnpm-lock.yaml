@@ -65,19 +65,19 @@ importers:
         version: 2.11.6(electron@38.7.2)
       '@hono/node-server':
         specifier: 1.19.7
-        version: 1.19.7(hono@4.10.3)
+        version: 1.19.7(hono@4.11.4)
       '@hono/node-ws':
         specifier: 1.2.0
-        version: 1.2.0(@hono/node-server@1.19.7(hono@4.10.3))(bufferutil@4.0.9)(hono@4.10.3)(utf-8-validate@6.0.6)
+        version: 1.2.0(@hono/node-server@1.19.7(hono@4.11.4))(bufferutil@4.0.9)(hono@4.11.4)(utf-8-validate@6.0.6)
       '@hono/swagger-ui':
         specifier: 0.5.2
-        version: 0.5.2(hono@4.10.3)
+        version: 0.5.2(hono@4.11.4)
       '@hono/zod-openapi':
         specifier: 1.2.0
-        version: 1.2.0(hono@4.10.3)(zod@4.2.1)
+        version: 1.2.0(hono@4.11.4)(zod@4.2.1)
       '@hono/zod-validator':
         specifier: 0.7.6
-        version: 0.7.6(hono@4.10.3)(zod@4.2.1)
+        version: 0.7.6(hono@4.11.4)(zod@4.2.1)
       '@jellybrick/dbus-next':
         specifier: 0.10.3
         version: 0.10.3
@@ -166,8 +166,8 @@ importers:
         specifier: 20.0.11
         version: 20.0.11
       hono:
-        specifier: 4.10.3
-        version: 4.10.3
+        specifier: 4.11.4
+        version: 4.11.4
       howler:
         specifier: 2.2.4
         version: 2.2.4
@@ -2854,8 +2854,8 @@ packages:
     resolution: {integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==}
     hasBin: true
 
-  hono@4.10.3:
-    resolution: {integrity: sha512-2LOYWUbnhdxdL8MNbNg9XZig6k+cZXm5IjHn2Aviv7honhBMOHb+jxrKIeJRZJRmn+htUCKhaicxwXuUDlchRA==}
+  hono@4.11.4:
+    resolution: {integrity: sha512-U7tt8JsyrxSRKspfhtLET79pU8K+tInj5QZXs1jSugO1Vq5dFj3kmZsRldo29mTBfcjDRVRXrEZ6LS63Cog9ZA==}
     engines: {node: '>=16.9.0'}
 
   hosted-git-info@4.1.0:
@@ -5390,34 +5390,34 @@ snapshots:
     dependencies:
       tldts-experimental: 7.0.12
 
-  '@hono/node-server@1.19.7(hono@4.10.3)':
+  '@hono/node-server@1.19.7(hono@4.11.4)':
     dependencies:
-      hono: 4.10.3
+      hono: 4.11.4
 
-  '@hono/node-ws@1.2.0(@hono/node-server@1.19.7(hono@4.10.3))(bufferutil@4.0.9)(hono@4.10.3)(utf-8-validate@6.0.6)':
+  '@hono/node-ws@1.2.0(@hono/node-server@1.19.7(hono@4.11.4))(bufferutil@4.0.9)(hono@4.11.4)(utf-8-validate@6.0.6)':
     dependencies:
-      '@hono/node-server': 1.19.7(hono@4.10.3)
-      hono: 4.10.3
+      '@hono/node-server': 1.19.7(hono@4.11.4)
+      hono: 4.11.4
       ws: 8.18.3(bufferutil@4.0.9)(utf-8-validate@6.0.6)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@hono/swagger-ui@0.5.2(hono@4.10.3)':
+  '@hono/swagger-ui@0.5.2(hono@4.11.4)':
     dependencies:
-      hono: 4.10.3
+      hono: 4.11.4
 
-  '@hono/zod-openapi@1.2.0(hono@4.10.3)(zod@4.2.1)':
+  '@hono/zod-openapi@1.2.0(hono@4.11.4)(zod@4.2.1)':
     dependencies:
       '@asteasolutions/zod-to-openapi': 8.1.0(zod@4.2.1)
-      '@hono/zod-validator': 0.7.6(hono@4.10.3)(zod@4.2.1)
-      hono: 4.10.3
+      '@hono/zod-validator': 0.7.6(hono@4.11.4)(zod@4.2.1)
+      hono: 4.11.4
       openapi3-ts: 4.5.0
       zod: 4.2.1
 
-  '@hono/zod-validator@0.7.6(hono@4.10.3)(zod@4.2.1)':
+  '@hono/zod-validator@0.7.6(hono@4.11.4)(zod@4.2.1)':
     dependencies:
-      hono: 4.10.3
+      hono: 4.11.4
       zod: 4.2.1
 
   '@humanfs/core@0.19.1': {}
@@ -7903,7 +7903,7 @@ snapshots:
 
   he@1.2.0: {}
 
-  hono@4.10.3: {}
+  hono@4.11.4: {}
 
   hosted-git-info@4.1.0:
     dependencies:
