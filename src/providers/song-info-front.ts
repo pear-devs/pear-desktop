@@ -116,17 +116,59 @@ export const setupLikeChangedListener = singleton(() => {
 });
 
 export const setupVolumeChangedListener = singleton((api: MusicPlayer) => {
-  document.querySelector('video')?.addEventListener('volumechange', () => {
-    window.ipcRenderer.send('peard:volume-changed', {
-      state: api.getVolume(),
-      isMuted: api.isMuted(),
-    });
+  const updateVolume = () => {
+    // Queries the video element to check if it's muted
+    // But importantly, queries the *current* player bar execution context for the API
+    // This avoids the stale 'api' reference issue
+    const playerBar = document.querySelector<
+      HTMLElement & {
+        getState: () => GetState;
+      }
+    >('ytmusic-player-bar');
+
+    // Fallback to provided api if available, but playerBar is preferred for freshness
+    const state = playerBar?.getState().player.muted
+      ? 0
+      : (playerBar?.getState().player.volume ?? api.getVolume());
+    const isMuted = playerBar?.getState().player.muted ?? api.isMuted();
+
+    try {
+      window.ipcRenderer.send('peard:volume-changed', {
+        state,
+        isMuted,
+      });
+    } catch (e) {
+      console.error('Failed to send volume change IPC:', e);
+    }
+  };
+
+  const attachListener = (video: HTMLVideoElement) => {
+    // We attach the listener to the video element to know WHEN to update
+    video.addEventListener('volumechange', updateVolume);
+  };
+
+  const video = document.querySelector('video');
+  if (video) {
+    attachListener(video);
+    updateVolume(); // Initial sync
+  } else {
+    updateVolume(); // Send whatever we have
+  }
+
+  const observer = new MutationObserver((mutations) => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        if (node instanceof HTMLVideoElement) {
+          attachListener(node);
+          updateVolume();
+        }
+      }
+    }
   });
 
-  // Emit the initial value as well; as it's persistent between launches.
-  window.ipcRenderer.send('peard:volume-changed', {
-    state: api.getVolume(),
-    isMuted: api.isMuted(),
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
   });
 });
 
@@ -165,7 +207,7 @@ export const setupFullScreenChangedListener = singleton(() => {
     window.ipcRenderer.send(
       'peard:fullscreen-changed',
       (playerBar?.attributes.getNamedItem('player-fullscreened') ?? null) !==
-        null,
+      null,
     );
   });
 
