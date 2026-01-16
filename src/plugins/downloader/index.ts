@@ -11,6 +11,12 @@ import { t } from '@/i18n';
 export type DownloaderPluginConfig = {
   enabled: boolean;
   downloadFolder?: string;
+  // Engine to use for downloading: either the built-in youtube.js or external yt-dlp
+  engine?: 'youtube.js' | 'yt-dlp';
+  // Path to the yt-dlp executable (when using yt-dlp). Defaults to common system path.
+  ytdlpPath?: string;
+  // Optional path to ffmpeg/ffprobe executable or folder for yt-dlp
+  ytdlpFfmpegPath?: string;
   downloadOnFinish?: {
     enabled: boolean;
     seconds: number;
@@ -26,6 +32,9 @@ export type DownloaderPluginConfig = {
 
 export const defaultConfig: DownloaderPluginConfig = {
   enabled: false,
+  engine: 'youtube.js',
+  ytdlpPath: undefined,
+  ytdlpFfmpegPath: undefined,
   downloadFolder: undefined,
   downloadOnFinish: {
     enabled: false,
