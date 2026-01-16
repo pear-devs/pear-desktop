@@ -91,6 +91,11 @@ export const simplifyUnicode = (text?: string) =>
         .trim()
     : text;
 
+export const isBlank = (text?: string) => {
+  const simplified = simplifyUnicode(text);
+  return simplified === undefined || simplified === '';
+};
+
 // Japanese Shinjitai
 const shinjitai = [
   20055, 20081, 20120, 20124, 20175, 26469, 20341, 20206, 20253, 20605, 20385,
@@ -212,4 +217,61 @@ export const romanize = async (line: string) => {
   if (hasThai([line])) line = romanizeThai(line);
 
   return line;
+};
+
+// timeInMs to seek time in seconds (precise or rounded to nearest second for preciseTiming)
+export const getSeekTime = (timeInMs: number, precise: boolean) =>
+  precise ? timeInMs / 1000 : Math.round(timeInMs / 1000);
+
+// Format a time value in ms into mm:ss or mm:ss.xx depending on preciseTiming
+export function formatTime(timeInMs: number, preciseTiming: boolean): string {
+  if (!preciseTiming) {
+    const totalSeconds = Math.round(timeInMs / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    return `${minutes.toString().padStart(2, '0')}:${seconds
+      .toString()
+      .padStart(2, '0')}`;
+  }
+
+  const minutes = Math.floor(timeInMs / 60000);
+  const seconds = Math.floor((timeInMs % 60000) / 1000);
+  const ms = Math.floor((timeInMs % 1000) / 10);
+
+  return `${minutes.toString().padStart(2, '0')}:${seconds
+    .toString()
+    .padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+}
+
+// Returns the time code prefix text to embed in yt-formatted-string runs
+export const timeCodeText = (
+  timeInMs: number,
+  preciseTiming: boolean,
+  show: boolean,
+) => (show ? `[${formatTime(timeInMs, preciseTiming)}] ` : '');
+
+// Normalizes plain-lyrics text into displayable lines, removing empty lines
+// while preserving a single trailing empty line if the original text ends with one.
+export const normalizePlainLyrics = (raw: string): string[] => {
+  const rawLines = raw.split('\n');
+  const hasTrailingEmpty =
+    rawLines.length > 0 && isBlank(rawLines[rawLines.length - 1]);
+
+  const lines = rawLines.filter((line, idx) => {
+    if (!isBlank(line)) return true;
+    // keep only the final empty line (for padding) if it exists
+    return hasTrailingEmpty && idx === rawLines.length - 1;
+  });
+
+  return lines;
+};
+
+export const SFont = () => {
+  if (document.getElementById('satoshi-font-link')) return;
+  const link = document.createElement('link');
+  link.id = 'satoshi-font-link';
+  link.rel = 'stylesheet';
+  link.href = 'https://api.fontshare.com/v2/css?f[]=satoshi@1&display=swap';
+  document.head.appendChild(link);
 };

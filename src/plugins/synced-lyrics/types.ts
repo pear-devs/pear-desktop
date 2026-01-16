@@ -9,6 +9,7 @@ export type SyncedLyricsPluginConfig = {
   defaultTextString: string | string[];
   showLyricsEvenIfInexact: boolean;
   lineEffect: LineEffect;
+  showEmptyLineSymbols: boolean;
   romanization: boolean;
 };
 
@@ -23,7 +24,7 @@ export type LineLyrics = {
   status: LineLyricsStatus;
 };
 
-export type LineEffect = 'fancy' | 'scale' | 'offset' | 'focus';
+export type LineEffect = 'enhanced' | 'fancy' | 'scale' | 'offset' | 'focus';
 
 export interface LyricResult {
   title: string;
