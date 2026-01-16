@@ -207,7 +207,7 @@ export const setupFullScreenChangedListener = singleton(() => {
     window.ipcRenderer.send(
       'peard:fullscreen-changed',
       (playerBar?.attributes.getNamedItem('player-fullscreened') ?? null) !==
-      null,
+        null,
     );
   });
 
