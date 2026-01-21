@@ -70,8 +70,8 @@ importers:
         specifier: 1.2.0
         version: 1.2.0(@hono/node-server@1.19.7(hono@4.11.4))(bufferutil@4.1.0)(hono@4.11.4)(utf-8-validate@6.0.6)
       '@hono/swagger-ui':
-        specifier: 0.5.2
-        version: 0.5.2(hono@4.11.4)
+        specifier: 0.5.3
+        version: 0.5.3(hono@4.11.4)
       '@hono/zod-openapi':
         specifier: 1.2.0
         version: 1.2.0(hono@4.11.4)(zod@4.2.1)
@@ -836,10 +836,10 @@ packages:
       '@hono/node-server': ^1.11.1
       hono: ^4.6.0
 
-  '@hono/swagger-ui@0.5.2':
-    resolution: {integrity: sha512-7wxLKdb8h7JTdZ+K8DJNE3KXQMIpJejkBTQjrYlUWF28Z1PGOKw6kUykARe5NTfueIN37jbyG/sBYsbzXzG53A==}
+  '@hono/swagger-ui@0.5.3':
+    resolution: {integrity: sha512-Hn90DOOJ62ICJQplQvCDVpi9Jcn6EhtRaiffyJIS53wA5RmRLtMCDQGVc0bor8vQD7JIwpkweWjs+3cycp+IvA==}
     peerDependencies:
-      hono: '*'
+      hono: '>=4.0.0'
 
   '@hono/zod-openapi@1.2.0':
     resolution: {integrity: sha512-KDfHqv/Wy4elVseZXgokbHxeWuqBL+AZfqsOMpEihBMUsk/fJ+bLIi3Sf70JFVpt1Ihui8RasYrInozt7ZBDIA==}
@@ -5404,7 +5404,7 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@hono/swagger-ui@0.5.2(hono@4.11.4)':
+  '@hono/swagger-ui@0.5.3(hono@4.11.4)':
     dependencies:
       hono: 4.11.4
 

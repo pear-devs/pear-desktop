@@ -74,7 +74,7 @@
     "@ghostery/adblocker-electron-preload": "2.11.6",
     "@hono/node-server": "1.19.7",
     "@hono/node-ws": "1.2.0",
-    "@hono/swagger-ui": "0.5.2",
+    "@hono/swagger-ui": "0.5.3",
     "@hono/zod-openapi": "1.2.0",
     "@hono/zod-validator": "0.7.6",
     "@jellybrick/dbus-next": "0.10.3",
