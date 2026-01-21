@@ -176,7 +176,7 @@
     "vite-plugin-inspect": "11.3.3",
     "vite-plugin-resolve": "2.5.2",
     "vite-plugin-solid": "2.11.10",
-    "ws": "8.18.3"
+    "ws": "8.19.0"
   },
   "auto-changelog": {
     "hideCredit": true,
