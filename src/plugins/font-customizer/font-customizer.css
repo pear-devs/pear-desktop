@@ -25,8 +25,6 @@ html[data-font-customizer="active"] .ytmusic-browse-response *:not(.title):not(.
 }
 
 /* Headers */
-
-/* Headers */
 html[data-font-customizer="active"] ytmusic-shelf-renderer h2.title,
 html[data-font-customizer="active"] .ytmusic-detail-header-renderer .title,
 html[data-font-customizer="active"] ytmusic-header-renderer .title,
@@ -40,8 +38,6 @@ html[data-font-customizer="active"] .ytmusic-immersive-header-renderer .title,
 html[data-font-customizer="active"] .ytmusic-immersive-header-renderer yt-formatted-string {
   font-family: var(--ytmusic-font-header, var(--ytmusic-font-primary, var(--ytmusic-font-global, initial))) !important;
 }
-
-/* Titles */
 
 /* Titles */
 html[data-font-customizer="active"] ytmusic-player-bar .title,
@@ -60,8 +56,6 @@ html[data-font-customizer="active"] ytmusic-browse-response .title yt-formatted-
 html[data-font-customizer="active"] ytmusic-search-response .title yt-formatted-string {
   font-family: var(--ytmusic-font-title, var(--ytmusic-font-primary, var(--ytmusic-font-global, initial))) !important;
 }
-
-/* Artists and secondary text */
 
 /* Artists and secondary text */
 html[data-font-customizer="active"] ytmusic-player-bar .byline,
@@ -109,15 +103,12 @@ html[data-font-customizer="active"] yt-simple-endpoint .style-scope.yt-formatted
 }
 
 /* Lyrics */
-
-/* Lyrics */
 html[data-font-customizer="active"] #tab-renderer[page-type='MUSIC_PAGE_TYPE_TRACK_LYRICS'] *,
 html[data-font-customizer="active"] #synced-lyrics-container * {
   font-family: var(--ytmusic-font-lyrics) !important;
 }
 
 /* Menus and navigation */
-
 html[data-font-customizer="active"] nav[data-ytmd-main-panel],
 html[data-font-customizer="active"] nav[data-ytmd-main-panel] *,
 html[data-font-customizer="active"] [data-ytmd-main-panel],
@@ -151,3 +142,4 @@ html[data-font-customizer="active"] tp-yt-paper-listbox *,
 html[data-font-customizer="active"] .style-scope.menu-item.ytmusic-menu-popup-renderer {
   font-family: var(--ytmusic-font-menu) !important;
 }
+
