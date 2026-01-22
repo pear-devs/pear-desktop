@@ -1,12 +1,17 @@
 import { createRenderer } from '@/utils';
+
 import type { FontCustomizerConfig } from './types';
-import './font-customizer.css';
 
 function injectGoogleFont(doc: Document, family: string) {
-  if (family === 'System Default' || doc.querySelector<HTMLLinkElement>(`link[data-font-family="${CSS.escape(family)}"]`)) {
+  if (
+    family === 'System Default' ||
+    doc.querySelector<HTMLLinkElement>(
+      `link[data-font-family="${CSS.escape(family)}"]`,
+    )
+  ) {
     return;
   }
-  
+
   const link = doc.createElement('link');
   link.rel = 'stylesheet';
   link.href = `https://fonts.googleapis.com/css2?family=${family.replace(/\s+/g, '+')}:wght@300;400;500;600;700;800&display=swap`;
@@ -44,7 +49,7 @@ function applyConfig(config: FontCustomizerConfig) {
     doc.documentElement.removeAttribute('data-font-customizer');
     return;
   }
-  
+
   if (config.mode === 'simple') {
     injectGoogleFont(doc, config.globalFont);
     setCssVar('--ytmusic-font-global', config.globalFont);
@@ -55,7 +60,7 @@ function applyConfig(config: FontCustomizerConfig) {
     injectGoogleFont(doc, config.artistFont);
     injectGoogleFont(doc, config.lyricsFont);
     injectGoogleFont(doc, config.menuFont);
-    
+
     setCssVar('--ytmusic-font-primary', config.primaryFont);
     setCssVar('--ytmusic-font-header', config.headerFont);
     setCssVar('--ytmusic-font-title', config.titleFont);
