@@ -118,8 +118,8 @@ importers:
         specifier: 14.0.0
         version: 14.0.0
       custom-electron-prompt:
-        specifier: 1.5.8
-        version: 1.5.8(electron@38.7.2)
+        specifier: 1.6.1
+        version: 1.6.1(electron@38.7.2)
       deepmerge-ts:
         specifier: 7.1.5
         version: 7.1.5
@@ -1974,10 +1974,13 @@ packages:
   csstype@3.1.3:
     resolution: {integrity: sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==}
 
-  custom-electron-prompt@1.5.8:
-    resolution: {integrity: sha512-AJat6JKDROsbxn375ysJEVYjW6c/+1AiPGyZ7qKugdjvgTjQsPCuH5H4pZ365M+gmYc9/WOSv4s31dPnZ+75eg==}
+  custom-electron-prompt@1.6.1:
+    resolution: {integrity: sha512-D6blzWAe837st316FrByxnz5uLnhgd5aHTDPFq6H1iERh6fq4TJPVmDGMlfg/UVacv3FjHnHMaB1q9IX/HpgVg==}
     peerDependencies:
       electron: '>=10.0.0'
+    peerDependenciesMeta:
+      electron:
+        optional: true
 
   data-uri-to-buffer@4.0.1:
     resolution: {integrity: sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A==}
@@ -6511,8 +6514,8 @@ snapshots:
 
   csstype@3.1.3: {}
 
-  custom-electron-prompt@1.5.8(electron@38.7.2):
-    dependencies:
+  custom-electron-prompt@1.6.1(electron@38.7.2):
+    optionalDependencies:
       electron: 38.7.2
 
   data-uri-to-buffer@4.0.1: {}
