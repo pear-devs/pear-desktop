@@ -74,7 +74,7 @@ export const menu = async ({
         const isNew =
           !popularFonts.includes(trimmedFont) &&
           !customFonts.includes(trimmedFont);
-        
+
         const newConfig: Partial<FontCustomizerConfig> = {
           [fontType]: trimmedFont,
         };
@@ -149,19 +149,23 @@ export const menu = async ({
     ),
   ];
 
+  const simpleModeMenuItems = simpleModeItems.map((item) => ({
+    ...item,
+    visible: cfg.mode === 'simple',
+  }));
+
+  const advancedModeMenuItems = advancedModeItems.map((item) => ({
+    ...item,
+    visible: cfg.mode === 'advanced',
+  }));
+
   return [
     {
       label: 'Mode',
       submenu: modeItems,
     },
     { type: 'separator' },
-    ...simpleModeItems.map((item) => ({
-      ...item,
-      visible: cfg.mode === 'simple',
-    })),
-    ...advancedModeItems.map((item) => ({
-      ...item,
-      visible: cfg.mode === 'advanced',
-    })),
+    ...simpleModeMenuItems,
+    ...advancedModeMenuItems,
   ];
 };
