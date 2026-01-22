@@ -1,5 +1,5 @@
 import { createSignal, Match, Show, Switch } from 'solid-js';
-import { JSX } from 'solid-js/jsx-runtime';
+import { type JSX } from 'solid-js/jsx-runtime';
 import { css } from 'solid-styled-components';
 import { Portal } from 'solid-js/web';
 
@@ -278,7 +278,7 @@ export const PanelItem = (props: PanelItemProps) => {
   };
 
   const handleClick = async () => {
-    await window.ipcRenderer.invoke('ytmd:menu-event', props.commandId);
+    await window.ipcRenderer.invoke('peard:menu-event', props.commandId);
     if (props.type === 'radio') {
       props.onChange?.(!props.checked);
     } else if (props.type === 'checkbox') {
@@ -290,80 +290,80 @@ export const PanelItem = (props: PanelItemProps) => {
 
   return (
     <li
-      ref={setAnchor}
       class={itemStyle()}
-      onMouseEnter={handleHover}
-      onClick={handleClick}
       data-selected={open()}
+      onClick={handleClick}
+      onMouseEnter={handleHover}
+      ref={setAnchor}
     >
       <Switch fallback={<div class={itemIconStyle()} />}>
         <Match when={props.type === 'checkbox' && props.checked}>
           <svg
             class={itemIconStyle()}
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
             fill="none"
+            stroke="currentColor"
             stroke-linecap="round"
             stroke-linejoin="round"
+            stroke-width="1.5"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
           >
-            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M0 0h24v24H0z" fill="none" stroke="none" />
             <path d="M5 12l5 5l10 -10" />
           </svg>
         </Match>
         <Match when={props.type === 'radio' && props.checked}>
           <svg
             class={itemIconStyle()}
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
             style={{ padding: '6px' }}
+            viewBox="0 0 20 20"
+            xmlns="http://www.w3.org/2000/svg"
           >
             <path
-              fill="currentColor"
               d="M10,5 C7.2,5 5,7.2 5,10 C5,12.8 7.2,15 10,15 C12.8,15 15,12.8 15,10 C15,7.2 12.8,5 10,5 L10,5 Z M10,0 C4.5,0 0,4.5 0,10 C0,15.5 4.5,20 10,20 C15.5,20 20,15.5 20,10 C20,4.5 15.5,0 10,0 L10,0 Z M10,18 C5.6,18 2,14.4 2,10 C2,5.6 5.6,2 10,2 C14.4,2 18,5.6 18,10 C18,14.4 14.4,18 10,18 L10,18 Z"
+              fill="currentColor"
             />
           </svg>
         </Match>
         <Match when={props.type === 'radio' && !props.checked}>
           <svg
             class={itemIconStyle()}
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
             style={{ padding: '6px' }}
+            viewBox="0 0 20 20"
+            xmlns="http://www.w3.org/2000/svg"
           >
             <path
-              fill="currentColor"
               d="M10,0 C4.5,0 0,4.5 0,10 C0,15.5 4.5,20 10,20 C15.5,20 20,15.5 20,10 C20,4.5 15.5,0 10,0 L10,0 Z M10,18 C5.6,18 2,14.4 2,10 C2,5.6 5.6,2 10,2 C14.4,2 18,5.6 18,10 C18,14.4 14.4,18 10,18 L10,18 Z"
+              fill="currentColor"
             />
           </svg>
         </Match>
       </Switch>
       <span class={itemLabelStyle()}>{props.name}</span>
-      <Show when={props.chip} fallback={<div />}>
+      <Show fallback={<div />} when={props.chip}>
         <span class={itemChipStyle()}>{props.chip}</span>
       </Show>
       <Show when={props.type === 'submenu'}>
         <svg
           class={itemIconStyle()}
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
           fill="none"
+          stroke="currentColor"
           stroke-linecap="round"
           stroke-linejoin="round"
+          stroke-width="1.5"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
         >
-          <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+          <path d="M0 0h24v24H0z" fill="none" stroke="none" />
           <polyline points="9 6 15 12 9 18" />
         </svg>
         <Panel
-          ref={setChild}
-          open={open()}
           anchor={anchor()}
-          placement={'right-start'}
           data-level={props.type === 'submenu' && props.level.join('/')}
           offset={{ mainAxis: 8 }}
+          open={open()}
+          placement={'right-start'}
+          ref={setChild}
         >
           {props.type === 'submenu' && props.children}
         </Panel>
@@ -371,8 +371,8 @@ export const PanelItem = (props: PanelItemProps) => {
       <Show when={props.toolTip}>
         <Portal>
           <div
-            ref={setToolTip}
             class={popupStyle()}
+            ref={setToolTip}
             style={{
               '--offset-x': `${position.x}px`,
               '--offset-y': `${position.y}px`,
@@ -380,10 +380,10 @@ export const PanelItem = (props: PanelItemProps) => {
           >
             <Transition
               appear
-              enterClass={animationStyle().enter}
               enterActiveClass={animationStyle().enterActive}
-              exitToClass={animationStyle().exitTo}
+              enterClass={animationStyle().enter}
               exitActiveClass={animationStyle().exitActive}
+              exitToClass={animationStyle().exitTo}
             >
               <Show when={toolTipOpen()}>
                 <div class={toolTipStyle()}>{props.toolTip}</div>

@@ -1,5 +1,6 @@
-import { Icons } from '@/types/icons';
+import { type IntrinsicElements as MDUIElements } from 'mdui/jsx.en';
 
+import type { Icons } from '@/types/icons';
 import type { ComponentProps } from 'solid-js';
 
 declare module 'solid-js' {
@@ -34,13 +35,13 @@ declare module 'solid-js' {
       icon: Icons;
     }
 
-    interface YtmdTransProps {
+    interface PearTransProps {
       key?: string;
     }
 
-    interface IntrinsicElements {
+    interface IntrinsicElements extends MDUIElements {
       'center': ComponentProps<'div'>;
-      'ytmd-trans': ComponentProps<'span'> & YtmdTransProps;
+      'pear-trans': ComponentProps<'span'> & PearTransProps;
       'yt-formatted-string': ComponentProps<'span'> & YtFormattedStringProps;
       'yt-button-renderer': ComponentProps<'button'> & YtButtonRendererProps;
       'yt-touch-feedback-shape': ComponentProps<'div'>;
@@ -49,8 +50,8 @@ declare module 'solid-js' {
       'tp-yt-paper-icon-button': ComponentProps<'div'> &
         TpYtPaperIconButtonProps;
       'yt-icon-button': ComponentProps<'div'> & TpYtPaperIconButtonProps;
-      'tp-yt-iron-icon': ComponentProps<'div'>;
-      'yt-icon': ComponentProps<'div'>;
+      'tp-yt-iron-icon': ComponentProps<'div'> & TpYtPaperIconButtonProps;
+      'yt-icon': ComponentProps<'div'> & TpYtPaperIconButtonProps;
       // input type="range" slider component
       'tp-yt-paper-slider': ComponentProps<'input'> & {
         'value'?: number | string;

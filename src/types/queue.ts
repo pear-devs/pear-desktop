@@ -1,4 +1,4 @@
-import type { YoutubePlayer } from '@/types/youtube-player';
+import type { MusicPlayer } from '@/types/music-player';
 import type { GetState, QueueItem } from '@/types/datahost-get-state';
 
 type StoreState = GetState;
@@ -52,7 +52,7 @@ export interface ToastService {
 export type AppElement = HTMLElement & AppAPI;
 export type AppAPI = {
   queue: QueueAPI;
-  playerApi: YoutubePlayer;
+  playerApi: MusicPlayer;
 
   toastService: ToastService;
 

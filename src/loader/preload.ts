@@ -3,7 +3,7 @@ import { allPlugins, preloadPlugins } from 'virtual:plugins';
 
 import { LoggerPrefix, startPlugin, stopPlugin } from '@/utils';
 
-import config from '@/config';
+import * as config from '@/config';
 
 import { t } from '@/i18n';
 

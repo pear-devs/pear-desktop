@@ -19,7 +19,7 @@ export const DefaultPresetList: Record<string, Preset> = {
   },
 };
 
-export interface YouTubeFormat {
+export interface VideoFormat {
   itag: number;
   container: string;
   content: string;
@@ -29,9 +29,9 @@ export interface YouTubeFormat {
   vrOr3D: string;
 }
 
-// converted from https://gist.github.com/sidneys/7095afe4da4ae58694d128b1034e01e2#file-youtube_format_code_itag_list-md
+// converted from https://gist.github.com/sidneys/7095afe4da4ae58694d128b1034e01e2
 // and https://gist.github.com/MartinEesmaa/2f4b261cb90a47e9c41ba115a011a4aa
-export const YoutubeFormatList: YouTubeFormat[] = [
+export const VideoFormatList: VideoFormat[] = [
   {
     itag: 5,
     container: 'flv',

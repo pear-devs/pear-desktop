@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as z from 'zod';
 
 import { LRC } from '../parsers/lrc';
 import { netFetch } from '../renderer';

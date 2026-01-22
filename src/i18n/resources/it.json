@@ -150,6 +150,13 @@
           "visual-tweaks": {
             "label": "Miglioramenti visivi",
             "submenu": {
+              "custom-window-title": {
+                "label": "Personalizza titolo finestra",
+                "prompt": {
+                  "label": "Inserisci un titolo della finestra personalizzato: (lascia vuoto per disattivare)",
+                  "placeholder": "Esempio: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "Predefinito",
                 "force-show": "Forza la visualizzazione",
@@ -201,8 +208,8 @@
       "restart": "Riavvia l'app",
       "show": "Mostra finestra",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -230,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Abilita tematizzazione della seekbar"
       },
       "name": "Tema abbinato a colore album"
     },
@@ -280,7 +288,7 @@
       "name": "Modalità Ambiente"
     },
     "amuse": {
-      "description": "Aggiunge il supporto a YouTube Music per il widget Amuse Now Playing di 6K Labs",
+      "description": "Aggiunge il supporto a {{applicationName}} per il widget Amuse Now Playing di 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Il server API di Amuse è in funzione. GET /query per ottenere informazioni sui brani."
@@ -312,6 +320,22 @@
         },
         "hostname": {
           "label": "Hostname"
+        },
+        "https": {
+          "label": "HTTPS & Certificati",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Seleziona file di certificato HTTPS",
+              "label": "File di certificato (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Abilita HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Seleziona il file della chiave privata HTTPS",
+              "label": "File della chiave privata (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Porta"
@@ -362,11 +386,11 @@
       "name": "Barra di navigazione trasparente"
     },
     "bypass-age-restrictions": {
-      "description": "Bypassa la verifica dell'età di YouTube",
+      "description": "Bypassa la verifica dell'età di Music Player",
       "name": "Aggira i limiti d'età"
     },
     "captions-selector": {
-      "description": "Selettore sottotitolo per le tracce audio di YouTube",
+      "description": "Selettore sottotitolo per le tracce audio di {{applicationName}}",
       "menu": {
         "autoload": "Seleziona automaticamente l'ultimo sottotitolo utilizzato",
         "disable-captions": "Disattiva i sottotitoli"
@@ -414,6 +438,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Scegli da quale uscita audio vuoi riprodurre i brani",
+      "menu": {
+        "device-selector": "Seleziona un'uscita"
+      },
+      "name": "Dispositivo di Output Personalizzato",
+      "prompt": {
+        "device-selector": {
+          "label": "Scegli il dispositivo d'output da utilizzare",
+          "title": "Scegli il dispositivo d'output"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Fa iniziare i brani in modalità \"pausa\"",
       "menu": {
@@ -436,8 +473,16 @@
         "disconnected": "Disconnesso",
         "hide-duration-left": "Nascondi la durata rimasta",
         "hide-github-button": "Nascondi il pulsante link a GitHub",
-        "play-on-youtube-music": "Riproduci su YouTube Music",
-        "set-inactivity-timeout": "Imposta il timeout di inattività"
+        "play-on-application": "Riproduci su {{applicationName}}",
+        "set-inactivity-timeout": "Imposta il timeout di inattività",
+        "set-status-display-type": {
+          "label": "Testo dello status",
+          "submenu": {
+            "application": "Ascoltando {{applicationName}}",
+            "artist": "Stai ascoltando {artist}",
+            "title": "Stai ascoltando {song title}"
+          }
+        }
       },
       "name": "Discord Rich Presence",
       "prompt": {
@@ -729,6 +774,7 @@
         "listenbrainz": {
           "token": "Inserire il token utente per ListenBrainz"
         },
+        "scrobble-alternative-artist": "Usa artisti alternativi",
         "scrobble-alternative-title": "Usa titoli alternativi",
         "scrobble-other-media": "Scrobble altri media"
       },
@@ -814,6 +860,14 @@
           "label": "Rendi i testi perfettamente sincronizzati",
           "tooltip": "Calcola al millisecondo la visualizzazione della riga successiva (può avere un piccolo impatto sulle prestazioni)"
         },
+        "preferred-provider": {
+          "label": "Provider preferito",
+          "none": {
+            "label": "Nessuno",
+            "tooltip": "Nessun provider preferito"
+          },
+          "tooltip": "Scegli quale provider predefinito utilizzare"
+        },
         "romanization": {
           "label": "Testi in caratteri occidentali",
           "tooltip": "Qualora il testo fosse scritto in una lingua non occidentale, prova a visualizzarlo in caratteri latini."
@@ -829,7 +883,7 @@
       },
       "name": "Testi sincronizzati",
       "refetch-btn": {
-        "fetching": "Sto recuperando...",
+        "fetching": "Caricamento...",
         "normal": "Recupera i testi"
       },
       "warnings": {
@@ -845,6 +899,27 @@
     "touchbar": {
       "description": "Aggiunge un widget TouchBar per gli utenti macOS",
       "name": "Touch Bar (per MacOS)"
+    },
+    "transparent-player": {
+      "description": "Rende trasparente la finestra del programma",
+      "menu": {
+        "opacity": {
+          "label": "Opacità",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Tipo",
+          "submenu": {
+            "acrylic": "Acrilico",
+            "mica": "Mica",
+            "none": "Nessuno",
+            "tabbed": "In scheda"
+          }
+        }
+      },
+      "name": "Player Trasparente"
     },
     "tuna-obs": {
       "description": "Integrazione con il plugin OBS Tuna",

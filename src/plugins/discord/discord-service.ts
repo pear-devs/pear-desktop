@@ -98,8 +98,11 @@ export class DiscordService {
 
     const activityInfo: SetActivity = {
       type: ActivityType.Listening,
-      details: truncateString(songInfo.title, 128), // Song title
-      state: truncateString(songInfo.artist, 128), // Artist name
+      statusDisplayType: config.statusDisplayType,
+      details: truncateString(songInfo.alternativeTitle ?? songInfo.title, 128), // Song title
+      detailsUrl: songInfo.url ?? undefined,
+      state: truncateString(songInfo.tags?.at(0) ?? songInfo.artist, 128), // Artist name
+      stateUrl: songInfo.artistUrl,
       largeImageKey: songInfo.imageSrc ?? undefined,
       largeImageText: songInfo.album
         ? truncateString(songInfo.album, 128)

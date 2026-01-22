@@ -132,10 +132,15 @@ export class LastFmScrobbler extends ScrobblerBase {
         ? songInfo.alternativeTitle
         : songInfo.title;
 
+    const artist =
+      config.alternativeArtist && songInfo.tags?.at(0) !== undefined
+        ? songInfo.tags?.at(0)
+        : songInfo.artist;
+
     const postData: LastFmSongData = {
       track: title,
       duration: songInfo.songDuration,
-      artist: songInfo.artist,
+      artist: artist,
       ...(songInfo.album ? { album: songInfo.album } : undefined), // Will be undefined if current song is a video
       api_key: config.scrobblers.lastfm.apiKey,
       sk: config.scrobblers.lastfm.sessionKey,

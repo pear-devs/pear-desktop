@@ -1,11 +1,11 @@
 import is from 'electron-is';
 import {
   app,
-  BrowserWindow,
+  type BrowserWindow,
   clipboard,
   dialog,
   Menu,
-  MenuItem,
+  type MenuItem,
   shell,
 } from 'electron';
 import prompt from 'custom-electron-prompt';
@@ -15,14 +15,14 @@ import { allPlugins } from 'virtual:plugins';
 
 import { languageResources } from 'virtual:i18n';
 
-import config from './config';
+import * as config from './config';
 
 import { restart } from './providers/app-controls';
 import { startingPages } from './providers/extracted-data';
 import promptOptions from './providers/prompt-options';
 
 import { getAllMenuTemplate, loadAllMenuPlugins } from './loader/menu';
-import { setLanguage, t } from '@/i18n';
+import { APPLICATION_NAME, setLanguage, t } from '@/i18n';
 
 import packageJson from '../package.json';
 
@@ -235,6 +235,9 @@ export const mainMenuTemplate = async (
                       type: 'text',
                       placeholder: t(
                         'main.menu.options.submenu.visual-tweaks.submenu.custom-window-title.prompt.placeholder',
+                        {
+                          applicationName: APPLICATION_NAME,
+                        },
                       ),
                     },
                     width: 500,
@@ -473,7 +476,7 @@ export const mainMenuTemplate = async (
               ),
               type: 'normal',
               click() {
-                const url = 'https://hosted.weblate.org/engage/youtube-music/';
+                const url = 'https://bit.ly/48n5YF7';
                 shell.openExternal(url);
               },
             } as Electron.MenuItemConstructorOptions,

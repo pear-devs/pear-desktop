@@ -1,10 +1,12 @@
 import type { SongInfo } from '@/providers/song-info';
+import type { ProviderName } from './providers';
 
 export type SyncedLyricsPluginConfig = {
   enabled: boolean;
+  preferredProvider?: ProviderName;
   preciseTiming: boolean;
   showTimeCodes: boolean;
-  defaultTextString: string;
+  defaultTextString: string | string[];
   showLyricsEvenIfInexact: boolean;
   lineEffect: LineEffect;
   romanization: boolean;

@@ -27,7 +27,7 @@
         "loaded": "i18n ലോഡ് ചെയ്തു"
       },
       "second-instance": {
-        "receive-command": "പ്രോട്ടോക്കോളിലൂടെ  കമാൻഡ് ലഭിച്ചു : \"{{command}}\""
+        "receive-command": "പ്രോട്ടോക്കോളിലൂടെ കമാൻഡ് ലഭിച്ചു : \"{{command}}\""
       },
       "theme": {
         "css-file-not-found": "\"{{cssFile}}\" എന്ന CSS file നിലവിൽ ഇല്ല. ഉപേക്ഷിക്കുന്നു"
@@ -59,6 +59,7 @@
       },
       "unresponsive": {
         "buttons": {
+          "quit": "ഉപേക്ഷിക്കുക",
           "relaunch": "പുനരാരംഭിക്കുക",
           "wait": "കാത്തിരിക്കൂ"
         },
@@ -107,6 +108,23 @@
       },
       "plugins": {
         "enabled": "പ്രവർത്തനക്ഷമമാക്കി"
+      }
+    }
+  },
+  "plugins": {
+    "video-toggle": {
+      "menu": {
+        "align": {
+          "label": "ക്രമപ്പെടുത്തൽ",
+          "submenu": {
+            "left": "ഇടത്",
+            "middle": "മധ്യഭാഗം",
+            "right": "വലത്"
+          }
+        }
+      },
+      "templates": {
+        "button-video": "വീഡിയോ"
       }
     }
   }

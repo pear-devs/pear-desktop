@@ -26,10 +26,10 @@ export const PlaybackSpeedSlider = (props: PlaybackSpeedSliderProps) => (
         aria-valuenow={props.speed}
         class="volume-slider style-scope ytmusic-player-bar on-hover"
         dir="ltr"
-        on:immediate-value-changed={(e) => props.onImmediateValueChanged?.(e)}
-        onWheel={(e) => props.onWheel?.(e)}
         max="2"
         min="0"
+        on:immediate-value-changed={(e) => props.onImmediateValueChanged?.(e)}
+        onWheel={(e) => props.onWheel?.(e)}
         role="slider"
         step="0.125"
         style={{ 'display': 'inherit !important' }}

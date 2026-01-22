@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Notification } from 'electron';
+import { app, type BrowserWindow, Notification } from 'electron';
 
 import playIcon from '@assets/media-icons-black/play.png?asset&asarUnpack';
 import pauseIcon from '@assets/media-icons-black/pause.png?asset&asarUnpack';
@@ -7,12 +7,13 @@ import previousIcon from '@assets/media-icons-black/previous.png?asset&asarUnpac
 
 import { notificationImage, secondsToMinutes, ToastStyles } from './utils';
 
-import getSongControls from '@/providers/song-controls';
-import registerCallback, {
+import { getSongControls } from '@/providers/song-controls';
+import {
+  registerCallback,
   type SongInfo,
   SongInfoEvent,
 } from '@/providers/song-info';
-import { changeProtocolHandler } from '@/providers/protocol-handler';
+import { APP_PROTOCOL, changeProtocolHandler } from '@/providers/protocol-handler';
 import { setTrayOnClick, setTrayOnDoubleClick } from '@/tray';
 import { mediaIcons } from '@/types/media-icons';
 
@@ -126,7 +127,7 @@ export default (
   const getButton = (kind: keyof typeof mediaIcons) =>
     `<action ${display(
       kind,
-    )} activationType="protocol" arguments="youtubemusic://${kind}"/>`;
+    )} activationType="protocol" arguments="${APP_PROTOCOL}://${kind}"/>`;
 
   const getButtons = (isPaused: boolean) => `\
     <actions>
@@ -259,7 +260,9 @@ export default (
   songControls = getSongControls(win);
 
   let currentSeconds = 0;
-  on('ytmd:player-api-loaded', () => send('ytmd:setup-time-changed-listener'));
+  on('peard:player-api-loaded', () =>
+    send('peard:setup-time-changed-listener'),
+  );
 
   let savedSongInfo: SongInfo;
   let lastUrl: string | undefined;

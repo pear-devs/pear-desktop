@@ -1,0 +1,147 @@
+name: Build PR Artifacts
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+env:
+  NODE_VERSION: "22.x"
+
+jobs:
+  check-permissions:
+    if: github.event.pull_request.draft == false
+    name: Check if user has write access
+    runs-on: ubuntu-latest
+    outputs:
+      has-write-access: ${{ steps.check.outputs.require-result }}
+    steps:
+      - name: Check user permission
+        id: check
+        uses: actions-cool/check-user-permission@v2
+        with:
+          require: write
+          username: ${{ github.event.pull_request.user.login }}
+
+  build:
+    name: Build ${{ matrix.os }}
+    needs: check-permissions
+    if: needs.check-permissions.outputs.has-write-access == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup NodeJS
+        if: startsWith(matrix.os, 'macOS') != true
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Setup NodeJS for macOS
+        if: startsWith(matrix.os, 'macOS')
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build on macOS
+        if: startsWith(matrix.os, 'macOS')
+        run: |
+          pnpm dist:mac
+          pnpm dist:mac:arm64
+
+      - name: Install Linux dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo snap install snapcraft --classic
+          sudo apt update
+          sudo apt install -y flatpak flatpak-builder
+          sudo flatpak remote-add --if-not-exists --system flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y flathub org.freedesktop.Platform/x86_64/24.08
+          sudo flatpak install -y flathub org.freedesktop.Sdk/x86_64/24.08
+          sudo flatpak install -y flathub org.electronjs.Electron2.BaseApp/x86_64/24.08
+
+      - name: Build on Linux
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          pnpm dist:linux
+          pnpm dist:linux:deb-arm64
+          pnpm dist:linux:rpm-arm64
+
+      - name: Build on Windows
+        if: startsWith(matrix.os, 'windows')
+        run: |
+          pnpm dist:win
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-${{ matrix.os }}
+          path: pack/
+          retention-days: 7
+          if-no-files-found: error
+
+  comment:
+    name: Comment on PR
+    needs: [check-permissions, build]
+    if: always() && needs.check-permissions.outputs.has-write-access == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Create comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = context.runId;
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${runId}`;
+
+            const buildResult = '${{ needs.build.result }}';
+
+            let comment;
+            if (buildResult === 'success') {
+              comment = `## 🚀 Build Artifacts Ready!
+
+            The builds have completed successfully. You can download the artifacts from the workflow run:
+
+            **[📦 Download Artifacts](${runUrl})**
+
+            ### Available builds:
+            - **Windows**: \`build-artifacts-windows-latest\`
+            - **macOS**: \`build-artifacts-macos-latest\`
+            - **Linux**: \`build-artifacts-ubuntu-latest\`
+
+            *Note: Artifacts are available for 7 days.*`;
+            } else if (buildResult === 'failure') {
+              comment = `## ❌ Build Failed
+
+            Unfortunately, one or more builds failed. Please check the workflow run for details:
+
+            **[View Workflow Run](${runUrl})**`;
+            } else {
+              comment = `## ⚠️ Build Status: ${buildResult}
+
+            The build process completed with status: **${buildResult}**
+
+            **[View Workflow Run](${runUrl})**`;
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

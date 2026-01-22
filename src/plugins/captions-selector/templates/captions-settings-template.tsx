@@ -9,10 +9,10 @@ export const CaptionsSettingButton = (props: CaptionsSettingsButtonProps) => (
     aria-label={props.label}
     class="player-captions-button style-scope ytmusic-player-bar"
     icon={'yt-icons:subtitles'}
+    on:click={(e) => props.onClick(e)}
     role={'button'}
     tabindex={0}
     title={props.label}
-    on:click={(e) => props.onClick(e)}
   >
     <span class="yt-icon-shape style-scope yt-icon yt-spec-icon-shape">
       <div

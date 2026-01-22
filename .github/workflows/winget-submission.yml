@@ -22,9 +22,9 @@ jobs:
       - name: Submit package to Windows Package Manager Community Repository
         uses: vedantmgoyal2009/winget-releaser@main
         with:
-          identifier: th-ch.YouTubeMusic
-          installers-regex: '^YouTube-Music-Web-Setup-[\d\.]+\.exe$'
+          identifier: pear-devs.PearDesktop
+          installers-regex: '^Pear-Desktop-Web-Setup-[\d\.]+\.exe$'
           version: ${{ env.WINGET_TAG_NAME }}
           release-tag: ${{ inputs.tag_name || github.event.release.tag_name }}
           token: ${{ secrets.WINGET_ACC_TOKEN }}
-          fork-user: youtube-music-winget
+          fork-user: pear-desktop-winget

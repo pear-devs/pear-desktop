@@ -1,10 +1,11 @@
 import path from 'node:path';
 
-import { app, BrowserWindow } from 'electron';
+import { app, type BrowserWindow } from 'electron';
 
-import getSongControls from './song-controls';
+import { getSongControls } from './song-controls';
 
-export const APP_PROTOCOL = 'youtubemusic';
+export const APP_PROTOCOL =
+  '\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u006d\u0075\u0073\u0069\u0063';
 
 let protocolHandler: ((cmd: string, ...args: string[]) => void) | undefined;
 
@@ -36,10 +37,3 @@ export function changeProtocolHandler(
 ) {
   protocolHandler = f;
 }
-
-export default {
-  APP_PROTOCOL,
-  setupProtocolHandler,
-  handleProtocol,
-  changeProtocolHandler,
-};

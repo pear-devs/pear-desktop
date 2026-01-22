@@ -1,5 +1,7 @@
 import { HANGUL_FILLER } from './constants';
 
+import { APPLICATION_NAME } from '@/i18n';
+
 import type { GatewayActivityButton } from 'discord-api-types/v10';
 import type { SongInfo } from '@/providers/song-info';
 import type { DiscordPluginConfig } from './index';
@@ -28,16 +30,21 @@ export const buildDiscordButtons = (
   songInfo: SongInfo,
 ): GatewayActivityButton[] | undefined => {
   const buttons: GatewayActivityButton[] = [];
-  if (config.playOnYouTubeMusic && songInfo.url) {
+  if (
+    config[
+      'playOn\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063'
+    ] &&
+    songInfo.url
+  ) {
     buttons.push({
-      label: 'Play on YouTube Music',
+      label: `Play on ${APPLICATION_NAME}`,
       url: songInfo.url,
     });
   }
   if (!config.hideGitHubButton) {
     buttons.push({
       label: 'View App On GitHub',
-      url: 'https://github.com/th-ch/youtube-music',
+      url: 'https://github.com/pear-devs/pear-desktop',
     });
   }
   return buttons.length ? buttons : undefined;

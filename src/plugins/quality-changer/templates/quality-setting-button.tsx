@@ -9,10 +9,10 @@ export const QualitySettingButton = (props: QualitySettingButtonProps) => (
     aria-label={props.label}
     class="player-quality-button style-scope ytmusic-player"
     icon={'yt-icons:settings'}
+    on:click={(e) => props.onClick(e)}
     role={'button'}
     tabindex={0}
     title={props.label}
-    on:click={(e) => props.onClick(e)}
   >
     <span class="yt-icon-shape style-scope yt-icon yt-spec-icon-shape">
       <div

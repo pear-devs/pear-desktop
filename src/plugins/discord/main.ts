@@ -1,6 +1,6 @@
 import { app } from 'electron';
 
-import registerCallback, { SongInfoEvent } from '@/providers/song-info';
+import { registerCallback, SongInfoEvent } from '@/providers/song-info';
 import { createBackend } from '@/utils';
 
 import { DiscordService } from './discord-service';
@@ -45,8 +45,8 @@ export const backend = createBackend<
       });
     }
 
-    ctx.ipc.on('ytmd:player-api-loaded', () => {
-      ctx.ipc.send('ytmd:setup-time-changed-listener');
+    ctx.ipc.on('peard:player-api-loaded', () => {
+      ctx.ipc.send('peard:setup-time-changed-listener');
     });
 
     app.on('before-quit', () => {

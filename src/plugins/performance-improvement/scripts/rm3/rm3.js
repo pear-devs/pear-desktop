@@ -35,7 +35,7 @@ export const injectRm3 = () => {
   const DEBUG_dataChangeReflection = true;
 
   /** @type {globalThis.PromiseConstructor} */
-  const Promise = (async () => {})().constructor; // YouTube hacks Promise in WaterFox Classic and "Promise.resolve(0)" nevers resolve.
+  const Promise = (async () => {})().constructor; // hacks Promise in WaterFox Classic and "Promise.resolve(0)" nevers resolve.
 
   // https://qiita.com/piroor/items/02885998c9f76f45bfa0
   // https://gist.github.com/piroor/829ecb32a52c2a42e5393bbeebe5e63f
@@ -354,7 +354,7 @@ export const injectRm3 = () => {
 
     const timeCheck = () => {
       // regularly check elements are old enough to put into the available pools
-      // note: the characterists of YouTube components are non-volatile. So don't need to waste time to check weakRef.deref() is null or not for removing in operations.
+      // note: the characterists of original components are non-volatile. So don't need to waste time to check weakRef.deref() is null or not for removing in operations.
 
       const ct = Date.now();
       if (ct - lastTimeCheck < CHECK_INTERVAL || noTimeCheck) return;
@@ -738,7 +738,7 @@ export const injectRm3 = () => {
         }
 
         const acceptance = true;
-        // const acceptance = !cntE.__dataReady && cntE.__dataInvalid !== false; // we might need to change the acceptance condition along with YouTube Coding updates.
+        // const acceptance = !cntE.__dataReady && cntE.__dataInvalid !== false; // we might need to change the acceptance condition along with Coding updates.
         if (acceptance) {
           // [[ weak ElementNode, attached time, detached time, time of change, inside availablePool, reuse count ]]
           const entryRecord = [new WeakRef(newElement), -1, -1, -1, false, 0];

@@ -1,10 +1,9 @@
 import prompt from 'custom-electron-prompt';
 
-import { DataConnection } from 'peerjs';
-
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 import promptOptions from '@/providers/prompt-options';
+import { waitForElement } from '@/utils/wait-for-element';
 
 import {
   getDefaultProfile,
@@ -21,9 +20,8 @@ import { createSettingPopup } from './ui/setting';
 import settingHTML from './templates/setting.html?raw';
 import style from './style.css?inline';
 
-import { waitForElement } from '@/utils/wait-for-element';
-
-import type { YoutubePlayer } from '@/types/youtube-player';
+import type { DataConnection } from 'peerjs';
+import type { MusicPlayer } from '@/types/music-player';
 import type { RendererContext } from '@/types/contexts';
 import type { VideoDataChanged } from '@/types/video-data-changed';
 import type { AppElement } from '@/types/queue';
@@ -51,7 +49,7 @@ export default createPlugin<
     ipc?: RendererContext<never>['ipc'];
     api: AppElement | null;
     queue?: Queue;
-    playerApi?: YoutubePlayer;
+    playerApi?: MusicPlayer;
     showPrompt: (title: string, label: string) => Promise<string>;
     popups: {
       host: ReturnType<typeof createHostPopup>;
@@ -217,6 +215,25 @@ export default createPlugin<
         this.ignoreChange = true;
 
         switch (event.type) {
+          case 'CLEAR_QUEUE': {
+            if (conn && this.permission === 'host-only') {
+              await this.connection?.broadcast('SYNC_QUEUE', {
+                videoList: this.queue?.videoList ?? [],
+              });
+              return;
+            }
+
+            this.queue?.clear();
+            await this.connection?.broadcast('CLEAR_QUEUE', {});
+            break;
+          }
+          case 'SET_INDEX': {
+            this.queue?.setIndex(event.payload.index);
+            await this.connection?.broadcast('SET_INDEX', {
+              index: event.payload.index,
+            });
+            break;
+          }
           case 'ADD_SONGS': {
             if (conn && this.permission === 'host-only') {
               await this.connection?.broadcast('SYNC_QUEUE', {
@@ -236,7 +253,15 @@ export default createPlugin<
             await this.connection?.broadcast('ADD_SONGS', {
               ...event.payload,
               videoList,
-            });
+              },
+              event.after,
+            );
+
+            const afterevent = event.after?.at(0);
+            if (afterevent?.type === 'SET_INDEX') {
+              this.queue?.setIndex(afterevent.payload.index);
+            }
+
             break;
           }
           case 'REMOVE_SONG': {
@@ -387,6 +412,16 @@ export default createPlugin<
       const queueListener = async (event: ConnectionEventUnion) => {
         this.ignoreChange = true;
         switch (event.type) {
+          case 'CLEAR_QUEUE': {
+            await this.connection?.broadcast('CLEAR_QUEUE', {});
+            break;
+          }
+          case 'SET_INDEX': {
+            await this.connection?.broadcast('SET_INDEX', {
+              index: event.payload.index,
+            });
+            break;
+          }
           case 'ADD_SONGS': {
             await this.connection?.broadcast('ADD_SONGS', {
               ...event.payload,
@@ -394,7 +429,9 @@ export default createPlugin<
                 ...it,
                 ownerId: it.ownerId ?? this.connection!.id,
               })),
-            });
+              },
+              event.after,
+            );
             break;
           }
           case 'REMOVE_SONG': {
@@ -422,6 +459,14 @@ export default createPlugin<
       const listener = async (event: ConnectionEventUnion) => {
         this.ignoreChange = true;
         switch (event.type) {
+          case 'CLEAR_QUEUE': {
+            this.queue?.clear();
+            break;
+          }
+          case 'SET_INDEX': {
+            this.queue?.setIndex(event.payload.index);
+            break;
+          }
           case 'ADD_SONGS': {
             const videoList: VideoData[] = event.payload.videoList.map(
               (it) => ({
@@ -431,6 +476,13 @@ export default createPlugin<
             );
 
             await this.queue?.addVideos(videoList, event.payload.index);
+
+            const afterevent = event.after?.at(0);
+            if (afterevent?.type === 'SET_INDEX') {
+              this.queue?.setIndex(afterevent.payload.index);
+            }
+
+
             break;
           }
           case 'REMOVE_SONG': {

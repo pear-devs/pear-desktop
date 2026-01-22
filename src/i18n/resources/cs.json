@@ -8,7 +8,7 @@
         "load-all": "Načítání všech pluginů",
         "load-failed": "Selhalo načtení \"{{pluginName}}\" pluginu",
         "loaded": "Plugin \"{{pluginName}}\" načten",
-        "unload-failed": "Selhalo unload \"{{pluginName}}\" pluginu",
+        "unload-failed": "Selhalo vypnutí \"{{pluginName}}\" pluginu",
         "unloaded": "Plugin {{pluginName}} byl odnačten"
       }
     }
@@ -154,7 +154,7 @@
                 "label": "Vlastní název okna",
                 "prompt": {
                   "label": "Zadejte vlastní název okna: (zanechejte prázdné pro zakázání)",
-                  "placeholder": "Příklad: Hudba YouTube"
+                  "placeholder": "Příklad: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Restartovat aplikaci",
       "show": "Zobrazit okno",
       "tooltip": {
-        "default": "Youtube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,8 @@
       "name": "Ambientní režim"
     },
     "amuse": {
-      "description": "Přídá YouTube Music podporu pro Amuse ‚právě hraje‘ widget od 6K Labs",
+      "description": "Přídá {{applicationName}} podporu pro Amuse ‚právě hraje‘ widget od 6K Labs",
+      "name": "Amuse",
       "response": {
         "query": "Server Amuse API běží. Pošli požadavek typu GET na /query, aby ses dozvěděl info o písničce."
       }
@@ -336,7 +337,7 @@
       }
     },
     "audio-compressor": {
-      "description": "Apply compression k audiu (snižuje hlasitost nejhlasitěších částí signálu and zvyšuje hlasitost nejjemnějších částí)",
+      "description": "Aplikuje kompresi k audiu (snižuje hlasitost nejhlasitěších částí signálu a zvyšuje hlasitost nejjemnějších částí)",
       "name": "Audio kompresor"
     },
     "auth-proxy-adapter": {
@@ -351,6 +352,7 @@
           "label": "Port"
         }
       },
+      "name": "Autorizační Proxy adaptér",
       "prompt": {
         "hostname": {
           "label": "Zadejte hostname lokálního proxy serveru (vyžaduje restart):",
@@ -367,11 +369,11 @@
       "name": "Rozmazaný navigační panel"
     },
     "bypass-age-restrictions": {
-      "description": "Obejít ověření věku na YouTube",
+      "description": "Obejít ověření věku na Music Player",
       "name": "Obejít věková omezení"
     },
     "captions-selector": {
-      "description": "Titulkový selector pro zvukové stopy v YouTube Music",
+      "description": "Titulkový selector pro zvukové stopy v {{applicationName}}",
       "menu": {
         "autoload": "Automaticky vybrat naposledy použité titulky",
         "disable-captions": "Žádné titulky ve vychozím nastavení"
@@ -419,6 +421,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Nastavte vlastní výstupní zařízení pro skladby",
+      "menu": {
+        "device-selector": "Vyberte zařízení"
+      },
+      "name": "Vlastní výstupní zařízení",
+      "prompt": {
+        "device-selector": {
+          "label": "Vyberte zařízení pro výstup zvuku",
+          "title": "Vyberte výstupní zařízení"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Spustí písničku v režimu \"pozastaveno\"",
       "menu": {
@@ -441,8 +456,16 @@
         "disconnected": "Odpojeno",
         "hide-duration-left": "Skrýt zbývající duration",
         "hide-github-button": "Skrýt tlačítko s odkazem na GitHub",
-        "play-on-youtube-music": "Hrát na YouTube Music",
-        "set-inactivity-timeout": "Nastavit timeout pro neaktivitu"
+        "play-on-application": "Hrát na {{applicationName}}",
+        "set-inactivity-timeout": "Nastavit timeout pro neaktivitu",
+        "set-status-display-type": {
+          "label": "Text statusu",
+          "submenu": {
+            "artist": "Poslouchám: {artist}",
+            "application": "Poslouchám {{applicationName}}",
+            "title": "Poslouchám {song title}"
+          }
+        }
       },
       "name": "Discord Rich Persence",
       "prompt": {
@@ -643,7 +666,8 @@
       "name": "Oznámení"
     },
     "performance-improvement": {
-      "description": "Zlepšit výkon povolením experimentálních skriptů"
+      "description": "Zlepšit výkon povolením experimentálních skriptů",
+      "name": "Zlepšení výkonu [Beta]"
     },
     "picture-in-picture": {
       "description": "Povoluje switch aplikaci do režimu obrázek v obrázku",
@@ -733,6 +757,7 @@
         "listenbrainz": {
           "token": "Vložte Listenbrainz user token"
         },
+        "scrobble-alternative-artist": "Použij alternativní umělce",
         "scrobble-alternative-title": "Používat alternativní názvy",
         "scrobble-other-media": "Scrobble jiné média"
       },
@@ -795,20 +820,44 @@
         "line-effect": {
           "label": "Efekt řádku",
           "submenu": {
+            "fancy": {
+              "label": "Luxusní",
+              "tooltip": "Použijte velké, aplikací inspirované efekty na aktuální řádek"
+            },
+            "focus": {
+              "label": "Soustředění",
+              "tooltip": "Nechat pouze aktuální řádek bílý"
+            },
             "offset": {
-              "label": "Posun"
+              "label": "Posun",
+              "tooltip": "Posunout aktuální řádek doprava"
+            },
+            "scale": {
+              "label": "Zvětšení",
+              "tooltip": "Změnit velikost aktuálního řádku"
             }
-          }
+          },
+          "tooltip": "Vyberte efekt pro aktuální řádek"
         },
         "precise-timing": {
+          "label": "Dokonale synchronizovat texty",
           "tooltip": "Vypočítat zobrazení dalšího řádku na milisekundu (může mít menší dopad na výkon)"
+        },
+        "preferred-provider": {
+          "label": "Preferovaný poskytovatel",
+          "none": {
+            "label": "Žádný",
+            "tooltip": "Žádný preferovaný poskytovatel"
+          },
+          "tooltip": "Zvolte výchozího poskytovatele"
         },
         "romanization": {
           "label": "Romanizovat texty",
           "tooltip": "Pokud je text v jiném jazyce, zkusit zobrazit verzi v latince."
         },
         "show-lyrics-even-if-inexact": {
-          "label": "Zobrazit i nepřesné texty"
+          "label": "Zobrazit i nepřesné texty",
+          "tooltip": "Pokud se píseň nenajde, plugin to zkusí znovu s jiným vyhledávacím výrazem.\nVýsledek druhého pokusu nemusí být přesný."
         },
         "show-time-codes": {
           "label": "Zobrazit časové kódy",
@@ -817,7 +866,8 @@
       },
       "name": "Synchronizované texty",
       "refetch-btn": {
-        "fetching": "Získávání..."
+        "fetching": "Získávání...",
+        "normal": "Znovu načíst texty"
       },
       "warnings": {
         "duration-mismatch": "⚠️ - Text nemusí být synchronizován kvůli neshodě v délce trvání.",
@@ -833,9 +883,34 @@
       "description": "Přidává Touch Bar widget pro macOS uživatele",
       "name": "Touch Bar"
     },
+    "transparent-player": {
+      "description": "Zprůhlední okno aplikace",
+      "menu": {
+        "opacity": {
+          "label": "Průhlednost",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Typ",
+          "submenu": {
+            "acrylic": "Akryl",
+            "mica": "Mica",
+            "none": "Žádné",
+            "tabbed": "Záložkovaný"
+          }
+        }
+      },
+      "name": "Průhledný přehrávač"
+    },
     "tuna-obs": {
       "description": "Integrace s OBS's plugin Tuna",
       "name": "Tuna OBS"
+    },
+    "unobtrusive-player": {
+      "description": "Zabrání tomu, aby se přehrávač objevil při hraní písně",
+      "name": "Nepřekážející přehrávač"
     },
     "video-toggle": {
       "description": "Přidává tlačítko k switch mezi video/písničko režimem. Může také odstranit celou video kartu",

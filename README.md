@@ -1,44 +1,53 @@
+<div align="center" markdown="1">
+   <sup>Special thanks to:</sup>
+   <br>
+   <br>
+   <a href="https://go.warp.dev/pear-desktop">
+      <img alt="Warp sponsorship" width="400" src="https://github.com/user-attachments/assets/8307ea56-e872-494a-8a9c-de0e296a06ed" />
+   </a>
+
+### [Warp, built for coding with multiple AI agents](https://go.warp.dev/pear-desktop)
+[Available for macOS, Linux, & Windows](https://go.warp.dev/pear-desktop)<br>
+
+</div>
+<hr>
+
 <div align="center">
 
-# YouTube Music
+# :pear: Pear Desktop
 
-[![GitHub release](https://img.shields.io/github/release/th-ch/youtube-music.svg?style=for-the-badge&logo=youtube-music)](https://github.com/th-ch/youtube-music/releases/)
-[![GitHub license](https://img.shields.io/github/license/th-ch/youtube-music.svg?style=for-the-badge)](https://github.com/th-ch/youtube-music/blob/master/license)
-[![eslint code style](https://img.shields.io/badge/code_style-eslint-5ed9c7.svg?style=for-the-badge)](https://github.com/th-ch/youtube-music/blob/master/eslint.config.mjs)
-[![Build status](https://img.shields.io/github/actions/workflow/status/th-ch/youtube-music/build.yml?branch=master&style=for-the-badge&logo=youtube-music)](https://GitHub.com/th-ch/youtube-music/releases/)
-[![GitHub All Releases](https://img.shields.io/github/downloads/th-ch/youtube-music/total?style=for-the-badge&logo=youtube-music)](https://GitHub.com/th-ch/youtube-music/releases/)
-[![AUR](https://img.shields.io/aur/version/youtube-music-bin?color=blueviolet&style=for-the-badge&logo=youtube-music)](https://aur.archlinux.org/packages/youtube-music-bin)
-[![Known Vulnerabilities](https://snyk.io/test/github/th-ch/youtube-music/badge.svg)](https://snyk.io/test/github/th-ch/youtube-music)
+[![GitHub release](https://img.shields.io/github/release/pear-devs/pear-desktop.svg?style=for-the-badge)](https://github.com/pear-devs/pear-desktop/releases/)
+[![GitHub license](https://img.shields.io/github/license/pear-devs/pear-desktop.svg?style=for-the-badge)](https://github.com/pear-devs/pear-desktop/blob/master/license)
+[![eslint code style](https://img.shields.io/badge/code_style-eslint-5ed9c7.svg?style=for-the-badge)](https://github.com/pear-devs/pear-desktop/blob/master/eslint.config.mjs)
+[![Build status](https://img.shields.io/github/actions/workflow/status/pear-devs/pear-desktop/build.yml?branch=master&style=for-the-badge)](https://GitHub.com/pear-devs/pear-desktop/releases/)
+[![GitHub All Releases](https://img.shields.io/github/downloads/pear-devs/pear-desktop/total?style=for-the-badge)](https://GitHub.com/pear-devs/pear-desktop/releases/)
+<!--[![AUR](https://img.shields.io/aur/version/pear-desktop-bin?color=blueviolet&style=for-the-badge)](https://aur.archlinux.org/packages/pear-desktop-bin)-->
+[![Known Vulnerabilities](https://snyk.io/test/github/pear-devs/pear-desktop/badge.svg)](https://snyk.io/test/github/pear-devs/pear-desktop)
 
 </div>
 
-![Screenshot](web/screenshot.png "Screenshot")
+<!--![Screenshot](web/screenshot.png "Screenshot")-->
 
+- Native look & feel extension
 
-<div align="center">
-	<a href="https://github.com/th-ch/youtube-music/releases/latest">
-		<img src="web/youtube-music.svg" width="400" height="100" alt="YouTube Music SVG">
-	</a>
-</div>
-
-Read this in other languages: [한국어](./docs/readme/README-ko.md), [Française](./docs/readme/README-fr.md), [Íslenska](./docs/readme/README-is.md), [Español](./docs/readme/README-es.md), [Pусский](./docs/readme/README-ru.md), [Українська](./docs/readme/README-uk.md), [Magyar](./docs/readme/README-hu.md), [Português](./docs/readme/README-pt.md), [日本語](./docs/readme/README-ja.md)
-
-**Electron wrapper around YouTube Music featuring:**
-
-- Native look & feel, aims at keeping the original interface
-- Framework for custom plugins: change YouTube Music to your needs (style, content, features), enable/disable plugins in
-  one click
-
-## Demo Image
-
-|                          Player Screen (album color theme & ambient light)                                |
-|:---------------------------------------------------------------------------------------------------------:|
-|![Screenshot1](https://github.com/th-ch/youtube-music/assets/16558115/53efdf73-b8fa-4d7b-a235-b96b91ea77fc)|
+> [!IMPORTANT]
+> ⚠️ Disclaimer
+>
+> **No Affiliation**
+>
+> This project, and its contributors, are not affiliated with, authorized by, endorsed by, or in any way officially connected with Google LLC, YouTube, or any of their subsidiaries or affiliates. **This is an independent, non-profit, and unofficial extension developed by a team of volunteers with the goal of providing a desktop experience.**
+>
+> **Trademarks**
+>
+> The names "Google" and "YouTube Music", as well as related names, marks, emblems, and images, are registered trademarks of their respective owners. Any use of these trademarks is for identification and reference purposes only and does not imply any association with the trademark holder. We have no intention of infringing upon these trademarks or causing harm to the trademark holders.
+>
+> **Limitation of Liability**
+>
+> This application (extension) is provided "AS IS", and you use it at your own risk. In no event shall the developers or contributors be liable for any claim, damages, or other liability, including any legal consequences, arising from, out of, or in connection with the software or the use or other dealings in the software. The responsibility for any and all outcomes of using this software rests entirely with the user.
 
 ## Content
 
 - [Features](#features)
-- [Available plugins](#available-plugins)
 - [Translation](#translation)
 - [Download](#download)
   - [Arch Linux](#arch-linux)
@@ -56,173 +65,63 @@ Read this in other languages: [한국어](./docs/readme/README-ko.md), [Françai
 - [License](#license)
 - [FAQ](#faq)
 
-## Features:
-
-- **Auto confirm when paused** (Always Enabled): disable
-  the ["Continue Watching?"](https://user-images.githubusercontent.com/61631665/129977894-01c60740-7ec6-4bf0-9a2c-25da24491b0e.png)
-  popup that pause music after a certain time
-
- - And more ...
-
-## Available plugins:
-
-- **Ad Blocker**: Block all ads and tracking out of the box
-
-- **Album Actions**: Adds Undislike, Dislike, Like, and Unlike buttons to apply this to all songs in a playlist or album
-
-- **Album Color Theme**: Applies a dynamic theme and visual effects based on the album color palette
-
-- **Ambient Mode**: Applies a lighting effect by casting gentle colors from the video, into your screen’s background
-
-- **Audio Compressor**: Apply compression to audio (lowers the volume of the loudest parts of the signal and raises the
-  volume of the softest parts)
-
-- **Blur Navigation Bar**: makes navigation bar transparent and blurry
-
-- **Bypass Age Restrictions**: bypass YouTube's age verification
-
-- **Captions Selector**: Enable captions
-
-- **Compact Sidebar**: Always set the sidebar in compact mode
-
-- **Crossfade**: Crossfade between songs
-
-- **Disable Autoplay**: Makes every song start in "paused" mode
-
-- **[Discord](https://discord.com/) Rich Presence**: Show your friends what you listen to
-  with [Rich Presence](https://user-images.githubusercontent.com/28219076/104362104-a7a0b980-5513-11eb-9744-bb89eabe0016.png)
-
-- **Downloader**: downloads
-  MP3 [directly from the interface](https://user-images.githubusercontent.com/61631665/129977677-83a7d067-c192-45e1-98ae-b5a4927393be.png) [(youtube-dl)](https://github.com/ytdl-org/youtube-dl)
-
-- **Equalizer**: add filters to boost or cut specific range of frequencies (e.g. bass booster)
-
-- **Exponential Volume**: Makes the volume
-  slider [exponential](https://greasyfork.org/en/scripts/397686-youtube-music-fix-volume-ratio/) so it's easier to
-  select lower volumes
-
-- **In-App Menu**: [gives bars a fancy, dark look](https://user-images.githubusercontent.com/78568641/112215894-923dbf00-8c29-11eb-95c3-3ce15db27eca.png)
-
-  > (see [this post](https://github.com/th-ch/youtube-music/issues/410#issuecomment-952060709) if you have problem
-  accessing the menu after enabling this plugin and hide-menu option)
-
-- **Scrobbler**: Adds scrobbling support for [Last.fm](https://www.last.fm/) and [ListenBrainz](https://listenbrainz.org/)
-
-- **Lumia Stream**: Adds [Lumia Stream](https://lumiastream.com/) support
-
-- **Lyrics Genius**: Adds lyrics support for most songs
-
-- **Music Together**: Share a playlist with others. When the host plays a song, everyone else will hear the same song
-
-- **Navigation**: Next/Back navigation arrows directly integrated in the interface, like in your favorite browser
-
-- **No Google Login**: Remove Google login buttons and links from the interface
-
-- **Notifications**: Display a notification when a song starts
-  playing ([interactive notifications](https://user-images.githubusercontent.com/78568641/114102651-63ce0e00-98d0-11eb-9dfe-c5a02bb54f9c.png)
-  are available on windows)
-
-- **Picture-in-picture**: allows to switch the app to picture-in-picture mode
-
-- **Playback Speed**: Listen fast, listen
-  slow! [Adds a slider that controls song speed](https://user-images.githubusercontent.com/61631665/129976003-e55db5ba-bf42-448c-a059-26a009775e68.png)
-
-- **Precise Volume**: Control the volume precisely using mousewheel/hotkeys, with a custom hud and customizable volume
-  steps
-
-- **Shortcuts (& MPRIS)**: Allows setting global hotkeys for playback (play/pause/next/previous) +
-  disable [media osd](https://user-images.githubusercontent.com/84923831/128601225-afa38c1f-dea8-4209-9f72-0f84c1dd8b54.png)
-  by overriding media keys + enable Ctrl/CMD + F to search + enable linux mpris support for
-  mediakeys + [custom hotkeys](https://github.com/Araxeus/youtube-music/blob/1e591d6a3df98449bcda6e63baab249b28026148/providers/song-controls.js#L13-L50)
-  for [advanced users](https://github.com/th-ch/youtube-music/issues/106#issuecomment-952156902)
-
-- **Skip Disliked Song**: Skips disliked songs
-
-- **Skip Silences**: Automatically skip silenced sections
-
-- [**SponsorBlock**](https://github.com/ajayyy/SponsorBlock): Automatically Skips non-music parts like intro/outro or
-  parts of music videos where the song isn't playing
-
-- **Synced Lyrics**: Provides synced lyrics to songs, using providers like [LRClib](https://lrclib.net).
-
-- **Taskbar Media Control**: Control playback from
-  your [Windows taskbar](https://user-images.githubusercontent.com/78568641/111916130-24a35e80-8a82-11eb-80c8-5021c1aa27f4.png)
-
-- **TouchBar**: Custom TouchBar layout for macOS
-
-- **Tuna OBS**: Integration with [OBS](https://obsproject.com/)'s
-  plugin [Tuna](https://obsproject.com/forum/resources/tuna.843/)
-
-- **Unobtrusive Player**: Prevents the player from popping up when playing a song
-
-- **Video Quality Changer**: Allows changing the video quality with
-  a [button](https://user-images.githubusercontent.com/78568641/138574366-70324a5e-2d64-4f6a-acdd-dc2a2b9cecc5.png) on
-  the video overlay
-
-- **Video Toggle**: Adds
-  a [button](https://user-images.githubusercontent.com/28893833/173663950-63e6610e-a532-49b7-9afa-54cb57ddfc15.png) to
-  switch between Video/Song mode. can also optionally remove the whole video tab
-
-- **Visualizer**: Different music visualizers
-
-
 ## Translation
 
-You can help with translation on [Hosted Weblate](https://hosted.weblate.org/projects/youtube-music/).
+You can help with translation on [Hosted Weblate](https://bit.ly/48n5YF7).
 
-<a href="https://hosted.weblate.org/engage/youtube-music/">
-  <img src="https://hosted.weblate.org/widget/youtube-music/i18n/multi-auto.svg" alt="translation status" />
-  <img src="https://hosted.weblate.org/widget/youtube-music/i18n/287x66-black.png" alt="translation status 2" />
+<a href="https://bit.ly/48n5YF7">
+  <img src="https://bit.ly/4q83L6S" alt="translation status" />
+  <img src="https://bit.ly/4h3zBxo" alt="translation status 2" />
 </a>
 
 ## Download
 
-You can check out the [latest release](https://github.com/th-ch/youtube-music/releases/latest) to quickly find the
+You can check out the [latest release](https://github.com/pear-devs/pear-desktop/releases/latest) to quickly find the
 latest version.
 
 ### Arch Linux
 
-Install the [`youtube-music-bin`](https://aur.archlinux.org/packages/youtube-music-bin) package from the AUR. For AUR installation instructions, take a look at
+Install the [`pear-desktop`](https://aur.archlinux.org/packages/pear-desktop) package from the AUR. For AUR installation instructions, take a look at
 this [wiki page](https://wiki.archlinux.org/index.php/Arch_User_Repository#Installing_packages).
 
 ### macOS
 
-You can install the app using Homebrew (see the [cask definition](https://github.com/th-ch/homebrew-youtube-music)):
+You can install the app using Homebrew (see the [cask definition](https://github.com/pear-devs/pear-desktop-homebrew)):
 
 ```bash
-brew install th-ch/youtube-music/youtube-music
+brew install pear-devs/pear-desktop
 ```
 
 If you install the app manually and get an error "is damaged and can’t be opened." when launching the app, run the following in the Terminal:
 
 ```bash
-/usr/bin/xattr -cr /Applications/YouTube\ Music.app
+/usr/bin/xattr -cr /Applications/Pear\ Desktop.app
 ```
 
 ### Windows
 
-You can use the [Scoop package manager](https://scoop.sh) to install the `youtube-music` package from
+You can use the [Scoop package manager](https://scoop.sh) to install the `pear-desktop` package from
 the [`extras` bucket](https://github.com/ScoopInstaller/Extras).
 
 ```bash
 scoop bucket add extras
-scoop install extras/youtube-music
+scoop install extras/pear-desktop
 ```
 
 Alternately you can use [Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/), Windows 11s
-official CLI package manager to install the `th-ch.YouTubeMusic` package.
+official CLI package manager to install the `pear-devs.pear-desktop` package.
 
 *Note: Microsoft Defender SmartScreen might block the installation since it is from an "unknown publisher". This is also
 true for the manual installation when trying to run the executable(.exe) after a manual download here on github (same
 file).*
 
 ```bash
-winget install th-ch.YouTubeMusic
+winget install pear-devs.pear-desktop
 ```
 
 #### How to install without a network connection? (in Windows)
 
-- Download the `*.nsis.7z` file for _your device architecture_ in [release page](https://github.com/th-ch/youtube-music/releases/latest).
+- Download the `*.nsis.7z` file for _your device architecture_ in [release page](https://github.com/pear-devs/pear-desktop/releases/latest).
   - `x64` for 64-bit Windows
   - `ia32` for 32-bit Windows
   - `arm64` for ARM64 Windows
@@ -239,8 +138,8 @@ Some predefined themes are available in https://github.com/kerichdev/themes-for-
 ## Dev
 
 ```bash
-git clone https://github.com/th-ch/youtube-music
-cd youtube-music
+git clone https://github.com/pear-devs/pear-desktop
+cd pear-desktop
 pnpm install --frozen-lockfile
 pnpm dev
 ```
@@ -305,7 +204,7 @@ export default createPlugin({
       console.log(await context.ipc.invoke('some-event'));
     },
     // Only renderer available hook
-    onPlayerApiReady(api: YoutubePlayer, context: RendererContext) {
+    onPlayerApiReady(api, context) {
       // set plugin config easily
       context.setConfig({ myConfig: api.getVolume() });
     },
@@ -334,7 +233,7 @@ import { createPlugin } from '@/utils';
 
 export default createPlugin({
   name: 'Plugin Label',
-  restartNeeded: true, // if value is true, ytmusic will show a restart dialog
+  restartNeeded: true, // if value is true, pear-desktop will show a restart dialog
   config: {
     enabled: false,
   }, // your custom config
@@ -355,8 +254,7 @@ export default createPlugin({
     enabled: false,
   }, // your custom config
   renderer() {
-    // Remove the login button
-    document.querySelector(".sign-in-link.ytmusic-nav-bar").remove();
+    console.log('hello from renderer');
   } // define renderer hook
 });
 ```
@@ -397,7 +295,7 @@ Uses [Playwright](https://playwright.dev/) to test the app.
 
 ## License
 
-MIT © [th-ch](https://github.com/th-ch/youtube-music)
+MIT © [pear-devs](https://github.com/pear-devs/pear-desktop)
 
 ## FAQ
 

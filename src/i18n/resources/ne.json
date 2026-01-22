@@ -150,6 +150,13 @@
           "visual-tweaks": {
             "label": "भिजुअल ट्वीक्स",
             "submenu": {
+              "custom-window-title": {
+                "label": "अनुकूलन विन्डो शीर्षक",
+                "prompt": {
+                  "label": "अनुकूलन विन्डो शीर्षक प्रविष्ट गर्नुहोस्: (असक्षम पार्न खाली छोड्नुहोस्)",
+                  "placeholder": "उदाहरण: पियर डेस्कटप"
+                }
+              },
               "like-buttons": {
                 "default": "पूर्वनिर्धारित",
                 "force-show": "देखाउनुहोस",
@@ -179,7 +186,7 @@
       "plugins": {
         "enabled": "सक्षम गरियो",
         "label": "प्लगइनहरू",
-        "new": "NEW"
+        "new": "नयाँ"
       },
       "view": {
         "label": "हेर्नुहोस्",
@@ -201,8 +208,8 @@
       "restart": "एप पुनः सुरु गर्नुहोस्",
       "show": "विन्डो देखाउनुहोस्",
       "tooltip": {
-        "default": "युट्युब मिउजिक",
-        "with-song-info": "युट्युब मिउजिक:{{artist}}-{{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -436,7 +443,7 @@
         "disconnected": "डिसकन्एक्टेड",
         "hide-duration-left": "बाकी समय लुकाऊ",
         "hide-github-button": "GitHub लिंक लुकाऊ",
-        "play-on-youtube-music": "YouTube music मा बजाउ",
+        "play-on-application": "{{applicationName}} मा बजाउ",
         "set-inactivity-timeout": "इनएक्टिभिटी टाइमआउट राख"
       },
       "name": "डिसकार्ड रिच प्रीसेंस",

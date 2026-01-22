@@ -1,11 +1,11 @@
 import path from 'node:path';
 import fs from 'node:fs';
 
-import { app, NativeImage } from 'electron';
+import { app, type NativeImage } from 'electron';
 
-import youtubeMusicIcon from '@assets/youtube-music.png?asset&asarUnpack';
+import musicPlayerIcon from '@assets/icon.png?asset&asarUnpack';
 
-import { SongInfo } from '@/providers/song-info';
+import { type SongInfo } from '@/providers/song-info';
 
 import type { NotificationsPluginConfig } from './index';
 
@@ -46,7 +46,7 @@ export const notificationImage = (
   config: NotificationsPluginConfig,
 ) => {
   if (!songInfo.image) {
-    return youtubeMusicIcon;
+    return musicPlayerIcon;
   }
 
   if (!config.interactive) {
@@ -71,7 +71,7 @@ export const saveImage = (img: NativeImage, savePath: string) => {
   } catch (error: unknown) {
     console.error('Error writing song icon to disk:');
     console.trace(error);
-    return youtubeMusicIcon;
+    return musicPlayerIcon;
   }
 
   return savePath;

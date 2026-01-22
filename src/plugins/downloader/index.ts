@@ -1,4 +1,4 @@
-import { DefaultPresetList, Preset } from './types';
+import { DefaultPresetList, type Preset } from './types';
 
 import style from './style.css?inline';
 

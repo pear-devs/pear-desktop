@@ -6,7 +6,7 @@ import { t } from '@/i18n';
 
 import { CaptionsSettingButton } from './templates/captions-settings-template';
 
-import type { YoutubePlayer } from '@/types/youtube-player';
+import type { MusicPlayer } from '@/types/music-player';
 import type { AppElement } from '@/types/queue';
 
 export interface LanguageOptions {
@@ -35,7 +35,7 @@ export default createRenderer<
   {
     captionsSettingsButton?: HTMLElement;
     captionTrackList: LanguageOptions[] | null;
-    api: YoutubePlayer | null;
+    api: MusicPlayer | null;
     config: CaptionsSelectorConfig | null;
     videoChangeListener: () => void;
   },
@@ -73,7 +73,7 @@ export default createRenderer<
     this.api?.unloadModule('captions');
     document
       .querySelector('video')
-      ?.removeEventListener('ytmd:src-changed', this.videoChangeListener);
+      ?.removeEventListener('peard:src-changed', this.videoChangeListener);
     if (this.captionsSettingsButton) {
       document
         .querySelector('.right-controls-buttons')
@@ -111,7 +111,7 @@ export default createRenderer<
                 ];
 
                 currentIndex = (await ipc.invoke(
-                  'ytmd:captions-selector',
+                  'peard:captions-selector',
                   captionLabels,
                   currentIndex,
                 )) as number;
@@ -156,7 +156,7 @@ export default createRenderer<
 
     document
       .querySelector('video')
-      ?.addEventListener('ytmd:src-changed', this.videoChangeListener);
+      ?.addEventListener('peard:src-changed', this.videoChangeListener);
   },
   onConfigChange(newConfig) {
     this.config = newConfig;

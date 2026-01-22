@@ -22,6 +22,24 @@ export const isMusicOrVideoTrack = () => {
   return false;
 };
 
+export const isAlbumOrPlaylist = () => {
+  for (const menuSelector of document.querySelectorAll<
+    HTMLAnchorElement & {
+      data: {
+        addToPlaylistEndpoint: {
+          playlistId: string;
+        };
+        clickTrackingParams: string;
+      };
+    }
+  >('tp-yt-paper-listbox #navigation-endpoint')) {
+    if (menuSelector?.data?.addToPlaylistEndpoint?.playlistId) {
+      return true;
+    }
+  }
+  return false;
+};
+
 export const isPlayerMenu = (menu?: HTMLElement | null) => {
   return (
     menu?.parentElement as

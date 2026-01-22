@@ -201,8 +201,8 @@
       "restart": "Ponovni zagon",
       "show": "Pokaži okno",
       "tooltip": {
-        "default": "YouTube Glasba",
-        "with-song-info": "YouTube Glasba: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -335,7 +335,7 @@
       "name": "Preskoči starostno omejitev"
     },
     "captions-selector": {
-      "description": "Izberi podnapise za YouTube Music zvočne posnetke",
+      "description": "Izberi podnapise za {{applicationName}} zvočne posnetke",
       "menu": {
         "autoload": "Avtomatsko uporabi zadnje izbrane podnapise",
         "disable-captions": "Avtomatsko brez podnapisov"
@@ -400,7 +400,7 @@
         "disconnected": "Prekinjena povezava",
         "hide-duration-left": "Skrij preostali čas",
         "hide-github-button": "Skrij povezavo do GitHub-a",
-        "play-on-youtube-music": "Predvajaj v YouTube Music",
+        "play-on-application": "Predvajaj v {{applicationName}}",
         "set-inactivity-timeout": "Nastavite časovno omejitev neaktivnosti"
       },
       "name": "Discord bogata prisotnost (Rich Presence)",

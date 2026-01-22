@@ -201,8 +201,8 @@
       "restart": "Endurræstu Forritið",
       "show": "Sýna glugga",
       "tooltip": {
-        "default": "YouTube Tónlist",
-        "with-song-info": "YouTube Tónlist: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -331,11 +331,11 @@
       "name": "Þoka Leiðsagnarstika"
     },
     "bypass-age-restrictions": {
-      "description": "Framhjá aldursstaðfestingu YouTube",
+      "description": "Framhjá aldursstaðfestingu Music Player",
       "name": "Farið Framhjá Aldurstakmörkunum"
     },
     "captions-selector": {
-      "description": "Skjátextavali fyrir YouTube Tónlist hljóðrásir",
+      "description": "Skjátextavali fyrir {{applicationName}} hljóðrásir",
       "menu": {
         "autoload": "Veldu sjálfkrafa síðast notaða myndatexta",
         "disable-captions": "Engir skjátextar sjálfgefið"
@@ -400,7 +400,7 @@
         "disconnected": "Aftengt",
         "hide-duration-left": "Fela tímalengd til vinstri",
         "hide-github-button": "Fela GitHub tengilhnapp",
-        "play-on-youtube-music": "Spilaðu á YouTube Tónlist",
+        "play-on-application": "Spilaðu á {{applicationName}}",
         "set-inactivity-timeout": "Stilltu tímamörk fyrir óvirkni"
       },
       "name": "Discord Rík Nærvera",

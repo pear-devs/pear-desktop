@@ -153,8 +153,8 @@
               "custom-window-title": {
                 "label": "Niestandardowy tytuł okna",
                 "prompt": {
-                  "label": "Podaj niestandardowy tytuł okna (zostaw puste, aby to wyłączyć):",
-                  "placeholder": "Przykład: YouTube Music"
+                  "label": "Podaj niestandardowy tytuł okna (zostaw puste, aby to wyłączyć)",
+                  "placeholder": "Przykład: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Uruchom ponownie aplikację",
       "show": "Pokaż okno",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "{{title}} (autorstwa {{artist}}) - YT Music"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{artist}} - (autorstwa {{artist}}) - {{applicationName}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Zezwól stylowanie paska wyszukiwań"
       },
       "name": "Motyw kolorów albumu"
     },
@@ -287,14 +288,14 @@
       "name": "Tryb otoczenia"
     },
     "amuse": {
-      "description": "Wspiera integrację YouTube Music z widgetami Amuse (od 6K Labs)",
+      "description": "Wspiera integrację {{applicationName}} z widgetami Amuse (od 6K Labs)",
       "name": "Amuse",
       "response": {
         "query": "Serwer API Amuse działa. Użyj metody GET do /query, aby zdobyć informację o utworze."
       }
     },
     "api-server": {
-      "description": "Pozwala na kontrolowanie YouTube Music poprzez podłączenie specjalnego serwera API",
+      "description": "Pozwala na kontrolowanie {{applicationName}} poprzez podłączenie specjalnego serwera API",
       "dialog": {
         "request": {
           "buttons": {
@@ -320,11 +321,27 @@
         "hostname": {
           "label": "Nazwa hosta (IP)"
         },
+        "https": {
+          "label": "HTTPS i Certyfikaty",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Wybierz plik certyfikatu HTTPS",
+              "label": "Certyfikat (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Zezwól HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Wybierz plik prywatnego klucza HTTPS",
+              "label": "Klucz prywatny (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
       },
-      "name": "YouTube Music API",
+      "name": "{{applicationName}} API",
       "prompt": {
         "hostname": {
           "label": "Wpisz nazwę hosta (IP, np. 0.0.0.0), który będzie użyty do serwera API:",
@@ -373,7 +390,7 @@
       "name": "Omiń ograniczenia wiekowe"
     },
     "captions-selector": {
-      "description": "Selektor napisów dla ścieżek audio YouTube Music",
+      "description": "Selektor napisów dla ścieżek audio {{applicationName}}",
       "menu": {
         "autoload": "Automatycznie wybierz ostatnio używanych napisów",
         "disable-captions": "Domyślnie, brak napisów"
@@ -421,6 +438,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Skonfiguruj niestandardowe wyjście audio dla odtwarzanych utworów",
+      "menu": {
+        "device-selector": "Wybierz urządzenie"
+      },
+      "name": "Niestandardowe urządzenie wyjścia",
+      "prompt": {
+        "device-selector": {
+          "label": "Wybierz urządzenie wyjściowe",
+          "title": "Wybierz wyjście audio"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Wyłącza automatyczne odtwarzanie utworów",
       "menu": {
@@ -434,7 +464,7 @@
         "connected": "Połączono z Discordem",
         "disconnected": "Odłączono od Discorda"
       },
-      "description": "Pokaż znajomym z Discorda czego słuchasz dzięki Rich Presence",
+      "description": "Pokaż znajomym z Discorda czego słuchasz, dzięki technologii Rich Presence",
       "menu": {
         "auto-reconnect": "Automatyczne wznawianie połączenia",
         "clear-activity": "Wyczyść aktywność",
@@ -443,10 +473,18 @@
         "disconnected": "Odłączono",
         "hide-duration-left": "Ukryj pozostały czas trwania",
         "hide-github-button": "Ukryj przycisk do GitHub",
-        "play-on-youtube-music": "Odtwórz w YouTube Music",
-        "set-inactivity-timeout": "Ustaw limit czasu bezczynności"
+        "play-on-application": "Odtwórz w {{applicationName}}",
+        "set-inactivity-timeout": "Ustaw limit czasu bezczynności",
+        "set-status-display-type": {
+          "label": "Opis statusu",
+          "submenu": {
+            "application": "Słucha {{applicationName}}",
+            "artist": "Słucha {artist}",
+            "title": "Słucha {song title}"
+          }
+        }
       },
-      "name": "Discord Rich Presence",
+      "name": "Aktywność w Discord",
       "prompt": {
         "set-inactivity-timeout": {
           "label": "Podaj limit czasu bezczynności w sekundach:",
@@ -736,6 +774,7 @@
         "listenbrainz": {
           "token": "Podaj token użytkownika ListenBrainz"
         },
+        "scrobble-alternative-artist": "Urzyj alternatywnych artytów",
         "scrobble-alternative-title": "Użyj alternatywnych tytułów",
         "scrobble-other-media": "Scrobbluj pozostałe multimedia"
       },
@@ -821,6 +860,14 @@
           "label": "Zsynchronizuj tekst utworu do perfekcji",
           "tooltip": "Wylicz czas wyświetlania następnej linijki co do milisekundy (może mieć mały wpływ na wydajność systemu)"
         },
+        "preferred-provider": {
+          "label": "Preferowane Źródło",
+          "none": {
+            "label": "Żaden",
+            "tooltip": "Brak preferowanego źródła"
+          },
+          "tooltip": "Wybierz domyślne źródło"
+        },
         "romanization": {
           "label": "Romanizacja utworów",
           "tooltip": "Jeżeli tekst piosenki nie jest w alfabecie łacińskim, poddaje ją romanizacji, czyli przedstawia mowy za pomocą owych liter."
@@ -852,6 +899,27 @@
     "touchbar": {
       "description": "Dodaje widżet do paska dotykowego dla użytkowników systemu macOS",
       "name": "Pasek dotykowy"
+    },
+    "transparent-player": {
+      "description": "Sprawia, że okno aplikacji jest przeźroczyste",
+      "menu": {
+        "opacity": {
+          "label": "Nieprzezroczystość",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Typ",
+          "submenu": {
+            "acrylic": "Akryl",
+            "mica": "Mika",
+            "none": "Brak",
+            "tabbed": "Zakładkowy"
+          }
+        }
+      },
+      "name": "Przeźroczysty odtwarzacz"
     },
     "tuna-obs": {
       "description": "Integracja z wtyczką OBS Tuna",

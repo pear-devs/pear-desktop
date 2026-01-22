@@ -5,9 +5,9 @@ import { fileURLToPath } from 'node:url';
 import {
   Project,
   ts,
-  ObjectLiteralExpression,
   VariableDeclarationKind,
-  Node,
+  type ObjectLiteralExpression,
+  type Node,
   type ObjectLiteralElementLike,
 } from 'ts-morph';
 

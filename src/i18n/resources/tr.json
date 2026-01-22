@@ -154,7 +154,7 @@
                 "label": "Özel pencere başlığı",
                 "prompt": {
                   "label": "Özel pencere başlığı girin: (devre dışı bırakmak için boş bırakın)",
-                  "placeholder": "Örnek: Youtube Music"
+                  "placeholder": "Örnek: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Yeniden başlat",
       "show": "Pencereyi görüntüle",
       "tooltip": {
-        "default": "YouTube Müzik",
-        "with-song-info": "YouTube Müzik: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Arama çubuğu temalarını etkinleştir"
       },
       "name": "Albüm Renk Teması"
     },
@@ -287,7 +288,7 @@
       "name": "Ambiyans Modu"
     },
     "amuse": {
-      "description": "6K Labs'ın Amuse oynatma widget'ı için YouTube Music desteği ekler",
+      "description": "6K Labs'ın Amuse oynatma widget'ı için {{applicationName}} desteği ekler",
       "name": "Amuse",
       "response": {
         "query": "Amuse API sunucusu çalışıyor. Şarkı bilgilerini almak için GET /query kullanabilirsiniz."
@@ -319,6 +320,22 @@
         },
         "hostname": {
           "label": "Ana bilgisayar adı"
+        },
+        "https": {
+          "label": "HTTPS & Sertifikalar",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "HTTPS sertifika dosyası seç",
+              "label": "Sertifika dosyası (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "HTTPS'i aktifleştir"
+            },
+            "key": {
+              "dialogTitle": "HTTPS özel anahtar dosyası seç",
+              "label": "Özel anahtar dosyası (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -369,11 +386,11 @@
       "name": "Navigasyon barını bulanıklaştır"
     },
     "bypass-age-restrictions": {
-      "description": "YouTube yaş doğrulamasını atla",
+      "description": "Music Player yaş doğrulamasını atla",
       "name": "Yaş doğrulamasını atla"
     },
     "captions-selector": {
-      "description": "YouTube Music için altyazı seçici",
+      "description": "{{applicationName}} için altyazı seçici",
       "menu": {
         "autoload": "Son kullanılan altyazıyı otomatik olarak seç",
         "disable-captions": "Varsayılan olarak altyazı yok"
@@ -421,6 +438,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Şarkılar için özel bir medya çıkış aygıtı ayarlayın",
+      "menu": {
+        "device-selector": "Aygıt Seçin"
+      },
+      "name": "Özel Çıkış Aygıtı",
+      "prompt": {
+        "device-selector": {
+          "label": "Kullanılacak medya çıkış aygıtını seçin",
+          "title": "Çıkış Aygıtını Seçin"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Şarkıların otomatik olarak duraklatılmasını sağlar",
       "menu": {
@@ -443,8 +473,16 @@
         "disconnected": "Bağlantı kesildi",
         "hide-duration-left": "Kalan süreyi gizle",
         "hide-github-button": "GitHub bağlantısını gizle",
-        "play-on-youtube-music": "YouTube Music de oynat",
-        "set-inactivity-timeout": "Hareketsizlik zaman aşımını ayarla"
+        "play-on-application": "{{applicationName}} de oynat",
+        "set-inactivity-timeout": "Hareketsizlik zaman aşımını ayarla",
+        "set-status-display-type": {
+          "label": "Durum metni",
+          "submenu": {
+            "application": "{{applicationName}} Dinleniyor",
+            "artist": "{artist} Dinleniyor",
+            "title": "{song title} Dinleniyor"
+          }
+        }
       },
       "name": "Discord Etkinlik Durumu",
       "prompt": {
@@ -736,6 +774,7 @@
         "listenbrainz": {
           "token": "ListenBrainz kullanıcı kimliğinizi girin"
         },
+        "scrobble-alternative-artist": "Alternatif sanatçıları kullan",
         "scrobble-alternative-title": "Alternatif başlıklar kullan",
         "scrobble-other-media": "Diğer medya ortamlarında listele"
       },
@@ -821,6 +860,14 @@
           "label": "Şarkı sözlerini mükemmel şekilde senkronize edin",
           "tooltip": "Bir sonraki satırın görüntülenmesini milisaniyesine kadar hesaplayın (performans üzerinde küçük bir etkisi olabilir)"
         },
+        "preferred-provider": {
+          "label": "Tercih edilen Sağlayıcı",
+          "none": {
+            "label": "Hiçbiri",
+            "tooltip": "Varsayılan sağlayıcı yok"
+          },
+          "tooltip": "Kullanmak İçin varsayılan sağlayıcıyı seçin"
+        },
         "romanization": {
           "label": "Sözleri Romanize Et",
           "tooltip": "Sözler başka bir dilde gözüküyorsa, Latin versiyonunu dene."
@@ -852,6 +899,27 @@
     "touchbar": {
       "description": "macOS kullanıcıları için bir TouchBar widget'ı ekler",
       "name": "TouchBar"
+    },
+    "transparent-player": {
+      "description": "Uygulama penceresini şeffaf yapar",
+      "menu": {
+        "opacity": {
+          "label": "Opaklık",
+          "submenu": {
+            "percent": "%{{opacity}}"
+          }
+        },
+        "type": {
+          "label": "Tür",
+          "submenu": {
+            "acrylic": "Akrilik",
+            "mica": "Mika",
+            "none": "Hiçbiri",
+            "tabbed": "Sekmeli"
+          }
+        }
+      },
+      "name": "Şeffaf Oynatıcı"
     },
     "tuna-obs": {
       "description": "OBS eklentisi Tuna ile entegrasyon sağlar",

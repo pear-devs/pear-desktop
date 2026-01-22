@@ -1,17 +1,15 @@
-import net from 'net';
+import * as net from 'node:net';
 
-import { SocksClient, SocksClientOptions } from 'socks';
-
+import { SocksClient, type SocksClientOptions } from 'socks';
 import is from 'electron-is';
 
 import { createBackend, LoggerPrefix } from '@/utils';
 
-import { BackendType } from './types';
+import * as config from '@/config';
 
-import config from '@/config';
+import { type AuthProxyConfig, defaultAuthProxyConfig } from '../config';
 
-import { AuthProxyConfig, defaultAuthProxyConfig } from '../config';
-
+import type { BackendType } from './types';
 import type { BackendContext } from '@/types/contexts';
 
 // Parsing the upstream authentication SOCK proxy URL

@@ -1,4 +1,4 @@
-import prompt, { KeybindOptions } from 'custom-electron-prompt';
+import prompt, { type KeybindOptions } from 'custom-electron-prompt';
 
 import promptOptions from '@/providers/prompt-options';
 

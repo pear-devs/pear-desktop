@@ -20,7 +20,7 @@ import {
   PlainLyrics,
 } from './components';
 
-import { currentLyrics } from '../providers';
+import { currentLyrics } from './store';
 
 import type { LineLyrics, SyncedLyricsPluginConfig } from '../types';
 
@@ -301,8 +301,8 @@ export const LyricsRenderer = () => {
               return (
                 <SyncedLine
                   {...props}
-                  scroller={scroller()!}
                   index={idx()}
+                  scroller={scroller()!}
                   status={statuses()[idx() - 1]}
                 />
               );

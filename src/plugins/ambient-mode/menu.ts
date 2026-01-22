@@ -1,8 +1,8 @@
-import { MenuItemConstructorOptions } from 'electron';
+import { type MenuItemConstructorOptions } from 'electron';
 
 import { t } from '@/i18n';
-import { MenuContext } from '@/types/contexts';
-import { AmbientModePluginConfig } from './types';
+import { type MenuContext } from '@/types/contexts';
+import { type AmbientModePluginConfig } from './types';
 
 export interface menuParameters {
   getConfig: () => AmbientModePluginConfig | Promise<AmbientModePluginConfig>;

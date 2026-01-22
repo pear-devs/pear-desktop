@@ -14,8 +14,9 @@ import {
   protocol,
   type BrowserWindowConstructorOptions,
 } from 'electron';
-import enhanceWebRequest, {
-  BetterSession,
+import {
+  enhanceWebRequest,
+  type BetterSession,
 } from '@jellybrick/electron-better-web-request';
 import is from 'electron-is';
 import unhandled from 'electron-unhandled';
@@ -29,7 +30,7 @@ import { allPlugins, mainPlugins } from 'virtual:plugins';
 
 import { languageResources } from 'virtual:i18n';
 
-import config from '@/config';
+import * as config from '@/config';
 
 import { refreshMenu, setApplicationMenu } from '@/menu';
 import { fileExists, injectCSS, injectCSSAsFile } from '@/plugins/utils/main';
@@ -43,7 +44,7 @@ import {
   setupProtocolHandler,
 } from '@/providers/protocol-handler';
 
-import youtubeMusicCSS from '@/youtube-music.css?inline';
+import musicPlayerCss from '@/music-player.css?inline';
 
 import {
   forceLoadMainPlugin,
@@ -53,20 +54,13 @@ import {
 } from '@/loader/main';
 
 import { LoggerPrefix } from '@/utils';
-import { loadI18n, setLanguage, t } from '@/i18n';
+import { APPLICATION_NAME, loadI18n, setLanguage, t } from '@/i18n';
 
 import ErrorHtmlAsset from '@assets/error.html?asset';
 
 import { defaultAuthProxyConfig } from '@/plugins/auth-proxy-adapter/config';
 
 import type { PluginConfig } from '@/types/plugins';
-
-if (!is.macOS()) {
-  delete (await allPlugins())['touchbar'];
-}
-if (!is.windows()) {
-  delete (await allPlugins())['taskbar-mediacontrol'];
-}
 
 // Catch errors and log them
 unhandled({
@@ -111,11 +105,6 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'mailto', privileges: { standard: true } },
 ]);
 
-// https://github.com/electron/electron/issues/46538#issuecomment-2808806722
-if (is.linux()) {
-  app.commandLine.appendSwitch('gtk-version', '3');
-}
-
 // Ozone platform hint: Required for Wayland support
 app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
 // SharedArrayBuffer: Required for downloader (@ffmpeg/core-mt)
@@ -138,7 +127,9 @@ if (config.get('options.disableHardwareAcceleration')) {
 
 if (is.linux()) {
   // Overrides WM_CLASS for X11 to correspond to icon filename
-  app.setName('com.github.th_ch.youtube_music');
+  app.setName(
+    'com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063',
+  );
 
   // Stops chromium from launching its own MPRIS service
   if (await config.plugins.isEnabled('shortcuts')) {
@@ -172,11 +163,11 @@ electronDebug({
   showDevTools: false, // Disable automatic devTools on new window
 });
 
-let icon = 'assets/youtube-music.png';
+let icon = 'assets/icon.png';
 if (process.platform === 'win32') {
-  icon = 'assets/generated/icon.ico';
+  icon = 'assets/generated/icons/win/icon.ico';
 } else if (process.platform === 'darwin') {
-  icon = 'assets/generated/icon.icns';
+  icon = 'assets/generated/icons/mac/icon.icns';
 }
 
 function onClosed() {
@@ -185,7 +176,7 @@ function onClosed() {
   mainWindow = null;
 }
 
-ipcMain.handle('ytmd:get-main-plugin-names', async () =>
+ipcMain.handle('peard:get-main-plugin-names', async () =>
   Object.keys(await mainPlugins()),
 );
 
@@ -193,14 +184,14 @@ const initHook = async (win: BrowserWindow) => {
   const allPluginStubs = await allPlugins();
 
   ipcMain.handle(
-    'ytmd:get-config',
+    'peard:get-config',
     (_, id: string) =>
       deepmerge(
         allPluginStubs[id].config ?? { enabled: false },
         config.get(`plugins.${id}`) ?? {},
       ) as PluginConfig,
   );
-  ipcMain.handle('ytmd:set-config', (_, name: string, obj: object) =>
+  ipcMain.handle('peard:set-config', (_, name: string, obj: object) =>
     config.setPartial(`plugins.${name}`, obj, allPluginStubs[name].config),
   );
 
@@ -299,7 +290,7 @@ const showNeedToRestartDialog = async (id: string) => {
 };
 
 function initTheme(win: BrowserWindow) {
-  injectCSS(win.webContents, youtubeMusicCSS);
+  injectCSS(win.webContents, musicPlayerCss);
   // Load user CSS
   const themes: string[] = config.get('options.themes');
   if (Array.isArray(themes)) {
@@ -356,10 +347,12 @@ async function createMainWindow() {
     delete decorations.titleBarStyle;
   }
 
-  const win = new BrowserWindow({
+  const electronWindowSettings: Electron.BrowserWindowConstructorOptions = {
     icon,
     width: windowSize.width,
     height: windowSize.height,
+    minWidth: 325,
+    minHeight: 425,
     backgroundColor: '#000',
     show: false,
     webPreferences: {
@@ -374,7 +367,10 @@ async function createMainWindow() {
           }),
     },
     ...decorations,
-  });
+  };
+
+  const win = new BrowserWindow(electronWindowSettings);
+
   await initHook(win);
   initTheme(win);
 
@@ -505,11 +501,14 @@ async function createMainWindow() {
     const url = new URL(event.url);
 
     // Workarounds for regions where YTM is restricted
-    if (url.hostname.endsWith('youtube.com') && url.pathname === '/premium') {
+    if (
+      url.hostname.endsWith('\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com') &&
+      url.pathname === '/premium'
+    ) {
       event.preventDefault();
 
       win.webContents.loadURL(
-        'https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26next%3Dhttps%253A%252F%252Fmusic.youtube.com%252F',
+        'https://accounts.google.com/ServiceLogin?ltmpl=music&service=\u0079\u006f\u0075\u0074\u0075\u0062\u0065&continue=https%3A%2F%2Fwww.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com%2Fsignin%3Faction_handle_signin%3Dtrue%26next%3Dhttps%253A%252F%252Fmusic.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com%252F',
       );
     }
   });
@@ -662,7 +661,8 @@ app.whenReady().then(async () => {
 
   // Register appID on windows
   if (is.windows()) {
-    const appID = 'com.github.th-ch.youtube-music';
+    const appID =
+      'com.github.th-ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063';
     app.setAppUserModelId(appID);
     const appLocation = process.execPath;
     const appData = app.getPath('appData');
@@ -677,7 +677,7 @@ app.whenReady().then(async () => {
         'Windows',
         'Start Menu',
         'Programs',
-        'YouTube Music.lnk',
+        `${APPLICATION_NAME}.lnk`,
       );
       try {
         // Check if shortcut is registered and valid
@@ -697,7 +697,7 @@ app.whenReady().then(async () => {
           {
             target: appLocation,
             cwd: path.dirname(appLocation),
-            description: 'YouTube Music Desktop App - including custom plugins',
+            description: `${APPLICATION_NAME} Desktop App - including custom plugins`,
             appUserModelId: appID,
           },
         );
@@ -806,7 +806,7 @@ app.whenReady().then(async () => {
     }, 2000);
     autoUpdater.on('update-available', () => {
       const downloadLink =
-        'https://github.com/th-ch/youtube-music/releases/latest';
+        'https://github.com/pear-devs/pear-desktop/releases/latest';
       const dialogOptions: Electron.MessageBoxOptions = {
         type: 'info',
         buttons: [
@@ -945,7 +945,7 @@ function removeContentSecurityPolicy(
         !details.responseHeaders['access-control-allow-origin'] &&
         !details.responseHeaders['Access-Control-Allow-Origin']
       ) {
-        details.responseHeaders['access-control-allow-origin'] = ['https://music.youtube.com'];
+        details.responseHeaders['access-control-allow-origin'] = ['https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com'];
       }
     }
 

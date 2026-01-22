@@ -154,7 +154,7 @@
                 "label": "কাস্টম উইন্ডো টাইটেল",
                 "prompt": {
                   "label": "নিজস্ব উইন্ডোর টাইটেল দিন (বন্ধ করতে ফাঁকা রাখুন)",
-                  "placeholder": "উদাহরণস্বরূপ: YouTube Music"
+                  "placeholder": "উদাহরণস্বরূপ: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "অ্যাপ পুনরায় চালু করুন",
       "show": "উইন্ডো দেখান",
       "tooltip": {
-        "default": "ইউটিউব মিউজিক",
-        "with-song-info": "ইউটিউব মিউজিক: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -443,7 +443,7 @@
         "disconnected": "সংযোগ বিচ্ছিন্ন",
         "hide-duration-left": "অবশিষ্ট সময় লুকান",
         "hide-github-button": "গিটহাব লিঙ্ক বাটন লুকান",
-        "play-on-youtube-music": "ইউটিউব মিউজিকে চালান",
+        "play-on-application": "ইউটিউব মিউজিকে চালান",
         "set-inactivity-timeout": "নিষ্ক্রিয়তার সময়সীমা সেট করুন"
       },
       "name": "ডিসকর্ড রিচ প্রেজেন্স",

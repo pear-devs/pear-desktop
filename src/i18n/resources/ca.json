@@ -2,7 +2,7 @@
   "common": {
     "console": {
       "plugins": {
-        "execute-failed": "Ha fallat l'execució de l'extensió {{pluginName}}::{{contextName}}",
+        "execute-failed": "Error en l'execució de l'extensió {{pluginName}}::{{contextName}}",
         "executed-at-ms": "L'extensió {{pluginName}}::{{contextName}} s'ha executat als {{ms}}ms",
         "initialize-failed": "Ha fallat la inicialització de l'extensió \"{{pluginName}}\"",
         "load-all": "Carregant totes les extensions",
@@ -154,7 +154,7 @@
                 "label": "Títol personalitzat de la finestra",
                 "prompt": {
                   "label": "Introdueix un títol personalitzat per a la finestra (deixa-ho buit per deshabilitar-ho)",
-                  "placeholder": "Exemple: YouTube Music"
+                  "placeholder": "Exemple: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Reinicia l'aplicació",
       "show": "Mostra la finestra",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Activar el tema en la barra de progrés"
       },
       "name": "Tema de color de l'àlbum"
     },
@@ -287,7 +288,7 @@
       "name": "Mode ambient"
     },
     "amuse": {
-      "description": "Afegeix suport a Youtube Music per el widget \"now playing\" d'Amuse per 6K Labs",
+      "description": "Afegeix suport a {{applicationName}} per el widget \"now playing\" d'Amuse per 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "L'API del servidor de Amuse està funcionant. GET /query per tenir informació de la cançó."
@@ -319,6 +320,22 @@
         },
         "hostname": {
           "label": "Nom del host"
+        },
+        "https": {
+          "label": "HTTPS i Certificats",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Seleccionar arxiu de certificat HTTPS",
+              "label": "Arxiu de certificat (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Activa HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Selecciona arxiu de clau HTTPS privada",
+              "label": "Arxiu de clau privada (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -369,11 +386,11 @@
       "name": "Desenfoca la barra de navegació"
     },
     "bypass-age-restrictions": {
-      "description": "Esquiva la verificació d'edat de YouTube",
+      "description": "Esquiva la verificació d'edat de Music Player",
       "name": "Esquiva les restriccions d'edat"
     },
     "captions-selector": {
-      "description": "Selector de subtítols per les pistes d'àudio de YouTube Music",
+      "description": "Selector de subtítols per les pistes d'àudio de {{applicationName}}",
       "menu": {
         "autoload": "Selecciona automàticament l'últim subtítol emprat",
         "disable-captions": "Sense subtítols per defecte"
@@ -421,6 +438,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Configura un dispositiu multimèdia de sortida personalitzat per a cançons",
+      "menu": {
+        "device-selector": "Selecciona un dispositiu"
+      },
+      "name": "Dispositiu de sortida personalitzat",
+      "prompt": {
+        "device-selector": {
+          "label": "Trieu el dispositiu de sortida que s'utilitzarà",
+          "title": "Escull el dispositiu de sortida"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Fa que la cançó comenci en mode «pausat»",
       "menu": {
@@ -443,8 +473,16 @@
         "disconnected": "Desconnectat",
         "hide-duration-left": "Amaga la durada restant",
         "hide-github-button": "Amaga el botó de l'enllaç a GitHub",
-        "play-on-youtube-music": "Reprodueix a YouTube Music",
-        "set-inactivity-timeout": "Estableix temps d'espera d'inactivitat"
+        "play-on-application": "Reprodueix a {{applicationName}}",
+        "set-inactivity-timeout": "Estableix temps d'espera d'inactivitat",
+        "set-status-display-type": {
+          "label": "Text d'estat",
+          "submenu": {
+            "application": "Escoltant {{applicationName}}",
+            "artist": "Escoltant {artist}",
+            "title": "Escoltant {song title}"
+          }
+        }
       },
       "name": "Estat d'activitat de Discord",
       "prompt": {
@@ -615,10 +653,10 @@
       "name": "Navegació",
       "templates": {
         "back": {
-          "title": "Tornar a la pàgina anterior"
+          "title": "Pàgina anterior"
         },
         "forward": {
-          "title": "Anar a la pàgina següent"
+          "title": "Pàgina següent"
         }
       }
     },
@@ -736,6 +774,7 @@
         "listenbrainz": {
           "token": "Introduir token d'usuari de ListenBrainz"
         },
+        "scrobble-alternative-artist": "Utilitza artistes alternatius",
         "scrobble-alternative-title": "Useu títols alternatius",
         "scrobble-other-media": "Scrobble amb altres mitjans"
       },
@@ -821,6 +860,14 @@
           "label": "Fes que les lletres es sincronitzin a la perfecció",
           "tooltip": "Calcula al mil·lisegon l'aparició de la següent línia (pot tenir un petit impacte en el rendiment)"
         },
+        "preferred-provider": {
+          "label": "Proveïdor preferit",
+          "none": {
+            "label": "Cap",
+            "tooltip": "Cap proveïdor preferit"
+          },
+          "tooltip": "Trieu el proveïdor predeterminat que voleu utilitzar"
+        },
         "romanization": {
           "label": "Romanitza les lletres",
           "tooltip": "Si les lletres són en un idioma diferent, intenta mostrar la versió amb alfabet llatí."
@@ -852,6 +899,27 @@
     "touchbar": {
       "description": "Afegeix un giny a la Touch Bar per usuaris de macOS",
       "name": "TouchBar"
+    },
+    "transparent-player": {
+      "description": "Fa la finestra de l'aplicació transparent",
+      "menu": {
+        "opacity": {
+          "label": "Opacitat",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Tipus",
+          "submenu": {
+            "acrylic": "Acrílic",
+            "mica": "Mica",
+            "none": "Cap",
+            "tabbed": "En pestanyes"
+          }
+        }
+      },
+      "name": "Reproductor Transparent"
     },
     "tuna-obs": {
       "description": "Integració amb l'extensió «Tuna» del OBS",

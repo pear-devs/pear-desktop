@@ -3,7 +3,7 @@
   --menu-bar-height: 32px;
 }
 
-/* youtube-music style */
+/* original style */
 ytmusic-app-layout {
   overflow: auto scroll;
   height: calc(100vh - var(--menu-bar-height, 36px));
@@ -73,7 +73,7 @@ ytmusic-app-layout ytmusic-player-page[is-mweb-modernization-enabled] .side-pane
   transform: translate(0, calc(var(--ytmusic-player-page-inner-height) - var(--ytmusic-player-page-tabs-header-height) - var(--ytmusic-player-page-player-bar-height) - var(--menu-bar-height, 32px) ));
 }
 
-/* ytm-bugs: see https://github.com/th-ch/youtube-music/issues/1737 */
+/* ytm-bugs: see https://github.com/pear-devs/pear-desktop/issues/1737 */
 html {
   scrollbar-color: unset;
 }

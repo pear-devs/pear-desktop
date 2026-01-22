@@ -1,4 +1,4 @@
-import { JSX } from 'solid-js';
+import { type JSX } from 'solid-js';
 import { css } from 'solid-styled-components';
 
 import { cacheNoArgs } from '@/providers/decorators';

@@ -31,6 +31,7 @@ export interface DefaultConfig {
     likeButtons: string;
     proxy: string;
     startingPage: string;
+    backgroundMaterial?: 'none' | 'mica' | 'acrylic' | 'tabbed';
     overrideUserAgent: boolean;
     usePodcastParticipantAsArtist: boolean;
     themes: string[];
@@ -39,7 +40,7 @@ export interface DefaultConfig {
   'plugins': Record<string, unknown>;
 }
 
-const defaultConfig: DefaultConfig = {
+export const defaultConfig: DefaultConfig = {
   'window-size': {
     width: 1100,
     height: 550,
@@ -49,7 +50,7 @@ const defaultConfig: DefaultConfig = {
     x: -1,
     y: -1,
   },
-  'url': 'https://music.youtube.com',
+  'url': 'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com',
   'options': {
     tray: false,
     appVisible: true,
@@ -73,5 +74,3 @@ const defaultConfig: DefaultConfig = {
   },
   'plugins': {},
 };
-
-export default defaultConfig;

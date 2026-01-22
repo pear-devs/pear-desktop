@@ -1,8 +1,12 @@
 import { createRoute, z } from '@hono/zod-openapi';
-
 import { ipcMain } from 'electron';
 
-import getSongControls from '@/providers/song-controls';
+import { getSongControls } from '@/providers/song-controls';
+import {
+  LikeType,
+  type RepeatMode,
+  type VolumeState,
+} from '@/types/datahost-get-state';
 
 import {
   AddSongToQueueSchema,
@@ -19,16 +23,14 @@ import {
   SwitchRepeatSchema,
   type ResponseSongInfo,
 } from '../scheme';
+import { API_VERSION } from '../api-version';
 
-import type { RepeatMode } from '@/types/datahost-get-state';
 import type { SongInfo } from '@/providers/song-info';
 import type { BackendContext } from '@/types/contexts';
 import type { APIServerConfig } from '../../config';
 import type { HonoApp } from '../types';
-import type { QueueResponse } from '@/types/youtube-music-desktop-internal';
+import type { QueueResponse } from '@/types/music-player-desktop-internal';
 import type { Context } from 'hono';
-
-const API_VERSION = 'v1';
 
 const routes = {
   previous: createRoute({
@@ -84,6 +86,24 @@ const routes = {
     responses: {
       204: {
         description: 'Success',
+      },
+    },
+  }),
+  getLikeState: createRoute({
+    method: 'get',
+    path: `/api/${API_VERSION}/like-state`,
+    summary: 'get like state',
+    description: 'Get the current like state',
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: z.object({
+              state: z.enum(LikeType).nullable(),
+            }),
+          },
+        },
       },
     },
   }),
@@ -274,6 +294,7 @@ const routes = {
           'application/json': {
             schema: z.object({
               state: z.number(),
+              isMuted: z.boolean(),
             }),
           },
         },
@@ -387,6 +408,26 @@ const routes = {
       },
       204: {
         description: 'No song info',
+      },
+    },
+  }),
+  nextSongInfo: createRoute({
+    method: 'get',
+    path: `/api/${API_VERSION}/queue/next`,
+    summary: 'get next song info',
+    description:
+      'Get information about the next song in the queue (relative index +1)',
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: SongInfoSchema,
+          },
+        },
+      },
+      204: {
+        description: 'No next song in queue',
       },
     },
   }),
@@ -526,12 +567,15 @@ const routes = {
   }),
 };
 
+type PromiseOrValue<T> = T | Promise<T>;
+
 export const register = (
   app: HonoApp,
   { window }: BackendContext<APIServerConfig>,
-  songInfoGetter: () => SongInfo | undefined,
-  repeatModeGetter: () => RepeatMode | undefined,
-  volumeGetter: () => number | undefined,
+  songInfoGetter: () => PromiseOrValue<SongInfo | undefined>,
+  repeatModeGetter: () => PromiseOrValue<RepeatMode | undefined>,
+  likeTypeGetter: () => PromiseOrValue<LikeType | undefined>,
+  volumeStateGetter: () => PromiseOrValue<VolumeState | undefined>,
 ) => {
   const controller = getSongControls(window);
 
@@ -564,6 +608,10 @@ export const register = (
 
     ctx.status(204);
     return ctx.body(null);
+  });
+  app.openapi(routes.getLikeState, async (ctx) => {
+    ctx.status(200);
+    return ctx.json({ state: (await likeTypeGetter()) ?? null });
   });
   app.openapi(routes.like, (ctx) => {
     controller.like();
@@ -602,7 +650,7 @@ export const register = (
   app.openapi(routes.getShuffleState, async (ctx) => {
     const stateResponsePromise = new Promise<boolean>((resolve) => {
       ipcMain.once(
-        'ytmd:get-shuffle-response',
+        'peard:get-shuffle-response',
         (_, isShuffled: boolean | undefined) => {
           return resolve(!!isShuffled);
         },
@@ -624,9 +672,9 @@ export const register = (
     return ctx.body(null);
   });
 
-  app.openapi(routes.repeatMode, (ctx) => {
+  app.openapi(routes.repeatMode, async (ctx) => {
     ctx.status(200);
-    return ctx.json({ mode: repeatModeGetter() ?? null });
+    return ctx.json({ mode: (await repeatModeGetter()) ?? null });
   });
   app.openapi(routes.switchRepeat, (ctx) => {
     const { iteration } = ctx.req.valid('json');
@@ -642,9 +690,11 @@ export const register = (
     ctx.status(204);
     return ctx.body(null);
   });
-  app.openapi(routes.getVolumeState, (ctx) => {
+  app.openapi(routes.getVolumeState, async (ctx) => {
     ctx.status(200);
-    return ctx.json({ state: volumeGetter() ?? 0 });
+    return ctx.json(
+      (await volumeStateGetter()) ?? { state: 0, isMuted: false },
+    );
   });
   app.openapi(routes.setFullscreen, (ctx) => {
     const { state } = ctx.req.valid('json');
@@ -663,7 +713,7 @@ export const register = (
   app.openapi(routes.getFullscreenState, async (ctx) => {
     const stateResponsePromise = new Promise<boolean>((resolve) => {
       ipcMain.once(
-        'ytmd:set-fullscreen',
+        'peard:set-fullscreen',
         (_, isFullscreen: boolean | undefined) => {
           return resolve(!!isFullscreen);
         },
@@ -678,8 +728,8 @@ export const register = (
     return ctx.json({ state: fullscreen });
   });
 
-  const songInfo = (ctx: Context) => {
-    const info = songInfoGetter();
+  const songInfo = async (ctx: Context) => {
+    const info = await songInfoGetter();
 
     if (!info) {
       ctx.status(204);
@@ -698,7 +748,7 @@ export const register = (
   // Queue
   const queueInfo = async (ctx: Context) => {
     const queueResponsePromise = new Promise<QueueResponse>((resolve) => {
-      ipcMain.once('ytmd:get-queue-response', (_, queue: QueueResponse) => {
+      ipcMain.once('peard:get-queue-response', (_, queue: QueueResponse) => {
         return resolve(queue);
       });
 
@@ -717,6 +767,63 @@ export const register = (
   };
   app.openapi(routes.oldQueueInfo, queueInfo);
   app.openapi(routes.queueInfo, queueInfo);
+
+  app.openapi(routes.nextSongInfo, async (ctx) => {
+    const queueResponsePromise = new Promise<QueueResponse>((resolve) => {
+      ipcMain.once('peard:get-queue-response', (_, queue: QueueResponse) => {
+        return resolve(queue);
+      });
+
+      controller.requestQueueInformation();
+    });
+
+    const queue = await queueResponsePromise;
+
+    if (!queue?.items || queue.items.length === 0) {
+      ctx.status(204);
+      return ctx.body(null);
+    }
+
+    // Find the currently selected song
+    const currentIndex = queue.items.findIndex((item) => {
+      const renderer =
+        item.playlistPanelVideoRenderer ||
+        item.playlistPanelVideoWrapperRenderer?.primaryRenderer
+          ?.playlistPanelVideoRenderer;
+      return renderer?.selected === true;
+    });
+
+    // Get the next song (currentIndex + 1)
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= queue.items.length) {
+      // No next song available
+      ctx.status(204);
+      return ctx.body(null);
+    }
+
+    const nextItem = queue.items[nextIndex];
+    const nextRenderer =
+      nextItem.playlistPanelVideoRenderer ||
+      nextItem.playlistPanelVideoWrapperRenderer?.primaryRenderer
+        ?.playlistPanelVideoRenderer;
+
+    if (!nextRenderer) {
+      ctx.status(204);
+      return ctx.body(null);
+    }
+
+    // Extract relevant information similar to SongInfo format
+    const nextSongInfo = {
+      title: nextRenderer.title?.runs?.[0]?.text,
+      videoId: nextRenderer.videoId,
+      thumbnail: nextRenderer.thumbnail,
+      lengthText: nextRenderer.lengthText,
+      shortBylineText: nextRenderer.shortBylineText,
+    };
+
+    ctx.status(200);
+    return ctx.json(nextSongInfo);
+  });
 
   app.openapi(routes.addSongToQueue, (ctx) => {
     const { videoId, insertPosition } = ctx.req.valid('json');

@@ -1,5 +1,5 @@
-appId: com.github.th-ch.youtube-music
-productName: YouTube Music
+appId: "com.github.th-ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063"
+productName: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063"
 files:
   - '!*'
   - dist
@@ -20,7 +20,7 @@ mac:
       arch:
         - x64
         - arm64
-  icon: assets/generated/icons/mac/icon.icns
+  icon: assets/generated/icons/mac/icon.icon
   compression: maximum
 win:
   icon: assets/generated/icons/win/icon.ico
@@ -43,7 +43,7 @@ linux:
   category: AudioVideo
   desktop:
     entry:
-      StartupWMClass: com.github.th_ch.youtube_music
+      StartupWMClass: "com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063"
   target:
     - target: AppImage
       arch:
@@ -76,14 +76,10 @@ linux:
         - arm64
         - armv7l
 appImage:
-  description: >-
-    YouTube Music Desktop App bundled with custom plugins (and built-in ad
-    blocker / downloader)
+  description: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063 Desktop App bundled with custom plugins"
   category: AudioVideo
 flatpak:
-  description: >-
-    YouTube Music Desktop App bundled with custom plugins (and built-in ad
-    blocker / downloader)
+  description: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063 Desktop App bundled with custom plugins"
   category: AudioVideo
   runtimeVersion: '24.08'
   baseVersion: '24.08'
@@ -98,7 +94,7 @@ flatpak:
     - '--talk-name=org.freedesktop.Notifications'
     - '--talk-name=org.gnome.SessionManager'
     - '--talk-name=org.kde.StatusNotifierWatcher'
-    - '--own-name=org.mpris.MediaPlayer2.YoutubeMusic.*'
+    - "--own-name=org.mpris.MediaPlayer2.\u0059\u006f\u0075\u0074\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063.*"
 deb:
   depends:
     - libgtk-3-0
