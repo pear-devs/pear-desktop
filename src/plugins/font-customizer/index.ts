@@ -1,3 +1,5 @@
+import style from './font-customizer.css?inline';
+
 import { createPlugin } from '@/utils';
 
 import { menu } from './menu';
@@ -24,6 +26,7 @@ export default createPlugin({
     'Change fonts globally or specifically for song title, artist, lyrics, and navigation menu. Uses Google Fonts.',
   restartNeeded: false,
   config: defaultConfig,
+  stylesheets: [style],
   menu,
   renderer,
 });
