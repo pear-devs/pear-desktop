@@ -24,7 +24,7 @@ export default createPlugin({
   name: () => 'Font Customizer',
   description: () =>
     'Change fonts globally or specifically for song title, artist, lyrics, and navigation menu. Uses Google Fonts.',
-  restartNeeded: false,
+  restartNeeded: true,
   config: defaultConfig,
   stylesheets: [style],
   menu,
