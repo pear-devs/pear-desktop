@@ -381,6 +381,10 @@
         }
       }
     },
+    "better-fullscreen": {
+      "description": "Enhances the fullscreen experience with lyrics, background effects, and more",
+      "name": "Better Fullscreen"
+    },
     "blur-nav-bar": {
       "description": "Makes navigation bar transparent and blurry",
       "name": "Blur Navigation Bar"
@@ -587,6 +591,20 @@
         "hide-dom-window-controls": "Hide DOM window controls"
       },
       "name": "In-App Menu"
+    },
+    "lyrics-provider": {
+      "description": "Provides lyrics fetching functionality for other plugins",
+      "menu": {
+        "preferred-provider": {
+          "label": "Preferred Provider",
+          "tooltip": "Choose the default provider to use",
+          "none": {
+            "label": "None",
+            "tooltip": "No preferred provider"
+          }
+        }
+      },
+      "name": "Lyrics Provider"
     },
     "lumiastream": {
       "description": "Adds Lumia Stream support",
@@ -830,14 +848,6 @@
         "not-found": "⚠️ No lyrics found for this song."
       },
       "menu": {
-        "preferred-provider": {
-          "label": "Preferred Provider",
-          "tooltip": "Choose the default provider to use",
-          "none": {
-            "label": "None",
-            "tooltip": "No preferred provider"
-          }
-        },
         "default-text-string": {
           "label": "Default character between lyrics",
           "tooltip": "Choose the default character to use for the gap between lyrics"
