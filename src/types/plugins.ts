@@ -57,6 +57,7 @@ export interface PluginDef<
   addedVersion?: string;
   config?: Config;
   platform?: Platform;
+  dependencies?: string[];
 
   menu?: (
     ctx: MenuContext<Config>,

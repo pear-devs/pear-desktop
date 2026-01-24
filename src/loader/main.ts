@@ -132,14 +132,52 @@ export const forceLoadMainPlugin = async (
   }
 };
 
+const topologicalSort = (plugins: Record<string, PluginDef<unknown, unknown, unknown>>) => {
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+  const order: string[] = [];
+
+  const visit = (id: string) => {
+    if (visited.has(id)) return;
+    if (visiting.has(id)) {
+      console.warn(`Circular dependency detected involving plugin: ${id}`);
+      return;
+    }
+
+    visiting.add(id);
+    const plugin = plugins[id];
+    if (plugin?.dependencies) {
+      for (const dep of plugin.dependencies) {
+        if (plugins[dep]) {
+          visit(dep);
+        } else {
+          console.warn(`Plugin ${id} depends on ${dep} which is not found`);
+        }
+      }
+    }
+    visiting.delete(id);
+    visited.add(id);
+    order.push(id);
+  };
+
+  for (const id of Object.keys(plugins)) {
+    visit(id);
+  }
+
+  return order;
+};
+
 export const loadAllMainPlugins = async (win: BrowserWindow) => {
   console.log(LoggerPrefix, t('common.console.plugins.load-all'));
   const pluginConfigs = config.plugins.getPlugins();
+  const allPluginsMap = await mainPlugins();
+  const sortedPluginIds = topologicalSort(allPluginsMap);
   const queue: Promise<void>[] = [];
 
-  for (const [plugin, pluginDef] of Object.entries(await mainPlugins())) {
-    const config = deepmerge(pluginDef.config, pluginConfigs[plugin] ?? {});
-    if (config.enabled) {
+  for (const plugin of sortedPluginIds) {
+    const pluginDef = allPluginsMap[plugin];
+    const pluginConfig = deepmerge(pluginDef.config, pluginConfigs[plugin] ?? {});
+    if (pluginConfig.enabled) {
       queue.push(forceLoadMainPlugin(plugin, win));
     } else if (loadedPluginMap[plugin]) {
       queue.push(forceUnloadMainPlugin(plugin, win));

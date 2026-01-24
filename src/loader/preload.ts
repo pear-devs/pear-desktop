@@ -82,16 +82,54 @@ export const forceLoadPreloadPlugin = async (id: string) => {
   }
 };
 
+const topologicalSort = (plugins: Record<string, PluginDef<unknown, unknown, unknown>>) => {
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+  const order: string[] = [];
+
+  const visit = (id: string) => {
+    if (visited.has(id)) return;
+    if (visiting.has(id)) {
+      console.warn(`Circular dependency detected involving plugin: ${id}`);
+      return;
+    }
+
+    visiting.add(id);
+    const plugin = plugins[id];
+    if (plugin?.dependencies) {
+      for (const dep of plugin.dependencies) {
+        if (plugins[dep]) {
+          visit(dep);
+        } else {
+          console.warn(`Plugin ${id} depends on ${dep} which is not found`);
+        }
+      }
+    }
+    visiting.delete(id);
+    visited.add(id);
+    order.push(id);
+  };
+
+  for (const id of Object.keys(plugins)) {
+    visit(id);
+  }
+
+  return order;
+};
+
 export const loadAllPreloadPlugins = async () => {
   const pluginConfigs = config.plugins.getPlugins();
+  const allPluginsMap = await preloadPlugins();
+  const sortedPluginIds = topologicalSort(allPluginsMap);
 
-  for (const [pluginId, pluginDef] of Object.entries(await preloadPlugins())) {
-    const config = deepmerge(
+  for (const pluginId of sortedPluginIds) {
+    const pluginDef = allPluginsMap[pluginId];
+    const pluginConfig = deepmerge(
       pluginDef.config ?? { enable: false },
       pluginConfigs[pluginId] ?? {},
     );
 
-    if (config.enabled) {
+    if (pluginConfig.enabled) {
       forceLoadPreloadPlugin(pluginId);
     } else {
       if (loadedPluginMap[pluginId]) {
