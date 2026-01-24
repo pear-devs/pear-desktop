@@ -1,9 +1,8 @@
 import type { SongInfo } from '@/providers/song-info';
-import type { ProviderName } from './providers';
+import type { ProviderName } from '@/plugins/lyrics-provider/providers';
 
 export type SyncedLyricsPluginConfig = {
   enabled: boolean;
-  preferredProvider?: ProviderName;
   preciseTiming: boolean;
   showTimeCodes: boolean;
   defaultTextString: string | string[];

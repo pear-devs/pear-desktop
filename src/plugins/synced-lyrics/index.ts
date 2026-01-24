@@ -13,6 +13,7 @@ export default createPlugin({
   description: () => t('plugins.synced-lyrics.description'),
   authors: ['Non0reo', 'ArjixWasTaken', 'KimJammer', 'Strvm'],
   restartNeeded: true,
+  dependencies: ['lyrics-provider'],
   addedVersion: '3.5.X',
   config: {
     enabled: false,
@@ -21,8 +22,8 @@ export default createPlugin({
     showTimeCodes: false,
     defaultTextString: '♪',
     lineEffect: 'fancy',
-    romanization: true,
-  } satisfies SyncedLyricsPluginConfig as SyncedLyricsPluginConfig,
+    romanization: true
+  }as SyncedLyricsPluginConfig,
 
   menu,
   renderer,
