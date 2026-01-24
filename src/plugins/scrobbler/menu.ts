@@ -1,6 +1,6 @@
 import prompt from 'custom-electron-prompt';
 
-import { type BrowserWindow } from 'electron';
+import { type BrowserWindow, dialog } from 'electron';
 
 import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
@@ -54,6 +54,24 @@ async function promptLastFmOptions(
     }
 
     setConfig(options);
+  }
+}
+
+async function promptLibreFmAuth(
+  options: ScrobblerPluginConfig,
+  setConfig: SetConfType,
+  window: BrowserWindow,
+) {
+  // Trigger authentication
+  const scrobbler = backend.enabledScrobblers.get('librefm');
+  if (scrobbler) {
+    await scrobbler.createSession(options, setConfig);
+  } else {
+    dialog.showMessageBox({
+      title: 'Libre.fm Not Enabled',
+      message: 'Please enable Libre.fm first before authenticating.',
+      type: 'warning',
+    });
   }
 }
 
@@ -131,6 +149,27 @@ export const onMenu = async ({
           label: t('plugins.scrobbler.menu.lastfm.api-settings'),
           click() {
             promptLastFmOptions(config, setConfig, window);
+          },
+        },
+      ],
+    },
+    {
+      label: 'Libre.fm',
+      submenu: [
+        {
+          label: t('main.menu.plugins.enabled'),
+          type: 'checkbox',
+          checked: Boolean(config.scrobblers.librefm?.enabled),
+          click(item) {
+            backend.toggleScrobblers(config, window);
+            config.scrobblers.librefm.enabled = item.checked;
+            setConfig(config);
+          },
+        },
+        {
+          label: 'Authenticate with Libre.fm',
+          click() {
+            promptLibreFmAuth(config, setConfig, window);
           },
         },
       ],
