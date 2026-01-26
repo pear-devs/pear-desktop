@@ -1,4 +1,4 @@
-name: Build Pear Desktop
+name: Build Pear Desktop2
 
 on:
   push:
