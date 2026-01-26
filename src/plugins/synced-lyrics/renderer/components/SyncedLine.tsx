@@ -7,7 +7,14 @@ import { type LineLyrics } from '@/plugins/synced-lyrics/types';
 import { config, currentTime } from '../renderer';
 import { _ytAPI } from '..';
 
-import { canonicalize, romanize, simplifyUnicode } from '../utils';
+import {
+  canonicalize,
+  romanize,
+  simplifyUnicode,
+  getSeekTime,
+  isBlank,
+  timeCodeText,
+} from '../utils';
 
 interface SyncedLineProps {
   scroller: VirtualizerHandle;
@@ -15,7 +22,57 @@ interface SyncedLineProps {
 
   line: LineLyrics;
   status: 'upcoming' | 'current' | 'previous';
+  isFinalLine?: boolean;
+  isFirstEmptyLine?: boolean;
 }
+
+// small helpers
+const END_DELAY_SECONDS = 1.0; // end delay at line end
+const WORD_ANIM_DELAY_STEP = 0.05; // seconds per word index
+
+const computeEndDelayMs = (totalMs: number): number => {
+  const LONG_MS = 3000;
+  const SHORT_MS = 1000;
+  const SHORT_SECONDS = END_DELAY_SECONDS / 2;
+  const SHORT_FRACTION = 0.8;
+  const SHORT_MIN_GAP_MS = Math.round(SHORT_SECONDS * 1000 * 0.3);
+
+  if (totalMs > LONG_MS) {
+    return Math.round(END_DELAY_SECONDS * 1000);
+  }
+  if (totalMs >= SHORT_MS) {
+    const ratio = (totalMs - SHORT_MS) / (LONG_MS - SHORT_MS);
+    const endDelayDelta = (END_DELAY_SECONDS - SHORT_SECONDS) * ratio;
+    const endDelaySeconds = SHORT_SECONDS + endDelayDelta;
+    return Math.round(endDelaySeconds * 1000);
+  }
+  return Math.min(
+    Math.round(totalMs * SHORT_FRACTION),
+    totalMs - SHORT_MIN_GAP_MS,
+  );
+};
+
+const seekToMs = (ms: number) => {
+  const precise = config()?.preciseTiming ?? false;
+  _ytAPI?.seekTo(getSeekTime(ms, precise));
+};
+
+const renderWordSpans = (input: string) => (
+  <span>
+    <For each={input.split(' ')}>
+      {(word, index) => (
+        <span
+          style={{
+            'transition-delay': `${index() * WORD_ANIM_DELAY_STEP}s`,
+            'animation-delay': `${index() * WORD_ANIM_DELAY_STEP}s`,
+          }}
+        >
+          <yt-formatted-string text={{ runs: [{ text: `${word} ` }] }} />
+        </span>
+      )}
+    </For>
+  </span>
+);
 
 const EmptyLine = (props: SyncedLineProps) => {
   const states = createMemo(() => {
@@ -23,19 +80,79 @@ const EmptyLine = (props: SyncedLineProps) => {
     return Array.isArray(defaultText) ? defaultText : [defaultText];
   });
 
+  const isCumulative = createMemo(() => {
+    const arr = states();
+    if (arr.length <= 1) return false;
+    return arr.every((value) => value === arr[0]);
+  });
+
+  const endDelayMsValue = createMemo(() =>
+    computeEndDelayMs(props.line.duration),
+  );
+
   const index = createMemo(() => {
     const progress = currentTime() - props.line.timeInMs;
     const total = props.line.duration;
+    const stepCount = states().length;
+    const precise = config()?.preciseTiming ?? false;
 
-    const percentage = Math.min(1, progress / total);
-    return Math.max(0, Math.floor((states().length - 1) * percentage));
+    if (stepCount === 1) return 0;
+
+    const endDelayMs = endDelayMsValue();
+
+    const effectiveTotal =
+      total <= 1000
+        ? total - endDelayMs
+        : precise
+          ? total - endDelayMs
+          : Math.round((total - endDelayMs) / 1000) * 1000;
+
+    if (effectiveTotal <= 0) return 0;
+
+    const effectiveProgress = precise
+      ? progress
+      : Math.round(progress / 1000) * 1000;
+    const percentage = Math.min(1, effectiveProgress / effectiveTotal);
+
+    return Math.max(0, Math.floor((stepCount - 1) * percentage));
   });
+
+  const shouldRenderPlaceholder = createMemo(() => {
+    const isEmpty = isBlank(props.line.text);
+    const showEmptySymbols = config()?.showEmptyLineSymbols ?? false;
+
+    return isEmpty
+      ? showEmptySymbols || props.status === 'current'
+      : props.status === 'current';
+  });
+
+  const isHighlighted = createMemo(() => props.status === 'current');
+  const isFinalEmpty = createMemo(() => {
+    return props.isFinalLine && isBlank(props.line.text);
+  });
+
+  const shouldRemovePadding = createMemo(() => {
+    // remove padding only when this is the first empty line and the configured label is blank (empty string or NBSP)
+    if (!props.isFirstEmptyLine) return false;
+    const defaultText = config()?.defaultTextString ?? '';
+    const first = Array.isArray(defaultText) ? defaultText[0] : defaultText;
+    return first === '' || first === '\u00A0';
+  });
+
+  // helper to build the class string for the placeholder/empty line
+  function getEmptyLineClass() {
+    let cls = 'synced-emptyline';
+    cls += ` ${props.status}`;
+    if (isFinalEmpty()) cls += ' final-empty';
+    if (shouldRemovePadding()) cls += ' no-padding';
+    return cls;
+  }
 
   return (
     <div
-      class={`synced-line ${props.status}`}
+      class={getEmptyLineClass()}
       onClick={() => {
-        _ytAPI?.seekTo((props.line.timeInMs + 10) / 1000);
+        seekToMs(props.line.timeInMs);
       }}
     >
       <div class="description ytmusic-description-shelf-renderer" dir="auto">
@@ -43,37 +160,60 @@ const EmptyLine = (props: SyncedLineProps) => {
           text={{
             runs: [
               {
-                text: config()?.showTimeCodes ? `[${props.line.time}] ` : '',
+                text: timeCodeText(
+                  props.line.timeInMs,
+                  config()?.preciseTiming ?? false,
+                  config()?.showTimeCodes ?? false,
+                ),
               },
             ],
           }}
         />
-
         <div class="text-lyrics">
-          <span>
+          {props.isFinalLine && isBlank(props.line.text) ? (
             <span>
-              <Show
-                fallback={
-                  <yt-formatted-string
-                    text={{ runs: [{ text: states()[0] }] }}
-                  />
-                }
-                when={states().length > 1}
-              >
-                <yt-formatted-string
-                  text={{
-                    runs: [
-                      {
-                        text: states().at(
-                          props.status === 'current' ? index() : -1,
-                        )!,
-                      },
-                    ],
-                  }}
-                />
-              </Show>
+              <span class={`fade ${isHighlighted() ? 'show' : ''}`}>
+                <yt-formatted-string text={{ runs: [{ text: '' }] }} />
+              </span>
             </span>
-          </span>
+          ) : (
+            <Show
+              fallback={
+                <span
+                  class={`fade ${
+                    shouldRenderPlaceholder()
+                      ? isHighlighted()
+                        ? 'show'
+                        : 'placeholder'
+                      : ''
+                  }`}
+                >
+                  <yt-formatted-string
+                    text={{ runs: [{ text: states()[index()] ?? '' }] }}
+                  />
+                </span>
+              }
+              when={isCumulative()}
+            >
+              <For each={states()}>
+                {(text, i) => (
+                  <span
+                    class={`fade ${
+                      shouldRenderPlaceholder()
+                        ? i() <= index()
+                          ? isHighlighted()
+                            ? 'show'
+                            : 'placeholder'
+                          : 'dim'
+                        : ''
+                    }`}
+                  >
+                    <yt-formatted-string text={{ runs: [{ text }] }} />
+                  </span>
+                )}
+              </For>
+            </Show>
+          )}
         </div>
       </div>
     </div>
@@ -98,7 +238,7 @@ export const SyncedLine = (props: SyncedLineProps) => {
       <div
         class={`synced-line ${props.status}`}
         onClick={() => {
-          _ytAPI?.seekTo((props.line.timeInMs + 10) / 1000);
+          seekToMs(props.line.timeInMs);
         }}
       >
         <div class="description ytmusic-description-shelf-renderer" dir="auto">
@@ -106,7 +246,11 @@ export const SyncedLine = (props: SyncedLineProps) => {
             text={{
               runs: [
                 {
-                  text: config()?.showTimeCodes ? `[${props.line.time}] ` : '',
+                  text: timeCodeText(
+                    props.line.timeInMs,
+                    config()?.preciseTiming ?? false,
+                    config()?.showTimeCodes ?? false,
+                  ),
                 },
               ],
             }}
@@ -124,26 +268,7 @@ export const SyncedLine = (props: SyncedLineProps) => {
             }}
             style={{ 'display': 'flex', 'flex-direction': 'column' }}
           >
-            <span>
-              <For each={text().split(' ')}>
-                {(word, index) => {
-                  return (
-                    <span
-                      style={{
-                        'transition-delay': `${index() * 0.05}s`,
-                        'animation-delay': `${index() * 0.05}s`,
-                      }}
-                    >
-                      <yt-formatted-string
-                        text={{
-                          runs: [{ text: `${word} ` }],
-                        }}
-                      />
-                    </span>
-                  );
-                }}
-              </For>
-            </span>
+            {renderWordSpans(text())}
 
             <Show
               when={
@@ -151,26 +276,7 @@ export const SyncedLine = (props: SyncedLineProps) => {
                 simplifyUnicode(text()) !== simplifyUnicode(romanization())
               }
             >
-              <span class="romaji">
-                <For each={romanization().split(' ')}>
-                  {(word, index) => {
-                    return (
-                      <span
-                        style={{
-                          'transition-delay': `${index() * 0.05}s`,
-                          'animation-delay': `${index() * 0.05}s`,
-                        }}
-                      >
-                        <yt-formatted-string
-                          text={{
-                            runs: [{ text: `${word} ` }],
-                          }}
-                        />
-                      </span>
-                    );
-                  }}
-                </For>
-              </span>
+              <span class="romaji">{renderWordSpans(romanization())}</span>
             </Show>
           </div>
         </div>

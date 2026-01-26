@@ -1,6 +1,11 @@
 import * as z from 'zod';
 
 import { LRC } from '../parsers/lrc';
+import {
+  ensureLeadingPaddingEmptyLine,
+  ensureTrailingEmptyLine,
+  mergeConsecutiveEmptySyncedLines,
+} from '../shared/lines';
 import { netFetch } from '../renderer';
 
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
@@ -42,10 +47,19 @@ export class MusixMatch implements LyricProvider {
       title: track.track_name,
       artists: [track.artist_name],
       lines: subtitle
-        ? LRC.parse(subtitle.subtitle.subtitle_body).lines.map((l) => ({
-            ...l,
-            status: 'upcoming' as const,
-          }))
+        ? (() => {
+            const parsed = LRC.parse(subtitle.subtitle.subtitle_body).lines.map(
+              (l) => ({ ...l, status: 'upcoming' as const }),
+            );
+
+            const merged = mergeConsecutiveEmptySyncedLines(parsed);
+            const withLeading = ensureLeadingPaddingEmptyLine(
+              merged,
+              300,
+              'span',
+            );
+            return ensureTrailingEmptyLine(withLeading, 'lastEnd');
+          })()
         : undefined,
       lyrics: lyrics,
     };

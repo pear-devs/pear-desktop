@@ -11,6 +11,42 @@ export type IStore = InstanceType<
 >;
 
 const migrations = {
+  '>=3.12.0'(store: IStore) {
+    // Synced Lyrics: migrate placeholder defaults
+    const syncedLyricsConfig = store.get('plugins.synced-lyrics') as
+      | SyncedLyricsPluginConfig
+      | undefined;
+
+    if (!syncedLyricsConfig) return;
+
+    const current = syncedLyricsConfig.defaultTextString as
+      | string
+      | string[]
+      | undefined;
+    let updatedValue: string | string[] | undefined;
+
+    if (Array.isArray(current)) {
+      const asJson = JSON.stringify(current);
+      // Migrate progressive sequences to non-cumulative variants
+      if (asJson === JSON.stringify(['•', '••', '•••'])) {
+        updatedValue = ['•', '•', '•'];
+      } else if (asJson === JSON.stringify(['.', '..', '...'])) {
+        updatedValue = ['.', '.', '.'];
+      }
+    } else if (typeof current === 'string') {
+      // Replace regular space placeholder with NBSP to preserve layout
+      if (current === ' ') {
+        updatedValue = '\u00A0';
+      }
+    }
+
+    if (updatedValue !== undefined) {
+      store.set('plugins.synced-lyrics', {
+        ...syncedLyricsConfig,
+        defaultTextString: updatedValue,
+      } as SyncedLyricsPluginConfig);
+    }
+  },
   '>=3.10.0'(store: IStore) {
     const lyricGeniusConfig = store.get('plugins.lyrics-genius') as
       | {

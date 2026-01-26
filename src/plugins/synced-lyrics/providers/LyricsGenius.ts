@@ -89,10 +89,16 @@ export class LyricsGenius implements LyricProvider {
       return null;
     }
 
+    // final empty line for padding.
+    let finalLyrics = lyrics;
+    if (!finalLyrics.endsWith('\n\n')) {
+      finalLyrics = finalLyrics.endsWith('\n') ? finalLyrics + '\n' : finalLyrics + '\n\n';
+    }
+
     return {
       title: closestHit.result.title,
       artists: closestHit.result.primary_artists.map(({ name }) => name),
-      lyrics,
+      lyrics: finalLyrics,
     };
   }
 }
