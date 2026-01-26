@@ -8,6 +8,7 @@ interface LRCLine {
   timeInMs: number;
   duration: number;
   text: string;
+  words: { timeInMs: number; word: string }[];
 }
 
 interface LRC {
@@ -18,6 +19,9 @@ interface LRC {
 const tagRegex = /^\[(?<tag>\w+):\s*(?<value>.+?)\s*\]$/;
 // prettier-ignore
 const timestampRegex = /^\[(?<minutes>\d+):(?<seconds>\d+)\.(?<milliseconds>\d+)\]/m;
+
+// prettier-ignore
+const wordRegex = /<(?<minutes>\d+):(?<seconds>\d+)\.(?<milliseconds>\d+)> *(?<word>\w+)/g;
 
 export const LRC = {
   parse: (text: string): LRC => {
@@ -65,13 +69,27 @@ export const LRC = {
         continue;
       }
 
-      const text = line.trim();
+      let text = line.trim();
+      const words = Array.from(text.matchAll(wordRegex), ({ groups }) => {
+        const { minutes, seconds, milliseconds, word } = groups!;
+        const timeInMs =
+          parseInt(minutes) * 60 * 1000 +
+          parseInt(seconds) * 1000 +
+          parseInt(milliseconds);
+
+        return { timeInMs, word };
+      });
+
+      if (words.length) {
+        text = words.map(({ word }) => word).join(' ');
+      }
 
       for (const { time, timeInMs } of timestamps) {
         lrc.lines.push({
           time,
           timeInMs,
-          text: text,
+          text,
+          words,
           duration: Infinity,
         });
       }
@@ -92,10 +110,11 @@ export const LRC = {
     const first = lrc.lines.at(0);
     if (first && first.timeInMs > 300) {
       lrc.lines.unshift({
-        time: '0:0:0',
+        time: '00:00:00',
         timeInMs: 0,
         duration: first.timeInMs,
         text: '',
+        words: [],
       });
     }
 
