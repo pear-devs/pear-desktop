@@ -1,6 +1,7 @@
 import { jaroWinkler } from '@skyra/jaro-winkler';
 
 import { config } from '../renderer/renderer';
+import { netFetch } from '../renderer';
 import { LRC } from '../parsers/lrc';
 
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
@@ -28,13 +29,13 @@ export class LRCLib implements LyricProvider {
     }
 
     let url = `${this.baseUrl}/api/search?${query.toString()}`;
-    let response = await fetch(url);
+    let [status, text] = await netFetch(url);
 
-    if (!response.ok) {
-      throw new Error(`bad HTTPStatus(${response.statusText})`);
+    if (status < 200 || status >= 300) {
+      throw new Error(`bad HTTPStatus(${status})`);
     }
 
-    let data = (await response.json()) as LRCLIBSearchResponse;
+    let data = JSON.parse(text) as LRCLIBSearchResponse;
     if (!data || !Array.isArray(data)) {
       throw new Error(`Expected an array, instead got ${typeof data}`);
     }
@@ -49,12 +50,12 @@ export class LRCLib implements LyricProvider {
       query = new URLSearchParams({ q: `${trackName}` });
       url = `${this.baseUrl}/api/search?${query.toString()}`;
 
-      response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`bad HTTPStatus(${response.statusText})`);
+      [status, text] = await netFetch(url);
+      if (status < 200 || status >= 300) {
+        throw new Error(`bad HTTPStatus(${status})`);
       }
 
-      data = (await response.json()) as LRCLIBSearchResponse;
+      data = JSON.parse(text) as LRCLIBSearchResponse;
       if (!Array.isArray(data)) {
         throw new Error(`Expected an array, instead got ${typeof data}`);
       }
@@ -64,12 +65,12 @@ export class LRCLib implements LyricProvider {
         query = new URLSearchParams({ q: title });
         url = `${this.baseUrl}/api/search?${query.toString()}`;
 
-        response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`bad HTTPStatus(${response.statusText})`);
+        [status, text] = await netFetch(url);
+        if (status < 200 || status >= 300) {
+          throw new Error(`bad HTTPStatus(${status})`);
         }
 
-        data = (await response.json()) as LRCLIBSearchResponse;
+        data = JSON.parse(text) as LRCLIBSearchResponse;
         if (!Array.isArray(data)) {
           throw new Error(`Expected an array, instead got ${typeof data}`);
         }

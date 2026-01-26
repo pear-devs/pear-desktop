@@ -1,14 +1,11 @@
 import type { SongInfo } from '@/providers/song-info';
-import type { ProviderName } from '@/plugins/lyrics-provider/providers';
+import type { ProviderName } from './providers';
+import type { ProviderState } from './providers';
 
-export type SyncedLyricsPluginConfig = {
-  enabled: boolean;
-  preciseTiming: boolean;
-  showTimeCodes: boolean;
-  defaultTextString: string | string[];
-  showLyricsEvenIfInexact: boolean;
-  lineEffect: LineEffect;
-  romanization: boolean;
+export type LyricsStore = {
+  provider: ProviderName;
+  current: ProviderState;
+  lyrics: Record<ProviderName, ProviderState>;
 };
 
 export type LineLyricsStatus = 'previous' | 'current' | 'upcoming';
@@ -32,7 +29,6 @@ export interface LyricResult {
   lines?: LineLyrics[];
 }
 
-// prettier-ignore
 export type SearchSongInfo = Pick<SongInfo, 'title' | 'alternativeTitle' | 'artist' | 'album' | 'songDuration' | 'videoId' | 'tags'>;
 
 export interface LyricProvider {
@@ -40,4 +36,16 @@ export interface LyricProvider {
   baseUrl: string;
 
   search(songInfo: SearchSongInfo): Promise<LyricResult | null>;
+}
+
+export interface LyricsProviderAPI {
+  fetchLyrics: (song: SongInfo) => void;
+  currentLyrics: () => ProviderState;
+  lyricsStore: {
+    provider: ProviderName;
+    current: ProviderState;
+    lyrics: Record<ProviderName, ProviderState>;
+  };
+  setLyricsStore: (path: string | string[], value: any) => void;
+  retrySearch: (provider: ProviderName, song: SongInfo) => void;
 }

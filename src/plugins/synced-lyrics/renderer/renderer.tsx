@@ -1,11 +1,4 @@
-import {
-  createEffect,
-  createSignal,
-  onCleanup,
-  onMount,
-  Show,
-  untrack,
-} from 'solid-js';
+import { createEffect, createSignal, onCleanup, onMount, Show, untrack } from 'solid-js';
 import { type VirtualizerHandle, VList } from 'virtua/solid';
 
 import { LyricsPicker } from './components/LyricsPicker';
@@ -20,9 +13,8 @@ import {
   PlainLyrics,
 } from './components';
 
-import { currentLyrics } from './store';
-
 import type { LineLyrics, SyncedLyricsPluginConfig } from '../types';
+import { getLyricsProvider } from '@/plugins/lyrics-provider/renderer/utils';
 
 export const [isVisible, setIsVisible] = createSignal<boolean>(false);
 export const [config, setConfig] =
@@ -192,7 +184,7 @@ export const LyricsRenderer = () => {
   ]);
 
   createEffect(() => {
-    const current = currentLyrics();
+    const current = getLyricsProvider().currentLyrics();
     if (!current) {
       setChildren(() => [{ kind: 'NotFoundKaomoji' }]);
       return;
@@ -233,7 +225,7 @@ export const LyricsRenderer = () => {
   >([]);
   createEffect(() => {
     const time = currentTime();
-    const data = currentLyrics()?.data;
+    const data = getLyricsProvider().currentLyrics()?.data;
 
     if (!data || !data.lines) return setStatuses([]);
 
@@ -259,7 +251,7 @@ export const LyricsRenderer = () => {
   });
 
   createEffect(() => {
-    const current = currentLyrics();
+    const current = getLyricsProvider().currentLyrics();
     const idx = currentIndex();
     const maxIdx = untrack(statuses).length - 1;
 
@@ -290,7 +282,11 @@ export const LyricsRenderer = () => {
           if (typeof props === 'undefined') return null;
           switch (props.kind) {
             case 'LyricsPicker':
-              return <LyricsPicker setStickRef={setStickRef} />;
+              return (
+                <Show when={getLyricsProvider()}>
+                  <LyricsPicker setStickRef={setStickRef} />
+                </Show>
+              );
             case 'Error':
               return <ErrorDisplay {...props} />;
             case 'LoadingKaomoji':

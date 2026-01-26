@@ -2,7 +2,7 @@ import { t } from '@/i18n';
 
 import { getSongInfo } from '@/providers/song-info-front';
 
-import { lyricsStore, retrySearch } from '../store';
+const getLyricsProvider = () => (window as any).lyricsProvider;
 
 interface ErrorDisplayProps {
   error: Error;
@@ -53,7 +53,7 @@ export const ErrorDisplay = (props: ErrorDisplayProps) => {
             simpleText: t('plugins.synced-lyrics.refetch-btn.normal')
           },
         }}
-        onClick={() => retrySearch(lyricsStore.provider, getSongInfo())}
+        onClick={() => getLyricsProvider().retrySearch(getLyricsProvider().lyricsStore.provider, getSongInfo())}
         style={{
           'margin-top': '1em',
           'width': '100%'

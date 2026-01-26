@@ -1,6 +1,7 @@
 import { jaroWinkler } from '@skyra/jaro-winkler';
 
 import { LRC } from '../parsers/lrc';
+import { netFetch } from '../renderer';
 
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
 
@@ -25,14 +26,13 @@ export class Megalobiz implements LyricProvider {
       qry: `${artist} ${title}`,
     });
 
-    const response = await fetch(`${this.baseUrl}/search/all?${query}`, {
+    const [status, data] = await netFetch(`${this.baseUrl}/search/all?${query}`, {
       signal: AbortSignal.timeout(5_000),
     });
-    if (!response.ok) {
-      throw new Error(`bad HTTPStatus(${response.statusText})`);
+    if (status < 200 || status >= 300) {
+      throw new Error(`bad HTTPStatus(${status})`);
     }
 
-    const data = await response.text();
     const searchDoc = this.domParser.parseFromString(data, 'text/html');
 
     // prettier-ignore
@@ -87,7 +87,10 @@ export class Megalobiz implements LyricProvider {
       return null;
     }
 
-    const html = await fetch(`${this.baseUrl}${closestResult.href}`).then((r) => r.text());
+    const [status2, html] = await netFetch(`${this.baseUrl}${closestResult.href}`);
+    if (status2 < 200 || status2 >= 300) {
+      throw new Error(`bad HTTPStatus(${status2})`);
+    }
     const lyricsDoc = this.domParser.parseFromString(html, 'text/html');
     const raw = lyricsDoc.querySelector('span[id^="lrc_"][id$="_lyrics"]')?.textContent;
     if (!raw) throw new Error('Failed to extract lyrics from page.');

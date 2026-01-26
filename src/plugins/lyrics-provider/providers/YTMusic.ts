@@ -1,5 +1,6 @@
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
 import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
+import { netFetch } from '../renderer';
 
 const headers = {
   'Accept': 'application/json',
@@ -123,14 +124,19 @@ export class YTMusic implements LyricProvider {
   }
 
   private fetchBrowse(browseId: string) {
-    return fetch(this.PROXIED_ENDPOINT + 'browse?prettyPrint=false', {
+    return netFetch(this.PROXIED_ENDPOINT + 'browse?prettyPrint=false', {
       headers,
       method: 'POST',
       body: JSON.stringify({
         browseId,
         context: { client },
       }),
-    }).then((res) => res.json()) as Promise<BrowseData>;
+    }).then(([status, text]) => {
+      if (status < 200 || status >= 300) {
+        throw new Error(`bad HTTPStatus(${status})`);
+      }
+      return JSON.parse(text);
+    }) as Promise<BrowseData>;
   }
 }
 

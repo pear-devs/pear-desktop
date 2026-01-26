@@ -1,4 +1,5 @@
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
+import { netFetch } from '../renderer';
 
 const preloadedStateRegex = /__PRELOADED_STATE__ = JSON\.parse\('(.*?)'\);/;
 const preloadHtmlRegex = /body":{"html":"(.*?)","children"/;
@@ -16,12 +17,12 @@ export class LyricsGenius implements LyricProvider {
       per_page: '10',
     });
 
-    const response = await fetch(`${this.baseUrl}/api/search/song?${query}`);
-    if (!response.ok) {
+    const [status, text] = await netFetch(`${this.baseUrl}/api/search/song?${query}`);
+    if (status < 200 || status >= 300) {
       return null;
     }
 
-    const data = (await response.json()) as LyricsGeniusSearch;
+    const data = JSON.parse(text) as LyricsGeniusSearch;
     const hits = data.response.sections[0].hits;
 
     hits.sort(
@@ -52,9 +53,10 @@ export class LyricsGenius implements LyricProvider {
 
     const { result: { path } } = closestHit;
 
-    const html = await fetch(`${this.baseUrl}${path}`).then((res) =>
-      res.text()
-    );
+    const [status2, html] = await netFetch(`${this.baseUrl}${path}`);
+    if (status2 < 200 || status2 >= 300) {
+      return null;
+    }
     const doc = this.domParser.parseFromString(html, 'text/html');
 
     const preloadedStateScript = Array.prototype.find.call(
