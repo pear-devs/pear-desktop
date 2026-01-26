@@ -227,7 +227,7 @@
     },
     "album-actions": {
       "description": "Lisab Undislike, Ebameeldiv, Meeldiv ja Unlike nupud selle rakendamiseks kõikidele loendisse või albumisse kuuluvatele lauludele.",
-      "name": "Albumi aktsioonid"
+      "name": "Albumi toimingud"
     },
     "album-color-theme": {
       "description": "Rakendab dünaamilist teemat ja visuaalseid efekte, mis põhinevad albumi värvipalettil",
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{suhe}}%"
           }
-        }
+        },
+        "enable-seekbar": "Luba kerimisriba kujundamine"
       },
       "name": "Albumi värviteema"
     },
@@ -245,9 +246,19 @@
       "description": "Rakendab valgusefekti, projitseerides videost õrnad värvid ekraani taustale",
       "menu": {
         "blur-amount": {
-          "label": "Hägusus"
+          "label": "Hägusus",
+          "submenu": {
+            "pixels": "{{blurAmount}} pikslit"
+          }
+        },
+        "buffer": {
+          "label": "Puhver",
+          "submenu": {
+            "buffer": "{{buffer}}"
+          }
         },
         "opacity": {
+          "label": "Läbipaistmatus",
           "submenu": {
             "percent": "{{opacity}}%"
           }
@@ -263,8 +274,15 @@
           "submenu": {
             "percent": "{{size}}%"
           }
+        },
+        "smoothness-transition": {
+          "label": "Sujuv üleminek"
+        },
+        "use-fullscreen": {
+          "label": "Kasutamas täisekraani"
         }
-      }
+      },
+      "name": "Ümbritsev režiim"
     },
     "blur-nav-bar": {
       "description": "Muudab navigatsiooniriba läbipaistavaks ja hägusaks",
