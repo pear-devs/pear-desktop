@@ -98,7 +98,7 @@
     "electron-localshortcut": "3.2.1",
     "electron-store": "10.1.0",
     "electron-unhandled": "5.0.0",
-    "electron-updater": "6.6.2",
+    "electron-updater": "6.7.3",
     "es-hangul": "2.3.8",
     "fast-average-color": "9.5.0",
     "fast-equals": "5.2.2",
