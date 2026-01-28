@@ -103,7 +103,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Create comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const runId = context.runId;
