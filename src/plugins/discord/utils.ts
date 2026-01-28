@@ -20,6 +20,27 @@ export const truncateString = (str: string, length: number): string => {
 };
 
 /**
+ * Sanitizes a string for Discord Rich Presence activity, ensuring it meets length requirements.
+ * @param input - The string to sanitize.
+ * @param fallback - A fallback string to use if the input is empty or whitespace. Defaults to 'undefined'.
+ * @returns The sanitized string, compliant with Discord's requirements.
+ */
+export function sanitizeActivityText(input: string | undefined, fallback: string = 'undefined'): string {
+  const text = (input && input.trim()) ? input.trim() : fallback.trim();
+  let safeString = truncateString(text, 128);
+
+  if (safeString.length === 0) {
+    return fallback;
+  }
+
+  if (safeString.length < 2) {
+    safeString = safeString.padEnd(2, '⠀'); // change if necessary
+  }
+
+  return safeString;
+}
+
+/**
  * Builds the array of buttons for the Discord Rich Presence activity.
  * @param config - The plugin configuration.
  * @param songInfo - The current song information.
