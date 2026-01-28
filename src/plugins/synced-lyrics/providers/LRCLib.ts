@@ -77,10 +77,11 @@ export class LRCLib implements LyricProvider {
     }
 
     const filteredResults = [];
+    const artists = artist.split(/[&,]/g).map((i) => i.trim());
+
     for (const item of data) {
       const { artistName } = item;
 
-      const artists = artist.split(/[&,]/g).map((i) => i.trim());
       const itemArtists = artistName.split(/[&,]/g).map((i) => i.trim());
 
       // Try to match using artist name first
