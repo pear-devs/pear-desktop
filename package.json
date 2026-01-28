@@ -68,7 +68,7 @@
     "@electron/remote": "2.1.3",
     "@ffmpeg.wasm/core-mt": "0.12.0",
     "@ffmpeg.wasm/main": "0.12.0",
-    "@floating-ui/dom": "1.7.4",
+    "@floating-ui/dom": "1.7.5",
     "@foobar404/wave": "2.0.5",
     "@ghostery/adblocker-electron": "2.13.4",
     "@ghostery/adblocker-electron-preload": "2.13.4",
