@@ -3,6 +3,7 @@ import crypto from 'node:crypto';
 import { BrowserWindow, dialog, net } from 'electron';
 
 import { ScrobblerBase } from './base';
+
 import type { ScrobblerPluginConfig } from '../index';
 import type { SetConfType } from '../main';
 
@@ -168,11 +169,10 @@ export class LibreFmScrobbler extends ScrobblerBase {
       return;
     }
 
+    const elapsedMs = (songInfo.elapsedSeconds ?? 0) * 1000;
     const data = {
       method: 'track.scrobble',
-      timestamp: Math.trunc(
-        (Date.now() - (songInfo.elapsedSeconds ?? 0) * 1000) / 1000,
-      ),
+      timestamp: Math.trunc((Date.now() - elapsedMs) / 1000),
     };
     this.postSongDataToAPI(songInfo, config, data, setConfig);
   }
