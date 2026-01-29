@@ -209,7 +209,7 @@
       "show": "Pokaż okno",
       "tooltip": {
         "default": "{{applicationName}}",
-        "with-song-info": "{{artist}} - (autorstwa {{artist}}) - {{applicationName}}"
+        "with-song-info": "{{title}} (autorstwa {{artist}}) - {{applicationName}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Zezwól stylowanie paska wyszukiwań"
       },
       "name": "Motyw kolorów albumu"
     },
@@ -294,7 +295,7 @@
       }
     },
     "api-server": {
-      "description": "Pozwala na kontrolowanie {{applicationName}} poprzez podłączenie specjalnego serwera API",
+      "description": "Steruj odtwarzaczem przez specjalny serwer API",
       "dialog": {
         "request": {
           "buttons": {
@@ -319,6 +320,22 @@
         },
         "hostname": {
           "label": "Nazwa hosta (IP)"
+        },
+        "https": {
+          "label": "HTTPS i Certyfikaty",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Wybierz plik certyfikatu HTTPS",
+              "label": "Certyfikat (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Zezwól HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Wybierz plik prywatnego klucza HTTPS",
+              "label": "Klucz prywatny (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -461,8 +478,8 @@
         "set-status-display-type": {
           "label": "Opis statusu",
           "submenu": {
-            "artist": "Słucha {artist}",
             "application": "Słucha {{applicationName}}",
+            "artist": "Słucha {artist}",
             "title": "Słucha {song title}"
           }
         }

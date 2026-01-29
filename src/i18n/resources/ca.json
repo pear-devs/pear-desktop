@@ -321,6 +321,22 @@
         "hostname": {
           "label": "Nom del host"
         },
+        "https": {
+          "label": "HTTPS i Certificats",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Seleccionar arxiu de certificat HTTPS",
+              "label": "Arxiu de certificat (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Activa HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Selecciona arxiu de clau HTTPS privada",
+              "label": "Arxiu de clau privada (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
@@ -462,8 +478,8 @@
         "set-status-display-type": {
           "label": "Text d'estat",
           "submenu": {
-            "artist": "Escoltant {artist}",
             "application": "Escoltant {{applicationName}}",
+            "artist": "Escoltant {artist}",
             "title": "Escoltant {song title}"
           }
         }
