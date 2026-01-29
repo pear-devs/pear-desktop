@@ -1,12 +1,12 @@
-import crypto from 'node:crypto';
+import crypto from "node:crypto";
 
-import { BrowserWindow, dialog, net } from 'electron';
+import { BrowserWindow, dialog, net } from "electron";
 
-import type { SongInfo } from '@/providers/song-info';
+import { ScrobblerBase } from "./base";
+import type { ScrobblerPluginConfig } from "../index";
+import type { SetConfType } from "../main";
 
-import { ScrobblerBase } from './base';
-import type { ScrobblerPluginConfig } from '../index';
-import type { SetConfType } from '../main';
+import type { SongInfo } from "@/providers/song-info";
 
 interface LibreFmSongData {
   track?: string;
@@ -19,8 +19,8 @@ interface LibreFmSongData {
 
 // Libre.fm uses a special API key - you should register your own at https://libre.fm/api/account
 // For now using a generic test key
-const LIBREFM_API_KEY = 'test';
-const LIBREFM_API_SECRET = 'test';
+const LIBREFM_API_KEY = "test";
+const LIBREFM_API_SECRET = "test";
 
 export class LibreFmScrobbler extends ScrobblerBase {
   override isSessionCreated(config: ScrobblerPluginConfig): boolean {
@@ -34,9 +34,9 @@ export class LibreFmScrobbler extends ScrobblerBase {
     try {
       // Step 1: Get a token
       const tokenParams: Record<string, string> = {
-        method: 'auth.gettoken',
+        method: "auth.gettoken",
         api_key: LIBREFM_API_KEY,
-        format: 'json',
+        format: "json",
       };
 
       const tokenSig = createApiSig(tokenParams, LIBREFM_API_SECRET);
@@ -52,14 +52,14 @@ export class LibreFmScrobbler extends ScrobblerBase {
           error?: number;
         };
         if (!tokenJson.token) {
-          throw new Error('Failed to get authentication token');
+          throw new Error("Failed to get authentication token");
         }
         token = tokenJson.token;
       } catch {
         // Try parsing as XML if JSON fails
         const tokenMatch = tokenText.match(/<token>([^<]+)<\/token>/);
         if (!tokenMatch) {
-          throw new Error('Failed to parse token from response');
+          throw new Error("Failed to parse token from response");
         }
         token = tokenMatch[1];
       }
@@ -78,15 +78,15 @@ export class LibreFmScrobbler extends ScrobblerBase {
 
       // Wait for user to authorize
       await new Promise<void>((resolve) => {
-        authWindow.on('closed', () => resolve());
+        authWindow.on("closed", () => resolve());
       });
 
       // Step 3: Get session key
       const sessionParams: Record<string, string> = {
-        method: 'auth.getsession',
+        method: "auth.getsession",
         api_key: LIBREFM_API_KEY,
         token: token,
-        format: 'json',
+        format: "json",
       };
 
       const sessionSig = createApiSig(sessionParams, LIBREFM_API_SECRET);
@@ -107,12 +107,12 @@ export class LibreFmScrobbler extends ScrobblerBase {
           await setConfig(config);
 
           dialog.showMessageBox({
-            title: 'Libre.fm Authentication Successful',
+            title: "Libre.fm Authentication Successful",
             message: `Successfully authenticated as ${sessionJson.session.name}!`,
-            type: 'info',
+            type: "info",
           });
         } else {
-          throw new Error(sessionJson.message || 'Failed to get session key');
+          throw new Error(sessionJson.message || "Failed to get session key");
         }
       } catch {
         // Try parsing as XML
@@ -124,20 +124,20 @@ export class LibreFmScrobbler extends ScrobblerBase {
           await setConfig(config);
 
           dialog.showMessageBox({
-            title: 'Libre.fm Authentication Successful',
-            message: `Successfully authenticated${nameMatch ? ` as ${nameMatch[1]}` : ''}!`,
-            type: 'info',
+            title: "Libre.fm Authentication Successful",
+            message: `Successfully authenticated${nameMatch ? ` as ${nameMatch[1]}` : ""}!`,
+            type: "info",
           });
         } else {
-          throw new Error('Failed to parse session from response');
+          throw new Error("Failed to parse session from response");
         }
       }
     } catch (error) {
-      console.error('Libre.fm authentication error:', error);
+      console.error("Libre.fm authentication error:", error);
       dialog.showMessageBox({
-        title: 'Libre.fm Authentication Failed',
-        message: `Error: ${error}`,
-        type: 'error',
+        title: "Libre.fm Authentication Failed",
+        message: `Error: ${String(error)}`,
+        type: "error",
       });
     }
 
@@ -154,7 +154,7 @@ export class LibreFmScrobbler extends ScrobblerBase {
     }
 
     const data = {
-      method: 'track.updateNowPlaying',
+      method: "track.updateNowPlaying",
     };
     this.postSongDataToAPI(songInfo, config, data, setConfig);
   }
@@ -169,7 +169,7 @@ export class LibreFmScrobbler extends ScrobblerBase {
     }
 
     const data = {
-      method: 'track.scrobble',
+      method: "track.scrobble",
       timestamp: Math.trunc(
         (Date.now() - (songInfo.elapsedSeconds ?? 0) * 1000) / 1000,
       ),
@@ -229,10 +229,10 @@ export class LibreFmScrobbler extends ScrobblerBase {
 
     try {
       const response = await net.fetch(config.scrobblers.librefm.apiRoot, {
-        method: 'POST',
+        method: "POST",
         body: formData,
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
+          "Content-Type": "application/x-www-form-urlencoded",
         },
       });
 
@@ -247,7 +247,7 @@ export class LibreFmScrobbler extends ScrobblerBase {
 
         if (json.error === 9) {
           // Session expired, need to re-authenticate
-          console.log('Libre.fm session expired, clearing session key');
+          console.log("Libre.fm session expired, clearing session key");
           config.scrobblers.librefm.sessionKey = undefined;
           await setConfig(config);
         } else if (json.error) {
@@ -287,24 +287,24 @@ const createQueryString = (
       `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`,
   );
 
-  return queryData.join('&');
+  return queryData.join("&");
 };
 
 const createApiSig = (
   parameters: Record<string, string | number>,
   secret: string,
 ) => {
-  let sig = '';
+  let sig = "";
 
   Object.entries(parameters)
     .sort(([a], [b]) => a.localeCompare(b))
     .forEach(([key, value]) => {
-      if (key === 'format' || key === 'callback') {
+      if (key === "format" || key === "callback") {
         return;
       }
       sig += key + value;
     });
 
   sig += secret;
-  return crypto.createHash('md5').update(sig, 'utf-8').digest('hex');
+  return crypto.createHash("md5").update(sig, "utf-8").digest("hex");
 };
