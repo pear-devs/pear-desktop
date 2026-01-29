@@ -29,14 +29,14 @@ jobs:
 
       - name: Setup NodeJS
         if: startsWith(matrix.os, 'macOS') != true
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Setup NodeJS for macOS
         if: startsWith(matrix.os, 'macOS')
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -104,14 +104,14 @@ jobs:
 
       - name: Setup NodeJS
         if: startsWith(matrix.os, 'macOS') != true
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Setup NodeJS for macOS
         if: startsWith(matrix.os, 'macOS')
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
 
