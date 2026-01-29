@@ -209,7 +209,7 @@
       "show": "Afficher la fenêtre",
       "tooltip": {
         "default": "{{applicationName}}",
-        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
+        "with-song-info": "{{applicationName}} : {{artist}} - {{title}}"
       }
     }
   },
@@ -320,6 +320,22 @@
         },
         "hostname": {
           "label": "Nom de l'hôte"
+        },
+        "https": {
+          "label": "HTTPS & Certificats",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Sélectionner le fichier de certificat HTTPS",
+              "label": "Fichier de certificat (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Activer HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Sélectionner le fichier de clé privée HTTPS",
+              "label": "Fichier de clé privée (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -462,8 +478,8 @@
         "set-status-display-type": {
           "label": "Texte d'état",
           "submenu": {
-            "artist": "Écoute {artiste}",
             "application": "Écoute {{applicationName}}",
+            "artist": "Écoute {artiste}",
             "title": "Écoute {titre de la chanson}"
           }
         }
@@ -483,8 +499,8 @@
             "buttons": {
               "ok": "Ok"
             },
-            "message": "Argh ! Désolé, le téléchargement a échoué…",
-            "title": "Erreur de téléchargement !"
+            "message": "Argh ! Désolé, le téléchargement a échoué…",
+            "title": "Erreur de téléchargement !"
           },
           "start-download-playlist": {
             "buttons": {
@@ -492,30 +508,30 @@
             },
             "detail": "({{playlistSize}} chansons)",
             "message": "Téléchargement de la playlist {{playlistTitle}}",
-            "title": "Téléchargement a commencé"
+            "title": "Téléchargement commencé"
           }
         },
         "feedback": {
-          "conversion-progress": "Conversion : {{percent}} %",
+          "conversion-progress": "Conversion : {{percent}}%",
           "converting": "Conversion…",
           "done": "Terminé : {{filePath}}",
           "download-info": "Téléchargement {{artist}} - {{title}} [{{videoId}}",
-          "download-progress": "Téléchargé : {{percent}}%",
+          "download-progress": "Téléchargé : {{percent}}%",
           "downloading": "Télécharge…",
           "downloading-counter": "Télécharge {{current}}/{{total}}…",
-          "downloading-playlist": "Téléchargement de la playlist \"{{playlistTitle}}\" – {{playlistSize}} chansons ({{playlistId}})",
+          "downloading-playlist": "Téléchargement de la playlist \"{{playlistTitle}}\" - {{playlistSize}} chansons ({{playlistId}})",
           "error-while-downloading": "Erreur lors du téléchargement de \"{{author}} - {{title}}\" : {{error}}",
           "folder-already-exists": "Le dossier {{playlistFolder}} existe déjà",
-          "getting-playlist-info": "Obtention d'informations sur la liste de lecture…",
+          "getting-playlist-info": "Obtention des données de la playlist…",
           "loading": "Chargement…",
-          "playlist-has-only-one-song": "La liste de lecture ne contient qu'un seul élément, téléchargement du morceau seul",
-          "playlist-id-not-found": "Aucun ID de liste de lecture trouvé",
-          "playlist-is-empty": "La liste de lecture est vide",
-          "playlist-is-mix-or-private": "Erreur lors de l'obtention des informations sur la liste de lecture : assurez-vous qu'il ne s'agit pas d'une liste privée ou \"Mixée pour vous\"\n\n{{error}}",
-          "preparing-file": "Péparer des fichier…",
+          "playlist-has-only-one-song": "La playlist ne contient qu'un seul élément, téléchargement du morceau seul",
+          "playlist-id-not-found": "Aucun ID de playlist trouvé",
+          "playlist-is-empty": "La playlist est vide",
+          "playlist-is-mix-or-private": "Erreur lors de l'obtention des informations sur la playlist : assurez-vous qu'il ne s'agit pas d'une playlist privée ou \"Mixée pour vous\"\n\n{{error}}",
+          "preparing-file": "Préparation des fichier…",
           "saving": "Sauvegarde…",
-          "trying-to-get-playlist-id": "Obtention de l'ID de la liste de lecture : {{playlistId}}",
-          "video-id-not-found": "Vidéo non trouvée",
+          "trying-to-get-playlist-id": "Obtention de l'ID de la playlist : {{playlistId}}",
+          "video-id-not-found": "Vidéo introuvable",
           "writing-id3": "Écriture des balises ID3…"
         }
       },
@@ -525,19 +541,19 @@
         "download-finish-settings": {
           "label": "Télécharger une fois terminé",
           "prompt": {
-            "last-percent": "Après x pour cent",
+            "last-percent": "Après x pourcents",
             "last-seconds": "Dernières x secondes",
             "title": "Configurer quand télécharger"
           },
           "submenu": {
             "advanced": "Avancé",
             "enabled": "Activé",
-            "mode": "Mode de temps",
+            "mode": "Unité de temps",
             "percent": "Pourcent",
             "seconds": "Secondes"
           }
         },
-        "download-playlist": "Télécharger la liste de lecture",
+        "download-playlist": "Télécharger la playlist",
         "presets": "Préconfigurations",
         "skip-existing": "Passer les fichiers existants"
       },
@@ -574,7 +590,7 @@
     },
     "lumiastream": {
       "description": "Ajoute la prise en charge de Lumia Stream",
-      "name": "Lumia Stream [Bêta]"
+      "name": "Lumia Stream [Beta]"
     },
     "lyrics-genius": {
       "description": "Ajoute la prise en charge des paroles pour la plupart des chansons",
@@ -605,9 +621,9 @@
         "host": "Hôte du Music Together",
         "join": "Rejoindre le Music Together",
         "permission": {
-          "all": "Autorisez les invités à contrôler la musique et le player",
-          "host-only": "Seulement l'hôte peut contrôler les playlists et le lecteur",
-          "playlist": "Autoriser les invités à contrôler les playlists"
+          "all": "Autorisez les invités à contrôler la playlist et le lecteur",
+          "host-only": "Seulement l'hôte peut contrôler la playlist et le lecteur",
+          "playlist": "Autoriser les invités à contrôler la playlist"
         },
         "set-permission": "Changer les permissions de contrôle",
         "status": {
@@ -625,7 +641,7 @@
         "id-copied": "Identifiant de l'hôte copié dans le presse papier",
         "id-copy-failed": "Echec de la copie de l'identifiant de l'hôte dans le presse papier",
         "join-failed": "Echec en rejoignant le Music Together",
-        "joined": "Rejoint le Music Together",
+        "joined": "Music Together rejoint",
         "permission-changed": "Permission du Music Together changé à \"{{permission}}\"",
         "remove-song-failed": "Echec du retrait de la piste",
         "user-connected": "{{name}} à rejoint le Music Together",
@@ -657,7 +673,7 @@
           "submenu": {
             "hide-button-text": "Masquer le texte du bouton",
             "refresh-on-play-pause": "Actualiser lors de la lecture/pause",
-            "tray-controls": "Ouvrir/Fermer sur le plateau, cliquez"
+            "tray-controls": "Ouvrir/Fermer au clic sur l’icône de la barre des tâches"
           }
         },
         "priority": "Priorité des notifications",
@@ -671,30 +687,30 @@
       "name": "Amélioration des performances [Beta]"
     },
     "picture-in-picture": {
-      "description": "Permet de basculer l’application en mode image dans image",
+      "description": "Permet de basculer l’application en mode picture-in-picture",
       "menu": {
-        "always-on-top": "Toujours en haut",
+        "always-on-top": "Toujours au dessus",
         "hotkey": {
           "label": "Raccourci clavier",
           "prompt": {
             "keybind-options": {
               "hotkey": "Raccourci clavier"
             },
-            "label": "Choisissez un raccourci clavier pour activer le mode Image dans l'image",
-            "title": "Touche de raccourci Image dans l'image"
+            "label": "Choisissez un raccourci clavier pour activer le mode picture-in-picture",
+            "title": "Touche de raccourci picture-in-picture"
           }
         },
         "save-window-position": "Enregistrer la position de la fenêtre",
         "save-window-size": "Enregistrer la taille de la fenêtre",
-        "use-native-pip": "Utiliser le mode image dans image natif du navigateur"
+        "use-native-pip": "Utiliser le mode PiP natif du navigateur"
       },
-      "name": "Image dans l'image",
+      "name": "Picture-in-picture",
       "templates": {
-        "button": "Image dans l'image"
+        "button": "Picture-in-picture"
       }
     },
     "playback-speed": {
-      "description": "Écoutez vite, écoutez lentement ! Ajoute un curseur qui contrôle la vitesse de la chanson",
+      "description": "Écoutez vite, écoutez lentement ! Ajoute un curseur qui contrôle la vitesse de la chanson",
       "name": "Vitesse de lecture",
       "templates": {
         "button": "Vitesse"
@@ -727,14 +743,14 @@
       "backend": {
         "dialog": {
           "quality-changer": {
-            "detail": "Qualité actuelle : {{quality}}",
+            "detail": "Qualité actuelle : {{quality}}",
             "message": "Choisissez la qualité vidéo :",
             "title": "Choisissez la qualité vidéo"
           }
         }
       },
-      "description": "Permet de changer la qualité vidéo avec un bouton sur la vidéo",
-      "name": "Changeur de qualité vidéo",
+      "description": "Permet de changer la qualité vidéo avec un bouton sur l'overlay vidéo",
+      "name": "Sélecteur de qualité vidéo",
       "renderer": {
         "quality-settings-button": {
           "label": "Ouvrir le sélecteur de qualité du lecteur"
@@ -746,7 +762,7 @@
       "dialog": {
         "lastfm": {
           "auth-failed": {
-            "message": "Erreur lors de l'authetification avec Last.fm\nCachez la popup jusqu'au prochain redémarrage.",
+            "message": "Erreur lors de l'authetification avec Last.fm\nCacher la popup jusqu'au prochain redémarrage.",
             "title": "Authentification échouée"
           }
         }
@@ -762,7 +778,7 @@
         "scrobble-alternative-title": "Utiliser des titres alternatifs",
         "scrobble-other-media": "Scrobbler d'autres médias"
       },
-      "name": "Scrobble",
+      "name": "Scrobbler",
       "prompt": {
         "lastfm": {
           "api-key": "Clé API de Last.fm",
@@ -770,7 +786,7 @@
         },
         "listenbrainz": {
           "token": {
-            "label": "Entrez votre token utilisateur ListenBrainz :",
+            "label": "Entrez votre token utilisateur ListenBrainz :",
             "title": "Token ListenBrainz"
           }
         }
@@ -796,8 +812,8 @@
       }
     },
     "skip-disliked-songs": {
-      "description": "Passer les musiques que je n'aime pas",
-      "name": "Passer les chansons « Je n'aime pas »"
+      "description": "Passe les titres \"Je n'aime pas\"",
+      "name": "Passer les titres \"Je n'aime pas\""
     },
     "skip-silences": {
       "description": "Ignorer automatiquement les sections de silence dans les chansons",
@@ -811,12 +827,12 @@
       "description": "Ajoute des paroles synchronisées aux chansons, grâce à LRClib par exemple.",
       "errors": {
         "fetch": "⚠️\tUne erreur s'est produite en allant chercher les paroles.\n\tMerci de réessayer plus tard.",
-        "not-found": "⚠️ Aucune paroles trouvées pour cette musique."
+        "not-found": "⚠️ Aucune paroles trouvées pour ce titre."
       },
       "menu": {
         "default-text-string": {
           "label": "Caractère par défaut entre les paroles",
-          "tooltip": "Choisi le caractère par défaut à utiliser pour l'espace entre les paroles"
+          "tooltip": "Choisi le caractère par défaut à utiliser pour les blancs entre les paroles"
         },
         "line-effect": {
           "label": "Effet de ligne",
@@ -827,7 +843,7 @@
             },
             "focus": {
               "label": "Focus",
-              "tooltip": "Rend seulement la ligne actuelle blanche"
+              "tooltip": "Rend blanche seulement la ligne actuelle"
             },
             "offset": {
               "label": "Décalage",
@@ -850,7 +866,7 @@
             "label": "Aucun",
             "tooltip": "Aucun fournisseur privilégié"
           },
-          "tooltip": "Choisissez le fournisseur par défaut à utiliser"
+          "tooltip": "Choisissez le fournisseur à utiliser par défaut"
         },
         "romanization": {
           "label": "Romaniser les paroles",
@@ -862,7 +878,7 @@
         },
         "show-time-codes": {
           "label": "Afficher les timecodes",
-          "tooltip": "Affiche à côté de chaque paroles son timecode"
+          "tooltip": "Affiche le timecode à côté de chaque paroles"
         }
       },
       "name": "Paroles Synchronisées",
@@ -873,7 +889,7 @@
       "warnings": {
         "duration-mismatch": "⚠️ - Les paroles peuvent ne pas être synchronisées à cause d'une différence de durée.",
         "inexact": "⚠️ - Les paroles de cette chanson peuvent ne pas être exactes",
-        "instrumental": "⚠️ - Cette musique n'a pas de paroles"
+        "instrumental": "⚠️ - C'est un titre instrumental"
       }
     },
     "taskbar-mediacontrol": {
@@ -910,7 +926,7 @@
       "name": "Tuna OBS"
     },
     "unobtrusive-player": {
-      "description": "Empêche le lecteur de s'afficher quand une chanson est en cours de lecture",
+      "description": "Empêche le lecteur de s'afficher quand un titre est en cours de lecture",
       "name": "Lecteur Non-Intrusif"
     },
     "video-toggle": {
@@ -934,7 +950,7 @@
           }
         }
       },
-      "name": "Basculer la vidéo",
+      "name": "Bouton de bascule vidéo",
       "templates": {
         "button-song": "Musique",
         "button-video": "Vidéo"

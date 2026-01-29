@@ -320,6 +320,13 @@
         "hostname": {
           "label": "Tên máy chủ"
         },
+        "https": {
+          "submenu": {
+            "enable-https": {
+              "label": "Bật HTTPS"
+            }
+          }
+        },
         "port": {
           "label": "Cổng"
         }
@@ -461,9 +468,9 @@
         "set-status-display-type": {
           "label": "Văn bản trạng thái",
           "submenu": {
+            "application": "Đang nghe {{applicationName}}",
             "artist": "Đang nghe nhạc của {artist}",
-            "title": "Đang nghe nhạc {song title}",
-            "application": "Đang nghe {{applicationName}}"
+            "title": "Đang nghe nhạc {song title}"
           }
         }
       },

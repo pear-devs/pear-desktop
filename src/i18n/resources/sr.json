@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Omogući postavljanje teme \"seekbar\"-a"
       },
       "name": "Paleta boja albuma"
     },
@@ -319,6 +320,22 @@
         },
         "hostname": {
           "label": "Ime host-a"
+        },
+        "https": {
+          "label": "HTTPS i Sertifikati",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Izaberi HTTPS datoteku sertifikata",
+              "label": "Datoteka sertifikata (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Omogući HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Izaberi HTTPS datoteku privatnog ključa",
+              "label": "Datoteka privatnog ključa (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -461,9 +478,9 @@
         "set-status-display-type": {
           "label": "Tekst statusa",
           "submenu": {
+            "application": "Slušanje {{applicationName}}",
             "artist": "Slušanje {artist}",
-            "title": "Slušanje {song title}",
-            "application": "Slušanje {{applicationName}}"
+            "title": "Slušanje {song title}"
           }
         }
       },

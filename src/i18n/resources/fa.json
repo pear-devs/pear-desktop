@@ -320,6 +320,22 @@
         "hostname": {
           "label": "نام میزبان"
         },
+        "https": {
+          "label": "HTTPS و گواهینامه‌ها",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "پرونده گواهینامه HTTPS را انتخاب کنید",
+              "label": "پرونده گواهینامه (crt/.pem.)"
+            },
+            "enable-https": {
+              "label": "فعال کردن HTTPS"
+            },
+            "key": {
+              "dialogTitle": "پرونده کلید خصوصی HTTPS را انتخاب کنید",
+              "label": "پرونده کلید خصوصی (key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "پورت"
         }
@@ -461,8 +477,8 @@
         "set-status-display-type": {
           "label": "متن وضعىت",
           "submenu": {
-            "artist": "به {artist} گوش مىکند",
             "application": "به پىر دسکتاپ گوش مىکند",
+            "artist": "به {artist} گوش مىکند",
             "title": "به {song title} گوش مىکند"
           }
         }

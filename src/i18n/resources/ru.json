@@ -2,13 +2,13 @@
   "common": {
     "console": {
       "plugins": {
-        "execute-failed": "Ошибка загрузки плагина {{pluginName}}::{{contextName}}",
+        "execute-failed": "Ошибка при выполнении плагина {{pluginName}}::{{contextName}}",
         "executed-at-ms": "Плагин {{pluginName}}::{{contextName}} загружен за {{ms}}мс",
         "initialize-failed": "Ошибка инициализации плагина \"{{pluginName}}\"",
         "load-all": "Загружаем все плагины",
         "load-failed": "Ошибка загрузки плагина \"{{pluginName}}\"",
         "loaded": "Плагин \"{{pluginName}}\" загружен",
-        "unload-failed": "Ошибка выгрузки плагина \"{{pluginName}}\"",
+        "unload-failed": "Ошибка при выгрузке плагина \"{{pluginName}}\"",
         "unloaded": "Плагин \"{{pluginName}}\" выгружен"
       }
     }
@@ -44,7 +44,7 @@
     },
     "dialog": {
       "hide-menu-enabled": {
-        "detail": "Меню скрыто, 'Alt' чтобы показать его ('Escape' если используете внутреннее меню приложения)",
+        "detail": "Меню скрыто, используйте 'Alt' чтобы показать его ('Escape' если используете внутреннее меню приложения)",
         "message": "Скрытие меню включено",
         "title": "Включено скрытие меню"
       },
@@ -53,8 +53,8 @@
           "later": "Позже",
           "restart-now": "Перезапустить сейчас"
         },
-        "detail": "Перезапустите приложение для включения плагина {{pluginName}}",
-        "message": "Перезапуск для применения плагина {{pluginName}}",
+        "detail": "Для вступления изменений в силу плагину \"{{pluginName}}\" требуется перезапуск",
+        "message": "Требуется перезапуск плагина \"{{pluginName}}\"",
         "title": "Нужен перезапуск"
       },
       "unresponsive": {
@@ -100,7 +100,7 @@
               "disable-hardware-acceleration": "Отключить аппаратное ускорение",
               "edit-config-json": "Редактировать config.json",
               "override-user-agent": "Переопределить User-Agent",
-              "restart-on-config-changes": "Перезапускать при изменениях конфига",
+              "restart-on-config-changes": "Перезапускать при изменениях конфигурации",
               "set-proxy": {
                 "label": "Задать прокси",
                 "prompt": {
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Включить тематическое оформление полосы прокрутки"
       },
       "name": "Цветовая тема альбома"
     },
@@ -287,7 +288,7 @@
       "name": "Режим Ambient"
     },
     "amuse": {
-      "description": "Добавляет поддержку виджета Amuse „сейчас играет“ от 6K Labs",
+      "description": "Добавляет {{applicationName}} поддержку виджета Amuse „сейчас играет“ от 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Сервер Amuse API запущен. GET /query чтобы получить информацию о треке."
@@ -319,6 +320,22 @@
         },
         "hostname": {
           "label": "Имя хоста"
+        },
+        "https": {
+          "label": "HTTPS и сертификаты",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Выберите файл сертификата HTTPS",
+              "label": "Файл сертификата (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Включить HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Выберите файл приватного ключа HTTPS",
+              "label": "Файл приватного ключа (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Порт"
@@ -461,8 +478,8 @@
         "set-status-display-type": {
           "label": "Текст статуса",
           "submenu": {
-            "artist": "Слушает {исполнитель}",
             "application": "Слушает {{applicationName}}",
+            "artist": "Слушает {исполнитель}",
             "title": "Слушает {название трека}"
           }
         }

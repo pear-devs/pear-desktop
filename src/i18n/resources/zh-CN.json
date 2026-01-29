@@ -322,7 +322,20 @@
           "label": "主机名"
         },
         "https": {
-          "label": "HTTPS & 数字证书"
+          "label": "HTTPS & 数字证书",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "选择 HTTPS 证书文件",
+              "label": "证书文件（.crt/.pem）"
+            },
+            "enable-https": {
+              "label": "启用 HTTPS"
+            },
+            "key": {
+              "dialogTitle": "选择 HTTPS 私钥文件",
+              "label": "私钥文件（.key/.pem）"
+            }
+          }
         },
         "port": {
           "label": "端口号"
@@ -465,8 +478,8 @@
         "set-status-display-type": {
           "label": "状态文本",
           "submenu": {
-            "artist": "在听 {artist}",
             "application": "在听 {{applicationName}}",
+            "artist": "在听 {artist}",
             "title": "在听 {song title}"
           }
         }

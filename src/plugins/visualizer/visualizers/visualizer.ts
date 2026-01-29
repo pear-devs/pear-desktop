@@ -1,22 +1,15 @@
-import type { VisualizerPluginConfig } from '../index';
-
-export abstract class Visualizer<T> {
-  /**
-   * The name must be the same as the file name.
-   */
-  abstract name: string;
-  abstract visualizer: T;
+export abstract class Visualizer {
+  protected audioNode: GainNode;
+  protected audioSource: MediaElementAudioSourceNode;
 
   protected constructor(
-    _audioContext: AudioContext,
     _audioSource: MediaElementAudioSourceNode,
-    _visualizerContainer: HTMLElement,
-    _canvas: HTMLCanvasElement,
     _audioNode: GainNode,
-    _stream: MediaStream,
-    _options: VisualizerPluginConfig,
-  ) {}
+  ) {
+    this.audioNode = _audioNode;
+    this.audioSource = _audioSource;
+  }
 
   abstract resize(width: number, height: number): void;
-  abstract render(): void;
+  abstract destroy(): void;
 }

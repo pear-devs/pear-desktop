@@ -321,6 +321,22 @@
         "hostname": {
           "label": "Nome do anfitrião"
         },
+        "https": {
+          "label": "HTTPS e Certificados",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Selecionar arquivo do certificado HTTPS",
+              "label": "Arquivo do certificado (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Ativar HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Selecionar arquivo da chave privada HTTPS",
+              "label": "Arquivo da chave privada (.key/.pen)"
+            }
+          }
+        },
         "port": {
           "label": "Porta"
         }
@@ -462,8 +478,8 @@
         "set-status-display-type": {
           "label": "Texto de estado",
           "submenu": {
-            "artist": "A ouvir {artist}",
             "application": "A reproduzir {{applicationName}}",
+            "artist": "A ouvir {artist}",
             "title": "A ouvir {song title}"
           }
         }

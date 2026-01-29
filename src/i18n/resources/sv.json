@@ -321,6 +321,22 @@
         "hostname": {
           "label": "Värdnamn"
         },
+        "https": {
+          "label": "HTTPS och certifikat",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Välj HTTPS-certifikatfil",
+              "label": "Certifikatfil (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Aktivera HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Välj privat nyckelfil (.key/.pem)",
+              "label": "Privat nyckelfil (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
@@ -462,8 +478,8 @@
         "set-status-display-type": {
           "label": "Statusmeddelande",
           "submenu": {
-            "artist": "Lyssnar på {artist}",
             "application": "Lyssnar på {{applicationName}}",
+            "artist": "Lyssnar på {artist}",
             "title": "Lyssnar på {song title}"
           }
         }

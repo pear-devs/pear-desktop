@@ -151,7 +151,9 @@
             "label": "Vizualiniai patobulinimai",
             "submenu": {
               "custom-window-title": {
+                "label": "Pasirinktinis lango pavadinimas",
                 "prompt": {
+                  "label": "Įveskite pasirinktinį lango pavadinimą: (palikite tuščią, jei norite išjungti)",
                   "placeholder": "Pavyzdys: {{applicationName}}"
                 }
               },
@@ -431,9 +433,9 @@
         "set-inactivity-timeout": "Nustatyti neveiklumo laiką",
         "set-status-display-type": {
           "submenu": {
+            "application": "Klausosi {{applicationName}}",
             "artist": "Klausosi {artist]",
-            "title": "Klausosi {song title}",
-            "application": "Klausosi {{applicationName}}"
+            "title": "Klausosi {song title}"
           }
         }
       },

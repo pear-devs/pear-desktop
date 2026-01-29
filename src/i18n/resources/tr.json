@@ -321,6 +321,22 @@
         "hostname": {
           "label": "Ana bilgisayar adı"
         },
+        "https": {
+          "label": "HTTPS & Sertifikalar",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "HTTPS sertifika dosyası seç",
+              "label": "Sertifika dosyası (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "HTTPS'i aktifleştir"
+            },
+            "key": {
+              "dialogTitle": "HTTPS özel anahtar dosyası seç",
+              "label": "Özel anahtar dosyası (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
@@ -462,8 +478,8 @@
         "set-status-display-type": {
           "label": "Durum metni",
           "submenu": {
-            "artist": "{artist} Dinleniyor",
             "application": "{{applicationName}} Dinleniyor",
+            "artist": "{artist} Dinleniyor",
             "title": "{song title} Dinleniyor"
           }
         }
