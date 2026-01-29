@@ -109,7 +109,7 @@ deb:
     - libgbm1
 rpm:
   depends:
-    - /usr/lib64/libuuid.so.1
+    - libuuid
   fpm:
     - '--rpm-rpmbuild-define'
     - _build_id_links none
