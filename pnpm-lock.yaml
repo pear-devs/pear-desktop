@@ -41,7 +41,7 @@ importers:
         version: 1.0.0
       '@electron-toolkit/tsconfig':
         specifier: 1.0.1
-        version: 1.0.1(@types/node@24.3.0)
+        version: 1.0.1(@types/node@25.0.10)
       '@electron/remote':
         specifier: 2.1.3
         version: 2.1.3(electron@38.7.2)
@@ -263,7 +263,7 @@ importers:
         specifier: 0.4.0
         version: 0.4.0(patch_hash=c787371eeb2af011ea934e8818a0dad6d7dcb2df31bbb1686babc7231af0183c)
       '@playwright/test':
-        specifier: 1.57.0
+        specifier: ^1.57.0
         version: 1.57.0
       '@stylistic/eslint-plugin':
         specifier: 5.7.0
@@ -280,6 +280,9 @@ importers:
       '@types/html-to-text':
         specifier: 9.0.4
         version: 9.0.4
+      '@types/node':
+        specifier: ^25.0.10
+        version: 25.0.10
       '@types/semver':
         specifier: 7.7.1
         version: 7.7.1
@@ -315,7 +318,7 @@ importers:
         version: 4.0.0
       electron-vite:
         specifier: 4.0.1
-        version: 4.0.1(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1))
+        version: 4.0.1(rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1))
       eslint:
         specifier: 9.39.2
         version: 9.39.2(jiti@2.6.1)
@@ -357,16 +360,16 @@ importers:
         version: 6.0.6
       vite:
         specifier: npm:rolldown-vite@7.3.1
-        version: rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)
+        version: rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1)
       vite-plugin-inspect:
         specifier: 11.3.3
-        version: 11.3.3(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1))
+        version: 11.3.3(rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1))
       vite-plugin-resolve:
         specifier: 2.5.2
         version: 2.5.2
       vite-plugin-solid:
         specifier: 2.11.10
-        version: 2.11.10(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1))(solid-js@1.9.10)
+        version: 2.11.10(rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1))(solid-js@1.9.10)
       ws:
         specifier: 8.19.0
         version: 8.19.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
@@ -1308,8 +1311,8 @@ packages:
   '@types/node@22.17.2':
     resolution: {integrity: sha512-gL6z5N9Jm9mhY+U2KXZpteb+09zyffliRkZyZOHODGATyC5B1Jt/7TzuuiLkFsSUMLbS1OLmlj/E+/3KF4Q/4w==}
 
-  '@types/node@24.3.0':
-    resolution: {integrity: sha512-aPTXCrfwnDLj4VvXrm+UUCQjNEvJgNA8s5F1cvwQU+3KNltTOkBm1j30uNLyqqPNe7gE3KFzImYoZEfLhp4Yow==}
+  '@types/node@25.0.10':
+    resolution: {integrity: sha512-zWW5KPngR/yvakJgGOmZ5vTBemDoSqF3AcV/LrO5u5wTWyEAVVh+IT39G4gtyAkh3CtTZs8aX/yRM82OfzHJRg==}
 
   '@types/plist@3.0.5':
     resolution: {integrity: sha512-E6OCaRmAe4WDmWNsL/9RMqdkkzDCY1etutkflWk4c+AcjDU07Pcz1fQwTX0TQz+Pxqn9i4L1TU3UFpjnrcDgxA==}
@@ -4447,8 +4450,8 @@ packages:
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
-  undici-types@7.10.0:
-    resolution: {integrity: sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag==}
+  undici-types@7.16.0:
+    resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
   undici@6.21.3:
     resolution: {integrity: sha512-gBLkYIlEnSp8pFbT64yFgGE6UIB9tAkhukC23PmMDCe5Nd+cRqKxSjw5y54MK2AZMgZfJWMaNE4nYUHgi1XEOw==}
@@ -4893,9 +4896,9 @@ snapshots:
 
   '@discordjs/util@1.1.1': {}
 
-  '@electron-toolkit/tsconfig@1.0.1(@types/node@24.3.0)':
+  '@electron-toolkit/tsconfig@1.0.1(@types/node@25.0.10)':
     dependencies:
-      '@types/node': 24.3.0
+      '@types/node': 25.0.10
 
   '@electron/asar@3.4.1':
     dependencies:
@@ -5720,7 +5723,7 @@ snapshots:
     dependencies:
       '@types/http-cache-semantics': 4.0.4
       '@types/keyv': 3.1.4
-      '@types/node': 24.3.0
+      '@types/node': 25.0.10
       '@types/responselike': 1.0.3
 
   '@types/debug@4.1.12':
@@ -5737,7 +5740,7 @@ snapshots:
 
   '@types/fs-extra@9.0.13':
     dependencies:
-      '@types/node': 24.3.0
+      '@types/node': 25.0.10
 
   '@types/howler@2.2.12': {}
 
@@ -5751,7 +5754,7 @@ snapshots:
 
   '@types/keyv@3.1.4':
     dependencies:
-      '@types/node': 24.3.0
+      '@types/node': 25.0.10
 
   '@types/ms@2.1.0': {}
 
@@ -5765,19 +5768,19 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
-  '@types/node@24.3.0':
+  '@types/node@25.0.10':
     dependencies:
-      undici-types: 7.10.0
+      undici-types: 7.16.0
 
   '@types/plist@3.0.5':
     dependencies:
-      '@types/node': 24.3.0
+      '@types/node': 25.0.10
       xmlbuilder: 15.1.1
     optional: true
 
   '@types/responselike@1.0.3':
     dependencies:
-      '@types/node': 24.3.0
+      '@types/node': 25.0.10
 
   '@types/semver@7.7.1': {}
 
@@ -5790,7 +5793,7 @@ snapshots:
 
   '@types/yauzl@2.10.3':
     dependencies:
-      '@types/node': 24.3.0
+      '@types/node': 25.0.10
     optional: true
 
   '@typescript-eslint/eslint-plugin@8.53.1(@typescript-eslint/parser@8.53.1(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)':
@@ -6821,7 +6824,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron-vite@4.0.1(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)):
+  electron-vite@4.0.1(rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1)):
     dependencies:
       '@babel/core': 7.28.3
       '@babel/plugin-transform-arrow-functions': 7.27.1(@babel/core@7.28.3)
@@ -6829,7 +6832,7 @@ snapshots:
       esbuild: 0.25.9
       magic-string: 0.30.17
       picocolors: 1.1.1
-      vite: rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)
+      vite: rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -8682,7 +8685,7 @@ snapshots:
       sprintf-js: 1.1.3
     optional: true
 
-  rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1):
+  rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1):
     dependencies:
       '@oxc-project/runtime': 0.101.0
       fdir: 6.5.0(picomatch@4.0.3)
@@ -8692,7 +8695,7 @@ snapshots:
       rolldown: 1.0.0-beta.53
       tinyglobby: 0.2.15
     optionalDependencies:
-      '@types/node': 24.3.0
+      '@types/node': 25.0.10
       fsevents: 2.3.3
       jiti: 2.6.1
       yaml: 2.8.1
@@ -9226,7 +9229,7 @@ snapshots:
 
   undici-types@6.21.0: {}
 
-  undici-types@7.10.0: {}
+  undici-types@7.16.0: {}
 
   undici@6.21.3: {}
 
@@ -9323,17 +9326,17 @@ snapshots:
     optionalDependencies:
       solid-js: 1.9.10
 
-  vite-dev-rpc@1.1.0(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)):
+  vite-dev-rpc@1.1.0(rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1)):
     dependencies:
       birpc: 2.5.0
-      vite: rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)
-      vite-hot-client: 2.1.0(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1))
+      vite: rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1)
+      vite-hot-client: 2.1.0(rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1))
 
-  vite-hot-client@2.1.0(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)):
+  vite-hot-client@2.1.0(rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1)):
     dependencies:
-      vite: rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)
+      vite: rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1)
 
-  vite-plugin-inspect@11.3.3(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)):
+  vite-plugin-inspect@11.3.3(rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1)):
     dependencies:
       ansis: 4.1.0
       debug: 4.4.3
@@ -9343,8 +9346,8 @@ snapshots:
       perfect-debounce: 2.0.0
       sirv: 3.0.1
       unplugin-utils: 0.3.0
-      vite: rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)
-      vite-dev-rpc: 1.1.0(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1))
+      vite: rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1)
+      vite-dev-rpc: 1.1.0(rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1))
     transitivePeerDependencies:
       - supports-color
 
@@ -9352,7 +9355,7 @@ snapshots:
     dependencies:
       lib-esm: 0.4.2
 
-  vite-plugin-solid@2.11.10(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1))(solid-js@1.9.10):
+  vite-plugin-solid@2.11.10(rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1))(solid-js@1.9.10):
     dependencies:
       '@babel/core': 7.28.3
       '@types/babel__core': 7.20.5
@@ -9360,14 +9363,14 @@ snapshots:
       merge-anything: 5.1.7
       solid-js: 1.9.10
       solid-refresh: 0.6.3(solid-js@1.9.10)
-      vite: rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)
-      vitefu: 1.1.1(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1))
+      vite: rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1)
+      vitefu: 1.1.1(rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1))
     transitivePeerDependencies:
       - supports-color
 
-  vitefu@1.1.1(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)):
+  vitefu@1.1.1(rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1)):
     optionalDependencies:
-      vite: rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)
+      vite: rolldown-vite@7.3.1(@types/node@25.0.10)(jiti@2.6.1)(yaml@2.8.1)
 
   vudio@2.1.1(patch_hash=0e06c2ed11c02bdc490c209fa80070e98517c2735c641f5738b6e15d7dc1959d): {}
 

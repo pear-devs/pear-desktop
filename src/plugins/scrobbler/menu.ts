@@ -60,7 +60,7 @@ async function promptLastFmOptions(
 async function promptLibreFmAuth(
   options: ScrobblerPluginConfig,
   setConfig: SetConfType,
-  window: BrowserWindow,
+  _window: BrowserWindow,
 ) {
   // Trigger authentication
   const scrobbler = backend.enabledScrobblers.get('librefm');

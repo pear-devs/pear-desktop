@@ -2,11 +2,11 @@ import crypto from 'node:crypto';
 
 import { BrowserWindow, dialog, net } from 'electron';
 
-import type { SongInfo } from '@/providers/song-info';
-
 import { ScrobblerBase } from './base';
 import type { ScrobblerPluginConfig } from '../index';
 import type { SetConfType } from '../main';
+
+import type { SongInfo } from '@/providers/song-info';
 
 interface LibreFmSongData {
   track?: string;
@@ -136,7 +136,7 @@ export class LibreFmScrobbler extends ScrobblerBase {
       console.error('Libre.fm authentication error:', error);
       dialog.showMessageBox({
         title: 'Libre.fm Authentication Failed',
-        message: `Error: ${error}`,
+        message: `Error: ${String(error)}`,
         type: 'error',
       });
     }
