@@ -101,7 +101,7 @@
     "electron-updater": "6.6.2",
     "es-hangul": "2.3.8",
     "fast-average-color": "9.5.0",
-    "fast-equals": "5.2.2",
+    "fast-equals": "5.4.0",
     "fflate": "0.8.2",
     "filenamify": "6.0.0",
     "hanja": "1.1.5",
