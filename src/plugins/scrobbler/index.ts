@@ -1,5 +1,5 @@
 import { createPlugin } from '@/utils';
-import { t } from "@/i18n";
+import { t } from '@/i18n';
 
 import { onMenu } from "./menu";
 import { backend } from "./main";
