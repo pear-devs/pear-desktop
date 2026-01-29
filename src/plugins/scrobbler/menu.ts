@@ -3,7 +3,7 @@ import prompt from "custom-electron-prompt";
 import { type BrowserWindow, dialog } from "electron";
 
 import { t } from "@/i18n";
-import promptOptions from "@/providers/prompt-options";
+import promptOptions from '@/providers/prompt-options';
 
 import { type ScrobblerPluginConfig } from "./index";
 import { type SetConfType, backend } from "./main";
