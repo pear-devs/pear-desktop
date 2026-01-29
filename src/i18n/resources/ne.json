@@ -208,8 +208,8 @@
       "restart": "एप पुनः सुरु गर्नुहोस्",
       "show": "विन्डो देखाउनुहोस्",
       "tooltip": {
-        "default": "युट्युब मिउजिक",
-        "with-song-info": "युट्युब मिउजिक:{{artist}}-{{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -443,7 +443,7 @@
         "disconnected": "डिसकन्एक्टेड",
         "hide-duration-left": "बाकी समय लुकाऊ",
         "hide-github-button": "GitHub लिंक लुकाऊ",
-        "play-on-pear-desktop": "Pear Desktop मा बजाउ",
+        "play-on-application": "{{applicationName}} मा बजाउ",
         "set-inactivity-timeout": "इनएक्टिभिटी टाइमआउट राख"
       },
       "name": "डिसकार्ड रिच प्रीसेंस",

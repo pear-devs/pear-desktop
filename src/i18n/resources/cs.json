@@ -154,7 +154,7 @@
                 "label": "Vlastní název okna",
                 "prompt": {
                   "label": "Zadejte vlastní název okna: (zanechejte prázdné pro zakázání)",
-                  "placeholder": "Příklad: Pear Desktop"
+                  "placeholder": "Příklad: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Restartovat aplikaci",
       "show": "Zobrazit okno",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Ambientní režim"
     },
     "amuse": {
-      "description": "Přídá Pear Desktop podporu pro Amuse ‚právě hraje‘ widget od 6K Labs",
+      "description": "Přídá {{applicationName}} podporu pro Amuse ‚právě hraje‘ widget od 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Server Amuse API běží. Pošli požadavek typu GET na /query, aby ses dozvěděl info o písničce."
@@ -373,7 +373,7 @@
       "name": "Obejít věková omezení"
     },
     "captions-selector": {
-      "description": "Titulkový selector pro zvukové stopy v Pear Desktop",
+      "description": "Titulkový selector pro zvukové stopy v {{applicationName}}",
       "menu": {
         "autoload": "Automaticky vybrat naposledy použité titulky",
         "disable-captions": "Žádné titulky ve vychozím nastavení"
@@ -456,13 +456,13 @@
         "disconnected": "Odpojeno",
         "hide-duration-left": "Skrýt zbývající duration",
         "hide-github-button": "Skrýt tlačítko s odkazem na GitHub",
-        "play-on-pear-desktop": "Hrát na Pear Desktop",
+        "play-on-application": "Hrát na {{applicationName}}",
         "set-inactivity-timeout": "Nastavit timeout pro neaktivitu",
         "set-status-display-type": {
           "label": "Text statusu",
           "submenu": {
             "artist": "Poslouchám: {artist}",
-            "pear-desktop": "Poslouchám Pear Desktop",
+            "application": "Poslouchám {{applicationName}}",
             "title": "Poslouchám {song title}"
           }
         }

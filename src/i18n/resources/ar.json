@@ -154,7 +154,7 @@
                 "label": "عنوان نافذة مخصص",
                 "prompt": {
                   "label": "ادخل عنوان مخصص للنافذة: (اتركه فارغًا إلغاء التفعيل)",
-                  "placeholder": "مثال: Pear Desktop"
+                  "placeholder": "مثال: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "إعادة تشغيل التطبيق",
       "show": "عرض النافدة",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "الوضع المحيطي"
     },
     "amuse": {
-      "description": "تكامل دعم Pear Desktop مع ويدجت Amuse لعرض الأغنية التي قيد التشغيل، من إنتاج 6K Labs",
+      "description": "تكامل دعم {{applicationName}} مع ويدجت Amuse لعرض الأغنية التي قيد التشغيل، من إنتاج 6K Labs",
       "name": "تلسيه",
       "response": {
         "query": "خادم Amuse API قيد التشغيل. استخدم GET /query للحصول على معلومات الأغنية."
@@ -373,7 +373,7 @@
       "name": "تجاوز التحقق من السن"
     },
     "captions-selector": {
-      "description": "محدد ترجمات المقاطع الصوتية لPear Desktop",
+      "description": "محدد ترجمات المقاطع الصوتية ل{{applicationName}}",
       "menu": {
         "autoload": "اختار اخر ترجمة مستخدمة تلقائيا",
         "disable-captions": "لا توجد ترجمات بشكل افتراضي"
@@ -456,13 +456,13 @@
         "disconnected": "غير متصل",
         "hide-duration-left": "إخفاء المدة المتبقية",
         "hide-github-button": "إخفاء زر رابط GitHub",
-        "play-on-pear-desktop": "شغل في Pear Desktop",
+        "play-on-application": "شغل في {{applicationName}}",
         "set-inactivity-timeout": "ضبط مهلة عدم النشاط",
         "set-status-display-type": {
           "label": "نص الحالة",
           "submenu": {
             "artist": "جار السمع ل{artist}",
-            "pear-desktop": "جار السمع لPear Desktop",
+            "application": "جار السمع ل{{applicationName}}",
             "title": "جار السمع ل{song title}"
           }
         }

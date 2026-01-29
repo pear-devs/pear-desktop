@@ -5,6 +5,7 @@ node_modules
 .idea
 
 .pnp.*
+.pnpm-store
 .yarn/*
 !.yarn/patches
 !.yarn/plugins

@@ -16,4 +16,5 @@ export const startingPages: Record<string, string> = {
   'Uploaded Songs': 'FEmusic_library_privately_owned_tracks',
   'Uploaded Albums': 'FEmusic_library_privately_owned_releases',
   'Uploaded Artists': 'FEmusic_library_privately_owned_artists',
+  'Mixed for you': 'FEmusic_mixed_for_you',
 };
