@@ -1,4 +1,4 @@
-import { createPlugin } from "@/utils";
+import { createPlugin } from '@/utils';
 import { t } from "@/i18n";
 
 import { onMenu } from "./menu";
