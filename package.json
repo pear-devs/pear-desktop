@@ -141,7 +141,7 @@
     "@electron-toolkit/tsconfig": "1.0.1",
     "@eslint/js": "9.39.2",
     "@malept/flatpak-bundler": "0.4.0",
-    "@playwright/test": "1.57.0",
+    "@playwright/test": "1.58.0",
     "@stylistic/eslint-plugin": "5.7.1",
     "@total-typescript/ts-reset": "0.6.1",
     "@types/electron-localshortcut": "3.1.3",
