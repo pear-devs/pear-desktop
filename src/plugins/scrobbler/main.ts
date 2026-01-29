@@ -8,7 +8,7 @@ import {
 } from "@/providers/song-info";
 import { createBackend } from "@/utils";
 
-import { LastFmScrobbler } from "./services/lastfm";
+import { LastFmScrobbler } from './services/lastfm';
 import { LibreFmScrobbler } from "./services/librefm";
 import { ListenbrainzScrobbler } from "./services/listenbrainz";
 
