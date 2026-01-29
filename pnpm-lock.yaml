@@ -221,19 +221,19 @@ importers:
         version: 2.8.7
       solid-element:
         specifier: 1.9.1
-        version: 1.9.1(solid-js@1.9.10)
+        version: 1.9.1(solid-js@1.9.11)
       solid-floating-ui:
         specifier: 0.3.1
-        version: 0.3.1(@floating-ui/dom@1.7.5)(solid-js@1.9.10)
+        version: 0.3.1(@floating-ui/dom@1.7.5)(solid-js@1.9.11)
       solid-js:
-        specifier: 1.9.10
-        version: 1.9.10
+        specifier: 1.9.11
+        version: 1.9.11
       solid-styled-components:
         specifier: 0.28.5
-        version: 0.28.5(solid-js@1.9.10)
+        version: 0.28.5(solid-js@1.9.11)
       solid-transition-group:
         specifier: 0.3.0
-        version: 0.3.0(solid-js@1.9.10)
+        version: 0.3.0(solid-js@1.9.11)
       tiny-pinyin:
         specifier: 1.3.2
         version: 1.3.2
@@ -242,7 +242,7 @@ importers:
         version: 1.3.4
       virtua:
         specifier: 0.48.5
-        version: 0.48.5(solid-js@1.9.10)
+        version: 0.48.5(solid-js@1.9.11)
       vudio:
         specifier: 2.1.1
         version: 2.1.1(patch_hash=0e06c2ed11c02bdc490c209fa80070e98517c2735c641f5738b6e15d7dc1959d)
@@ -366,7 +366,7 @@ importers:
         version: 2.5.2
       vite-plugin-solid:
         specifier: 2.11.10
-        version: 2.11.10(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1))(solid-js@1.9.10)
+        version: 2.11.10(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1))(solid-js@1.9.11)
       ws:
         specifier: 8.19.0
         version: 8.19.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
@@ -4057,14 +4057,14 @@ packages:
     resolution: {integrity: sha512-8I8TjW5KMOKsZQTvoxjuSIa7foAwPWGOts+6o7sgjz41/qMD9VQHEDxi6PBvK2l0MXUmqZyNpUK+T2tQaaElvw==}
     engines: {node: '>=10'}
 
-  seroval-plugins@1.3.2:
-    resolution: {integrity: sha512-0QvCV2lM3aj/U3YozDiVwx9zpH0q8A60CTWIv4Jszj/givcudPb48B+rkU5D51NJ0pTpweGMttHjboPa9/zoIQ==}
+  seroval-plugins@1.5.0:
+    resolution: {integrity: sha512-EAHqADIQondwRZIdeW2I636zgsODzoBDwb3PT/+7TLDWyw1Dy/Xv7iGUIEXXav7usHDE9HVhOU61irI3EnyyHA==}
     engines: {node: '>=10'}
     peerDependencies:
       seroval: ^1.0
 
-  seroval@1.3.2:
-    resolution: {integrity: sha512-RbcPH1n5cfwKrru7v7+zrZvjLurgHhGyso3HTyGtRivGWgYjbOmGuivCQaORNELjNONoK35nj28EoWul9sb1zQ==}
+  seroval@1.5.0:
+    resolution: {integrity: sha512-OE4cvmJ1uSPrKorFIH9/w/Qwuvi/IMcGbv5RKgcJ/zjA/IohDLU6SVaxFN9FwajbP7nsX0dQqMDes1whk3y+yw==}
     engines: {node: '>=10'}
 
   serve-handler@6.1.6:
@@ -4165,8 +4165,8 @@ packages:
       '@floating-ui/dom': ^1.5
       solid-js: ^1.8
 
-  solid-js@1.9.10:
-    resolution: {integrity: sha512-Coz956cos/EPDlhs6+jsdTxKuJDPT7B5SVIWgABwROyxjY7Xbr8wkzD68Et+NxnV7DLJ3nJdAC2r9InuV/4Jew==}
+  solid-js@1.9.11:
+    resolution: {integrity: sha512-WEJtcc5mkh/BnHA6Yrg4whlF8g6QwpmXXRg4P2ztPmcKeHHlH4+djYecBLhSpecZY2RRECXYUwIc/C2r3yzQ4Q==}
 
   solid-refresh@0.6.3:
     resolution: {integrity: sha512-F3aPsX6hVw9ttm5LYlth8Q15x6MlI/J3Dn+o3EQyRTtTxidepSTwAYdozt01/YA+7ObcciagGEyXIopGZzQtbA==}
@@ -5644,18 +5644,18 @@ snapshots:
 
   '@skyra/jaro-winkler@1.1.1': {}
 
-  '@solid-primitives/refs@1.1.2(solid-js@1.9.10)':
+  '@solid-primitives/refs@1.1.2(solid-js@1.9.11)':
     dependencies:
-      '@solid-primitives/utils': 6.3.2(solid-js@1.9.10)
-      solid-js: 1.9.10
+      '@solid-primitives/utils': 6.3.2(solid-js@1.9.11)
+      solid-js: 1.9.11
 
-  '@solid-primitives/transition-group@1.1.2(solid-js@1.9.10)':
+  '@solid-primitives/transition-group@1.1.2(solid-js@1.9.11)':
     dependencies:
-      solid-js: 1.9.10
+      solid-js: 1.9.11
 
-  '@solid-primitives/utils@6.3.2(solid-js@1.9.10)':
+  '@solid-primitives/utils@6.3.2(solid-js@1.9.11)':
     dependencies:
-      solid-js: 1.9.10
+      solid-js: 1.9.11
 
   '@stylistic/eslint-plugin@5.7.1(eslint@9.39.2(jiti@2.6.1))':
     dependencies:
@@ -6155,12 +6155,12 @@ snapshots:
       parse5: 7.3.0
       validate-html-nesting: 1.2.3
 
-  babel-preset-solid@1.9.9(@babel/core@7.28.3)(solid-js@1.9.10):
+  babel-preset-solid@1.9.9(@babel/core@7.28.3)(solid-js@1.9.11):
     dependencies:
       '@babel/core': 7.28.3
       babel-plugin-jsx-dom-expressions: 0.40.1(@babel/core@7.28.3)
     optionalDependencies:
-      solid-js: 1.9.10
+      solid-js: 1.9.11
 
   balanced-match@1.0.2: {}
 
@@ -8753,11 +8753,11 @@ snapshots:
       type-fest: 0.13.1
     optional: true
 
-  seroval-plugins@1.3.2(seroval@1.3.2):
+  seroval-plugins@1.5.0(seroval@1.5.0):
     dependencies:
-      seroval: 1.3.2
+      seroval: 1.5.0
 
-  seroval@1.3.2: {}
+  seroval@1.5.0: {}
 
   serve-handler@6.1.6:
     dependencies:
@@ -8883,42 +8883,42 @@ snapshots:
       ip-address: 10.0.1
       smart-buffer: 4.2.0
 
-  solid-element@1.9.1(solid-js@1.9.10):
+  solid-element@1.9.1(solid-js@1.9.11):
     dependencies:
       component-register: 0.8.7
-      solid-js: 1.9.10
+      solid-js: 1.9.11
 
-  solid-floating-ui@0.3.1(@floating-ui/dom@1.7.5)(solid-js@1.9.10):
+  solid-floating-ui@0.3.1(@floating-ui/dom@1.7.5)(solid-js@1.9.11):
     dependencies:
       '@floating-ui/dom': 1.7.5
-      solid-js: 1.9.10
+      solid-js: 1.9.11
 
-  solid-js@1.9.10:
+  solid-js@1.9.11:
     dependencies:
       csstype: 3.1.3
-      seroval: 1.3.2
-      seroval-plugins: 1.3.2(seroval@1.3.2)
+      seroval: 1.5.0
+      seroval-plugins: 1.5.0(seroval@1.5.0)
 
-  solid-refresh@0.6.3(solid-js@1.9.10):
+  solid-refresh@0.6.3(solid-js@1.9.11):
     dependencies:
       '@babel/generator': 7.28.3
       '@babel/helper-module-imports': 7.27.1
       '@babel/types': 7.28.2
-      solid-js: 1.9.10
+      solid-js: 1.9.11
     transitivePeerDependencies:
       - supports-color
 
-  solid-styled-components@0.28.5(solid-js@1.9.10):
+  solid-styled-components@0.28.5(solid-js@1.9.11):
     dependencies:
       csstype: 3.1.3
       goober: 2.1.16(csstype@3.1.3)
-      solid-js: 1.9.10
+      solid-js: 1.9.11
 
-  solid-transition-group@0.3.0(solid-js@1.9.10):
+  solid-transition-group@0.3.0(solid-js@1.9.11):
     dependencies:
-      '@solid-primitives/refs': 1.1.2(solid-js@1.9.10)
-      '@solid-primitives/transition-group': 1.1.2(solid-js@1.9.10)
-      solid-js: 1.9.10
+      '@solid-primitives/refs': 1.1.2(solid-js@1.9.11)
+      '@solid-primitives/transition-group': 1.1.2(solid-js@1.9.11)
+      solid-js: 1.9.11
 
   source-map-js@1.2.1: {}
 
@@ -9295,9 +9295,9 @@ snapshots:
       extsprintf: 1.4.1
     optional: true
 
-  virtua@0.48.5(solid-js@1.9.10):
+  virtua@0.48.5(solid-js@1.9.11):
     optionalDependencies:
-      solid-js: 1.9.10
+      solid-js: 1.9.11
 
   vite-dev-rpc@1.1.0(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)):
     dependencies:
@@ -9328,14 +9328,14 @@ snapshots:
     dependencies:
       lib-esm: 0.4.2
 
-  vite-plugin-solid@2.11.10(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1))(solid-js@1.9.10):
+  vite-plugin-solid@2.11.10(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1))(solid-js@1.9.11):
     dependencies:
       '@babel/core': 7.28.3
       '@types/babel__core': 7.20.5
-      babel-preset-solid: 1.9.9(@babel/core@7.28.3)(solid-js@1.9.10)
+      babel-preset-solid: 1.9.9(@babel/core@7.28.3)(solid-js@1.9.11)
       merge-anything: 5.1.7
-      solid-js: 1.9.10
-      solid-refresh: 0.6.3(solid-js@1.9.10)
+      solid-js: 1.9.11
+      solid-refresh: 0.6.3(solid-js@1.9.11)
       vite: rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1)
       vitefu: 1.1.1(rolldown-vite@7.3.1(@types/node@24.3.0)(jiti@2.6.1)(yaml@2.8.1))
     transitivePeerDependencies:
