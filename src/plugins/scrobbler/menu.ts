@@ -70,7 +70,7 @@ async function promptLibreFmAuth(
     dialog.showMessageBox({
       title: "Libre.fm Not Enabled",
       message: "Please enable Libre.fm first before authenticating.",
-      type: "warning",
+      type: 'warning',
     });
   }
 }
