@@ -1,22 +1,22 @@
-import { type BrowserWindow } from "electron";
+import { type BrowserWindow } from 'electron';
 
 import {
   registerCallback,
   MediaType,
   type SongInfo,
   SongInfoEvent,
-} from "@/providers/song-info";
-import { createBackend } from "@/utils";
+} from '@/providers/song-info';
+import { createBackend } from '@/utils';
 
 import { LastFmScrobbler } from './services/lastfm';
-import { LibreFmScrobbler } from "./services/librefm";
-import { ListenbrainzScrobbler } from "./services/listenbrainz";
+import { LibreFmScrobbler } from './services/librefm';
+import { ListenbrainzScrobbler } from './services/listenbrainz';
 
-import type { ScrobblerPluginConfig } from "./index";
-import type { ScrobblerBase } from "./services/base";
+import type { ScrobblerPluginConfig } from './index';
+import type { ScrobblerBase } from './services/base';
 
 export type SetConfType = (
-  conf: Partial<Omit<ScrobblerPluginConfig, "enabled">>,
+  conf: Partial<Omit<ScrobblerPluginConfig, 'enabled'>>,
 ) => void | Promise<void>;
 
 export const backend = createBackend<
@@ -40,24 +40,24 @@ export const backend = createBackend<
 
   toggleScrobblers(config: ScrobblerPluginConfig, window: BrowserWindow) {
     if (config.scrobblers.lastfm && config.scrobblers.lastfm.enabled) {
-      this.enabledScrobblers.set("lastfm", new LastFmScrobbler(window));
+      this.enabledScrobblers.set('lastfm', new LastFmScrobbler(window));
     } else {
-      this.enabledScrobblers.delete("lastfm");
+      this.enabledScrobblers.delete('lastfm');
     }
 
     if (config.scrobblers.librefm && config.scrobblers.librefm.enabled) {
-      this.enabledScrobblers.set("librefm", new LibreFmScrobbler());
+      this.enabledScrobblers.set('librefm', new LibreFmScrobbler());
     } else {
-      this.enabledScrobblers.delete("librefm");
+      this.enabledScrobblers.delete('librefm');
     }
 
     if (
       config.scrobblers.listenbrainz &&
       config.scrobblers.listenbrainz.enabled
     ) {
-      this.enabledScrobblers.set("listenbrainz", new ListenbrainzScrobbler());
+      this.enabledScrobblers.set('listenbrainz', new ListenbrainzScrobbler());
     } else {
-      this.enabledScrobblers.delete("listenbrainz");
+      this.enabledScrobblers.delete('listenbrainz');
     }
   },
 

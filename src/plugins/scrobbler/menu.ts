@@ -1,15 +1,15 @@
-import prompt from "custom-electron-prompt";
+import prompt from 'custom-electron-prompt';
 
-import { type BrowserWindow, dialog } from "electron";
+import { type BrowserWindow, dialog } from 'electron';
 
-import { t } from "@/i18n";
+import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 
-import { type ScrobblerPluginConfig } from "./index";
-import { type SetConfType, backend } from "./main";
+import { type ScrobblerPluginConfig } from './index';
+import { type SetConfType, backend } from './main';
 
-import type { MenuContext } from "@/types/contexts";
-import type { MenuTemplate } from "@/menu";
+import type { MenuContext } from '@/types/contexts';
+import type { MenuTemplate } from '@/menu';
 
 async function promptLastFmOptions(
   options: ScrobblerPluginConfig,
@@ -18,22 +18,22 @@ async function promptLastFmOptions(
 ) {
   const output = await prompt(
     {
-      title: t("plugins.scrobbler.menu.lastfm.api-settings"),
-      label: t("plugins.scrobbler.menu.lastfm.api-settings"),
-      type: "multiInput",
+      title: t('plugins.scrobbler.menu.lastfm.api-settings'),
+      label: t('plugins.scrobbler.menu.lastfm.api-settings'),
+      type: 'multiInput',
       multiInputOptions: [
         {
-          label: t("plugins.scrobbler.prompt.lastfm.api-key"),
+          label: t('plugins.scrobbler.prompt.lastfm.api-key'),
           value: options.scrobblers.lastfm?.apiKey,
           inputAttrs: {
-            type: "text",
+            type: 'text',
           },
         },
         {
-          label: t("plugins.scrobbler.prompt.lastfm.api-secret"),
+          label: t('plugins.scrobbler.prompt.lastfm.api-secret'),
           value: options.scrobblers.lastfm?.secret,
           inputAttrs: {
-            type: "text",
+            type: 'text',
           },
         },
       ],
@@ -63,13 +63,13 @@ async function promptLibreFmAuth(
   _window: BrowserWindow,
 ) {
   // Trigger authentication
-  const scrobbler = backend.enabledScrobblers.get("librefm");
+  const scrobbler = backend.enabledScrobblers.get('librefm');
   if (scrobbler) {
     await scrobbler.createSession(options, setConfig);
   } else {
     dialog.showMessageBox({
-      title: "Libre.fm Not Enabled",
-      message: "Please enable Libre.fm first before authenticating.",
+      title: 'Libre.fm Not Enabled',
+      message: 'Please enable Libre.fm first before authenticating.',
       type: 'warning',
     });
   }
@@ -82,9 +82,9 @@ async function promptListenbrainzOptions(
 ) {
   const output = await prompt(
     {
-      title: t("plugins.scrobbler.prompt.listenbrainz.token.title"),
-      label: t("plugins.scrobbler.prompt.listenbrainz.token.label"),
-      type: "input",
+      title: t('plugins.scrobbler.prompt.listenbrainz.token.title'),
+      label: t('plugins.scrobbler.prompt.listenbrainz.token.label'),
+      type: 'input',
       value: options.scrobblers.listenbrainz?.token,
       ...promptOptions(),
     },
@@ -106,8 +106,8 @@ export const onMenu = async ({
 
   return [
     {
-      label: t("plugins.scrobbler.menu.scrobble-other-media"),
-      type: "checkbox",
+      label: t('plugins.scrobbler.menu.scrobble-other-media'),
+      type: 'checkbox',
       checked: Boolean(config.scrobbleOtherMedia),
       click(item) {
         config.scrobbleOtherMedia = item.checked;
@@ -115,8 +115,8 @@ export const onMenu = async ({
       },
     },
     {
-      label: t("plugins.scrobbler.menu.scrobble-alternative-title"),
-      type: "checkbox",
+      label: t('plugins.scrobbler.menu.scrobble-alternative-title'),
+      type: 'checkbox',
       checked: Boolean(config.alternativeTitles),
       click(item) {
         config.alternativeTitles = item.checked;
@@ -124,8 +124,8 @@ export const onMenu = async ({
       },
     },
     {
-      label: t("plugins.scrobbler.menu.scrobble-alternative-artist"),
-      type: "checkbox",
+      label: t('plugins.scrobbler.menu.scrobble-alternative-artist'),
+      type: 'checkbox',
       checked: Boolean(config.alternativeArtist),
       click(item) {
         config.alternativeArtist = item.checked;
@@ -133,11 +133,11 @@ export const onMenu = async ({
       },
     },
     {
-      label: "Last.fm",
+      label: 'Last.fm',
       submenu: [
         {
-          label: t("main.menu.plugins.enabled"),
-          type: "checkbox",
+          label: t('main.menu.plugins.enabled'),
+          type: 'checkbox',
           checked: Boolean(config.scrobblers.lastfm?.enabled),
           click(item) {
             backend.toggleScrobblers(config, window);
@@ -146,7 +146,7 @@ export const onMenu = async ({
           },
         },
         {
-          label: t("plugins.scrobbler.menu.lastfm.api-settings"),
+          label: t('plugins.scrobbler.menu.lastfm.api-settings'),
           click() {
             promptLastFmOptions(config, setConfig, window);
           },
@@ -154,11 +154,11 @@ export const onMenu = async ({
       ],
     },
     {
-      label: "Libre.fm",
+      label: 'Libre.fm',
       submenu: [
         {
-          label: t("main.menu.plugins.enabled"),
-          type: "checkbox",
+          label: t('main.menu.plugins.enabled'),
+          type: 'checkbox',
           checked: Boolean(config.scrobblers.librefm?.enabled),
           click(item) {
             backend.toggleScrobblers(config, window);
@@ -167,7 +167,7 @@ export const onMenu = async ({
           },
         },
         {
-          label: "Authenticate with Libre.fm",
+          label: 'Authenticate with Libre.fm',
           click() {
             promptLibreFmAuth(config, setConfig, window);
           },
@@ -175,11 +175,11 @@ export const onMenu = async ({
       ],
     },
     {
-      label: "ListenBrainz",
+      label: 'ListenBrainz',
       submenu: [
         {
-          label: t("main.menu.plugins.enabled"),
-          type: "checkbox",
+          label: t('main.menu.plugins.enabled'),
+          type: 'checkbox',
           checked: Boolean(config.scrobblers.listenbrainz?.enabled),
           click(item) {
             backend.toggleScrobblers(config, window);
@@ -188,7 +188,7 @@ export const onMenu = async ({
           },
         },
         {
-          label: t("plugins.scrobbler.menu.listenbrainz.token"),
+          label: t('plugins.scrobbler.menu.listenbrainz.token'),
           click() {
             promptListenbrainzOptions(config, setConfig, window);
           },
