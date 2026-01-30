@@ -44,7 +44,7 @@ importers:
         version: 1.0.1(@types/node@25.1.0)
       '@electron/remote':
         specifier: 2.1.3
-        version: 2.1.3(electron@38.8.0)
+        version: 2.1.3(electron@40.1.0)
       '@ffmpeg.wasm/core-mt':
         specifier: 0.12.0
         version: 0.12.0
@@ -59,10 +59,10 @@ importers:
         version: 2.0.5
       '@ghostery/adblocker-electron':
         specifier: 2.13.4
-        version: 2.13.4(electron@38.8.0)
+        version: 2.13.4(electron@40.1.0)
       '@ghostery/adblocker-electron-preload':
         specifier: 2.13.4
-        version: 2.13.4(electron@38.8.0)
+        version: 2.13.4(electron@40.1.0)
       '@hono/node-server':
         specifier: 1.19.9
         version: 1.19.9(hono@4.11.7)
@@ -119,7 +119,7 @@ importers:
         version: 14.0.0
       custom-electron-prompt:
         specifier: 1.6.1
-        version: 1.6.1(electron@38.8.0)
+        version: 1.6.1(electron@40.1.0)
       deepmerge-ts:
         specifier: 7.1.5
         version: 7.1.5
@@ -302,8 +302,8 @@ importers:
         specifier: 0.38.37
         version: 0.38.37
       electron:
-        specifier: 38.8.0
-        version: 38.8.0
+        specifier: 40.1.0
+        version: 40.1.0
       electron-builder:
         specifier: 26.4.0
         version: 26.4.0(electron-builder-squirrel-windows@26.4.0)
@@ -1297,8 +1297,8 @@ packages:
   '@types/node@16.9.1':
     resolution: {integrity: sha512-QpLcX9ZSsq3YYUUnD3nFDY8H7wctAhQj/TFKL8Ya8v5fMm3CFXxo8zStsLAl780ltoYoo1WvKUVGBQK+1ifr7g==}
 
-  '@types/node@22.19.7':
-    resolution: {integrity: sha512-MciR4AKGHWl7xwxkBa6xUGxQJ4VBOmPTF7sL+iGzuahOFaO0jHCsuEfS80pan1ef4gWId1oWOweIhrDEYLuaOw==}
+  '@types/node@24.10.9':
+    resolution: {integrity: sha512-ne4A0IpG3+2ETuREInjPNhUGis1SFjv1d5asp8MzEAGtOZeTeHVDOYqOgqfhvseqg/iXty2hjBf1zAOb7RNiNw==}
 
   '@types/node@25.1.0':
     resolution: {integrity: sha512-t7frlewr6+cbx+9Ohpl0NOTKXZNV9xHRmNOvql47BFJKcEG1CxtxlPEEe+gR9uhVWM4DwhnvTF110mIL4yP9RA==}
@@ -2271,8 +2271,8 @@ packages:
     resolution: {integrity: sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg==}
     engines: {node: '>=8.0.0'}
 
-  electron@38.8.0:
-    resolution: {integrity: sha512-cMvNuIFdXXDr4pJd5xD+F8FDjQhin9vyJ5hGSb5cZRIUb1VqfvRyP2nLBzU2Iazj0z3L686AUOkykp6Xd8bT1w==}
+  electron@40.1.0:
+    resolution: {integrity: sha512-2j/kvw7uF0H1PnzYBzw2k2Q6q16J8ToKrtQzZfsAoXbbMY0l5gQi2DLOauIZLzwp4O01n8Wt/74JhSRwG0yj9A==}
     engines: {node: '>= 12.20.55'}
     hasBin: true
 
@@ -4477,9 +4477,6 @@ packages:
     resolution: {integrity: sha512-nWJ91DjeOkej/TA8pXQ3myruKpKEYgqvpw9lz4OPHj/NWFNluYrjbz9j01CJ8yKQd2g4jFoOkINCTW2I5LEEyw==}
     engines: {node: '>= 0.4'}
 
-  undici-types@6.21.0:
-    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
-
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
 
@@ -4994,9 +4991,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@electron/remote@2.1.3(electron@38.8.0)':
+  '@electron/remote@2.1.3(electron@40.1.0)':
     dependencies:
-      electron: 38.8.0
+      electron: 40.1.0
 
   '@electron/universal@3.0.2':
     dependencies:
@@ -5187,16 +5184,16 @@ snapshots:
     dependencies:
       '@ghostery/adblocker-extended-selectors': 2.13.4
 
-  '@ghostery/adblocker-electron-preload@2.13.4(electron@38.8.0)':
+  '@ghostery/adblocker-electron-preload@2.13.4(electron@40.1.0)':
     dependencies:
       '@ghostery/adblocker-content': 2.13.4
-      electron: 38.8.0
+      electron: 40.1.0
 
-  '@ghostery/adblocker-electron@2.13.4(electron@38.8.0)':
+  '@ghostery/adblocker-electron@2.13.4(electron@40.1.0)':
     dependencies:
       '@ghostery/adblocker': 2.13.4
-      '@ghostery/adblocker-electron-preload': 2.13.4(electron@38.8.0)
-      electron: 38.8.0
+      '@ghostery/adblocker-electron-preload': 2.13.4(electron@40.1.0)
+      electron: 40.1.0
       tldts-experimental: 7.0.19
 
   '@ghostery/adblocker-extended-selectors@2.13.4': {}
@@ -5759,7 +5756,7 @@ snapshots:
 
   '@types/electron-localshortcut@3.1.3':
     dependencies:
-      electron: 38.8.0
+      electron: 40.1.0
     transitivePeerDependencies:
       - supports-color
 
@@ -5787,9 +5784,9 @@ snapshots:
 
   '@types/node@16.9.1': {}
 
-  '@types/node@22.19.7':
+  '@types/node@24.10.9':
     dependencies:
-      undici-types: 6.21.0
+      undici-types: 7.16.0
 
   '@types/node@25.1.0':
     dependencies:
@@ -6593,9 +6590,9 @@ snapshots:
 
   csstype@3.2.3: {}
 
-  custom-electron-prompt@1.6.1(electron@38.8.0):
+  custom-electron-prompt@1.6.1(electron@40.1.0):
     optionalDependencies:
-      electron: 38.8.0
+      electron: 40.1.0
 
   data-uri-to-buffer@4.0.1: {}
 
@@ -6922,10 +6919,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@38.8.0:
+  electron@40.1.0:
     dependencies:
       '@electron/get': 2.0.3
-      '@types/node': 22.19.7
+      '@types/node': 24.10.9
       extract-zip: 2.0.1
     transitivePeerDependencies:
       - supports-color
@@ -9304,8 +9301,6 @@ snapshots:
       has-bigints: 1.1.0
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
-
-  undici-types@6.21.0: {}
 
   undici-types@7.16.0: {}
 
