@@ -421,7 +421,6 @@ export class DiscordService {
     return this.rpc.isConnected && this.ready;
   }
 
-
   /**
    * Fetches the YouTube Music user avatar and name from the page.
    * This method opens the settings menu to access the username.
