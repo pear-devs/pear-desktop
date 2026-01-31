@@ -41,7 +41,7 @@ export type DiscordPluginConfig = {
   statusDisplayType: (typeof StatusDisplayType)[keyof typeof StatusDisplayType];
   /**
    * Show YouTube Music user avatar and username in Discord Rich Presence
-   * 
+   *
    * @default true
    */
   showYouTubeUser: boolean;

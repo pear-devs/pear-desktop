@@ -116,8 +116,12 @@ export class DiscordService {
       largeImageText: songInfo.album
         ? truncateString(songInfo.album, 128)
         : undefined,
-      smallImageKey: config.showYouTubeUser ? this.getYouTubeUserAvatar() : undefined,
-      smallImageText: config.showYouTubeUser ? this.getYouTubeUserName() : undefined,
+      smallImageKey: config.showYouTubeUser
+        ? this.getYouTubeUserAvatar()
+        : undefined,
+      smallImageText: config.showYouTubeUser
+        ? this.getYouTubeUserName()
+        : undefined,
       buttons: buildDiscordButtons(config, songInfo),
     };
 
@@ -167,6 +171,7 @@ export class DiscordService {
    */
   private resetInfo() {
     this.ready = false;
+    this.youtubeUser = null;
     this.lastSongInfo = undefined;
     this.lastProgressUpdate = 0;
     this.timerManager.clearAll();
@@ -423,7 +428,7 @@ export class DiscordService {
    */
   private async fetchYouTubeUserInfo(): Promise<void> {
     try {
-      const result = await this.mainWindow.webContents.executeJavaScript(`
+      const result = (await this.mainWindow.webContents.executeJavaScript(`
         (async function() {
           try {
             // Find avatar first - this is always visible
@@ -475,7 +480,7 @@ export class DiscordService {
             return null;
           }
         })();
-      `);
+      `)) as { name: string; avatar: string } | null;
 
       if (result && result.avatar) {
         this.youtubeUser = {
@@ -485,10 +490,19 @@ export class DiscordService {
         console.log(LoggerPrefix, `Fetched YouTube user: ${result.name}`);
         console.log(LoggerPrefix, `Fetched Avatar URL: ${result.avatar}`);
       } else {
-        console.log(LoggerPrefix, 'Could not fetch YouTube user info - retrying in 5 seconds');
+        console.log(
+          LoggerPrefix,
+          'Could not fetch YouTube user info - retrying in 5 seconds',
+        );
         // Retry after a delay if enabled
         if (this.config?.showYouTubeUser) {
-          setTimeout(() => this.fetchYouTubeUserInfo(), 5000);
+          this.timerManager.set(
+            TimerKey.YouTubeFetchRetry,
+            () => {
+              this.fetchYouTubeUserInfo();
+            },
+            5000,
+          );
         }
       }
     } catch (err) {
