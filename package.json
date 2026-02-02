@@ -170,7 +170,7 @@
     "node-gyp": "11.5.0",
     "ts-morph": "27.0.2",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.53.1",
+    "typescript-eslint": "8.54.0",
     "utf-8-validate": "6.0.6",
     "vite": "npm:rolldown-vite@7.3.1",
     "vite-plugin-inspect": "11.3.3",
