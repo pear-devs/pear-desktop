@@ -14,6 +14,20 @@ export enum MaterialType {
   UNDER_PAGE = 'under-page',
 }
 
+export const WINDOWS_MATERIALS = [
+  MaterialType.MICA,
+  MaterialType.ACRYLIC,
+  MaterialType.TABBED,
+];
+
+export const MACOS_MATERIALS = [
+  MaterialType.WINDOW,
+  MaterialType.FULLSCREEN_UI,
+  MaterialType.CONTENT,
+  MaterialType.UNDER_WINDOW,
+  MaterialType.UNDER_PAGE,
+];
+
 export type TransparentPlayerConfig = {
   enabled: boolean;
   opacity: number;

@@ -2,7 +2,7 @@ import is from 'electron-is';
 
 import { t } from '@/i18n';
 
-import { MaterialType } from './types';
+import { MaterialType, WINDOWS_MATERIALS, MACOS_MATERIALS } from './types';
 
 import type { MenuContext } from '@/types/contexts';
 import type { MenuTemplate } from '@/menu';
@@ -16,21 +16,9 @@ export const onMenu = async ({
 }: MenuContext<TransparentPlayerConfig>): Promise<MenuTemplate> => {
   const config = await getConfig();
   const typeList = is.windows()
-    ? [
-        MaterialType.MICA,
-        MaterialType.ACRYLIC,
-        MaterialType.TABBED,
-        MaterialType.NONE,
-      ]
+    ? WINDOWS_MATERIALS
     : is.macOS()
-      ? [
-          MaterialType.WINDOW,
-          MaterialType.FULLSCREEN_UI,
-          MaterialType.CONTENT,
-          MaterialType.UNDER_WINDOW,
-          MaterialType.UNDER_PAGE,
-          MaterialType.NONE,
-        ]
+      ? MACOS_MATERIALS
       : [MaterialType.NONE];
 
   return [
