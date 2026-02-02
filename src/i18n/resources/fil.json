@@ -154,7 +154,7 @@
                 "label": "Custom na window title",
                 "prompt": {
                   "label": "I-enter ang custom na window tile: (iwanang blanko para di-mapagana)",
-                  "placeholder": "Halimbawa: Pear Desktop"
+                  "placeholder": "Halimbawa: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "I-restart ang App",
       "show": "Ipakita ang window",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Ambient Mode"
     },
     "amuse": {
-      "description": "Nagdaragdag ng suporta sa Pear Desktop para sa Amuse now playing widget ng 6K Labs",
+      "description": "Nagdaragdag ng suporta sa {{applicationName}} para sa Amuse now playing widget ng 6K Labs",
       "response": {
         "query": "Tumatakbo ang Amuse API server. Gamitin ang GET /query para makuha ang impo ng kanta."
       }
@@ -369,7 +369,7 @@
       "name": "I-bypass ang Restriksyon sa Edad"
     },
     "captions-selector": {
-      "description": "Tagapili ng caption para sa mga audio track ng Pear Desktop",
+      "description": "Tagapili ng caption para sa mga audio track ng {{applicationName}}",
       "menu": {
         "autoload": "Awtomatikong piliin ang huling ginamit na caption",
         "disable-captions": "Walang mga caption bilang default"
@@ -446,13 +446,13 @@
         "disconnected": "Nadiskonekta",
         "hide-duration-left": "Itago ang natitirang oras",
         "hide-github-button": "Itago ang button na GitHub link",
-        "play-on-pear-desktop": "Patugtugin sa Pear Desktop",
+        "play-on-application": "Patugtugin sa {{applicationName}}",
         "set-inactivity-timeout": "I-set ang inactivity timeout",
         "set-status-display-type": {
           "submenu": {
             "artist": "Nakikinig sa {artist}",
             "title": "Nakikinig sa {song title}",
-            "pear-desktop": "Kumikinig sa Pear Desktop"
+            "application": "Kumikinig sa {{applicationName}}"
           }
         }
       },

@@ -2,7 +2,7 @@
   "common": {
     "console": {
       "plugins": {
-        "execute-failed": "Ha fallat l'execució de l'extensió {{pluginName}}::{{contextName}}",
+        "execute-failed": "Error en l'execució de l'extensió {{pluginName}}::{{contextName}}",
         "executed-at-ms": "L'extensió {{pluginName}}::{{contextName}} s'ha executat als {{ms}}ms",
         "initialize-failed": "Ha fallat la inicialització de l'extensió \"{{pluginName}}\"",
         "load-all": "Carregant totes les extensions",
@@ -154,7 +154,7 @@
                 "label": "Títol personalitzat de la finestra",
                 "prompt": {
                   "label": "Introdueix un títol personalitzat per a la finestra (deixa-ho buit per deshabilitar-ho)",
-                  "placeholder": "Exemple: Pear Desktop"
+                  "placeholder": "Exemple: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Reinicia l'aplicació",
       "show": "Mostra la finestra",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Activar el tema en la barra de progrés"
       },
       "name": "Tema de color de l'àlbum"
     },
@@ -287,7 +288,7 @@
       "name": "Mode ambient"
     },
     "amuse": {
-      "description": "Afegeix suport a Pear Desktop per el widget \"now playing\" d'Amuse per 6K Labs",
+      "description": "Afegeix suport a {{applicationName}} per el widget \"now playing\" d'Amuse per 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "L'API del servidor de Amuse està funcionant. GET /query per tenir informació de la cançó."
@@ -319,6 +320,22 @@
         },
         "hostname": {
           "label": "Nom del host"
+        },
+        "https": {
+          "label": "HTTPS i Certificats",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Seleccionar arxiu de certificat HTTPS",
+              "label": "Arxiu de certificat (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Activa HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Selecciona arxiu de clau HTTPS privada",
+              "label": "Arxiu de clau privada (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -373,7 +390,7 @@
       "name": "Esquiva les restriccions d'edat"
     },
     "captions-selector": {
-      "description": "Selector de subtítols per les pistes d'àudio de Pear Desktop",
+      "description": "Selector de subtítols per les pistes d'àudio de {{applicationName}}",
       "menu": {
         "autoload": "Selecciona automàticament l'últim subtítol emprat",
         "disable-captions": "Sense subtítols per defecte"
@@ -456,14 +473,14 @@
         "disconnected": "Desconnectat",
         "hide-duration-left": "Amaga la durada restant",
         "hide-github-button": "Amaga el botó de l'enllaç a GitHub",
-        "play-on-pear-desktop": "Reprodueix a Pear Desktop",
+        "play-on-application": "Reprodueix a {{applicationName}}",
         "set-inactivity-timeout": "Estableix temps d'espera d'inactivitat",
         "set-status-display-type": {
           "label": "Text d'estat",
           "submenu": {
+            "application": "Escoltant {{applicationName}}",
             "artist": "Escoltant {artist}",
-            "title": "Escoltant {song title}",
-            "pear-desktop": "Escoltant Pear Desktop"
+            "title": "Escoltant {song title}"
           }
         }
       },

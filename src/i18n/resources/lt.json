@@ -151,8 +151,10 @@
             "label": "Vizualiniai patobulinimai",
             "submenu": {
               "custom-window-title": {
+                "label": "Pasirinktinis lango pavadinimas",
                 "prompt": {
-                  "placeholder": "Pavyzdys: Pear Desktop"
+                  "label": "Įveskite pasirinktinį lango pavadinimą: (palikite tuščią, jei norite išjungti)",
+                  "placeholder": "Pavyzdys: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -206,8 +208,8 @@
       "restart": "Perkrauti programą",
       "show": "Rodyti langą",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -285,7 +287,7 @@
       "name": "Aplinkos rėžimas"
     },
     "amuse": {
-      "description": "Prideda Pear Desktop palaikyma Amuse grojimo valdikliui pagal 6K Labs",
+      "description": "Prideda {{applicationName}} palaikyma Amuse grojimo valdikliui pagal 6K Labs",
       "name": "Amuse (Platforma Dainininkams)",
       "response": {
         "query": "Amuse API serveris yra veikiantis. Parašykite Get /query kad gautumėte dainos informacija."
@@ -347,7 +349,7 @@
       "name": "Apeiti Amžiaus Apribojimus"
     },
     "captions-selector": {
-      "description": "„Pear Desktop“ Garso takelių antraščių parinkiklis",
+      "description": "„{{applicationName}}“ Garso takelių antraščių parinkiklis",
       "menu": {
         "autoload": "Automatiškai pasirinkti paskutinę naudotą antraštę",
         "disable-captions": "Pagal numatytuosius nustatymus išjungti antraštės"
@@ -427,13 +429,13 @@
         "disconnected": "Atsijungta",
         "hide-duration-left": "Slėpti kiek liko laiko",
         "hide-github-button": "Slėpti \"GitHub\" nuorodos mygtuką",
-        "play-on-pear-desktop": "Leisti ant \"Pear Desktop\"",
+        "play-on-application": "Leisti ant \"{{applicationName}}\"",
         "set-inactivity-timeout": "Nustatyti neveiklumo laiką",
         "set-status-display-type": {
           "submenu": {
+            "application": "Klausosi {{applicationName}}",
             "artist": "Klausosi {artist]",
-            "title": "Klausosi {song title}",
-            "pear-desktop": "Klausosi Pear Desktop"
+            "title": "Klausosi {song title}"
           }
         }
       },

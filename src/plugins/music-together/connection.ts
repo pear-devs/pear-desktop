@@ -9,9 +9,11 @@ import delay from 'delay';
 import type { Permission, Profile, VideoData } from './types';
 
 export type ConnectionEventMap = {
+  CLEAR_QUEUE: {};
   ADD_SONGS: { videoList: VideoData[]; index?: number };
   REMOVE_SONG: { index: number };
   MOVE_SONG: { fromIndex: number; toIndex: number };
+  SET_INDEX: { index: number };
   IDENTIFY: { profile: Profile } | undefined;
   SYNC_PROFILE: { profiles: Record<string, Profile> } | undefined;
   SYNC_QUEUE: { videoList: VideoData[] } | undefined;
@@ -171,9 +173,10 @@ export class Connection {
   public async broadcast<Event extends keyof ConnectionEventMap>(
     type: Event,
     payload: ConnectionEventMap[Event],
+    after?: ConnectionEventUnion[],
   ) {
     await Promise.all(
-      this.getConnections().map((conn) => conn.send({ type, payload })),
+      this.getConnections().map((conn) => conn.send({ type, payload, after })),
     );
   }
 

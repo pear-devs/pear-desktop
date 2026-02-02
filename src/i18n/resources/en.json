@@ -154,13 +154,14 @@
                 "default": "Default",
                 "force-show": "Force show",
                 "hide": "Hide",
+                "swap": "Swap like buttons order",
                 "label": "Like buttons"
               },
               "custom-window-title": {
                 "label": "Custom window title",
                 "prompt": {
                   "label": "Enter custom window title: (leave empty to disable)",
-                  "placeholder": "Example: Pear Desktop"
+                  "placeholder": "Example: {{applicationName}}"
                 }
               },
               "remove-upgrade-button": "Remove upgrade button",
@@ -208,8 +209,8 @@
       "restart": "Restart App",
       "show": "Show window",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +238,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Enable seekbar theming"
       },
       "name": "Album Color Theme"
     },
@@ -287,7 +289,7 @@
       "name": "Ambient Mode"
     },
     "amuse": {
-      "description": "Adds Pear Desktop support for the Amuse now playing widget by 6K Labs",
+      "description": "Adds {{applicationName}} support for the Amuse now playing widget by 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API server is running. GET /query to get song info."
@@ -322,6 +324,22 @@
         },
         "port": {
           "label": "Port"
+        },
+        "https": {
+          "label": "HTTPS & Certificates",
+          "submenu": {
+            "enable-https": {
+              "label": "Enable HTTPS"
+            },
+            "cert": {
+              "label": "Certificate file (.crt/.pem)",
+              "dialogTitle": "Select HTTPS certificate file"
+            },
+            "key": {
+              "label": "Private key file (.key/.pem)",
+              "dialogTitle": "Select HTTPS private key file"
+            }
+          }
         }
       },
       "name": "API Server [Beta]",
@@ -373,7 +391,7 @@
       "name": "Bypass Age Restrictions"
     },
     "captions-selector": {
-      "description": "Caption selector for Pear Desktop audio tracks",
+      "description": "Caption selector for {{applicationName}} audio tracks",
       "menu": {
         "autoload": "Automatically select last used caption",
         "disable-captions": "No captions by default"
@@ -393,6 +411,17 @@
         "caption-changed": "Caption changed to {{language}}",
         "caption-disabled": "Captions disabled",
         "no-captions": "No captions available for this song"
+      }
+    },
+    "clock": {
+      "description": "Add a clock to the navigation bar",
+      "name": "Clock",
+      "menu": {
+        "format": {
+          "label": "Format",
+          "display-seconds": "Display Seconds",
+          "24-hour-format": "24-Hour Format"
+        }
       }
     },
     "compact-sidebar": {
@@ -456,12 +485,12 @@
         "disconnected": "Disconnected",
         "hide-duration-left": "Hide duration left",
         "hide-github-button": "Hide GitHub link Button",
-        "play-on-pear-desktop": "Play on Pear Desktop",
+        "play-on-application": "Play on {{applicationName}}",
         "set-inactivity-timeout": "Set inactivity timeout",
         "set-status-display-type": {
           "label": "Status text",
           "submenu": {
-            "pear-desktop": "Listening to Pear Desktop",
+            "application": "Listening to {{applicationName}}",
             "artist": "Listening to {artist}",
             "title": "Listening to {song title}"
           }

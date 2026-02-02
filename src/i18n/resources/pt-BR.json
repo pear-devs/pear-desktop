@@ -154,14 +154,15 @@
                 "label": "Título da janela customizado",
                 "prompt": {
                   "label": "Insira título customizado para a janela: (deixe em branco para desabilitar)",
-                  "placeholder": "Exemplo: Pear Desktop"
+                  "placeholder": "Exemplo: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "Padrão",
                 "force-show": "Forçar exibir",
                 "hide": "Ocultar",
-                "label": "Botões de 'Curtir'"
+                "label": "Botões de 'Curtir'",
+                "swap": "Inverter ordem dos botões de curtir"
               },
               "remove-upgrade-button": "Remover botão de atualização",
               "theme": {
@@ -208,8 +209,8 @@
       "restart": "Reiniciar aplicativo",
       "show": "Mostrar janela",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +238,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Ativar personalização da barra de progresso"
       },
       "name": "Tema da cor do álbum"
     },
@@ -287,7 +289,7 @@
       "name": "Modo ambiente"
     },
     "amuse": {
-      "description": "Adiciona suporte ao Pear Desktop ao widget 'Reproduzindo agora' do Amuse da 6K Labs",
+      "description": "Adiciona suporte ao {{applicationName}} ao widget 'Reproduzindo agora' do Amuse da 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Servidor API do Amuse em execução. GET /query para obter informações da música."
@@ -319,6 +321,22 @@
         },
         "hostname": {
           "label": "Nome do anfitrião"
+        },
+        "https": {
+          "label": "HTTPS & Certificados",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Selecione o certificado do HTTPS",
+              "label": "Arquivo de certificado (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Habilitar HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Selecione a chave privada do HTTPS",
+              "label": "Arquivo de chave privada (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Porta"
@@ -373,7 +391,7 @@
       "name": "Ignorar restrições de idade"
     },
     "captions-selector": {
-      "description": "Seletor de legendas para faixas de áudio do Pear Desktop",
+      "description": "Seletor de legendas para faixas de áudio do {{applicationName}}",
       "menu": {
         "autoload": "Selecionar automaticamente a última legenda usada",
         "disable-captions": "Sem legendas por padrão"
@@ -394,6 +412,17 @@
         "caption-disabled": "Legendas desativadas",
         "no-captions": "Sem legendas disponíveis para essa música"
       }
+    },
+    "clock": {
+      "description": "Adicionar relógio na barra de navegação",
+      "menu": {
+        "format": {
+          "24-hour-format": "Formato 24 horas",
+          "display-seconds": "Mostrar segundos",
+          "label": "Formato"
+        }
+      },
+      "name": "Relógio"
     },
     "compact-sidebar": {
       "description": "Sempre definir a barra lateral no modo compacto",
@@ -456,13 +485,13 @@
         "disconnected": "Desconectado",
         "hide-duration-left": "Ocultar duração restante",
         "hide-github-button": "Ocultar botão do GitHub",
-        "play-on-pear-desktop": "Reproduzir no Pear Desktop",
+        "play-on-application": "Reproduzir no {{applicationName}}",
         "set-inactivity-timeout": "Definir tempo limite de inatividade",
         "set-status-display-type": {
           "label": "Texto de status",
           "submenu": {
+            "application": "Ouvindo {{applicationName}}",
             "artist": "Ouvindo {artist}",
-            "pear-desktop": "Ouvindo Pear Desktop",
             "title": "Ouvindo {song title}"
           }
         }
