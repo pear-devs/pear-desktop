@@ -1,6 +1,8 @@
 import { dialog } from 'electron';
 import prompt from 'custom-electron-prompt';
 import { deepmerge } from 'deepmerge-ts';
+import { spawn, spawnSync } from 'node:child_process';
+import { which } from 'which';
 
 import { downloadPlaylist } from './main';
 import { getFolder } from './main/utils';
@@ -20,6 +22,65 @@ export const onMenu = async ({
   setConfig,
 }: MenuContext<DownloaderPluginConfig>): Promise<MenuTemplate> => {
   const config = await getConfig();
+  
+  const findYtdlpExecutable = async (preferred?: string) => {
+    const candidates: (string | undefined)[] = [];
+    if (preferred) candidates.push(preferred);
+    
+    // Try to find yt-dlp using the which command
+    try {
+      const foundPath = await which('yt-dlp', { nothrow: true });
+      if (foundPath) return foundPath;
+    } catch (_) {
+      // ignore if which fails
+    }
+
+    for (const c of candidates) {
+      if (!c) continue;
+      try {
+        // Try running `--version` to check it's executable
+        const res = spawnSync(c, ['--version'], { encoding: 'utf8', stdio: 'ignore' });
+        if (res && res.status === 0) return c;
+      } catch (_) {
+        // ignore and try next
+      }
+    }
+    return null;
+  };
+
+  const findFfmpegExecutable = async (preferred?: string) => {
+    const candidates: (string | undefined)[] = [];
+    if (preferred) candidates.push(preferred);
+    
+    // Try to find ffmpeg using the which command
+    try {
+      const foundPath = await which('ffmpeg', { nothrow: true });
+      if (foundPath) return foundPath;
+    } catch (_) {
+      // ignore if which fails
+    }
+    
+    return null;
+  };
+  
+  const _engineKey = 'plugins.downloader.menu.engine.label';
+  const engineTranslated = t(_engineKey);
+  const engineLabel =
+    typeof engineTranslated === 'string' && !engineTranslated.includes(_engineKey)
+      ? engineTranslated
+      : 'Download Method';
+  const _ytdlpKey = 'plugins.downloader.menu.engine.ytdlp-path';
+  const ytdlpTranslated = t(_ytdlpKey);
+  const ytdlpLabel =
+    typeof ytdlpTranslated === 'string' && !ytdlpTranslated.includes(_ytdlpKey)
+      ? ytdlpTranslated
+      : 'Path of yt-dlp';
+  const _ffmpegKey = 'plugins.downloader.menu.engine.ffmpeg-path';
+  const ffmpegTranslated = t(_ffmpegKey);
+  const ffmpegLabel =
+    typeof ffmpegTranslated === 'string' && !ffmpegTranslated.includes(_ffmpegKey)
+      ? ffmpegTranslated
+      : 'Path of ffmpeg';
 
   return [
     {
@@ -205,6 +266,81 @@ export const onMenu = async ({
           setConfig({ selectedPreset: preset });
         },
       })),
+    },
+    {
+      label: engineLabel,
+      type: 'submenu',
+      submenu: [
+        {
+          label: 'youtube.js',
+          type: 'radio',
+          checked: (config.engine ?? defaultConfig.engine) !== 'yt-dlp',
+          click() {
+            setConfig({ engine: 'youtube.js' });
+          },
+        },
+        {
+          label: 'yt-dlp',
+          type: 'radio',
+          checked: (config.engine ?? defaultConfig.engine) === 'yt-dlp',
+          click: async () => {
+            // Check if yt-dlp and ffmpeg are available before allowing switch
+            const ytdlpPath = await findYtdlpExecutable(config.ytdlpPath ?? undefined);
+            const ffmpegPath = await findFfmpegExecutable(config.ytdlpFfmpegPath ?? undefined);
+            
+            if (!ytdlpPath) {
+              dialog.showMessageBoxSync({
+                type: 'error',
+                buttons: ['OK'],
+                title: 'yt-dlp not found',
+                message:
+                  "yt-dlp not found. Please install yt-dlp or provide the path in the settings.",
+              });
+              return;
+            }
+            
+            if (!ffmpegPath) {
+              dialog.showMessageBoxSync({
+                type: 'error',
+                buttons: ['OK'],
+                title: 'ffmpeg not found',
+                message:
+                  "ffmpeg not found. Please install ffmpeg or provide the path in the settings.",
+              });
+              return;
+            }
+            
+            setConfig({ engine: 'yt-dlp' });
+          },
+        },
+        {
+          type: 'separator',
+        },
+        {
+          label: ytdlpLabel,
+          click() {
+            const result = dialog.showOpenDialogSync({
+              properties: ['openFile'],
+              defaultPath: config.ytdlpPath ?? defaultConfig.ytdlpPath,
+            });
+            if (result && result[0]) {
+              setConfig({ ytdlpPath: result[0] });
+            }
+          },
+        },
+        {
+          label: ffmpegLabel,
+          click() {
+            const result = dialog.showOpenDialogSync({
+              properties: ['openFile'],
+              defaultPath: config.ytdlpFfmpegPath ?? '',
+            });
+            if (result && result[0]) {
+              setConfig({ ytdlpFfmpegPath: result[0] });
+            }
+          },
+        },
+      ],
     },
     {
       label: t('plugins.downloader.menu.skip-existing'),
