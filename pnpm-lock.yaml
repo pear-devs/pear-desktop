@@ -91,7 +91,7 @@ importers:
         specifier: 1.6.0
         version: 1.6.0
       '@mdui/icons':
-        specifier: ^1.0.3
+        specifier: 1.0.3
         version: 1.0.3
       '@skyra/jaro-winkler':
         specifier: 1.1.1
@@ -247,7 +247,7 @@ importers:
         specifier: 2.3.0
         version: 2.3.0
       youtubei.js:
-        specifier: ^16.0.1
+        specifier: 16.0.1
         version: 16.0.1
       zod:
         specifier: 4.3.6
