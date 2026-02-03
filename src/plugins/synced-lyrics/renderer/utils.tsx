@@ -96,8 +96,6 @@ export const convertChineseCharacter = (
       return tify(text);
     case 'traditionalToSimplified':
       return sify(text);
-    default:
-      return text;
   }
 };
 
