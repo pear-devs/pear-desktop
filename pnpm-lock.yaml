@@ -123,9 +123,6 @@ importers:
       deepmerge-ts:
         specifier: 7.1.5
         version: 7.1.5
-      delay:
-        specifier: 6.0.0
-        version: 6.0.0
       electron-debug:
         specifier: 4.1.0
         version: 4.1.0
@@ -2124,10 +2121,6 @@ packages:
   del@8.0.1:
     resolution: {integrity: sha512-gPqh0mKTPvaUZGAuHbrBUYKZWBNAeHG7TU3QH5EhVwPMyKvmfJaNXhcD2jTcXsJRRcffuho4vaYweu80dRrMGA==}
     engines: {node: '>=18'}
-
-  delay@6.0.0:
-    resolution: {integrity: sha512-2NJozoOHQ4NuZuVIr5CWd0iiLVIRSDepakaovIN+9eIDHEhdCAEvSy2cuf1DCrPPQLvHmbqTHODlhHg8UCy4zw==}
-    engines: {node: '>=16'}
 
   delayed-stream@1.0.0:
     resolution: {integrity: sha512-ZySD7Nf91aLB0RxL4KGrKHBXl7Eds1DAmEdcoVawXnLD7SDhpNgtuII2aAkg7a7QS41jxPSZ17p4VdGnMHk3MQ==}
@@ -6704,8 +6697,6 @@ snapshots:
       p-map: 7.0.4
       presentable-error: 0.0.1
       slash: 5.1.0
-
-  delay@6.0.0: {}
 
   delayed-stream@1.0.0: {}
 
