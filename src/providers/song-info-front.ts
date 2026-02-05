@@ -117,8 +117,8 @@ export const setupLikeChangedListener = singleton(() => {
 
 export const setupVolumeChangedListener = singleton((api: MusicPlayer) => {
   const updateVolume = () => {
-    // Queries the video element to check if it's muted
-    // But importantly, queries the *current* player bar execution context for the API
+    // Queries the current player bar state to check if it's muted and what the volume is
+    // Specifically, it uses the *current* player bar execution context for the API
     // This avoids the stale 'api' reference issue
     const playerBar = document.querySelector<
       HTMLElement & {
@@ -127,10 +127,11 @@ export const setupVolumeChangedListener = singleton((api: MusicPlayer) => {
     >('ytmusic-player-bar');
 
     // Fallback to provided api if available, but playerBar is preferred for freshness
-    const state = playerBar?.getState().player.muted
+    const playerState = playerBar?.getState().player;
+    const state = playerState?.muted
       ? 0
-      : (playerBar?.getState().player.volume ?? api.getVolume());
-    const isMuted = playerBar?.getState().player.muted ?? api.isMuted();
+      : (playerState?.volume ?? api.getVolume());
+    const isMuted = playerState?.muted ?? api.isMuted();
 
     try {
       window.ipcRenderer.send('peard:volume-changed', {
@@ -142,7 +143,20 @@ export const setupVolumeChangedListener = singleton((api: MusicPlayer) => {
     }
   };
 
+  let currentVideo: HTMLVideoElement | null = null;
+
   const attachListener = (video: HTMLVideoElement) => {
+    // Avoid attaching multiple listeners to the same video element
+    if (currentVideo === video) {
+      return;
+    }
+
+    // Detach listener from previous video element, if any
+    if (currentVideo) {
+      currentVideo.removeEventListener('volumechange', updateVolume);
+    }
+
+    currentVideo = video;
     // We attach the listener to the video element to know WHEN to update
     video.addEventListener('volumechange', updateVolume);
   };
@@ -155,6 +169,8 @@ export const setupVolumeChangedListener = singleton((api: MusicPlayer) => {
     updateVolume(); // Send whatever we have
   }
 
+  // Note: This observer is intentionally not disconnected as it needs to run for the lifetime
+  // of the application. The singleton decorator ensures this setup only runs once.
   const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       for (const node of mutation.addedNodes) {
@@ -166,10 +182,18 @@ export const setupVolumeChangedListener = singleton((api: MusicPlayer) => {
     }
   });
 
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
+  // Observe the player container instead of document.body for better performance.
+  // We only watch for HTMLVideoElement additions within the player area.
+  const playerContainer =
+    document.querySelector('ytmusic-player-bar') ||
+    document.querySelector('#player');
+
+  if (playerContainer) {
+    observer.observe(playerContainer, {
+      childList: true,
+      subtree: true,
+    });
+  }
 });
 
 export const setupShuffleChangedListener = singleton(() => {
@@ -207,7 +231,7 @@ export const setupFullScreenChangedListener = singleton(() => {
     window.ipcRenderer.send(
       'peard:fullscreen-changed',
       (playerBar?.attributes.getNamedItem('player-fullscreened') ?? null) !==
-        null,
+      null,
     );
   });
 
