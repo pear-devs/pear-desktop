@@ -53,9 +53,9 @@
           "later": "Daha Sonra",
           "restart-now": "Şimdi yeniden başlat"
         },
-        "detail": "\"{{pluginName}}\" eklentisinin çalışabilmesi için yeniden başlatman gerekiyor",
-        "message": "\"{{pluginName}}\" için yeniden başlatman gerekiyor",
-        "title": "Uygulamayı yeniden başlatman gerekiyor"
+        "detail": "\"{{pluginName}}\" eklentisinin çalışması için uygulamanın yeniden başlatılması gerekiyor",
+        "message": "\"{{pluginName}}\" eklentisi için uygulamanın yeniden başlatılması gerekiyor",
+        "title": "Uygulamanın yeniden başlatılması gerekiyor"
       },
       "unresponsive": {
         "buttons": {
@@ -161,7 +161,8 @@
                 "default": "Varsayılan",
                 "force-show": "Zorla göster",
                 "hide": "Gizle",
-                "label": "Beğenme düğmeleri"
+                "label": "Beğenme düğmeleri",
+                "swap": "Beğenme butonlarının sıralamasını değiştir"
               },
               "remove-upgrade-button": "Yükseltme düğmesini kaldır",
               "theme": {
@@ -411,6 +412,17 @@
         "caption-disabled": "Altyazılar devre dışı",
         "no-captions": "Bu şarkı için altyazı mevcut değil"
       }
+    },
+    "clock": {
+      "description": "Navigasyon barına bir saat ekle",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-Saat Formatı, Biçimi",
+          "display-seconds": "Saniyeleri göster",
+          "label": "Format, Biçim"
+        }
+      },
+      "name": "Saat"
     },
     "compact-sidebar": {
       "description": "Her zaman kompakt kenar çubugu",
