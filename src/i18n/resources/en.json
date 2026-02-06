@@ -358,6 +358,40 @@
       "description": "Apply compression to audio (lowers the volume of the loudest parts of the signal and raises the volume of the softest parts)",
       "name": "Audio Compressor"
     },
+    "audio-stream": {
+      "description": "Stream audio as PCM data over HTTP for external applications",
+      "menu": {
+        "port": {
+          "label": "Port"
+        },
+        "quality-latency": {
+          "label": "Quality & Latency",
+          "submenu": {
+            "bit-depth": {
+              "label": "Bit Depth"
+            },
+            "buffer-size": {
+              "label": "Buffer Size"
+            },
+            "channels": {
+              "label": "Channels",
+              "mono": "Mono",
+              "stereo": "Stereo"
+            },
+            "sample-rate": {
+              "label": "Sample Rate"
+            }
+          }
+        }
+      },
+      "name": "Audio Stream",
+      "prompt": {
+        "port": {
+          "label": "Enter the port for the audio stream server:\nStream URL: {{streamUrl}}",
+          "title": "Audio Stream Port"
+        }
+      }
+    },
     "auth-proxy-adapter": {
       "description": "Support for the use of authentication proxy services",
       "menu": {
