@@ -1,0 +1,222 @@
+/* Master Sync Plugin Styles */
+
+/* Menu items styling */
+.master-sync-menu-item {
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.master-sync-menu-item:last-child {
+  border-bottom: none;
+}
+
+/* Status indicators */
+.master-sync-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-left: 8px;
+}
+
+.master-sync-status.connected {
+  background-color: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+}
+
+.master-sync-status.disconnected {
+  background-color: rgba(244, 67, 54, 0.2);
+  color: #f44336;
+}
+
+.master-sync-status.warning {
+  background-color: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+/* Configuration input styling */
+.master-sync-input {
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.master-sync-input:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(0, 0, 0, 0.5);
+  outline: none;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.1);
+}
+
+.master-sync-input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Menu labels and descriptions */
+.master-sync-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.master-sync-description {
+  display: block;
+  font-size: 11px;
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Separator styling */
+.master-sync-separator {
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0)
+  );
+  margin: 8px 0;
+}
+
+/* Info box for configuration status */
+.master-sync-info {
+  padding: 12px;
+  border-left: 3px solid rgba(33, 150, 243, 0.6);
+  background-color: rgba(33, 150, 243, 0.1);
+  border-radius: 4px;
+  margin: 8px 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.4;
+}
+
+.master-sync-info.error {
+  border-left-color: rgba(244, 67, 54, 0.6);
+  background-color: rgba(244, 67, 54, 0.1);
+}
+
+.master-sync-info.success {
+  border-left-color: rgba(76, 175, 80, 0.6);
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.master-sync-info.warning {
+  border-left-color: rgba(255, 193, 7, 0.6);
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+/* Checkbox and radio button styling */
+.master-sync-checkbox,
+.master-sync-radio {
+  margin-right: 8px;
+  cursor: pointer;
+  accent-color: rgba(33, 150, 243, 0.8);
+}
+
+/* Button styling for inline actions */
+.master-sync-button {
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  background-color: rgba(33, 150, 243, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.master-sync-button:hover {
+  background-color: rgba(33, 150, 243, 0.2);
+  border-color: rgba(33, 150, 243, 0.4);
+}
+
+.master-sync-button:active {
+  background-color: rgba(33, 150, 243, 0.3);
+  transform: scale(0.98);
+}
+
+.master-sync-button.danger {
+  background-color: rgba(244, 67, 54, 0.1);
+  border-color: rgba(244, 67, 54, 0.2);
+  color: rgba(244, 67, 54, 0.9);
+}
+
+.master-sync-button.danger:hover {
+  background-color: rgba(244, 67, 54, 0.2);
+  border-color: rgba(244, 67, 54, 0.4);
+}
+
+/* Network status indicator */
+.master-sync-network-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.master-sync-network-status::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentColor;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.master-sync-network-status.connected {
+  color: #4caf50;
+  background-color: rgba(76, 175, 80, 0.1);
+}
+
+.master-sync-network-status.disconnected {
+  color: #f44336;
+  background-color: rgba(244, 67, 54, 0.1);
+}
+
+.master-sync-network-status.connecting {
+  color: #ffc107;
+  background-color: rgba(255, 193, 7, 0.1);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .master-sync-input {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  .master-sync-button {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
+  .master-sync-label {
+    font-size: 12px;
+  }
+
+  .master-sync-description {
+    font-size: 10px;
+  }
+}

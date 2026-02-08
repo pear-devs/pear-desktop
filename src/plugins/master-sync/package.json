@@ -1,0 +1,15 @@
+{
+  "name": "master-sync",
+  "version": "1.0.0",
+  "description": "Sync YouTube Music playback from MASTER to SLAVE instance via API",
+  "main": "index.ts",
+  "author": "YouTube Music Desktop Plugin Developer",
+  "license": "MIT",
+  "keywords": [
+    "youtube-music",
+    "plugin",
+    "sync",
+    "remote-control",
+    "api"
+  ]
+}

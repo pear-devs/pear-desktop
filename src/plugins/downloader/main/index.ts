@@ -58,7 +58,7 @@ const ffmpeg = lazy(async () =>
 );
 const ffmpegMutex = new Mutex();
 
-Platform.shim.eval = async (data: Types.BuildScriptResult, env: Record<string, Types.VMPrimative>) => {
+Platform.shim.eval = async (data: any, env: Record<string, any>) => {
   const properties = [];
 
   if(env.n) {
