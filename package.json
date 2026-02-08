@@ -76,7 +76,7 @@
     "@hono/swagger-ui": "0.5.2",
     "@hono/zod-openapi": "1.1.0",
     "@hono/zod-validator": "0.7.2",
-    "@indic-transliteration/sanscript": "^1.3.3",
+    "@indic-transliteration/sanscript": "1.3.3",
     "@jellybrick/dbus-next": "0.10.3",
     "@jellybrick/electron-better-web-request": "1.0.4",
     "@jellybrick/mpris-service": "2.1.5",
