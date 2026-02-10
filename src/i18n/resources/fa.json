@@ -2,7 +2,7 @@
   "common": {
     "console": {
       "plugins": {
-        "execute-failed": "اجرای افزونه {{pluginName}}::{{contextName}} با خطا مواجه شد",
+        "execute-failed": "اجراى {{اسمزمىنه}}::{{اسمپلاگىن}} با خطا مواجه شد",
         "executed-at-ms": "افزونه {{pluginName}}::{{contextName}} در {{ms}} میلی‌ثانیه اجرا شد",
         "initialize-failed": "افزونه \"{{pluginName}}\" با خطا در حین مقداردهی اولیه مواجه شد",
         "load-all": "در حال بارگذاری تمامی افزونه‌ها",
@@ -150,6 +150,13 @@
           "visual-tweaks": {
             "label": "تغییرات ظاهری",
             "submenu": {
+              "custom-window-title": {
+                "label": "عنوان پنجره سفارشى",
+                "prompt": {
+                  "label": "عنوان پنجره سفارشى را وارد کنىد: (خالى بزارىد تا غىرفعال شود)",
+                  "placeholder": "مثال :{{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "پیش‌فرض",
                 "force-show": "اجبار به نمایش",
@@ -201,8 +208,8 @@
       "restart": "راه‌اندازی مجدد برنامه",
       "show": "نمایش پنجره",
       "tooltip": {
-        "default": "یوتیوب موسیقی",
-        "with-song-info": "یوتیوب موسیقی: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -280,7 +287,7 @@
       "name": "حالت محیطی"
     },
     "amuse": {
-      "description": "حالا ویجت Amuse از YouTube Music هم پشتیبانی می‌کنه! (توسط 6K Labs)",
+      "description": "حالا ویجت Amuse از {{applicationName}} هم پشتیبانی می‌کنه! (توسط 6K Labs)",
       "name": "Amuse",
       "response": {
         "query": "سرور Amuse فعال است. برای دریافت اطلاعات آهنگ، از آدرس /query استفاده کنید."
@@ -312,6 +319,22 @@
         },
         "hostname": {
           "label": "نام میزبان"
+        },
+        "https": {
+          "label": "HTTPS و گواهینامه‌ها",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "پرونده گواهینامه HTTPS را انتخاب کنید",
+              "label": "پرونده گواهینامه (crt/.pem.)"
+            },
+            "enable-https": {
+              "label": "فعال کردن HTTPS"
+            },
+            "key": {
+              "dialogTitle": "پرونده کلید خصوصی HTTPS را انتخاب کنید",
+              "label": "پرونده کلید خصوصی (key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "پورت"
@@ -362,11 +385,11 @@
       "name": "محو کردن نوار کنترل"
     },
     "bypass-age-restrictions": {
-      "description": "دور زدن تأیید سن یوتیوب",
+      "description": "دور زدن تأیید سن مىوزىک پلىر",
       "name": "دور زدن محدودیت‌های سنی"
     },
     "captions-selector": {
-      "description": "انتخاب زیرنویس برای آهنگ‌های یوتیوب موسیقی",
+      "description": "انتخاب زیرنویس برای آهنگ‌های پىر دسکتاپ",
       "menu": {
         "autoload": "به طور خودکار انتخاب آخرین زیرنویس استفاده شده",
         "disable-captions": "بدون زیرنویس به صورت پیش‌فرض"
@@ -414,6 +437,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "ىک اسپىکر براى پخش آهنگها انتخاب کنىد",
+      "menu": {
+        "device-selector": "دستگاه را انتخاب کنىد"
+      },
+      "name": "اسپىکر دلخواه",
+      "prompt": {
+        "device-selector": {
+          "label": "اسپىکر دلخواه را انتخاب کنىد",
+          "title": "اسپىکر دلخواهتان را انتخاب کنىد"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "شروع آهنگ در حالت \"توقف\"",
       "menu": {
@@ -436,8 +472,16 @@
         "disconnected": "اتصال قطع شد",
         "hide-duration-left": "مخفی کردن مدت زمان باقی‌مانده",
         "hide-github-button": "مخفی کردن دکمه لینک گیت هاب",
-        "play-on-youtube-music": "پخش در یوتیوب موزیک",
-        "set-inactivity-timeout": "تنظیم زمان عدم فعالیت"
+        "play-on-application": "پخش در یوتیوب موزیک",
+        "set-inactivity-timeout": "تنظیم زمان عدم فعالیت",
+        "set-status-display-type": {
+          "label": "متن وضعىت",
+          "submenu": {
+            "application": "به پىر دسکتاپ گوش مىکند",
+            "artist": "به {artist} گوش مىکند",
+            "title": "به {song title} گوش مىکند"
+          }
+        }
       },
       "name": "Discord Rich Presence",
       "prompt": {
@@ -729,6 +773,7 @@
         "listenbrainz": {
           "token": "توکن کاربری ListenBrainz را وارد کنید"
         },
+        "scrobble-alternative-artist": "از هنرمند دىگرى استفاده کنىد",
         "scrobble-alternative-title": "از عناوین جایگزین استفاده کنید",
         "scrobble-other-media": "ردیابی رسانه‌های دیگر"
       },
@@ -814,6 +859,14 @@
           "label": "هماهنگ‌سازی کامل متن ترانه‌",
           "tooltip": "محاسبه دقیق نمایش خط بعدی تا میلی‌ثانیه (ممکن است تاثیر کمی بر عملکرد داشته باشد)"
         },
+        "preferred-provider": {
+          "label": "منبع دلخواه",
+          "none": {
+            "label": "هىچکدام",
+            "tooltip": "منبح دلخواهى انتخاب نشده"
+          },
+          "tooltip": "منبع دلخواهتان را انتخاب کنىد"
+        },
         "romanization": {
           "label": "اشعار رومی شده",
           "tooltip": "اگر اشعار به زبانی متفاوت هستند، سعی کنید نسخه لاتین را نمایش دهید."
@@ -845,6 +898,27 @@
     "touchbar": {
       "description": "افزودن ویجت TouchBar برای کاربران macOS",
       "name": "نوار لمسی"
+    },
+    "transparent-player": {
+      "description": "پنجره برنامه را شفاف مىکند",
+      "menu": {
+        "opacity": {
+          "label": "تارى",
+          "submenu": {
+            "percent": "%{{تارى}}"
+          }
+        },
+        "type": {
+          "label": "نوع",
+          "submenu": {
+            "acrylic": "اکرىلىک",
+            "mica": "مىکا",
+            "none": "هىچکدام",
+            "tabbed": "نوار دار"
+          }
+        }
+      },
+      "name": "پلىر شفاف"
     },
     "tuna-obs": {
       "description": "ادغام با پلاگین Tuna در OBS",

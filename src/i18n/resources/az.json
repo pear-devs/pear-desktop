@@ -116,7 +116,54 @@
           "auto-update": "Avtomatik Yeniləmə",
           "hide-menu": {
             "dialog": {
-              "message": "Menu will be hidden on next launch, use [Alt] to show it (or backtick [`] if using in-app-menu)"
+              "message": "Menyu növbəti açılışda gizlədiləcək, göstərmək üçün [Alt] düyməsini basın (proqramdaxili menyudan istifadə edildikdə isə, [`] düyməsi).",
+              "title": "Menyu gizlətmə aktivdir"
+            },
+            "label": "Menyunu gizlət"
+          },
+          "language": {
+            "dialog": {
+              "message": "Dil yenidən başlatmadan sonra dəyişiləcək",
+              "title": "Dil dəyişdirildi"
+            },
+            "label": "Dil",
+            "submenu": {
+              "to-help-translate": "Tərcüməyə kömək etmək istəyirsiniz? Buraya basın"
+            }
+          },
+          "resume-on-start": "Tətbiq başladıqda son mahnıdan davam et",
+          "single-instance-lock": "Tək proqram kilidi",
+          "start-at-login": "Giriş səhifəsində başlat",
+          "starting-page": {
+            "label": "Giriş səhifəsi",
+            "unset": "Təyin edilməyib"
+          },
+          "tray": {
+            "submenu": {
+              "disabled": "Deaktiv edilib"
+            }
+          },
+          "visual-tweaks": {
+            "label": "Vizual düzəlişlər",
+            "submenu": {
+              "custom-window-title": {
+                "prompt": {
+                  "placeholder": "Nümunə: {{applicationName}}"
+                }
+              },
+              "like-buttons": {
+                "default": "Standart",
+                "hide": "Gizlət"
+              },
+              "remove-upgrade-button": "Yeniləmə düyməsini sil",
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "Ləğv et",
+                    "remove": "Sil"
+                  }
+                }
+              }
             }
           }
         }

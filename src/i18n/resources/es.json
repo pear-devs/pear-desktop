@@ -3,11 +3,11 @@
     "console": {
       "plugins": {
         "execute-failed": "Error al ejecutar el complemento {{pluginName}}::{{contextName}}",
-        "executed-at-ms": "Complemento {{pluginName}}::{{contextName}} Ejecutó en {{ms}}ms",
+        "executed-at-ms": "Complemento {{pluginName}}::{{contextName}} se ejecutó en {{ms}}ms",
         "initialize-failed": "Error al inicializar el complemento \"{{pluginName}}\"",
         "load-all": "Cargando todos los complementos",
         "load-failed": "Error al cargar el complemento \"{{pluginName}}\"",
-        "loaded": "Complementos \"{{pluginName}}\" cargado",
+        "loaded": "Complementos \"{{pluginName}}\" cargados",
         "unload-failed": "No se ha podido descargar el complemento \"{{pluginName}}\"",
         "unloaded": "Complemento \"{{pluginName}}\" descargado"
       }
@@ -154,7 +154,7 @@
                 "label": "Título de ventana personalizado",
                 "prompt": {
                   "label": "Ingresa un título de ventana personalizado: (déjalo vacío para desactivar)",
-                  "placeholder": "Ejemplo: YouTube Music"
+                  "placeholder": "Ejemplo: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Reiniciar la aplicación",
       "show": "Mostrar ventana",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Habilitar temas a la barra de búsqueda"
       },
       "name": "Tema de color del álbum"
     },
@@ -287,7 +288,7 @@
       "name": "Modo ambiente"
     },
     "amuse": {
-      "description": "Agrega soporte a YouTube Music para el widget \"reproduciendo\" de Amuse por 6K Labs",
+      "description": "Agrega soporte a {{applicationName}} para el widget \"reproduciendo\" de Amuse por 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "El servidor API de Amuse se está ejecutando. Usa GET /query para obtener información de la canción."
@@ -319,6 +320,22 @@
         },
         "hostname": {
           "label": "Nombre del host"
+        },
+        "https": {
+          "label": "HTTPS & Certificados",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Selecciona el archivo de certificado HTTPS",
+              "label": "Archivo de certificado (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Habilitar HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Selecciona el archivo de clave privada HTTPS",
+              "label": "Archivo de clave privada (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Puerto"
@@ -369,11 +386,11 @@
       "name": "Desenfocar barra de navegación"
     },
     "bypass-age-restrictions": {
-      "description": "Saltarse la verificación de edad de YouTube",
+      "description": "Saltarse la verificación de edad de Music Player",
       "name": "Saltarse las restricciones de edad"
     },
     "captions-selector": {
-      "description": "Selector de subtítulos para pistas de audio de YouTube Music",
+      "description": "Selector de subtítulos para pistas de audio de {{applicationName}}",
       "menu": {
         "autoload": "Seleccionar automáticamente el último subtítulo utilizado",
         "disable-captions": "Sin subtítulos por defecto"
@@ -456,14 +473,14 @@
         "disconnected": "Desconectado",
         "hide-duration-left": "Ocultar la duración restante",
         "hide-github-button": "Ocultar el botón de enlace a GitHub",
-        "play-on-youtube-music": "Reproducir en YouTube Music",
+        "play-on-application": "Reproducir en {{applicationName}}",
         "set-inactivity-timeout": "Establecer tiempo de inactividad",
         "set-status-display-type": {
           "label": "Texto de estado",
           "submenu": {
+            "application": "Escuchando {{applicationName}}",
             "artist": "Escuchando a {artist}",
-            "title": "Escuchando {song title}",
-            "youtube-music": "Escuchando YouTube Music"
+            "title": "Escuchando {song title}"
           }
         }
       },

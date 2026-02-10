@@ -151,10 +151,10 @@
             "label": "介面設定",
             "submenu": {
               "custom-window-title": {
-                "label": "客製化窗口標題",
+                "label": "自訂窗口標題",
                 "prompt": {
-                  "label": "輸入客製化窗口標題: (留空讓其停用)",
-                  "placeholder": "例如: YouTube 音樂"
+                  "label": "輸入自訂視窗標題: (留空將其停用)",
+                  "placeholder": "例如: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "重新啟動應用程式",
       "show": "顯示視窗",
       "tooltip": {
-        "default": "YouTube 音樂",
-        "with-song-info": "YouTube 音樂: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "啟用進度條主題樣式"
       },
       "name": "隨歌曲色調變更主題"
     },
@@ -287,7 +288,7 @@
       "name": "微光效果"
     },
     "amuse": {
-      "description": "加入支援 6K Labs 的 Amuse OBS 外掛以取得 YouTube Music 現正播放資訊",
+      "description": "加入支援 6K Labs 的 Amuse OBS 外掛以取得 {{applicationName}} 現正播放資訊",
       "name": "Amuse",
       "response": {
         "query": "Amuse API 伺服器正在運作中，使用 /query 以取得歌曲資訊。"
@@ -369,11 +370,11 @@
       "name": "模糊導覽列"
     },
     "bypass-age-restrictions": {
-      "description": "繞過 YouTube 年齡驗證",
+      "description": "繞過年齡驗證",
       "name": "繞過年齡驗證"
     },
     "captions-selector": {
-      "description": "Youtube Music 音軌字幕選項",
+      "description": "{{applicationName}} 音軌字幕選項",
       "menu": {
         "autoload": "自動選擇上次使用的字幕",
         "disable-captions": "預設無字幕"
@@ -456,14 +457,14 @@
         "disconnected": "已斷開連線",
         "hide-duration-left": "隱藏音樂剩餘時間狀態",
         "hide-github-button": "隱藏 GitHub 頁面按鈕",
-        "play-on-youtube-music": "顯示 Play on YouTube Music 按鈕",
+        "play-on-application": "顯示 Play on {{applicationName}} 按鈕",
         "set-inactivity-timeout": "設定閒置狀態時長",
         "set-status-display-type": {
-          "label": "狀態文字",
+          "label": "狀態樣式",
           "submenu": {
-            "artist": "正在聽 {artist}",
-            "title": "正在聽 {song title}",
-            "youtube-music": "正在聽 YouTube Music"
+            "artist": "正在聆聽 {artist} 的歌曲",
+            "application": "正在聆聽 {{applicationName}}",
+            "title": "正在聆聽 {song title}"
           }
         }
       },
@@ -666,8 +667,8 @@
       "name": "歌曲播放通知"
     },
     "performance-improvement": {
-      "description": "使用實驗性的腳本以最佳化效能",
-      "name": "效能最佳化 [Beta]"
+      "description": "使用實驗性的腳本以優化效能",
+      "name": "效能優化 [Beta]"
     },
     "picture-in-picture": {
       "description": "允許應用程式切換至子母畫面模式",
@@ -765,7 +766,7 @@
       "prompt": {
         "lastfm": {
           "api-key": "Last.fm API 金鑰",
-          "api-secret": "Last.fm API 金鑰"
+          "api-secret": "Last.fm API 密鑰"
         },
         "listenbrainz": {
           "token": {
@@ -849,7 +850,7 @@
             "label": "無",
             "tooltip": "沒有偏好的提供者"
           },
-          "tooltip": "選擇要使用的預設提供者"
+          "tooltip": "選擇預設的歌詞提供者"
         },
         "romanization": {
           "label": "羅馬拼音化歌詞",
@@ -884,7 +885,7 @@
       "name": "觸控列 (Touchbar) 支援"
     },
     "transparent-player": {
-      "description": "讓應用程式視窗變為透明",
+      "description": "讓視窗背景變為透明糢糊",
       "menu": {
         "opacity": {
           "label": "不透明度",
@@ -893,16 +894,16 @@
           }
         },
         "type": {
-          "label": "類型",
+          "label": "樣式",
           "submenu": {
-            "acrylic": "壓克力",
-            "mica": "雲母",
+            "acrylic": "壓克力(Acrylic)",
+            "mica": "雲母(Mica)",
             "none": "無",
-            "tabbed": "分頁式"
+            "tabbed": "分頁式(Tabbed)"
           }
         }
       },
-      "name": "透明撥放器"
+      "name": "透明糢糊效果"
     },
     "tuna-obs": {
       "description": "與 OBS 的 Tuna 外掛連線",
@@ -940,9 +941,9 @@
       }
     },
     "visualizer": {
-      "description": "新增一個視覺化音樂效果",
+      "description": "在播放器新增視覺化效果",
       "menu": {
-        "visualizer-type": "視覺化效果類型"
+        "visualizer-type": "視覺化效果樣式"
       },
       "name": "視覺化效果"
     }

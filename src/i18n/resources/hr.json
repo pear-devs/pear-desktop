@@ -55,7 +55,7 @@
         },
         "detail": "\"{{pluginName}}\" plugin zahtjeva ponovno pokretanje da bi postao aktivan",
         "message": "\"{{pluginName}}\" se treba ponovo pokreniti",
-        "title": "Ponovno Pokrećanje je Potrebno"
+        "title": "Potrebno Ponovno Pokretanje"
       },
       "unresponsive": {
         "buttons": {
@@ -128,7 +128,7 @@
             },
             "label": "Jezik",
             "submenu": {
-              "to-help-translate": "Želite pomoć za prijevodom? Kliknite ovdje"
+              "to-help-translate": "Želite pomoći sa prijevodom? Kliknite ovdje"
             }
           },
           "resume-on-start": "Nastavi zadnju pjesmu kad se aplikacija pokrene",
@@ -150,6 +150,13 @@
           "visual-tweaks": {
             "label": "Vizualna podešavanja",
             "submenu": {
+              "custom-window-title": {
+                "label": "Prilagođeni naslov prozora",
+                "prompt": {
+                  "label": "Unesi prilagođeni naslov prozora: (ostavi prazno za onemogućiti)",
+                  "placeholder": "Primjer: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "Zadano",
                 "force-show": "Prisilno prikaži",
@@ -201,8 +208,8 @@
       "restart": "Ponovo Pokreni Aplikaciju",
       "show": "Prikaži prozor",
       "tooltip": {
-        "default": "YouTube Glazba",
-        "with-song-info": "YouTube Glazba: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -230,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Omogući postavljanje teme \"seekbar\"-a"
       },
       "name": "Boja teme albuma"
     },
@@ -280,8 +288,8 @@
       "name": "Ambijentalni Način"
     },
     "amuse": {
-      "description": "Dodaje podršku za YouTube Glazbu za widget \"sada reproducira\" od Amuse od strane 6K Labs",
-      "name": "Amuse",
+      "description": "Dodaje podršku za {{applicationName}} za widget \"sada reproducira\" od Amuse od strane 6K Labs",
+      "name": "Zabavljati",
       "response": {
         "query": "Amuse API poslužitelj je pokrenut. Koristi GET /query za dohvat informacija o pjesmi."
       }
@@ -312,6 +320,22 @@
         },
         "hostname": {
           "label": "Naziv hosta"
+        },
+        "https": {
+          "label": "HTTPS i Sertifikati",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Biraj HTTPS sertifikat datoteku",
+              "label": "Sertifikat datoteka (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Omogući HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Biraj privatni ključ datoteku za HTTPS",
+              "label": "Privatni ključ datoteka (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -362,11 +386,11 @@
       "name": "Zamagli Navigacijsku Traku"
     },
     "bypass-age-restrictions": {
-      "description": "Zaobiđi YouTubeovu provjeru dobi",
+      "description": "Zaobiđi Music Player provjeru dobi",
       "name": "Zaobiđi dobna ograničenja"
     },
     "captions-selector": {
-      "description": "Izbornik titlova za audiozapise od YouTube Musica",
+      "description": "Izbornik titlova za audiozapise od {{applicationName}}a",
       "menu": {
         "autoload": "Automatski izaberi posljednje korištene titlove",
         "disable-captions": "Bez titlova"
@@ -383,7 +407,7 @@
         "title": "Otvori izbornik za titlove"
       },
       "toast": {
-        "caption-changed": "Titlovi su promenjeni u {{language}}",
+        "caption-changed": "Titlovi su promijenjeni u {{language}}",
         "caption-disabled": "Titlovi su isključeni",
         "no-captions": "Za ovu pjesmu nisu dostupni titlovi"
       }
@@ -414,8 +438,21 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Konfiguriraj prilagođeni izlazni medijski uređaj za pjesme",
+      "menu": {
+        "device-selector": "Odaberi Uređaj"
+      },
+      "name": "Prilagođeni uređaj za izlaz",
+      "prompt": {
+        "device-selector": {
+          "label": "Odaberi izlazni medijski uređaj za korištenje",
+          "title": "Odaberi izlazni uređaj"
+        }
+      }
+    },
     "disable-autoplay": {
-      "description": "Postavlja da pjesma počne pauzirana",
+      "description": "Pokreće pjesmu u pauziranom načinu rada",
       "menu": {
         "apply-once": "Primjenjuje se samo pri pokretanju aplikacije"
       },
@@ -436,10 +473,18 @@
         "disconnected": "Odspojen",
         "hide-duration-left": "Sakrij preostalo vrijeme",
         "hide-github-button": "Sakrij gumb sa GitHub poveznicom",
-        "play-on-youtube-music": "Reproduciraj na YouTube Musicu",
-        "set-inactivity-timeout": "Postavi vremensko ograničenje neaktivnosti (inactivity timeout)"
+        "play-on-application": "Reproduciraj na {{applicationName}}u",
+        "set-inactivity-timeout": "Postavi vremensko ograničenje neaktivnosti (inactivity timeout)",
+        "set-status-display-type": {
+          "label": "Tekst statusa",
+          "submenu": {
+            "application": "Slušate {{applicationName}}",
+            "artist": "Slušate {glazbenika}",
+            "title": "Slušate {naslov pjesme}"
+          }
+        }
       },
-      "name": "Discord Rich Presence",
+      "name": "Bogata prisutnost Discorda",
       "prompt": {
         "set-inactivity-timeout": {
           "label": "Postavi vremensko ograničenje neaktivnosti u sekundama:",
@@ -479,10 +524,10 @@
           "folder-already-exists": "Mapa {{playlistFolder}} već postoji",
           "getting-playlist-info": "Dobavljaju se informacije o playlisti…",
           "loading": "Učitavanje…",
-          "playlist-has-only-one-song": "Playlista ima samo jedan stavku, preuzeti će se direktno",
+          "playlist-has-only-one-song": "Playlista ima samo jednu stavku, preuzeti će se direktno",
           "playlist-id-not-found": "Nije pronađen ID playliste",
           "playlist-is-empty": "Playlista je prazna",
-          "playlist-is-mix-or-private": "Pogreška pri dobivanju informacija o playlisti: provjerite da nije ili privatna ili \"Za vas\" playlista\n\n{{error}}",
+          "playlist-is-mix-or-private": "Pogreška pri dobavljanju informacija o playlisti: provjerite da nije privatna ili \"Za vas\" playlista\n\n{{error}}",
           "preparing-file": "Priprema se datoteka…",
           "saving": "Spremanje…",
           "trying-to-get-playlist-id": "Pokušavam dobaviti playlist ID: {{playlistId}}",
@@ -533,7 +578,7 @@
       "name": "Ekvalizator"
     },
     "exponential-volume": {
-      "description": "Čini klizač glasnoće (volume slider) eksponencijalnim za lakše odabranje niže glasnoće.",
+      "description": "Čini klizač glasnoće (volume slider) eksponencijalnim za lakši odabir niže glasnoće.",
       "name": "Eksponencijalna Glasnoća"
     },
     "in-app-menu": {
@@ -552,7 +597,7 @@
       "menu": {
         "romanized-lyrics": "Romanizirani tekstovi pjesme"
       },
-      "name": "Genius teksovi pjesme",
+      "name": "Genius tekstovi",
       "renderer": {
         "fetched-lyrics": "Dobavljen tekst pjesme s Genius-a"
       }
@@ -729,6 +774,7 @@
         "listenbrainz": {
           "token": "Unesi korisnički žeton za ListenBrainz"
         },
+        "scrobble-alternative-artist": "Izaberite druge glazbenike",
         "scrobble-alternative-title": "Koristi alternativne naslove",
         "scrobble-other-media": "Učetkaj druge medije"
       },
@@ -781,7 +827,7 @@
       "description": "Obezbjeđava sinkronizirane lirike pjesama, korištenjem dobavljača poput LRClib.",
       "errors": {
         "fetch": "⚠️\tDošlo je do greške prilikom dobavljanja stihova pjesme.\n\tMolimo vas da probate ponovno kasnije.",
-        "not-found": "⚠️ Tekst za ovu pjesmu nije pronađen."
+        "not-found": "⚠️ Tekst ove pjesme nije pronađen."
       },
       "menu": {
         "default-text-string": {
@@ -789,7 +835,7 @@
           "tooltip": "Odaberi zadane karaktere koji će biti korišteni za razmake između stihova pjesama"
         },
         "line-effect": {
-          "label": "Efekat crte",
+          "label": "Efekt crte",
           "submenu": {
             "fancy": {
               "label": "Kitnjast",
@@ -808,15 +854,23 @@
               "tooltip": "Promjeni razmjeru trenutne crte"
             }
           },
-          "tooltip": "Odaberi efekat koji će biti primjenjen na trenutnoj crti"
+          "tooltip": "Odaberi efekt koji će biti primijenjen na trenutnoj crti"
         },
         "precise-timing": {
           "label": "Napravi da tekst pjesme bude izvrsno usklađen",
           "tooltip": "Izračunaj do milisekunde prikaz sljedeće crteteksta (može malo utjecati na učinak)"
         },
+        "preferred-provider": {
+          "label": "Željeni davatelj usluga",
+          "none": {
+            "label": "Nema / prazno",
+            "tooltip": "Nema željenog pružatelja usluga"
+          },
+          "tooltip": "Odaberite zadanog pružatelja usluga kojeg ćete koristiti"
+        },
         "romanization": {
           "label": "Romanizuj stihove pjesama",
-          "tooltip": "Ako je tekst pjesme na drugom jeziku, probajte da ga prikažete na latinici."
+          "tooltip": "Ako je tekst pjesme na drugom jeziku, probajte ga prikazati na latinici."
         },
         "show-lyrics-even-if-inexact": {
           "label": "Prikaži tekst pjesme čak i ako je netačan",
@@ -827,14 +881,14 @@
           "tooltip": "Prikaži vremenske oznake pored teksta pjesme"
         }
       },
-      "name": "Sinkronizovani stihovi pjesama",
+      "name": "Sinkronizirani stihovi pjesama",
       "refetch-btn": {
         "fetching": "Dobavljanje...",
         "normal": "Ponovo dobavite tekst pjesme"
       },
       "warnings": {
         "duration-mismatch": "⚠️ - Tekst pjesme možda nije usklađen zbog neuklapanja u daljini trajanja.",
-        "inexact": "⚠️ - Tekst za ovu pjesmu možda nije tačan",
+        "inexact": "⚠️ - Tekst ove pjesme možda nije točan",
         "instrumental": "⚠️ - Ovo je instrumentalna glazba"
       }
     },
@@ -845,6 +899,27 @@
     "touchbar": {
       "description": "Dodaje dodatak dodirne trake za macOS korisnike",
       "name": "Dodirna Traka"
+    },
+    "transparent-player": {
+      "description": "Učinit će prozor aplikacije prozirnim",
+      "menu": {
+        "opacity": {
+          "label": "Neprozirnost",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Vrsta",
+          "submenu": {
+            "acrylic": "Akrilni",
+            "mica": "Tinjac",
+            "none": "Nema / prazno",
+            "tabbed": "U karticama"
+          }
+        }
+      },
+      "name": "Prozirni Svirač"
     },
     "tuna-obs": {
       "description": "Integracija sa OBS-ovim Tuna dodatkom",

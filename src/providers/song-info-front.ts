@@ -2,7 +2,7 @@ import { singleton } from './decorators';
 
 import { LikeType, type GetState } from '@/types/datahost-get-state';
 
-import type { YoutubePlayer } from '@/types/youtube-player';
+import type { MusicPlayer } from '@/types/music-player';
 import type {
   AlbumDetails,
   PlayerOverlays,
@@ -18,19 +18,19 @@ let songInfo: SongInfo = {} as SongInfo;
 export const getSongInfo = () => songInfo;
 
 window.ipcRenderer.on(
-  'ytmd:update-song-info',
+  'peard:update-song-info',
   (_, extractedSongInfo: SongInfo) => {
     songInfo = extractedSongInfo;
   },
 );
 
-// Used because 'loadeddata' or 'loadedmetadata' weren't firing on song start for some users (https://github.com/th-ch/youtube-music/issues/473)
-const srcChangedEvent = new CustomEvent('ytmd:src-changed');
+// Used because 'loadeddata' or 'loadedmetadata' weren't firing on song start for some users (https://github.com/pear-devs/pear-desktop/issues/473)
+const srcChangedEvent = new CustomEvent('peard:src-changed');
 
 export const setupSeekedListener = singleton(() => {
   document.querySelector('video')?.addEventListener('seeked', (v) => {
     if (v.target instanceof HTMLVideoElement) {
-      window.ipcRenderer.send('ytmd:seeked', v.target.currentTime);
+      window.ipcRenderer.send('peard:seeked', v.target.currentTime);
     }
   });
 });
@@ -40,7 +40,7 @@ export const setupTimeChangedListener = singleton(() => {
     for (const mutation of mutations) {
       const target = mutation.target as Node & { value: string };
       const numberValue = Number(target.value);
-      window.ipcRenderer.send('ytmd:time-changed', numberValue);
+      window.ipcRenderer.send('peard:time-changed', numberValue);
       songInfo.elapsedSeconds = numberValue;
     }
   });
@@ -52,9 +52,9 @@ export const setupTimeChangedListener = singleton(() => {
 
 export const setupRepeatChangedListener = singleton(() => {
   const repeatObserver = new MutationObserver((mutations) => {
-    // provided by YouTube Music
+    // provided by App
     window.ipcRenderer.send(
-      'ytmd:repeat-changed',
+      'peard:repeat-changed',
       (
         mutations[0].target as Node & {
           __dataHost: {
@@ -69,9 +69,9 @@ export const setupRepeatChangedListener = singleton(() => {
   });
 
   // Emit the initial value as well; as it's persistent between launches.
-  // provided by YouTube Music
+  // provided by App
   window.ipcRenderer.send(
-    'ytmd:repeat-changed',
+    'peard:repeat-changed',
     document
       .querySelector<
         HTMLElement & {
@@ -92,7 +92,7 @@ const LIKE_STATUS_ATTRIBUTE = 'like-status';
 export const setupLikeChangedListener = singleton(() => {
   const likeDislikeObserver = new MutationObserver((mutations) => {
     window.ipcRenderer.send(
-      'ytmd:like-changed',
+      'peard:like-changed',
       mapLikeStatus(
         (mutations[0].target as HTMLElement)?.getAttribute?.(
           LIKE_STATUS_ATTRIBUTE,
@@ -109,22 +109,22 @@ export const setupLikeChangedListener = singleton(() => {
 
     // Emit the initial value as well; as it's persistent between launches.
     window.ipcRenderer.send(
-      'ytmd:like-changed',
+      'peard:like-changed',
       mapLikeStatus(likeButtonRenderer.getAttribute?.(LIKE_STATUS_ATTRIBUTE)),
     );
   }
 });
 
-export const setupVolumeChangedListener = singleton((api: YoutubePlayer) => {
+export const setupVolumeChangedListener = singleton((api: MusicPlayer) => {
   document.querySelector('video')?.addEventListener('volumechange', () => {
-    window.ipcRenderer.send('ytmd:volume-changed', {
+    window.ipcRenderer.send('peard:volume-changed', {
       state: api.getVolume(),
       isMuted: api.isMuted(),
     });
   });
 
   // Emit the initial value as well; as it's persistent between launches.
-  window.ipcRenderer.send('ytmd:volume-changed', {
+  window.ipcRenderer.send('peard:volume-changed', {
     state: api.getVolume(),
     isMuted: api.isMuted(),
   });
@@ -134,13 +134,13 @@ export const setupShuffleChangedListener = singleton(() => {
   const playerBar = document.querySelector('ytmusic-player-bar');
 
   if (!playerBar) {
-    window.ipcRenderer.send('ytmd:shuffle-changed-supported', false);
+    window.ipcRenderer.send('peard:shuffle-changed-supported', false);
     return;
   }
 
   const observer = new MutationObserver(() => {
     window.ipcRenderer.send(
-      'ytmd:shuffle-changed',
+      'peard:shuffle-changed',
       (playerBar?.attributes.getNamedItem('shuffle-on') ?? null) !== null,
     );
   });
@@ -157,13 +157,13 @@ export const setupFullScreenChangedListener = singleton(() => {
   const playerBar = document.querySelector('ytmusic-player-bar');
 
   if (!playerBar) {
-    window.ipcRenderer.send('ytmd:fullscreen-changed-supported', false);
+    window.ipcRenderer.send('peard:fullscreen-changed-supported', false);
     return;
   }
 
   const observer = new MutationObserver(() => {
     window.ipcRenderer.send(
-      'ytmd:fullscreen-changed',
+      'peard:fullscreen-changed',
       (playerBar?.attributes.getNamedItem('player-fullscreened') ?? null) !==
         null,
     );
@@ -183,7 +183,7 @@ export const setupAutoPlayChangedListener = singleton(() => {
   );
 
   const observer = new MutationObserver(() => {
-    window.ipcRenderer.send('ytmd:autoplay-changed');
+    window.ipcRenderer.send('peard:autoplay-changed');
   });
 
   observer.observe(autoplaySlider!, {
@@ -193,36 +193,36 @@ export const setupAutoPlayChangedListener = singleton(() => {
   });
 });
 
-export const setupSongInfo = (api: YoutubePlayer) => {
-  window.ipcRenderer.on('ytmd:setup-time-changed-listener', () => {
+export const setupSongInfo = (api: MusicPlayer) => {
+  window.ipcRenderer.on('peard:setup-time-changed-listener', () => {
     setupTimeChangedListener();
   });
 
-  window.ipcRenderer.on('ytmd:setup-like-changed-listener', () => {
+  window.ipcRenderer.on('peard:setup-like-changed-listener', () => {
     setupLikeChangedListener();
   });
 
-  window.ipcRenderer.on('ytmd:setup-repeat-changed-listener', () => {
+  window.ipcRenderer.on('peard:setup-repeat-changed-listener', () => {
     setupRepeatChangedListener();
   });
 
-  window.ipcRenderer.on('ytmd:setup-volume-changed-listener', () => {
+  window.ipcRenderer.on('peard:setup-volume-changed-listener', () => {
     setupVolumeChangedListener(api);
   });
 
-  window.ipcRenderer.on('ytmd:setup-shuffle-changed-listener', () => {
+  window.ipcRenderer.on('peard:setup-shuffle-changed-listener', () => {
     setupShuffleChangedListener();
   });
 
-  window.ipcRenderer.on('ytmd:setup-fullscreen-changed-listener', () => {
+  window.ipcRenderer.on('peard:setup-fullscreen-changed-listener', () => {
     setupFullScreenChangedListener();
   });
 
-  window.ipcRenderer.on('ytmd:setup-autoplay-changed-listener', () => {
+  window.ipcRenderer.on('peard:setup-autoplay-changed-listener', () => {
     setupAutoPlayChangedListener();
   });
 
-  window.ipcRenderer.on('ytmd:setup-seeked-listener', () => {
+  window.ipcRenderer.on('peard:setup-seeked-listener', () => {
     setupSeekedListener();
   });
 
@@ -231,7 +231,7 @@ export const setupSongInfo = (api: YoutubePlayer) => {
       e.target instanceof HTMLVideoElement &&
       Math.round(e.target.currentTime) > 0
     ) {
-      window.ipcRenderer.send('ytmd:play-or-paused', {
+      window.ipcRenderer.send('peard:play-or-paused', {
         isPaused: status === 'pause',
         elapsedSeconds: Math.floor(e.target.currentTime),
       });
@@ -326,7 +326,7 @@ export const setupSongInfo = (api: YoutubePlayer) => {
         lengthSeconds: video.duration,
         loading: true,
 
-        ytmdWatchNextResponse: watchNextResponse,
+        ['\u0079\u0074\u006d\u0064WatchNextResponse']: watchNextResponse,
       } satisfies VideoDataChangeValue);
     }
   }
@@ -336,14 +336,15 @@ export const setupSongInfo = (api: YoutubePlayer) => {
 
     let playerOverlay: PlayerOverlays | undefined;
 
-    if (!videoData.ytmdWatchNextResponse) {
+    if (!videoData['\u0079\u0074\u006d\u0064WatchNextResponse']) {
       playerOverlay = (
         Object.entries(videoData).find(
           ([, value]) => value && Object.hasOwn(value, 'playerOverlays'),
         ) as [string, AlbumDetails | undefined]
       )?.[1]?.playerOverlays;
     } else {
-      playerOverlay = videoData.ytmdWatchNextResponse?.playerOverlays;
+      playerOverlay =
+        videoData['\u0079\u0074\u006d\u0064WatchNextResponse']?.playerOverlays;
     }
     data.videoDetails.album =
       playerOverlay?.playerOverlayRenderer?.browserMediaSession?.browserMediaSessionRenderer?.album?.runs?.at(
@@ -352,6 +353,6 @@ export const setupSongInfo = (api: YoutubePlayer) => {
     data.videoDetails.elapsedSeconds = 0;
     data.videoDetails.isPaused = false;
 
-    window.ipcRenderer.send('ytmd:video-src-changed', data);
+    window.ipcRenderer.send('peard:video-src-changed', data);
   }
 };

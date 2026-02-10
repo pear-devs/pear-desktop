@@ -1,5 +1,7 @@
 import { HANGUL_FILLER } from './constants';
 
+import { APPLICATION_NAME } from '@/i18n';
+
 import type { GatewayActivityButton } from 'discord-api-types/v10';
 import type { SongInfo } from '@/providers/song-info';
 import type { DiscordPluginConfig } from './index';
@@ -18,6 +20,27 @@ export const truncateString = (str: string, length: number): string => {
 };
 
 /**
+ * Sanitizes a string for Discord Rich Presence activity, ensuring it meets length requirements.
+ * @param input - The string to sanitize.
+ * @param fallback - A fallback string to use if the input is empty or whitespace. Defaults to 'undefined'.
+ * @returns The sanitized string, compliant with Discord's requirements.
+ */
+export function sanitizeActivityText(input: string | undefined, fallback: string = 'undefined'): string {
+  const text = (input && input.trim()) ? input.trim() : fallback.trim();
+  let safeString = truncateString(text, 128);
+
+  if (safeString.length === 0) {
+    return fallback;
+  }
+
+  if (safeString.length < 2) {
+    safeString = safeString.padEnd(2, '⠀'); // change if necessary
+  }
+
+  return safeString;
+}
+
+/**
  * Builds the array of buttons for the Discord Rich Presence activity.
  * @param config - The plugin configuration.
  * @param songInfo - The current song information.
@@ -28,16 +51,21 @@ export const buildDiscordButtons = (
   songInfo: SongInfo,
 ): GatewayActivityButton[] | undefined => {
   const buttons: GatewayActivityButton[] = [];
-  if (config.playOnYouTubeMusic && songInfo.url) {
+  if (
+    config[
+      'playOn\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063'
+    ] &&
+    songInfo.url
+  ) {
     buttons.push({
-      label: 'Play on YouTube Music',
+      label: `Play on ${APPLICATION_NAME}`,
       url: songInfo.url,
     });
   }
   if (!config.hideGitHubButton) {
     buttons.push({
       label: 'View App On GitHub',
-      url: 'https://github.com/th-ch/youtube-music',
+      url: 'https://github.com/pear-devs/pear-desktop',
     });
   }
   return buttons.length ? buttons : undefined;

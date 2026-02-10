@@ -1,5 +1,5 @@
 import { createPlugin } from '@/utils';
-import { t } from '@/i18n';
+import { APPLICATION_NAME, t } from '@/i18n';
 
 import backend from './back';
 import renderer, {
@@ -7,7 +7,7 @@ import renderer, {
   type LanguageOptions,
 } from './renderer';
 
-import type { YoutubePlayer } from '@/types/youtube-player';
+import type { MusicPlayer } from '@/types/music-player';
 
 export default createPlugin<
   unknown,
@@ -15,14 +15,17 @@ export default createPlugin<
   {
     captionsSettingsButton?: HTMLElement;
     captionTrackList: LanguageOptions[] | null;
-    api: YoutubePlayer | null;
+    api: MusicPlayer | null;
     config: CaptionsSelectorConfig | null;
     videoChangeListener: () => void;
   },
   CaptionsSelectorConfig
 >({
   name: () => t('plugins.captions-selector.name'),
-  description: () => t('plugins.captions-selector.description'),
+  description: () =>
+    t('plugins.captions-selector.description', {
+      applicationName: APPLICATION_NAME,
+    }),
   config: {
     enabled: false,
     disableCaptions: false,

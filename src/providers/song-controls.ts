@@ -39,62 +39,62 @@ const parseStringFromArgsType = (args: ArgsType<string>) => {
 export const getSongControls = (win: BrowserWindow) => {
   return {
     // Playback
-    previous: () => win.webContents.send('ytmd:previous-video'),
-    next: () => win.webContents.send('ytmd:next-video'),
-    play: () => win.webContents.send('ytmd:play'),
-    pause: () => win.webContents.send('ytmd:pause'),
-    playPause: () => win.webContents.send('ytmd:toggle-play'),
-    like: () => win.webContents.send('ytmd:update-like', LikeType.Like),
-    dislike: () => win.webContents.send('ytmd:update-like', LikeType.Dislike),
+    previous: () => win.webContents.send('peard:previous-video'),
+    next: () => win.webContents.send('peard:next-video'),
+    play: () => win.webContents.send('peard:play'),
+    pause: () => win.webContents.send('peard:pause'),
+    playPause: () => win.webContents.send('peard:toggle-play'),
+    like: () => win.webContents.send('peard:update-like', LikeType.Like),
+    dislike: () => win.webContents.send('peard:update-like', LikeType.Dislike),
     seekTo: (seconds: ArgsType<number>) => {
       const secondsNumber = parseNumberFromArgsType(seconds);
       if (secondsNumber !== null) {
-        win.webContents.send('ytmd:seek-to', seconds);
+        win.webContents.send('peard:seek-to', seconds);
       }
     },
     goBack: (seconds: ArgsType<number>) => {
       const secondsNumber = parseNumberFromArgsType(seconds);
       if (secondsNumber !== null) {
-        win.webContents.send('ytmd:seek-by', -secondsNumber);
+        win.webContents.send('peard:seek-by', -secondsNumber);
       }
     },
     goForward: (seconds: ArgsType<number>) => {
       const secondsNumber = parseNumberFromArgsType(seconds);
       if (secondsNumber !== null) {
-        win.webContents.send('ytmd:seek-by', seconds);
+        win.webContents.send('peard:seek-by', seconds);
       }
     },
     requestShuffleInformation: () => {
-      win.webContents.send('ytmd:get-shuffle');
+      win.webContents.send('peard:get-shuffle');
     },
-    shuffle: () => win.webContents.send('ytmd:shuffle'),
+    shuffle: () => win.webContents.send('peard:shuffle'),
     switchRepeat: (n: ArgsType<number> = 1) => {
       const repeat = parseNumberFromArgsType(n);
       if (repeat !== null) {
-        win.webContents.send('ytmd:switch-repeat', n);
+        win.webContents.send('peard:switch-repeat', n);
       }
     },
     // General
     setVolume: (volume: ArgsType<number>) => {
       const volumeNumber = parseNumberFromArgsType(volume);
       if (volumeNumber !== null) {
-        win.webContents.send('ytmd:update-volume', volume);
+        win.webContents.send('peard:update-volume', volume);
       }
     },
     setFullscreen: (isFullscreen: ArgsType<boolean>) => {
       const isFullscreenValue = parseBooleanFromArgsType(isFullscreen);
       if (isFullscreenValue !== null) {
         win.setFullScreen(isFullscreenValue);
-        win.webContents.send('ytmd:click-fullscreen-button', isFullscreenValue);
+        win.webContents.send('peard:click-fullscreen-button', isFullscreenValue);
       }
     },
     requestFullscreenInformation: () => {
-      win.webContents.send('ytmd:get-fullscreen');
+      win.webContents.send('peard:get-fullscreen');
     },
     requestQueueInformation: () => {
-      win.webContents.send('ytmd:get-queue');
+      win.webContents.send('peard:get-queue');
     },
-    muteUnmute: () => win.webContents.send('ytmd:toggle-mute'),
+    muteUnmute: () => win.webContents.send('peard:toggle-mute'),
     openSearchBox: () => {
       win.webContents.sendInputEvent({
         type: 'keyDown',
@@ -107,7 +107,7 @@ export const getSongControls = (win: BrowserWindow) => {
       if (videoIdValue === null) return;
 
       win.webContents.send(
-        'ytmd:add-to-queue',
+        'peard:add-to-queue',
         videoIdValue,
         queueInsertPosition,
       );
@@ -120,28 +120,28 @@ export const getSongControls = (win: BrowserWindow) => {
       const toIndexValue = parseNumberFromArgsType(toIndex);
       if (fromIndexValue === null || toIndexValue === null) return;
 
-      win.webContents.send('ytmd:move-in-queue', fromIndexValue, toIndexValue);
+      win.webContents.send('peard:move-in-queue', fromIndexValue, toIndexValue);
     },
     removeSongFromQueue: (index: ArgsType<number>) => {
       const indexValue = parseNumberFromArgsType(index);
       if (indexValue === null) return;
 
-      win.webContents.send('ytmd:remove-from-queue', indexValue);
+      win.webContents.send('peard:remove-from-queue', indexValue);
     },
     setQueueIndex: (index: ArgsType<number>) => {
       const indexValue = parseNumberFromArgsType(index);
       if (indexValue === null) return;
 
-      win.webContents.send('ytmd:set-queue-index', indexValue);
+      win.webContents.send('peard:set-queue-index', indexValue);
     },
-    clearQueue: () => win.webContents.send('ytmd:clear-queue'),
+    clearQueue: () => win.webContents.send('peard:clear-queue'),
 
     search: (query: string, params?: string, continuation?: string) =>
       new Promise((resolve) => {
-        ipcMain.once('ytmd:search-results', (_, result) => {
+        ipcMain.once('peard:search-results', (_, result) => {
           resolve(result as string);
         });
-        win.webContents.send('ytmd:search', query, params, continuation);
+        win.webContents.send('peard:search', query, params, continuation);
       }),
   };
 };

@@ -76,7 +76,7 @@ export default createPlugin({
 
     const { apiURL, categories } = config;
 
-    ipc.on('ytmd:video-src-changed', async (data: GetPlayerResponse) => {
+    ipc.on('peard:video-src-changed', async (data: GetPlayerResponse) => {
       const segments = await fetchSegments(
         apiURL,
         categories,

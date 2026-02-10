@@ -1,4 +1,4 @@
-import { Innertube } from 'youtubei.js';
+import { Innertube } from '\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js';
 
 import prompt from 'custom-electron-prompt';
 

@@ -154,7 +154,7 @@
                 "label": "Mukautettu ikkunan otsikko",
                 "prompt": {
                   "label": "Syötä mukautettu ikkunan otsikko: (jätä tyhjäksi poistaaksesi päältä)",
-                  "placeholder": "Esimerkki: YouTube Music"
+                  "placeholder": "Esimerkki: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Uudelleen käynnistä appi",
       "show": "Näytä ikkuna",
       "tooltip": {
-        "default": "Youtube Music",
-        "with-song-info": "Youtube Music {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Tunnelmallinen Tila"
     },
     "amuse": {
-      "description": "Lisää YouTube Music tuen Amusen nyt soitetaan -widgetille, kehittäjänä 6K Labs",
+      "description": "Lisää {{applicationName}} tuen Amusen nyt soitetaan -widgetille, kehittäjänä 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API-palvelin on päällä. Käytä GET /query-rajapintaa saadaksesi kappaleen tiedot."
@@ -369,11 +369,11 @@
       "name": "Sumenna Siirtymäpalkki"
     },
     "bypass-age-restrictions": {
-      "description": "Ohita YouTuben iän vahvistus",
+      "description": "Ohita Music Player iän vahvistus",
       "name": "Ohita Ikään Perustuvat Rajoitukset"
     },
     "captions-selector": {
-      "description": "YouTube Music ääniraitojen tekstitysten valitsin",
+      "description": "{{applicationName}} ääniraitojen tekstitysten valitsin",
       "menu": {
         "autoload": "Valitse automaattisesti viimeksi käytetty tekstitys",
         "disable-captions": "Tekstitys ei oletusarvoisesti käytössä"
@@ -443,7 +443,7 @@
         "disconnected": "Yhteys katkaistu",
         "hide-duration-left": "Piilota kappaleen jäljellä oleva kesto",
         "hide-github-button": "Piilota \"linkki GitHubiin\" -nappi",
-        "play-on-youtube-music": "Kuuntele palvelussa YouTube Music",
+        "play-on-application": "Kuuntele palvelussa {{applicationName}}",
         "set-inactivity-timeout": "Aseta toimettomuuden aikakatkaisu"
       },
       "name": "Discord Aktiviteetti (Rich Presence)",

@@ -154,7 +154,7 @@
                 "label": "Saját ablak cím",
                 "prompt": {
                   "label": "Kérem az egyéni ablak címét: (hagyd üresen a kikapcsoláshoz)",
-                  "placeholder": "Példa: Youtube Music"
+                  "placeholder": "Példa: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "YT Music újraindítása",
       "show": "Ablak megjelenítése",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Ambient mód"
     },
     "amuse": {
-      "description": "Hozzáadja a YouTube Music támogatását az Amuse \"now playing\" widgethez a 6K Labs által",
+      "description": "Hozzáadja a {{applicationName}} támogatását az Amuse \"now playing\" widgethez a 6K Labs által",
       "name": "Amuse",
       "response": {
         "query": "Az Amuse API szerver fut. Használja a GET /query kérést a dalinformációk lekéréséhez."
@@ -342,11 +342,23 @@
     },
     "auth-proxy-adapter": {
       "menu": {
+        "disable": "Proxy adapder kikapcsolása",
+        "enable": "Proxy adapter bekapcsolása",
         "hostname": {
           "label": "Gazdanév"
         },
         "port": {
           "label": "Port"
+        }
+      },
+      "prompt": {
+        "hostname": {
+          "label": "Adjon meg egy hosztnevet a lokális proxy szerverhez (újraindítást igényel):",
+          "title": "Proxy hosztnév"
+        },
+        "port": {
+          "label": "Adjon meg egy portot a lokális proxy szerverhez (újraindátást igényel):",
+          "title": "Proxy Port"
         }
       }
     },
@@ -355,11 +367,11 @@
       "name": "Navigációs sáv elmosása"
     },
     "bypass-age-restrictions": {
-      "description": "A YouTube korellenőrzését kihagyja, ezáltal nem kel meg erősíteni a zene meghallgatása elött. (Automatikusan megerősítve lesz.)",
+      "description": "A Music Player korellenőrzését kihagyja, ezáltal nem kel meg erősíteni a zene meghallgatása elött. (Automatikusan megerősítve lesz.)",
       "name": "Korellenőrzés kihagyása"
     },
     "captions-selector": {
-      "description": "Felirat választó a YouTube Music zenékhez",
+      "description": "Felirat választó a {{applicationName}} zenékhez",
       "menu": {
         "autoload": "Automatikusan kiválasztja az utoljára használt feliratot",
         "disable-captions": "Alapértelmezetten nincsenek feliratok"
@@ -441,14 +453,14 @@
         "disconnected": "Nincs Kapcsolódva",
         "hide-duration-left": "Hátralévő idő elrejtése",
         "hide-github-button": "GitHub url gombjának elrejtése",
-        "play-on-youtube-music": "Lejátszás a YouTube Music-on",
+        "play-on-application": "Lejátszás a {{applicationName}}-on",
         "set-inactivity-timeout": "Inaktivitási időkorlát beállítása",
         "set-status-display-type": {
           "label": "Tevékenység szöveg",
           "submenu": {
             "artist": "Hallgatja: {artist}",
-            "title": "Hallgatja: {song title}",
-            "youtube-music": "Hallgatja: YouTube Music"
+            "application": "Hallgatja: {{applicationName}}",
+            "title": "Hallgatja: {song title}"
           }
         }
       },
@@ -718,7 +730,7 @@
         }
       },
       "description": "Lehetővé teszi a videó minőségének megváltoztatását egy gombbal a videó fedvényen",
-      "name": "Videóminőség modosító"
+      "name": "Videóminőség módosító"
     },
     "scrobbler": {
       "description": "Scrobbling támogatás hozzáadása (pl. last.fm, ListenBrainz)",

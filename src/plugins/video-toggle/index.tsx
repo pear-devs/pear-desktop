@@ -325,7 +325,7 @@ export default createPlugin({
           if (video) {
             video.style.height = 'auto';
           }
-          video?.addEventListener('ytmd:src-changed', videoStarted);
+          video?.addEventListener('peard:src-changed', videoStarted);
           observeThumbnail();
           videoStarted();
           switch (config.align) {

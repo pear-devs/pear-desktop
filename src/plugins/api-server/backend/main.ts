@@ -1,3 +1,7 @@
+import { createServer as createHttpServer } from 'node:http';
+import { createServer as createHttpsServer } from 'node:https';
+import { readFileSync } from 'node:fs';
+
 import { jwt } from 'hono/jwt';
 import { OpenAPIHono as Hono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
@@ -10,6 +14,8 @@ import { createBackend } from '@/utils';
 
 import { JWTPayloadSchema } from './scheme';
 import { registerAuth, registerControl, registerWebsocket } from './routes';
+
+import { APPLICATION_NAME } from '@/i18n';
 
 import { type APIServerConfig, AuthStrategy } from '../config';
 
@@ -29,41 +35,45 @@ export const backend = createBackend<BackendType, APIServerConfig>({
       this.songInfo = songInfo;
     });
 
-    ctx.ipc.on('ytmd:player-api-loaded', () => {
-      ctx.ipc.send('ytmd:setup-seeked-listener');
-      ctx.ipc.send('ytmd:setup-time-changed-listener');
-      ctx.ipc.send('ytmd:setup-repeat-changed-listener');
-      ctx.ipc.send('ytmd:setup-like-changed-listener');
-      ctx.ipc.send('ytmd:setup-volume-changed-listener');
-      ctx.ipc.send('ytmd:setup-shuffle-changed-listener');
+    ctx.ipc.on('peard:player-api-loaded', () => {
+      ctx.ipc.send('peard:setup-seeked-listener');
+      ctx.ipc.send('peard:setup-time-changed-listener');
+      ctx.ipc.send('peard:setup-repeat-changed-listener');
+      ctx.ipc.send('peard:setup-like-changed-listener');
+      ctx.ipc.send('peard:setup-volume-changed-listener');
+      ctx.ipc.send('peard:setup-shuffle-changed-listener');
     });
 
     ctx.ipc.on(
-      'ytmd:repeat-changed',
+      'peard:repeat-changed',
       (mode: RepeatMode) => (this.currentRepeatMode = mode),
     );
 
     ctx.ipc.on(
-      'ytmd:volume-changed',
+      'peard:volume-changed',
       (newVolumeState: VolumeState) => (this.volumeState = newVolumeState),
     );
 
-    this.run(config.hostname, config.port);
+    this.run(config);
   },
   stop() {
     this.end();
   },
   onConfigChange(config) {
+    const old = this.oldConfig;
     if (
-      this.oldConfig?.hostname === config.hostname &&
-      this.oldConfig?.port === config.port
+      old?.hostname === config.hostname &&
+      old?.port === config.port &&
+      old?.useHttps === config.useHttps &&
+      old?.certPath === config.certPath &&
+      old?.keyPath === config.keyPath
     ) {
       this.oldConfig = config;
       return;
     }
 
     this.end();
-    this.run(config.hostname, config.port);
+    this.run(config);
     this.oldConfig = config;
   },
 
@@ -138,7 +148,7 @@ export const backend = createBackend<BackendType, APIServerConfig>({
       openapi: '3.1.0',
       info: {
         version: '1.0.0',
-        title: 'Youtube Music API Server',
+        title: `${APPLICATION_NAME} API Server`,
         description:
           'Note: You need to get an access token using the `/auth/{id}` endpoint first to call any API endpoints under `/api`.',
       },
@@ -153,15 +163,30 @@ export const backend = createBackend<BackendType, APIServerConfig>({
 
     this.injectWebSocket = ws.injectWebSocket.bind(this);
   },
-  run(hostname, port) {
+  run(config) {
     if (!this.app) return;
 
     try {
-      this.server = serve({
-        fetch: this.app.fetch.bind(this.app),
-        port,
-        hostname,
-      });
+      const serveOptions =
+        config.useHttps && config.certPath && config.keyPath
+          ? {
+              fetch: this.app.fetch.bind(this.app),
+              port: config.port,
+              hostname: config.hostname,
+              createServer: createHttpsServer,
+              serverOptions: {
+                key: readFileSync(config.keyPath),
+                cert: readFileSync(config.certPath),
+              },
+            }
+          : {
+              fetch: this.app.fetch.bind(this.app),
+              port: config.port,
+              hostname: config.hostname,
+              createServer: createHttpServer,
+            };
+
+      this.server = serve(serveOptions);
 
       if (this.injectWebSocket && this.server) {
         this.injectWebSocket(this.server);

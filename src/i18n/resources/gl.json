@@ -53,8 +53,158 @@
           "later": "Despois",
           "restart-now": "Reiniciar Agora"
         },
-        "detail": "O plugin \"{{pluginName}}\" precisa dun reinicio para tomar efecto"
+        "detail": "O plugin \"{{pluginName}}\" precisa dun reinicio para tomar efecto",
+        "message": "\"{{pluginName}}\" precisa reiniciar",
+        "title": "Requírese reinicio"
+      },
+      "unresponsive": {
+        "buttons": {
+          "quit": "Saír",
+          "relaunch": "Lanzar de novo",
+          "wait": "Agardar"
+        },
+        "detail": "Desculpa o inconveniente! Por favor escolle que facer:",
+        "message": "A aplicación non responde",
+        "title": "A xanela non responde"
+      },
+      "update-available": {
+        "buttons": {
+          "disable": "Desactivar actualizacións",
+          "download": "Descarregar",
+          "ok": "OK"
+        },
+        "detail": "Está dispoñíbel unha nova versión que se pode descarregar de {{downloadLink}}",
+        "message": "Hai una nova versión dispoñíbel",
+        "title": "Actualización dispoñíbel"
       }
+    },
+    "menu": {
+      "about": "Sobre",
+      "navigation": {
+        "label": "Navegación",
+        "submenu": {
+          "copy-current-url": "Copiar o URL actual",
+          "go-back": "Atrás",
+          "go-forward": "Adiante",
+          "quit": "Saír",
+          "restart": "Reiniciar a aplicación"
+        }
+      },
+      "options": {
+        "label": "Opcións",
+        "submenu": {
+          "advanced-options": {
+            "label": "Opcións avanzadas",
+            "submenu": {
+              "auto-reset-app-cache": "Reiniciar a caché cando a aplicación arrinque",
+              "disable-hardware-acceleration": "Desactivar a aceleración hardware",
+              "edit-config-json": "Editar config.json",
+              "override-user-agent": "Substituír o User-Agent",
+              "restart-on-config-changes": "Reiniciar ao alterar a configuración",
+              "set-proxy": {
+                "label": "Configurar o proxy",
+                "prompt": {
+                  "label": "Introducir o enderezo do proxy (deixar baleiro para desactivalo)",
+                  "placeholder": "Exemplo: SOCKS5://127.0.0.1:9999",
+                  "title": "Configurar o proxy"
+                }
+              },
+              "toggle-dev-tools": "Activar ou desactivar as DevTools"
+            }
+          },
+          "always-on-top": "Sempre en primeiro plano",
+          "auto-update": "Actualización automática",
+          "hide-menu": {
+            "dialog": {
+              "message": "O menú ocultarase no próximo inicio; use [Alt] para mostralo (ou a tecla [`] se emprega o menú integrado)",
+              "title": "Ocultar Menú activado"
+            },
+            "label": "Ocultar Menú"
+          },
+          "language": {
+            "dialog": {
+              "message": "A lingua hase mudar despois do reinicio",
+              "title": "Mudouse a lingua"
+            },
+            "label": "Lingua",
+            "submenu": {
+              "to-help-translate": "Quere axudar a traducir? Prema aquí"
+            }
+          },
+          "resume-on-start": "Retomar a última canción ao iniciar a aplicación",
+          "single-instance-lock": "Bloqueo de instancia única",
+          "start-at-login": "Iniciar co inicio de sesión",
+          "starting-page": {
+            "label": "Páxina de inicio",
+            "unset": "Sen definir"
+          },
+          "tray": {
+            "label": "Bandexa",
+            "submenu": {
+              "disabled": "Desactivado",
+              "enabled-and-hide-app": "Activado e ocultar a aplicación",
+              "enabled-and-show-app": "Activado e mostrar a aplicación",
+              "play-pause-on-click": "Reproducir/Pausar ao premer"
+            }
+          },
+          "visual-tweaks": {
+            "label": "Axustes visuais",
+            "submenu": {
+              "custom-window-title": {
+                "label": "Título de xanela personalizado",
+                "prompt": {
+                  "label": "Introduza o título personalizado da xanela (deixe baleiro para desactivala)",
+                  "placeholder": "Exemplo: {{applicationName}}"
+                }
+              },
+              "like-buttons": {
+                "default": "Predeterminado",
+                "force-show": "Forzar a visualización",
+                "hide": "Agochar",
+                "label": "Botóns de Gústame"
+              },
+              "remove-upgrade-button": "Retirar o botón de anovación",
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "Cancelar",
+                    "remove": "Retirar"
+                  },
+                  "remove-theme": "Estás certo que queres retirar o tema personalizado?",
+                  "remove-theme-message": "Isto ha retirar o tema personalizado"
+                },
+                "label": "Tema",
+                "submenu": {
+                  "import-css-file": "Importar arquivo CSS personalizado",
+                  "no-theme": "Sen tema"
+                }
+              }
+            }
+          }
+        }
+      },
+      "plugins": {
+        "enabled": "Activado",
+        "label": "Complementos",
+        "new": "NOVO"
+      },
+      "view": {
+        "label": "Vista",
+        "submenu": {
+          "force-reload": "Forzar recarga",
+          "reload": "Recargar",
+          "reset-zoom": "Tamaño real",
+          "toggle-fullscreen": "Alternar Pantalla Completa",
+          "zoom-in": "Achegarse",
+          "zoom-out": "Afastarse"
+        }
+      }
+    },
+    "tray": {
+      "next": "Seguinte",
+      "play-pause": "Reproducir/Pausar",
+      "previous": "Anterior",
+      "quit": "Saír"
     }
   }
 }

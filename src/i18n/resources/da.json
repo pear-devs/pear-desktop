@@ -154,7 +154,7 @@
                 "label": "Tilpasset vindues titel",
                 "prompt": {
                   "label": "Indtast tilpasset vindues titel: (lad være top for deaktiveret)",
-                  "placeholder": "Eksempel: YouTube Music"
+                  "placeholder": "Eksempel: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -206,8 +206,8 @@
       "restart": "Genstart app",
       "show": "Vis vindue",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },

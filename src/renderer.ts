@@ -1,5 +1,9 @@
 import i18next from 'i18next';
 
+import { setTheme } from 'mdui/functions/setTheme.js';
+import 'mdui/mdui.css';
+import 'mdui';
+
 import { startingPages } from './providers/extracted-data';
 import { setupSongInfo } from './providers/song-info-front';
 import {
@@ -19,13 +23,15 @@ import {
 } from '@/utils/trusted-types';
 
 import type { PluginConfig } from '@/types/plugins';
-import type { YoutubePlayer } from '@/types/youtube-player';
+import type { MusicPlayer } from '@/types/music-player';
 import type { QueueElement } from '@/types/queue';
-import type { QueueResponse } from '@/types/youtube-music-desktop-internal';
-import type { YouTubeMusicAppElement } from '@/types/youtube-music-app-element';
+import type { QueueResponse } from '@/types/music-player-desktop-internal';
+import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
 import type { SearchBoxElement } from '@/types/search-box-element';
 
-let api: (Element & YoutubePlayer) | null = null;
+setTheme('dark');
+
+let api: (Element & MusicPlayer) | null = null;
 let isPluginLoaded = false;
 let isApiLoaded = false;
 let firstDataLoaded = false;
@@ -64,29 +70,29 @@ async function onApiLoaded() {
       window.dispatchEvent(new Event('resize')),
     );
 
-  window.ipcRenderer.on('ytmd:previous-video', () => {
+  window.ipcRenderer.on('peard:previous-video', () => {
     document
       .querySelector<HTMLElement>('.previous-button.ytmusic-player-bar')
       ?.click();
   });
-  window.ipcRenderer.on('ytmd:next-video', () => {
+  window.ipcRenderer.on('peard:next-video', () => {
     document
       .querySelector<HTMLElement>('.next-button.ytmusic-player-bar')
       ?.click();
   });
-  window.ipcRenderer.on('ytmd:play', (_) => {
+  window.ipcRenderer.on('peard:play', (_) => {
     api?.playVideo();
   });
-  window.ipcRenderer.on('ytmd:pause', (_) => {
+  window.ipcRenderer.on('peard:pause', (_) => {
     api?.pauseVideo();
   });
-  window.ipcRenderer.on('ytmd:toggle-play', (_) => {
+  window.ipcRenderer.on('peard:toggle-play', (_) => {
     if (api?.getPlayerState() === 2) api?.playVideo();
     else api?.pauseVideo();
   });
-  window.ipcRenderer.on('ytmd:seek-to', (_, t: number) => api!.seekTo(t));
-  window.ipcRenderer.on('ytmd:seek-by', (_, t: number) => api!.seekBy(t));
-  window.ipcRenderer.on('ytmd:shuffle', () => {
+  window.ipcRenderer.on('peard:seek-to', (_, t: number) => api!.seekTo(t));
+  window.ipcRenderer.on('peard:seek-by', (_, t: number) => api!.seekBy(t));
+  window.ipcRenderer.on('peard:shuffle', () => {
     document
       .querySelector<
         HTMLElement & { queue: { shuffle: () => void } }
@@ -103,12 +109,12 @@ async function onApiLoaded() {
     return isShuffled !== null;
   };
 
-  window.ipcRenderer.on('ytmd:get-shuffle', () => {
-    window.ipcRenderer.send('ytmd:get-shuffle-response', isShuffled());
+  window.ipcRenderer.on('peard:get-shuffle', () => {
+    window.ipcRenderer.send('peard:get-shuffle-response', isShuffled());
   });
 
   window.ipcRenderer.on(
-    'ytmd:update-like',
+    'peard:update-like',
     (_, status: 'LIKE' | 'DISLIKE' = 'LIKE') => {
       document
         .querySelector<
@@ -117,7 +123,7 @@ async function onApiLoaded() {
         ?.updateLikeStatus(status);
     },
   );
-  window.ipcRenderer.on('ytmd:switch-repeat', (_, repeat = 1) => {
+  window.ipcRenderer.on('peard:switch-repeat', (_, repeat = 1) => {
     for (let i = 0; i < repeat; i++) {
       document
         .querySelector<
@@ -126,7 +132,7 @@ async function onApiLoaded() {
         ?.onRepeatButtonClick();
     }
   });
-  window.ipcRenderer.on('ytmd:update-volume', (_, volume: number) => {
+  window.ipcRenderer.on('peard:update-volume', (_, volume: number) => {
     document
       .querySelector<
         HTMLElement & { updateVolume: (volume: number) => void }
@@ -156,18 +162,18 @@ async function onApiLoaded() {
     }
   };
 
-  window.ipcRenderer.on('ytmd:get-fullscreen', () => {
-    window.ipcRenderer.send('ytmd:set-fullscreen', isFullscreen());
+  window.ipcRenderer.on('peard:get-fullscreen', () => {
+    window.ipcRenderer.send('peard:set-fullscreen', isFullscreen());
   });
 
   window.ipcRenderer.on(
-    'ytmd:click-fullscreen-button',
+    'peard:click-fullscreen-button',
     (_, fullscreen: boolean | undefined) => {
       clickFullscreenButton(fullscreen ?? false);
     },
   );
 
-  window.ipcRenderer.on('ytmd:toggle-mute', (_) => {
+  window.ipcRenderer.on('peard:toggle-mute', (_) => {
     document
       .querySelector<
         HTMLElement & { onVolumeClick: () => void }
@@ -175,9 +181,9 @@ async function onApiLoaded() {
       ?.onVolumeClick();
   });
 
-  window.ipcRenderer.on('ytmd:get-queue', () => {
+  window.ipcRenderer.on('peard:get-queue', () => {
     const queue = document.querySelector<QueueElement>('#queue');
-    window.ipcRenderer.send('ytmd:get-queue-response', {
+    window.ipcRenderer.send('peard:get-queue-response', {
       items: queue?.queue.getItems(),
       autoPlaying: queue?.queue.autoPlaying,
       continuation: queue?.queue.continuation,
@@ -185,10 +191,10 @@ async function onApiLoaded() {
   });
 
   window.ipcRenderer.on(
-    'ytmd:add-to-queue',
+    'peard:add-to-queue',
     (_, videoId: string, queueInsertPosition: string) => {
       const queue = document.querySelector<QueueElement>('#queue');
-      const app = document.querySelector<YouTubeMusicAppElement>('ytmusic-app');
+      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
       if (!app) return;
 
       const store = queue?.queue.store.store;
@@ -240,7 +246,7 @@ async function onApiLoaded() {
     },
   );
   window.ipcRenderer.on(
-    'ytmd:move-in-queue',
+    'peard:move-in-queue',
     (_, fromIndex: number, toIndex: number) => {
       const queue = document.querySelector<QueueElement>('#queue');
       queue?.dispatch({
@@ -252,21 +258,21 @@ async function onApiLoaded() {
       });
     },
   );
-  window.ipcRenderer.on('ytmd:remove-from-queue', (_, index: number) => {
+  window.ipcRenderer.on('peard:remove-from-queue', (_, index: number) => {
     const queue = document.querySelector<QueueElement>('#queue');
     queue?.dispatch({
       type: 'REMOVE_ITEM',
       payload: index,
     });
   });
-  window.ipcRenderer.on('ytmd:set-queue-index', (_, index: number) => {
+  window.ipcRenderer.on('peard:set-queue-index', (_, index: number) => {
     const queue = document.querySelector<QueueElement>('#queue');
     queue?.dispatch({
       type: 'SET_INDEX',
       payload: index,
     });
   });
-  window.ipcRenderer.on('ytmd:clear-queue', () => {
+  window.ipcRenderer.on('peard:clear-queue', () => {
     const queue = document.querySelector<QueueElement>('#queue');
     queue?.queue.store.store.dispatch({
       type: 'SET_PLAYER_PAGE_INFO',
@@ -278,9 +284,9 @@ async function onApiLoaded() {
   });
 
   window.ipcRenderer.on(
-    'ytmd:search',
+    'peard:search',
     async (_, query: string, params?: string, continuation?: string) => {
-      const app = document.querySelector<YouTubeMusicAppElement>('ytmusic-app');
+      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
       const searchBox =
         document.querySelector<SearchBoxElement>('ytmusic-search-box');
 
@@ -301,7 +307,7 @@ async function onApiLoaded() {
         suggestStats: searchBox.getSearchboxStats(),
       });
 
-      window.ipcRenderer.send('ytmd:search-results', result);
+      window.ipcRenderer.send('peard:search-results', result);
     },
   );
 
@@ -328,7 +334,7 @@ async function onApiLoaded() {
 
   const audioCanPlayEventDispatcher = () => {
     document.dispatchEvent(
-      new CustomEvent('ytmd:audio-can-play', {
+      new CustomEvent('peard:audio-can-play', {
         detail: {
           audioContext,
           audioSource,
@@ -350,13 +356,13 @@ async function onApiLoaded() {
 
   video.addEventListener('loadstart', loadstartListener, { passive: true });
 
-  window.ipcRenderer.send('ytmd:player-api-loaded');
+  window.ipcRenderer.send('peard:player-api-loaded');
 
   // Navigate to "Starting page"
   const startingPage: string = window.mainConfig.get('options.startingPage');
   if (startingPage && startingPages[startingPage]) {
     document
-      .querySelector<YouTubeMusicAppElement>('ytmusic-app')
+      .querySelector<MusicPlayerAppElement>('ytmusic-app')
       ?.navigate(startingPages[startingPage]);
   }
 
@@ -366,7 +372,7 @@ async function onApiLoaded() {
     let selector = 'ytmusic-guide-entry-renderer:last-child';
 
     const upgradeBtnIcon = document.querySelector<SVGGElement>(
-      'iron-iconset-svg[name="yt-sys-icons"] #youtube_music_monochrome',
+      'iron-iconset-svg[name="yt-sys-icons"] #\u0079\u006f\u0075\u0074\u0075\u0062\u0065_music_monochrome',
     );
     if (upgradeBtnIcon) {
       const path = upgradeBtnIcon.firstChild as SVGPathElement;
@@ -388,10 +394,26 @@ async function onApiLoaded() {
     const style = document.createElement('style');
     style.textContent = `
       ytmusic-player-bar[is-mweb-player-bar-modernization-enabled] .middle-controls-buttons.ytmusic-player-bar, #like-button-renderer {
-        display: ${likeButtonsOptions === 'hide' ? 'none' : 'inherit'} !important;
+        display: ${
+          likeButtonsOptions === 'hide' ? 'none' : 'inherit'
+        } !important;
       }
       ytmusic-player-bar[is-mweb-player-bar-modernization-enabled] .middle-controls.ytmusic-player-bar {
-        justify-content: ${likeButtonsOptions === 'hide' ? 'flex-start' : 'space-between'} !important;
+        justify-content: ${
+          likeButtonsOptions === 'hide' ? 'flex-start' : 'space-between'
+        } !important;
+      }`;
+
+    document.head.appendChild(style);
+  }
+
+  // Swap like button order
+  if (window.mainConfig.get('options.swapLikeButtonsOrder')) {
+    const style = document.createElement('style');
+    style.textContent = `
+      #like-button-renderer {
+        display: inline-flex;
+        flex-direction: row-reverse;
       }`;
 
     document.head.appendChild(style);
@@ -399,14 +421,14 @@ async function onApiLoaded() {
 }
 
 /**
- * YouTube Music still using ES5, so we need to define custom elements using ES5 style
+ * Original still using ES5, so we need to define custom elements using ES5 style
  */
-const defineYTMDTransElements = () => {
-  const YTMDTrans = function () {};
+const definePearTransElements = () => {
+  const PearTrans = function () {};
   // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  YTMDTrans.prototype = Object.create(HTMLElement.prototype);
+  PearTrans.prototype = Object.create(HTMLElement.prototype);
   // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  YTMDTrans.prototype.connectedCallback = function () {
+  PearTrans.prototype.connectedCallback = function () {
     const that = this as HTMLElement;
     const key = that.getAttribute('key');
     if (key) {
@@ -417,8 +439,8 @@ const defineYTMDTransElements = () => {
     }
   };
   customElements.define(
-    'ytmd-trans',
-    YTMDTrans as unknown as CustomElementConstructor,
+    'pear-trans',
+    PearTrans as unknown as CustomElementConstructor,
   );
 };
 
@@ -428,7 +450,7 @@ const preload = async () => {
   window.i18n = {
     t: i18t.bind(i18next),
   };
-  defineYTMDTransElements();
+  definePearTransElements();
   if (document.body?.dataset?.os) {
     document.body.dataset.os = navigator.userAgent;
   }
@@ -465,7 +487,7 @@ const main = async () => {
     },
   );
 
-  // Wait for complete load of YouTube api
+  // Wait for complete load of the api
   await listenForApiLoad();
 
   // Blocks the "Are You Still There?" popup by setting the last active time to Date.now every 15min
@@ -492,7 +514,7 @@ const initObserver = async () => {
   });
 
   const observer = new MutationObserver(() => {
-    const playerApi = document.querySelector<Element & YoutubePlayer>(
+    const playerApi = document.querySelector<Element & MusicPlayer>(
       '#movie_player',
     );
     if (playerApi) {

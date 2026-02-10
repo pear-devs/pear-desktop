@@ -5,7 +5,7 @@ import { getSongControls } from '@/providers/song-controls';
 import { registerCallback, SongInfoEvent } from '@/providers/song-info';
 import { t } from '@/i18n';
 
-import youtubeMusicIcon from '@assets/youtube-music.png?asset&asarUnpack';
+import musicPlayerIcon from '@assets/icon.png?asset&asarUnpack';
 import { Platform } from '@/types/plugins';
 
 export default createPlugin({
@@ -97,7 +97,7 @@ export default createPlugin({
         songImage.icon = (
           songInfo.image
             ? songInfo.image
-            : nativeImage.createFromPath(youtubeMusicIcon)
+            : nativeImage.createFromPath(musicPlayerIcon)
         ).resize({ height: 23 });
 
         window.setTouchBar(touchBar);

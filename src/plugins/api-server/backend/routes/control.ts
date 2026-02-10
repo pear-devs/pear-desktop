@@ -29,7 +29,7 @@ import type { SongInfo } from '@/providers/song-info';
 import type { BackendContext } from '@/types/contexts';
 import type { APIServerConfig } from '../../config';
 import type { HonoApp } from '../types';
-import type { QueueResponse } from '@/types/youtube-music-desktop-internal';
+import type { QueueResponse } from '@/types/music-player-desktop-internal';
 import type { Context } from 'hono';
 
 const routes = {
@@ -411,6 +411,26 @@ const routes = {
       },
     },
   }),
+  nextSongInfo: createRoute({
+    method: 'get',
+    path: `/api/${API_VERSION}/queue/next`,
+    summary: 'get next song info',
+    description:
+      'Get information about the next song in the queue (relative index +1)',
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: SongInfoSchema,
+          },
+        },
+      },
+      204: {
+        description: 'No next song in queue',
+      },
+    },
+  }),
   queueInfo: createRoute({
     method: 'get',
     path: `/api/${API_VERSION}/queue`,
@@ -630,7 +650,7 @@ export const register = (
   app.openapi(routes.getShuffleState, async (ctx) => {
     const stateResponsePromise = new Promise<boolean>((resolve) => {
       ipcMain.once(
-        'ytmd:get-shuffle-response',
+        'peard:get-shuffle-response',
         (_, isShuffled: boolean | undefined) => {
           return resolve(!!isShuffled);
         },
@@ -693,7 +713,7 @@ export const register = (
   app.openapi(routes.getFullscreenState, async (ctx) => {
     const stateResponsePromise = new Promise<boolean>((resolve) => {
       ipcMain.once(
-        'ytmd:set-fullscreen',
+        'peard:set-fullscreen',
         (_, isFullscreen: boolean | undefined) => {
           return resolve(!!isFullscreen);
         },
@@ -728,7 +748,7 @@ export const register = (
   // Queue
   const queueInfo = async (ctx: Context) => {
     const queueResponsePromise = new Promise<QueueResponse>((resolve) => {
-      ipcMain.once('ytmd:get-queue-response', (_, queue: QueueResponse) => {
+      ipcMain.once('peard:get-queue-response', (_, queue: QueueResponse) => {
         return resolve(queue);
       });
 
@@ -747,6 +767,63 @@ export const register = (
   };
   app.openapi(routes.oldQueueInfo, queueInfo);
   app.openapi(routes.queueInfo, queueInfo);
+
+  app.openapi(routes.nextSongInfo, async (ctx) => {
+    const queueResponsePromise = new Promise<QueueResponse>((resolve) => {
+      ipcMain.once('peard:get-queue-response', (_, queue: QueueResponse) => {
+        return resolve(queue);
+      });
+
+      controller.requestQueueInformation();
+    });
+
+    const queue = await queueResponsePromise;
+
+    if (!queue?.items || queue.items.length === 0) {
+      ctx.status(204);
+      return ctx.body(null);
+    }
+
+    // Find the currently selected song
+    const currentIndex = queue.items.findIndex((item) => {
+      const renderer =
+        item.playlistPanelVideoRenderer ||
+        item.playlistPanelVideoWrapperRenderer?.primaryRenderer
+          ?.playlistPanelVideoRenderer;
+      return renderer?.selected === true;
+    });
+
+    // Get the next song (currentIndex + 1)
+    const nextIndex = currentIndex + 1;
+    if (nextIndex >= queue.items.length) {
+      // No next song available
+      ctx.status(204);
+      return ctx.body(null);
+    }
+
+    const nextItem = queue.items[nextIndex];
+    const nextRenderer =
+      nextItem.playlistPanelVideoRenderer ||
+      nextItem.playlistPanelVideoWrapperRenderer?.primaryRenderer
+        ?.playlistPanelVideoRenderer;
+
+    if (!nextRenderer) {
+      ctx.status(204);
+      return ctx.body(null);
+    }
+
+    // Extract relevant information similar to SongInfo format
+    const nextSongInfo = {
+      title: nextRenderer.title?.runs?.[0]?.text,
+      videoId: nextRenderer.videoId,
+      thumbnail: nextRenderer.thumbnail,
+      lengthText: nextRenderer.lengthText,
+      shortBylineText: nextRenderer.shortBylineText,
+    };
+
+    ctx.status(200);
+    return ctx.json(nextSongInfo);
+  });
 
   app.openapi(routes.addSongToQueue, (ctx) => {
     const { videoId, insertPosition } = ctx.req.valid('json');

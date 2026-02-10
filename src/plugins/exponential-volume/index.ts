@@ -1,7 +1,7 @@
 import { createPlugin } from '@/utils';
 import { t } from '@/i18n';
 
-import type { YoutubePlayer } from '@/types/youtube-player';
+import type { MusicPlayer } from '@/types/music-player';
 
 export default createPlugin({
   name: () => t('plugins.exponential-volume.name'),
@@ -12,7 +12,7 @@ export default createPlugin({
   },
   renderer: {
     onPlayerApiReady(playerApi) {
-      const syncVolume = (playerApi: YoutubePlayer) => {
+      const syncVolume = (playerApi: MusicPlayer) => {
         if (playerApi.getPlayerState() === 3) {
           setTimeout(() => syncVolume(playerApi), 0);
           return;
@@ -21,8 +21,8 @@ export default createPlugin({
         playerApi.setVolume(playerApi.getVolume());
       };
 
-      // "YouTube Music fix volume ratio 0.4" by Marco Pfeiffer
-      // https://greasyfork.org/en/scripts/397686-youtube-music-fix-volume-ratio/
+      // "fix volume ratio 0.4" by Marco Pfeiffer
+      // https://bit.ly/4nMu2WF
 
       // Manipulation exponent, higher value = lower volume
       // 3 is the value used by pulseaudio, which Barteks2x figured out this gist here: https://gist.github.com/Barteks2x/a4e189a36a10c159bb1644ffca21c02a

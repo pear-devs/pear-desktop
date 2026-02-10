@@ -7,7 +7,7 @@ import { backend } from './main';
 export interface ScrobblerPluginConfig {
   enabled: boolean;
   /**
-   * Attempt to scrobble other video types (e.g. Podcasts, normal YouTube videos)
+   * Attempt to scrobble other video types (e.g. Podcasts, normal videos)
    *
    * @default true
    */

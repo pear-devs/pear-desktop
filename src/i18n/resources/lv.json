@@ -150,13 +150,20 @@
           "visual-tweaks": {
             "label": "Vizuāli Iestatījumi",
             "submenu": {
+              "custom-window-title": {
+                "label": "Pielāgots loga nosaukums",
+                "prompt": {
+                  "label": "Ievadiet pielāgotu loga nosaukumu: (atstājiet tukšu, lai atspējotu)",
+                  "placeholder": "Piemērs: Pear mūzika"
+                }
+              },
               "like-buttons": {
                 "default": "Noklusējums",
                 "force-show": "Vienmēr rādīt",
                 "hide": "Paslēpt",
                 "label": "Like pogas"
               },
-              "remove-upgrade-button": "Noslēpt YouTube Premium pogu",
+              "remove-upgrade-button": "Noslēpt Premium pogu",
               "theme": {
                 "dialog": {
                   "button": {
@@ -201,8 +208,8 @@
       "restart": "Restartēt Lietotni",
       "show": "Rādīt logu",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -280,7 +287,7 @@
       "name": "Ambientais Režīms"
     },
     "amuse": {
-      "description": "Pievieno YouTube Music atblastu priekš Amuse \"tagad spēlē\" no 6K Labs",
+      "description": "Pievieno {{applicationName}} atblastu priekš Amuse \"tagad spēlē\" no 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API serveris ir palaists. GET /query lai dabūtu dziesmas info."
@@ -362,11 +369,11 @@
       "name": "Izplūdusi Navigācijas Josla"
     },
     "bypass-age-restrictions": {
-      "description": "Apiet YouTube vecuma pārbaudi",
+      "description": "Apiet Music Player vecuma pārbaudi",
       "name": "Apiet Vecuma Ierobežojumus"
     },
     "captions-selector": {
-      "description": "Subtitru izvēlne priekš YouTube Music audio ceļiem",
+      "description": "Subtitru izvēlne priekš {{applicationName}} audio ceļiem",
       "menu": {
         "autoload": "Automātiski izvēlēties pēdējo izmantotos subtitrus",
         "disable-captions": "Bez subtitriem pēc noklusējuma"
@@ -414,6 +421,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Pielāgotas izvades multivides ierīces konfigurēšana dziesmām",
+      "menu": {
+        "device-selector": "Izvēlieties ierīci"
+      },
+      "name": "Pielāgota izvades ierīce",
+      "prompt": {
+        "device-selector": {
+          "label": "Izvēlieties izmantojamo izvades multivides ierīci",
+          "title": "Izvēlieties izvades ierīci"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Palaiž dziesmu nopauzētu",
       "menu": {
@@ -436,8 +456,15 @@
         "disconnected": "Atvienojies",
         "hide-duration-left": "Paslēpt cik palika laika",
         "hide-github-button": "Paslēpt GitHub saites pogu",
-        "play-on-youtube-music": "Atskaņot uz YouTube Music",
-        "set-inactivity-timeout": "Iestatīt neaktivitātes taimeru"
+        "play-on-application": "Atskaņot uz {{applicationName}}",
+        "set-inactivity-timeout": "Iestatīt neaktivitātes taimeru",
+        "set-status-display-type": {
+          "label": "Statusa teksts",
+          "submenu": {
+            "artist": "Klausos {mākslinieku}",
+            "title": "Klausos {dziesmas nosaukums}"
+          }
+        }
       },
       "name": "Discord Rich Presence",
       "prompt": {
@@ -485,9 +512,114 @@
           "playlist-is-mix-or-private": "Neizdevās iegūt atskaņošanas saraksta informāciju: pārliecinieties, ka tas nav privāts vai \"Jums izveidotā izlase\" saraksts.\n\n{{error}}",
           "preparing-file": "Faila sagatavošana…",
           "saving": "Saglabāšana…",
+          "trying-to-get-playlist-id": "Mēģinu iegūt atskaņošanas saraksta ID: {{playlistId}}",
           "video-id-not-found": "Video nav atrasts",
           "writing-id3": "Rakstam ID3 tegus…"
         }
+      },
+      "description": "Lejupielādē MP3/avota audio tieši no saskarnes",
+      "menu": {
+        "choose-download-folder": "Izvēlieties lejupielādes mapi",
+        "download-finish-settings": {
+          "label": "Lejupielādēt pēc pabeigšanas",
+          "prompt": {
+            "last-percent": "Pēc x procentiem",
+            "last-seconds": "Pēdējās x sekundes",
+            "title": "Konfigurējiet lejupielādes laiku"
+          },
+          "submenu": {
+            "advanced": "Paplašināts",
+            "enabled": "Iespējots",
+            "mode": "Laika režīms",
+            "percent": "Procenti",
+            "seconds": "Sekundes"
+          }
+        },
+        "download-playlist": "Lejupielādēt atskaņošanas sarakstu",
+        "presets": "Iepriekšiestatījumi",
+        "skip-existing": "Izlaist esošos failus"
+      },
+      "name": "Lejupielādētājs",
+      "renderer": {
+        "can-not-update-progress": "Nevar atjaunināt progresu"
+      },
+      "templates": {
+        "button": "Lejupielādēt"
+      }
+    },
+    "equalizer": {
+      "description": "Pievieno atskaņotājam ekvalaizeru",
+      "menu": {
+        "presets": {
+          "label": "Iepriekšiestatījumi",
+          "list": {
+            "bass-booster": "Basu pastiprinātājs"
+          }
+        }
+      },
+      "name": "Ekvalaizers"
+    },
+    "exponential-volume": {
+      "description": "Padara skaļuma slīdni eksponenciālu, lai būtu vieglāk izvēlēties zemākus skaļumus.",
+      "name": "Eksponenciālais apjoms"
+    },
+    "in-app-menu": {
+      "description": "Piešķir izvēļņu joslām greznu, tumšu vai albuma krāsas izskatu",
+      "menu": {
+        "hide-dom-window-controls": "Slēpt DOM loga vadīklas"
+      },
+      "name": "Lietotnes izvēlne"
+    },
+    "lumiastream": {
+      "description": "Pievieno Lumia Stream atbalstu",
+      "name": "Lumia Stream [Beta versija]"
+    },
+    "lyrics-genius": {
+      "description": "Pievieno dziesmu tekstu atbalstu lielākajai daļai dziesmu",
+      "menu": {
+        "romanized-lyrics": "Romanizēti dziesmu teksti"
+      },
+      "name": "Dziesmu vārdu ģēnijs",
+      "renderer": {
+        "fetched-lyrics": "Iegūti dziesmu vārdi priekš oriģināla"
+      }
+    },
+    "music-together": {
+      "description": "Kopīgojiet atskaņošanas sarakstu ar citiem. Kad vadītājs atskaņo dziesmu, visi pārējie dzirdēs to pašu dziesmu.",
+      "dialog": {
+        "enter-host": "Ievadiet resursdatora ID"
+      },
+      "internal": {
+        "save": "Saglabāt",
+        "track-source": "Dziesmas avots",
+        "unknown-user": "Nezināms lietotājs"
+      },
+      "menu": {
+        "click-to-copy-id": "Kopēt resursdatora ID",
+        "close": "Aizvērt mūziku kopā",
+        "connected-users": "Savienotie lietotāji",
+        "disconnect": "Atvienojiet mūziku kopā",
+        "empty-user": "Nav pievienotu lietotāju",
+        "host": "Kopklausīšanās vadītājs",
+        "join": "Pievienojieties mūzikai kopā",
+        "permission": {
+          "all": "Atļaut viesiem kontrolēt atskaņošanas sarakstu un atskaņotāju",
+          "host-only": "Tikai resursdators var kontrolēt atskaņošanas sarakstu un atskaņotāju",
+          "playlist": "Atļaut viesiem kontrolēt atskaņošanas sarakstu"
+        },
+        "set-permission": "Izmainīt kontroles piekļuvi",
+        "status": {
+          "disconnected": "Atvienots",
+          "guest": "Pieslēdzies kā viesis",
+          "host": "Pieslēdzies kā vadītājs"
+        }
+      },
+      "name": "Mūzika Kopā [Beta]",
+      "toast": {
+        "add-song-failed": "Neizdevās pievienot dziesmu",
+        "closed": "Mūzika Kopā slēgta",
+        "disconnected": "Mūzika Kopā atvienota",
+        "host-failed": "Neizdevās uzsākt Mūziku Kopā"
       }
     }
   }

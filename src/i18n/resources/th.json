@@ -154,7 +154,7 @@
                 "label": "ชื่อหน้าต่างกำหนดเอง",
                 "prompt": {
                   "label": "กำหนดชื่อหน้าต่างที่ต้องการ: (ปล่อยว่างเพื่อปิดใช้งาน)",
-                  "placeholder": "ตัวอย่าง: Youtube Music"
+                  "placeholder": "ตัวอย่าง: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "รีสตาร์ตแอป",
       "show": "แสดงหน้าต่าง",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "โหมดสภาพแวดล้อม"
     },
     "amuse": {
-      "description": "เพิ่มการรองรับ Youtube Music สำหรับ Widget Amuse Now Playing ของ 6K Labs",
+      "description": "เพิ่มการรองรับ {{applicationName}} สำหรับ Widget Amuse Now Playing ของ 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "API Server ของ Amuse ทำงานอยู่ ส่ง GET ไปที่ /query เพื่อขอข้อมูลเกี่ยวกับเพลง"
@@ -369,11 +369,11 @@
       "name": "เบลอแถบนำทาง"
     },
     "bypass-age-restrictions": {
-      "description": "ข้ามการตรวจสอบอายุของ YouTube",
+      "description": "ข้ามการตรวจสอบอายุของ Music Player",
       "name": "ข้ามข้อจำกัดอายุ"
     },
     "captions-selector": {
-      "description": "ตัวเลือกคำบรรยายสำหรับเพลงใน YouTube Music",
+      "description": "ตัวเลือกคำบรรยายสำหรับเพลงใน {{applicationName}}",
       "menu": {
         "autoload": "เลือกคำบรรยายที่ใช้ครั้งล่าสุดโดยอัตโนมัติ",
         "disable-captions": "ไม่มีคำบรรยายเป็นค่าเริ่มต้น"
@@ -456,14 +456,14 @@
         "disconnected": "ตัดการเชื่อมต่อ",
         "hide-duration-left": "ซ่อนระยะเวลาที่เหลือ",
         "hide-github-button": "ซ่อนปุ่มลิงก์ GitHub",
-        "play-on-youtube-music": "เล่นบน YouTube Music",
+        "play-on-application": "เล่นบน {{applicationName}}",
         "set-inactivity-timeout": "ตั้งระยะเวลาไม่มีกิจกรรม",
         "set-status-display-type": {
           "label": "ข้อความสถานะ",
           "submenu": {
             "artist": "กำลังฟัง {ชื่อนักร้อง}",
             "title": "กำลังฟัง {ชื่อเพลง}",
-            "youtube-music": "กำลังฟัง YouTube Music"
+            "application": "กำลังฟัง {{applicationName}}"
           }
         }
       },

@@ -154,7 +154,7 @@
                 "label": "Προσαρμοσμένος τίτλος παραθύρου",
                 "prompt": {
                   "label": "Εισαγωγή προσαρμοσμένου τίτλου παραθύρου: (κενό για απενεργοποίηση)",
-                  "placeholder": "Παράδειγμα: YouTube Music"
+                  "placeholder": "Παράδειγμα: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Επανεκκίνηση εφαρμογής",
       "show": "Εμφάνιση παραθύρου",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Λειτουργία περιβάλλοντος"
     },
     "amuse": {
-      "description": "Προσθέτει υποστήριξη YouTube Music στο widget Amuse now playing από την 6K Labs",
+      "description": "Προσθέτει υποστήριξη {{applicationName}} στο widget Amuse now playing από την 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Ο διακομιστής Amuse API εκτελείται. GET /query για να λάβετε πληροφορίες για το τραγούδι."
@@ -369,11 +369,11 @@
       "name": "Θόλωμα γραμμής πλοήγησης"
     },
     "bypass-age-restrictions": {
-      "description": "Παράκαμψη επαλήθευσης ηλικίας στο YouTube",
+      "description": "Παράκαμψη επαλήθευσης ηλικίας στο Music Player",
       "name": "Παράκαμψη ηλικιακών περιορισμών"
     },
     "captions-selector": {
-      "description": "Επιλογέας λεζάντας για μουσικά κομμάτια ήχου του YouTube",
+      "description": "Επιλογέας λεζάντας για μουσικά κομμάτια ήχου του {{applicationName}}",
       "menu": {
         "autoload": "Αυτόματη επιλογή της τελευταίας χρησιμοποιούμενης λεζάντας",
         "disable-captions": "Χωρίς λεζάντες από προεπιλογή"
@@ -443,7 +443,7 @@
         "disconnected": "Αποσυνδεδεμένο",
         "hide-duration-left": "Απόκρυψη της διάρκειας που απομένει",
         "hide-github-button": "Απόκρυψη κουμπιού συνδέσμου GitHub",
-        "play-on-youtube-music": "Αναπαραγωγή στο YouTube Music",
+        "play-on-application": "Αναπαραγωγή στο {{applicationName}}",
         "set-inactivity-timeout": "Ορισμός χρονικού ορίου αδράνειας"
       },
       "name": "Discord Πλούσια παρουσία",

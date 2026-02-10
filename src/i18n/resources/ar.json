@@ -2,10 +2,10 @@
   "common": {
     "console": {
       "plugins": {
-        "execute-failed": "فشل تشغيل الاضافة {{pluginName}}::{{contextName}}",
-        "executed-at-ms": "تم تشغيل الاضافة {{pluginName}}::{{contextName}} خلال {{ms}} جزء من الثانية",
-        "initialize-failed": "فشل تنفيذ الاضافة \"{{pluginName}}\"",
-        "load-all": "جاري تحميل جميع الاضافات",
+        "execute-failed": "فشل بدأ الاضافة {{pluginName}}::{{contextName}}",
+        "executed-at-ms": "تم بدأ الاضافة {{pluginName}}::{{contextName}} خلال {{ms}} جزء من الثانية",
+        "initialize-failed": "فشل تشغيل الاضافة \"{{pluginName}}\"",
+        "load-all": "جار تحميل جميع الاضافات",
         "load-failed": "فشل في تحميل الاضافة \"{{pluginName}}\"",
         "loaded": "تم تحميل الاضافة \"{{pluginName}}\"",
         "unload-failed": "فشل ازالة الاضافة \"{{pluginName}}\"",
@@ -30,21 +30,21 @@
         "receive-command": "تم الحصول على أمر عن طريق: \"{{command}}\""
       },
       "theme": {
-        "css-file-not-found": "ملف \"{{cssFile}}\" غير متواجد,سيتم التجاهل"
+        "css-file-not-found": "ملف \"{{cssFile}}\" غير متواجد، سيتم التجاهل"
       },
       "unresponsive": {
         "details": "خطء عدم استجابة!\n{{error}}"
       },
       "when-ready": {
-        "clearing-cache-after-20s": "ازالة بيانات التطبيق المخزنة"
+        "clearing-cache-after-20s": "ازالة ذاكرة التخزين المؤقت للتطبيق"
       },
       "window": {
-        "tried-to-render-offscreen": "تم محاولة فتح الصفحة خارج الشاشة, حجم الصفحة={{windowSize}}, حجم الشاشة={{displaySize}}, مكان={{position}}"
+        "tried-to-render-offscreen": "تم محاولة فتح الصفحة خارج الشاشة, حجم الصفحة={{windowSize}}, حجم النافذة={{displaySize}}, المكان={{position}}"
       }
     },
     "dialog": {
       "hide-menu-enabled": {
-        "detail": "تم اخفاء القائمة, استخدم 'Alt' لاظهار القائمة (أو 'Escape' اذا كنت تستخدم القائمة داخل التطبيق)",
+        "detail": "تم اخفاء القائمة, استخدم 'Alt' لاظهار القائمة (أو 'Escape' اذا كنت تستخدم القائمة التي داخل التطبيق)",
         "message": "اخفاء القائمة مفعل",
         "title": "تم تفعيل اخفاء القائمة"
       },
@@ -65,27 +65,27 @@
         },
         "detail": "نأسف على الإزعاج! يرجى اختيار ما يجب القيام به:",
         "message": "التطبيق لا يستجيب",
-        "title": "الصفحة لا تستجيب"
+        "title": "النافذة لا تستجيب"
       },
       "update-available": {
         "buttons": {
           "disable": "ايقاف التحديثات",
-          "download": "تحميل",
-          "ok": "موافق"
+          "download": "تنزيل",
+          "ok": "حسنا"
         },
-        "detail": "يوجد نسخة جديدة يمكن تحميلها من خلال {{downloadLink}}",
-        "message": "يوجد نسخة حديثة",
+        "detail": "يوجد نسخة جديدة يمكن تنزيلها من {{downloadLink}}",
+        "message": "يوجد نسخة جديدة",
         "title": "يوجد تحديث"
       }
     },
     "menu": {
       "about": "عنا",
       "navigation": {
-        "label": "التنقل",
+        "label": "شريط التنقل",
         "submenu": {
           "copy-current-url": "نسخ الرابط الحالي",
-          "go-back": "العودة للخلف",
-          "go-forward": "التقدم",
+          "go-back": "عودة",
+          "go-forward": "تقدم",
           "quit": "الخروج",
           "restart": "اعادة تشغيل التطبيق"
         }
@@ -96,28 +96,28 @@
           "advanced-options": {
             "label": "الاعدادات المتقدمة",
             "submenu": {
-              "auto-reset-app-cache": "إعادة تعيين ذاكرة التخزين المؤقت للتطبيق عند بدء التشغيل",
-              "disable-hardware-acceleration": "تعطيل تسريع الأجهزة",
+              "auto-reset-app-cache": "إعادة ضبط ذاكرة التخزين المؤقت للتطبيق عند بدء التشغيل",
+              "disable-hardware-acceleration": "اطفاء تسريع الأجهزة",
               "edit-config-json": "تعديل ملف الاعدادات",
               "override-user-agent": "تجاوز وكيل المستخدم",
               "restart-on-config-changes": "اعادة التشغيل بعد تعديل الاعدادات",
               "set-proxy": {
                 "label": "تعيين الوكيل",
                 "prompt": {
-                  "label": "أدخل عنوان الوكيل: (اتركه فارغًا للتعطيل)",
+                  "label": "أدخل عنوان الوكيل: (اتركه فارغًا لإطفائه)",
                   "placeholder": "مثال: SOCKS5://127.0.0.1:9999",
-                  "title": "اضافة الوكيل"
+                  "title": "ضع proxy"
                 }
               },
               "toggle-dev-tools": "تثبيت أدوات التطوير"
             }
           },
-          "always-on-top": "دائما في القمة",
+          "always-on-top": "دائما في المقدمة",
           "auto-update": "تحديث تلقائي",
           "hide-menu": {
             "dialog": {
-              "message": "سيتم إخفاء القائمة عند التشغيل التالي، استخدم [Alt] لإظهارها (أو ضع علامة اختيار على [`] في حالة استخدام القائمة داخل التطبيق)",
-              "title": "إخفاء القائمة ممكن"
+              "message": "سيتم إخفاء القائمة عند التشغيل التالي، استخدم [Alt] لإظهارها (أو اضغط [`] في حالة استخدام القائمة التي داخل التطبيق)",
+              "title": "إخفاء القائمة مفعل"
             },
             "label": "إخفاء القائمة"
           },
@@ -131,20 +131,20 @@
               "to-help-translate": "تريد المساعدة في الترجمة؟ اضغط هنا"
             }
           },
-          "resume-on-start": "تكملة الأغنية الأخيرة عند بدأ التشغيل",
+          "resume-on-start": "استأنف الأغنية الأخيرة عند بدأ التشغيل",
           "single-instance-lock": "قفل مثيل واحد",
           "start-at-login": "‎ابدأ عند تسجيل الدخول",
           "starting-page": {
             "label": "صفحة البداية",
-            "unset": "الغاء"
+            "unset": "عدم تعيين"
           },
           "tray": {
             "label": "قائمة",
             "submenu": {
               "disabled": "غير مفعل",
-              "enabled-and-hide-app": "تمكين وإخفاء التطبيق",
-              "enabled-and-show-app": "ممكين وأظهر التطبيق",
-              "play-pause-on-click": "تشغيل/إيقاف مؤقت عند النقر"
+              "enabled-and-hide-app": "مفعل وإخفاء التطبيق",
+              "enabled-and-show-app": "مفعل وأظهر التطبيق",
+              "play-pause-on-click": "تشغيل/إيقاف عند النقر"
             }
           },
           "visual-tweaks": {
@@ -153,7 +153,8 @@
               "custom-window-title": {
                 "label": "عنوان نافذة مخصص",
                 "prompt": {
-                  "placeholder": "مثال: YouTube Music"
+                  "label": "ادخل عنوان مخصص للنافذة: (اتركه فارغًا إلغاء التفعيل)",
+                  "placeholder": "مثال: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -162,7 +163,7 @@
                 "hide": "اخفاء",
                 "label": "أزرار الاعجاب"
               },
-              "remove-upgrade-button": "ازالة زرار التطوير",
+              "remove-upgrade-button": "ازالة زر التطوير",
               "theme": {
                 "dialog": {
                   "button": {
@@ -207,8 +208,8 @@
       "restart": "إعادة تشغيل التطبيق",
       "show": "عرض النافدة",
       "tooltip": {
-        "default": "يوتيوب اغاني",
-        "with-song-info": "أغاني يوتيوب: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -232,25 +233,25 @@
       "description": "يطبق ثيمًا ديناميكيًا وتأثيرات بصرية بناء على ألوان الألبوم",
       "menu": {
         "color-mix-ratio": {
-          "label": "‬نسبة قوة اللون",
+          "label": "‬نسبة قوة مزيج الألوان",
           "submenu": {
-            "percent": "{{ratio}}%"
+            "percent": "{{ratio}}٪"
           }
         }
       },
-      "name": "ثيم ألوان الألبوم"
+      "name": "سمة ألوان الألبوم"
     },
     "ambient-mode": {
       "description": "يطبق تأثير إضاءة عن طريق إسقاط ألوان ناعمة من الفيديو على خلفية شاشتك",
       "menu": {
         "blur-amount": {
-          "label": "مقدار التمويه",
+          "label": "مقدار الطمس",
           "submenu": {
             "pixels": "{{blurAmount}} بكسل"
           }
         },
         "buffer": {
-          "label": "تخزين الصوت الؤقت",
+          "label": "تخزين الصوت المؤقت",
           "submenu": {
             "buffer": "{{buffer}}"
           }
@@ -258,7 +259,7 @@
         "opacity": {
           "label": "الشفافية",
           "submenu": {
-            "percent": "{{opacity}}%"
+            "percent": "{{opacity}}٪"
           }
         },
         "quality": {
@@ -270,7 +271,7 @@
         "size": {
           "label": "الحجم",
           "submenu": {
-            "percent": "{{size}}%"
+            "percent": "{{size}}٪"
           }
         },
         "smoothness-transition": {
@@ -286,30 +287,30 @@
       "name": "الوضع المحيطي"
     },
     "amuse": {
-      "description": "تكامل دعم YouTube Music مع ويدجت Amuse لعرض الأغنية قيد التشغيل، من إنتاج 6K Labs",
+      "description": "تكامل دعم {{applicationName}} مع ويدجت Amuse لعرض الأغنية التي قيد التشغيل، من إنتاج 6K Labs",
       "name": "تلسيه",
       "response": {
         "query": "خادم Amuse API قيد التشغيل. استخدم GET /query للحصول على معلومات الأغنية."
       }
     },
     "api-server": {
-      "description": "يضيف خادم للتحكم في المشغل",
+      "description": "يضيف API للتحكم في المشغل",
       "dialog": {
         "request": {
           "buttons": {
             "allow": "سماح",
             "deny": "رفض"
           },
-          "message": "السماح لـ {{ID}} ({{origin}}) بالوصول إلى واجهة برمجة التطبيقات (API)؟",
-          "title": "طلب السماح بالوصول إلى واجهة برمجة التطبيقات(API)"
+          "message": "السماح لـ {{ID}} ({{origin}}) بالوصول إلى الAPI؟",
+          "title": "طلب السماح بالوصول إلى الAPI"
         }
       },
       "menu": {
         "auth-strategy": {
-          "label": "نهج التفويض",
+          "label": "استراتيجية التفويض",
           "submenu": {
             "auth-at-first": {
-              "label": "التفويض المبدئي عند الطلب الأول"
+              "label": "التفويض عند الطلب الأول"
             },
             "none": {
               "label": "بدون تفويض"
@@ -340,10 +341,10 @@
       "name": "ضاغط الصوت"
     },
     "auth-proxy-adapter": {
-      "description": "دعم استخدام خدمات وكيل المصادقة",
+      "description": "دعم استخدام خدمات proxy للإثبات",
       "menu": {
         "disable": "تعطيل مكيف الوكيل",
-        "enable": "تفعيل مكيف الوكيل",
+        "enable": "تفعيل مكيف proxy للصداقة",
         "hostname": {
           "label": "إسم المستضيف"
         },
@@ -351,28 +352,28 @@
           "label": "المدخل"
         }
       },
-      "name": "مكيّف وسيط المصادقة",
+      "name": "مكيّف proxy للمصادقة",
       "prompt": {
         "hostname": {
-          "label": "أدخل اسم المستضيف لخادم الوسيط المحلي (يتطلب إعادة التشغيل):",
-          "title": "إسم مستضيف الوسيط"
+          "label": "أدخل اسم المستضيف لخادم proxy المحلي (يتطلب إعادة التشغيل):",
+          "title": "إسم مستضيف proxy"
         },
         "port": {
-          "label": "أدخل مدخلًا لخادم الوسيط المحلي (يتطلب إعادة التشغيل):",
-          "title": "مدخل الوسيط"
+          "label": "أدخل مدخلًا لخادم proxy المحلي (يتطلب إعادة التشغيل):",
+          "title": "مدخل proxy"
         }
       }
     },
     "blur-nav-bar": {
-      "description": "يجعل شريط التنقل شفاف و ضبابي",
-      "name": "تغبيش شريط التنقل"
+      "description": "يجعل شريط التنقل شفاف و مطموس",
+      "name": "طمس شريط التنقل"
     },
     "bypass-age-restrictions": {
-      "description": "تجاوز تَحَقّق اليوتيوب من السن",
+      "description": "تجاوز تَحَقّق مشغل الموسيقى من السن",
       "name": "تجاوز التحقق من السن"
     },
     "captions-selector": {
-      "description": "محدد ترجمات المقاطع الصوتية لYoutube Music",
+      "description": "محدد ترجمات المقاطع الصوتية ل{{applicationName}}",
       "menu": {
         "autoload": "اختار اخر ترجمة مستخدمة تلقائيا",
         "disable-captions": "لا توجد ترجمات بشكل افتراضي"
@@ -390,7 +391,7 @@
       },
       "toast": {
         "caption-changed": "تم تغيير الترجمة الى {{language}}",
-        "caption-disabled": "الترجمة معطلة",
+        "caption-disabled": "الترجمة غير مفعلة",
         "no-captions": "الترجمة لهاته الأغنية غير متاحة"
       }
     },
@@ -408,25 +409,33 @@
         "options": {
           "multi-input": {
             "fade-in-duration": "مدة التداخل (بأجزاء الثانية)",
-            "fade-out-duration": "مدة التلاشي (جزء ثانية)",
+            "fade-out-duration": "مدة التلاشي (بأجزاء الثانية)",
             "fade-scaling": {
               "label": "توسيع التداخل",
               "linear": "خطي",
               "logarithmic": "لوغاريتمي"
             },
-            "seconds-before-end": "التلاشي قبل النهاية بـ N ثوانٍ"
+            "seconds-before-end": "التداخل قبل النهاية بـ N ثوانٍ"
           },
           "title": "خيارات التداخل"
         }
       }
     },
     "custom-output-device": {
+      "description": "ضبط مخرج جهاز وسائط مخصص للأغاني",
       "menu": {
         "device-selector": "اختر جهاز"
+      },
+      "name": "جهاز اخراج مخصص",
+      "prompt": {
+        "device-selector": {
+          "label": "اختر جهاز الوسائط الذي سيتم استخدامه للاخراج",
+          "title": "اختر الجهاز الإخراج"
+        }
       }
     },
     "disable-autoplay": {
-      "description": "يجعل الأغنية تبدأ في وضع \"الإيقاف المؤقت\"",
+      "description": "يجعل الأغنية تبدأ في وضع \"الإيقاف\"",
       "menu": {
         "apply-once": "ينطبق فقط عند بدء التشغيل"
       },
@@ -444,13 +453,21 @@
         "clear-activity": "مسح النشاط",
         "clear-activity-after-timeout": "مسح النشاط بعد انتهاء المهلة",
         "connected": "متصل",
-        "disconnected": "قطع الاتصال",
+        "disconnected": "غير متصل",
         "hide-duration-left": "إخفاء المدة المتبقية",
         "hide-github-button": "إخفاء زر رابط GitHub",
-        "play-on-youtube-music": "شغل في YouTube Music",
-        "set-inactivity-timeout": "ضبط مهلة عدم النشاط"
+        "play-on-application": "شغل في {{applicationName}}",
+        "set-inactivity-timeout": "ضبط مهلة عدم النشاط",
+        "set-status-display-type": {
+          "label": "نص الحالة",
+          "submenu": {
+            "artist": "جار السمع ل{artist}",
+            "application": "جار السمع ل{{applicationName}}",
+            "title": "جار السمع ل{song title}"
+          }
+        }
       },
-      "name": "حالة ديسكورد",
+      "name": "Discord Rich Presence",
       "prompt": {
         "set-inactivity-timeout": {
           "label": "أدخل مهلة عدم النشاط بالثواني:",
@@ -465,70 +482,70 @@
             "buttons": {
               "ok": "حسنا"
             },
-            "message": "نعتذر، فشل التحميل…",
-            "title": "خطأ في التحميل!"
+            "message": "اه! نعتذر، فشل التنزيل…",
+            "title": "خطأ في التنزيل!"
           },
           "start-download-playlist": {
             "buttons": {
               "ok": "حسنا"
             },
             "detail": "({{playlistSize}} أغنية)",
-            "message": "تحميل القائمة {{playlistTitle}}",
-            "title": "بدأ التحميل"
+            "message": "تنزيل القائمة {{playlistTitle}}",
+            "title": "تم بدأ التنزيل"
           }
         },
         "feedback": {
-          "conversion-progress": "التحويل: {{percent}}%",
+          "conversion-progress": "التحويل: {{percent}}٪",
           "converting": "جارٍ التحويل…",
           "done": "تم: {{filePath}}",
-          "download-info": "تحميل {{artist}} - {{title}} {{videoId}}",
-          "download-progress": "تحميل: {{percent}}%",
-          "downloading": "تحميل…",
-          "downloading-counter": "تنزيل {{current}}/{{total}}…",
-          "downloading-playlist": "يتم تحميل القائمة \"{{playlistTitle}}\" - {{playlistSize}} أغاني ({{playlistId}})",
-          "error-while-downloading": "خطأ في تحميل \"{{author}} - {{title}}\": {{error}}",
+          "download-info": "تنزيل {{artist}} - {{title}} {{videoId}}",
+          "download-progress": "تنزيل: {{percent}}٪",
+          "downloading": "جار التنزيل…",
+          "downloading-counter": "جار التنزيل {{current}}/{{total}}…",
+          "downloading-playlist": "جار تنزيل القائمة \"{{playlistTitle}}\" - {{playlistSize}} أغاني ({{playlistId}})",
+          "error-while-downloading": "خطأ في تنزيل \"{{author}} - {{title}}\": {{error}}",
           "folder-already-exists": "الملف {{playlistFolder}} موجود بالفعل",
-          "getting-playlist-info": "الحصول على معلومات القائمة…",
-          "loading": "جار التحميل…",
-          "playlist-has-only-one-song": "تحتوي قائمة التشغيل على عنصر واحد فقط، يتم تحميله الأن",
+          "getting-playlist-info": "جار الحصول على معلومات القائمة…",
+          "loading": "جارِ التنزيل…",
+          "playlist-has-only-one-song": "تحتوي قائمة التشغيل على عنصر واحد فقط، جار تنزيله الأن",
           "playlist-id-not-found": "لم يتم العثور على معرف قائمة التشغيل",
           "playlist-is-empty": "قائمة التشغيل فارغة",
           "playlist-is-mix-or-private": "حدث خطأ أثناء الحصول على معلومات قائمة التشغيل: تأكد من أنها ليست قائمة تشغيل خاصة أو قائمة تشغيل \"مختلطة لك\"\n\n{{error}}",
-          "preparing-file": "يتم تجهيز الملف…",
-          "saving": "يتم الحفظ…",
-          "trying-to-get-playlist-id": "محاولة الحصول على معرف قائمة التشغيل: {{playlistId}}",
+          "preparing-file": "جار تجهيز الملف…",
+          "saving": "جار الحفظ…",
+          "trying-to-get-playlist-id": "جار محاولة الحصول على معرف قائمة التشغيل: {{playlistId}}",
           "video-id-not-found": "لم يتم ايجاد الفيديو",
-          "writing-id3": "كتابة علامات ID3…"
+          "writing-id3": "جار كتابة علامات ID3…"
         }
       },
       "description": "يقوم بتنزيل ملفات MP3/مصدر الصوت مباشرة من الواجهة",
       "menu": {
-        "choose-download-folder": "اختر مكان التحميل",
+        "choose-download-folder": "اختر مكان التنزيل",
         "download-finish-settings": {
-          "label": "تحميل عند الانتهاء",
+          "label": "تنزيل عند الانتهاء",
           "prompt": {
-            "last-percent": "بعد ( عدد مجهول ) بالمئة",
-            "last-seconds": "آخر (x) ثانية",
-            "title": "تكوين وقت التحميل"
+            "last-percent": "بعد x بالمئة",
+            "last-seconds": "آخر x ثانية",
+            "title": "تكوين وقت التنزيل"
           },
           "submenu": {
             "advanced": "متقدم",
             "enabled": "مفعل",
             "mode": "وضع الوقت",
-            "percent": "النسبة",
+            "percent": "نسبة",
             "seconds": "ثواني"
           }
         },
-        "download-playlist": "تحميل قائمة التشغيل",
+        "download-playlist": "تنزيل قائمة التشغيل",
         "presets": "الإعدادات المسبقة",
-        "skip-existing": "تخطي الملفات الموجودة"
+        "skip-existing": "تخطي الملفات الموجودة بالفعل"
       },
       "name": "أداة التنزيل",
       "renderer": {
         "can-not-update-progress": "لا يمكن تحديث التقدم"
       },
       "templates": {
-        "button": "تحميل"
+        "button": "تنزيل"
       }
     },
     "equalizer": {
@@ -552,11 +569,11 @@
       "menu": {
         "hide-dom-window-controls": "إخفاء عناصر التحكم في نافذة DOM"
       },
-      "name": "قائمة داخل التطبيق"
+      "name": "قائمة التي داخل التطبيق"
     },
     "lumiastream": {
       "description": "يضيف دعم Lumia Stream",
-      "name": "Lumia Stream [بيتا]"
+      "name": "Lumia Stream [تجريبي]"
     },
     "lyrics-genius": {
       "description": "يضيف دعم الكلمات لمعظم الأغاني",
@@ -575,17 +592,17 @@
       },
       "internal": {
         "save": "حفظ",
-        "track-source": "مصدر الاغنية",
+        "track-source": "تتبع مصدر الاغنية",
         "unknown-user": "مستخدم مجهول"
       },
       "menu": {
         "click-to-copy-id": "نسخ معرف المستضيف",
-        "close": "إغلاق \"الموسيقى معًا\"",
+        "close": "إغلاق الموسيقى معًا",
         "connected-users": "المستخدمون المتصلون",
-        "disconnect": "قطع اتصال من \"الموسيقى معًا\"",
+        "disconnect": "قطع اتصال من الموسيقى معًا",
         "empty-user": "لا يوجد مستعملون متصلون",
-        "host": "مضيف \"الموسيقى معًا\"",
-        "join": "الانضمام إلى \"الموسيقى معا\"",
+        "host": "مضيف الموسيقى معًا",
+        "join": "الانضمام إلى الموسيقى معا",
         "permission": {
           "all": "السماح للضيوف بالتحكم في قائمة التشغيل والمشغل",
           "host-only": "فقط المضيف يستطيع التحكم بالقائمة و المشغل",
@@ -593,29 +610,29 @@
         },
         "set-permission": "تغيير إذن التحكم",
         "status": {
-          "disconnected": "قطع الاتصال",
+          "disconnected": "غير متصل",
           "guest": "متصل كضيف",
           "host": "متصل كمضيف"
         }
       },
-      "name": "الموسيقى معا [بيتا]",
+      "name": "الموسيقى معا [تجريبي]",
       "toast": {
         "add-song-failed": "فشل في إضافة أغنية",
-        "closed": "تم إغلاق \"الموسيقى معا\"",
-        "disconnected": "تم قطع اتصال \"الموسيقى معًا\"",
-        "host-failed": "فشل في استضافة \"الموسيقى معا\"",
+        "closed": "تم إغلاق الموسيقى معا",
+        "disconnected": "تم قطع اتصال الموسيقى معًا",
+        "host-failed": "فشل في استضافة الموسيقى معا",
         "id-copied": "تم نسخ معرف المضيف",
-        "id-copy-failed": "لم يتم نسخ معرف المضيف",
-        "join-failed": "فشل الانضمام إلى \"الموسيقى معا\"",
-        "joined": "تم الانضمام إلى \"الموسيقى معا\"",
-        "permission-changed": "تم تغيير إذن \"الموسيقى معًا\" إلى \"{{permission}}\"",
+        "id-copy-failed": "فشل نسخ معرف المضيف",
+        "join-failed": "فشل الانضمام إلى الموسيقى معا",
+        "joined": "تم الانضمام إلى الموسيقى معا",
+        "permission-changed": "تم تغيير إذن الموسيقى معًا إلى \"{{permission}}\"",
         "remove-song-failed": "فشل في إزالة الأغنية",
-        "user-connected": "{{name}} انضم إلى \"الموسيقى معًا\"",
-        "user-disconnected": "{{name}} غادر \"الموسيقى معًا\""
+        "user-connected": "{{name}} انضم إلى الموسيقى معًا",
+        "user-disconnected": "{{name}} غادر الموسيقى معًا"
       }
     },
     "navigation": {
-      "description": "أسهم التنقل \"التالي/السابق\" مدمجة مباشرة في الواجهة، كما في متصفحك",
+      "description": "أسهم التنقل \"التالي/السابق\" مدمجة مباشرة في الواجهة، كما في متصفحك المفضل",
       "name": "التنقل",
       "templates": {
         "back": {
@@ -631,31 +648,31 @@
       "name": "لا يوجد تسجيل دخول بجوجل"
     },
     "notifications": {
-      "description": "عرض إشعار عندما تبدأ الأغنية بالتشغيل (الإشعارات التفاعلية متوفرة على ويندوز)",
+      "description": "عرض إشعار عندما تبدأ الأغنية (الإشعارات التفاعلية متوفرة على ويندوز)",
       "menu": {
         "interactive": "إشعارات تفاعلية",
         "interactive-settings": {
           "label": "إعدادات تفاعلية",
           "submenu": {
-            "hide-button-text": "إخفاء زر النص",
-            "refresh-on-play-pause": "تحديث عند التشغيل/الإيقاف المؤقت",
+            "hide-button-text": "إخفاء نص الزر",
+            "refresh-on-play-pause": "اعادة تحميل عند التشغيل/الإيقاف",
             "tray-controls": "فتح/إغلاق عند النقر على علامة الشريط"
           }
         },
         "priority": "أولوية الإشعار",
-        "toast-style": "تنسيق التوست",
+        "toast-style": "تنسيق النخب",
         "unpause-notification": "إظهار إشعار عند استئناف التشغيل"
       },
       "name": "الإشعارات"
     },
     "performance-improvement": {
       "description": "تحسين الأداء عبر تفعيل السكربتات التجريبية",
-      "name": "تحسين الأداء [بيتا]"
+      "name": "تحسين الأداء [تجريبي]"
     },
     "picture-in-picture": {
       "description": "يسمح بتحويل التطبيق إلى وضع الصورة داخل الصورة",
       "menu": {
-        "always-on-top": "دائمًا في الأعلى",
+        "always-on-top": "دائمًا في المقدمة",
         "hotkey": {
           "label": "مفتاح اختصار",
           "prompt": {
@@ -670,7 +687,7 @@
         "save-window-size": "حفظ حجم النافذة",
         "use-native-pip": "استخدام وضع الصورة داخل الصورة الأصلي للمتصفح"
       },
-      "name": "الصورة داخل الصورة",
+      "name": "وضع الصورة داخل الصورة",
       "templates": {
         "button": "وضع الصورة داخل الصورة"
       }
@@ -683,7 +700,7 @@
       }
     },
     "precise-volume": {
-      "description": "التحكم في مستوى الصوت بدقة باستخدام عجلة الفأرة/مفاتيح الاختصار، مع واجهة مستخدم مخصصة وقابلة للتخصيص وخطوات صوتية قابلة للتعديل",
+      "description": "التحكم في مستوى الصوت بدقة باستخدام عجلة الفأرة/مفاتيح الاختصار، مع واجهة مستخدم مخصصة وخطوات صوتية قابلة للتخصيص",
       "menu": {
         "arrows-shortcuts": "عناصر التحكم بأسهم المفاتيح",
         "custom-volume-steps": "تعيين خطوات صوتية خاصة",
@@ -728,8 +745,8 @@
       "dialog": {
         "lastfm": {
           "auth-failed": {
-            "message": "فشل المصادقة مع Last.fm\nإخفاء النافذة المنبثقة حتى إعادة التشغيل التالية.",
-            "title": "فشلت المصادقة"
+            "message": "فشل التفويض مع Last.fm\nإخفاء النافذة المصغرة حتى إعادة التشغيل التالية.",
+            "title": "فشل التفويض"
           }
         }
       },
@@ -740,6 +757,7 @@
         "listenbrainz": {
           "token": "أدخل رمز مستخدم ListenBrainz"
         },
+        "scrobble-alternative-artist": "استخدم فنانين بديلين",
         "scrobble-alternative-title": "استخدم عناوين بديلة",
         "scrobble-other-media": "Scrobble الوسائط الأخرى"
       },
@@ -758,12 +776,12 @@
       }
     },
     "shortcuts": {
-      "description": "يسمح بضبط اختصارات لوحة المفاتيح العالمية للتحكم في التشغيل (تشغيل/إيقاف مؤقت/التالي/السابق) وإيقاف تشغيل OSD الوسائط عن طريق تجاوز مفاتيح الوسائط، وتشغيل Ctrl/CMD + F للبحث، وتفعيل دعم Linux MPRIS لمفاتيح الوسائط، واختصارات مخصصة للمستخدمين المتقدمين",
+      "description": "يسمح بضبط اختصارات لوحة المفاتيح للتحكم في التشغيل (تشغيل/إيقاف/التالي/السابق) وإيقاف تشغيل OSD الوسائط عن طريق تجاوز مفاتيح الوسائط، وتشغيل Ctrl/CMD + F للبحث، وتفعيل دعم Linux MPRIS لمفاتيح الوسائط، واختصارات مخصصة للمستخدمين المتقدمين",
       "menu": {
         "override-media-keys": "تجاوز مفاتيح الوسائط",
         "set-keybinds": "تعيين عناصر التحكم بالأغاني"
       },
-      "name": "الاختصارات (& MPRIS)",
+      "name": "الاختصارات (و MPRIS)",
       "prompt": {
         "keybind": {
           "keybind-options": {
@@ -772,17 +790,17 @@
             "previous": "السابق"
           },
           "label": "اختر اختصارات لوحة المفاتيح للتحكم في الأغاني:",
-          "title": "اختصارات لوحة المفاتيح العالمية"
+          "title": "اختصارات لوحة المفاتيح"
         }
       }
     },
     "skip-disliked-songs": {
-      "description": "تخطي الأغاني غير المرغوب فيها",
-      "name": "تخطي الأغاني الغير مرغوب فيها"
+      "description": "يتخطى الأغاني الغير معجب فيها",
+      "name": "تخطي الأغاني الغير معجب فيها"
     },
     "skip-silences": {
-      "description": "تخطي أقسام الصمت تلقائيًا في الأغاني",
-      "name": "تخطي فترات الصمت"
+      "description": "تخطي أقسام التي ليس لها صوت تلقائيًا في الأغاني",
+      "name": "تخطي الفترات التي ليس لها صوت"
     },
     "sponsorblock": {
       "description": "تخطي تلقائيًا الأجزاء غير الموسيقية مثل المقدمة/الختام أو أجزاء مقاطع الفيديو الموسيقية حيث لا يتم تشغيل الأغنية",
@@ -796,7 +814,7 @@
       },
       "menu": {
         "default-text-string": {
-          "label": "المسافة الافتراضي بين كلمات الأغاني",
+          "label": "المسافة الافتراضية بين كلمات الأغاني",
           "tooltip": "اختر الحرف الافتراضي لاستخدامه في الفجوة بين كلمات الأغنية"
         },
         "line-effect": {
@@ -816,14 +834,22 @@
             },
             "scale": {
               "label": "تحجيم",
-              "tooltip": "تكبير السطر الحالي"
+              "tooltip": "حجم السطر الحالي"
             }
           },
           "tooltip": "اختر التأثير لتطبيقه على السطر الحالي"
         },
         "precise-timing": {
           "label": "اجعل كلمات الأغنية متزامنة بشكل مثالي",
-          "tooltip": "احسب بدقة الملي ثانية عرض السطر التالي (قد يكون له تأثير طفيف على الأداء)"
+          "tooltip": "احسب بدقة الملي ثانية عرض السطر التالي (قد يكون له تأثير صغير على الأداء)"
+        },
+        "preferred-provider": {
+          "label": "المزود المفضل",
+          "none": {
+            "label": "لا شيء",
+            "tooltip": "لا يوجد مزود مفضل"
+          },
+          "tooltip": "اختر المزود المفضل للإستخدام"
         },
         "romanization": {
           "label": "اجعل الكلمات رومانية",
@@ -850,7 +876,7 @@
       }
     },
     "taskbar-mediacontrol": {
-      "description": "التحكم في المشغل من شريط المهام ويندوز",
+      "description": "التحكم في المشغل من شريط مهام ويندوز",
       "name": "التحكم بالوسائط من شريط المهام"
     },
     "touchbar": {
@@ -858,12 +884,21 @@
       "name": "شريط اللمس (TouchBar)"
     },
     "transparent-player": {
+      "description": "يجعل نافذة التطبيق شفافة",
       "menu": {
-        "type": {
+        "opacity": {
+          "label": "الشفافية",
           "submenu": {
-            "acrylic": "زجاجي",
-            "mica": "حجري",
-            "none": "لاشيء"
+            "percent": "{{opacity}}٪"
+          }
+        },
+        "type": {
+          "label": "النوع",
+          "submenu": {
+            "acrylic": "أكريليك",
+            "mica": "ميكا",
+            "none": "لاشيء",
+            "tabbed": "بديل ميكا"
           }
         }
       },
@@ -892,13 +927,13 @@
         "mode": {
           "label": "وضع",
           "submenu": {
-            "custom": "تبديل مخصص",
+            "custom": "زر مخصص",
             "disabled": "غير مفعل",
-            "native": "تبديل طبيعي"
+            "native": "زر طبيعي"
           }
         }
       },
-      "name": "تفعيل الفيديو",
+      "name": "زر الفيديو",
       "templates": {
         "button-song": "أغنية",
         "button-video": "فيديو"
@@ -907,7 +942,7 @@
     "visualizer": {
       "description": "يضيف معاينًا بصريًا للمشغل",
       "menu": {
-        "visualizer-type": "نوع المعاينة المصرية"
+        "visualizer-type": "نوع المعاين البصري"
       },
       "name": "معاين بصري"
     }

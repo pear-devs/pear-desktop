@@ -72,8 +72,8 @@ export default createPlugin({
           });
       };
 
-      ipc.on('ytmd:player-api-loaded', () =>
-        ipc.send('ytmd:setup-time-changed-listener'),
+      ipc.on('peard:player-api-loaded', () =>
+        ipc.send('peard:setup-time-changed-listener'),
       );
 
       registerCallback((songInfo) => {

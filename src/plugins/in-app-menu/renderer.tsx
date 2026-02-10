@@ -4,6 +4,8 @@ import { render } from 'solid-js/web';
 import { TitleBar } from './renderer/TitleBar';
 import { defaultInAppMenuConfig, type InAppMenuConfig } from './constants';
 
+import { APPLICATION_NAME } from '@/i18n';
+
 import type { RendererContext } from '@/types/contexts';
 
 const scrollStyle = `
@@ -25,7 +27,7 @@ export const onRendererLoad = async ({
 }: RendererContext<InAppMenuConfig>) => {
   setConfig(await getConfig());
 
-  document.title = 'YouTube Music';
+  document.title = APPLICATION_NAME;
   const stylesheet = new CSSStyleSheet();
   stylesheet.replaceSync(scrollStyle);
   document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];

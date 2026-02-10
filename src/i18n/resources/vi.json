@@ -154,7 +154,7 @@
                 "label": "Tiêu đề cửa sổ tùy chỉnh",
                 "prompt": {
                   "label": "Nhập tiêu đề cửa sổ tùy chỉnh: (để trống để vô hiệu hóa)",
-                  "placeholder": "Ví dụ: Youtube Music"
+                  "placeholder": "Ví dụ: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Khởi động lại ứng dụng",
       "show": "Hiện cửa sổ",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{title}} - {{artist}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Chế độ Môi trường xung quanh"
     },
     "amuse": {
-      "description": "Thêm hỗ trợ YouTube Music cho tiện ích hiển thị bài hát đang phát Amuse của 6K Labs",
+      "description": "Thêm hỗ trợ {{applicationName}} cho tiện ích hiển thị bài hát đang phát Amuse của 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Máy chủ API của Amuse đang chạy. GET /query để lấy thông tin về bài hát."
@@ -319,6 +319,13 @@
         },
         "hostname": {
           "label": "Tên máy chủ"
+        },
+        "https": {
+          "submenu": {
+            "enable-https": {
+              "label": "Bật HTTPS"
+            }
+          }
         },
         "port": {
           "label": "Cổng"
@@ -369,11 +376,11 @@
       "name": "Làm mờ thanh điều hướng"
     },
     "bypass-age-restrictions": {
-      "description": "Bỏ qua xác minh độ tuổi của YouTube",
+      "description": "Bỏ qua xác minh độ tuổi của Music Player",
       "name": "Bỏ qua hạn chế độ tuổi"
     },
     "captions-selector": {
-      "description": "Bộ lựa chọn phụ đề cho các bài hát trên Youtube Music",
+      "description": "Bộ lựa chọn phụ đề cho các bài hát trên {{applicationName}}",
       "menu": {
         "autoload": "Tự động chọn phụ đề vừa sử dụng",
         "disable-captions": "Không có phụ đề làm mặc định"
@@ -456,14 +463,14 @@
         "disconnected": "Đã ngắt kết nối",
         "hide-duration-left": "Ẩn thời lượng còn lại",
         "hide-github-button": "Ẩn nút liên kết GitHub",
-        "play-on-youtube-music": "Phát trong Youtube Music",
+        "play-on-application": "Phát trong {{applicationName}}",
         "set-inactivity-timeout": "Đặt thời gian chờ không hoạt động",
         "set-status-display-type": {
           "label": "Văn bản trạng thái",
           "submenu": {
+            "application": "Đang nghe {{applicationName}}",
             "artist": "Đang nghe nhạc của {artist}",
-            "title": "Đang nghe nhạc {song title}",
-            "youtube-music": "Đang nghe Youtube Music"
+            "title": "Đang nghe nhạc {song title}"
           }
         }
       },

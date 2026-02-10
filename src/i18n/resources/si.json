@@ -201,8 +201,8 @@
       "restart": "නැවත ආරම්භ කරන්න",
       "show": "තිරය පෙන්වන්න",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },

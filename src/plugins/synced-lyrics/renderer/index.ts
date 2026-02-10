@@ -6,11 +6,11 @@ import { setConfig, setCurrentTime } from './renderer';
 import { fetchLyrics } from './store';
 
 import type { RendererContext } from '@/types/contexts';
-import type { YoutubePlayer } from '@/types/youtube-player';
+import type { MusicPlayer } from '@/types/music-player';
 import type { SongInfo } from '@/providers/song-info';
 import type { SyncedLyricsPluginConfig } from '../types';
 
-export let _ytAPI: YoutubePlayer | null = null;
+export let _ytAPI: MusicPlayer | null = null;
 export let netFetch: (
   url: string,
   init?: RequestInit,
@@ -44,7 +44,7 @@ export const renderer = createRenderer<
     }
   },
 
-  async onPlayerApiReady(api: YoutubePlayer) {
+  async onPlayerApiReady(api: MusicPlayer) {
     _ytAPI = api;
 
     api.addEventListener('videodatachange', this.videoDataChange);
@@ -79,7 +79,7 @@ export const renderer = createRenderer<
 
     setConfig(await ctx.getConfig());
 
-    ctx.ipc.on('ytmd:update-song-info', (info: SongInfo) => {
+    ctx.ipc.on('peard:update-song-info', (info: SongInfo) => {
       fetchLyrics(info);
     });
   },

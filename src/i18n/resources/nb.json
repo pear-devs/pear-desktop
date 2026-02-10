@@ -257,11 +257,11 @@
       "name": "Tilslør navigasjonsfelt"
     },
     "bypass-age-restrictions": {
-      "description": "Omgå YouTube sin aldersgrenser",
+      "description": "Omgå Music Player sin aldersgrenser",
       "name": "Omgå aldersgrense"
     },
     "captions-selector": {
-      "description": "Undertekstverktøy for lydspor i YouTube Music",
+      "description": "Undertekstverktøy for lydspor i {{applicationName}}",
       "menu": {
         "autoload": "Auto-velg sist brukte undertekst",
         "disable-captions": "Ingen undertekst som forvalg"
@@ -326,7 +326,7 @@
         "disconnected": "Frakoblet",
         "hide-duration-left": "Skjul gjenværende tid",
         "hide-github-button": "Skjul GitHub-lenkeknapp",
-        "play-on-youtube-music": "Spill på YouTube Music",
+        "play-on-application": "Spill på {{applicationName}}",
         "set-inactivity-timeout": "Sett tid før tidsavbrudd"
       },
       "name": "Rik tilstedeværelse for Discord",

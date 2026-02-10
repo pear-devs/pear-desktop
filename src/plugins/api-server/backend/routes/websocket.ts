@@ -94,7 +94,7 @@ export const register = (
     lastSongInfo = { ...songInfo };
   });
 
-  ipc.on('ytmd:volume-changed', (newVolumeState: VolumeState) => {
+  ipc.on('peard:volume-changed', (newVolumeState: VolumeState) => {
     volumeState = newVolumeState;
     send(DataTypes.VolumeChanged, {
       volume: volumeState.state,
@@ -102,16 +102,16 @@ export const register = (
     });
   });
 
-  ipc.on('ytmd:repeat-changed', (mode: RepeatMode) => {
+  ipc.on('peard:repeat-changed', (mode: RepeatMode) => {
     repeat = mode;
     send(DataTypes.RepeatChanged, { repeat });
   });
 
-  ipc.on('ytmd:seeked', (t: number) => {
+  ipc.on('peard:seeked', (t: number) => {
     send(DataTypes.PositionChanged, { position: t });
   });
 
-  ipc.on('ytmd:shuffle-changed', (newShuffle: boolean) => {
+  ipc.on('peard:shuffle-changed', (newShuffle: boolean) => {
     shuffle = newShuffle;
     send(DataTypes.ShuffleChanged, { shuffle });
   });

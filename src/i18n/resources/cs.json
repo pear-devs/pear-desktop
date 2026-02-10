@@ -154,7 +154,7 @@
                 "label": "Vlastní název okna",
                 "prompt": {
                   "label": "Zadejte vlastní název okna: (zanechejte prázdné pro zakázání)",
-                  "placeholder": "Příklad: Hudba YouTube"
+                  "placeholder": "Příklad: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Restartovat aplikaci",
       "show": "Zobrazit okno",
       "tooltip": {
-        "default": "Youtube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Ambientní režim"
     },
     "amuse": {
-      "description": "Přídá YouTube Music podporu pro Amuse ‚právě hraje‘ widget od 6K Labs",
+      "description": "Přídá {{applicationName}} podporu pro Amuse ‚právě hraje‘ widget od 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Server Amuse API běží. Pošli požadavek typu GET na /query, aby ses dozvěděl info o písničce."
@@ -337,7 +337,7 @@
       }
     },
     "audio-compressor": {
-      "description": "Apply compression k audiu (snižuje hlasitost nejhlasitěších částí signálu and zvyšuje hlasitost nejjemnějších částí)",
+      "description": "Aplikuje kompresi k audiu (snižuje hlasitost nejhlasitěších částí signálu a zvyšuje hlasitost nejjemnějších částí)",
       "name": "Audio kompresor"
     },
     "auth-proxy-adapter": {
@@ -369,11 +369,11 @@
       "name": "Rozmazaný navigační panel"
     },
     "bypass-age-restrictions": {
-      "description": "Obejít ověření věku na YouTube",
+      "description": "Obejít ověření věku na Music Player",
       "name": "Obejít věková omezení"
     },
     "captions-selector": {
-      "description": "Titulkový selector pro zvukové stopy v YouTube Music",
+      "description": "Titulkový selector pro zvukové stopy v {{applicationName}}",
       "menu": {
         "autoload": "Automaticky vybrat naposledy použité titulky",
         "disable-captions": "Žádné titulky ve vychozím nastavení"
@@ -456,14 +456,14 @@
         "disconnected": "Odpojeno",
         "hide-duration-left": "Skrýt zbývající duration",
         "hide-github-button": "Skrýt tlačítko s odkazem na GitHub",
-        "play-on-youtube-music": "Hrát na YouTube Music",
+        "play-on-application": "Hrát na {{applicationName}}",
         "set-inactivity-timeout": "Nastavit timeout pro neaktivitu",
         "set-status-display-type": {
           "label": "Text statusu",
           "submenu": {
             "artist": "Poslouchám: {artist}",
-            "title": "Poslouchám {song title}",
-            "youtube-music": "Poslouchám YouTube Music"
+            "application": "Poslouchám {{applicationName}}",
+            "title": "Poslouchám {song title}"
           }
         }
       },

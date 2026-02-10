@@ -154,7 +154,7 @@
                 "label": "தனிப்பயன் சாளர தலைப்பு",
                 "prompt": {
                   "label": "தனிப்பயன் சாளர தலைப்பை உள்ளிடவும்: (முடக்க காலியாக விடவும்)",
-                  "placeholder": "எடுத்துக்காட்டு: YouTube இசை"
+                  "placeholder": "எடுத்துக்காட்டு: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "பயன்பாட்டை மறுதொடக்கம் செய்யுங்கள்",
       "show": "சாளரத்தைக் காட்டு",
       "tooltip": {
-        "default": "யூடியூப் இசை",
-        "with-song-info": "YouTube இசை: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "சுற்றுப்புற முறை"
     },
     "amuse": {
-      "description": "6K ஆய்வகங்களால் இப்போது விட்செட்டில் விளையாடும் Amuse க்கு YouTube இசை ஆதரவை சேர்க்கிறது",
+      "description": "6K ஆய்வகங்களால் இப்போது விட்செட்டில் விளையாடும் Amuse க்கு Music Player இசை ஆதரவை சேர்க்கிறது",
       "name": "பொழுதுபோக்கு",
       "response": {
         "query": "பநிஇ சேவையகம் இயங்குகிறது. பாடல் தகவலைப் பெற /வினவல்."
@@ -369,11 +369,11 @@
       "name": "மங்கலான வழிசெலுத்தல் பட்டி"
     },
     "bypass-age-restrictions": {
-      "description": "YouTube அகவை சரிபார்ப்பு பைபாச்",
+      "description": "Music Player அகவை சரிபார்ப்பு பைபாச்",
       "name": "அகவை கட்டுப்பாடுகள் பைபாச்"
     },
     "captions-selector": {
-      "description": "YouTube இசை ஆடியோ டிராக்குகளுக்கான தலைப்பு தேர்வாளர்",
+      "description": "{{applicationName}} இசை ஆடியோ டிராக்குகளுக்கான தலைப்பு தேர்வாளர்",
       "menu": {
         "autoload": "கடைசியாக பயன்படுத்தப்பட்ட தலைப்பை தானாகத் தேர்ந்தெடுக்கவும்",
         "disable-captions": "முன்னிருப்பாக தலைப்புகள் இல்லை"
@@ -456,14 +456,14 @@
         "disconnected": "துண்டிக்கப்பட்டது",
         "hide-duration-left": "காலம் மீதமுள்ளதை மறைக்கவும்",
         "hide-github-button": "அறிவிலிமையம் இணைப்பு பொத்தானை மறைக்கவும்",
-        "play-on-youtube-music": "யூடியூப் இசையில் விளையாடுங்கள்",
+        "play-on-application": "யூடியூப் இசையில் விளையாடுங்கள்",
         "set-inactivity-timeout": "செயலற்ற நேரம் முடிந்தது",
         "set-status-display-type": {
           "label": "நிலை உரை",
           "submenu": {
+            "application": "வலையொளி இசையில் கேட்கிறது",
             "artist": "{கலைஞர்} பாடலைக் கேட்கிறேன்",
-            "title": "பாடலைக் கேட்கிறேன்{பாடல் தலைப்பு}",
-            "youtube-music": "வலையொளி இசையில் கேட்கிறது"
+            "title": "பாடலைக் கேட்கிறேன்{பாடல் தலைப்பு}"
           }
         }
       },
@@ -889,7 +889,7 @@
         "opacity": {
           "label": "ஒளிபுகாநிலை",
           "submenu": {
-            "percent": "{{opacity}}{{ஒளிபுகாநிலை}}%"
+            "percent": "{{opacity}}%"
           }
         },
         "type": {

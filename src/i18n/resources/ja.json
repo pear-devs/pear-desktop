@@ -154,7 +154,7 @@
                 "label": "カスタムウィンドウタイトル",
                 "prompt": {
                   "label": "カスタムウィンドウタイトルを入力: (未入力の場合無効になります)",
-                  "placeholder": "例: YouTube Music"
+                  "placeholder": "例: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "アプリを再起動",
       "show": "ウィンドウを表示",
       "tooltip": {
-        "default": "YouTube ミュージック",
-        "with-song-info": "YouTube ミュージック: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "アンビエント モード"
     },
     "amuse": {
-      "description": "6K LabsのAmuse再生中ウィジェットがYouTube Musicに対応しました",
+      "description": "6K LabsのAmuse再生中ウィジェットが{{applicationName}}に対応しました",
       "name": "Amuse",
       "response": {
         "query": "AmuseのAPIサーバーが稼働中です。GET /query で楽曲情報を取得できます。"
@@ -369,11 +369,11 @@
       "name": "ナビゲーションバーの曇り効果"
     },
     "bypass-age-restrictions": {
-      "description": "ユーチューブの年齢制限を迂回します",
+      "description": "音楽プレーヤーの年齢確認をバイパスする",
       "name": "年齢制限迂回"
     },
     "captions-selector": {
-      "description": "YouTube Musicトラック用字幕選択機",
+      "description": "{{applicationName}}トラック用字幕選択機",
       "menu": {
         "autoload": "最後の字幕を自動に選択",
         "disable-captions": "デフォルトで字幕を無効化"
@@ -456,14 +456,14 @@
         "disconnected": "切断済み",
         "hide-duration-left": "残りの再生時間を隠す",
         "hide-github-button": "GitHubリンクボタンを隠す",
-        "play-on-youtube-music": "YouTube Musicで再生",
+        "play-on-application": "{{applicationName}}で再生",
         "set-inactivity-timeout": "タイムアウト時間を設定",
         "set-status-display-type": {
           "label": "ステータステキスト",
           "submenu": {
             "artist": "{artist}を聴いている",
-            "title": "{曲名}を聴いている",
-            "youtube-music": "YouTube Musicを聴く"
+            "application": "{{applicationName}}を聴く",
+            "title": "{曲名}を聴いている"
           }
         }
       },

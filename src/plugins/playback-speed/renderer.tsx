@@ -109,7 +109,7 @@ export const onPlayerApiReady = () => {
     const video = document.querySelector<HTMLVideoElement>('video');
     if (video) {
       video.addEventListener('ratechange', forcePlaybackRate);
-      video.addEventListener('ytmd:src-changed', forcePlaybackRate);
+      video.addEventListener('peard:src-changed', forcePlaybackRate);
     }
   };
 
@@ -121,7 +121,7 @@ export const onUnload = () => {
   const video = document.querySelector<HTMLVideoElement>('video');
   if (video) {
     video.removeEventListener('ratechange', forcePlaybackRate);
-    video.removeEventListener('ytmd:src-changed', forcePlaybackRate);
+    video.removeEventListener('peard:src-changed', forcePlaybackRate);
   }
   getSongMenu()?.removeChild(sliderContainer);
 };

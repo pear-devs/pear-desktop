@@ -154,7 +154,7 @@
                 "label": "कस्टम विंडो टाइटल",
                 "prompt": {
                   "label": "कस्टम विंडो टाइटल डालें: (डिसएबल करने के लिए खाली छोड़ें)",
-                  "placeholder": "उदाहरण: यूट्यूब संगीत"
+                  "placeholder": "उदाहरण: पियर डेस्कटॉप"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "ऐप पुनः प्रारंभ करें",
       "show": "ऐप दिखाए",
       "tooltip": {
-        "default": "यूट्यूब म्यूजिक",
-        "with-song-info": "यूट्यूब म्यूजिक: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "अम्बिएन्ट मोड्"
     },
     "amuse": {
-      "description": "6K लैब्स द्वारा Amuse now playing विजेट के लिए YouTube म्यूजिक समर्थन जोड़ा गया",
+      "description": "6K लैब्स द्वारा Amuse now playing विजेट के लिए Music Player म्यूजिक समर्थन जोड़ा गया",
       "name": "मन बहलाना",
       "response": {
         "query": "अमयूस ए.पि.ऐ. चल रहा है। गाने की जान्कारि होने के लिये GET /query कीजिये।"
@@ -369,11 +369,11 @@
       "name": "नेविगेशन बार को ब्लर करें"
     },
     "bypass-age-restrictions": {
-      "description": "YouTube आयु की जांच को बायपास करें",
+      "description": "Music Player आयु की जांच को बायपास करें",
       "name": "आयु प्रतिबंध को बायपास करें"
     },
     "captions-selector": {
-      "description": "YouTube म्यूज़िक ऑडियो ट्रैक के लिए कैप्शन चयनकर्ता",
+      "description": "{{applicationName}} म्यूज़िक ऑडियो ट्रैक के लिए कैप्शन चयनकर्ता",
       "menu": {
         "autoload": "अंतिम बार उपयोग किए गए कैप्शन का ऑटोमैटिक रूप से चयन करें",
         "disable-captions": "डिफ़ॉल्ट रूप में कोई कैप्शन नहीं"
@@ -426,7 +426,13 @@
       "menu": {
         "device-selector": "डिवाइस चुनें"
       },
-      "name": "अपनी पसंद का आउटपुट डिवाइस"
+      "name": "अपनी पसंद का आउटपुट डिवाइस",
+      "prompt": {
+        "device-selector": {
+          "label": "उपयोग किए जाने वाला आउटपुट मीडिया चुने",
+          "title": "आउटपुट डिवाइस चुनें"
+        }
+      }
     },
     "disable-autoplay": {
       "description": "गीत को \"रुके हुए \" मोड में शुरू करता है",
@@ -450,8 +456,16 @@
         "disconnected": "डिस्कनेक्ट किया गया",
         "hide-duration-left": "शेष अवधि छिपाएँ",
         "hide-github-button": "GitHub लिंक के बटन को छिपाएँ",
-        "play-on-youtube-music": "YouTube म्यूज़िक पर चलाएँ",
-        "set-inactivity-timeout": "निष्क्रियता समय समाप्ति सेट करें"
+        "play-on-application": "{{applicationName}} म्यूज़िक पर चलाएँ",
+        "set-inactivity-timeout": "निष्क्रियता समय समाप्ति सेट करें",
+        "set-status-display-type": {
+          "label": "स्टेटस टेक्स्ट",
+          "submenu": {
+            "application": "{{applicationName}} सुन रहे है",
+            "artist": "{artist} को सुन रहे है",
+            "title": "{song title} सुन रहे है"
+          }
+        }
       },
       "name": "डिस्कॉर्ड रिच प्रेजेंस",
       "prompt": {
@@ -743,6 +757,7 @@
         "listenbrainz": {
           "token": "listenbrainz उपयोगकर्ता टोकन दर्ज करें"
         },
+        "scrobble-alternative-artist": "वैकल्पिक आर्टिस्ट का उपयोग करें",
         "scrobble-alternative-title": "वैकल्पिक शीर्षक का उपयोग करें",
         "scrobble-other-media": "अन्य मीडिया स्क्रोबल करें"
       },
@@ -788,8 +803,11 @@
       "name": "साइलेंस स्किप करें"
     },
     "sponsorblock": {
-      "description": "Intro/Outro जैसे गैर-संगीत भागों को स्किप करता है",
+      "description": "गाने के वीडियो में जहाँ म्यूजिक नहीं चलता, जैसे शुरुआत या अंत के हिस्से, उन्हें अपने आप स्किप कर देता है",
       "name": "SponsorBlock"
+    },
+    "synced-lyrics": {
+      "description": "LRClib जैसे सोर्सेज के उपयोग से, गानों के लिए सिंक किए गए लिरिक्स देता है।"
     },
     "video-toggle": {
       "menu": {

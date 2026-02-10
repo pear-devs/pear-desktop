@@ -86,7 +86,7 @@
           "copy-current-url": "Kopiera nuvarande länk",
           "go-back": "Gå tillbaka",
           "go-forward": "Gå framåt",
-          "quit": "Avsluta",
+          "quit": "Stäng",
           "restart": "Starta om appen"
         }
       },
@@ -154,7 +154,7 @@
                 "label": "Anpassad titel på fönstret",
                 "prompt": {
                   "label": "Ange anpassad fönstertitel: (lämna tomt för att inaktivera)",
-                  "placeholder": "Exempelvis: YouTube Music"
+                  "placeholder": "Exempelvis: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Starta om appen",
       "show": "Visa fönster",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} – {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +237,8 @@
           "submenu": {
             "percent": "{{ratio}} %"
           }
-        }
+        },
+        "enable-seekbar": "Aktivera temaanpassning av uppspelningsreglaget"
       },
       "name": "Albumfärgtema"
     },
@@ -287,7 +288,7 @@
       "name": "Ambiensläge"
     },
     "amuse": {
-      "description": "Lägger till stöd för YouTube Music i Amuse ‘Now Playing’-widgeten av 6K Labs",
+      "description": "Lägger till stöd för {{applicationName}} i Amuse ‘Now Playing’-widgeten av 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API-servern körs. Använd GET /query för att hämta information om låt."
@@ -319,6 +320,22 @@
         },
         "hostname": {
           "label": "Värdnamn"
+        },
+        "https": {
+          "label": "HTTPS och certifikat",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Välj HTTPS-certifikatfil",
+              "label": "Certifikatfil (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Aktivera HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Välj privat nyckelfil (.key/.pem)",
+              "label": "Privat nyckelfil (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -369,11 +386,11 @@
       "name": "Suddigt Navigeringsfält"
     },
     "bypass-age-restrictions": {
-      "description": "Hoppa över YouTubes åldersverifiering",
+      "description": "Hoppa över Music Player åldersverifiering",
       "name": "Hoppa Över Åldersbegränsningar"
     },
     "captions-selector": {
-      "description": "Välj textning för YouTube Music-ljudspår",
+      "description": "Välj textning för {{applicationName}}-ljudspår",
       "menu": {
         "autoload": "Välj automatiskt senast använda textning",
         "disable-captions": "Ingen textning som standard"
@@ -456,14 +473,14 @@
         "disconnected": "Frånkopplad",
         "hide-duration-left": "Dölj återstående tid",
         "hide-github-button": "Dölj knapp för GitHub-länk",
-        "play-on-youtube-music": "Spela på YouTube Music",
+        "play-on-application": "Spela på {{applicationName}}",
         "set-inactivity-timeout": "Ställ in inaktivitetstid",
         "set-status-display-type": {
           "label": "Statusmeddelande",
           "submenu": {
+            "application": "Lyssnar på {{applicationName}}",
             "artist": "Lyssnar på {artist}",
-            "title": "Lyssnar på {song title}",
-            "youtube-music": "Lyssnar på YouTube Music"
+            "title": "Lyssnar på {song title}"
           }
         }
       },

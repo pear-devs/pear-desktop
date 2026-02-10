@@ -154,14 +154,15 @@
                 "label": "Personalizza titolo finestra",
                 "prompt": {
                   "label": "Inserisci un titolo della finestra personalizzato: (lascia vuoto per disattivare)",
-                  "placeholder": "Esempio: YouTube Music"
+                  "placeholder": "Esempio: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "Predefinito",
                 "force-show": "Forza la visualizzazione",
                 "hide": "Nascondi",
-                "label": "Pulsanti Like"
+                "label": "Pulsanti Like",
+                "swap": "Scambia l'ordine dei pulsanti like"
               },
               "remove-upgrade-button": "Rimuovi il pulsante aggiorna",
               "theme": {
@@ -208,8 +209,8 @@
       "restart": "Riavvia l'app",
       "show": "Mostra finestra",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +238,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Abilita tematizzazione della seekbar"
       },
       "name": "Tema abbinato a colore album"
     },
@@ -287,7 +289,7 @@
       "name": "Modalità Ambiente"
     },
     "amuse": {
-      "description": "Aggiunge il supporto a YouTube Music per il widget Amuse Now Playing di 6K Labs",
+      "description": "Aggiunge il supporto a {{applicationName}} per il widget Amuse Now Playing di 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Il server API di Amuse è in funzione. GET /query per ottenere informazioni sui brani."
@@ -319,6 +321,22 @@
         },
         "hostname": {
           "label": "Hostname"
+        },
+        "https": {
+          "label": "HTTPS & Certificati",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Seleziona file di certificato HTTPS",
+              "label": "File di certificato (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Abilita HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Seleziona il file della chiave privata HTTPS",
+              "label": "File della chiave privata (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Porta"
@@ -369,11 +387,11 @@
       "name": "Barra di navigazione trasparente"
     },
     "bypass-age-restrictions": {
-      "description": "Bypassa la verifica dell'età di YouTube",
+      "description": "Bypassa la verifica dell'età di Music Player",
       "name": "Aggira i limiti d'età"
     },
     "captions-selector": {
-      "description": "Selettore sottotitolo per le tracce audio di YouTube",
+      "description": "Selettore sottotitolo per le tracce audio di {{applicationName}}",
       "menu": {
         "autoload": "Seleziona automaticamente l'ultimo sottotitolo utilizzato",
         "disable-captions": "Disattiva i sottotitoli"
@@ -394,6 +412,17 @@
         "caption-disabled": "Sottotitoli disattivati",
         "no-captions": "Nessun sottotitolo disponibile per questa canzone"
       }
+    },
+    "clock": {
+      "description": "Aggiungi un orologio alla barra di navigazione",
+      "menu": {
+        "format": {
+          "24-hour-format": "Formato in 24 ore",
+          "display-seconds": "Mostra Secondi",
+          "label": "Formato"
+        }
+      },
+      "name": "Orologio"
     },
     "compact-sidebar": {
       "description": "Imposta sempre la barra laterale in modalità compatta",
@@ -456,14 +485,14 @@
         "disconnected": "Disconnesso",
         "hide-duration-left": "Nascondi la durata rimasta",
         "hide-github-button": "Nascondi il pulsante link a GitHub",
-        "play-on-youtube-music": "Riproduci su YouTube Music",
+        "play-on-application": "Riproduci su {{applicationName}}",
         "set-inactivity-timeout": "Imposta il timeout di inattività",
         "set-status-display-type": {
           "label": "Testo dello status",
           "submenu": {
+            "application": "Ascoltando {{applicationName}}",
             "artist": "Stai ascoltando {artist}",
-            "title": "Stai ascoltando {song title}",
-            "youtube-music": "Ascoltando YouTube Music"
+            "title": "Stai ascoltando {song title}"
           }
         }
       },
@@ -866,7 +895,7 @@
       },
       "name": "Testi sincronizzati",
       "refetch-btn": {
-        "fetching": "Sto recuperando...",
+        "fetching": "Caricamento...",
         "normal": "Recupera i testi"
       },
       "warnings": {

@@ -54,7 +54,7 @@ export const onMainLoad = ({
     return target;
   };
 
-  ipcMain.handle('ytmd:menu-event', (event, commandId: number) => {
+  ipcMain.handle('peard:menu-event', (event, commandId: number) => {
     const target = getMenuItemById(commandId);
     if (target)
       (

@@ -5,6 +5,7 @@ import { ScrobblerBase } from './base';
 import type { SetConfType } from '../main';
 import type { SongInfo } from '@/providers/song-info';
 import type { ScrobblerPluginConfig } from '../index';
+import { APPLICATION_NAME } from '@/i18n';
 
 interface ListenbrainzRequestBody {
   listen_type?: string;
@@ -91,8 +92,8 @@ function createRequestBody(
     track_name: title,
     release_name: songInfo.album ?? undefined,
     additional_info: {
-      media_player: 'YouTube Music Desktop App',
-      submission_client: 'YouTube Music Desktop App - Scrobbler Plugin',
+      media_player: `${APPLICATION_NAME} Desktop App`,
+      submission_client: `${APPLICATION_NAME} Desktop App - Scrobbler Plugin`,
       origin_url: songInfo.url,
       duration: songInfo.songDuration,
     },
