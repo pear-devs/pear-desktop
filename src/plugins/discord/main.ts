@@ -49,6 +49,13 @@ export const backend = createBackend<
       ctx.ipc.send('peard:setup-time-changed-listener');
     });
 
+    ctx.ipc.on(
+      'discord:youtube-info',
+      (info: { name: string; avatar: string }) => {
+        discordService?.setYouTubeUser(info);
+      },
+    );
+
     app.on('before-quit', () => {
       discordService?.cleanup();
     });

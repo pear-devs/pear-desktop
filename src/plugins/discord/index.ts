@@ -2,6 +2,7 @@ import { StatusDisplayType } from 'discord-api-types/v10';
 
 import { createPlugin } from '@/utils';
 import { backend } from './main';
+import { preload } from './preload';
 import { onMenu } from './menu';
 import { t } from '@/i18n';
 
@@ -64,4 +65,5 @@ export default createPlugin({
   } as DiscordPluginConfig,
   menu: onMenu,
   backend,
+  preload,
 });

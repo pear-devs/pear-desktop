@@ -76,10 +76,6 @@ export class DiscordService {
 
     this.rpc.on('ready', () => {
       this.ready = true;
-      // Fetch YouTube Music user info after connecting if enabled
-      if (this.config?.showYouTubeUser) {
-        this.fetchYouTubeUserInfo();
-      }
       if (this.lastSongInfo && this.config) {
         this.updateActivity(this.lastSongInfo);
       }
@@ -297,9 +293,7 @@ export class DiscordService {
     this.timerManager.clear(TimerKey.ClearActivity);
 
     // Fetch YouTube user info if not already available and feature is enabled
-    if (!this.youtubeUser && this.config?.showYouTubeUser) {
-      this.fetchYouTubeUserInfo();
-    }
+
 
     if (!this.rpc || !this.ready) {
       // skip update if not ready
@@ -422,90 +416,33 @@ export class DiscordService {
   }
 
   /**
-   * Fetches the YouTube Music user avatar and name from the page.
-   * This method opens the settings menu to access the username.
+   * Sets the YouTube Music user info used for Rich Presence.
+   * @param user - The user info (name, avatar).
    */
-  private async fetchYouTubeUserInfo(): Promise<void> {
-    try {
-      const result = (await this.mainWindow.webContents.executeJavaScript(`
-        (async function() {
-          try {
-            // Find avatar first - this is always visible
-            const accountButton = document.querySelector('ytmusic-settings-button img#img')
-                               || document.querySelector('ytmusic-settings-button yt-img-shadow img')
-                               || document.querySelector('ytmusic-settings-button img');
-
-            let avatar = null;
-            if (accountButton) {
-              avatar = accountButton.src || accountButton.getAttribute('src');
-            }
-
-            // Now get the username by clicking the settings button
-            const settingsButton = document.querySelector('ytmusic-settings-button button')
-                                || document.querySelector('ytmusic-settings-button tp-yt-paper-icon-button');
-
-            let name = 'Pear Desktop User';
-
-            if (settingsButton) {
-              // Click to open the menu
-              settingsButton.click();
-
-              // Wait for the menu to appear (check multiple times)
-              for (let i = 0; i < 20; i++) {
-                await new Promise(resolve => setTimeout(resolve, 50));
-
-                const accountNameElement = document.querySelector('ytd-active-account-header-renderer #account-name')
-                                        || document.querySelector('yt-formatted-string#account-name');
-
-                if (accountNameElement) {
-                  name = accountNameElement.textContent?.trim() 
-                      || accountNameElement.getAttribute('title') 
-                      || name;
-                  break;
-                }
-              }
-
-              // Close the menu by pressing Escape
-              document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27 }));
-            }
-
-            if (avatar) {
-              return { avatar, name };
-            }
-
-            return null;
-          } catch (e) {
-            console.error('Failed to fetch YouTube user info:', e);
-            return null;
-          }
-        })();
-      `)) as { name: string; avatar: string } | null;
-
-      if (result && result.avatar) {
-        this.youtubeUser = {
-          name: result.name,
-          avatar: result.avatar,
-        };
-        console.log(LoggerPrefix, `Fetched YouTube user: ${result.name}`);
-        console.log(LoggerPrefix, `Fetched Avatar URL: ${result.avatar}`);
-      } else {
-        console.log(
-          LoggerPrefix,
-          'Could not fetch YouTube user info - retrying in 5 seconds',
-        );
-        // Retry after a delay if enabled
-        if (this.config?.showYouTubeUser) {
-          this.timerManager.set(
-            TimerKey.YouTubeFetchRetry,
-            () => {
-              this.fetchYouTubeUserInfo();
-            },
-            5000,
-          );
-        }
+  setYouTubeUser(user: { name: string; avatar: string }) {
+    if (!user) {
+      if (dev()) {
+        console.warn(LoggerPrefix, 'Received undefined YouTube user info');
       }
-    } catch (err) {
-      console.error(LoggerPrefix, 'Failed to fetch YouTube user info:', err);
+      return;
+    }
+
+    if (
+      this.youtubeUser &&
+      this.youtubeUser.name === user.name &&
+      this.youtubeUser.avatar === user.avatar
+    ) {
+      return;
+    }
+
+    this.youtubeUser = user;
+    if (dev()) {
+      console.log(LoggerPrefix, `Fetched YouTube user: ${user.name}`);
+      console.log(LoggerPrefix, `Fetched Avatar URL: ${user.avatar}`);
+    }
+
+    if (this.lastSongInfo) {
+      this.updateActivity(this.lastSongInfo);
     }
   }
 
