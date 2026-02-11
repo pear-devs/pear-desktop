@@ -292,9 +292,6 @@ export class DiscordService {
     // Cache the latest song info
     this.timerManager.clear(TimerKey.ClearActivity);
 
-    // Fetch YouTube user info if not already available and feature is enabled
-
-
     if (!this.rpc || !this.ready) {
       // skip update if not ready
       return;

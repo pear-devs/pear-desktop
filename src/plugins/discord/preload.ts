@@ -9,16 +9,22 @@ export const preload = createPreload({
 
     const findUserInfo = async () => {
       try {
+        let avatar: string | null = null;
+
         // Find avatar first - this is always visible
         const accountButton =
-          document.querySelector('ytmusic-settings-button img#img') ||
-          document.querySelector('ytmusic-settings-button yt-img-shadow img') ||
-          document.querySelector('ytmusic-settings-button img');
+          document.querySelector<HTMLImageElement>(
+            'ytmusic-settings-button img#img',
+          ) ||
+          document.querySelector<HTMLImageElement>(
+            'ytmusic-settings-button yt-img-shadow img',
+          ) ||
+          document.querySelector<HTMLImageElement>(
+            'ytmusic-settings-button img',
+          );
 
         if (accountButton) {
-          avatar =
-            (accountButton as HTMLImageElement).src ||
-            accountButton.getAttribute('src');
+          avatar = accountButton.src || accountButton.getAttribute('src');
         }
 
         if (!avatar || avatar.startsWith('data:')) {
