@@ -285,6 +285,19 @@ export const mainMenuTemplate = async (
                     config.set('options.likeButtons', 'hide');
                   },
                 },
+                {
+                  label: t(
+                    'main.menu.options.submenu.visual-tweaks.submenu.like-buttons.swap',
+                  ),
+                  type: 'checkbox',
+                  checked: config.get('options.swapLikeButtonsOrder'),
+                  click(item: MenuItem) {
+                    config.setMenuOption(
+                      'options.swapLikeButtonsOrder',
+                      item.checked,
+                    );
+                  },
+                },
               ],
             },
             {

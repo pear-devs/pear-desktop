@@ -161,7 +161,8 @@
                 "default": "Par défaut",
                 "force-show": "Forcer à apparaître",
                 "hide": "Cacher",
-                "label": "Boutons « J'aime »"
+                "label": "Boutons « J'aime »",
+                "swap": "Inverser l'order des boutons like"
               },
               "remove-upgrade-button": "Supprimer le bouton de mise à niveau",
               "theme": {
@@ -411,6 +412,17 @@
         "caption-disabled": "Sous-titres désactivés",
         "no-captions": "Aucun sous-titres disponibles pour cette chanson"
       }
+    },
+    "clock": {
+      "description": "Ajoute une horloge a la barre de navigation",
+      "menu": {
+        "format": {
+          "24-hour-format": "Format 24 heures",
+          "display-seconds": "Afficher les secondes",
+          "label": "Format"
+        }
+      },
+      "name": "Horloge"
     },
     "compact-sidebar": {
       "description": "Toujours définir la barre latérale en mode compact",

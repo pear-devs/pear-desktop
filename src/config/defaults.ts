@@ -29,6 +29,7 @@ export interface DefaultConfig {
     autoResetAppCache: boolean;
     resumeOnStart: boolean;
     likeButtons: string;
+    swapLikeButtonsOrder: boolean;
     proxy: string;
     startingPage: string;
     backgroundMaterial?: 'none' | 'mica' | 'acrylic' | 'tabbed';
@@ -66,6 +67,7 @@ export const defaultConfig: DefaultConfig = {
     autoResetAppCache: false,
     resumeOnStart: true,
     likeButtons: '',
+    swapLikeButtonsOrder: false,
     proxy: '',
     startingPage: '',
     overrideUserAgent: false,

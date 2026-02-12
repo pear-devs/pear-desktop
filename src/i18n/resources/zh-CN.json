@@ -161,7 +161,8 @@
                 "default": "默认",
                 "force-show": "强制显示",
                 "hide": "隐藏",
-                "label": "点赞按钮"
+                "label": "点赞按钮",
+                "swap": "交换“点赞”按钮顺序"
               },
               "remove-upgrade-button": "移除升级按钮",
               "theme": {
@@ -411,6 +412,17 @@
         "caption-disabled": "停用了字幕",
         "no-captions": "这首歌没有字幕"
       }
+    },
+    "clock": {
+      "description": "添加时钟到导航栏",
+      "menu": {
+        "format": {
+          "24-hour-format": "24 小时格式",
+          "display-seconds": "显示秒数",
+          "label": "格式"
+        }
+      },
+      "name": "时钟"
     },
     "compact-sidebar": {
       "description": "始终将侧边栏设为紧凑模式",

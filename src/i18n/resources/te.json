@@ -1,0 +1,31 @@
+{
+  "common": {
+    "console": {
+      "plugins": {
+        "execute-failed": "{{pluginName}}::{{contextName}} ప్లగిన్‌ను అమలు చేయడంలో విఫలమైంది",
+        "executed-at-ms": "{{pluginName}}::{{contextName}} ప్లగిన్ అమలు చేయబడిన సమయం {{ms}} మిల్లీసెకను",
+        "initialize-failed": "\"{{pluginName}}\" ప్లగిన్‌ను ప్రారంభించడంలో విఫలమైంది",
+        "load-all": "అన్నీ ప్లగిన్లను లోడ్ చెయ్యబడుతోంది",
+        "load-failed": "\"{{pluginName}}\" ప్లగిన్ లోడ్ చేయడంలో విఫలమైంది",
+        "loaded": "ప్లగిన్ \"{{pluginName}}\" లోడ్ చేయబడింది",
+        "unload-failed": "“{{pluginName}}” ప్లగిన్‌ను అన్‌లోడ్ చేయడంలో విఫలమైంది",
+        "unloaded": "\"{{pluginName}}\" ప్లగిన్ అన్‌లోడ్ చేయబడింది"
+      }
+    }
+  },
+  "language": {
+    "code": "te",
+    "local-name": "తెలుగు",
+    "name": "Telugu"
+  },
+  "main": {
+    "console": {
+      "did-finish-load": {
+        "dev-tools": "లోడ్ చేయడం పూర్తయింది. డెవ్‌టూల్స్ తెరవబడ్డాయి"
+      },
+      "i18n": {
+        "loaded": "i18n లోడ్ చేయబడింది"
+      }
+    }
+  }
+}
