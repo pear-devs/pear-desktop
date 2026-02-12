@@ -891,6 +891,24 @@
         "show-time-codes": {
           "label": "Show time codes",
           "tooltip": "Show the time codes next to the lyrics"
+        },
+        "convert-chinese-character": {
+          "label": "Convert Chinese character",
+          "submenu": {
+            "disabled": {
+              "label": "Disabled",
+              "tooltip": "Disable Chinese character conversion"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplified to Traditional",
+              "tooltip": "Convert Simplified Chinese to Traditional Chinese"
+            },
+            "traditional-to-simplified": {
+              "label": "Traditional to Simplified",
+              "tooltip": "Convert Traditional Chinese to Simplified Chinese"
+            }
+          },
+          "tooltip": "Convert Chinese character to Traditional or Simplified"
         }
       },
       "name": "Synced Lyrics",
