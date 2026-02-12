@@ -46,7 +46,7 @@ export class LRCLib implements LyricProvider {
       if (!config()?.showLyricsEvenIfInexact) {
         return null;
       }
-
+      // Try to search with the alternative title (original language)
       isFallback = true;
       const trackName = alternativeTitle || title;
       query = new URLSearchParams({ q: trackName });
@@ -71,6 +71,7 @@ export class LRCLib implements LyricProvider {
       const artists = artist.split(/[&,]/g).map((i) => i.trim());
       const itemArtists = artistName.split(/[&,]/g).map((i) => i.trim());
 
+      // Try to match using artist name first
       const permutations = [];
       for (const artistA of artists) {
         for (const artistB of itemArtists) {
@@ -86,19 +87,22 @@ export class LRCLib implements LyricProvider {
 
       let ratio = Math.max(...permutations.map(([x, y]) => jaroWinkler(x, y)));
 
+      // If direct artist match is below threshold and we have tags, try matching with tags
       if (ratio <= 0.9 && tags && tags.length > 0) {
+        // Filter out the artist from tags to avoid duplicate comparisons
         const filteredTags = tags.filter(
           (tag) => tag.toLowerCase() !== artist.toLowerCase(),
         );
 
         const tagPermutations = [];
+        // Compare each tag with each item artist
         for (const tag of filteredTags) {
           for (const itemArtist of itemArtists) {
             tagPermutations.push([tag.toLowerCase(), itemArtist.toLowerCase()]);
           }
         }
-
-        for (const itemArtist of itemArtists) {
+        
+          // Compare each item artist with each tag
           for (const tag of filteredTags) {
             tagPermutations.push([itemArtist.toLowerCase(), tag.toLowerCase()]);
           }
