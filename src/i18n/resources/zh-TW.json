@@ -161,7 +161,8 @@
                 "default": "預設",
                 "force-show": "強制顯示",
                 "hide": "隱藏",
-                "label": "按讚按鈕"
+                "label": "按讚按鈕",
+                "swap": "交換讚及倒讚的按鈕位置"
               },
               "remove-upgrade-button": "移除升級按鈕",
               "theme": {
@@ -321,6 +322,22 @@
         "hostname": {
           "label": "主機名稱"
         },
+        "https": {
+          "label": "HTTPS 及 憑證",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "選擇憑證檔案",
+              "label": "憑證檔案（.crt/.pem）"
+            },
+            "enable-https": {
+              "label": "啟用 HTTPS"
+            },
+            "key": {
+              "dialogTitle": "選擇私人金鑰檔案",
+              "label": "私人金鑰檔案（.key/.pem）"
+            }
+          }
+        },
         "port": {
           "label": "連接埠"
         }
@@ -396,6 +413,17 @@
         "no-captions": "該首歌曲無可用的字幕"
       }
     },
+    "clock": {
+      "description": "新增時鐘至應用程式上方",
+      "menu": {
+        "format": {
+          "24-hour-format": "24 小時制",
+          "display-seconds": "顯示秒數",
+          "label": "時間格式"
+        }
+      },
+      "name": "時鐘"
+    },
     "compact-sidebar": {
       "description": "永遠讓側邊欄保持收合狀態",
       "name": "收合側邊欄"
@@ -462,8 +490,8 @@
         "set-status-display-type": {
           "label": "狀態樣式",
           "submenu": {
-            "artist": "正在聆聽 {artist} 的歌曲",
             "application": "正在聆聽 {{applicationName}}",
+            "artist": "正在聆聽 {artist} 的歌曲",
             "title": "正在聆聽 {song title}"
           }
         }
