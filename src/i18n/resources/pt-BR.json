@@ -842,6 +842,24 @@
         "not-found": "⚠️ Nenhuma letra encontrada para esta música."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Converter caracteres Chineses",
+          "submenu": {
+            "disabled": {
+              "label": "Desativado",
+              "tooltip": "Desativar conversão de caracteres Chineses"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplificado para Tradicional",
+              "tooltip": "Converter Chinês Simplificado para Chinês Tradicional"
+            },
+            "traditional-to-simplified": {
+              "label": "Tradicional para Simplificado",
+              "tooltip": "Converter Chinês Tradicional para Chinês Simplificado"
+            }
+          },
+          "tooltip": "Converter caractere Chinês para Tradicional ou Simplificado"
+        },
         "default-text-string": {
           "label": "Caractere padrão entre letras",
           "tooltip": "Escolha o caractere padrão a ser usado para o intervalo entre as letras"
