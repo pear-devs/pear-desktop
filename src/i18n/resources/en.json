@@ -909,6 +909,18 @@
             }
           },
           "tooltip": "Convert Chinese character to Traditional or Simplified"
+        },
+        "auto-skip-languages": {
+          "label": "Auto-skip languages",
+          "tooltip": "Automatically skip songs when these languages are detected in lyrics (comma-separated language codes)",
+          "prompt": {
+            "title": "Auto-skip languages",
+            "label": "Enter language codes (comma-separated, e.g., ja,ko,zh):"
+          }
+        },
+        "auto-dislike-skipped-languages": {
+          "label": "Auto-dislike skipped songs",
+          "tooltip": "Automatically dislike songs before skipping them when a language from the skip list is detected"
         }
       },
       "name": "Synced Lyrics",

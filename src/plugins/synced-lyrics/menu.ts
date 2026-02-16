@@ -1,4 +1,6 @@
 import { t } from '@/i18n';
+import prompt from 'custom-electron-prompt';
+import promptOptions from '@/providers/prompt-options';
 
 import { providerNames } from './providers';
 
@@ -230,6 +232,44 @@ export const menu = async (
       click(item) {
         ctx.setConfig({
           showLyricsEvenIfInexact: item.checked,
+        });
+      },
+    },
+    {
+      label: t('plugins.synced-lyrics.menu.auto-skip-languages.label'),
+      toolTip: t('plugins.synced-lyrics.menu.auto-skip-languages.tooltip'),
+      async click() {
+        const languages =
+          (await prompt(
+            {
+              title: t('plugins.synced-lyrics.menu.auto-skip-languages.prompt.title'),
+              label: t('plugins.synced-lyrics.menu.auto-skip-languages.prompt.label'),
+              value: config.autoSkipLanguages || '',
+              type: 'input',
+              inputAttrs: {
+                type: 'text',
+                placeholder: 'e.g., ja,ko,zh',
+              },
+              ...promptOptions(),
+            },
+            ctx.window,
+          )) ?? config.autoSkipLanguages;
+
+        ctx.setConfig({
+          autoSkipLanguages: languages as string,
+        });
+      },
+    },
+    {
+      label: t('plugins.synced-lyrics.menu.auto-dislike-skipped-languages.label'),
+      toolTip: t(
+        'plugins.synced-lyrics.menu.auto-dislike-skipped-languages.tooltip',
+      ),
+      type: 'checkbox',
+      checked: config.autoDislikeSkippedLanguages,
+      click(item) {
+        ctx.setConfig({
+          autoDislikeSkippedLanguages: item.checked,
         });
       },
     },
