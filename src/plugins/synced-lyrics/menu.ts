@@ -246,7 +246,9 @@ export const menu = async (
               title: t(
                 'plugins.synced-lyrics.menu.auto-skip-languages.prompt.title',
               ),
-              label: t('plugins.synced-lyrics.menu.auto-skip-languages.prompt.label'),
+              label: t(
+                'plugins.synced-lyrics.menu.auto-skip-languages.prompt.label',
+              ),
               value: config.autoSkipLanguages || '',
               type: 'input',
               inputAttrs: {
