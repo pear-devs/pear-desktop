@@ -69,7 +69,10 @@ const detectLyricsLanguage = (
     if (result.lyrics) {
       textToAnalyze = result.lyrics.trim();
     } else if (result.lines && result.lines.length > 0) {
-      textToAnalyze = result.lines.map(line => line.text).join('\n').trim();
+      textToAnalyze = result.lines
+        .map((line) => line.text)
+        .join('\n')
+        .trim();
     }
 
     // Only attempt detection if we have meaningful text
