@@ -266,7 +266,9 @@ export const menu = async (
       },
     },
     {
-      label: t('plugins.synced-lyrics.menu.auto-dislike-skipped-languages.label'),
+      label: t(
+        'plugins.synced-lyrics.menu.auto-dislike-skipped-languages.label',
+      ),
       toolTip: t(
         'plugins.synced-lyrics.menu.auto-dislike-skipped-languages.tooltip',
       ),
