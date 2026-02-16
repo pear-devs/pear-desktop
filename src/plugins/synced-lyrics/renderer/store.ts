@@ -57,7 +57,9 @@ const searchCache = new Map<VideoId, SearchCache>();
  * Detects the language of lyrics and adds it to the result.
  * Handles edge cases: no lyrics, empty text, detection failure.
  */
-const detectLyricsLanguage = (result: LyricResult | null): LyricResult | null => {
+const detectLyricsLanguage = (
+  result: LyricResult | null,
+): LyricResult | null => {
   if (!result) return null;
 
   try {
