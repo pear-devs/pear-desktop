@@ -1,4 +1,5 @@
 import prompt from 'custom-electron-prompt';
+
 import { t } from '@/i18n';
 
 import promptOptions from '@/providers/prompt-options';
