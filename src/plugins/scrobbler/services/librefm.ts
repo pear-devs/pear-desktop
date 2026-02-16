@@ -23,6 +23,19 @@ interface LibreFmSongData {
 const LIBREFM_API_KEY = 'test';
 const LIBREFM_API_SECRET = 'test';
 
+/**
+ * Decode HTML entities in a string
+ */
+const decodeHtmlEntities = (text: string): string => {
+  return text
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'");
+};
+
 export class LibreFmScrobbler extends ScrobblerBase {
   override isSessionCreated(config: ScrobblerPluginConfig): boolean {
     return !!config.scrobblers.librefm.sessionKey;
@@ -187,15 +200,18 @@ export class LibreFmScrobbler extends ScrobblerBase {
       return;
     }
 
-    const title =
+    // Get raw title and artist
+    const rawTitle =
       config.alternativeTitles && songInfo.alternativeTitle !== undefined
         ? songInfo.alternativeTitle
         : songInfo.title;
 
-    const artist =
-      config.alternativeArtist && songInfo.tags?.at(0) !== undefined
-        ? songInfo.tags?.at(0)
-        : songInfo.artist;
+    // Always prefer songInfo.artist over tags
+    const rawArtist = songInfo.artist;
+
+    // Decode HTML entities (handle undefined values)
+    const title = rawTitle ? decodeHtmlEntities(rawTitle) : '';
+    const artist = rawArtist ? decodeHtmlEntities(rawArtist) : '';
 
     const postData: Record<string, string | number | undefined> = {
       ...data,
@@ -210,7 +226,7 @@ export class LibreFmScrobbler extends ScrobblerBase {
     }
 
     if (songInfo.album) {
-      postData.album = songInfo.album;
+      postData.album = decodeHtmlEntities(songInfo.album);
     }
 
     // Filter out undefined values
