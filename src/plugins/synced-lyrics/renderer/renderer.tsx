@@ -143,7 +143,7 @@ createEffect(() => {
   const skipLanguages = cfg.autoSkipLanguages
     .split(',')
     .map(lang => lang.trim().toLowerCase())
-    .filter(lang => lang.length > 0);
+    .filter((lang) => lang.length > 0);
 
   if (skipLanguages.length === 0) return;
 
