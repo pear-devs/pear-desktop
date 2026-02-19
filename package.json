@@ -58,7 +58,8 @@
       "kuromoji@0.1.2": "patches/kuromoji@0.1.2.patch",
       "file-type@16.5.4": "patches/file-type@16.5.4.patch",
       "electron-is@3.0.0": "patches/electron-is@3.0.0.patch",
-      "mdui@2.1.4": "patches/mdui@2.1.4.patch"
+      "mdui@2.1.4": "patches/mdui@2.1.4.patch",
+      "@jellybrick/dbus-next": "patches/@jellybrick__dbus-next.patch"
     },
     "neverBuiltDependencies": []
   },
