@@ -944,8 +944,13 @@
           "label": "Type",
           "submenu": {
             "acrylic": "Acrylic",
+            "content": "Content",
+            "fullscreen-ui": "Fullscreen UI",
             "mica": "Mica",
             "tabbed": "Tabbed",
+            "under-page": "Under Page",
+            "under-window": "Under Window",
+            "window": "Window",
             "none": "None"
           }
         }
