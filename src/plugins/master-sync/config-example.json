@@ -1,0 +1,13 @@
+{
+  "plugins": {
+    "master-sync": {
+      "enabled": true,
+      "slaveHost": "192.168.1.100",
+      "slavePort": 26538,
+      "slaveAuthToken": "YOUR_AUTH_TOKEN_HERE",
+      "syncInterval": 2000,
+      "syncPlayPause": true,
+      "logDebug": false
+    }
+  }
+}

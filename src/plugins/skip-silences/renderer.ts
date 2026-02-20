@@ -16,7 +16,7 @@ let playOrSeekHandler: (() => void) | undefined;
 
 const getMaxVolume = (analyser: AnalyserNode, fftBins: Float32Array) => {
   let maxVolume = Number.NEGATIVE_INFINITY;
-  analyser.getFloatFrequencyData(fftBins);
+  analyser.getFloatFrequencyData(fftBins as any);
 
   for (let i = 4, ii = fftBins.length; i < ii; i++) {
     if (fftBins[i] > maxVolume && fftBins[i] < 0) {
