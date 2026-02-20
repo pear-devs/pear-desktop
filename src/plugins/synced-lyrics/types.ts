@@ -14,6 +14,8 @@ export type SyncedLyricsPluginConfig = {
     | 'simplifiedToTraditional'
     | 'traditionalToSimplified'
     | 'disabled';
+  autoSkipLanguages?: string;
+  autoDislikeSkippedLanguages: boolean;
 };
 
 export type LineLyricsStatus = 'previous' | 'current' | 'upcoming';
@@ -35,6 +37,7 @@ export interface LyricResult {
 
   lyrics?: string;
   lines?: LineLyrics[];
+  language?: string;
 }
 
 // prettier-ignore

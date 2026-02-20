@@ -22,6 +22,8 @@ export default createPlugin({
     defaultTextString: '♪',
     lineEffect: 'fancy',
     romanization: true,
+    autoSkipLanguages: '',
+    autoDislikeSkippedLanguages: false,
   } satisfies SyncedLyricsPluginConfig as SyncedLyricsPluginConfig,
 
   menu,
