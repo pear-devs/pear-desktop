@@ -139,7 +139,7 @@
     "zod": "4.3.6"
   },
   "devDependencies": {
-    "@electron-toolkit/tsconfig": "1.0.1",
+    "@electron-toolkit/tsconfig": "2.0.0",
     "@eslint/js": "9.39.2",
     "@malept/flatpak-bundler": "0.4.0",
     "@playwright/test": "1.58.1",
