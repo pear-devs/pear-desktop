@@ -3,10 +3,12 @@ import KuromojiAnalyzer from 'kuroshiro-analyzer-kuromoji';
 import Kuroshiro from 'kuroshiro';
 import { romanize as esHangulRomanize } from 'es-hangul';
 import hanja from 'hanja';
-import * as pinyin from 'tiny-pinyin';
+import { pinyin } from 'pinyin-pro';
 import { romanize as romanizeThaiFrag } from '@dehoist/romanize-thai';
 import { lazy } from 'lazy-var';
 import { detect } from 'tinyld';
+import { sify, tify } from 'chinese-conv';
+import Sanscript from '@indic-transliteration/sanscript';
 
 import { waitForElement } from '@/utils/wait-for-element';
 import { LyricsRenderer, setIsVisible } from './renderer';
@@ -84,6 +86,20 @@ export const canonicalize = (text: string) => {
   );
 };
 
+export const convertChineseCharacter = (
+  text: string,
+  mode: 'simplifiedToTraditional' | 'traditionalToSimplified',
+) => {
+  if (!hasChinese([text])) return text;
+
+  switch (mode) {
+    case 'simplifiedToTraditional':
+      return tify(text);
+    case 'traditionalToSimplified':
+      return sify(text);
+  }
+};
+
 export const simplifyUnicode = (text?: string) =>
   text
     ? text
@@ -155,6 +171,12 @@ const hasChinese = (lines: string[]) =>
 const hasThai = (lines: string[]) =>
   lines.some((line) => /[\u0E00-\u0E7F]+/.test(line));
 
+const hasBengali = (lines: string[]) =>
+  lines.some((line) => /[\u0980-\u09FF]+/.test(line));
+
+const hasHindi = (lines: string[]) =>
+  lines.some((line) => /[\u0900-\u097F]+/.test(line));
+
 export const romanizeJapanese = async (line: string) =>
   (await kuroshiro.get()).convert(line, {
     to: 'romaji',
@@ -165,9 +187,9 @@ export const romanizeHangul = (line: string) =>
   esHangulRomanize(hanja.translate(line, 'SUBSTITUTION'));
 
 export const romanizeChinese = (line: string) => {
-  return line.replaceAll(/[\u4E00-\u9FFF]+/g, (match) =>
-    pinyin.convertToPinyin(match, ' ', true),
-  );
+  return line.replaceAll(/[\u4E00-\u9FFF]+/g, (match) => {
+    return pinyin(match, { separator: ' ' });
+  });
 };
 
 const thaiSegmenter = Intl.Segmenter.supportedLocalesOf('th').includes('th')
@@ -190,11 +212,35 @@ export const romanizeThai = (line: string) => {
   return latin;
 };
 
+export const romanizeBengali = (line: string) => {
+  try {
+    let out = Sanscript.t(line, 'bengali', 'iast');
+    out = out.normalize('NFD');
+    out = out.replace(/[\u0300-\u036f]/g, '');
+    out = out.replace(/[\u09BC\u09BE-\u09CD]/g, '');
+    return out.toLowerCase();
+  } catch {
+    return line;
+  }
+};
+
+export const romanizeHindi = (line: string) => {
+  try {
+    let out = Sanscript.t(line, 'devanagari', 'iast');
+    out = out.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // strip accents
+    return out.replace(/[^a-zA-Z\s]/g, '') || line; // remove any remaining symbols
+  } catch {
+    return line;
+  }
+};
+
 const handlers: Record<string, (line: string) => Promise<string> | string> = {
   ja: romanizeJapanese,
   ko: romanizeHangul,
   zh: romanizeChinese,
   th: romanizeThai,
+  bn: romanizeBengali,
+  hi: romanizeHindi,
 };
 
 export const romanize = async (line: string) => {
@@ -210,6 +256,8 @@ export const romanize = async (line: string) => {
   if (hasKorean([line])) line = romanizeHangul(line);
   if (hasChinese([line])) line = romanizeChinese(line);
   if (hasThai([line])) line = romanizeThai(line);
+  if (hasBengali([line])) line = romanizeBengali(line);
+  if (hasHindi([line])) line = romanizeHindi(line);
 
   return line;
 };

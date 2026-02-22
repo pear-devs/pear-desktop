@@ -43,14 +43,14 @@ jobs:
 
       - name: Setup NodeJS
         if: startsWith(matrix.os, 'macOS') != true
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Setup NodeJS for macOS
         if: startsWith(matrix.os, 'macOS')
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -103,7 +103,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Create comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const runId = context.runId;
