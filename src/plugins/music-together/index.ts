@@ -224,7 +224,7 @@ export default createPlugin<
             }
 
             this.queue?.clear();
-            await this.connection?.broadcast('CLEAR_QUEUE', {});
+            await this.connection?.broadcast('CLEAR_QUEUE', null);
             break;
           }
           case 'SET_INDEX': {
@@ -413,7 +413,7 @@ export default createPlugin<
         this.ignoreChange = true;
         switch (event.type) {
           case 'CLEAR_QUEUE': {
-            await this.connection?.broadcast('CLEAR_QUEUE', {});
+            await this.connection?.broadcast('CLEAR_QUEUE', null);
             break;
           }
           case 'SET_INDEX': {

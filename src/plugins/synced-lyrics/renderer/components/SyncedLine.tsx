@@ -7,7 +7,12 @@ import { type LineLyrics } from '@/plugins/synced-lyrics/types';
 import { config, currentTime } from '../renderer';
 import { _ytAPI } from '..';
 
-import { canonicalize, romanize, simplifyUnicode } from '../utils';
+import {
+  canonicalize,
+  convertChineseCharacter,
+  romanize,
+  simplifyUnicode,
+} from '../utils';
 
 interface SyncedLineProps {
   scroller: VirtualizerHandle;
@@ -81,7 +86,14 @@ const EmptyLine = (props: SyncedLineProps) => {
 };
 
 export const SyncedLine = (props: SyncedLineProps) => {
-  const text = createMemo(() => props.line.text.trim());
+  const text = createMemo(() => {
+    let line = props.line.text;
+    const convertChineseText = config()?.convertChineseCharacter;
+    if (convertChineseText && convertChineseText !== 'disabled') {
+      line = convertChineseCharacter(line, convertChineseText);
+    }
+    return line.trim();
+  });
 
   const [romanization, setRomanization] = createSignal('');
   createEffect(() => {

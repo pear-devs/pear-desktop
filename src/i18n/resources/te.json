@@ -1,0 +1,59 @@
+{
+  "common": {
+    "console": {
+      "plugins": {
+        "execute-failed": "{{pluginName}}::{{contextName}} ప్లగిన్‌ను అమలు చేయడంలో విఫలమైంది",
+        "executed-at-ms": "{{pluginName}}::{{contextName}} ప్లగిన్ అమలు చేయబడిన సమయం {{ms}} మిల్లీసెకను",
+        "initialize-failed": "\"{{pluginName}}\" ప్లగిన్‌ను ప్రారంభించడంలో విఫలమైంది",
+        "load-all": "అన్నీ ప్లగిన్లను లోడ్ చెయ్యబడుతోంది",
+        "load-failed": "\"{{pluginName}}\" ప్లగిన్ లోడ్ చేయడంలో విఫలమైంది",
+        "loaded": "ప్లగిన్ \"{{pluginName}}\" లోడ్ చేయబడింది",
+        "unload-failed": "“{{pluginName}}” ప్లగిన్‌ను అన్‌లోడ్ చేయడంలో విఫలమైంది",
+        "unloaded": "\"{{pluginName}}\" ప్లగిన్ అన్‌లోడ్ చేయబడింది"
+      }
+    }
+  },
+  "language": {
+    "code": "te",
+    "local-name": "తెలుగు",
+    "name": "Telugu"
+  },
+  "main": {
+    "console": {
+      "did-finish-load": {
+        "dev-tools": "లోడ్ చేయడం పూర్తయింది. డెవ్‌టూల్స్ తెరవబడ్డాయి"
+      },
+      "i18n": {
+        "loaded": "i18n లోడ్ చేయబడింది"
+      },
+      "second-instance": {
+        "receive-command": "ప్రోటోకాల్ ద్వారా కమాండ్ స్వీకరించబడింది: \"{{command}}\""
+      },
+      "theme": {
+        "css-file-not-found": "CSS ఫైల్ \"{{cssFile}}\" లేదు, విస్మరిస్తున్నాము"
+      },
+      "unresponsive": {
+        "details": "స్పందించని ఎర్రర్!\n{{error}}"
+      },
+      "when-ready": {
+        "clearing-cache-after-20s": "యాప్ కాష్ క్లియర్ చేయబడుతోంది"
+      },
+      "window": {
+        "tried-to-render-offscreen": "విండో స్క్రీన్ వెలుపల రెండర్ చేయడానికి ప్రయత్నించింది, windowSize={{windowSize}}, displaySize={{displaySize}}, position={{position}}"
+      }
+    },
+    "dialog": {
+      "hide-menu-enabled": {
+        "detail": "మెనూ దాచబడింది, దాన్ని చూపించడానికి 'Alt' ఉపయోగించండి (లేదా ఒకవేళ In-App Menu ఉపయోగిస్తుంటే 'Escape' ఉపయోగించండి)",
+        "message": "Hide Menu ఎనేబుల్ చేయబడింది",
+        "title": "Hide Menu ఎనేబుల్ అయిపోయింది"
+      },
+      "need-to-restart": {
+        "buttons": {
+          "later": "తర్వాత",
+          "restart-now": "ఇప్పుడే రీస్టార్ట్ చేయండి"
+        }
+      }
+    }
+  }
+}

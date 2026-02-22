@@ -209,7 +209,7 @@
       "show": "Pokaż okno",
       "tooltip": {
         "default": "{{applicationName}}",
-        "with-song-info": "{{artist}} - (autorstwa {{artist}}) - {{applicationName}}"
+        "with-song-info": "{{title}} (autorstwa {{artist}}) - {{applicationName}}"
       }
     }
   },
@@ -295,7 +295,7 @@
       }
     },
     "api-server": {
-      "description": "Pozwala na kontrolowanie {{applicationName}} poprzez podłączenie specjalnego serwera API",
+      "description": "Steruj odtwarzaczem przez specjalny serwer API",
       "dialog": {
         "request": {
           "buttons": {

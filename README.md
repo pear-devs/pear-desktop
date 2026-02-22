@@ -101,7 +101,7 @@ Using `rebase` keeps a clean, linear history which is preferred for PRs.
 
 You can help with translation on [Hosted Weblate](https://bit.ly/48n5YF7).
 
-<a href="https://bit.ly/48n5YF7/">
+<a href="https://bit.ly/48n5YF7">
   <img src="https://bit.ly/4q83L6S" alt="translation status" />
   <img src="https://bit.ly/4h3zBxo" alt="translation status 2" />
 </a>
@@ -118,10 +118,10 @@ this [wiki page](https://wiki.archlinux.org/index.php/Arch_User_Repository#Insta
 
 ### macOS
 
-You can install the app using Homebrew (see the [cask definition](https://github.com/pear-devs/pear-desktop-homebrew)):
+You can install the app using Homebrew (see the [cask definition](https://github.com/pear-devs/homebrew-pear)):
 
 ```bash
-brew install pear-devs/pear-desktop
+brew install pear-devs/pear/pear-desktop
 ```
 
 If you install the app manually and get an error "is damaged and can’t be opened." when launching the app, run the following in the Terminal:
@@ -175,6 +175,10 @@ cd pear-desktop
 pnpm install --frozen-lockfile
 pnpm dev
 ```
+
+Instead of installing pnpm on your system, you can also use [devcontainers](https://containers.dev/). You can use devcontainers either as a development environment in VS Code, or as a way to easily build the project without installing dependencies on your host system.
+
+Note that this has it's own limitations (for example, GUI doesn't work on, at least some, Linux hosts).
 
 ## Build your own plugins
 
@@ -310,6 +314,16 @@ export default createPlugin({
 
 Builds the app for macOS, Linux, and Windows,
 using [electron-builder](https://github.com/electron-userland/electron-builder).
+
+### Building in devcontainer
+
+1. Clone the repo;
+2. Open the folder in VS Code;
+3. Reopen in container when prompted;
+4. Run `pnpm build` as above (choosing the desired target);
+5. Collect the built files from the `dist` folder.
+
+Since devcontainer uses a mount for the workspace, the built files will be available on the host system as well.
 
 ## Production Preview
 

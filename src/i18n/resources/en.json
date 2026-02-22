@@ -154,6 +154,7 @@
                 "default": "Default",
                 "force-show": "Force show",
                 "hide": "Hide",
+                "swap": "Swap like buttons order",
                 "label": "Like buttons"
               },
               "custom-window-title": {
@@ -410,6 +411,17 @@
         "caption-changed": "Caption changed to {{language}}",
         "caption-disabled": "Captions disabled",
         "no-captions": "No captions available for this song"
+      }
+    },
+    "clock": {
+      "description": "Add a clock to the navigation bar",
+      "name": "Clock",
+      "menu": {
+        "format": {
+          "label": "Format",
+          "display-seconds": "Display Seconds",
+          "24-hour-format": "24-Hour Format"
+        }
       }
     },
     "compact-sidebar": {
@@ -883,6 +895,24 @@
         "show-time-codes": {
           "label": "Show time codes",
           "tooltip": "Show the time codes next to the lyrics"
+        },
+        "convert-chinese-character": {
+          "label": "Convert Chinese character",
+          "submenu": {
+            "disabled": {
+              "label": "Disabled",
+              "tooltip": "Disable Chinese character conversion"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplified to Traditional",
+              "tooltip": "Convert Simplified Chinese to Traditional Chinese"
+            },
+            "traditional-to-simplified": {
+              "label": "Traditional to Simplified",
+              "tooltip": "Convert Traditional Chinese to Simplified Chinese"
+            }
+          },
+          "tooltip": "Convert Chinese character to Traditional or Simplified"
         }
       },
       "name": "Synced Lyrics",
