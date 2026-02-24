@@ -9,7 +9,7 @@ import style from './style.css?inline';
 import type { BrowserWindow } from 'electron';
 
 const defaultConfig: TransparentPlayerConfig = {
-  enabled: false,
+  enabled: true,
   opacity: 0.5,
   type: MaterialType.ACRYLIC,
 };
@@ -22,7 +22,7 @@ export default createPlugin({
   description: () => t('plugins.transparent-player.description'),
   addedVersion: '3.11.x',
   restartNeeded: true,
-  platform: Platform.Windows,
+  platform: Platform.Windows | Platform.Linux,
   config: defaultConfig,
   stylesheets: [style],
   async menu({ getConfig, setConfig }) {
