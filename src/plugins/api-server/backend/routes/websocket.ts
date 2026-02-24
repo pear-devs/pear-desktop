@@ -1,4 +1,5 @@
-import { createRoute } from '@hono/zod-openapi';
+import { createRoute, z } from '@hono/zod-openapi';
+import { verify } from 'hono/jwt';
 
 import { type NodeWebSocket } from '@hono/node-ws';
 
@@ -7,6 +8,8 @@ import {
   type SongInfo,
   SongInfoEvent,
 } from '@/providers/song-info';
+
+import { AuthStrategy } from '@/plugins/api-server/config';
 
 import { API_VERSION } from '../api-version';
 
@@ -39,7 +42,7 @@ type PlayerState = {
 
 export const register = (
   app: HonoApp,
-  { ipc }: BackendContext<APIServerConfig>,
+  { getConfig, ipc }: BackendContext<APIServerConfig>,
   { upgradeWebSocket }: NodeWebSocket,
 ) => {
   let volumeState: VolumeState | undefined = undefined;
@@ -122,14 +125,42 @@ export const register = (
       path: `/api/${API_VERSION}/ws`,
       summary: 'websocket endpoint',
       description: 'WebSocket endpoint for real-time updates',
+      request: {
+        query: z.object({
+          token: z.string().optional(),
+        }),
+      },
       responses: {
         101: {
           description: 'Switching Protocols',
         },
       },
     }),
-    upgradeWebSocket(() => ({
-      onOpen(_, ws) {
+    upgradeWebSocket((ctx) => ({
+      async onOpen(_, ws) {
+        const config = await getConfig();
+
+        if (config.authStrategy !== AuthStrategy.NONE) {
+          const token = ctx.req.query('token');
+
+          if (!token) {
+            ws.close(1008, 'Unauthorized');
+            return;
+          }
+
+          try {
+            const payload = await verify(token, config.secret);
+
+            if (!config.authorizedClients.includes(payload.id as string)) {
+              ws.close(1008, 'Unauthorized');
+              return;
+            }
+          } catch {
+            ws.close(1008, 'Unauthorized');
+            return;
+          }
+        }
+
         // "Unsafe argument of type `WSContext<WebSocket>` assigned to a parameter of type `WSContext<WebSocket>`. (@typescript-eslint/no-unsafe-argument)" ????? what?
         sockets.add(ws as WSContext<WebSocket>);
 
