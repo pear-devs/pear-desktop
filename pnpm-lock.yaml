@@ -244,8 +244,8 @@ importers:
         specifier: 1.3.4
         version: 1.3.4
       virtua:
-        specifier: 0.48.5
-        version: 0.48.5(solid-js@1.9.11)
+        specifier: 0.48.6
+        version: 0.48.6(solid-js@1.9.11)
       vudio:
         specifier: 2.1.1
         version: 2.1.1(patch_hash=0e06c2ed11c02bdc490c209fa80070e98517c2735c641f5738b6e15d7dc1959d)
@@ -4503,8 +4503,8 @@ packages:
     resolution: {integrity: sha512-veufcmxri4e3XSrT0xwfUR7kguIkaxBeosDg00yDWhk49wdwkSUrvvsm7nc75e1PUyvIeZj6nS8VQRYz2/S4Xg==}
     engines: {node: '>=0.6.0'}
 
-  virtua@0.48.5:
-    resolution: {integrity: sha512-REjLvX8tGzNQYyJ+remkpK3a7CI0tXPyiyxvL419X+FbBUIa3Org7Bd1OWYXdC6jXqhuW5JFOtGD6qQrM2JnjQ==}
+  virtua@0.48.6:
+    resolution: {integrity: sha512-Cl4uMvMV5c9RuOy9zhkFMYwx/V4YLBMYLRSWkO8J46opQZ3P7KMq0CqCVOOAKUckjl/r//D2jWTBGYWzmgtzrQ==}
     peerDependencies:
       react: '>=16.14.0'
       react-dom: '>=16.14.0'
@@ -9292,7 +9292,7 @@ snapshots:
       extsprintf: 1.4.1
     optional: true
 
-  virtua@0.48.5(solid-js@1.9.11):
+  virtua@0.48.6(solid-js@1.9.11):
     optionalDependencies:
       solid-js: 1.9.11
 
