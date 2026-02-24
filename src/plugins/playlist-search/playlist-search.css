@@ -1,0 +1,13 @@
+#custom-playlist-search-container {
+  width: 100%;
+  margin: 0 16px 16px 16px;
+}
+
+#custom-playlist-search-container .search-container {
+  width: 100%;
+}
+
+ytmusic-search-box[is-bauhaus-sidenav-enabled][opened]#custom-playlist-search-container
+  .search-box {
+  border-radius: 8px;
+}
