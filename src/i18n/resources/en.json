@@ -593,6 +593,27 @@
       "description": "Makes the volume slider exponential so it's easier to select lower volumes.",
       "name": "Exponential Volume"
     },
+    "global-keybinds": {
+      "name": "Global Keybinds",
+      "description": "Set global keybinds to control playback even when the app is not focused",
+      "management": "Manage Global Keybinds",
+      "dubleTapToogleWindowVisibility": {
+        "label": "Enable double tap on Play/Pause to toggle window visibility",
+        "tooltip": "When enabled, double tapping the Play/Pause keybind will show/hide the app window"
+      },
+      "prompt": {
+        "title": "Global Keybinds",
+        "label": "Choose Global Keybinds:",
+        "volume-up": "Volume Up",
+        "volume-down": "Volume Down",
+        "next-track": "Next Track",
+        "previous-track": "Previous Track",
+        "like-track": "Like Track",
+        "dislike-track": "Dislike Track",
+        "toogle-play": "Play / Pause",
+        "toogle-window-visibility": "Show/Hide Window (Double Click)"
+      }
+    },
     "in-app-menu": {
       "description": "Gives menu-bars a fancy, dark or album-color look",
       "menu": {
