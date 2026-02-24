@@ -94,9 +94,9 @@ async function onApiLoaded() {
   window.ipcRenderer.on('peard:seek-by', (_, t: number) => api!.seekBy(t));
   window.ipcRenderer.on('peard:shuffle', () => {
     document
-      .querySelector<
-        HTMLElement & { queue: { shuffle: () => void } }
-      >('ytmusic-player-bar')
+      .querySelector<HTMLElement & { queue: { shuffle: () => void } }>(
+        'ytmusic-player-bar',
+      )
       ?.queue.shuffle();
   });
 
@@ -126,17 +126,17 @@ async function onApiLoaded() {
   window.ipcRenderer.on('peard:switch-repeat', (_, repeat = 1) => {
     for (let i = 0; i < repeat; i++) {
       document
-        .querySelector<
-          HTMLElement & { onRepeatButtonClick: () => void }
-        >('ytmusic-player-bar')
+        .querySelector<HTMLElement & { onRepeatButtonClick: () => void }>(
+          'ytmusic-player-bar',
+        )
         ?.onRepeatButtonClick();
     }
   });
   window.ipcRenderer.on('peard:update-volume', (_, volume: number) => {
     document
-      .querySelector<
-        HTMLElement & { updateVolume: (volume: number) => void }
-      >('ytmusic-player-bar')
+      .querySelector<HTMLElement & { updateVolume: (volume: number) => void }>(
+        'ytmusic-player-bar',
+      )
       ?.updateVolume(volume);
   });
 
@@ -175,9 +175,9 @@ async function onApiLoaded() {
 
   window.ipcRenderer.on('peard:toggle-mute', (_) => {
     document
-      .querySelector<
-        HTMLElement & { onVolumeClick: () => void }
-      >('ytmusic-player-bar')
+      .querySelector<HTMLElement & { onVolumeClick: () => void }>(
+        'ytmusic-player-bar',
+      )
       ?.onVolumeClick();
   });
 

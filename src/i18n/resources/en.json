@@ -922,6 +922,25 @@
         "instrumental": "⚠️ - This is an instrumental song"
       }
     },
+    "settings-ui": {
+      "name": "Settings UI",
+      "description": "todo!()",
+      "button": "Settings",
+      "title": {
+        "general": "General",
+        "appearance": "Appearance",
+        "plugins": "Plugins",
+        "advanced": "Advanced",
+        "about": "About"
+      },
+      "label": {
+        "general": "General",
+        "appearance": "Appearance",
+        "plugins": "Plugins",
+        "advanced": "Advanced",
+        "about": "About"
+      }
+    },
     "taskbar-mediacontrol": {
       "description": "Control playback from your Windows taskbar",
       "name": "Taskbar Media Control"
