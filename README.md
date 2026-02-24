@@ -317,3 +317,15 @@ MIT © [pear-devs](https://github.com/pear-devs/pear-desktop)
 
 If `Hide Menu` option is on - you can show the menu with the <kbd>alt</kbd> key (or <kbd>\`</kbd> [backtick] if using
 the in-app-menu plugin)
+
+## macOS Vibrancy Theme (YouTube Music)
+
+Optional CSS theme for macOS that enhances glass/vibrancy styling.
+
+- CSS-only
+- No Electron changes
+- Optional
+- Tested on macOS Tahoe 26.2
+
+Note: macOS vibrancy must be enabled at the Electron window level
+for this theme to have effect.
