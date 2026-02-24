@@ -59,6 +59,24 @@ export interface ScrobblerPluginConfig {
        */
       secret: string;
     };
+    librefm: {
+      /**
+       * Enable Libre.fm scrobbling
+       *
+       * @default false
+       */
+      enabled: boolean;
+      /**
+       * Session key used for scrobbling
+       */
+      sessionKey: string | undefined;
+      /**
+       * Root of the Libre.fm API
+       *
+       * @default 'https://libre.fm/2.0/'
+       */
+      apiRoot: string;
+    };
     listenbrainz: {
       /**
        * Enable ListenBrainz scrobbling
@@ -93,6 +111,11 @@ export const defaultConfig: ScrobblerPluginConfig = {
       apiRoot: 'https://ws.audioscrobbler.com/2.0/',
       apiKey: '04d76faaac8726e60988e14c105d421a',
       secret: 'a5d2a36fdf64819290f6982481eaffa2',
+    },
+    librefm: {
+      enabled: false,
+      sessionKey: undefined,
+      apiRoot: 'https://libre.fm/2.0/',
     },
     listenbrainz: {
       enabled: false,
