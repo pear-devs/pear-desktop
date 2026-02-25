@@ -846,6 +846,24 @@
         "not-found": "⚠️ Bu şarkı için şarkı sözleri bulunamadı."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Çince karakterleri çevir",
+          "submenu": {
+            "disabled": {
+              "label": "Devre dışı bırak",
+              "tooltip": "Çince karakterleri çevirmeyi devre dışı bırak"
+            },
+            "simplified-to-traditional": {
+              "label": "Basitleştirilmişten Geleneksele",
+              "tooltip": "Basitleştirilmiş Ç*nceyi Geleneksel Ç*nceye Çevir"
+            },
+            "traditional-to-simplified": {
+              "label": "Gelenekselden Basitleştirilmişe",
+              "tooltip": "Geleneksel Çince'yi Basitleştirilmiş Çince'ye dönüştür"
+            }
+          },
+          "tooltip": "Çince karakterleri Geleneksel veya Basitleştirilmiş Çinceye dönüştür"
+        },
         "default-text-string": {
           "label": "Şarkı sözleri arasında varsayılan karakter",
           "tooltip": "Şarkı sözleri arasındaki boşluk için kullanılacak varsayılan karakteri seçin"

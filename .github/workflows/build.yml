@@ -23,7 +23,7 @@ jobs:
         os: [ macos-26, ubuntu-latest, windows-latest ]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -96,7 +96,7 @@ jobs:
     if: github.repository == 'pear-devs/pear-desktop' && github.ref == 'refs/heads/master'
     needs: build
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -167,7 +167,7 @@ jobs:
 
       - name: Commit changelog
         if: ${{ env.VERSION_HASH == '' }}
-        uses: stefanzweifel/git-auto-commit-action@v6
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: Update changelog for ${{ env.VERSION_TAG }}
           file_pattern: "changelog.md"
