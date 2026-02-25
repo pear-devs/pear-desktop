@@ -208,7 +208,7 @@ const sendError = (error: Error, source?: string) => {
 
   // Send error to renderer for toast display (non-blocking)
   try {
-    win.webContents.send('downloader-error-toast', {
+    win.webContents.send('downloader-ytdlp-error-toast', {
       message: message + commandInfo + userTip,
       title: t('plugins.downloader.backend.dialog.error.title'),
     });
@@ -234,11 +234,11 @@ export const onMainLoad = async ({
   // Update cache when config changes
   cachedConfig = config;
 
-  ipc.handle('download-song', (url: string) => downloadSong(url));
+  ipc.handle('download-song-ytdlp', (url: string) => downloadSong(url));
   ipc.on('ytmd:video-src-changed', (data: GetPlayerResponse) => {
     playingUrl = data.microformat.microformatDataRenderer.urlCanonical;
   });
-  ipc.handle('download-playlist-request', async (url: string) =>
+  ipc.handle('download-playlist-request-ytdlp', async (url: string) =>
     downloadPlaylist(url),
   );
 
@@ -414,53 +414,51 @@ async function downloadSongUnsafe(
     );
   }
 
-  // Enhanced output template with artist and title, higher quality, metadata
-  const outTemplate = `${dir}/%(artist)s - %(title)s.%(ext)s`;
+  // Output template: include artist only when available (avoids "NA - " prefix)
+  const outTemplate = `${dir}/%(artist&{} - |)s%(title)s.%(ext)s`;
+
+  // Pre-resolve the expected filename so we can use it as fallback and for skip-existing check
+  let expectedFilePath: string | undefined;
+  try {
+    const infoArgs = ['--print', '%(artist&{} - |)s%(title)s.%(ext)s', url];
+    const infoProcess = spawn(ytDlpPath, infoArgs, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      shell: false,
+    });
+
+    let infoOutput = '';
+    infoProcess.stdout?.on('data', (data: Buffer) => {
+      infoOutput += data.toString();
+    });
+
+    const infoExitCode = await new Promise<number>((resolve) => {
+      infoProcess.on('close', resolve);
+    });
+
+    if (infoExitCode === 0) {
+      const expectedFilename = infoOutput
+        .trim()
+        .replace('.webm', '.mp3')
+        .replace('.m4a', '.mp3');
+      expectedFilePath = path.join(dir, expectedFilename);
+    }
+  } catch (error) {
+    logToFrontend('warn', '⚠️ Could not pre-resolve expected filename:', error);
+  }
 
   // Check if file already exists when skipExisting is enabled
-  if (config.skipExisting) {
-    try {
-      // Get the expected filename by running yt-dlp with --print option first
-      const infoArgs = ['--print', '%(artist)s - %(title)s.%(ext)s', url];
-      const infoProcess = spawn(ytDlpPath, infoArgs, {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        shell: false,
-      });
-
-      let infoOutput = '';
-      infoProcess.stdout?.on('data', (data: Buffer) => {
-        infoOutput += data.toString();
-      });
-
-      const infoExitCode = await new Promise<number>((resolve) => {
-        infoProcess.on('close', resolve);
-      });
-
-      if (infoExitCode === 0) {
-        const expectedFilename = infoOutput
-          .trim()
-          .replace('.webm', '.mp3')
-          .replace('.m4a', '.mp3');
-        const expectedPath = path.join(dir, expectedFilename);
-
-        if (existsSync(expectedPath)) {
-          logToFrontend(
-            'info',
-            '⏭️ File already exists, skipping:',
-            expectedPath,
-          );
-          sendFeedback(
-            t('plugins.downloader.backend.feedback.file-already-exists'),
-            -1,
-          );
-          setName(expectedPath);
-          return; // Skip download
-        }
-      }
-    } catch (error) {
-      logToFrontend('warn', '⚠️ Could not check for existing file:', error);
-      // Continue with download if check fails
-    }
+  if (config.skipExisting && expectedFilePath && existsSync(expectedFilePath)) {
+    logToFrontend(
+      'info',
+      '⏭️ File already exists, skipping:',
+      expectedFilePath,
+    );
+    sendFeedback(
+      t('plugins.downloader.backend.feedback.file-already-exists'),
+      -1,
+    );
+    setName(expectedFilePath);
+    return; // Skip download
   }
 
   // Enhanced args with higher quality and metadata embedding (NO separate thumbnail downloads)
@@ -561,29 +559,22 @@ async function downloadSongUnsafe(
 
     // Try to determine the final file location more accurately
     let finalFile = downloadedFile;
+
+    // Check if yt-dlp reported the file already exists (no extraction happened)
+    const alreadyDownloaded =
+      output.includes('has already been downloaded') ||
+      output.includes('already been recorded') ||
+      (output.includes('[download]') && !output.includes('[ExtractAudio]'));
+
     if (!finalFile || finalFile === '') {
-      // Try to find the file by looking for mp3 files in the directory
-      try {
-        const fs = await import('fs');
-        const files = fs.readdirSync(dir);
-        const mp3Files = files.filter((f) => f.endsWith('.mp3'));
-        if (mp3Files.length > 0) {
-          // Sort by modification time, get the newest
-          const fullPaths = mp3Files.map((f) => path.join(dir, f));
-          const newest = fullPaths.reduce((a, b) => {
-            const aStat = fs.statSync(a);
-            const bStat = fs.statSync(b);
-            return aStat.mtime > bStat.mtime ? a : b;
-          });
-          finalFile = newest;
-          logToFrontend('info', '🔍 Found downloaded file:', finalFile);
+      // Use the pre-resolved expected path instead of scanning the directory
+      if (expectedFilePath) {
+        finalFile = expectedFilePath;
+        if (alreadyDownloaded) {
+          logToFrontend('info', '⏭️ File already exists:', finalFile);
+        } else {
+          logToFrontend('info', '📁 Resolved output file:', finalFile);
         }
-      } catch (error) {
-        logToFrontend(
-          'warn',
-          '⚠️ Could not determine final file location:',
-          error,
-        );
       }
     }
 
@@ -591,12 +582,21 @@ async function downloadSongUnsafe(
       finalFile = 'Unknown location (check download folder)';
     }
 
-    logToFrontend('info', '✅ Download complete!');
-    logToFrontend('info', '📂 File saved:', finalFile);
-    sendOsNotification(
-      'Download complete!',
-      `Downloaded: ${path.basename(finalFile)}`,
-    ).catch(() => {});
+    if (alreadyDownloaded) {
+      logToFrontend('info', '⏭️ File already existed, nothing new downloaded.');
+      logToFrontend('info', '📂 Existing file:', finalFile);
+      sendOsNotification(
+        'File already exists',
+        `Already downloaded: ${path.basename(finalFile)}`,
+      ).catch(() => {});
+    } else {
+      logToFrontend('info', '✅ Download complete!');
+      logToFrontend('info', '📂 File saved:', finalFile);
+      sendOsNotification(
+        'Download complete!',
+        `Downloaded: ${path.basename(finalFile)}`,
+      ).catch(() => {});
+    }
   } catch (error) {
     logToFrontend('error', '❌ Download failed:', error);
     sendOsNotification('Download failed!', String(error)).catch(() => {});

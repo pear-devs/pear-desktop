@@ -36,7 +36,7 @@ export const DownloadButton = (props: {
     </div>
     <div
       class="text style-scope ytmusic-menu-navigation-item-renderer"
-      id="ytmcustom-download"
+      id="ytmcustom-download-ytdlp"
     >
       {props.text}
     </div>
