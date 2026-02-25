@@ -78,24 +78,24 @@ export const onRendererLoad = ({
       }
 
       if (videoUrl.includes('?playlist=')) {
-        ipc.invoke('download-playlist-request', videoUrl);
+        ipc.invoke('download-playlist-request-ytdlp', videoUrl);
         return;
       }
     } else {
       videoUrl = getSongInfo().url || window.location.href;
     }
 
-    ipc.invoke('download-song', videoUrl);
+    ipc.invoke('download-song-ytdlp', videoUrl);
   };
 
-  ipc.on('downloader-feedback', (feedback: string) => {
-    const targetHtml = feedback || t('plugins.downloader.templates.button');
+  ipc.on('downloader-ytdlp-feedback', (feedback: string) => {
+    const targetHtml = feedback || t('plugins.downloader.templates.button') + ' (ytdlp)';
     setDownloadButtonText(targetHtml);
   });
 
   // Listen for error toasts from backend
   ipc.on(
-    'downloader-error-toast',
+    'downloader-ytdlp-error-toast',
     (data: { message: string; title?: string }) => {
       setToast(data);
       if (toastTimeout) clearTimeout(toastTimeout);
@@ -105,7 +105,7 @@ export const onRendererLoad = ({
 };
 
 export const onPlayerApiReady = () => {
-  setDownloadButtonText(t('plugins.downloader.templates.button'));
+  setDownloadButtonText(t('plugins.downloader.templates.button') + ' (ytdlp)');
 
   buttonContainer = document.createElement('div');
   buttonContainer.classList.add(

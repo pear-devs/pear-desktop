@@ -5,7 +5,7 @@ export const getFolder = (customFolder?: string) =>
   customFolder ?? app.getPath('downloads');
 
 export const sendFeedback = (win: BrowserWindow, message?: unknown) => {
-  win.webContents.send('downloader-feedback', message);
+  win.webContents.send('downloader-ytdlp-feedback', message);
 };
 
 export const cropMaxWidth = (image: Electron.NativeImage) => {
