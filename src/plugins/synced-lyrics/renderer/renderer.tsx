@@ -21,8 +21,17 @@ import {
 } from './components';
 
 import { currentLyrics } from './store';
+import { _ytAPI } from './index';
+
+import { t } from '@/i18n';
 
 import type { LineLyrics, SyncedLyricsPluginConfig } from '../types';
+
+interface AppElement extends HTMLElement {
+  toastService?: {
+    show: (message: string) => void;
+  };
+}
 
 export const [isVisible, setIsVisible] = createSignal<boolean>(false);
 export const [config, setConfig] =
@@ -123,6 +132,50 @@ createEffect(() => {
       root.style.setProperty('--lyrics-active-scale', '1');
       root.style.setProperty('--lyrics-active-offset', '0');
       break;
+  }
+});
+
+// Auto-skip songs based on detected language
+createEffect(() => {
+  const cfg = config();
+  const lyrics = currentLyrics();
+
+  if (!cfg?.autoSkipLanguages || !lyrics?.data?.language) return;
+
+  const skipLanguages = cfg.autoSkipLanguages
+    .split(',')
+    .map((lang) => lang.trim().toLowerCase())
+    .filter((lang) => lang.length > 0);
+
+  if (skipLanguages.length === 0) return;
+
+  const detectedLanguage = lyrics.data.language.toLowerCase();
+
+  if (skipLanguages.includes(detectedLanguage)) {
+    const appApi = document.querySelector<AppElement>('ytmusic-app');
+
+    // Show toast notification
+    appApi?.toastService?.show(
+      t('plugins.synced-lyrics.menu.auto-skip-toast', {
+        language: lyrics.data.language.toUpperCase(),
+      }),
+    );
+
+    // Optionally dislike the song
+    if (cfg.autoDislikeSkippedLanguages) {
+      const dislikeButton = document.querySelector<HTMLButtonElement>(
+        '#button-shape-dislike > button[aria-pressed="false"]',
+      );
+      if (dislikeButton) {
+        dislikeButton.click();
+      }
+    }
+
+    // Skip to next song
+    const timer = setTimeout(() => {
+      _ytAPI?.nextVideo();
+    }, 500);
+    onCleanup(() => clearTimeout(timer));
   }
 });
 
