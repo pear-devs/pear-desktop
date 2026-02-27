@@ -80,7 +80,7 @@ const detectLyricsLanguage = (
       const detectedLang = detect(textToAnalyze);
       // Only set language if detection was successful (not empty string)
       if (detectedLang) {
-        result.language = detectedLang;
+        return { ...result, language: detectedLang };
       }
     }
   } catch (error) {

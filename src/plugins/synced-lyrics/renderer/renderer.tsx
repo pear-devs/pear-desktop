@@ -23,6 +23,8 @@ import {
 import { currentLyrics } from './store';
 import { _ytAPI } from './index';
 
+import { t } from '@/i18n';
+
 import type { LineLyrics, SyncedLyricsPluginConfig } from '../types';
 
 interface AppElement extends HTMLElement {
@@ -154,7 +156,9 @@ createEffect(() => {
 
     // Show toast notification
     appApi?.toastService?.show(
-      `Auto-skipping song with detected language: ${lyrics.data.language.toUpperCase()}`,
+      t('plugins.synced-lyrics.menu.auto-skip-toast', {
+        language: lyrics.data.language.toUpperCase(),
+      }),
     );
 
     // Optionally dislike the song
@@ -168,9 +172,11 @@ createEffect(() => {
     }
 
     // Skip to next song
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       _ytAPI?.nextVideo();
     }, 500);
+    
+    onCleanup(() => clearTimeout(timer));
   }
 });
 

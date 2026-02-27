@@ -915,13 +915,15 @@
           "tooltip": "Automatically skip songs when these languages are detected in lyrics (comma-separated language codes)",
           "prompt": {
             "title": "Auto-skip languages",
-            "label": "Enter language codes (comma-separated, e.g., ja,ko,zh):"
+            "label": "Enter language codes (comma-separated, e.g., ja,ko,zh):",
+            "placeholder": "e.g., ja,ko,zh"
           }
         },
         "auto-dislike-skipped-languages": {
           "label": "Auto-dislike skipped songs",
           "tooltip": "Automatically dislike songs before skipping them when a language from the skip list is detected"
-        }
+        },
+        "auto-skip-toast": "Auto-skipping song with detected language: {{language}}"
       },
       "name": "Synced Lyrics",
       "refetch-btn": {

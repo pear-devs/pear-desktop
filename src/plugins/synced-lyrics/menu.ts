@@ -254,7 +254,9 @@ export const menu = async (
               type: 'input',
               inputAttrs: {
                 type: 'text',
-                placeholder: 'e.g., ja,ko,zh',
+                placeholder: t(
+                  'plugins.synced-lyrics.menu.auto-skip-languages.prompt.placeholder',
+                ),
               },
               ...promptOptions(),
             },
