@@ -175,7 +175,6 @@ createEffect(() => {
     const timer = setTimeout(() => {
       _ytAPI?.nextVideo();
     }, 500);
-    
     onCleanup(() => clearTimeout(timer));
   }
 });
