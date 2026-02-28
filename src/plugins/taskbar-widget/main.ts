@@ -17,6 +17,8 @@ import {
   SongInfoEvent,
 } from '@/providers/song-info';
 
+import type { TaskbarWidgetPluginConfig, VisualizerPosition } from './index';
+
 // Widget width limits – the actual width is driven by the renderer content
 // via the 'taskbar-widget:resize' IPC channel.
 const MAX_WIDGET_WIDTH = 350;
@@ -44,6 +46,8 @@ const HIDE_RECOVERY_INTERVAL_MS = 100;
 const HIDE_RECOVERY_DURATION_MS = 3000;
 
 let miniPlayerWin: BrowserWindow | null = null;
+// Visualizer window – sits adjacent to the mini player widget.
+let visualizerWin: BrowserWindow | null = null;
 // Keep a reference to the main window so cleanup can remove event listeners.
 let mainWindowRef: BrowserWindow | null = null;
 let controlHandler:
@@ -59,6 +63,19 @@ let positionOffsetX = 0;
 let positionOffsetY = 0;
 let backgroundBlurEnabled = false;
 let currentWidgetWidth = MIN_WIDGET_WIDTH;
+// Visualizer configuration state
+let visualizerEnabled = false;
+let visualizerPosition: VisualizerPosition = 'left';
+let visualizerBarCount = 20;
+let visualizerCenteredBars = true;
+let visualizerShowBaseline = true;
+let visualizerAudioSensitivity = 0.3;
+let visualizerAudioPeakThreshold = 0.85;
+const VISUALIZER_WIDTH = 120;
+// IPC handler for audio data forwarding from renderer to visualizer
+let audioDataHandler:
+  | ((_: Electron.IpcMainEvent, data: number[]) => void)
+  | null = null;
 // Tracks whether the widget is supposed to be visible (a song is playing).
 // Used to decide whether to recover from external hides.
 let isShowing = false;
@@ -98,8 +115,8 @@ const writePreloadScript = (): string => {
   fs.writeFileSync(
     preloadPath,
     `const { contextBridge, ipcRenderer } = require('electron');
-const ALLOWED_SEND = ['taskbar-widget:control', 'taskbar-widget:resize', 'taskbar-widget:show-window'];
-const ALLOWED_RECEIVE = ['taskbar-widget:song-info', 'taskbar-widget:set-blur', 'taskbar-widget:set-background-color'];
+const ALLOWED_SEND = ['taskbar-widget:control', 'taskbar-widget:resize', 'taskbar-widget:show-window', 'taskbar-widget:audio-data'];
+const ALLOWED_RECEIVE = ['taskbar-widget:song-info', 'taskbar-widget:set-blur', 'taskbar-widget:set-background-color', 'taskbar-widget:visualizer-config', 'taskbar-widget:audio-data'];
 contextBridge.exposeInMainWorld('widgetIpc', {
   send: (channel, ...args) => {
     if (ALLOWED_SEND.includes(channel)) {
@@ -415,6 +432,274 @@ const writeHtmlFile = (widgetHeight: number): string => {
 };
 
 /**
+ * Generate the HTML for the audio visualizer window.
+ * Renders vertical bars on a canvas that react to audio frequency data.
+ */
+const getVisualizerHTML = (widgetHeight: number): string => {
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: transparent;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: ${widgetHeight}px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="visualizer"></canvas>
+  <script>
+    const canvas = document.getElementById('visualizer');
+    const ctx = canvas.getContext('2d');
+
+    // Configuration – updated via IPC
+    let barCount = ${visualizerBarCount};
+    let centeredBars = ${visualizerCenteredBars};
+    let showBaseline = ${visualizerShowBaseline};
+    let audioSensitivity = ${visualizerAudioSensitivity};
+    let audioPeakThreshold = ${visualizerAudioPeakThreshold};
+
+    // Current and smoothed frequency data
+    let frequencyData = new Array(barCount).fill(0);
+    let smoothedData = new Array(barCount).fill(0);
+
+    // Dynamic color from album art
+    let barColorR = 120, barColorG = 180, barColorB = 255;
+
+    // High-DPI canvas scaling
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    window.widgetIpc.on('taskbar-widget:audio-data', (data) => {
+      if (!Array.isArray(data)) return;
+      frequencyData = data;
+    });
+
+    window.widgetIpc.on('taskbar-widget:visualizer-config', (config) => {
+      if (config.barCount !== undefined) {
+        barCount = config.barCount;
+        smoothedData = new Array(barCount).fill(0);
+      }
+      if (config.centeredBars !== undefined) centeredBars = config.centeredBars;
+      if (config.showBaseline !== undefined) showBaseline = config.showBaseline;
+      if (config.audioSensitivity !== undefined) audioSensitivity = config.audioSensitivity;
+      if (config.audioPeakThreshold !== undefined) audioPeakThreshold = config.audioPeakThreshold;
+    });
+
+    window.widgetIpc.on('taskbar-widget:set-background-color', (color) => {
+      if (color && color.r !== undefined) {
+        barColorR = Math.min(255, color.r + 60);
+        barColorG = Math.min(255, color.g + 60);
+        barColorB = Math.min(255, color.b + 60);
+      }
+    });
+
+    const draw = () => {
+      requestAnimationFrame(draw);
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width;
+      const h = rect.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      const gap = 2;
+      const totalGap = gap * (barCount - 1);
+      const barWidth = Math.max(1, (w - totalGap) / barCount);
+
+      // Re-sample frequency data to match bar count
+      const dataLen = frequencyData.length;
+      for (let i = 0; i < barCount; i++) {
+        const dataIndex = Math.floor((i / barCount) * dataLen);
+        const raw = (frequencyData[dataIndex] || 0) / 255;
+        const scaled = Math.min(raw * (audioSensitivity * 4), audioPeakThreshold);
+        // Smooth transitions
+        smoothedData[i] += (scaled - smoothedData[i]) * 0.3;
+      }
+
+      for (let i = 0; i < barCount; i++) {
+        const x = i * (barWidth + gap);
+        const barHeight = Math.max(0, smoothedData[i] * h);
+
+        // Gradient for each bar
+        const alpha = 0.5 + smoothedData[i] * 0.5;
+        const gradTop = 'rgba(' + barColorR + ',' + barColorG + ',' + barColorB + ',' + alpha + ')';
+        const gradBot = 'rgba(' + barColorR + ',' + barColorG + ',' + barColorB + ',' + (alpha * 0.3) + ')';
+
+        if (centeredBars) {
+          // Bars expand from center
+          const halfBar = barHeight / 2;
+          const yTop = (h / 2) - halfBar;
+
+          const grad = ctx.createLinearGradient(x, yTop, x, yTop + barHeight);
+          grad.addColorStop(0, gradBot);
+          grad.addColorStop(0.5, gradTop);
+          grad.addColorStop(1, gradBot);
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.roundRect(x, yTop, barWidth, barHeight, 1);
+          ctx.fill();
+        } else {
+          // Bars rise from bottom
+          const y = h - barHeight;
+          const grad = ctx.createLinearGradient(x, y, x, h);
+          grad.addColorStop(0, gradTop);
+          grad.addColorStop(1, gradBot);
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.roundRect(x, y, barWidth, barHeight, 1);
+          ctx.fill();
+        }
+      }
+
+      // Baseline
+      if (showBaseline) {
+        ctx.strokeStyle = 'rgba(' + barColorR + ',' + barColorG + ',' + barColorB + ', 0.25)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        if (centeredBars) {
+          ctx.moveTo(0, h / 2);
+          ctx.lineTo(w, h / 2);
+        } else {
+          ctx.moveTo(0, h - 0.5);
+          ctx.lineTo(w, h - 0.5);
+        }
+        ctx.stroke();
+      }
+    };
+
+    draw();
+  </script>
+</body>
+</html>`;
+};
+
+const writeVisualizerHtmlFile = (widgetHeight: number): string => {
+  const htmlPath = path.join(getWidgetDir(), 'visualizer.html');
+  fs.writeFileSync(htmlPath, getVisualizerHTML(widgetHeight));
+  return htmlPath;
+};
+
+/**
+ * Calculate the bounds for the visualizer window, positioned adjacent
+ * to the mini player widget.
+ */
+const getVisualizerBounds = () => {
+  const widgetBounds = getWidgetBounds();
+  const vizWidth = VISUALIZER_WIDTH;
+
+  return {
+    x:
+      visualizerPosition === 'left'
+        ? widgetBounds.x - vizWidth - 4
+        : widgetBounds.x + widgetBounds.width + 4,
+    y: widgetBounds.y,
+    width: vizWidth,
+    height: widgetBounds.height,
+  };
+};
+
+/** Create or destroy the visualizer window based on config. */
+const ensureVisualizerWindow = async (preloadPath: string) => {
+  if (visualizerEnabled && isShowing) {
+    if (!visualizerWin || visualizerWin.isDestroyed()) {
+      const bounds = getVisualizerBounds();
+      const htmlPath = writeVisualizerHtmlFile(bounds.height);
+
+      visualizerWin = new BrowserWindow({
+        ...bounds,
+        frame: false,
+        transparent: true,
+        skipTaskbar: true,
+        resizable: false,
+        movable: false,
+        focusable: false,
+        show: false,
+        type: 'toolbar',
+        webPreferences: {
+          contextIsolation: true,
+          preload: preloadPath,
+        },
+      });
+
+      visualizerWin.setAlwaysOnTop(true, 'screen-saver');
+      await visualizerWin.loadFile(htmlPath);
+      visualizerWin.setIgnoreMouseEvents(true, { forward: true });
+      visualizerWin.showInactive();
+
+      // Forward hide/minimize recovery
+      visualizerWin.on('hide', () => {
+        if (
+          isShowing &&
+          !intentionalClose &&
+          visualizerWin &&
+          !visualizerWin.isDestroyed()
+        ) {
+          visualizerWin.showInactive();
+          visualizerWin.setAlwaysOnTop(true, 'screen-saver');
+        }
+      });
+      visualizerWin.on('minimize', () => {
+        if (
+          isShowing &&
+          !intentionalClose &&
+          visualizerWin &&
+          !visualizerWin.isDestroyed()
+        ) {
+          visualizerWin.restore();
+        }
+      });
+    } else {
+      // Update position
+      const bounds = getVisualizerBounds();
+      visualizerWin.setBounds(bounds);
+    }
+  } else if (visualizerWin && !visualizerWin.isDestroyed()) {
+    visualizerWin.close();
+    visualizerWin = null;
+  }
+};
+
+/** Reposition the visualizer window alongside the main widget. */
+const repositionVisualizer = () => {
+  if (!visualizerWin || visualizerWin.isDestroyed()) return;
+  const bounds = getVisualizerBounds();
+  visualizerWin.setBounds(bounds);
+  if (isShowing && !intentionalClose) {
+    visualizerWin.moveTop();
+  }
+};
+
+/** Send current visualizer config to the visualizer renderer. */
+const sendVisualizerConfig = () => {
+  if (!visualizerWin || visualizerWin.isDestroyed()) return;
+  visualizerWin.webContents.send('taskbar-widget:visualizer-config', {
+    barCount: visualizerBarCount,
+    centeredBars: visualizerCenteredBars,
+    showBaseline: visualizerShowBaseline,
+    audioSensitivity: visualizerAudioSensitivity,
+    audioPeakThreshold: visualizerAudioPeakThreshold,
+  });
+};
+
+/**
  * Extract the dominant color from an album art URL using Electron's
  * nativeImage API.  Runs entirely in the main process so there are no
  * CORS issues.  Returns `null` when extraction fails for any reason.
@@ -582,14 +867,14 @@ const repositionWidget = () => {
       miniPlayerWin.moveTop();
     }
   }
+
+  // Keep the visualizer in sync with the widget position
+  repositionVisualizer();
 };
 
 export const createMiniPlayer = async (
   mainWindow: BrowserWindow,
-  monitorIndex = 0,
-  offsetX = 0,
-  offsetY = 0,
-  blurEnabled = false,
+  config: TaskbarWidgetPluginConfig,
 ) => {
   const { playPause, next, previous } = getSongControls(mainWindow);
   mainWindowRef = mainWindow;
@@ -603,10 +888,17 @@ export const createMiniPlayer = async (
   repositionTickCount = 0;
   clearBlurRecoveryTimers();
 
-  selectedMonitorIndex = monitorIndex;
-  positionOffsetX = offsetX;
-  positionOffsetY = offsetY;
-  backgroundBlurEnabled = blurEnabled;
+  selectedMonitorIndex = config.monitorIndex;
+  positionOffsetX = config.offsetX;
+  positionOffsetY = config.offsetY;
+  backgroundBlurEnabled = config.backgroundBlur;
+  visualizerEnabled = config.visualizer.enabled;
+  visualizerPosition = config.visualizer.position;
+  visualizerBarCount = config.visualizer.barCount;
+  visualizerCenteredBars = config.visualizer.centeredBars;
+  visualizerShowBaseline = config.visualizer.showBaseline;
+  visualizerAudioSensitivity = config.visualizer.audioSensitivity;
+  visualizerAudioPeakThreshold = config.visualizer.audioPeakThreshold;
   const preloadPath = writePreloadScript();
   const { x, y, width, height } = getWidgetBounds();
   const htmlPath = writeHtmlFile(height);
@@ -770,6 +1062,14 @@ export const createMiniPlayer = async (
 
   ipcMain.on('taskbar-widget:resize', resizeHandler);
 
+  // Forward audio frequency data from the renderer to the visualizer window
+  audioDataHandler = (_, data: number[]) => {
+    if (visualizerWin && !visualizerWin.isDestroyed()) {
+      visualizerWin.webContents.send('taskbar-widget:audio-data', data);
+    }
+  };
+  ipcMain.on('taskbar-widget:audio-data', audioDataHandler);
+
   // Send song info to the mini player
   const sendSongInfo = (songInfo: SongInfo) => {
     if (!miniPlayerWin || miniPlayerWin.isDestroyed()) return;
@@ -791,6 +1091,13 @@ export const createMiniPlayer = async (
             'taskbar-widget:set-background-color',
             color,
           );
+          // Also forward the color to the visualizer for bar tinting
+          if (visualizerWin && !visualizerWin.isDestroyed()) {
+            visualizerWin.webContents.send(
+              'taskbar-widget:set-background-color',
+              color,
+            );
+          }
         }
       });
     }
@@ -800,6 +1107,8 @@ export const createMiniPlayer = async (
       isShowing = true;
       miniPlayerWin.setIgnoreMouseEvents(false);
       miniPlayerWin.showInactive();
+      // Also create/show visualizer if enabled
+      ensureVisualizerWindow(preloadPath);
     }
   };
 
@@ -819,20 +1128,31 @@ export const createMiniPlayer = async (
  * Live-update configuration without recreating the window.
  * Called from the plugin's onConfigChange handler.
  */
-export const updateConfig = (
-  offsetX: number,
-  offsetY: number,
-  blurEnabled: boolean,
-) => {
-  positionOffsetX = offsetX;
-  positionOffsetY = offsetY;
-  backgroundBlurEnabled = blurEnabled;
+export const updateConfig = (newConfig: TaskbarWidgetPluginConfig) => {
+  positionOffsetX = newConfig.offsetX;
+  positionOffsetY = newConfig.offsetY;
+  backgroundBlurEnabled = newConfig.backgroundBlur;
+  visualizerEnabled = newConfig.visualizer.enabled;
+  visualizerPosition = newConfig.visualizer.position;
+  visualizerBarCount = newConfig.visualizer.barCount;
+  visualizerCenteredBars = newConfig.visualizer.centeredBars;
+  visualizerShowBaseline = newConfig.visualizer.showBaseline;
+  visualizerAudioSensitivity = newConfig.visualizer.audioSensitivity;
+  visualizerAudioPeakThreshold = newConfig.visualizer.audioPeakThreshold;
   lastBounds = null; // Force reposition on next tick
 
   if (miniPlayerWin && !miniPlayerWin.isDestroyed()) {
     repositionWidget();
-    miniPlayerWin.webContents.send('taskbar-widget:set-blur', blurEnabled);
+    miniPlayerWin.webContents.send(
+      'taskbar-widget:set-blur',
+      newConfig.backgroundBlur,
+    );
   }
+
+  // Create, update, or destroy visualizer as needed
+  const preloadPath = path.join(getWidgetDir(), 'preload.js');
+  ensureVisualizerWindow(preloadPath);
+  sendVisualizerConfig();
 };
 
 export const cleanup = () => {
@@ -861,6 +1181,11 @@ export const cleanup = () => {
     resizeHandler = null;
   }
 
+  if (audioDataHandler) {
+    ipcMain.removeListener('taskbar-widget:audio-data', audioDataHandler);
+    audioDataHandler = null;
+  }
+
   if (displayChangeHandler) {
     screen.removeListener('display-metrics-changed', displayChangeHandler);
     displayChangeHandler = null;
@@ -882,6 +1207,11 @@ export const cleanup = () => {
     clearInterval(repositionTimer);
     repositionTimer = null;
   }
+
+  if (visualizerWin && !visualizerWin.isDestroyed()) {
+    visualizerWin.close();
+  }
+  visualizerWin = null;
 
   if (miniPlayerWin && !miniPlayerWin.isDestroyed()) {
     miniPlayerWin.close();

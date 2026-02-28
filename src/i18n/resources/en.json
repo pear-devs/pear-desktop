@@ -947,7 +947,21 @@
           "horizontal-offset": "Horizontal offset (px)",
           "vertical-offset": "Vertical offset (px)"
         },
-        "background-blur": "Background Blur"
+        "background-blur": "Background Blur",
+        "visualizer": {
+          "label": "Taskbar Visualizer",
+          "enabled": "Enable Taskbar Visualizer",
+          "position": {
+            "label": "Visualizer Position",
+            "left": "Left of Widget",
+            "right": "Right of Widget"
+          },
+          "bar-count": "Bar Count",
+          "centered-bars": "Centered Bars",
+          "show-baseline": "Show Baseline",
+          "audio-sensitivity": "Audio Sensitivity",
+          "audio-peak-threshold": "Audio Peak Threshold"
+        }
       }
     },
     "touchbar": {
