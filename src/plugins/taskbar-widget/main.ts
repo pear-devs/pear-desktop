@@ -1030,6 +1030,15 @@ export const createMiniPlayer = async (
   visualizerAudioPeakThreshold = config.visualizer.audioPeakThreshold;
   visualizerWidth = config.visualizer.width ?? 84;
   blurOpacity = config.blurOpacity ?? 0.5;
+
+  // Disable background throttling on the main window when the visualizer
+  // is enabled.  Chromium aggressively throttles setInterval in minimized
+  // or hidden BrowserWindows (~1 s), which starves the audio analysis
+  // loop running in the renderer.  This keeps data flowing at full speed.
+  if (visualizerEnabled && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.setBackgroundThrottling(false);
+  }
+
   const preloadPath = writePreloadScript();
   const { x, y, width, height } = getWidgetBounds();
   const htmlPath = writeHtmlFile(height);
@@ -1294,6 +1303,7 @@ export const updateConfig = (newConfig: TaskbarWidgetPluginConfig) => {
   positionOffsetY = newConfig.offsetY;
   backgroundBlurEnabled = newConfig.backgroundBlur;
   blurOpacity = newConfig.blurOpacity ?? 0.5;
+  const wasVisualizerEnabled = visualizerEnabled;
   visualizerEnabled = newConfig.visualizer.enabled;
   visualizerPosition = newConfig.visualizer.position;
   visualizerWidth = newConfig.visualizer.width ?? 84;
@@ -1303,6 +1313,15 @@ export const updateConfig = (newConfig: TaskbarWidgetPluginConfig) => {
   visualizerAudioSensitivity = newConfig.visualizer.audioSensitivity;
   visualizerAudioPeakThreshold = newConfig.visualizer.audioPeakThreshold;
   lastBounds = null; // Force reposition on next tick
+
+  // Toggle background throttling based on visualizer state
+  if (mainWindowRef && !mainWindowRef.isDestroyed()) {
+    if (visualizerEnabled && !wasVisualizerEnabled) {
+      mainWindowRef.webContents.setBackgroundThrottling(false);
+    } else if (!visualizerEnabled && wasVisualizerEnabled) {
+      mainWindowRef.webContents.setBackgroundThrottling(true);
+    }
+  }
 
   if (miniPlayerWin && !miniPlayerWin.isDestroyed()) {
     repositionWidget();
@@ -1325,6 +1344,11 @@ export const updateConfig = (newConfig: TaskbarWidgetPluginConfig) => {
 export const cleanup = () => {
   intentionalClose = true;
   isShowing = false;
+
+  // Restore normal background throttling
+  if (mainWindowRef && !mainWindowRef.isDestroyed()) {
+    mainWindowRef.webContents.setBackgroundThrottling(true);
+  }
 
   clearBlurRecoveryTimers();
 
