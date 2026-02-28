@@ -23,16 +23,24 @@ const DEFAULT_TASKBAR_HEIGHT = 48;
 const SYSTEM_TRAY_ESTIMATED_WIDTH = 450;
 // How often (ms) to re-check and reposition the widget + reassert z-order.
 // Handles auto-hide taskbar changes and z-index loss from window focus changes.
-// Kept low (100 ms) so the widget reappears quickly after taskbar interactions.
 const REPOSITION_INTERVAL_MS = 100;
+// Every FORCE_ZORDER_EVERY_N_TICKS repositions, the always-on-top flag is
+// toggled off then back on.  This forces Windows to re-evaluate the widget's
+// position in the TOPMOST z-band – without the toggle, calling
+// setAlwaysOnTop(true) on an already-TOPMOST window is effectively a no-op
+// and the widget can stay stuck behind the taskbar after Start menu or shell
+// overlay interactions.
+const FORCE_ZORDER_EVERY_N_TICKS = 5; // ~500 ms at 100 ms interval
 // When the widget is hidden externally (e.g. Start menu opens), an aggressive
 // recovery interval fires every HIDE_RECOVERY_INTERVAL_MS for up to
 // HIDE_RECOVERY_DURATION_MS.  This covers both fast transitions (clicking a
 // pinned taskbar icon) and slower system overlay animations (Start menu).
-const HIDE_RECOVERY_INTERVAL_MS = 100;
+const HIDE_RECOVERY_INTERVAL_MS = 80;
 const HIDE_RECOVERY_DURATION_MS = 3000;
 
 let miniPlayerWin: BrowserWindow | null = null;
+// Keep a reference to the main window so cleanup can remove event listeners.
+let mainWindowRef: BrowserWindow | null = null;
 let controlHandler:
   | ((_: Electron.IpcMainEvent, command: string) => void)
   | null = null;
@@ -56,6 +64,12 @@ let lastBounds: { x: number; y: number; width: number; height: number } | null =
   null;
 // Persistent interval used to recover from external hides (Start menu, etc.).
 let hideRecoveryInterval: ReturnType<typeof setInterval> | null = null;
+// Tick counter for the periodic reposition timer.
+let repositionTickCount = 0;
+// Handler references for main window blur/focus listeners so they can be
+// cleaned up when the widget is destroyed.
+let mainWindowBlurHandler: (() => void) | null = null;
+let mainWindowFocusHandler: (() => void) | null = null;
 
 const getWidgetDir = () => {
   const dir = path.join(app.getPath('userData'), 'taskbar-widget');
@@ -376,8 +390,19 @@ const writeHtmlFile = (widgetHeight: number): string => {
 };
 
 /**
- * Recover visibility if the widget was hidden or minimized externally.
- * Also reasserts z-order in case the widget ended up behind an overlay.
+ * Recover visibility if the widget was hidden, minimized, or pushed behind
+ * the taskbar by a system overlay (Start menu, shell flyouts, etc.).
+ *
+ * The key trick is toggling `setAlwaysOnTop` off then back on.  On Windows,
+ * calling `setAlwaysOnTop(true)` when the window is *already* TOPMOST is a
+ * no-op – the OS does not re-evaluate the window's position within the
+ * TOPMOST z-band.  Toggling forces the OS to remove the TOPMOST flag
+ * (HWND_NOTOPMOST) and immediately re-add it (HWND_TOPMOST), which places
+ * the window at the very top of the TOPMOST band.
+ *
+ * `showInactive()` is called unconditionally because the widget can be
+ * technically "visible" (`isVisible() === true`) yet rendered behind the
+ * taskbar surface after Start menu interactions.
  */
 const recoverVisibility = () => {
   if (
@@ -393,10 +418,9 @@ const recoverVisibility = () => {
     miniPlayerWin.restore();
   }
 
-  if (!miniPlayerWin.isVisible()) {
-    miniPlayerWin.showInactive();
-  }
-
+  miniPlayerWin.showInactive();
+  // Toggle off → on to force Windows to re-evaluate the TOPMOST z-band.
+  miniPlayerWin.setAlwaysOnTop(false);
   miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
   miniPlayerWin.moveTop();
 };
@@ -405,10 +429,16 @@ const recoverVisibility = () => {
  * Reposition the widget and reassert z-order.
  * Called on display changes and periodically to handle auto-hide taskbar
  * and z-index loss from window focus changes.
- * Also recovers visibility if the widget was hidden externally.
+ *
+ * Every {@link FORCE_ZORDER_EVERY_N_TICKS} ticks the always-on-top flag is
+ * toggled off then on to force the OS to re-evaluate the TOPMOST z-band
+ * (see {@link recoverVisibility} for details).  On intermediate ticks only
+ * {@link moveTop} is called to minimise overhead.
  */
 const repositionWidget = () => {
   if (!miniPlayerWin || miniPlayerWin.isDestroyed()) return;
+
+  repositionTickCount++;
 
   const bounds = getWidgetBounds();
 
@@ -426,16 +456,17 @@ const repositionWidget = () => {
     lastBounds = bounds;
   }
 
-  // Reassert z-order so the widget stays above the taskbar even after
-  // other windows are moved / focused.  Also call moveTop() so the
-  // widget is pushed above any overlays (e.g. Start menu) that may
-  // have been placed on top since the last tick.
-  miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
   if (isShowing && !intentionalClose) {
-    miniPlayerWin.moveTop();
+    // Periodically force a full z-order toggle so the widget can recover
+    // even when no Electron events fire (e.g. after the Start menu closes
+    // and focus stays on the taskbar).
+    if (repositionTickCount % FORCE_ZORDER_EVERY_N_TICKS === 0) {
+      recoverVisibility();
+    } else {
+      miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
+      miniPlayerWin.moveTop();
+    }
   }
-
-  recoverVisibility();
 };
 
 export const createMiniPlayer = async (
@@ -446,12 +477,14 @@ export const createMiniPlayer = async (
   blurEnabled = false,
 ) => {
   const { playPause, next, previous } = getSongControls(mainWindow);
+  mainWindowRef = mainWindow;
 
   // Reset state from any previous session
   intentionalClose = false;
   isShowing = false;
   currentWidgetWidth = MIN_WIDGET_WIDTH;
   lastBounds = null;
+  repositionTickCount = 0;
 
   selectedMonitorIndex = monitorIndex;
   positionOffsetX = offsetX;
@@ -547,6 +580,22 @@ export const createMiniPlayer = async (
   // Reposition when display configuration changes (resolution, DPI, etc.)
   displayChangeHandler = () => repositionWidget();
   screen.on('display-metrics-changed', displayChangeHandler);
+
+  // When the main window loses focus the user may have clicked the taskbar,
+  // the Start menu, or another shell overlay.  Trigger an immediate
+  // aggressive recovery so the widget is pushed back above the taskbar as
+  // soon as the overlay closes – without waiting for the next periodic tick.
+  mainWindowBlurHandler = () => {
+    if (isShowing && !intentionalClose) recoverVisibility();
+  };
+  mainWindow.on('blur', mainWindowBlurHandler);
+
+  // When the main window regains focus, immediately ensure the widget is
+  // on top (handles the case where the user switches back from another app).
+  mainWindowFocusHandler = () => {
+    if (isShowing && !intentionalClose) recoverVisibility();
+  };
+  mainWindow.on('focus', mainWindowFocusHandler);
 
   // Periodically reposition and reassert z-order so the widget adapts to
   // auto-hide taskbar state changes and recovers from z-index loss.
@@ -683,6 +732,18 @@ export const cleanup = () => {
     screen.removeListener('display-metrics-changed', displayChangeHandler);
     displayChangeHandler = null;
   }
+
+  if (mainWindowRef && !mainWindowRef.isDestroyed()) {
+    if (mainWindowBlurHandler) {
+      mainWindowRef.removeListener('blur', mainWindowBlurHandler);
+    }
+    if (mainWindowFocusHandler) {
+      mainWindowRef.removeListener('focus', mainWindowFocusHandler);
+    }
+  }
+  mainWindowBlurHandler = null;
+  mainWindowFocusHandler = null;
+  mainWindowRef = null;
 
   if (repositionTimer) {
     clearInterval(repositionTimer);
