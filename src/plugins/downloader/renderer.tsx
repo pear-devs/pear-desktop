@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js';
+import { createSignal, Show } from 'solid-js';
 
 import { render } from 'solid-js/web';
 
@@ -17,6 +17,13 @@ import type { RendererContext } from '@/types/contexts';
 import type { DownloaderPluginConfig } from './index';
 
 let download: () => void;
+
+// Toast notification state
+const [toast, setToast] = createSignal<{
+  message: string;
+  title?: string;
+} | null>(null);
+let toastTimeout: number | undefined;
 
 const [downloadButtonText, setDownloadButtonText] = createSignal<string>('');
 
@@ -85,6 +92,16 @@ export const onRendererLoad = ({
     const targetHtml = feedback || t('plugins.downloader.templates.button');
     setDownloadButtonText(targetHtml);
   });
+
+  // Listen for error/info toasts from backend
+  ipc.on(
+    'downloader-error-toast',
+    (data: { message: string; title?: string }) => {
+      setToast(data);
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = window.setTimeout(() => setToast(null), 10000); // Auto-hide after 10s
+    },
+  );
 };
 
 export const onPlayerApiReady = () => {
@@ -110,4 +127,51 @@ export const onPlayerApiReady = () => {
     childList: true,
     subtree: true,
   });
+
+  // Render toast container for non-blocking notifications
+  let toastDiv = document.getElementById('ytmd-downloader-toast-container');
+  if (!toastDiv) {
+    toastDiv = document.createElement('div');
+    toastDiv.id = 'ytmd-downloader-toast-container';
+    document.body.appendChild(toastDiv);
+  }
+  render(
+    () => (
+      <Show when={toast()}>
+        <div
+          class="ytmd-toast"
+          onClick={() => {
+            navigator.clipboard.writeText(toast()?.message || '');
+            setToast(null);
+          }}
+          style={{
+            'position': 'fixed',
+            'bottom': '32px',
+            'left': '50%',
+            'transform': 'translateX(-50%)',
+            'background': '#222',
+            'color': '#fff',
+            'padding': '16px 24px',
+            'border-radius': '8px',
+            'box-shadow': '0 2px 8px #0008',
+            'z-index': '9999',
+            'max-width': '80vw',
+            'font-size': '15px',
+            'cursor': 'pointer',
+          }}
+          title="Click to copy message and dismiss"
+        >
+          <strong>{toast()?.title || 'Error'}</strong>
+          <br />
+          <span style={{ 'white-space': 'pre-wrap' }}>{toast()?.message}</span>
+          <div
+            style={{ 'font-size': '12px', 'margin-top': '8px', 'opacity': 0.7 }}
+          >
+            Click to copy & dismiss
+          </div>
+        </div>
+      </Show>
+    ),
+    toastDiv,
+  );
 };
