@@ -527,6 +527,10 @@
         "button": "Lataa"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Lataaja (yt-dlp)",
+      "description": "Lataa MP3- tai lähdetiedoston suoraan käyttöliittymästä. Latauslisäosan versio, joka käyttää yt-dlp.exe:tä. Voit asettaa suoritettavalle tiedostolle mukautetun polun sekä eväste-merkkijonon parantaaksesi latausten onnistumista lisäämällä kelvolliset evästeet."
+    },
     "equalizer": {
       "description": "Lisää taajuuskorjaimen toistimeen",
       "menu": {
@@ -777,3 +781,4 @@
     }
   }
 }
+

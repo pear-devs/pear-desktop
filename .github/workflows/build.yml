@@ -5,6 +5,10 @@ on:
     branches: [ master ]
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   NODE_VERSION: "22.x"
 

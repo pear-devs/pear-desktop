@@ -567,7 +567,11 @@
         },
         "download-playlist": "Download playlist",
         "presets": "Presets",
-        "skip-existing": "Skip existing files"
+        "skip-existing": "Skip existing files",
+        "yt-dlp-location-nice": "yt-dlp executable location",
+        "yt-dlp-location-title": "Set yt-dlp path",
+        "yt-dlp-location-label": "Path to yt-dlp executable",
+        "yt-dlp-location-saved": "yt-dlp path saved"
       },
       "name": "Downloader",
       "renderer": {
@@ -576,6 +580,10 @@
       "templates": {
         "button": "Download"
       }
+    },
+    "downloader-ytdlp": {
+      "name": "Downloader (yt-dlp)",
+      "description": "Downloads MP3 / source audio directly from the interface. A version of the downloader plugin that uses yt-dlp.exe. You can set a custom path for the executable and a cookies string to improve successful downloads by including valid cookies."
     },
     "equalizer": {
       "description": "Adds an equalizer to the player",
@@ -925,6 +933,38 @@
     "taskbar-mediacontrol": {
       "description": "Control playback from your Windows taskbar",
       "name": "Taskbar Media Control"
+    },
+    "taskbar-widget": {
+      "description": "Embeds a mini player into the Windows taskbar with album art, song info, and playback controls",
+      "name": "Taskbar Widget",
+      "menu": {
+        "monitor": {
+          "label": "Display Monitor",
+          "primary": "Primary"
+        },
+        "position": {
+          "label": "Position Offset",
+          "horizontal-offset": "Horizontal offset (px)",
+          "vertical-offset": "Vertical offset (px)"
+        },
+        "background-blur": "Background Blur",
+        "blur-opacity": "Blur Opacity (0.1–1.0)",
+        "visualizer": {
+          "label": "Taskbar Visualizer",
+          "enabled": "Enable Taskbar Visualizer",
+          "position": {
+            "label": "Visualizer Position",
+            "left": "Left of Widget",
+            "right": "Right of Widget"
+          },
+          "width": "Visualizer Width (40–300 px)",
+          "bar-count": "Bar Count (4–64)",
+          "centered-bars": "Centered Bars",
+          "show-baseline": "Show Baseline",
+          "audio-sensitivity": "Audio Sensitivity (0.01–1.0)",
+          "audio-peak-threshold": "Audio Peak Threshold (0.1–1.0)"
+        }
+      }
     },
     "touchbar": {
       "description": "Adds a TouchBar widget for macOS users",

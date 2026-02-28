@@ -577,6 +577,10 @@
         "button": "Herunterladen"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Downloader (yt-dlp)",
+      "description": "Lädt MP3-/Original-Audio direkt von der Schnittstelle herunter. Eine Version des Downloader-Plugins, die yt-dlp.exe verwendet. Du kannst einen benutzerdefinierten Pfad zur ausführbaren Datei sowie einen Cookies-String festlegen, um erfolgreiche Downloads durch gültige Cookies zu verbessern."
+    },
     "equalizer": {
       "description": "Fügt einen Equalizer zum Player hinzu",
       "menu": {
@@ -995,3 +999,4 @@
     }
   }
 }
+

@@ -484,6 +484,10 @@
         "button": "Prenos"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Prenaševalec (yt-dlp)",
+      "description": "Prenese MP3 / izviren zvok direktno iz vmesnika. Različica vtičnika za prenos, ki uporablja yt-dlp.exe. Nastavite lahko prilagojeno pot do izvršljive datoteke in niz piškotkov, da z vključitvijo veljavnih piškotkov izboljšate uspešnost prenosov."
+    },
     "exponential-volume": {
       "description": "Drsnik za glasnost naredi eksponenten, da bo lažje izbrati nižje glasnosti.",
       "name": "Eksponentna glasnost"
@@ -551,3 +555,4 @@
     }
   }
 }
+

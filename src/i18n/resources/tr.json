@@ -577,6 +577,10 @@
         "button": "İndir"
       }
     },
+    "downloader-ytdlp": {
+      "name": "İndirici (yt-dlp)",
+      "description": "MP3 / kaynak sesini doğrudan arayüzden indir. yt-dlp.exe kullanan indirici eklentisinin bir sürümü. Çalıştırılabilir dosya için özel bir yol ve geçerli çerezleri ekleyerek indirmelerin başarılı olma ihtimalini artırmak için bir çerez dizesi ayarlayabilirsiniz."
+    },
     "equalizer": {
       "description": "Oynatıcıya ekolayzer desteği ekler",
       "menu": {
@@ -995,3 +999,4 @@
     }
   }
 }
+

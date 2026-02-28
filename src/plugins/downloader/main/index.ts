@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
-import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, type BrowserWindow, ipcMain } from 'electron';
 import {
   Innertube,
   UniversalCache,
@@ -58,21 +58,24 @@ const ffmpeg = lazy(async () =>
 );
 const ffmpegMutex = new Mutex();
 
-Platform.shim.eval = async (data: Types.BuildScriptResult, env: Record<string, Types.VMPrimative>) => {
+Platform.shim.eval = async (
+  data: Types.BuildScriptResult,
+  env: Record<string, Types.VMPrimative>,
+) => {
   const properties = [];
 
-  if(env.n) {
-    properties.push(`n: exportedVars.nFunction("${env.n}")`)
+  if (env.n) {
+    properties.push(`n: exportedVars.nFunction("${env.n}")`);
   }
 
   if (env.sig) {
-    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
+    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`);
   }
 
   const code = `${data.output}\nreturn { ${properties.join(', ')} }`;
 
   return new Function(code)();
-}
+};
 
 let yt: Innertube;
 let win: BrowserWindow;
@@ -117,13 +120,16 @@ const sendError = (error: Error, source?: string) => {
 
   console.error(message);
   console.trace(error);
-  dialog.showMessageBox(win, {
-    type: 'info',
-    buttons: [t('plugins.downloader.backend.dialog.error.buttons.ok')],
-    title: t('plugins.downloader.backend.dialog.error.title'),
-    message: t('plugins.downloader.backend.dialog.error.message'),
-    detail: message,
-  });
+
+  // Send error to renderer for non-blocking toast display
+  try {
+    win.webContents.send('downloader-error-toast', {
+      message,
+      title: t('plugins.downloader.backend.dialog.error.title'),
+    });
+  } catch (e) {
+    console.warn('Could not send error toast:', e);
+  }
 };
 
 export const getCookieFromWindow = async (win: BrowserWindow) => {
@@ -421,8 +427,7 @@ async function downloadSongUnsafe(
   let targetFileExtension: string;
   if (!presetSetting?.extension) {
     targetFileExtension =
-      VideoFormatList.find((it) => it.itag === format.itag)?.container ??
-      'mp3';
+      VideoFormatList.find((it) => it.itag === format.itag)?.container ?? 'mp3';
   } else {
     targetFileExtension = presetSetting?.extension ?? 'mp3';
   }
@@ -740,25 +745,22 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
     mkdirSync(playlistFolder, { recursive: true });
   }
 
-  dialog.showMessageBox(win, {
-    type: 'info',
-    buttons: [
-      t('plugins.downloader.backend.dialog.start-download-playlist.buttons.ok'),
-    ],
-    title: t('plugins.downloader.backend.dialog.start-download-playlist.title'),
-    message: t(
+  // Non-blocking toast notification for playlist download start
+  try {
+    const playlistMessage = t(
       'plugins.downloader.backend.dialog.start-download-playlist.message',
-      {
-        playlistTitle,
-      },
-    ),
-    detail: t(
+      { playlistTitle },
+    ) + ' ' + t(
       'plugins.downloader.backend.dialog.start-download-playlist.detail',
-      {
-        playlistSize: items.length,
-      },
-    ),
-  });
+      { playlistSize: items.length },
+    );
+    win.webContents.send('downloader-error-toast', {
+      message: playlistMessage,
+      title: t('plugins.downloader.backend.dialog.start-download-playlist.title'),
+    });
+  } catch (e) {
+    console.warn('Could not send playlist toast:', e);
+  }
 
   if (is.dev()) {
     console.log(
