@@ -35,7 +35,7 @@ const REPOSITION_INTERVAL_MS = 100;
 // toggled off then back on (hidden behind an opacity:0 guard to prevent
 // visible flicker).  This forces Windows to re-evaluate the widget's
 // position in the TOPMOST z-band.
-const FORCE_ZORDER_EVERY_N_TICKS = 15; // ~1.5 s when REPOSITION_INTERVAL_MS=100
+const FORCE_ZORDER_EVERY_N_TICKS = 30; // ~3 s when REPOSITION_INTERVAL_MS=100
 // When the widget is hidden externally (e.g. Start menu opens), an aggressive
 // recovery interval fires every HIDE_RECOVERY_INTERVAL_MS for up to
 // HIDE_RECOVERY_DURATION_MS.  This covers both fast transitions (clicking a
@@ -214,10 +214,11 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       cursor: pointer;
     }
     .container.blur-bg {
-      background: var(--dynamic-bg, rgba(0, 0, 0, 0.15));
+      background: var(--dynamic-bg, rgba(0, 0, 0, 0.25));
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border-radius: 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
       padding: ${blurPadding};
     }
     .album-art {
@@ -380,7 +381,7 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
         const dr = Math.max(0, color.r - 40);
         const dg = Math.max(0, color.g - 40);
         const db = Math.max(0, color.b - 40);
-        const gradient = 'linear-gradient(135deg, rgba(' + color.r + ',' + color.g + ',' + color.b + ',0.25), rgba(' + dr + ',' + dg + ',' + db + ',0.35))';
+        const gradient = 'linear-gradient(135deg, rgba(' + color.r + ',' + color.g + ',' + color.b + ',0.35), rgba(' + dr + ',' + dg + ',' + db + ',0.45))';
         player.style.setProperty('--dynamic-bg', gradient);
       }
     });
@@ -577,8 +578,7 @@ const repositionWidget = () => {
     // recoverVisibility() prevents visible stutter.
     if (repositionTickCount % FORCE_ZORDER_EVERY_N_TICKS === 0) {
       recoverVisibility();
-    } else {
-      miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
+    } else if (miniPlayerWin.isVisible()) {
       miniPlayerWin.moveTop();
     }
   }
