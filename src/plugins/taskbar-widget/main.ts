@@ -23,16 +23,20 @@ const DEFAULT_TASKBAR_HEIGHT = 48;
 const SYSTEM_TRAY_ESTIMATED_WIDTH = 450;
 // How often (ms) to re-check and reposition the widget + reassert z-order.
 // Handles auto-hide taskbar changes and z-index loss from window focus changes.
-const REPOSITION_INTERVAL_MS = 250;
-// Retry delays (ms) for the 'hide' event recovery.  The first retry
-// catches fast transitions (e.g. clicking a pinned taskbar icon) while
-// the second covers slower system overlay animations (Start menu close).
-const HIDE_RECOVERY_RETRY_MS = [300, 800];
+// Kept low (100 ms) so the widget reappears quickly after taskbar interactions.
+const REPOSITION_INTERVAL_MS = 100;
+// When the widget is hidden externally (e.g. Start menu opens), an aggressive
+// recovery interval fires every HIDE_RECOVERY_INTERVAL_MS for up to
+// HIDE_RECOVERY_DURATION_MS.  This covers both fast transitions (clicking a
+// pinned taskbar icon) and slower system overlay animations (Start menu).
+const HIDE_RECOVERY_INTERVAL_MS = 100;
+const HIDE_RECOVERY_DURATION_MS = 3000;
 
 let miniPlayerWin: BrowserWindow | null = null;
 let controlHandler:
   | ((_: Electron.IpcMainEvent, command: string) => void)
   | null = null;
+let showWindowHandler: ((_: Electron.IpcMainEvent) => void) | null = null;
 let resizeHandler: ((_: Electron.IpcMainEvent, width: number) => void) | null =
   null;
 let displayChangeHandler: (() => void) | null = null;
@@ -50,8 +54,8 @@ let intentionalClose = false;
 // Cache last bounds to avoid unnecessary setBounds calls that cause flicker.
 let lastBounds: { x: number; y: number; width: number; height: number } | null =
   null;
-// Pending recovery timeouts scheduled from the 'hide' event handler.
-let hideRecoveryTimers: ReturnType<typeof setTimeout>[] = [];
+// Persistent interval used to recover from external hides (Start menu, etc.).
+let hideRecoveryInterval: ReturnType<typeof setInterval> | null = null;
 
 const getWidgetDir = () => {
   const dir = path.join(app.getPath('userData'), 'taskbar-widget');
@@ -68,7 +72,7 @@ const writePreloadScript = (): string => {
   fs.writeFileSync(
     preloadPath,
     `const { contextBridge, ipcRenderer } = require('electron');
-const ALLOWED_SEND = ['taskbar-widget:control', 'taskbar-widget:resize'];
+const ALLOWED_SEND = ['taskbar-widget:control', 'taskbar-widget:resize', 'taskbar-widget:show-window'];
 const ALLOWED_RECEIVE = ['taskbar-widget:song-info', 'taskbar-widget:set-blur'];
 contextBridge.exposeInMainWorld('widgetIpc', {
   send: (channel, ...args) => {
@@ -146,8 +150,8 @@ const getWidgetBounds = () => {
 const getMiniPlayerHTML = (widgetHeight: number): string => {
   // Scale UI elements relative to taskbar height
   const albumSize = Math.max(widgetHeight - 12, 24);
-  const titleFontSize = widgetHeight >= 48 ? 12 : 10;
-  const artistFontSize = widgetHeight >= 48 ? 10 : 9;
+  const titleFontSize = widgetHeight >= 48 ? 13 : 11;
+  const artistFontSize = widgetHeight >= 48 ? 11 : 10;
   const btnSize = widgetHeight >= 48 ? 24 : 22;
   const iconSize = widgetHeight >= 48 ? 14 : 13;
   const playIconSize = widgetHeight >= 48 ? 18 : 15;
@@ -177,8 +181,9 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       display: inline-flex;
       align-items: center;
       padding: ${containerPadding};
-      gap: 3px;
+      gap: 8px;
       height: 100%;
+      cursor: pointer;
     }
     .container.blur-bg {
       background: rgba(0, 0, 0, 0.3);
@@ -351,6 +356,14 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
     document.getElementById('nextBtn').addEventListener('click', () => {
       window.widgetIpc.send('taskbar-widget:control', 'next');
     });
+
+    // Clicking anywhere on the widget (outside of control buttons) opens
+    // the main YouTube Music window.
+    player.addEventListener('click', (e) => {
+      if (!e.target.closest('.controls')) {
+        window.widgetIpc.send('taskbar-widget:show-window');
+      }
+    });
   </script>
 </body>
 </html>`;
@@ -363,20 +376,29 @@ const writeHtmlFile = (widgetHeight: number): string => {
 };
 
 /**
- * Recover visibility if the widget was hidden externally.
+ * Recover visibility if the widget was hidden or minimized externally.
+ * Also reasserts z-order in case the widget ended up behind an overlay.
  */
 const recoverVisibility = () => {
   if (
-    isShowing &&
-    !intentionalClose &&
-    miniPlayerWin &&
-    !miniPlayerWin.isDestroyed() &&
-    !miniPlayerWin.isVisible()
+    !isShowing ||
+    intentionalClose ||
+    !miniPlayerWin ||
+    miniPlayerWin.isDestroyed()
   ) {
-    miniPlayerWin.showInactive();
-    miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
-    miniPlayerWin.moveTop();
+    return;
   }
+
+  if (miniPlayerWin.isMinimized()) {
+    miniPlayerWin.restore();
+  }
+
+  if (!miniPlayerWin.isVisible()) {
+    miniPlayerWin.showInactive();
+  }
+
+  miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
+  miniPlayerWin.moveTop();
 };
 
 /**
@@ -477,16 +499,35 @@ export const createMiniPlayer = async (
 
   // Immediately recover if the widget is hidden externally (e.g. by
   // taskbar interactions, Start menu opening, or window management tools).
-  // Multiple retries handle the case where immediate recovery fails because
-  // the system overlay (Start menu) is still active.
+  // A persistent interval keeps retrying for HIDE_RECOVERY_DURATION_MS so
+  // recovery succeeds even after slower system overlay animations finish.
   miniPlayerWin.on('hide', () => {
     if (!isShowing || intentionalClose) return;
-    hideRecoveryTimers.forEach(clearTimeout);
-    hideRecoveryTimers = [];
+    if (hideRecoveryInterval) clearInterval(hideRecoveryInterval);
     recoverVisibility();
-    for (const delay of HIDE_RECOVERY_RETRY_MS) {
-      hideRecoveryTimers.push(setTimeout(() => recoverVisibility(), delay));
-    }
+    let elapsed = 0;
+    hideRecoveryInterval = setInterval(() => {
+      elapsed += HIDE_RECOVERY_INTERVAL_MS;
+      if (
+        elapsed >= HIDE_RECOVERY_DURATION_MS ||
+        !isShowing ||
+        intentionalClose
+      ) {
+        if (hideRecoveryInterval) {
+          clearInterval(hideRecoveryInterval);
+          hideRecoveryInterval = null;
+        }
+        return;
+      }
+      recoverVisibility();
+    }, HIDE_RECOVERY_INTERVAL_MS);
+  });
+
+  // Also recover immediately from any minimize event (the Start menu
+  // may minimize overlay windows on some configurations).
+  miniPlayerWin.on('minimize', () => {
+    if (!isShowing || intentionalClose) return;
+    recoverVisibility();
   });
 
   // Re-assert always-on-top if something steals z-order.
@@ -535,6 +576,17 @@ export const createMiniPlayer = async (
   };
 
   ipcMain.on('taskbar-widget:control', controlHandler);
+
+  // Clicking on the widget (outside buttons) brings the main window to front
+  showWindowHandler = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  };
+
+  ipcMain.on('taskbar-widget:show-window', showWindowHandler);
 
   // Handle dynamic resize requests from the renderer
   resizeHandler = (_, width: number) => {
@@ -607,12 +659,19 @@ export const cleanup = () => {
   intentionalClose = true;
   isShowing = false;
 
-  hideRecoveryTimers.forEach(clearTimeout);
-  hideRecoveryTimers = [];
+  if (hideRecoveryInterval) {
+    clearInterval(hideRecoveryInterval);
+    hideRecoveryInterval = null;
+  }
 
   if (controlHandler) {
     ipcMain.removeListener('taskbar-widget:control', controlHandler);
     controlHandler = null;
+  }
+
+  if (showWindowHandler) {
+    ipcMain.removeListener('taskbar-widget:show-window', showWindowHandler);
+    showWindowHandler = null;
   }
 
   if (resizeHandler) {
