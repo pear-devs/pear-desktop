@@ -16,9 +16,11 @@ export type TaskbarWidgetPluginConfig = {
   offsetX: number;
   offsetY: number;
   backgroundBlur: boolean;
+  blurOpacity: number;
   visualizer: {
     enabled: boolean;
     position: VisualizerPosition;
+    width: number;
     barCount: number;
     centeredBars: boolean;
     showBaseline: boolean;
@@ -41,9 +43,11 @@ export default createPlugin({
     offsetX: 0,
     offsetY: 0,
     backgroundBlur: false,
+    blurOpacity: 0.5,
     visualizer: {
       enabled: false,
       position: 'left' as VisualizerPosition,
+      width: 84,
       barCount: 20,
       centeredBars: true,
       showBaseline: true,
@@ -133,6 +137,36 @@ export default createPlugin({
           setConfig({ backgroundBlur: item.checked });
         },
       },
+      {
+        label: t('plugins.taskbar-widget.menu.blur-opacity'),
+        click: async () => {
+          const currentConfig = await getConfig();
+          const res = await prompt(
+            {
+              title: t('plugins.taskbar-widget.menu.blur-opacity'),
+              type: 'input',
+              value: String(currentConfig.blurOpacity),
+              inputAttrs: {
+                type: 'number',
+                required: true,
+                min: '0.1',
+                max: '1.0',
+                step: '0.05',
+              },
+              resizable: true,
+              height: 200,
+              ...promptOptions(),
+            },
+            win,
+          ).catch(console.error);
+          if (res != null) {
+            const val = Math.max(0.1, Math.min(1.0, Number(res)));
+            if (Number.isFinite(val)) {
+              setConfig({ blurOpacity: val });
+            }
+          }
+        },
+      },
       { type: 'separator' as const },
       {
         label: t('plugins.taskbar-widget.menu.visualizer.label'),
@@ -175,6 +209,41 @@ export default createPlugin({
                 },
               },
             ],
+          },
+          {
+            label: t('plugins.taskbar-widget.menu.visualizer.width'),
+            click: async () => {
+              const currentConfig = await getConfig();
+              const res = await prompt(
+                {
+                  title: t('plugins.taskbar-widget.menu.visualizer.width'),
+                  type: 'input',
+                  value: String(currentConfig.visualizer.width),
+                  inputAttrs: {
+                    type: 'number',
+                    required: true,
+                    min: '40',
+                    max: '300',
+                    step: '1',
+                  },
+                  resizable: true,
+                  height: 200,
+                  ...promptOptions(),
+                },
+                win,
+              ).catch(console.error);
+              if (res != null) {
+                const val = Math.max(40, Math.min(300, Number(res)));
+                if (Number.isFinite(val)) {
+                  setConfig({
+                    visualizer: {
+                      ...currentConfig.visualizer,
+                      width: val,
+                    },
+                  });
+                }
+              }
+            },
           },
           {
             label: t('plugins.taskbar-widget.menu.visualizer.bar-count'),

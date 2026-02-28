@@ -948,6 +948,7 @@
           "vertical-offset": "Vertical offset (px)"
         },
         "background-blur": "Background Blur",
+        "blur-opacity": "Blur Opacity (0.1–1.0)",
         "visualizer": {
           "label": "Taskbar Visualizer",
           "enabled": "Enable Taskbar Visualizer",
@@ -956,6 +957,7 @@
             "left": "Left of Widget",
             "right": "Right of Widget"
           },
+          "width": "Visualizer Width (px)",
           "bar-count": "Bar Count",
           "centered-bars": "Centered Bars",
           "show-baseline": "Show Baseline",

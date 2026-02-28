@@ -71,7 +71,8 @@ let visualizerCenteredBars = true;
 let visualizerShowBaseline = true;
 let visualizerAudioSensitivity = 0.3;
 let visualizerAudioPeakThreshold = 0.85;
-const VISUALIZER_WIDTH = 120;
+let visualizerWidth = 84;
+let blurOpacity = 0.5;
 // IPC handler for audio data forwarding from renderer to visualizer
 let audioDataHandler:
   | ((_: Electron.IpcMainEvent, data: number[]) => void)
@@ -116,7 +117,7 @@ const writePreloadScript = (): string => {
     preloadPath,
     `const { contextBridge, ipcRenderer } = require('electron');
 const ALLOWED_SEND = ['taskbar-widget:control', 'taskbar-widget:resize', 'taskbar-widget:show-window', 'taskbar-widget:audio-data'];
-const ALLOWED_RECEIVE = ['taskbar-widget:song-info', 'taskbar-widget:set-blur', 'taskbar-widget:set-background-color', 'taskbar-widget:visualizer-config', 'taskbar-widget:audio-data'];
+const ALLOWED_RECEIVE = ['taskbar-widget:song-info', 'taskbar-widget:set-blur', 'taskbar-widget:set-blur-opacity', 'taskbar-widget:set-background-color', 'taskbar-widget:visualizer-config', 'taskbar-widget:audio-data'];
 contextBridge.exposeInMainWorld('widgetIpc', {
   send: (channel, ...args) => {
     if (ALLOWED_SEND.includes(channel)) {
@@ -231,7 +232,7 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       cursor: pointer;
     }
     .container.blur-bg {
-      background: var(--dynamic-bg, rgba(0, 0, 0, 0.25));
+      background: var(--dynamic-bg, rgba(0, 0, 0, var(--blur-opacity, 0.5)));
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-radius: 4px;
@@ -269,6 +270,10 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       overflow: hidden;
       text-overflow: ellipsis;
       line-height: 1.2;
+    }
+    .artist .year {
+      font-size: ${Math.max(artistFontSize - 2, 8)}px;
+      color: rgba(255, 255, 255, 0.4);
     }
     .controls {
       display: flex;
@@ -369,7 +374,12 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
         player.style.display = 'inline-flex';
         noSong.style.display = 'none';
         title.textContent = info.title;
-        artist.textContent = info.artist || '';
+        // Show artist with optional year in smaller text
+        if (info.year) {
+          artist.innerHTML = (info.artist || '') + ' <span class="year">(' + info.year + ')</span>';
+        } else {
+          artist.textContent = info.artist || '';
+        }
         if (info.imageSrc) {
           albumArt.src = info.imageSrc;
         }
@@ -393,12 +403,43 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       }
     });
 
+    window.widgetIpc.on('taskbar-widget:set-blur-opacity', (opacity) => {
+      if (typeof opacity === 'number') {
+        document.documentElement.style.setProperty('--blur-opacity', String(opacity));
+        // Also update dynamic-bg gradient if it was previously set
+        const current = player.style.getPropertyValue('--dynamic-bg');
+        if (current) {
+          // Re-apply the stored color with new opacity
+          player.dispatchEvent(new CustomEvent('update-opacity'));
+        }
+      }
+    });
+
+    let storedColor = null;
+    const getOpacity = () => {
+      const val = getComputedStyle(document.documentElement).getPropertyValue('--blur-opacity').trim();
+      return val ? parseFloat(val) : 0.5;
+    };
+
     window.widgetIpc.on('taskbar-widget:set-background-color', (color) => {
       if (color && color.r !== undefined) {
+        storedColor = color;
+        const opacity = getOpacity();
         const dr = Math.max(0, color.r - 40);
         const dg = Math.max(0, color.g - 40);
         const db = Math.max(0, color.b - 40);
-        const gradient = 'linear-gradient(135deg, rgba(' + color.r + ',' + color.g + ',' + color.b + ',0.35), rgba(' + dr + ',' + dg + ',' + db + ',0.45))';
+        const gradient = 'linear-gradient(135deg, rgba(' + color.r + ',' + color.g + ',' + color.b + ',' + (opacity * 0.7) + '), rgba(' + dr + ',' + dg + ',' + db + ',' + (opacity * 0.9) + '))';
+        player.style.setProperty('--dynamic-bg', gradient);
+      }
+    });
+
+    player.addEventListener('update-opacity', () => {
+      if (storedColor) {
+        const opacity = getOpacity();
+        const dr = Math.max(0, storedColor.r - 40);
+        const dg = Math.max(0, storedColor.g - 40);
+        const db = Math.max(0, storedColor.b - 40);
+        const gradient = 'linear-gradient(135deg, rgba(' + storedColor.r + ',' + storedColor.g + ',' + storedColor.b + ',' + (opacity * 0.7) + '), rgba(' + dr + ',' + dg + ',' + db + ',' + (opacity * 0.9) + '))';
         player.style.setProperty('--dynamic-bg', gradient);
       }
     });
@@ -471,8 +512,9 @@ const getVisualizerHTML = (widgetHeight: number): string => {
     let audioPeakThreshold = ${visualizerAudioPeakThreshold};
 
     // Current and smoothed frequency data
-    let frequencyData = new Array(barCount).fill(0);
     let smoothedData = new Array(barCount).fill(0);
+    // Rolling peak for dynamic normalization
+    let rollingPeak = 0.01;
 
     // Dynamic color from album art
     let barColorR = 120, barColorG = 180, barColorB = 255;
@@ -488,9 +530,12 @@ const getVisualizerHTML = (widgetHeight: number): string => {
     resize();
     window.addEventListener('resize', resize);
 
+    // Raw frequency data from IPC
+    let rawFreqData = [];
+
     window.widgetIpc.on('taskbar-widget:audio-data', (data) => {
       if (!Array.isArray(data)) return;
-      frequencyData = data;
+      rawFreqData = data;
     });
 
     window.widgetIpc.on('taskbar-widget:visualizer-config', (config) => {
@@ -524,14 +569,56 @@ const getVisualizerHTML = (widgetHeight: number): string => {
       const totalGap = gap * (barCount - 1);
       const barWidth = Math.max(1, (w - totalGap) / barCount);
 
-      // Re-sample frequency data to match bar count
-      const dataLen = frequencyData.length;
+      // Map frequency bins to bars using perceptual (mel-like) spacing.
+      // Skip the first 2 bins (sub-bass rumble / DC offset) and the very
+      // top bins (mostly silence).  Use a power curve to spread low
+      // frequencies across more bars while still giving high frequencies
+      // enough representation.
+      const dataLen = rawFreqData.length;
+      const minBin = 2;
+      const maxBin = Math.max(minBin + 1, Math.floor(dataLen * 0.85));
+      const usableBins = maxBin - minBin;
+
+      // Compute bar values with logarithmic bin mapping
+      const barValues = new Array(barCount);
+      let frameMax = 0;
+
       for (let i = 0; i < barCount; i++) {
-        const dataIndex = Math.floor((i / barCount) * dataLen);
-        const raw = (frequencyData[dataIndex] || 0) / 255;
-        const scaled = Math.min(raw * (audioSensitivity * 4), audioPeakThreshold);
-        // Smooth transitions
-        smoothedData[i] += (scaled - smoothedData[i]) * 0.3;
+        // Cubic root mapping spreads low frequencies across more bars
+        const t0 = i / barCount;
+        const t1 = (i + 1) / barCount;
+        const lowBin = minBin + Math.floor(Math.pow(t0, 0.6) * usableBins);
+        const highBin = minBin + Math.min(Math.floor(Math.pow(t1, 0.6) * usableBins), usableBins - 1);
+
+        // Average the bins in this bar's range
+        let sum = 0;
+        let count = 0;
+        for (let j = lowBin; j <= highBin; j++) {
+          sum += (rawFreqData[j] || 0);
+          count++;
+        }
+        const avg = count > 0 ? sum / count : 0;
+
+        // Apply amplitude compression (sqrt) so quiet and loud signals
+        // both produce visible bar movement instead of binary on/off.
+        const compressed = Math.sqrt(avg / 255);
+
+        barValues[i] = compressed;
+        if (compressed > frameMax) frameMax = compressed;
+      }
+
+      // Dynamic normalization: track a rolling peak and normalize
+      // bars relative to recent maximum.  This ensures bars always
+      // use the full height rather than sitting at the bottom.
+      rollingPeak += (frameMax - rollingPeak) * 0.1;
+      if (rollingPeak < 0.01) rollingPeak = 0.01;
+      const normFactor = 1.0 / rollingPeak;
+
+      for (let i = 0; i < barCount; i++) {
+        const normalized = Math.min(barValues[i] * normFactor * audioSensitivity * 1.5, audioPeakThreshold);
+        // Smooth transitions – faster attack, slower release
+        const diff = normalized - smoothedData[i];
+        smoothedData[i] += diff * (diff > 0 ? 0.4 : 0.15);
       }
 
       for (let i = 0; i < barCount; i++) {
@@ -603,7 +690,7 @@ const writeVisualizerHtmlFile = (widgetHeight: number): string => {
  */
 const getVisualizerBounds = () => {
   const widgetBounds = getWidgetBounds();
-  const vizWidth = VISUALIZER_WIDTH;
+  const vizWidth = visualizerWidth;
 
   return {
     x:
@@ -899,6 +986,8 @@ export const createMiniPlayer = async (
   visualizerShowBaseline = config.visualizer.showBaseline;
   visualizerAudioSensitivity = config.visualizer.audioSensitivity;
   visualizerAudioPeakThreshold = config.visualizer.audioPeakThreshold;
+  visualizerWidth = config.visualizer.width ?? 84;
+  blurOpacity = config.blurOpacity ?? 0.5;
   const preloadPath = writePreloadScript();
   const { x, y, width, height } = getWidgetBounds();
   const htmlPath = writeHtmlFile(height);
@@ -933,6 +1022,12 @@ export const createMiniPlayer = async (
   if (backgroundBlurEnabled) {
     miniPlayerWin.webContents.send('taskbar-widget:set-blur', true);
   }
+
+  // Apply initial blur opacity
+  miniPlayerWin.webContents.send(
+    'taskbar-widget:set-blur-opacity',
+    blurOpacity,
+  );
 
   // Make the window click-through until we have a song to display.
   // This prevents an invisible (transparent) window from blocking
@@ -1074,11 +1169,35 @@ export const createMiniPlayer = async (
   const sendSongInfo = (songInfo: SongInfo) => {
     if (!miniPlayerWin || miniPlayerWin.isDestroyed()) return;
 
+    // Strip the artist prefix from the title if present.
+    // YouTube Music often formats titles as "Artist - Song Name" but
+    // we already show the artist separately below the title.
+    let displayTitle = songInfo.title;
+    if (songInfo.artist && displayTitle) {
+      const prefix = songInfo.artist + ' - ';
+      if (displayTitle.startsWith(prefix)) {
+        displayTitle = displayTitle.slice(prefix.length);
+      }
+
+      // Also handle reversed "Song - Artist" format
+      const suffix = ' - ' + songInfo.artist;
+      if (displayTitle.endsWith(suffix)) {
+        displayTitle = displayTitle.slice(0, -suffix.length);
+      }
+    }
+
+    // Extract year from uploadDate (format "YYYY-MM-DD") if available
+    let uploadYear = '';
+    if (songInfo.uploadDate && songInfo.uploadDate.length >= 4) {
+      uploadYear = songInfo.uploadDate.slice(0, 4);
+    }
+
     miniPlayerWin.webContents.send('taskbar-widget:song-info', {
-      title: songInfo.title,
+      title: displayTitle,
       artist: songInfo.artist,
       imageSrc: songInfo.imageSrc,
       isPaused: songInfo.isPaused,
+      year: uploadYear,
     });
 
     // Extract dominant color from album art for the dynamic blur background.
@@ -1132,8 +1251,10 @@ export const updateConfig = (newConfig: TaskbarWidgetPluginConfig) => {
   positionOffsetX = newConfig.offsetX;
   positionOffsetY = newConfig.offsetY;
   backgroundBlurEnabled = newConfig.backgroundBlur;
+  blurOpacity = newConfig.blurOpacity ?? 0.5;
   visualizerEnabled = newConfig.visualizer.enabled;
   visualizerPosition = newConfig.visualizer.position;
+  visualizerWidth = newConfig.visualizer.width ?? 84;
   visualizerBarCount = newConfig.visualizer.barCount;
   visualizerCenteredBars = newConfig.visualizer.centeredBars;
   visualizerShowBaseline = newConfig.visualizer.showBaseline;
@@ -1146,6 +1267,10 @@ export const updateConfig = (newConfig: TaskbarWidgetPluginConfig) => {
     miniPlayerWin.webContents.send(
       'taskbar-widget:set-blur',
       newConfig.backgroundBlur,
+    );
+    miniPlayerWin.webContents.send(
+      'taskbar-widget:set-blur-opacity',
+      blurOpacity,
     );
   }
 
