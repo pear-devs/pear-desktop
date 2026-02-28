@@ -175,7 +175,7 @@ const getWidgetBounds = () => {
 
 const getMiniPlayerHTML = (widgetHeight: number): string => {
   // Scale UI elements relative to taskbar height
-  const albumSize = Math.max(widgetHeight - 12, 24);
+  const albumSize = Math.max(widgetHeight - 20, 24);
   const titleFontSize = widgetHeight >= 48 ? 13 : 11;
   const artistFontSize = widgetHeight >= 48 ? 11 : 10;
   const btnSize = widgetHeight >= 48 ? 24 : 22;
@@ -214,7 +214,7 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       cursor: pointer;
     }
     .container.blur-bg {
-      background: var(--dynamic-bg, rgba(0, 0, 0, 0.3));
+      background: var(--dynamic-bg, rgba(0, 0, 0, 0.15));
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-radius: 8px;
@@ -380,7 +380,7 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
         const dr = Math.max(0, color.r - 40);
         const dg = Math.max(0, color.g - 40);
         const db = Math.max(0, color.b - 40);
-        const gradient = 'linear-gradient(135deg, rgba(' + color.r + ',' + color.g + ',' + color.b + ',0.45), rgba(' + dr + ',' + dg + ',' + db + ',0.55))';
+        const gradient = 'linear-gradient(135deg, rgba(' + color.r + ',' + color.g + ',' + color.b + ',0.25), rgba(' + dr + ',' + dg + ',' + db + ',0.35))';
         player.style.setProperty('--dynamic-bg', gradient);
       }
     });
