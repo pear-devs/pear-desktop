@@ -370,10 +370,10 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
 
     window.widgetIpc.on('taskbar-widget:set-background-color', (color) => {
       if (color && color.r !== undefined) {
-        var dr = Math.max(0, color.r - 40);
-        var dg = Math.max(0, color.g - 40);
-        var db = Math.max(0, color.b - 40);
-        var gradient = 'linear-gradient(135deg, rgba(' + color.r + ',' + color.g + ',' + color.b + ',0.45), rgba(' + dr + ',' + dg + ',' + db + ',0.55))';
+        const dr = Math.max(0, color.r - 40);
+        const dg = Math.max(0, color.g - 40);
+        const db = Math.max(0, color.b - 40);
+        const gradient = 'linear-gradient(135deg, rgba(' + color.r + ',' + color.g + ',' + color.b + ',0.45), rgba(' + dr + ',' + dg + ',' + db + ',0.55))';
         player.style.setProperty('--dynamic-bg', gradient);
       }
     });
@@ -407,7 +407,7 @@ const writeHtmlFile = (widgetHeight: number): string => {
 };
 
 /**
- * Extract the dominant colour from an album art URL using Electron's
+ * Extract the dominant color from an album art URL using Electron's
  * nativeImage API.  Runs entirely in the main process so there are no
  * CORS issues.  Returns `null` when extraction fails for any reason.
  */
@@ -433,7 +433,7 @@ const extractDominantColor = async (
       const green = bitmap[i + 1];
       const red = bitmap[i + 2];
       const brightness = (red + green + blue) / 3;
-      // Skip very dark / very bright pixels for a more representative colour
+      // Skip very dark / very bright pixels for a more representative color
       if (brightness > 30 && brightness < 220) {
         r += red;
         g += green;
@@ -757,7 +757,7 @@ export const createMiniPlayer = async (
       isPaused: songInfo.isPaused,
     });
 
-    // Extract dominant colour from album art for the dynamic blur background.
+    // Extract dominant color from album art for the dynamic blur background.
     // Only re-extract when the image URL changes.
     if (songInfo.imageSrc && songInfo.imageSrc !== lastColorUrl) {
       lastColorUrl = songInfo.imageSrc;
