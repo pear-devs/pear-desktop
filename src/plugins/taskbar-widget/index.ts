@@ -13,9 +13,13 @@ export type TaskbarWidgetPluginConfig = {
   monitorIndex: number;
   offsetX: number;
   offsetY: number;
+  backgroundBlur: boolean;
 };
 
 let cleanupFn: (() => void) | null = null;
+let updateConfigFn:
+  | ((offsetX: number, offsetY: number, blurEnabled: boolean) => void)
+  | null = null;
 
 export default createPlugin({
   name: () => t('plugins.taskbar-widget.name'),
@@ -27,6 +31,7 @@ export default createPlugin({
     monitorIndex: 0,
     offsetX: 0,
     offsetY: 0,
+    backgroundBlur: false,
   } as TaskbarWidgetPluginConfig,
 
   menu: async ({
@@ -100,12 +105,21 @@ export default createPlugin({
           }
         },
       },
+      {
+        label: t('plugins.taskbar-widget.menu.background-blur'),
+        type: 'checkbox' as const,
+        checked: config.backgroundBlur,
+        click(item: Electron.MenuItem) {
+          setConfig({ backgroundBlur: item.checked });
+        },
+      },
     ];
   },
 
   backend: {
     async start({ window: mainWindow, getConfig }) {
-      const { createMiniPlayer, cleanup } = await import('./main');
+      const { createMiniPlayer, cleanup, updateConfig } =
+        await import('./main');
       const config = await getConfig();
 
       await createMiniPlayer(
@@ -113,13 +127,23 @@ export default createPlugin({
         config.monitorIndex,
         config.offsetX,
         config.offsetY,
+        config.backgroundBlur,
       );
 
       cleanupFn = cleanup;
+      updateConfigFn = updateConfig;
+    },
+    onConfigChange(newConfig) {
+      updateConfigFn?.(
+        newConfig.offsetX,
+        newConfig.offsetY,
+        newConfig.backgroundBlur,
+      );
     },
     stop() {
       cleanupFn?.();
       cleanupFn = null;
+      updateConfigFn = null;
     },
   },
 });

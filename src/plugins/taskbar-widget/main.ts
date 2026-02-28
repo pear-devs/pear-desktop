@@ -15,11 +15,12 @@ const WIDGET_WIDTH = 300;
 const DEFAULT_TASKBAR_HEIGHT = 48;
 // Estimated width of the system tray area (hidden icons arrow, pinned
 // tray icons, clock, action center) so the widget sits to their left.
+// A generous default keeps the widget clear of pinned tray icons.
 // Windows 11 only supports the bottom taskbar position.
-const SYSTEM_TRAY_ESTIMATED_WIDTH = 300;
+const SYSTEM_TRAY_ESTIMATED_WIDTH = 450;
 // How often (ms) to re-check and reposition the widget + reassert z-order.
 // Handles auto-hide taskbar changes and z-index loss from window focus changes.
-const REPOSITION_INTERVAL_MS = 2000;
+const REPOSITION_INTERVAL_MS = 500;
 
 let miniPlayerWin: BrowserWindow | null = null;
 let controlHandler:
@@ -30,6 +31,7 @@ let repositionTimer: ReturnType<typeof setInterval> | null = null;
 let selectedMonitorIndex = 0;
 let positionOffsetX = 0;
 let positionOffsetY = 0;
+let backgroundBlurEnabled = false;
 
 const getWidgetDir = () => {
   const dir = path.join(app.getPath('userData'), 'taskbar-widget');
@@ -47,7 +49,7 @@ const writePreloadScript = (): string => {
     preloadPath,
     `const { contextBridge, ipcRenderer } = require('electron');
 const ALLOWED_SEND = ['taskbar-widget:control'];
-const ALLOWED_RECEIVE = ['taskbar-widget:song-info'];
+const ALLOWED_RECEIVE = ['taskbar-widget:song-info', 'taskbar-widget:set-blur'];
 contextBridge.exposeInMainWorld('widgetIpc', {
   send: (channel, ...args) => {
     if (ALLOWED_SEND.includes(channel)) {
@@ -126,10 +128,10 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
   const albumSize = Math.max(widgetHeight - 12, 24);
   const titleFontSize = widgetHeight >= 48 ? 12 : 10;
   const artistFontSize = widgetHeight >= 48 ? 10 : 9;
-  const btnSize = widgetHeight >= 48 ? 28 : 24;
-  const iconSize = widgetHeight >= 48 ? 16 : 14;
-  const playIconSize = widgetHeight >= 48 ? 20 : 16;
-  const containerPadding = widgetHeight >= 48 ? '4px 8px' : '2px 6px';
+  const btnSize = widgetHeight >= 48 ? 24 : 20;
+  const iconSize = widgetHeight >= 48 ? 14 : 12;
+  const playIconSize = widgetHeight >= 48 ? 18 : 14;
+  const containerPadding = widgetHeight >= 48 ? '2px 4px' : '1px 3px';
 
   return `<!DOCTYPE html>
 <html>
@@ -153,8 +155,14 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       display: flex;
       align-items: center;
       padding: ${containerPadding};
-      gap: 8px;
+      gap: 4px;
       height: 100%;
+    }
+    .container.blur-bg {
+      background: rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 4px;
     }
     .album-art {
       width: ${albumSize}px;
@@ -170,7 +178,7 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       display: flex;
       flex-direction: column;
       justify-content: center;
-      gap: 1px;
+      gap: 0px;
     }
     .title {
       font-size: ${titleFontSize}px;
@@ -191,7 +199,7 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
     .controls {
       display: flex;
       align-items: center;
-      gap: 2px;
+      gap: 0px;
       flex-shrink: 0;
     }
     .controls button {
@@ -282,6 +290,14 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       }
     });
 
+    window.widgetIpc.on('taskbar-widget:set-blur', (enabled) => {
+      if (enabled) {
+        player.classList.add('blur-bg');
+      } else {
+        player.classList.remove('blur-bg');
+      }
+    });
+
     document.getElementById('prevBtn').addEventListener('click', () => {
       window.widgetIpc.send('taskbar-widget:control', 'previous');
     });
@@ -322,12 +338,14 @@ export const createMiniPlayer = async (
   monitorIndex = 0,
   offsetX = 0,
   offsetY = 0,
+  blurEnabled = false,
 ) => {
   const { playPause, next, previous } = getSongControls(mainWindow);
 
   selectedMonitorIndex = monitorIndex;
   positionOffsetX = offsetX;
   positionOffsetY = offsetY;
+  backgroundBlurEnabled = blurEnabled;
   const preloadPath = writePreloadScript();
   const { x, y, width, height } = getWidgetBounds();
   const htmlPath = writeHtmlFile(height);
@@ -357,6 +375,11 @@ export const createMiniPlayer = async (
   miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
 
   await miniPlayerWin.loadFile(htmlPath);
+
+  // Apply initial blur setting
+  if (backgroundBlurEnabled) {
+    miniPlayerWin.webContents.send('taskbar-widget:set-blur', true);
+  }
 
   // Reposition when display configuration changes (resolution, DPI, etc.)
   displayChangeHandler = () => repositionWidget();
@@ -418,6 +441,25 @@ export const createMiniPlayer = async (
   mainWindow.on('closed', () => {
     cleanup();
   });
+};
+
+/**
+ * Live-update configuration without recreating the window.
+ * Called from the plugin's onConfigChange handler.
+ */
+export const updateConfig = (
+  offsetX: number,
+  offsetY: number,
+  blurEnabled: boolean,
+) => {
+  positionOffsetX = offsetX;
+  positionOffsetY = offsetY;
+  backgroundBlurEnabled = blurEnabled;
+
+  if (miniPlayerWin && !miniPlayerWin.isDestroyed()) {
+    repositionWidget();
+    miniPlayerWin.webContents.send('taskbar-widget:set-blur', blurEnabled);
+  }
 };
 
 export const cleanup = () => {

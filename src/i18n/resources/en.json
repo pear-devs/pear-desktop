@@ -942,7 +942,8 @@
           "label": "Position Offset",
           "horizontal-offset": "Horizontal offset (px)",
           "vertical-offset": "Vertical offset (px)"
-        }
+        },
+        "background-blur": "Background Blur"
       }
     },
     "touchbar": {
