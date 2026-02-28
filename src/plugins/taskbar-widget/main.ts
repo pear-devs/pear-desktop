@@ -200,7 +200,7 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
   const iconSize = widgetHeight >= 48 ? 14 : 13;
   const playIconSize = widgetHeight >= 48 ? 18 : 15;
   const containerPadding = widgetHeight >= 48 ? '4px 6px' : '2px 4px';
-  const blurPadding = widgetHeight >= 48 ? '4px 8px' : '3px 6px';
+  const blurPadding = widgetHeight >= 48 ? '4px 8px 4px 4px' : '3px 6px 3px 3px';
   // Max width of the title/artist block before text is truncated with ellipsis
   const infoMaxWidth = 160;
 
