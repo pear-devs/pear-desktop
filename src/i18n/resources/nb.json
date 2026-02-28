@@ -395,6 +395,10 @@
         "button": "Last ned"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Nedlaster (yt-dlp)",
+      "description": "Laster ned MP3/kildelyd direkte fra grensesnittet. En versjon av nedlaster-tillegget som bruker yt-dlp.exe. Du kan angi en egendefinert sti til kjørbar fil og en cookies-streng for å øke sjansen for vellykkede nedlastinger ved å inkludere gyldige cookies."
+    },
     "exponential-volume": {
       "description": "Gjør lydstyrkekontrollen eksponentiell, slik at det er enklere velge lavere lydstyrker.",
       "name": "Eksponentiell lydstyrke"
@@ -589,3 +593,4 @@
     }
   }
 }
+

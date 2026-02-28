@@ -560,6 +560,10 @@
         "button": "Stiahnuť"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Sťahovač (yt-dlp)",
+      "description": "Sťahuje MP3 / zdrojový zvuk priamo z rozhrania. Verzia sťahovacieho pluginu, ktorá používa yt-dlp.exe. Môžete nastaviť vlastnú cestu k spustiteľnému súboru a reťazec cookies, aby ste zvýšili úspešnosť sťahovania zahrnutím platných cookies."
+    },
     "equalizer": {
       "description": "Pridáva ekvalizér do prehrávača",
       "menu": {
@@ -881,3 +885,4 @@
     }
   }
 }
+

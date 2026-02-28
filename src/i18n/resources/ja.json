@@ -548,6 +548,10 @@
         "button": "ダウンロード"
       }
     },
+    "downloader-ytdlp": {
+      "name": "ダウンローダー (yt-dlp)",
+      "description": "UIから直にMP3・ソースオーディオをダウンロードします. yt-dlp.exe を使用するダウンローダープラグインの別版です。実行ファイルのカスタムパスや、有効な Cookie を含めてダウンロード成功率を高めるための Cookie 文字列を設定できます。"
+    },
     "equalizer": {
       "description": "イコライザーを追加",
       "menu": {
@@ -948,3 +952,4 @@
     }
   }
 }
+

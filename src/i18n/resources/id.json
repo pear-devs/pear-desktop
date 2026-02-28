@@ -548,6 +548,10 @@
         "button": "Unduh"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Pengunduh (yt-dlp)",
+      "description": "Unduh MP3 / sumber suara secara langsung via antarmuka. Versi dari plugin pengunduh yang menggunakan yt-dlp.exe. Anda dapat mengatur jalur khusus untuk executable dan sebuah string cookies untuk meningkatkan keberhasilan unduhan dengan menyertakan cookies yang valid."
+    },
     "equalizer": {
       "description": "Menambahkan equalizer ke pemutar",
       "menu": {
@@ -948,3 +952,4 @@
     }
   }
 }
+
