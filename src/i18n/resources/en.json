@@ -932,7 +932,13 @@
     },
     "taskbar-widget": {
       "description": "Embeds a mini player into the Windows taskbar with album art, song info, and playback controls",
-      "name": "Taskbar Widget"
+      "name": "Taskbar Widget",
+      "menu": {
+        "monitor": {
+          "label": "Display Monitor",
+          "primary": "Primary"
+        }
+      }
     },
     "touchbar": {
       "description": "Adds a TouchBar widget for macOS users",

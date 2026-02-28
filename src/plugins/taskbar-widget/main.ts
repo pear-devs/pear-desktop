@@ -23,6 +23,7 @@ let controlHandler:
   | ((_: Electron.IpcMainEvent, command: string) => void)
   | null = null;
 let displayChangeHandler: (() => void) | null = null;
+let selectedMonitorIndex = 0;
 
 const getWidgetDir = () => {
   const dir = path.join(app.getPath('userData'), 'taskbar-widget');
@@ -59,12 +60,21 @@ contextBridge.exposeInMainWorld('widgetIpc', {
 };
 
 /**
+ * Get the target display for the widget.
+ * Falls back to the primary display if the requested index is out of range.
+ */
+const getTargetDisplay = () => {
+  const displays = screen.getAllDisplays();
+  return displays[selectedMonitorIndex] ?? screen.getPrimaryDisplay();
+};
+
+/**
  * Detect the taskbar region by comparing display bounds with the work area.
- * Returns the position and dimensions of the taskbar on the primary display.
+ * Returns the position and dimensions of the taskbar on the target display.
  */
 const getTaskbarGeometry = () => {
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { bounds, workArea } = primaryDisplay;
+  const display = getTargetDisplay();
+  const { bounds, workArea } = display;
 
   // The taskbar occupies the gap between the full screen bounds
   // and the usable work area (bottom taskbar is the Windows 11 default)
@@ -288,9 +298,13 @@ const repositionWidget = () => {
   miniPlayerWin.setBounds({ x, y, width, height });
 };
 
-export const createMiniPlayer = async (mainWindow: BrowserWindow) => {
+export const createMiniPlayer = async (
+  mainWindow: BrowserWindow,
+  monitorIndex = 0,
+) => {
   const { playPause, next, previous } = getSongControls(mainWindow);
 
+  selectedMonitorIndex = monitorIndex;
   const preloadPath = writePreloadScript();
   const { x, y, width, height } = getWidgetBounds();
   const htmlPath = writeHtmlFile(height);
@@ -303,16 +317,21 @@ export const createMiniPlayer = async (mainWindow: BrowserWindow) => {
     frame: false,
     transparent: true,
     skipTaskbar: true,
-    alwaysOnTop: true,
     resizable: false,
     movable: false,
     focusable: false,
     show: false,
+    // 'toolbar' type prevents third-party window managers (e.g. DisplayFusion)
+    // from attaching overlays such as "move to next monitor" buttons
+    type: 'toolbar',
     webPreferences: {
       contextIsolation: true,
       preload: preloadPath,
     },
   });
+
+  // Use 'screen-saver' z-level so the widget renders above the taskbar
+  miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
 
   await miniPlayerWin.loadFile(htmlPath);
 
