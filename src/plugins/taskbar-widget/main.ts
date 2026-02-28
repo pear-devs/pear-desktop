@@ -128,9 +128,9 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
   const albumSize = Math.max(widgetHeight - 12, 24);
   const titleFontSize = widgetHeight >= 48 ? 12 : 10;
   const artistFontSize = widgetHeight >= 48 ? 10 : 9;
-  const btnSize = widgetHeight >= 48 ? 24 : 20;
-  const iconSize = widgetHeight >= 48 ? 14 : 12;
-  const playIconSize = widgetHeight >= 48 ? 18 : 14;
+  const btnSize = widgetHeight >= 48 ? 24 : 22;
+  const iconSize = widgetHeight >= 48 ? 14 : 13;
+  const playIconSize = widgetHeight >= 48 ? 18 : 15;
   const containerPadding = widgetHeight >= 48 ? '2px 4px' : '1px 3px';
 
   return `<!DOCTYPE html>
@@ -178,7 +178,7 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       display: flex;
       flex-direction: column;
       justify-content: center;
-      gap: 0px;
+      gap: 1px;
     }
     .title {
       font-size: ${titleFontSize}px;
