@@ -28,9 +28,14 @@ const DEFAULT_TASKBAR_HEIGHT = 48;
 // A generous default keeps the widget clear of pinned tray icons.
 // Windows 11 only supports the bottom taskbar position.
 const SYSTEM_TRAY_ESTIMATED_WIDTH = 450;
-// How often (ms) to re-check and reposition the widget (bounds only).
-// Handles auto-hide taskbar changes.  Z-order is maintained event-driven.
-const REPOSITION_INTERVAL_MS = 200;
+// How often (ms) to re-check and reposition the widget + reassert z-order.
+// Handles auto-hide taskbar changes and z-index loss from window focus changes.
+const REPOSITION_INTERVAL_MS = 100;
+// Every FORCE_ZORDER_EVERY_N_TICKS repositions, the always-on-top flag is
+// toggled off then back on (hidden behind an opacity:0 guard to prevent
+// visible flicker).  This forces Windows to re-evaluate the widget's
+// position in the TOPMOST z-band.
+const FORCE_ZORDER_EVERY_N_TICKS = 15; // ~1.5 s when REPOSITION_INTERVAL_MS=100
 // When the widget is hidden externally (e.g. Start menu opens), an aggressive
 // recovery interval fires every HIDE_RECOVERY_INTERVAL_MS for up to
 // HIDE_RECOVERY_DURATION_MS.  This covers both fast transitions (clicking a
@@ -71,6 +76,8 @@ let hideRecoveryInterval: ReturnType<typeof setInterval> | null = null;
 let blurRecoveryTimers: ReturnType<typeof setTimeout>[] = [];
 // Cached imageSrc URL for dominant-color extraction to avoid re-fetching.
 let lastColorUrl: string | null = null;
+// Tick counter for the periodic reposition timer.
+let repositionTickCount = 0;
 // Handler references for main window blur/focus listeners so they can be
 // cleaned up when the widget is destroyed.
 let mainWindowBlurHandler: (() => void) | null = null;
@@ -196,13 +203,14 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       color: #fff;
       overflow: hidden;
       height: 100vh;
+      display: flex;
+      align-items: center;
     }
     .container {
       display: inline-flex;
       align-items: center;
       padding: ${containerPadding};
       gap: 8px;
-      height: 100%;
       cursor: pointer;
     }
     .container.blur-bg {
@@ -283,7 +291,6 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      height: 100%;
       color: rgba(255, 255, 255, 0.4);
       font-size: ${artistFontSize}px;
       padding: 0 8px;
@@ -532,17 +539,20 @@ const recoverVisibility = () => {
 };
 
 /**
- * Reposition the widget if the display geometry changed.
- * Called periodically to handle auto-hide taskbar state transitions.
+ * Reposition the widget and periodically reassert z-order.
+ * Called on display changes and periodically to handle auto-hide taskbar
+ * and z-index loss from window focus changes.
  *
- * Z-order is maintained entirely via event-driven handlers (blur, focus,
- * hide, minimize, always-on-top-changed) and the staggered recovery
- * timeouts in {@link scheduleBlurRecovery}.  No z-order manipulation
- * happens here to avoid the periodic stutter that plagued earlier
- * implementations.
+ * Every {@link FORCE_ZORDER_EVERY_N_TICKS} ticks the always-on-top flag is
+ * toggled off then on (wrapped in an opacity guard to prevent visible
+ * flicker) to force the OS to re-evaluate the TOPMOST z-band.  On
+ * intermediate ticks only {@link BrowserWindow.moveTop moveTop} is called
+ * to minimise overhead.
  */
 const repositionWidget = () => {
   if (!miniPlayerWin || miniPlayerWin.isDestroyed()) return;
+
+  repositionTickCount++;
 
   const bounds = getWidgetBounds();
 
@@ -558,6 +568,19 @@ const repositionWidget = () => {
   ) {
     miniPlayerWin.setBounds(bounds);
     lastBounds = bounds;
+  }
+
+  if (isShowing && !intentionalClose) {
+    // Periodically force a full z-order toggle so the widget can recover
+    // even when no Electron events fire (e.g. after the Start menu closes
+    // and focus stays on the taskbar).  The opacity guard in
+    // recoverVisibility() prevents visible stutter.
+    if (repositionTickCount % FORCE_ZORDER_EVERY_N_TICKS === 0) {
+      recoverVisibility();
+    } else {
+      miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
+      miniPlayerWin.moveTop();
+    }
   }
 };
 
@@ -577,6 +600,7 @@ export const createMiniPlayer = async (
   currentWidgetWidth = MIN_WIDGET_WIDTH;
   lastBounds = null;
   lastColorUrl = null;
+  repositionTickCount = 0;
   clearBlurRecoveryTimers();
 
   selectedMonitorIndex = monitorIndex;
@@ -690,8 +714,8 @@ export const createMiniPlayer = async (
   };
   mainWindow.on('focus', mainWindowFocusHandler);
 
-  // Periodically reposition so the widget adapts to auto-hide taskbar
-  // state changes.  Z-order is maintained event-driven (not here).
+  // Periodically reposition and reassert z-order so the widget adapts to
+  // auto-hide taskbar state changes and recovers from z-index loss.
   repositionTimer = setInterval(
     () => repositionWidget(),
     REPOSITION_INTERVAL_MS,
