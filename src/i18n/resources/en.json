@@ -931,7 +931,7 @@
       "name": "Taskbar Media Control"
     },
     "taskbar-widget": {
-      "description": "Adds a mini player widget above the Windows taskbar with album art, song info, and playback controls",
+      "description": "Embeds a mini player into the Windows taskbar with album art, song info, and playback controls",
       "name": "Taskbar Widget"
     },
     "touchbar": {

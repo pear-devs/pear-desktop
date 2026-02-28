@@ -10,13 +10,18 @@ import {
   SongInfoEvent,
 } from '@/providers/song-info';
 
-const WIDGET_WIDTH = 320;
-const WIDGET_HEIGHT = 80;
+const WIDGET_WIDTH = 300;
+// Default taskbar height on Windows 11 (used as fallback)
+const DEFAULT_TASKBAR_HEIGHT = 48;
+// Estimated width of the system tray area (hidden icons arrow, pinned
+// tray icons, clock, action center) so the widget sits to their left
+const SYSTEM_TRAY_ESTIMATED_WIDTH = 300;
 
 let miniPlayerWin: BrowserWindow | null = null;
 let controlHandler:
   | ((_: Electron.IpcMainEvent, command: string) => void)
   | null = null;
+let displayChangeHandler: (() => void) | null = null;
 
 const getWidgetDir = () => {
   const dir = path.join(app.getPath('userData'), 'taskbar-widget');
@@ -52,7 +57,58 @@ contextBridge.exposeInMainWorld('widgetIpc', {
   return preloadPath;
 };
 
-const getMiniPlayerHTML = (): string => `<!DOCTYPE html>
+/**
+ * Detect the taskbar region by comparing display bounds with the work area.
+ * Returns the position and dimensions of the taskbar on the primary display.
+ */
+const getTaskbarGeometry = () => {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { bounds, workArea } = primaryDisplay;
+
+  // The taskbar occupies the gap between the full screen bounds
+  // and the usable work area (bottom taskbar is the Windows 11 default)
+  const taskbarHeight =
+    bounds.height - workArea.height - (workArea.y - bounds.y);
+  const taskbarY = workArea.y + workArea.height;
+
+  return {
+    taskbarHeight: taskbarHeight > 0 ? taskbarHeight : DEFAULT_TASKBAR_HEIGHT,
+    taskbarY:
+      taskbarHeight > 0
+        ? taskbarY
+        : bounds.y + bounds.height - DEFAULT_TASKBAR_HEIGHT,
+    screenWidth: bounds.width,
+    screenX: bounds.x,
+  };
+};
+
+/**
+ * Calculate the widget window position so it sits on the taskbar surface,
+ * to the left of the notification / system tray area.
+ */
+const getWidgetBounds = () => {
+  const { taskbarHeight, taskbarY, screenWidth, screenX } =
+    getTaskbarGeometry();
+
+  return {
+    x: screenX + screenWidth - WIDGET_WIDTH - SYSTEM_TRAY_ESTIMATED_WIDTH,
+    y: taskbarY,
+    width: WIDGET_WIDTH,
+    height: taskbarHeight,
+  };
+};
+
+const getMiniPlayerHTML = (widgetHeight: number): string => {
+  // Scale UI elements relative to taskbar height
+  const albumSize = Math.max(widgetHeight - 12, 24);
+  const titleFontSize = widgetHeight >= 48 ? 12 : 10;
+  const artistFontSize = widgetHeight >= 48 ? 10 : 9;
+  const btnSize = widgetHeight >= 48 ? 28 : 24;
+  const iconSize = widgetHeight >= 48 ? 16 : 14;
+  const playIconSize = widgetHeight >= 48 ? 20 : 16;
+  const containerPadding = widgetHeight >= 48 ? '4px 8px' : '2px 6px';
+
+  return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -62,31 +118,28 @@ const getMiniPlayerHTML = (): string => `<!DOCTYPE html>
       padding: 0;
       box-sizing: border-box;
       user-select: none;
-      -webkit-app-region: drag;
     }
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: rgba(30, 30, 30, 0.95);
+      font-family: 'Segoe UI Variable', 'Segoe UI', sans-serif;
+      background: transparent;
       color: #fff;
       overflow: hidden;
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
       height: 100vh;
     }
     .container {
       display: flex;
       align-items: center;
-      padding: 8px;
-      gap: 10px;
+      padding: ${containerPadding};
+      gap: 8px;
       height: 100%;
     }
     .album-art {
-      width: 56px;
-      height: 56px;
-      border-radius: 6px;
+      width: ${albumSize}px;
+      height: ${albumSize}px;
+      border-radius: 4px;
       object-fit: cover;
       flex-shrink: 0;
-      background: #333;
+      background: rgba(255, 255, 255, 0.1);
     }
     .info {
       flex: 1;
@@ -94,65 +147,66 @@ const getMiniPlayerHTML = (): string => `<!DOCTYPE html>
       display: flex;
       flex-direction: column;
       justify-content: center;
-      gap: 2px;
+      gap: 1px;
     }
     .title {
-      font-size: 13px;
+      font-size: ${titleFontSize}px;
       font-weight: 600;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.2;
     }
     .artist {
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.65);
+      font-size: ${artistFontSize}px;
+      color: rgba(255, 255, 255, 0.6);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      line-height: 1.2;
     }
     .controls {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: 2px;
       flex-shrink: 0;
-      -webkit-app-region: no-drag;
     }
     .controls button {
       background: none;
       border: none;
       color: #fff;
       cursor: pointer;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
+      width: ${btnSize}px;
+      height: ${btnSize}px;
+      border-radius: 4px;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s;
+      transition: background 0.1s;
       padding: 0;
     }
     .controls button:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.1);
     }
     .controls button:active {
-      background: rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.2);
     }
     .controls button svg {
-      width: 18px;
-      height: 18px;
+      width: ${iconSize}px;
+      height: ${iconSize}px;
       fill: currentColor;
     }
     .play-pause svg {
-      width: 22px;
-      height: 22px;
+      width: ${playIconSize}px;
+      height: ${playIconSize}px;
     }
     .no-song {
       display: flex;
       align-items: center;
       justify-content: center;
       height: 100%;
-      color: rgba(255, 255, 255, 0.5);
-      font-size: 12px;
+      color: rgba(255, 255, 255, 0.4);
+      font-size: ${artistFontSize}px;
     }
   </style>
 </head>
@@ -217,34 +271,41 @@ const getMiniPlayerHTML = (): string => `<!DOCTYPE html>
   </script>
 </body>
 </html>`;
+};
 
-const writeHtmlFile = (): string => {
+const writeHtmlFile = (widgetHeight: number): string => {
   const htmlPath = path.join(getWidgetDir(), 'index.html');
-  fs.writeFileSync(htmlPath, getMiniPlayerHTML());
+  fs.writeFileSync(htmlPath, getMiniPlayerHTML(widgetHeight));
   return htmlPath;
+};
+
+/** Reposition the widget when the display layout changes. */
+const repositionWidget = () => {
+  if (!miniPlayerWin || miniPlayerWin.isDestroyed()) return;
+
+  const { x, y, width, height } = getWidgetBounds();
+  miniPlayerWin.setBounds({ x, y, width, height });
 };
 
 export const createMiniPlayer = async (mainWindow: BrowserWindow) => {
   const { playPause, next, previous } = getSongControls(mainWindow);
 
   const preloadPath = writePreloadScript();
-  const htmlPath = writeHtmlFile();
-
-  // Position at bottom-right, above the taskbar
-  const primaryDisplay = screen.getPrimaryDisplay();
-  const { width: screenWidth, height: screenHeight } =
-    primaryDisplay.workAreaSize;
+  const { x, y, width, height } = getWidgetBounds();
+  const htmlPath = writeHtmlFile(height);
 
   miniPlayerWin = new BrowserWindow({
-    width: WIDGET_WIDTH,
-    height: WIDGET_HEIGHT,
-    x: screenWidth - WIDGET_WIDTH - 10,
-    y: screenHeight - WIDGET_HEIGHT - 10,
+    width,
+    height,
+    x,
+    y,
     frame: false,
     transparent: true,
     skipTaskbar: true,
     alwaysOnTop: true,
     resizable: false,
+    movable: false,
+    focusable: false,
     show: false,
     webPreferences: {
       contextIsolation: true,
@@ -253,6 +314,10 @@ export const createMiniPlayer = async (mainWindow: BrowserWindow) => {
   });
 
   await miniPlayerWin.loadFile(htmlPath);
+
+  // Reposition when display configuration changes (resolution, DPI, etc.)
+  displayChangeHandler = () => repositionWidget();
+  screen.on('display-metrics-changed', displayChangeHandler);
 
   // Handle control commands from the mini player
   controlHandler = (_, command: string) => {
@@ -309,6 +374,11 @@ export const cleanup = () => {
   if (controlHandler) {
     ipcMain.removeListener('taskbar-widget:control', controlHandler);
     controlHandler = null;
+  }
+
+  if (displayChangeHandler) {
+    screen.removeListener('display-metrics-changed', displayChangeHandler);
+    displayChangeHandler = null;
   }
 
   if (miniPlayerWin && !miniPlayerWin.isDestroyed()) {
