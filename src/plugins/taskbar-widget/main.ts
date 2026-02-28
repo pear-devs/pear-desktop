@@ -175,7 +175,7 @@ const getWidgetBounds = () => {
 
 const getMiniPlayerHTML = (widgetHeight: number): string => {
   // Scale UI elements relative to taskbar height
-  const albumSize = Math.max(widgetHeight - 20, 24);
+  const albumSize = Math.max(widgetHeight - 16, 24);
   const titleFontSize = widgetHeight >= 48 ? 13 : 11;
   const artistFontSize = widgetHeight >= 48 ? 11 : 10;
   const btnSize = widgetHeight >= 48 ? 24 : 22;
