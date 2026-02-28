@@ -511,10 +511,8 @@ const getVisualizerHTML = (widgetHeight: number): string => {
     let audioSensitivity = ${visualizerAudioSensitivity};
     let audioPeakThreshold = ${visualizerAudioPeakThreshold};
 
-    // Current and smoothed frequency data
+    // Current and smoothed frequency data (FluentFlyout-style bar values)
     let smoothedData = new Array(barCount).fill(0);
-    // Rolling peak for dynamic normalization
-    let rollingPeak = 0.01;
 
     // Dynamic color from album art
     let barColorR = 120, barColorG = 180, barColorB = 255;
@@ -569,56 +567,100 @@ const getVisualizerHTML = (widgetHeight: number): string => {
       const totalGap = gap * (barCount - 1);
       const barWidth = Math.max(1, (w - totalGap) / barCount);
 
-      // Map frequency bins to bars using perceptual (mel-like) spacing.
-      // Skip the first 2 bins (sub-bass rumble / DC offset) and the very
-      // top bins (mostly silence).  Use a power curve to spread low
-      // frequencies across more bars while still giving high frequencies
-      // enough representation.
+      // ── FluentFlyout-style frequency processing ──
+      // Port of FluentFlyout's ProcessFftData() from Visualizer.cs.
+      //
+      // Input: rawFreqData is byte frequency data (0-255) from Web Audio
+      // AnalyserNode.getByteFrequencyData().  Each byte encodes magnitude
+      // in dB mapped to 0-255 where 0 = minDecibels (-100 dB) and
+      // 255 = maxDecibels (-30 dB).
+      //
+      // Steps (matching FluentFlyout):
+      // 1. Logarithmic frequency band mapping (40 Hz – 8000 Hz)
+      // 2. Max amplitude per band (not average)
+      // 3. Linear boost for higher-frequency bars
+      // 4. dB-scale intensity mapping between configurable min/max dB
+      // 5. Asymmetric smoothing: instant attack, 0.8/0.2 weighted decay
+
       const dataLen = rawFreqData.length;
-      const minBin = 2;
-      const maxBin = Math.max(minBin + 1, Math.floor(dataLen * 0.85));
-      const usableBins = maxBin - minBin;
-
-      // Compute bar values with logarithmic bin mapping
-      const barValues = new Array(barCount);
-      let frameMax = 0;
-
-      for (let i = 0; i < barCount; i++) {
-        // Cubic root mapping spreads low frequencies across more bars
-        const t0 = i / barCount;
-        const t1 = (i + 1) / barCount;
-        const lowBin = minBin + Math.floor(Math.pow(t0, 0.6) * usableBins);
-        const highBin = minBin + Math.min(Math.floor(Math.pow(t1, 0.6) * usableBins), usableBins - 1);
-
-        // Average the bins in this bar's range
-        let sum = 0;
-        let count = 0;
-        for (let j = lowBin; j <= highBin; j++) {
-          sum += (rawFreqData[j] || 0);
-          count++;
+      if (dataLen === 0) {
+        // No data yet - just decay existing bars
+        for (let i = 0; i < barCount; i++) {
+          smoothedData[i] *= 0.8;
         }
-        const avg = count > 0 ? sum / count : 0;
+      } else {
+        // Assume 44100 Hz sample rate; fftSize = dataLen * 2
+        const sampleRate = 44100;
+        const fftSize = dataLen * 2;
+        const frequencyPerBin = sampleRate / fftSize;
 
-        // Apply amplitude compression (sqrt) so quiet and loud signals
-        // both produce visible bar movement instead of binary on/off.
-        const compressed = Math.sqrt(avg / 255);
+        const minFreq = 40;    // Hz - low end
+        const maxFreq = 8000;  // Hz - high end (FluentFlyout default)
 
-        barValues[i] = compressed;
-        if (compressed > frameMax) frameMax = compressed;
-      }
+        // Map our audioSensitivity (0.01-1.0, default 0.3) and
+        // audioPeakThreshold (0.1-1.0, default 0.85) to FluentFlyout's
+        // dB range.  FluentFlyout uses integer 1-3  for both settings:
+        //   minDb = (sens * -10) - 30   -> default sens=2 -> -50
+        //   maxDb = (peak *  10) - 30   -> default peak=2 -> -10
+        // We scale our float ranges to produce comparable dB values.
+        const ffSens = 1 + audioSensitivity * 6.67; // 0.3 -> ~3 -> minDb -60
+        const ffPeak = 1 + audioPeakThreshold * 2.35; // 0.85 -> ~3 -> maxDb  0
+        const minDb = (ffSens * -10) - 30;
+        const maxDb = (ffPeak * 10) - 30;
 
-      // Dynamic normalization: track a rolling peak and normalize
-      // bars relative to recent maximum.  This ensures bars always
-      // use the full height rather than sitting at the bottom.
-      rollingPeak += (frameMax - rollingPeak) * 0.1;
-      if (rollingPeak < 0.01) rollingPeak = 0.01;
-      const normFactor = 1.0 / rollingPeak;
+        const currentBars = new Array(barCount);
 
-      for (let i = 0; i < barCount; i++) {
-        const normalized = Math.min(barValues[i] * normFactor * audioSensitivity * 1.5, audioPeakThreshold);
-        // Smooth transitions – faster attack, slower release
-        const diff = normalized - smoothedData[i];
-        smoothedData[i] += diff * (diff > 0 ? 0.4 : 0.15);
+        for (let i = 0; i < barCount; i++) {
+          // Logarithmic frequency band edges (FluentFlyout)
+          const startFreq = minFreq * Math.pow(maxFreq / minFreq, i / barCount);
+          const endFreq   = minFreq * Math.pow(maxFreq / minFreq, (i + 1) / barCount);
+
+          let startBin = Math.floor(startFreq / frequencyPerBin);
+          let endBin   = Math.floor(endFreq / frequencyPerBin);
+          if (endBin <= startBin) endBin = startBin + 1;
+          if (endBin >= dataLen) endBin = dataLen - 1;
+
+          // Find MAX amplitude in the band (FluentFlyout uses max, not avg)
+          // Convert byte -> linear amplitude first.
+          // Byte 0..255 maps to -100..-30 dB in Web Audio default.
+          let maxAmplitude = 0;
+          for (let j = startBin; j <= endBin; j++) {
+            const byteVal = rawFreqData[j] || 0;
+            // Convert byte to dB: db = (byte/255)*70 - 100
+            const dbVal = (byteVal / 255) * 70 - 100;
+            // Convert dB to linear amplitude
+            const amp = Math.pow(10, dbVal / 20);
+            if (amp > maxAmplitude) maxAmplitude = amp;
+          }
+
+          // Linear boost for higher-frequency bars (FluentFlyout: 1 + progress * 75)
+          const progress = i / barCount;
+          const linearBoost = 1.0 + (progress * 75.0);
+          maxAmplitude *= linearBoost;
+
+          // Floor to avoid log(0)
+          if (maxAmplitude < 0.001) maxAmplitude = 0.001;
+
+          // Convert back to dB
+          const db = 20 * Math.log10(maxAmplitude);
+
+          // Map to 0..1 intensity within [minDb, maxDb]
+          let intensity = (db - minDb) / (maxDb - minDb);
+          intensity = Math.max(0, Math.min(1, intensity));
+
+          currentBars[i] = intensity;
+        }
+
+        // FluentFlyout smoothing: instant attack, 0.8/0.2 weighted decay
+        for (let i = 0; i < barCount; i++) {
+          if (currentBars[i] > smoothedData[i]) {
+            // Jump up quickly (FluentFlyout: instant)
+            smoothedData[i] = currentBars[i];
+          } else {
+            // Fall down slowly (FluentFlyout: 0.8 old + 0.2 new)
+            smoothedData[i] = (smoothedData[i] * 0.8) + (currentBars[i] * 0.2);
+          }
+        }
       }
 
       for (let i = 0; i < barCount; i++) {

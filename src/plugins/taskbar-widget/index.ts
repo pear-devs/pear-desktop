@@ -435,7 +435,8 @@ export default createPlugin({
       }
 
       this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 128;
+      this.analyser.fftSize = 1024;
+      this.analyser.smoothingTimeConstant = 0;
       this.audioSource.connect(this.analyser);
 
       const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
