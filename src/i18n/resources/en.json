@@ -934,6 +934,22 @@
       "description": "Control playback from your Windows taskbar",
       "name": "Taskbar Media Control"
     },
+    "taskbar-widget": {
+      "description": "Embeds a mini player into the Windows taskbar with album art, song info, and playback controls",
+      "name": "Taskbar Widget",
+      "menu": {
+        "monitor": {
+          "label": "Display Monitor",
+          "primary": "Primary"
+        },
+        "position": {
+          "label": "Position Offset",
+          "horizontal-offset": "Horizontal offset (px)",
+          "vertical-offset": "Vertical offset (px)"
+        },
+        "background-blur": "Background Blur"
+      }
+    },
     "touchbar": {
       "description": "Adds a TouchBar widget for macOS users",
       "name": "TouchBar"
