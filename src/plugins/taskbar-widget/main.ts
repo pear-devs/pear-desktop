@@ -46,6 +46,8 @@ let intentionalClose = false;
 // Cache last bounds to avoid unnecessary setBounds calls that cause flicker.
 let lastBounds: { x: number; y: number; width: number; height: number } | null =
   null;
+// Pending recovery timeouts scheduled from the 'hide' event handler.
+let hideRecoveryTimers: ReturnType<typeof setTimeout>[] = [];
 
 const getWidgetDir = () => {
   const dir = path.join(app.getPath('userData'), 'taskbar-widget');
@@ -399,8 +401,13 @@ const repositionWidget = () => {
   }
 
   // Reassert z-order so the widget stays above the taskbar even after
-  // other windows are moved / focused.
+  // other windows are moved / focused.  Also call moveTop() so the
+  // widget is pushed above any overlays (e.g. Start menu) that may
+  // have been placed on top since the last tick.
   miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
+  if (isShowing && !intentionalClose) {
+    miniPlayerWin.moveTop();
+  }
 
   recoverVisibility();
 };
@@ -463,6 +470,33 @@ export const createMiniPlayer = async (
   // This prevents an invisible (transparent) window from blocking
   // taskbar clicks on the system tray arrow, pinned icons, etc.
   miniPlayerWin.setIgnoreMouseEvents(true, { forward: true });
+
+  // Immediately recover if the widget is hidden externally (e.g. by
+  // taskbar interactions, Start menu opening, or window management tools).
+  // Multiple retries handle the case where immediate recovery fails because
+  // the system overlay (Start menu) is still active.
+  miniPlayerWin.on('hide', () => {
+    if (!isShowing || intentionalClose) return;
+    hideRecoveryTimers.forEach(clearTimeout);
+    hideRecoveryTimers = [];
+    recoverVisibility();
+    hideRecoveryTimers.push(setTimeout(() => recoverVisibility(), 300));
+    hideRecoveryTimers.push(setTimeout(() => recoverVisibility(), 800));
+  });
+
+  // Re-assert always-on-top if something steals z-order.
+  miniPlayerWin.on('always-on-top-changed', (_event, isAlwaysOnTop) => {
+    if (
+      !isAlwaysOnTop &&
+      isShowing &&
+      !intentionalClose &&
+      miniPlayerWin &&
+      !miniPlayerWin.isDestroyed()
+    ) {
+      miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
+      miniPlayerWin.moveTop();
+    }
+  });
 
   // Reposition when display configuration changes (resolution, DPI, etc.)
   displayChangeHandler = () => repositionWidget();
@@ -567,6 +601,9 @@ export const updateConfig = (
 export const cleanup = () => {
   intentionalClose = true;
   isShowing = false;
+
+  hideRecoveryTimers.forEach(clearTimeout);
+  hideRecoveryTimers = [];
 
   if (controlHandler) {
     ipcMain.removeListener('taskbar-widget:control', controlHandler);
