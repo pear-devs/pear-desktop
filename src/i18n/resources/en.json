@@ -957,12 +957,12 @@
             "left": "Left of Widget",
             "right": "Right of Widget"
           },
-          "width": "Visualizer Width (px)",
-          "bar-count": "Bar Count",
+          "width": "Visualizer Width (40–300 px)",
+          "bar-count": "Bar Count (4–64)",
           "centered-bars": "Centered Bars",
           "show-baseline": "Show Baseline",
-          "audio-sensitivity": "Audio Sensitivity",
-          "audio-peak-threshold": "Audio Peak Threshold"
+          "audio-sensitivity": "Audio Sensitivity (0.01–1.0)",
+          "audio-peak-threshold": "Audio Peak Threshold (0.1–1.0)"
         }
       }
     },

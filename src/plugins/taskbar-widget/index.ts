@@ -48,11 +48,11 @@ export default createPlugin({
       enabled: false,
       position: 'left' as VisualizerPosition,
       width: 84,
-      barCount: 20,
+      barCount: 64,
       centeredBars: true,
       showBaseline: true,
-      audioSensitivity: 0.3,
-      audioPeakThreshold: 0.85,
+      audioSensitivity: 0.01,
+      audioPeakThreshold: 1.0,
     },
   } as TaskbarWidgetPluginConfig,
 
@@ -430,7 +430,7 @@ export default createPlugin({
 
       // Clean up any previous analyser
       if (this.animationFrame) {
-        cancelAnimationFrame(this.animationFrame);
+        clearInterval(this.animationFrame);
         this.animationFrame = null;
       }
 
@@ -441,25 +441,23 @@ export default createPlugin({
 
       const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
       const analyserRef = this.analyser;
-      let lastSendTime = 0;
 
-      const loop = () => {
-        this.animationFrame = requestAnimationFrame(loop);
-        // Throttle to ~30fps to reduce IPC overhead
-        const now = performance.now();
-        if (now - lastSendTime < 33) return;
-        lastSendTime = now;
-
+      // Use setInterval instead of requestAnimationFrame so that audio
+      // data continues to be captured and forwarded even when the main
+      // BrowserWindow is minimized or hidden (rAF pauses for hidden windows).
+      const intervalId = setInterval(() => {
         analyserRef.getByteFrequencyData(dataArray);
         send('taskbar-widget:audio-data', Array.from(dataArray));
-      };
+      }, 33); // ~30 fps
 
-      loop();
+      // Store the interval ID so we can clean it up later.
+      // We repurpose animationFrame to hold this (it's just a number ID).
+      this.animationFrame = intervalId as unknown as number;
     },
 
     stop() {
       if (this.animationFrame) {
-        cancelAnimationFrame(this.animationFrame);
+        clearInterval(this.animationFrame);
         this.animationFrame = null;
       }
       this.analyser = null;
