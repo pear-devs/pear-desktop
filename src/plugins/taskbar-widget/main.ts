@@ -28,13 +28,23 @@ const getWidgetDir = () => {
 
 const writePreloadScript = (): string => {
   const preloadPath = path.join(getWidgetDir(), 'preload.js');
+  // Written at runtime because the plugin system doesn't support bundling
+  // separate preload scripts for secondary windows
   fs.writeFileSync(
     preloadPath,
     `const { contextBridge, ipcRenderer } = require('electron');
+const ALLOWED_SEND = ['taskbar-widget:control'];
+const ALLOWED_RECEIVE = ['taskbar-widget:song-info'];
 contextBridge.exposeInMainWorld('widgetIpc', {
-  send: (channel, ...args) => ipcRenderer.send(channel, ...args),
+  send: (channel, ...args) => {
+    if (ALLOWED_SEND.includes(channel)) {
+      ipcRenderer.send(channel, ...args);
+    }
+  },
   on: (channel, listener) => {
-    ipcRenderer.on(channel, (_event, ...args) => listener(...args));
+    if (ALLOWED_RECEIVE.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => listener(...args));
+    }
   },
 });
 `,
@@ -148,7 +158,7 @@ const getMiniPlayerHTML = (): string => `<!DOCTYPE html>
 </head>
 <body>
   <div class="container" id="player" style="display: none;">
-    <img class="album-art" id="albumArt" src="" alt="">
+    <img class="album-art" id="albumArt" src="" alt="Album art">
     <div class="info">
       <div class="title" id="title"></div>
       <div class="artist" id="artist"></div>
@@ -238,7 +248,6 @@ export const createMiniPlayer = async (mainWindow: BrowserWindow) => {
     show: false,
     webPreferences: {
       contextIsolation: true,
-      sandbox: false,
       preload: preloadPath,
     },
   });
