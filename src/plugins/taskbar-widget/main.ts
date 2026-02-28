@@ -10,7 +10,10 @@ import {
   SongInfoEvent,
 } from '@/providers/song-info';
 
-const WIDGET_WIDTH = 300;
+// Widget width limits – the actual width is driven by the renderer content
+// via the 'taskbar-widget:resize' IPC channel.
+const MAX_WIDGET_WIDTH = 350;
+const MIN_WIDGET_WIDTH = 150;
 // Default taskbar height on Windows 11 (used as fallback)
 const DEFAULT_TASKBAR_HEIGHT = 48;
 // Estimated width of the system tray area (hidden icons arrow, pinned
@@ -20,18 +23,26 @@ const DEFAULT_TASKBAR_HEIGHT = 48;
 const SYSTEM_TRAY_ESTIMATED_WIDTH = 450;
 // How often (ms) to re-check and reposition the widget + reassert z-order.
 // Handles auto-hide taskbar changes and z-index loss from window focus changes.
-const REPOSITION_INTERVAL_MS = 500;
+const REPOSITION_INTERVAL_MS = 250;
 
 let miniPlayerWin: BrowserWindow | null = null;
 let controlHandler:
   | ((_: Electron.IpcMainEvent, command: string) => void)
   | null = null;
+let resizeHandler: ((_: Electron.IpcMainEvent, width: number) => void) | null =
+  null;
 let displayChangeHandler: (() => void) | null = null;
 let repositionTimer: ReturnType<typeof setInterval> | null = null;
 let selectedMonitorIndex = 0;
 let positionOffsetX = 0;
 let positionOffsetY = 0;
 let backgroundBlurEnabled = false;
+let currentWidgetWidth = MIN_WIDGET_WIDTH;
+// Tracks whether the widget is supposed to be visible (a song is playing).
+// Used to decide whether to recover from external hides.
+let isShowing = false;
+// Set before intentional close to suppress auto-recovery.
+let intentionalClose = false;
 
 const getWidgetDir = () => {
   const dir = path.join(app.getPath('userData'), 'taskbar-widget');
@@ -48,7 +59,7 @@ const writePreloadScript = (): string => {
   fs.writeFileSync(
     preloadPath,
     `const { contextBridge, ipcRenderer } = require('electron');
-const ALLOWED_SEND = ['taskbar-widget:control'];
+const ALLOWED_SEND = ['taskbar-widget:control', 'taskbar-widget:resize'];
 const ALLOWED_RECEIVE = ['taskbar-widget:song-info', 'taskbar-widget:set-blur'];
 contextBridge.exposeInMainWorld('widgetIpc', {
   send: (channel, ...args) => {
@@ -114,11 +125,11 @@ const getWidgetBounds = () => {
     x:
       screenX +
       screenWidth -
-      WIDGET_WIDTH -
+      currentWidgetWidth -
       SYSTEM_TRAY_ESTIMATED_WIDTH +
       positionOffsetX,
     y: taskbarY + positionOffsetY,
-    width: WIDGET_WIDTH,
+    width: currentWidgetWidth,
     height: taskbarHeight,
   };
 };
@@ -132,6 +143,8 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
   const iconSize = widgetHeight >= 48 ? 14 : 13;
   const playIconSize = widgetHeight >= 48 ? 18 : 15;
   const containerPadding = widgetHeight >= 48 ? '2px 4px' : '1px 3px';
+  // Max width of the title/artist block before text is truncated with ellipsis
+  const infoMaxWidth = 160;
 
   return `<!DOCTYPE html>
 <html>
@@ -152,10 +165,10 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       height: 100vh;
     }
     .container {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       padding: ${containerPadding};
-      gap: 4px;
+      gap: 3px;
       height: 100%;
     }
     .container.blur-bg {
@@ -173,7 +186,7 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       background: rgba(255, 255, 255, 0.1);
     }
     .info {
-      flex: 1;
+      max-width: ${infoMaxWidth}px;
       min-width: 0;
       display: flex;
       flex-direction: column;
@@ -232,12 +245,14 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       height: ${playIconSize}px;
     }
     .no-song {
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       height: 100%;
       color: rgba(255, 255, 255, 0.4);
       font-size: ${artistFontSize}px;
+      padding: 0 8px;
+      white-space: nowrap;
     }
   </style>
 </head>
@@ -271,9 +286,27 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
     const player = document.getElementById('player');
     const noSong = document.getElementById('noSong');
 
+    // Report content width to main process so the BrowserWindow can resize
+    let resizeTimer;
+    const reportWidth = () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        const visible = player.style.display !== 'none' ? player : noSong;
+        const width = Math.ceil(visible.getBoundingClientRect().width);
+        if (width > 0) {
+          window.widgetIpc.send('taskbar-widget:resize', width);
+        }
+      }, 50);
+    };
+
+    // Observe size changes on both elements
+    const ro = new ResizeObserver(() => reportWidth());
+    ro.observe(player);
+    ro.observe(noSong);
+
     window.widgetIpc.on('taskbar-widget:song-info', (info) => {
       if (info && info.title) {
-        player.style.display = 'flex';
+        player.style.display = 'inline-flex';
         noSong.style.display = 'none';
         title.textContent = info.title;
         artist.textContent = info.artist || '';
@@ -287,6 +320,8 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
           playIcon.style.display = 'none';
           pauseIcon.style.display = 'block';
         }
+        // Report after content update in case ResizeObserver misses it
+        requestAnimationFrame(() => reportWidth());
       }
     });
 
@@ -319,9 +354,25 @@ const writeHtmlFile = (widgetHeight: number): string => {
 };
 
 /**
+ * Recover visibility if the widget was hidden externally.
+ */
+const recoverVisibility = () => {
+  if (
+    isShowing &&
+    !intentionalClose &&
+    miniPlayerWin &&
+    !miniPlayerWin.isDestroyed() &&
+    !miniPlayerWin.isVisible()
+  ) {
+    miniPlayerWin.showInactive();
+  }
+};
+
+/**
  * Reposition the widget and reassert z-order.
  * Called on display changes and periodically to handle auto-hide taskbar
  * and z-index loss from window focus changes.
+ * Also recovers visibility if the widget was hidden externally.
  */
 const repositionWidget = () => {
   if (!miniPlayerWin || miniPlayerWin.isDestroyed()) return;
@@ -331,6 +382,9 @@ const repositionWidget = () => {
   // Reassert z-order so the widget stays above the taskbar even after
   // other windows are moved / focused.
   miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
+  miniPlayerWin.moveTop();
+
+  recoverVisibility();
 };
 
 export const createMiniPlayer = async (
@@ -341,6 +395,11 @@ export const createMiniPlayer = async (
   blurEnabled = false,
 ) => {
   const { playPause, next, previous } = getSongControls(mainWindow);
+
+  // Reset state from any previous session
+  intentionalClose = false;
+  isShowing = false;
+  currentWidgetWidth = MIN_WIDGET_WIDTH;
 
   selectedMonitorIndex = monitorIndex;
   positionOffsetX = offsetX;
@@ -381,6 +440,10 @@ export const createMiniPlayer = async (
     miniPlayerWin.webContents.send('taskbar-widget:set-blur', true);
   }
 
+  // Immediately re-show whenever the widget is hidden externally
+  // (e.g. shell z-order changes, start menu opening).
+  miniPlayerWin.on('hide', () => recoverVisibility());
+
   // Reposition when display configuration changes (resolution, DPI, etc.)
   displayChangeHandler = () => repositionWidget();
   screen.on('display-metrics-changed', displayChangeHandler);
@@ -414,6 +477,22 @@ export const createMiniPlayer = async (
 
   ipcMain.on('taskbar-widget:control', controlHandler);
 
+  // Handle dynamic resize requests from the renderer
+  resizeHandler = (_, width: number) => {
+    if (!miniPlayerWin || miniPlayerWin.isDestroyed()) return;
+    // Add a small buffer for sub-pixel rounding
+    const clamped = Math.max(
+      MIN_WIDGET_WIDTH,
+      Math.min(Math.ceil(width) + 2, MAX_WIDGET_WIDTH),
+    );
+    if (clamped !== currentWidgetWidth) {
+      currentWidgetWidth = clamped;
+      repositionWidget();
+    }
+  };
+
+  ipcMain.on('taskbar-widget:resize', resizeHandler);
+
   // Send song info to the mini player
   const sendSongInfo = (songInfo: SongInfo) => {
     if (!miniPlayerWin || miniPlayerWin.isDestroyed()) return;
@@ -427,6 +506,7 @@ export const createMiniPlayer = async (
 
     // Show the mini player once we have a song
     if (songInfo.title && !miniPlayerWin.isVisible()) {
+      isShowing = true;
       miniPlayerWin.showInactive();
     }
   };
@@ -463,9 +543,17 @@ export const updateConfig = (
 };
 
 export const cleanup = () => {
+  intentionalClose = true;
+  isShowing = false;
+
   if (controlHandler) {
     ipcMain.removeListener('taskbar-widget:control', controlHandler);
     controlHandler = null;
+  }
+
+  if (resizeHandler) {
+    ipcMain.removeListener('taskbar-widget:resize', resizeHandler);
+    resizeHandler = null;
   }
 
   if (displayChangeHandler) {
