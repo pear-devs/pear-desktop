@@ -24,6 +24,10 @@ const SYSTEM_TRAY_ESTIMATED_WIDTH = 450;
 // How often (ms) to re-check and reposition the widget + reassert z-order.
 // Handles auto-hide taskbar changes and z-index loss from window focus changes.
 const REPOSITION_INTERVAL_MS = 250;
+// Retry delays (ms) for the 'hide' event recovery.  The first retry
+// catches fast transitions (e.g. clicking a pinned taskbar icon) while
+// the second covers slower system overlay animations (Start menu close).
+const HIDE_RECOVERY_RETRY_MS = [300, 800];
 
 let miniPlayerWin: BrowserWindow | null = null;
 let controlHandler:
@@ -480,8 +484,9 @@ export const createMiniPlayer = async (
     hideRecoveryTimers.forEach(clearTimeout);
     hideRecoveryTimers = [];
     recoverVisibility();
-    hideRecoveryTimers.push(setTimeout(() => recoverVisibility(), 300));
-    hideRecoveryTimers.push(setTimeout(() => recoverVisibility(), 800));
+    for (const delay of HIDE_RECOVERY_RETRY_MS) {
+      hideRecoveryTimers.push(setTimeout(() => recoverVisibility(), delay));
+    }
   });
 
   // Re-assert always-on-top if something steals z-order.
