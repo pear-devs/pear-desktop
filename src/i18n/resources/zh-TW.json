@@ -577,6 +577,10 @@
         "button": "下載"
       }
     },
+    "downloader-ytdlp": {
+      "name": "歌曲下載 (yt-dlp)",
+      "description": "開啟應用程式內下載 MP3／原始音檔功能. 使用 yt-dlp.exe 的下載器外掛版本。你可以為可執行檔設定自訂路徑，並設定 cookies 字串，透過包含有效 cookies 來提高下載成功率。"
+    },
     "equalizer": {
       "description": "為播放器加入等化器",
       "menu": {
@@ -977,3 +981,4 @@
     }
   }
 }
+

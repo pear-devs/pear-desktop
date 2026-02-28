@@ -484,6 +484,10 @@
         "button": "Sækja"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Niðurhalari (yt-dlp)",
+      "description": "Niðurhalar MP3 / upprunahljóði beint úr viðmótinu. Útgáfa af niðurhalsviðbótinni sem notar yt-dlp.exe. Þú getur stillt sérsniðna slóð að keyrsluskránni og cookies-streng til að auka líkur á árangursríkum niðurhölum með því að nota gild cookies."
+    },
     "exponential-volume": {
       "description": "Gerir hljóðstyrkssleðann veldisvísis svo það er auðveldara að velja lægra hljóðstyrk.",
       "name": "Veldibundiðrúmmál"
@@ -811,3 +815,4 @@
     }
   }
 }
+

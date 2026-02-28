@@ -565,6 +565,10 @@
         "button": "Preuzimanje"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Servis za preuzimanje (yt-dlp)",
+      "description": "Preuzimanje MP3 / izvornog zvuka direktno sa interfejsa. Verzija dodatka za preuzimanje koja koristi yt-dlp.exe. Možete postaviti prilagođenu putanju do izvršne datoteke i cookies string kako biste povećali uspešnost preuzimanja uključivanjem važećih cookies."
+    },
     "equalizer": {
       "description": "Dodaje ekvilajzer u muzički plejer",
       "menu": {
@@ -965,3 +969,4 @@
     }
   }
 }
+

@@ -547,6 +547,10 @@
         "button": "Lejupielādēt"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Lejupielādētājs (yt-dlp)",
+      "description": "Lejupielādē MP3/avota audio tieši no saskarnes. Lejupielādes spraudņa versija, kas izmanto yt-dlp.exe. Varat iestatīt pielāgotu ceļu uz izpildāmo failu un sīkdatņu virkni, lai, iekļaujot derīgas sīkdatnes, uzlabotu lejupielāžu sekmību."
+    },
     "equalizer": {
       "description": "Pievieno atskaņotājam ekvalaizeru",
       "menu": {
@@ -624,3 +628,4 @@
     }
   }
 }
+
