@@ -14,7 +14,8 @@ const WIDGET_WIDTH = 300;
 // Default taskbar height on Windows 11 (used as fallback)
 const DEFAULT_TASKBAR_HEIGHT = 48;
 // Estimated width of the system tray area (hidden icons arrow, pinned
-// tray icons, clock, action center) so the widget sits to their left
+// tray icons, clock, action center) so the widget sits to their left.
+// Windows 11 only supports the bottom taskbar position.
 const SYSTEM_TRAY_ESTIMATED_WIDTH = 300;
 
 let miniPlayerWin: BrowserWindow | null = null;
