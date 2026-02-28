@@ -1,7 +1,14 @@
 import path from 'node:path';
 import fs from 'node:fs';
 
-import { app, BrowserWindow, ipcMain, screen } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  nativeImage,
+  net,
+  screen,
+} from 'electron';
 
 import { getSongControls } from '@/providers/song-controls';
 import {
@@ -21,16 +28,9 @@ const DEFAULT_TASKBAR_HEIGHT = 48;
 // A generous default keeps the widget clear of pinned tray icons.
 // Windows 11 only supports the bottom taskbar position.
 const SYSTEM_TRAY_ESTIMATED_WIDTH = 450;
-// How often (ms) to re-check and reposition the widget + reassert z-order.
-// Handles auto-hide taskbar changes and z-index loss from window focus changes.
-const REPOSITION_INTERVAL_MS = 100;
-// Every FORCE_ZORDER_EVERY_N_TICKS repositions, the always-on-top flag is
-// toggled off then back on.  This forces Windows to re-evaluate the widget's
-// position in the TOPMOST z-band – without the toggle, calling
-// setAlwaysOnTop(true) on an already-TOPMOST window is effectively a no-op
-// and the widget can stay stuck behind the taskbar after Start menu or shell
-// overlay interactions.
-const FORCE_ZORDER_EVERY_N_TICKS = 5; // ~500 ms when REPOSITION_INTERVAL_MS=100
+// How often (ms) to re-check and reposition the widget (bounds only).
+// Handles auto-hide taskbar changes.  Z-order is maintained event-driven.
+const REPOSITION_INTERVAL_MS = 200;
 // When the widget is hidden externally (e.g. Start menu opens), an aggressive
 // recovery interval fires every HIDE_RECOVERY_INTERVAL_MS for up to
 // HIDE_RECOVERY_DURATION_MS.  This covers both fast transitions (clicking a
@@ -64,8 +64,13 @@ let lastBounds: { x: number; y: number; width: number; height: number } | null =
   null;
 // Persistent interval used to recover from external hides (Start menu, etc.).
 let hideRecoveryInterval: ReturnType<typeof setInterval> | null = null;
-// Tick counter for the periodic reposition timer.
-let repositionTickCount = 0;
+// Delayed recovery timers scheduled after main window blur events.
+// The widget may be pushed behind the taskbar when shell overlays (Start menu,
+// notification center) open.  These timers fire recovery attempts at staggered
+// intervals so the widget reappears after the overlay closes.
+let blurRecoveryTimers: ReturnType<typeof setTimeout>[] = [];
+// Cached imageSrc URL for dominant-color extraction to avoid re-fetching.
+let lastColorUrl: string | null = null;
 // Handler references for main window blur/focus listeners so they can be
 // cleaned up when the widget is destroyed.
 let mainWindowBlurHandler: (() => void) | null = null;
@@ -87,7 +92,7 @@ const writePreloadScript = (): string => {
     preloadPath,
     `const { contextBridge, ipcRenderer } = require('electron');
 const ALLOWED_SEND = ['taskbar-widget:control', 'taskbar-widget:resize', 'taskbar-widget:show-window'];
-const ALLOWED_RECEIVE = ['taskbar-widget:song-info', 'taskbar-widget:set-blur'];
+const ALLOWED_RECEIVE = ['taskbar-widget:song-info', 'taskbar-widget:set-blur', 'taskbar-widget:set-background-color'];
 contextBridge.exposeInMainWorld('widgetIpc', {
   send: (channel, ...args) => {
     if (ALLOWED_SEND.includes(channel)) {
@@ -169,7 +174,8 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
   const btnSize = widgetHeight >= 48 ? 24 : 22;
   const iconSize = widgetHeight >= 48 ? 14 : 13;
   const playIconSize = widgetHeight >= 48 ? 18 : 15;
-  const containerPadding = widgetHeight >= 48 ? '2px 4px' : '1px 3px';
+  const containerPadding = widgetHeight >= 48 ? '4px 6px' : '2px 4px';
+  const blurPadding = widgetHeight >= 48 ? '4px 8px' : '3px 6px';
   // Max width of the title/artist block before text is truncated with ellipsis
   const infoMaxWidth = 160;
 
@@ -200,10 +206,11 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       cursor: pointer;
     }
     .container.blur-bg {
-      background: rgba(0, 0, 0, 0.3);
+      background: var(--dynamic-bg, rgba(0, 0, 0, 0.3));
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      border-radius: 4px;
+      border-radius: 8px;
+      padding: ${blurPadding};
     }
     .album-art {
       width: ${albumSize}px;
@@ -361,6 +368,16 @@ const getMiniPlayerHTML = (widgetHeight: number): string => {
       }
     });
 
+    window.widgetIpc.on('taskbar-widget:set-background-color', (color) => {
+      if (color && color.r !== undefined) {
+        var dr = Math.max(0, color.r - 40);
+        var dg = Math.max(0, color.g - 40);
+        var db = Math.max(0, color.b - 40);
+        var gradient = 'linear-gradient(135deg, rgba(' + color.r + ',' + color.g + ',' + color.b + ',0.45), rgba(' + dr + ',' + dg + ',' + db + ',0.55))';
+        player.style.setProperty('--dynamic-bg', gradient);
+      }
+    });
+
     document.getElementById('prevBtn').addEventListener('click', () => {
       window.widgetIpc.send('taskbar-widget:control', 'previous');
     });
@@ -390,19 +407,95 @@ const writeHtmlFile = (widgetHeight: number): string => {
 };
 
 /**
+ * Extract the dominant colour from an album art URL using Electron's
+ * nativeImage API.  Runs entirely in the main process so there are no
+ * CORS issues.  Returns `null` when extraction fails for any reason.
+ */
+const extractDominantColor = async (
+  imageUrl: string,
+): Promise<{ r: number; g: number; b: number } | null> => {
+  try {
+    const response = await net.fetch(imageUrl);
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const image = nativeImage.createFromBuffer(buffer);
+    if (image.isEmpty()) return null;
+
+    // Scale down for fast sampling
+    const small = image.resize({ width: 16, height: 16 });
+    const bitmap = small.toBitmap(); // BGRA on Windows
+
+    let r = 0;
+    let g = 0;
+    let b = 0;
+    let count = 0;
+    for (let i = 0; i < bitmap.length; i += 4) {
+      const blue = bitmap[i];
+      const green = bitmap[i + 1];
+      const red = bitmap[i + 2];
+      const brightness = (red + green + blue) / 3;
+      // Skip very dark / very bright pixels for a more representative colour
+      if (brightness > 30 && brightness < 220) {
+        r += red;
+        g += green;
+        b += blue;
+        count++;
+      }
+    }
+
+    if (count === 0) return null;
+
+    let avgR = Math.round(r / count);
+    let avgG = Math.round(g / count);
+    let avgB = Math.round(b / count);
+
+    // Cap brightness so white text stays readable on the semi-transparent bg
+    const avgBrightness = (avgR + avgG + avgB) / 3;
+    if (avgBrightness > 150) {
+      const factor = 150 / avgBrightness;
+      avgR = Math.round(avgR * factor);
+      avgG = Math.round(avgG * factor);
+      avgB = Math.round(avgB * factor);
+    }
+
+    return { r: avgR, g: avgG, b: avgB };
+  } catch {
+    return null;
+  }
+};
+
+/** Cancel any pending blur-recovery timeouts. */
+const clearBlurRecoveryTimers = () => {
+  for (const timer of blurRecoveryTimers) clearTimeout(timer);
+  blurRecoveryTimers = [];
+};
+
+/**
+ * Schedule staggered recovery attempts after a main-window blur event.
+ * The widget may be pushed behind the taskbar when shell overlays open
+ * (Start menu, notification centre, etc.).  These delayed attempts ensure
+ * recovery even when the overlay is slow to close and no further Electron
+ * events fire.
+ */
+const scheduleBlurRecovery = () => {
+  clearBlurRecoveryTimers();
+  const delays = [300, 800, 1500, 3000];
+  for (const delay of delays) {
+    blurRecoveryTimers.push(
+      setTimeout(() => {
+        if (isShowing && !intentionalClose) recoverVisibility();
+      }, delay),
+    );
+  }
+};
+
+/**
  * Recover visibility if the widget was hidden, minimized, or pushed behind
  * the taskbar by a system overlay (Start menu, shell flyouts, etc.).
  *
- * The key trick is toggling `setAlwaysOnTop` off then back on.  On Windows,
- * calling `setAlwaysOnTop(true)` when the window is *already* TOPMOST is a
- * no-op – the OS does not re-evaluate the window's position within the
- * TOPMOST z-band.  Toggling forces the OS to remove the TOPMOST flag
- * (HWND_NOTOPMOST) and immediately re-add it (HWND_TOPMOST), which places
- * the window at the very top of the TOPMOST band.
- *
- * `showInactive()` is called unconditionally because the widget can be
- * technically "visible" (`isVisible() === true`) yet rendered behind the
- * taskbar surface after Start menu interactions.
+ * The z-order toggle (off → on) forces Windows to re-evaluate the TOPMOST
+ * z-band.  To prevent a visible flash the window opacity is set to 0 before
+ * the toggle and restored to 1 immediately after.  Because the Electron
+ * calls are synchronous the compositor sees only the final state.
  */
 const recoverVisibility = () => {
   if (
@@ -418,27 +511,38 @@ const recoverVisibility = () => {
     miniPlayerWin.restore();
   }
 
-  miniPlayerWin.showInactive();
-  // Toggle off → on to force Windows to re-evaluate the TOPMOST z-band.
-  miniPlayerWin.setAlwaysOnTop(false);
-  miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
-  miniPlayerWin.moveTop();
+  if (!miniPlayerWin.isVisible()) {
+    miniPlayerWin.showInactive();
+    miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
+    miniPlayerWin.moveTop();
+    return;
+  }
+
+  // Hide briefly during z-order toggle to prevent visible flash.
+  try {
+    miniPlayerWin.setOpacity(0);
+    miniPlayerWin.setAlwaysOnTop(false);
+    miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
+    miniPlayerWin.moveTop();
+  } finally {
+    if (miniPlayerWin && !miniPlayerWin.isDestroyed()) {
+      miniPlayerWin.setOpacity(1);
+    }
+  }
 };
 
 /**
- * Reposition the widget and reassert z-order.
- * Called on display changes and periodically to handle auto-hide taskbar
- * and z-index loss from window focus changes.
+ * Reposition the widget if the display geometry changed.
+ * Called periodically to handle auto-hide taskbar state transitions.
  *
- * Every {@link FORCE_ZORDER_EVERY_N_TICKS} ticks the always-on-top flag is
- * toggled off then on to force the OS to re-evaluate the TOPMOST z-band
- * (see {@link recoverVisibility} for details).  On intermediate ticks only
- * {@link moveTop} is called to minimise overhead.
+ * Z-order is maintained entirely via event-driven handlers (blur, focus,
+ * hide, minimize, always-on-top-changed) and the staggered recovery
+ * timeouts in {@link scheduleBlurRecovery}.  No z-order manipulation
+ * happens here to avoid the periodic stutter that plagued earlier
+ * implementations.
  */
 const repositionWidget = () => {
   if (!miniPlayerWin || miniPlayerWin.isDestroyed()) return;
-
-  repositionTickCount++;
 
   const bounds = getWidgetBounds();
 
@@ -454,18 +558,6 @@ const repositionWidget = () => {
   ) {
     miniPlayerWin.setBounds(bounds);
     lastBounds = bounds;
-  }
-
-  if (isShowing && !intentionalClose) {
-    // Periodically force a full z-order toggle so the widget can recover
-    // even when no Electron events fire (e.g. after the Start menu closes
-    // and focus stays on the taskbar).
-    if (repositionTickCount % FORCE_ZORDER_EVERY_N_TICKS === 0) {
-      recoverVisibility();
-    } else {
-      miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
-      miniPlayerWin.moveTop();
-    }
   }
 };
 
@@ -484,7 +576,8 @@ export const createMiniPlayer = async (
   isShowing = false;
   currentWidgetWidth = MIN_WIDGET_WIDTH;
   lastBounds = null;
-  repositionTickCount = 0;
+  lastColorUrl = null;
+  clearBlurRecoveryTimers();
 
   selectedMonitorIndex = monitorIndex;
   positionOffsetX = offsetX;
@@ -582,11 +675,11 @@ export const createMiniPlayer = async (
   screen.on('display-metrics-changed', displayChangeHandler);
 
   // When the main window loses focus the user may have clicked the taskbar,
-  // the Start menu, or another shell overlay.  Trigger an immediate
-  // aggressive recovery so the widget is pushed back above the taskbar as
-  // soon as the overlay closes – without waiting for the next periodic tick.
+  // the Start menu, or another shell overlay.  Schedule staggered recovery
+  // attempts so the widget reappears after the overlay closes – even if no
+  // further Electron events fire (e.g. focus stays on the taskbar).
   mainWindowBlurHandler = () => {
-    if (isShowing && !intentionalClose) recoverVisibility();
+    if (isShowing && !intentionalClose) scheduleBlurRecovery();
   };
   mainWindow.on('blur', mainWindowBlurHandler);
 
@@ -597,8 +690,8 @@ export const createMiniPlayer = async (
   };
   mainWindow.on('focus', mainWindowFocusHandler);
 
-  // Periodically reposition and reassert z-order so the widget adapts to
-  // auto-hide taskbar state changes and recovers from z-index loss.
+  // Periodically reposition so the widget adapts to auto-hide taskbar
+  // state changes.  Z-order is maintained event-driven (not here).
   repositionTimer = setInterval(
     () => repositionWidget(),
     REPOSITION_INTERVAL_MS,
@@ -664,6 +757,20 @@ export const createMiniPlayer = async (
       isPaused: songInfo.isPaused,
     });
 
+    // Extract dominant colour from album art for the dynamic blur background.
+    // Only re-extract when the image URL changes.
+    if (songInfo.imageSrc && songInfo.imageSrc !== lastColorUrl) {
+      lastColorUrl = songInfo.imageSrc;
+      extractDominantColor(songInfo.imageSrc).then((color) => {
+        if (color && miniPlayerWin && !miniPlayerWin.isDestroyed()) {
+          miniPlayerWin.webContents.send(
+            'taskbar-widget:set-background-color',
+            color,
+          );
+        }
+      });
+    }
+
     // Show the mini player once we have a song
     if (songInfo.title && !miniPlayerWin.isVisible()) {
       isShowing = true;
@@ -707,6 +814,8 @@ export const updateConfig = (
 export const cleanup = () => {
   intentionalClose = true;
   isShowing = false;
+
+  clearBlurRecoveryTimers();
 
   if (hideRecoveryInterval) {
     clearInterval(hideRecoveryInterval);
