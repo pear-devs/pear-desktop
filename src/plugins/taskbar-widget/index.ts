@@ -1,10 +1,10 @@
-import { createPlugin } from '@/utils';
-import { t } from '@/i18n';
-import { Platform } from '@/types/plugins';
+import prompt from 'custom-electron-prompt';
 import { screen } from 'electron';
 
-import prompt from 'custom-electron-prompt';
+import { createPlugin } from '@/utils';
+import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
+import { Platform } from '@/types/plugins';
 
 import type { MenuContext } from '@/types/contexts';
 
@@ -68,7 +68,7 @@ export default createPlugin({
                   inputAttrs: {
                     type: 'number',
                     required: true,
-                    step: '10',
+                    step: '1',
                   },
                 },
                 {
@@ -91,9 +91,11 @@ export default createPlugin({
           ).catch(console.error);
 
           if (res) {
+            const newOffsetX = Number(res[0]);
+            const newOffsetY = Number(res[1]);
             setConfig({
-              offsetX: Number(res[0]),
-              offsetY: Number(res[1]),
+              offsetX: Number.isFinite(newOffsetX) ? newOffsetX : 0,
+              offsetY: Number.isFinite(newOffsetY) ? newOffsetY : 0,
             });
           }
         },

@@ -364,7 +364,10 @@ export const createMiniPlayer = async (
 
   // Periodically reposition and reassert z-order so the widget adapts to
   // auto-hide taskbar state changes and recovers from z-index loss.
-  repositionTimer = setInterval(() => repositionWidget(), REPOSITION_INTERVAL_MS);
+  repositionTimer = setInterval(
+    () => repositionWidget(),
+    REPOSITION_INTERVAL_MS,
+  );
 
   // Handle control commands from the mini player
   controlHandler = (_, command: string) => {
