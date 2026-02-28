@@ -17,13 +17,19 @@ const DEFAULT_TASKBAR_HEIGHT = 48;
 // tray icons, clock, action center) so the widget sits to their left.
 // Windows 11 only supports the bottom taskbar position.
 const SYSTEM_TRAY_ESTIMATED_WIDTH = 300;
+// How often (ms) to re-check and reposition the widget + reassert z-order.
+// Handles auto-hide taskbar changes and z-index loss from window focus changes.
+const REPOSITION_INTERVAL_MS = 2000;
 
 let miniPlayerWin: BrowserWindow | null = null;
 let controlHandler:
   | ((_: Electron.IpcMainEvent, command: string) => void)
   | null = null;
 let displayChangeHandler: (() => void) | null = null;
+let repositionTimer: ReturnType<typeof setInterval> | null = null;
 let selectedMonitorIndex = 0;
+let positionOffsetX = 0;
+let positionOffsetY = 0;
 
 const getWidgetDir = () => {
   const dir = path.join(app.getPath('userData'), 'taskbar-widget');
@@ -96,14 +102,20 @@ const getTaskbarGeometry = () => {
 /**
  * Calculate the widget window position so it sits on the taskbar surface,
  * to the left of the notification / system tray area.
+ * User-configured offsets are applied on top of the computed position.
  */
 const getWidgetBounds = () => {
   const { taskbarHeight, taskbarY, screenWidth, screenX } =
     getTaskbarGeometry();
 
   return {
-    x: screenX + screenWidth - WIDGET_WIDTH - SYSTEM_TRAY_ESTIMATED_WIDTH,
-    y: taskbarY,
+    x:
+      screenX +
+      screenWidth -
+      WIDGET_WIDTH -
+      SYSTEM_TRAY_ESTIMATED_WIDTH +
+      positionOffsetX,
+    y: taskbarY + positionOffsetY,
     width: WIDGET_WIDTH,
     height: taskbarHeight,
   };
@@ -290,21 +302,32 @@ const writeHtmlFile = (widgetHeight: number): string => {
   return htmlPath;
 };
 
-/** Reposition the widget when the display layout changes. */
+/**
+ * Reposition the widget and reassert z-order.
+ * Called on display changes and periodically to handle auto-hide taskbar
+ * and z-index loss from window focus changes.
+ */
 const repositionWidget = () => {
   if (!miniPlayerWin || miniPlayerWin.isDestroyed()) return;
 
   const { x, y, width, height } = getWidgetBounds();
   miniPlayerWin.setBounds({ x, y, width, height });
+  // Reassert z-order so the widget stays above the taskbar even after
+  // other windows are moved / focused.
+  miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
 };
 
 export const createMiniPlayer = async (
   mainWindow: BrowserWindow,
   monitorIndex = 0,
+  offsetX = 0,
+  offsetY = 0,
 ) => {
   const { playPause, next, previous } = getSongControls(mainWindow);
 
   selectedMonitorIndex = monitorIndex;
+  positionOffsetX = offsetX;
+  positionOffsetY = offsetY;
   const preloadPath = writePreloadScript();
   const { x, y, width, height } = getWidgetBounds();
   const htmlPath = writeHtmlFile(height);
@@ -338,6 +361,10 @@ export const createMiniPlayer = async (
   // Reposition when display configuration changes (resolution, DPI, etc.)
   displayChangeHandler = () => repositionWidget();
   screen.on('display-metrics-changed', displayChangeHandler);
+
+  // Periodically reposition and reassert z-order so the widget adapts to
+  // auto-hide taskbar state changes and recovers from z-index loss.
+  repositionTimer = setInterval(() => repositionWidget(), REPOSITION_INTERVAL_MS);
 
   // Handle control commands from the mini player
   controlHandler = (_, command: string) => {
@@ -399,6 +426,11 @@ export const cleanup = () => {
   if (displayChangeHandler) {
     screen.removeListener('display-metrics-changed', displayChangeHandler);
     displayChangeHandler = null;
+  }
+
+  if (repositionTimer) {
+    clearInterval(repositionTimer);
+    repositionTimer = null;
   }
 
   if (miniPlayerWin && !miniPlayerWin.isDestroyed()) {

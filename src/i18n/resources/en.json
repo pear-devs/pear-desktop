@@ -937,6 +937,11 @@
         "monitor": {
           "label": "Display Monitor",
           "primary": "Primary"
+        },
+        "position": {
+          "label": "Position Offset",
+          "horizontal-offset": "Horizontal offset (px)",
+          "vertical-offset": "Vertical offset (px)"
         }
       }
     },
