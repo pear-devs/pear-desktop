@@ -43,6 +43,9 @@ let currentWidgetWidth = MIN_WIDGET_WIDTH;
 let isShowing = false;
 // Set before intentional close to suppress auto-recovery.
 let intentionalClose = false;
+// Cache last bounds to avoid unnecessary setBounds calls that cause flicker.
+let lastBounds: { x: number; y: number; width: number; height: number } | null =
+  null;
 
 const getWidgetDir = () => {
   const dir = path.join(app.getPath('userData'), 'taskbar-widget');
@@ -365,6 +368,8 @@ const recoverVisibility = () => {
     !miniPlayerWin.isVisible()
   ) {
     miniPlayerWin.showInactive();
+    miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
+    miniPlayerWin.moveTop();
   }
 };
 
@@ -377,12 +382,25 @@ const recoverVisibility = () => {
 const repositionWidget = () => {
   if (!miniPlayerWin || miniPlayerWin.isDestroyed()) return;
 
-  const { x, y, width, height } = getWidgetBounds();
-  miniPlayerWin.setBounds({ x, y, width, height });
+  const bounds = getWidgetBounds();
+
+  // Only call setBounds when the position/size actually changed to avoid
+  // unnecessary window manipulation that can cause flickering or broken
+  // rendering on some systems.
+  if (
+    !lastBounds ||
+    lastBounds.x !== bounds.x ||
+    lastBounds.y !== bounds.y ||
+    lastBounds.width !== bounds.width ||
+    lastBounds.height !== bounds.height
+  ) {
+    miniPlayerWin.setBounds(bounds);
+    lastBounds = bounds;
+  }
+
   // Reassert z-order so the widget stays above the taskbar even after
   // other windows are moved / focused.
   miniPlayerWin.setAlwaysOnTop(true, 'screen-saver');
-  miniPlayerWin.moveTop();
 
   recoverVisibility();
 };
@@ -400,6 +418,7 @@ export const createMiniPlayer = async (
   intentionalClose = false;
   isShowing = false;
   currentWidgetWidth = MIN_WIDGET_WIDTH;
+  lastBounds = null;
 
   selectedMonitorIndex = monitorIndex;
   positionOffsetX = offsetX;
@@ -440,9 +459,10 @@ export const createMiniPlayer = async (
     miniPlayerWin.webContents.send('taskbar-widget:set-blur', true);
   }
 
-  // Immediately re-show whenever the widget is hidden externally
-  // (e.g. shell z-order changes, start menu opening).
-  miniPlayerWin.on('hide', () => recoverVisibility());
+  // Make the window click-through until we have a song to display.
+  // This prevents an invisible (transparent) window from blocking
+  // taskbar clicks on the system tray arrow, pinned icons, etc.
+  miniPlayerWin.setIgnoreMouseEvents(true, { forward: true });
 
   // Reposition when display configuration changes (resolution, DPI, etc.)
   displayChangeHandler = () => repositionWidget();
@@ -507,6 +527,7 @@ export const createMiniPlayer = async (
     // Show the mini player once we have a song
     if (songInfo.title && !miniPlayerWin.isVisible()) {
       isShowing = true;
+      miniPlayerWin.setIgnoreMouseEvents(false);
       miniPlayerWin.showInactive();
     }
   };
@@ -535,6 +556,7 @@ export const updateConfig = (
   positionOffsetX = offsetX;
   positionOffsetY = offsetY;
   backgroundBlurEnabled = blurEnabled;
+  lastBounds = null; // Force reposition on next tick
 
   if (miniPlayerWin && !miniPlayerWin.isDestroyed()) {
     repositionWidget();

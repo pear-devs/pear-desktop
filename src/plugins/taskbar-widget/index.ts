@@ -60,6 +60,8 @@ export default createPlugin({
       {
         label: t('plugins.taskbar-widget.menu.position.label'),
         click: async () => {
+          // Read config fresh each time so previously saved values are shown
+          const currentConfig = await getConfig();
           const res = await prompt(
             {
               title: t('plugins.taskbar-widget.menu.position.label'),
@@ -69,7 +71,7 @@ export default createPlugin({
                   label: t(
                     'plugins.taskbar-widget.menu.position.horizontal-offset',
                   ),
-                  value: config.offsetX,
+                  value: currentConfig.offsetX,
                   inputAttrs: {
                     type: 'number',
                     required: true,
@@ -80,7 +82,7 @@ export default createPlugin({
                   label: t(
                     'plugins.taskbar-widget.menu.position.vertical-offset',
                   ),
-                  value: config.offsetY,
+                  value: currentConfig.offsetY,
                   inputAttrs: {
                     type: 'number',
                     required: true,
