@@ -30,12 +30,12 @@ const REPOSITION_INTERVAL_MS = 100;
 // setAlwaysOnTop(true) on an already-TOPMOST window is effectively a no-op
 // and the widget can stay stuck behind the taskbar after Start menu or shell
 // overlay interactions.
-const FORCE_ZORDER_EVERY_N_TICKS = 5; // ~500 ms at 100 ms interval
+const FORCE_ZORDER_EVERY_N_TICKS = 5; // ~500 ms when REPOSITION_INTERVAL_MS=100
 // When the widget is hidden externally (e.g. Start menu opens), an aggressive
 // recovery interval fires every HIDE_RECOVERY_INTERVAL_MS for up to
 // HIDE_RECOVERY_DURATION_MS.  This covers both fast transitions (clicking a
 // pinned taskbar icon) and slower system overlay animations (Start menu).
-const HIDE_RECOVERY_INTERVAL_MS = 80;
+const HIDE_RECOVERY_INTERVAL_MS = 100;
 const HIDE_RECOVERY_DURATION_MS = 3000;
 
 let miniPlayerWin: BrowserWindow | null = null;
