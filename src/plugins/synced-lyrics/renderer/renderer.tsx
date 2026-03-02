@@ -133,12 +133,17 @@ createEffect(() => {
 
 // Auto-skip songs based on detected language
 let skippedVideoId: string | null = null;
+let skipTimer: ReturnType<typeof setTimeout> | null = null;
 createEffect(() => {
   const cfg = config();
   const lyrics = bestLanguageResult();
 
-  if (!cfg?.enabled || !cfg.autoSkipLanguages || !lyrics?.data?.language)
+  if (!cfg?.enabled || !cfg.autoSkipLanguages || !lyrics?.data?.language) {
+    // lyrics is null while providers are fetching (i.e. a new song just started).
+    // Reset the guard so repeat plays of the same videoId are re-evaluated.
+    if (!lyrics) skippedVideoId = null;
     return;
+  }
 
   const skipLanguages = cfg.autoSkipLanguages
     .split(',')
@@ -158,7 +163,7 @@ createEffect(() => {
 
     // Show toast notification
     appApi?.toastService?.show(
-      t('plugins.synced-lyrics.menu.auto-skip-toast', {
+      t('plugins.synced-lyrics.toast.auto-skip', {
         language: lyrics.data.language.toUpperCase(),
       }),
     );
@@ -173,11 +178,12 @@ createEffect(() => {
       }
     }
 
-    // Skip to next song
-    const timer = setTimeout(() => {
+    // Skip to next song — timer lives outside the effect so re-runs don't cancel it
+    if (skipTimer !== null) clearTimeout(skipTimer);
+    skipTimer = setTimeout(() => {
+      skipTimer = null;
       appApi?.playerApi?.nextVideo();
     }, 500);
-    onCleanup(() => clearTimeout(timer));
   }
 });
 

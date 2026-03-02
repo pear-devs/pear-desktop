@@ -922,13 +922,15 @@
         "auto-dislike-skipped-languages": {
           "label": "Auto-dislike skipped songs",
           "tooltip": "Automatically dislike songs before skipping them when a language from the skip list is detected"
-        },
-        "auto-skip-toast": "Auto-skipping song with detected language: {{language}}"
+        }
       },
       "name": "Synced Lyrics",
       "refetch-btn": {
         "fetching": "Fetching...",
         "normal": "Refetch lyrics"
+      },
+      "toast": {
+        "auto-skip": "Auto-skipping song with detected language: {{language}}"
       },
       "warnings": {
         "duration-mismatch": "⚠️ - The lyrics may be out of sync due to a duration mismatch.",

@@ -14,7 +14,7 @@ export type SyncedLyricsPluginConfig = {
     | 'simplifiedToTraditional'
     | 'traditionalToSimplified'
     | 'disabled';
-  autoSkipLanguages?: string;
+  autoSkipLanguages: string;
   autoDislikeSkippedLanguages: boolean;
 };
 
