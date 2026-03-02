@@ -25,13 +25,9 @@ import { _ytAPI } from './index';
 
 import { t } from '@/i18n';
 
-import type { LineLyrics, SyncedLyricsPluginConfig } from '../types';
+import type { AppElement } from '@/types/queue';
 
-interface AppElement extends HTMLElement {
-  toastService?: {
-    show: (message: string) => void;
-  };
-}
+import type { LineLyrics, SyncedLyricsPluginConfig } from '../types';
 
 export const [isVisible, setIsVisible] = createSignal<boolean>(false);
 export const [config, setConfig] =
@@ -140,7 +136,7 @@ createEffect(() => {
   const cfg = config();
   const lyrics = bestLanguageResult();
 
-  if (!cfg?.autoSkipLanguages || !lyrics?.data?.language) return;
+  if (!cfg?.enabled || !cfg.autoSkipLanguages || !lyrics?.data?.language) return;
 
   const skipLanguages = cfg.autoSkipLanguages
     .split(',')
