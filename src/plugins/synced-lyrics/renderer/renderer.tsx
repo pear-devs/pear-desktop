@@ -140,8 +140,14 @@ createEffect(() => {
 
   if (!cfg?.enabled || !cfg.autoSkipLanguages || !lyrics?.data?.language) {
     // lyrics is null while providers are fetching (i.e. a new song just started).
-    // Reset the guard so repeat plays of the same videoId are re-evaluated.
-    if (!lyrics) skippedVideoId = null;
+    // Reset the guard and cancel any pending skip so it doesn't fire on the next track.
+    if (!lyrics) {
+      skippedVideoId = null;
+      if (skipTimer !== null) {
+        clearTimeout(skipTimer);
+        skipTimer = null;
+      }
+    }
     return;
   }
 
@@ -178,11 +184,15 @@ createEffect(() => {
       }
     }
 
-    // Skip to next song — timer lives outside the effect so re-runs don't cancel it
+    // Skip to next song — timer lives outside the effect so re-runs don't cancel it.
+    // Capture videoId so the callback can verify the track hasn't changed by the time it fires.
+    const scheduledFor = videoId;
     if (skipTimer !== null) clearTimeout(skipTimer);
     skipTimer = setTimeout(() => {
       skipTimer = null;
-      appApi?.playerApi?.nextVideo();
+      if (getSongInfo().videoId === scheduledFor) {
+        appApi?.playerApi?.nextVideo();
+      }
     }, 500);
   }
 });
