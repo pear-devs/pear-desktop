@@ -264,7 +264,7 @@ export const menu = async (
           )) ?? config.autoSkipLanguages;
 
         ctx.setConfig({
-          autoSkipLanguages: languages as string,
+          autoSkipLanguages: languages,
         });
       },
     },
