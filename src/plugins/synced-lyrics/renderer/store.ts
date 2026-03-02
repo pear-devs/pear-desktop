@@ -42,6 +42,24 @@ export const currentLyrics = createMemo(() => {
   return lyricsStore.lyrics[provider];
 });
 
+/**
+ * Returns the best available provider result that has a detected language,
+ * without requiring lyricsStore.provider to have been set by LyricsPicker.
+ * Prefers the currently selected provider, then falls back to any done provider
+ * with a language so that auto-skip works even when the lyrics panel is hidden.
+ */
+export const bestLanguageResult = createMemo(() => {
+  const current = lyricsStore.lyrics[lyricsStore.provider];
+  if (current.state === 'done' && current.data?.language) return current;
+
+  for (const name of providerNames) {
+    const state = lyricsStore.lyrics[name];
+    if (state.state === 'done' && state.data?.language) return state;
+  }
+
+  return null;
+});
+
 type VideoId = string;
 
 type SearchCacheData = Record<ProviderName, ProviderState>;

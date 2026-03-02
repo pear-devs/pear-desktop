@@ -20,7 +20,7 @@ import {
   PlainLyrics,
 } from './components';
 
-import { currentLyrics } from './store';
+import { bestLanguageResult, currentLyrics } from './store';
 import { _ytAPI } from './index';
 
 import { t } from '@/i18n';
@@ -138,7 +138,7 @@ createEffect(() => {
 // Auto-skip songs based on detected language
 createEffect(() => {
   const cfg = config();
-  const lyrics = currentLyrics();
+  const lyrics = bestLanguageResult();
 
   if (!cfg?.autoSkipLanguages || !lyrics?.data?.language) return;
 
