@@ -140,13 +140,13 @@ createEffect(() => {
 
   if (!cfg?.enabled || !cfg.autoSkipLanguages || !lyrics?.data?.language) {
     // lyrics is null while providers are fetching (i.e. a new song just started).
-    // Reset the guard and cancel any pending skip so it doesn't fire on the next track.
-    if (!lyrics) {
+    // Also reset guards when auto-skip is disabled or configured languages are cleared.
+    if (!lyrics || !cfg?.enabled || !cfg.autoSkipLanguages) {
       skippedVideoId = null;
-      if (skipTimer !== null) {
-        clearTimeout(skipTimer);
-        skipTimer = null;
-      }
+    }
+    if (skipTimer !== null) {
+      clearTimeout(skipTimer);
+      skipTimer = null;
     }
     return;
   }
