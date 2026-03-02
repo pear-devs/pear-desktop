@@ -21,8 +21,8 @@ import {
 } from './components';
 
 import { bestLanguageResult, currentLyrics } from './store';
-import { _ytAPI } from './index';
 
+import { getSongInfo } from '@/providers/song-info-front';
 import { t } from '@/i18n';
 
 import type { AppElement } from '@/types/queue';
@@ -132,6 +132,7 @@ createEffect(() => {
 });
 
 // Auto-skip songs based on detected language
+let skippedVideoId: string | null = null;
 createEffect(() => {
   const cfg = config();
   const lyrics = bestLanguageResult();
@@ -148,6 +149,10 @@ createEffect(() => {
   const detectedLanguage = lyrics.data.language.toLowerCase();
 
   if (skipLanguages.includes(detectedLanguage)) {
+    const videoId = getSongInfo().videoId;
+    if (videoId === skippedVideoId) return;
+    skippedVideoId = videoId;
+
     const appApi = document.querySelector<AppElement>('ytmusic-app');
 
     // Show toast notification
@@ -169,7 +174,7 @@ createEffect(() => {
 
     // Skip to next song
     const timer = setTimeout(() => {
-      _ytAPI?.nextVideo();
+      appApi?.playerApi?.nextVideo();
     }, 500);
     onCleanup(() => clearTimeout(timer));
   }
