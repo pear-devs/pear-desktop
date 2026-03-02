@@ -137,7 +137,8 @@ createEffect(() => {
   const cfg = config();
   const lyrics = bestLanguageResult();
 
-  if (!cfg?.enabled || !cfg.autoSkipLanguages || !lyrics?.data?.language) return;
+  if (!cfg?.enabled || !cfg.autoSkipLanguages || !lyrics?.data?.language)
+    return;
 
   const skipLanguages = cfg.autoSkipLanguages
     .split(',')
