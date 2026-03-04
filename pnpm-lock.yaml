@@ -64,11 +64,11 @@ importers:
         specifier: 2.13.4
         version: 2.13.4(electron@40.1.0)
       '@hono/node-server':
-        specifier: 1.19.9
-        version: 1.19.9(hono@4.11.10)
+        specifier: 1.19.10
+        version: 1.19.10(hono@4.11.10)
       '@hono/node-ws':
         specifier: 1.3.0
-        version: 1.3.0(@hono/node-server@1.19.9(hono@4.11.10))(bufferutil@4.1.0)(hono@4.11.10)(utf-8-validate@6.0.6)
+        version: 1.3.0(@hono/node-server@1.19.10(hono@4.11.10))(bufferutil@4.1.0)(hono@4.11.10)(utf-8-validate@6.0.6)
       '@hono/swagger-ui':
         specifier: 0.5.3
         version: 0.5.3(hono@4.11.10)
@@ -802,8 +802,8 @@ packages:
   '@ghostery/url-parser@1.3.1':
     resolution: {integrity: sha512-QKqGi+7aDQ4RcyHyCwgEk6B9vWnsBP4Q7htaN0zPJV3ATqTKEQDtSTb9c/AN586oJUDs24YXKcwFYwNweY/YjQ==}
 
-  '@hono/node-server@1.19.9':
-    resolution: {integrity: sha512-vHL6w3ecZsky+8P5MD+eFfaGTyCeOHUIFYMGpQGbrBTSmNNoxv0if69rEZ5giu36weC5saFuznL411gRX7bJDw==}
+  '@hono/node-server@1.19.10':
+    resolution: {integrity: sha512-hZ7nOssGqRgyV3FVVQdfi+U4q02uB23bpnYpdvNXkYTRRyWx84b7yf1ans+dnJ/7h41sGL3CeQTfO+ZGxuO+Iw==}
     engines: {node: '>=18.14.1'}
     peerDependencies:
       hono: ^4
@@ -5182,13 +5182,13 @@ snapshots:
     dependencies:
       tldts-experimental: 7.0.19
 
-  '@hono/node-server@1.19.9(hono@4.11.10)':
+  '@hono/node-server@1.19.10(hono@4.11.10)':
     dependencies:
       hono: 4.11.10
 
-  '@hono/node-ws@1.3.0(@hono/node-server@1.19.9(hono@4.11.10))(bufferutil@4.1.0)(hono@4.11.10)(utf-8-validate@6.0.6)':
+  '@hono/node-ws@1.3.0(@hono/node-server@1.19.10(hono@4.11.10))(bufferutil@4.1.0)(hono@4.11.10)(utf-8-validate@6.0.6)':
     dependencies:
-      '@hono/node-server': 1.19.9(hono@4.11.10)
+      '@hono/node-server': 1.19.10(hono@4.11.10)
       hono: 4.11.10
       ws: 8.19.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
     transitivePeerDependencies:
