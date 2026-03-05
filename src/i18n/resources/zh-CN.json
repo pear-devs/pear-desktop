@@ -842,6 +842,24 @@
         "not-found": "⚠️ 未找到此歌曲的歌词。"
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "转换中文字符",
+          "submenu": {
+            "disabled": {
+              "label": "已停用",
+              "tooltip": "禁用中文字符转换"
+            },
+            "simplified-to-traditional": {
+              "label": "简体到繁体",
+              "tooltip": "转换简体中文到繁体中文"
+            },
+            "traditional-to-simplified": {
+              "label": "繁体到简体",
+              "tooltip": "转换繁体中文到简体中文"
+            }
+          },
+          "tooltip": "转换简繁体中文字符"
+        },
         "default-text-string": {
           "label": "默认的歌词行间字符",
           "tooltip": "选择在歌词间隙期间默认显示的字符"

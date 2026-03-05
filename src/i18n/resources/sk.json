@@ -396,6 +396,17 @@
         "no-captions": "Pre túto skladbu nie sú dostupné žiadne titulky"
       }
     },
+    "clock": {
+      "description": "Pridať hodiny do navigačnej lišty",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-hodinový formát",
+          "display-seconds": "Zobraz sekundy",
+          "label": "Formát"
+        }
+      },
+      "name": "Hodiny"
+    },
     "compact-sidebar": {
       "description": "Vždy nastaviť bočný panel do kompaktného režimu",
       "name": "Kompaktný bočný panel"
@@ -462,8 +473,8 @@
         "set-status-display-type": {
           "label": "Text stavu",
           "submenu": {
-            "artist": "Aktuálne si prehráva {artist}",
             "application": "Počúvať {{applicationName}}",
+            "artist": "Aktuálne si prehráva {artist}",
             "title": "Aktuálne si prehráva {song title}"
           }
         }
