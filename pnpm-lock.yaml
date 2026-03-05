@@ -215,7 +215,7 @@ importers:
         version: 1.5.5
       pinyin-pro:
         specifier: ^3.27.0
-        version: 3.27.0
+        version: 3.28.0
       semver:
         specifier: 7.7.4
         version: 7.7.4
@@ -3744,8 +3744,8 @@ packages:
     resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
     engines: {node: '>=12'}
 
-  pinyin-pro@3.27.0:
-    resolution: {integrity: sha512-Osdgjwe7Rm17N2paDMM47yW+jUIUH3+0RGo8QP39ZTLpTaJVDK0T58hOLaMQJbcMmAebVuK2ePunTEVEx1clNQ==}
+  pinyin-pro@3.28.0:
+    resolution: {integrity: sha512-mMRty6RisoyYNphJrTo3pnvp3w8OMZBrXm9YSWkxhAfxKj1KZk2y8T2PDIZlDDRsvZ0No+Hz6FI4sZpA6Ey25g==}
 
   pixelmatch@5.3.0:
     resolution: {integrity: sha512-o8mkY4E/+LNUf6LzX96ht6k6CEDi65k9G2rjMtBe9Oo+VPKSvl+0GKHuH/AlG+GA5LPG/i5hrekkxUc3s2HU+Q==}
@@ -8461,7 +8461,7 @@ snapshots:
 
   picomatch@4.0.3: {}
 
-  pinyin-pro@3.27.0: {}
+  pinyin-pro@3.28.0: {}
 
   pixelmatch@5.3.0:
     dependencies:
