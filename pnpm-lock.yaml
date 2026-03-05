@@ -46,8 +46,8 @@ importers:
         specifier: 2.1.3
         version: 2.1.3(electron@40.1.0)
       '@ffmpeg.wasm/core-mt':
-        specifier: 0.12.0
-        version: 0.12.0
+        specifier: 0.13.2
+        version: 0.13.2
       '@ffmpeg.wasm/main':
         specifier: 0.12.0
         version: 0.12.0
@@ -761,8 +761,8 @@ packages:
     resolution: {integrity: sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@ffmpeg.wasm/core-mt@0.12.0':
-    resolution: {integrity: sha512-M9pjL7JQX4AYl3WI8vGcPGPTz/O7JmhW8ac/fHA3oXTxoRAPwYSY/OsY1N9C0XahIM0+fxa1QSLN9Ekz8sBM/Q==}
+  '@ffmpeg.wasm/core-mt@0.13.2':
+    resolution: {integrity: sha512-3UgpMoOhpTslxluDvBrh0MULeNy55W+WWG00P+JnnCLpJulQxgi6mnIuGO03d2sfV5pyW/FqAwut+fiMLbRsPg==}
 
   '@ffmpeg.wasm/main@0.12.0':
     resolution: {integrity: sha512-LILAKTrU3Rga2iXLsF9jeFxe2hNQFjWlrKuXPWSdCFeQ7Kg69fO4WwjNJ0CzjOyO6qtndRQMNKqf//N4fLYUBA==}
@@ -5129,7 +5129,7 @@ snapshots:
       '@eslint/core': 0.17.0
       levn: 0.4.1
 
-  '@ffmpeg.wasm/core-mt@0.12.0': {}
+  '@ffmpeg.wasm/core-mt@0.13.2': {}
 
   '@ffmpeg.wasm/main@0.12.0':
     dependencies:
