@@ -565,6 +565,10 @@
         "button": "Preuzmi"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Preuzimatelj (yt-dlp)",
+      "description": "Preuzima MP3 / izvorni audiozapis izravno iz sučelja. Verzija dodatka za preuzimanje koja koristi yt-dlp.exe. Možete postaviti prilagođenu putanju do izvršne datoteke i niz kolačića (cookies) kako biste poboljšali uspješnost preuzimanja uključivanjem važećih kolačića."
+    },
     "equalizer": {
       "description": "Dodaje equalizer reprodukciji",
       "menu": {
@@ -965,3 +969,4 @@
     }
   }
 }
+
