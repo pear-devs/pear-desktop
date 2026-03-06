@@ -470,6 +470,17 @@
       },
       "name": "Desactivar reproducción automática"
     },
+    "slack-now-playing": {
+      "description": "Establece tu estado de Slack con la canción que estás reproduciendo",
+      "menu": {
+        "settings": "Configuración",
+        "token": "Token de API de Slack",
+        "cookie-token": "Token de Cookie de Slack",
+        "emoji-name": "Nombre del emoji personalizado"
+      },
+      "name": "Estado de Slack",
+      "status-text": "Reproduciendo: {{artist}} - {{title}}"
+    },
     "discord": {
       "backend": {
         "already-connected": "Se intentó conectar con una conexión activa",
