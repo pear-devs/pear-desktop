@@ -565,6 +565,10 @@
         "button": "Ladda ner"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Nedladdare (yt-dlp)",
+      "description": "Laddar ner MP3 / originalljud direkt från gränssnittet. En version av nedladdningspluginet som använder yt-dlp.exe. Du kan ange en anpassad sökväg till den körbara filen och en cookies-sträng för att förbättra chansen att nedladdningar lyckas genom att inkludera giltiga cookies."
+    },
     "equalizer": {
       "description": "Lägger till en equalizer i spelaren",
       "menu": {
@@ -965,3 +969,4 @@
     }
   }
 }
+

@@ -577,6 +577,10 @@
         "button": "Descargar"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Gestor de descargas (yt-dlp)",
+      "description": "Descarga audio MP3 / fuente directamente desde la interfaz. Una versión del complemento de descargas que usa yt-dlp.exe. Puedes establecer una ruta personalizada para el ejecutable y una cadena de cookies para mejorar el éxito de las descargas incluyendo cookies válidas."
+    },
     "equalizer": {
       "description": "Añade un ecualizador al reproductor",
       "menu": {
@@ -995,3 +999,4 @@
     }
   }
 }
+
