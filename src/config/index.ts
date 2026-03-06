@@ -3,7 +3,7 @@ import { deepmergeCustom } from 'deepmerge-ts';
 import { store, type IStore } from './store';
 import { restart } from '@/providers/app-controls';
 
-import type { defaultConfig } from './defaults';
+import { defaultConfig, type DefaultConfig } from './defaults';
 
 const deepmerge = deepmergeCustom({
   mergeArrays: false,
@@ -31,6 +31,8 @@ export const setMenuOption = (key: string, value: unknown) => {
     restart();
   }
 };
+
+export const getStore = () => store.store;
 
 // MAGIC OF TYPESCRIPT
 
@@ -64,7 +66,8 @@ type Join<K, P> = K extends string | number
     ? `${K}${'' extends P ? '' : '.'}${P}`
     : never
   : never;
-type Paths<T, D extends number = 10> = [D] extends [never]
+
+export type Paths<T, D extends number = 10> = [D] extends [never]
   ? never
   : T extends object
     ? {
@@ -75,13 +78,13 @@ type Paths<T, D extends number = 10> = [D] extends [never]
     : '';
 
 type SplitKey<K> = K extends `${infer A}.${infer B}` ? [A, B] : [K, string];
-type PathValue<T, K extends string> =
+export type PathValue<T, K extends string> =
   SplitKey<K> extends [infer A extends keyof T, infer B extends string]
     ? PathValue<T[A], B>
     : T;
 
-export const get = <Key extends Paths<typeof defaultConfig>>(key: Key) =>
-  store.get(key) as PathValue<typeof defaultConfig, typeof key>;
+export const get = <Key extends Paths<DefaultConfig>>(key: Key) =>
+  store.get(key) as PathValue<DefaultConfig, typeof key>;
 
 export const edit = () => store.openInEditor();
 
