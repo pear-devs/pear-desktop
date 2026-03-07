@@ -28,6 +28,7 @@ import type { QueueElement } from '@/types/queue';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';
 import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
 import type { SearchBoxElement } from '@/types/search-box-element';
+import type { RepeatMode } from '@/types/datahost-get-state';
 
 setTheme('dark');
 
@@ -50,6 +51,15 @@ async function listenForApiLoad() {
 }
 
 async function onApiLoaded() {
+  type RepeatController = HTMLElement & {
+    getState: () => {
+      queue: {
+        repeatMode: RepeatMode;
+      };
+    };
+    onRepeatButtonClick: () => void;
+  };
+
   // Workaround for macOS traffic lights
   {
     let osType = 'Unknown';
@@ -113,6 +123,72 @@ async function onApiLoaded() {
     window.ipcRenderer.send('peard:get-shuffle-response', isShuffled());
   });
 
+  const repeatModeOrder: RepeatMode[] = ['NONE', 'ALL', 'ONE'];
+
+  const getRepeatController = () =>
+    document.querySelector<RepeatController>('ytmusic-player-bar');
+
+  const getRepeatMode = () =>
+    getRepeatController()?.getState().queue.repeatMode;
+
+  let preferredRepeatMode = getRepeatMode();
+
+  const rememberPreferredRepeatMode = () => {
+    preferredRepeatMode = getRepeatMode() ?? preferredRepeatMode;
+  };
+
+  const switchRepeatToMode = (targetMode: RepeatMode) => {
+    const repeatController = getRepeatController();
+    if (!repeatController) {
+      return;
+    }
+
+    const currentMode = repeatController.getState().queue.repeatMode;
+    const currentIndex = repeatModeOrder.indexOf(currentMode);
+    const targetIndex = repeatModeOrder.indexOf(targetMode);
+    if (currentIndex < 0 || targetIndex < 0) {
+      return;
+    }
+
+    const repeatSwitches =
+      (targetIndex - currentIndex + repeatModeOrder.length) %
+      repeatModeOrder.length;
+    for (let i = 0; i < repeatSwitches; i++) {
+      repeatController.onRepeatButtonClick();
+    }
+  };
+
+  document.addEventListener(
+    'click',
+    (event) => {
+      if (
+        event.target instanceof Element &&
+        event.target.closest('#right-controls .repeat')
+      ) {
+        window.setTimeout(rememberPreferredRepeatMode, 0);
+      }
+    },
+    { capture: true },
+  );
+
+  document.addEventListener('videodatachange', (event) => {
+    const { detail } = event;
+    if (detail?.name !== 'dataloaded') {
+      return;
+    }
+
+    const modeToRestore = preferredRepeatMode;
+    if (!modeToRestore || modeToRestore === 'NONE') {
+      return;
+    }
+
+    window.setTimeout(() => {
+      if (getRepeatMode() === 'NONE') {
+        switchRepeatToMode(modeToRestore);
+      }
+    }, 350);
+  });
+
   window.ipcRenderer.on(
     'peard:update-like',
     (_, status: 'LIKE' | 'DISLIKE' = 'LIKE') => {
@@ -124,13 +200,16 @@ async function onApiLoaded() {
     },
   );
   window.ipcRenderer.on('peard:switch-repeat', (_, repeat = 1) => {
-    for (let i = 0; i < repeat; i++) {
-      document
-        .querySelector<
-          HTMLElement & { onRepeatButtonClick: () => void }
-        >('ytmusic-player-bar')
-        ?.onRepeatButtonClick();
+    const repeatController = getRepeatController();
+    if (!repeatController) {
+      return;
     }
+
+    for (let i = 0; i < repeat; i++) {
+      repeatController.onRepeatButtonClick();
+    }
+
+    rememberPreferredRepeatMode();
   });
   window.ipcRenderer.on('peard:update-volume', (_, volume: number) => {
     document
