@@ -100,6 +100,7 @@ export const backend = createBackend<BackendType, APIServerConfig>({
       if (config.authStrategy !== AuthStrategy.NONE) {
         return await jwt({
           secret: config.secret,
+          alg: 'HS256',
         })(ctx, next);
       }
       await next();
