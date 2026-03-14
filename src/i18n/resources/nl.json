@@ -565,6 +565,10 @@
         "button": "Download"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Downloader (yt-dlp)",
+      "description": "Download MP3 / bron-audio rechtstreeks vanuit de interface. Een versie van de downloader-plug-in die yt-dlp.exe gebruikt. Je kunt een aangepast pad naar het uitvoerbare bestand en een cookies-string instellen om downloads vaker te laten slagen door geldige cookies mee te geven."
+    },
     "equalizer": {
       "description": "Voegt een equalizer toe aan de speler",
       "menu": {
@@ -965,3 +969,4 @@
     }
   }
 }
+
