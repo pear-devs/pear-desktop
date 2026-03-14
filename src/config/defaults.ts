@@ -38,7 +38,7 @@ export interface DefaultConfig {
     themes: string[];
     customWindowTitle?: string;
   };
-  'plugins': Record<string, unknown>;
+  'plugins': Record<string, Record<string, unknown> & { enabled: boolean }>;
 }
 
 export const defaultConfig: DefaultConfig = {
