@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PCM Audio Stream Test GUI</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 800px;
+      width: 100%;
+      padding: 40px;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    .subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 14px;
+    }
+
+    .section {
+      margin-bottom: 30px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulse 2s infinite;
+    }
+
+    .status-indicator.connected {
+      background-color: #10b981;
+    }
+
+    .status-indicator.disconnected {
+      background-color: #ef4444;
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 500;
+      font-size: 14px;
+    }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus, input[type="number"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-connect {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-connect:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-disconnect {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-disconnect:hover:not(:disabled) {
+      background: #dc2626;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .info-card {
+      background: #f9fafb;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+    }
+
+    .info-label {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .info-value {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .info-value.bytes {
+      font-family: 'Courier New', monospace;
+      font-size: 16px;
+    }
+
+    .log-container {
+      background: #1e1e1e;
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin-top: 15px;
+    }
+
+    .log-entry {
+      color: #d4d4d4;
+      margin-bottom: 5px;
+      padding: 5px;
+      border-left: 3px solid transparent;
+      padding-left: 10px;
+    }
+
+    .log-entry.info {
+      border-left-color: #4a9eff;
+    }
+
+    .log-entry.success {
+      border-left-color: #10b981;
+    }
+
+    .log-entry.error {
+      border-left-color: #ef4444;
+    }
+
+    .log-entry.warn {
+      border-left-color: #f59e0b;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .audio-visualizer {
+      width: 100%;
+      height: 100px;
+      background: #1e1e1e;
+      border-radius: 8px;
+      margin-top: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .visualizer-bar {
+      position: absolute;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(to top, #667eea, #764ba2);
+      border-radius: 2px 2px 0 0;
+      transition: height 0.1s;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎵 PCM Audio Stream Test</h1>
+    <p class="subtitle">Test the audio streaming plugin with real-time PCM playback</p>
+
+    <div class="section">
+      <div class="section-title">
+        <span class="status-indicator disconnected" id="statusIndicator"></span>
+        <span id="statusText">Disconnected</span>
+      </div>
+
+      <div class="input-group">
+        <label for="serverUrl">Server URL</label>
+        <input type="text" id="serverUrl" value="http://localhost:8765/stream" placeholder="http://localhost:8765/stream">
+      </div>
+
+      <div class="button-group">
+        <button class="btn-connect" id="connectBtn" onclick="connect()">Connect</button>
+        <button class="btn-disconnect" id="disconnectBtn" onclick="disconnect()" disabled>Disconnect</button>
+      </div>
+    </div>
+
+    <div class="section hidden" id="audioInfoSection">
+      <div class="section-title">📊 Audio Information</div>
+      <div class="info-grid">
+        <div class="info-card">
+          <div class="info-label">Sample Rate</div>
+          <div class="info-value" id="sampleRate">-</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Bit Depth</div>
+          <div class="info-value" id="bitDepth">-</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Channels</div>
+          <div class="info-value" id="channels">-</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Bytes Received</div>
+          <div class="info-value bytes" id="bytesReceived">0</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Chunks Received</div>
+          <div class="info-value" id="chunksReceived">0</div>
+        </div>
+        <div class="info-card">
+          <div class="info-label">Latency</div>
+          <div class="info-value" id="latency">-</div>
+        </div>
+      </div>
+
+      <div class="audio-visualizer" id="visualizer"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📝 Log</div>
+      <div class="log-container" id="logContainer"></div>
+    </div>
+  </div>
+
+  <script>
+    let audioContext = null;
+    let sourceNode = null;
+    let analyserNode = null;
+    let isConnected = false;
+    let bytesReceived = 0;
+    let chunksReceived = 0;
+    let audioConfig = null;
+    let lastChunkTime = null;
+    let visualizerBars = [];
+    let animationFrameId = null;
+
+    const SERVER_URL_INPUT = document.getElementById('serverUrl');
+    const STATUS_INDICATOR = document.getElementById('statusIndicator');
+    const STATUS_TEXT = document.getElementById('statusText');
+    const CONNECT_BTN = document.getElementById('connectBtn');
+    const DISCONNECT_BTN = document.getElementById('disconnectBtn');
+    const AUDIO_INFO_SECTION = document.getElementById('audioInfoSection');
+    const LOG_CONTAINER = document.getElementById('logContainer');
+    const VISUALIZER = document.getElementById('visualizer');
+
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      const timestamp = new Date().toLocaleTimeString();
+      entry.textContent = `[${timestamp}] ${message}`;
+      LOG_CONTAINER.appendChild(entry);
+      LOG_CONTAINER.scrollTop = LOG_CONTAINER.scrollHeight;
+    }
+
+    function updateStatus(connected) {
+      isConnected = connected;
+      STATUS_INDICATOR.className = `status-indicator ${connected ? 'connected' : 'disconnected'}`;
+      STATUS_TEXT.textContent = connected ? 'Connected' : 'Disconnected';
+      CONNECT_BTN.disabled = connected;
+      DISCONNECT_BTN.disabled = !connected;
+      
+      if (connected) {
+        AUDIO_INFO_SECTION.classList.remove('hidden');
+      } else {
+        AUDIO_INFO_SECTION.classList.add('hidden');
+      }
+    }
+
+    function updateAudioInfo(config) {
+      if (config) {
+        document.getElementById('sampleRate').textContent = `${config.sampleRate.toLocaleString()} Hz`;
+        document.getElementById('bitDepth').textContent = `${config.bitDepth} bits`;
+        document.getElementById('channels').textContent = config.channels === 1 ? 'Mono' : 'Stereo';
+      }
+    }
+
+    function updateStats(bytes, chunks, latency) {
+      document.getElementById('bytesReceived').textContent = formatBytes(bytes);
+      document.getElementById('chunksReceived').textContent = chunks.toLocaleString();
+      document.getElementById('latency').textContent = latency !== null ? `${latency}ms` : '-';
+    }
+
+    function formatBytes(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    function initVisualizer() {
+      VISUALIZER.innerHTML = '';
+      visualizerBars = [];
+      const barCount = 32;
+      const barWidth = 100 / barCount;
+
+      for (let i = 0; i < barCount; i++) {
+        const bar = document.createElement('div');
+        bar.className = 'visualizer-bar';
+        bar.style.left = `${i * barWidth}%`;
+        bar.style.height = '0%';
+        VISUALIZER.appendChild(bar);
+        visualizerBars.push(bar);
+      }
+    }
+
+    function updateVisualizer() {
+      if (!analyserNode || !isConnected) {
+        visualizerBars.forEach(bar => bar.style.height = '0%');
+        return;
+      }
+
+      const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+      analyserNode.getByteFrequencyData(dataArray);
+
+      const barCount = visualizerBars.length;
+      const step = Math.floor(dataArray.length / barCount);
+
+      visualizerBars.forEach((bar, i) => {
+        const value = dataArray[i * step] || 0;
+        const height = (value / 255) * 100;
+        bar.style.height = `${height}%`;
+      });
+
+      animationFrameId = requestAnimationFrame(updateVisualizer);
+    }
+
+    async function connect() {
+      if (isConnected) return;
+
+      const serverUrl = SERVER_URL_INPUT.value.trim();
+      if (!serverUrl) {
+        log('Please enter a server URL', 'error');
+        return;
+      }
+
+      try {
+        log(`Connecting to ${serverUrl}...`, 'info');
+        
+        // Create ScriptProcessorNode to play PCM data
+        const bufferSize = 4096;
+        // Increased buffer sizes to prevent underruns
+        // Target: ~200ms of audio at 48kHz = ~9600 samples per channel
+        const TARGET_BUFFER_SAMPLES = 9600; // ~200ms buffer
+        let pcmBuffer = new Int16Array(0);
+        let pcmBuffer32 = new Int32Array(0);
+        let currentBitDepth = 16;
+        let expectedMetadataLength = null;
+        let metadataBuffer = new Uint8Array(0);
+        let isReadingMetadata = true;
+        let isReadingConfig = true;
+        let pcmDataBuffer = new Uint8Array(0); // Buffer for PCM data that might span chunks
+        let bufferUnderrunCount = 0;
+        let lastBufferWarning = 0;
+        let bufferReady = false;
+        let checkBufferAndStart = null; // Will be set when audio config is received
+
+
+        // Fetch the stream
+        const response = await fetch(serverUrl);
+        const reader = response.body.getReader();
+        
+        updateStatus(true);
+        initVisualizer();
+        updateVisualizer();
+        log('Connected successfully!', 'success');
+
+        // Read stream chunks
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) {
+            log('Stream ended', 'warn');
+            break;
+          }
+
+          bytesReceived += value.length;
+          const chunkStartTime = performance.now();
+
+          // Combine with any leftover PCM data from previous chunk
+          let dataToProcess = value;
+          if (pcmDataBuffer.length > 0) {
+            const combined = new Uint8Array(pcmDataBuffer.length + value.length);
+            combined.set(pcmDataBuffer);
+            combined.set(value, pcmDataBuffer.length);
+            dataToProcess = combined;
+            pcmDataBuffer = new Uint8Array(0);
+          }
+
+          let offset = 0;
+
+          while (offset < dataToProcess.length) {
+            if (isReadingMetadata) {
+              // Read metadata length (4 bytes, big-endian)
+              if (expectedMetadataLength === null) {
+                if (dataToProcess.length - offset < 4) {
+                  // Not enough data for length header, save for next chunk
+                  pcmDataBuffer = dataToProcess.slice(offset);
+                  break;
+                }
+                expectedMetadataLength = (dataToProcess[offset] << 24) | 
+                                        (dataToProcess[offset + 1] << 16) | 
+                                        (dataToProcess[offset + 2] << 8) | 
+                                        dataToProcess[offset + 3];
+                offset += 4;
+              }
+
+              // Read metadata JSON
+              const remainingForMetadata = expectedMetadataLength - metadataBuffer.length;
+              const available = dataToProcess.length - offset;
+              const toRead = Math.min(remainingForMetadata, available);
+
+              const newMetadataChunk = dataToProcess.slice(offset, offset + toRead);
+              const tempBuffer = new Uint8Array(metadataBuffer.length + newMetadataChunk.length);
+              tempBuffer.set(metadataBuffer);
+              tempBuffer.set(newMetadataChunk, metadataBuffer.length);
+              metadataBuffer = tempBuffer;
+              offset += toRead;
+
+              if (metadataBuffer.length === expectedMetadataLength) {
+                // Parse metadata
+                const metadataStr = new TextDecoder().decode(metadataBuffer);
+                const metadata = JSON.parse(metadataStr);
+
+                if (metadata.type === 'config') {
+                  audioConfig = {
+                    sampleRate: metadata.sampleRate,
+                    bitDepth: metadata.bitDepth,
+                    channels: metadata.channels,
+                  };
+                  currentBitDepth = metadata.bitDepth;
+                  updateAudioInfo(audioConfig);
+                  log(`Audio config received: ${audioConfig.sampleRate}Hz, ${audioConfig.bitDepth}-bit, ${audioConfig.channels} channel(s)`, 'success');
+                  
+                  // Create AudioContext with matching sample rate
+                  if (audioContext) {
+                    audioContext.close().catch(console.error);
+                  }
+                  audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: audioConfig.sampleRate
+                  });
+                  
+                  // Create analyser for visualization
+                  analyserNode = audioContext.createAnalyser();
+                  analyserNode.fftSize = 256;
+                  analyserNode.connect(audioContext.destination);
+                  
+                  // Create ScriptProcessorNode to play PCM data
+                  const scriptProcessor = audioContext.createScriptProcessor(bufferSize, 0, audioConfig.channels);
+                  
+                  scriptProcessor.onaudioprocess = (e) => {
+                    const outputBuffer = e.outputBuffer;
+                    const numberOfChannels = outputBuffer.numberOfChannels;
+                    const length = outputBuffer.length;
+                    const samplesNeeded = length * numberOfChannels;
+
+                    if (audioConfig && currentBitDepth === 16) {
+                      const availableSamples = pcmBuffer.length;
+                      
+                      // Check for buffer underrun
+                      if (availableSamples < samplesNeeded) {
+                        bufferUnderrunCount++;
+                        const now = Date.now();
+                        // Log warning at most once per second
+                        if (now - lastBufferWarning > 1000) {
+                          console.warn(`[Audio Stream] Buffer underrun: need ${samplesNeeded}, have ${availableSamples} (${Math.round(availableSamples / numberOfChannels / audioConfig.sampleRate * 1000)}ms)`);
+                          lastBufferWarning = now;
+                        }
+                      }
+                      
+                      // Convert 16-bit PCM to Float32Array for Web Audio API
+                      for (let channel = 0; channel < numberOfChannels; channel++) {
+                        const outputData = outputBuffer.getChannelData(channel);
+                        for (let i = 0; i < length; i++) {
+                          const sampleIndex = i * numberOfChannels + channel;
+                          if (sampleIndex < pcmBuffer.length) {
+                            // Convert 16-bit PCM (-32768 to 32767) to float32 (-1.0 to 1.0)
+                            outputData[i] = pcmBuffer[sampleIndex] / 32768.0;
+                          } else {
+                            // Fill with silence if underrun
+                            outputData[i] = 0;
+                          }
+                        }
+                      }
+                      
+                      // Remove used samples, but keep buffer if we have enough
+                      if (pcmBuffer.length >= samplesNeeded) {
+                        pcmBuffer = pcmBuffer.slice(samplesNeeded);
+                      } else {
+                        // Underrun - clear buffer
+                        pcmBuffer = new Int16Array(0);
+                      }
+                    } else if (audioConfig && currentBitDepth === 32) {
+                      const availableSamples = pcmBuffer32.length;
+                      
+                      // Check for buffer underrun
+                      if (availableSamples < samplesNeeded) {
+                        bufferUnderrunCount++;
+                        const now = Date.now();
+                        // Log warning at most once per second
+                        if (now - lastBufferWarning > 1000) {
+                          console.warn(`[Audio Stream] Buffer underrun: need ${samplesNeeded}, have ${availableSamples} (${Math.round(availableSamples / numberOfChannels / audioConfig.sampleRate * 1000)}ms)`);
+                          lastBufferWarning = now;
+                        }
+                      }
+                      
+                      // Convert 32-bit PCM to Float32Array for Web Audio API
+                      for (let channel = 0; channel < numberOfChannels; channel++) {
+                        const outputData = outputBuffer.getChannelData(channel);
+                        for (let i = 0; i < length; i++) {
+                          const sampleIndex = i * numberOfChannels + channel;
+                          if (sampleIndex < pcmBuffer32.length) {
+                            // Convert 32-bit PCM (-2147483648 to 2147483647) to float32 (-1.0 to 1.0)
+                            outputData[i] = pcmBuffer32[sampleIndex] / 2147483648.0;
+                          } else {
+                            // Fill with silence if underrun
+                            outputData[i] = 0;
+                          }
+                        }
+                      }
+                      
+                      // Remove used samples, but keep buffer if we have enough
+                      if (pcmBuffer32.length >= samplesNeeded) {
+                        pcmBuffer32 = pcmBuffer32.slice(samplesNeeded);
+                      } else {
+                        // Underrun - clear buffer
+                        pcmBuffer32 = new Int32Array(0);
+                      }
+                    } else {
+                      // Fill with silence if no data or config
+                      for (let channel = 0; channel < numberOfChannels; channel++) {
+                        outputBuffer.getChannelData(channel).fill(0);
+                      }
+                    }
+                  };
+
+                  // Don't connect yet - wait for buffer to fill first
+                  // This prevents initial crackling from buffer underruns
+                  bufferReady = false;
+                  checkBufferAndStart = () => {
+                    if (!audioConfig) return;
+                    const minBufferSamples = TARGET_BUFFER_SAMPLES * audioConfig.channels;
+                    const hasEnoughData = currentBitDepth === 16 
+                      ? pcmBuffer.length >= minBufferSamples
+                      : pcmBuffer32.length >= minBufferSamples;
+                    
+                    if (hasEnoughData && !bufferReady) {
+                      bufferReady = true;
+                      scriptProcessor.connect(analyserNode);
+                      sourceNode = scriptProcessor;
+                      const bufferedMs = Math.round((currentBitDepth === 16 ? pcmBuffer.length : pcmBuffer32.length) / audioConfig.channels / audioConfig.sampleRate * 1000);
+                      log(`Buffer ready: ${bufferedMs}ms buffered`, 'success');
+                    } else if (!bufferReady) {
+                      // Check again in 50ms
+                      setTimeout(checkBufferAndStart, 50);
+                    }
+                  };
+                  
+                  // Start checking buffer after first chunk arrives
+                  // Will be triggered when PCM data is received
+                  setTimeout(checkBufferAndStart, 100);
+                  
+                  isReadingConfig = false;
+                  // Reset for next metadata
+                  expectedMetadataLength = null;
+                  metadataBuffer = new Uint8Array(0);
+                } else {
+                  // This is PCM data metadata, prepare to read PCM data
+                  isReadingMetadata = false;
+                  expectedMetadataLength = null;
+                  metadataBuffer = new Uint8Array(0);
+                }
+              } else {
+                // Not enough data for complete metadata, save for next chunk
+                pcmDataBuffer = dataToProcess.slice(offset - toRead);
+                break;
+              }
+            } else {
+              // Read PCM data - accumulate all data until we detect next metadata header
+              // We need to look ahead to find the next metadata length header
+              let foundNextHeader = false;
+              let pcmEndOffset = offset;
+              
+              // Look for next metadata header (4-byte length)
+              for (let i = offset; i <= dataToProcess.length - 4; i++) {
+                const potentialLength = (dataToProcess[i] << 24) | 
+                                      (dataToProcess[i + 1] << 16) | 
+                                      (dataToProcess[i + 2] << 8) | 
+                                      dataToProcess[i + 3];
+                
+                // Heuristic: metadata length should be reasonable (50-5000 bytes for JSON)
+                if (potentialLength >= 50 && potentialLength < 5000) {
+                  // Check if we can read that many bytes (basic validation)
+                  if (i + 4 + potentialLength <= dataToProcess.length) {
+                    // Try to parse as JSON to validate
+                    try {
+                      const potentialJson = new TextDecoder().decode(
+                        dataToProcess.slice(i + 4, i + 4 + potentialLength)
+                      );
+                      JSON.parse(potentialJson);
+                      // Valid JSON found, this is likely the next metadata header
+                      foundNextHeader = true;
+                      pcmEndOffset = i;
+                      break;
+                    } catch (e) {
+                      // Not valid JSON, continue searching
+                    }
+                  }
+                }
+              }
+              
+              if (foundNextHeader) {
+                // Process accumulated PCM data up to the header
+                const pcmChunkData = dataToProcess.slice(offset, pcmEndOffset);
+                if (pcmChunkData.length > 0) {
+                  // Combine with any previously buffered PCM data
+                  const combinedPcm = new Uint8Array(pcmDataBuffer.length + pcmChunkData.length);
+                  combinedPcm.set(pcmDataBuffer);
+                  combinedPcm.set(pcmChunkData, pcmDataBuffer.length);
+                  
+                  // Convert based on bit depth
+                  if (currentBitDepth === 32 && combinedPcm.length >= 4 && combinedPcm.length % 4 === 0) {
+                    // 32-bit PCM
+                    const pcmChunk = new Int32Array(combinedPcm.buffer, combinedPcm.byteOffset, combinedPcm.length / 4);
+                    
+                    // Append to playback buffer
+                    const newBuffer = new Int32Array(pcmBuffer32.length + pcmChunk.length);
+                    newBuffer.set(pcmBuffer32);
+                    newBuffer.set(pcmChunk, pcmBuffer32.length);
+                    pcmBuffer32 = newBuffer;
+                    
+                    // Limit buffer size to prevent memory issues (keep ~500ms max)
+                    const maxBufferSamples = audioConfig ? TARGET_BUFFER_SAMPLES * audioConfig.channels * 2.5 : 48000;
+                    if (pcmBuffer32.length > maxBufferSamples) {
+                      // Keep the most recent samples
+                      pcmBuffer32 = pcmBuffer32.slice(-maxBufferSamples);
+                    }
+                    
+                    // Check if we should start playback now
+                    if (checkBufferAndStart) {
+                      checkBufferAndStart();
+                    }
+
+                    chunksReceived++;
+                    const latency = lastChunkTime ? Math.round(performance.now() - lastChunkTime) : null;
+                    lastChunkTime = performance.now();
+                    updateStats(bytesReceived, chunksReceived, latency);
+                  } else if (currentBitDepth === 16 && combinedPcm.length >= 2 && combinedPcm.length % 2 === 0) {
+                    // 16-bit PCM
+                    const pcmChunk = new Int16Array(combinedPcm.buffer, combinedPcm.byteOffset, combinedPcm.length / 2);
+                    
+                    // Append to playback buffer
+                    const newBuffer = new Int16Array(pcmBuffer.length + pcmChunk.length);
+                    newBuffer.set(pcmBuffer);
+                    newBuffer.set(pcmChunk, pcmBuffer.length);
+                    pcmBuffer = newBuffer;
+                    
+                    // Limit buffer size to prevent memory issues (keep ~500ms max)
+                    const maxBufferSamples = audioConfig ? TARGET_BUFFER_SAMPLES * audioConfig.channels * 2.5 : 48000;
+                    if (pcmBuffer.length > maxBufferSamples) {
+                      // Keep the most recent samples
+                      pcmBuffer = pcmBuffer.slice(-maxBufferSamples);
+                    }
+                    
+                    // Check if we should start playback now
+                    if (checkBufferAndStart) {
+                      checkBufferAndStart();
+                    }
+
+                    chunksReceived++;
+                    const latency = lastChunkTime ? Math.round(performance.now() - lastChunkTime) : null;
+                    lastChunkTime = performance.now();
+                    updateStats(bytesReceived, chunksReceived, latency);
+                  }
+                }
+                
+                // Start reading next metadata
+                pcmDataBuffer = new Uint8Array(0);
+                isReadingMetadata = true;
+                expectedMetadataLength = null;
+                offset = pcmEndOffset; // Start at the metadata header
+              } else {
+                // No header found, accumulate all remaining data as PCM
+                const remaining = dataToProcess.slice(offset);
+                const combinedPcm = new Uint8Array(pcmDataBuffer.length + remaining.length);
+                combinedPcm.set(pcmDataBuffer);
+                combinedPcm.set(remaining, pcmDataBuffer.length);
+                pcmDataBuffer = combinedPcm;
+                break; // Wait for more data
+              }
+            }
+          }
+        }
+      } catch (error) {
+        log(`Connection error: ${error.message}`, 'error');
+        console.error('Connection error:', error);
+        updateStatus(false);
+        disconnect();
+      }
+    }
+
+    function disconnect() {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
+
+      if (sourceNode) {
+        try {
+          sourceNode.disconnect();
+        } catch (e) {}
+        sourceNode = null;
+      }
+      
+      if (audioContext) {
+        audioContext.close().catch(console.error);
+        audioContext = null;
+      }
+
+      analyserNode = null;
+      bytesReceived = 0;
+      chunksReceived = 0;
+      audioConfig = null;
+      lastChunkTime = null;
+      updateStatus(false);
+      updateStats(0, 0, null);
+      log('Disconnected', 'info');
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', disconnect);
+
+    // Initialize
+    initVisualizer();
+    log('Ready to connect. Enter server URL and click Connect.', 'info');
+  </script>
+</body>
+</html>
+
