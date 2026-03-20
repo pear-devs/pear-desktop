@@ -577,6 +577,10 @@
         "button": "Atsisiųsti"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Atsiuntėjas (yt-dlp)",
+      "description": "Atsisiunčia MP3 / šaltinio garsą tiesiogiai iš sąsajos. Downloader įskiepio versija, naudojanti yt-dlp.exe. Galite nustatyti pasirinktą vykdomojo failo kelią ir slapukų (cookies) eilutę, kad įtraukus galiojančius slapukus būtų padidintas atsisiuntimų sėkmės procentas."
+    },
     "equalizer": {
       "description": "Prideda vienodintuvą į grotuvą",
       "menu": {
@@ -995,3 +999,4 @@
     }
   }
 }
+
