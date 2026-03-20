@@ -548,6 +548,10 @@
         "button": "Memuat turun"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Pemuat turun (yt-dlp)",
+      "description": "Memuat turun audio MP3 / sumber terus dari antara muka. Versi pemalam muat turun yang menggunakan yt-dlp.exe. Anda boleh menetapkan laluan tersuai untuk fail boleh laksana dan rentetan cookies untuk meningkatkan kejayaan muat turun dengan menyertakan cookies yang sah."
+    },
     "equalizer": {
       "description": "Menambahkan penyamaan kepada pemain",
       "menu": {
@@ -683,3 +687,4 @@
     }
   }
 }
+
