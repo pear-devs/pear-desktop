@@ -545,6 +545,10 @@
         "button": "Letöltés"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Letöltő (yt-dlp)",
+      "description": "MP3 / forrás hanganyag letöltése közvetlenül az interfészről. A letöltő bővítmény egy változata, amely a yt-dlp.exe-t használja. Beállítható egy egyéni útvonal a futtatható fájlhoz, valamint egy cookie-karakterlánc, amellyel érvényes cookie-k megadásával javítható a letöltések sikeressége."
+    },
     "equalizer": {
       "description": "Hangszínszabályzót ad hozzá a zenelejátszóhoz",
       "menu": {
@@ -909,3 +913,4 @@
     }
   }
 }
+
