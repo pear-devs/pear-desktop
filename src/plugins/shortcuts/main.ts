@@ -9,6 +9,15 @@ import type { ShortcutMappingType, ShortcutsPluginConfig } from './index';
 
 import type { BackendContext } from '@/types/contexts';
 
+// Media key accelerator names that must not be registered as global shortcuts
+// on Windows, because doing so intercepts them before SMTC can process them.
+const MEDIA_KEY_ACCELERATORS = new Set([
+  'MediaPlayPause',
+  'MediaNextTrack',
+  'MediaPreviousTrack',
+  'MediaStop',
+]);
+
 function _registerGlobalShortcut(
   webContents: Electron.WebContents,
   shortcut: string,
@@ -39,9 +48,24 @@ export const onMainLoad = async ({
   const { playPause, next, previous } = songControls;
 
   if (config.overrideMediaKeys) {
-    _registerGlobalShortcut(window.webContents, 'MediaPlayPause', playPause);
-    _registerGlobalShortcut(window.webContents, 'MediaNextTrack', next);
-    _registerGlobalShortcut(window.webContents, 'MediaPreviousTrack', previous);
+    // On Windows, media keys are handled through SMTC (System Media Transport
+    // Controls) via Chromium's built-in MediaSessionService. Registering global
+    // shortcuts for media keys intercepts them at the OS level, which prevents
+    // the SMTC taskbar flyout from appearing and breaks native media key routing.
+    if (is.windows()) {
+      console.warn(
+        'overrideMediaKeys is not supported on Windows as it breaks the SMTC taskbar flyout. ' +
+          'Media keys are handled natively through Windows SMTC.',
+      );
+    } else {
+      _registerGlobalShortcut(window.webContents, 'MediaPlayPause', playPause);
+      _registerGlobalShortcut(window.webContents, 'MediaNextTrack', next);
+      _registerGlobalShortcut(
+        window.webContents,
+        'MediaPreviousTrack',
+        previous,
+      );
+    }
   }
 
   if (is.linux()) {
@@ -80,6 +104,13 @@ export const onMainLoad = async ({
       }
 
       if (type === 'global') {
+        if (is.windows() && MEDIA_KEY_ACCELERATORS.has(container[action])) {
+          console.warn(
+            `Skipping global shortcut '${container[action]}' on Windows to preserve SMTC.`,
+          );
+          continue;
+        }
+
         _registerGlobalShortcut(
           window.webContents,
           container[action],
