@@ -65,19 +65,19 @@ importers:
         version: 2.13.4(electron@40.1.0)
       '@hono/node-server':
         specifier: 1.19.9
-        version: 1.19.9(hono@4.11.10)
+        version: 1.19.9(hono@4.12.7)
       '@hono/node-ws':
         specifier: 1.3.0
-        version: 1.3.0(@hono/node-server@1.19.9(hono@4.11.10))(bufferutil@4.1.0)(hono@4.11.10)(utf-8-validate@6.0.6)
+        version: 1.3.0(@hono/node-server@1.19.9(hono@4.12.7))(bufferutil@4.1.0)(hono@4.12.7)(utf-8-validate@6.0.6)
       '@hono/swagger-ui':
         specifier: 0.5.3
-        version: 0.5.3(hono@4.11.10)
+        version: 0.5.3(hono@4.12.7)
       '@hono/zod-openapi':
         specifier: 1.2.2
-        version: 1.2.2(hono@4.11.10)(zod@4.3.6)
+        version: 1.2.2(hono@4.12.7)(zod@4.3.6)
       '@hono/zod-validator':
         specifier: 0.7.6
-        version: 0.7.6(hono@4.11.10)(zod@4.3.6)
+        version: 0.7.6(hono@4.12.7)(zod@4.3.6)
       '@indic-transliteration/sanscript':
         specifier: 1.3.3
         version: 1.3.3
@@ -169,8 +169,8 @@ importers:
         specifier: 20.5.0
         version: 20.5.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
       hono:
-        specifier: 4.11.10
-        version: 4.11.10
+        specifier: 4.12.7
+        version: 4.12.7
       howler:
         specifier: 2.2.4
         version: 2.2.4
@@ -2786,8 +2786,8 @@ packages:
     resolution: {integrity: sha512-F/1DnUGPopORZi0ni+CvrCgHQ5FyEAHRLSApuYWMmrbSwoN2Mn/7k+Gl38gJnR7yyDZk6WLXwiGod1JOWNDKGw==}
     hasBin: true
 
-  hono@4.11.10:
-    resolution: {integrity: sha512-kyWP5PAiMooEvGrA9jcD3IXF7ATu8+o7B3KCbPXid5se52NPqnOpM/r9qeW2heMnOekF4kqR1fXJqCYeCLKrZg==}
+  hono@4.12.7:
+    resolution: {integrity: sha512-jq9l1DM0zVIvsm3lv9Nw9nlJnMNPOcAtsbsgiUhWcFzPE99Gvo6yRTlszSLLYacMeQ6quHD6hMfId8crVHvexw==}
     engines: {node: '>=16.9.0'}
 
   hosted-git-info@4.1.0:
@@ -3942,6 +3942,7 @@ packages:
   rolldown-vite@7.3.1:
     resolution: {integrity: sha512-LYzdNAjRHhF2yA4JUQm/QyARyi216N2rpJ0lJZb8E9FU2y5v6Vk+xq/U4XBOxMefpWixT5H3TslmAHm1rqIq2w==}
     engines: {node: ^20.19.0 || >=22.12.0}
+    deprecated: Use this package to migrate from Vite 7 to Vite 8. For the most recent updates, migrate to Vite 8 once you're ready.
     hasBin: true
     peerDependencies:
       '@types/node': ^20.19.0 || >=22.12.0
@@ -5182,34 +5183,34 @@ snapshots:
     dependencies:
       tldts-experimental: 7.0.19
 
-  '@hono/node-server@1.19.9(hono@4.11.10)':
+  '@hono/node-server@1.19.9(hono@4.12.7)':
     dependencies:
-      hono: 4.11.10
+      hono: 4.12.7
 
-  '@hono/node-ws@1.3.0(@hono/node-server@1.19.9(hono@4.11.10))(bufferutil@4.1.0)(hono@4.11.10)(utf-8-validate@6.0.6)':
+  '@hono/node-ws@1.3.0(@hono/node-server@1.19.9(hono@4.12.7))(bufferutil@4.1.0)(hono@4.12.7)(utf-8-validate@6.0.6)':
     dependencies:
-      '@hono/node-server': 1.19.9(hono@4.11.10)
-      hono: 4.11.10
+      '@hono/node-server': 1.19.9(hono@4.12.7)
+      hono: 4.12.7
       ws: 8.19.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@hono/swagger-ui@0.5.3(hono@4.11.10)':
+  '@hono/swagger-ui@0.5.3(hono@4.12.7)':
     dependencies:
-      hono: 4.11.10
+      hono: 4.12.7
 
-  '@hono/zod-openapi@1.2.2(hono@4.11.10)(zod@4.3.6)':
+  '@hono/zod-openapi@1.2.2(hono@4.12.7)(zod@4.3.6)':
     dependencies:
       '@asteasolutions/zod-to-openapi': 8.4.1(zod@4.3.6)
-      '@hono/zod-validator': 0.7.6(hono@4.11.10)(zod@4.3.6)
-      hono: 4.11.10
+      '@hono/zod-validator': 0.7.6(hono@4.12.7)(zod@4.3.6)
+      hono: 4.12.7
       openapi3-ts: 4.5.0
       zod: 4.3.6
 
-  '@hono/zod-validator@0.7.6(hono@4.11.10)(zod@4.3.6)':
+  '@hono/zod-validator@0.7.6(hono@4.12.7)(zod@4.3.6)':
     dependencies:
-      hono: 4.11.10
+      hono: 4.12.7
       zod: 4.3.6
 
   '@humanfs/core@0.19.1': {}
@@ -7550,7 +7551,7 @@ snapshots:
 
   he@1.2.0: {}
 
-  hono@4.11.10: {}
+  hono@4.12.7: {}
 
   hosted-git-info@4.1.0:
     dependencies:
