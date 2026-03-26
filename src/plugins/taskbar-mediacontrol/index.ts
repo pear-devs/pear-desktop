@@ -1,9 +1,14 @@
-import { nativeImage } from 'electron';
+import { nativeImage, nativeTheme, type NativeImage } from 'electron';
 
-import playIcon from '@assets/media-icons-black/play.png?asset&asarUnpack';
-import pauseIcon from '@assets/media-icons-black/pause.png?asset&asarUnpack';
-import nextIcon from '@assets/media-icons-black/next.png?asset&asarUnpack';
-import previousIcon from '@assets/media-icons-black/previous.png?asset&asarUnpack';
+import playIconBlack from '@assets/media-icons-black/play.png?asset&asarUnpack';
+import pauseIconBlack from '@assets/media-icons-black/pause.png?asset&asarUnpack';
+import nextIconBlack from '@assets/media-icons-black/next.png?asset&asarUnpack';
+import previousIconBlack from '@assets/media-icons-black/previous.png?asset&asarUnpack';
+
+import playIconWhite from '@assets/media-icons-white/play.png?asset&asarUnpack';
+import pauseIconWhite from '@assets/media-icons-white/pause.png?asset&asarUnpack';
+import nextIconWhite from '@assets/media-icons-white/next.png?asset&asarUnpack';
+import previousIconWhite from '@assets/media-icons-white/previous.png?asset&asarUnpack';
 
 import { createPlugin } from '@/utils';
 import { getSongControls } from '@/providers/song-controls';
@@ -29,12 +34,32 @@ export default createPlugin({
 
     const { playPause, next, previous } = getSongControls(window);
 
-    const images = {
-      play: nativeImage.createFromPath(playIcon),
-      pause: nativeImage.createFromPath(pauseIcon),
-      next: nativeImage.createFromPath(nextIcon),
-      previous: nativeImage.createFromPath(previousIcon),
+    const getImages = (): Record<
+      'play' | 'pause' | 'next' | 'previous',
+      NativeImage
+    > => {
+      const isDark = nativeTheme.shouldUseDarkColors;
+      return {
+        play: nativeImage.createFromPath(
+          isDark ? playIconWhite : playIconBlack,
+        ),
+        pause: nativeImage.createFromPath(
+          isDark ? pauseIconWhite : pauseIconBlack,
+        ),
+        next: nativeImage.createFromPath(
+          isDark ? nextIconWhite : nextIconBlack,
+        ),
+        previous: nativeImage.createFromPath(
+          isDark ? previousIconWhite : previousIconBlack,
+        ),
+      };
     };
+    let images = getImages();
+
+    nativeTheme.on('updated', () => {
+      images = getImages();
+      setThumbar(currentSongInfo);
+    });
 
     const setThumbar = (songInfo: SongInfo) => {
       // Wait for song to start before setting thumbar
