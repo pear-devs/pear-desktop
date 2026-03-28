@@ -48,9 +48,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Only vite build without release if it is a pull-request
+      # Only vite build without release if it is a fork, or it is a pull-request
       - name: Vite Build
-        if: github.event_name == 'pull_request'
+        if: github.repository != 'pear-devs/pear-desktop' || github.event_name == 'pull_request'
         run: |
           pnpm build
 
