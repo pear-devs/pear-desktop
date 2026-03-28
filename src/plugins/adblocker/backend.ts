@@ -42,19 +42,6 @@ async function loadBlockerEngine(
     engine = ElectronBlocker.merge([engine, extra]);
   }
 
-  // Do not block first-party YTM player telemetry/API; blocking breaks playback or desyncs A/V for some users.
-  const ytMusicPlaybackAllow = await ElectronBlocker.parse(
-    [
-      '@@||music.youtube.com/youtubei/^',
-      '@@||music.youtube.com/api/stats/^',
-      '@@||music.youtube.com/ptracking^',
-      '@@||music.youtube.com/generate_204^',
-      '@@||play.google.com/log^',
-      '@@||www.youtube.com/pagead/^$domain=music.youtube.com',
-    ].join('\n'),
-  );
-  engine = ElectronBlocker.merge([engine, ytMusicPlaybackAllow]);
-
   return engine;
 }
 
