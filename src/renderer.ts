@@ -1,3 +1,5 @@
+import './trusted-types-function-shim';
+
 import i18next from 'i18next';
 
 import { setTheme } from 'mdui/functions/setTheme.js';
@@ -339,8 +341,23 @@ async function onApiLoaded() {
     }
   });
   window.addEventListener('focus', resumeAudioContextIfSuspended);
+  window.addEventListener('pageshow', (ev) => {
+    if (ev.persisted) {
+      resumeAudioContextIfSuspended();
+    }
+  });
   video.addEventListener('play', resumeAudioContextIfSuspended);
   video.addEventListener('playing', resumeAudioContextIfSuspended);
+  // Cheap keepalive: suspended context while the element is actively playing = silent audio but moving picture.
+  video.addEventListener(
+    'timeupdate',
+    () => {
+      if (!video.paused && !video.ended) {
+        resumeAudioContextIfSuspended();
+      }
+    },
+    { passive: true },
+  );
   for (const type of ['pointerdown', 'keydown'] as const) {
     window.addEventListener(type, resumeAudioContextIfSuspended, {
       capture: true,
