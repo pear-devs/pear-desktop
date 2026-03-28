@@ -28,9 +28,12 @@ jobs:
 
       - name: Setup Xcode version
         if: startsWith(matrix.os, 'macOS')
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '^26.0'
+        run: |
+          XCODE_APP=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -r | head -n 1)
+          if [ -z "$XCODE_APP" ]; then XCODE_APP=$(ls -d /Applications/Xcode*.app | sort -r | head -n 1); fi
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+          actool --version
 
       - name: Install pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
