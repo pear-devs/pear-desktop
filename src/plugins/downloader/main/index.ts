@@ -46,6 +46,11 @@ import type {
   TrackInfo,
   Playlist,
 } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/ytmusic';
+import type {
+  EvalResult,
+  VMPrimative,
+} from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/types/PlatformShim';
+import type { BuildScriptResult } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/utils/javascript/JsExtractor';
 
 type CustomSongInfo = SongInfo & { trackId?: string };
 
@@ -58,21 +63,15 @@ const ffmpeg = lazy(async () =>
 );
 const ffmpegMutex = new Mutex();
 
-Platform.shim.eval = async (data: Types.BuildScriptResult, env: Record<string, Types.VMPrimative>) => {
-  const properties = [];
-
-  if(env.n) {
-    properties.push(`n: exportedVars.nFunction("${env.n}")`)
-  }
-
-  if (env.sig) {
-    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
-  }
-
-  const code = `${data.output}\nreturn { ${properties.join(', ')} }`;
-
-  return new Function(code)();
-}
+// youtubei.js ≥17 builds `data.output` with exportedVars + appended `process()` (see getNsigProcessorFn).
+// Do not append another return — that breaks nsig handling and crossfade/audio-url.
+Platform.shim.eval = (
+  data: BuildScriptResult,
+  _env: Record<string, VMPrimative>,
+): EvalResult => {
+  // eslint-disable-next-line @typescript-eslint/no-implied-eval, @typescript-eslint/no-unsafe-call -- required eval hook
+  return new Function(data.output)() as EvalResult;
+};
 
 let yt: Innertube;
 let win: BrowserWindow;
@@ -421,8 +420,7 @@ async function downloadSongUnsafe(
   let targetFileExtension: string;
   if (!presetSetting?.extension) {
     targetFileExtension =
-      VideoFormatList.find((it) => it.itag === format.itag)?.container ??
-      'mp3';
+      VideoFormatList.find((it) => it.itag === format.itag)?.container ?? 'mp3';
   } else {
     targetFileExtension = presetSetting?.extension ?? 'mp3';
   }

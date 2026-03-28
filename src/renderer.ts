@@ -316,6 +316,42 @@ async function onApiLoaded() {
   const audioSource = audioContext.createMediaElementSource(video);
   audioSource.connect(audioContext.destination);
 
+  // YouTube audio is piped through Web Audio; if the AudioContext suspends (macOS / background
+  // throttling / autoplay policy), the video timeline keeps moving but output is silent.
+  const resumeAudioContextIfSuspended = () => {
+    if (audioContext.state === 'suspended') {
+      audioContext.resume().catch(() => {
+        /* autoplay policy may block until user gesture */
+      });
+    }
+  };
+  audioContext.addEventListener('statechange', () => {
+    if (
+      audioContext.state === 'suspended' &&
+      document.visibilityState === 'visible'
+    ) {
+      resumeAudioContextIfSuspended();
+    }
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      resumeAudioContextIfSuspended();
+    }
+  });
+  window.addEventListener('focus', resumeAudioContextIfSuspended);
+  video.addEventListener('play', resumeAudioContextIfSuspended);
+  video.addEventListener('playing', resumeAudioContextIfSuspended);
+  for (const type of ['pointerdown', 'keydown'] as const) {
+    window.addEventListener(type, resumeAudioContextIfSuspended, {
+      capture: true,
+      passive: true,
+    });
+  }
+  window.ipcRenderer.on(
+    'peard:resume-audio-context',
+    resumeAudioContextIfSuspended,
+  );
+
   for (const [id, plugin] of Object.entries(getAllLoadedRendererPlugins())) {
     if (typeof plugin.renderer !== 'function') {
       await plugin.renderer?.onPlayerApiReady?.call(

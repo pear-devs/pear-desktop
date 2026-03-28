@@ -131,7 +131,7 @@ export const register = (
     upgradeWebSocket(() => ({
       onOpen(_, ws) {
         // "Unsafe argument of type `WSContext<WebSocket>` assigned to a parameter of type `WSContext<WebSocket>`. (@typescript-eslint/no-unsafe-argument)" ????? what?
-        sockets.add(ws as WSContext<WebSocket>);
+        sockets.add(ws as unknown as WSContext<WebSocket>);
 
         ws.send(
           JSON.stringify({
@@ -147,7 +147,7 @@ export const register = (
       },
 
       onClose(_, ws) {
-        sockets.delete(ws as WSContext<WebSocket>);
+        sockets.delete(ws as unknown as WSContext<WebSocket>);
       },
     })) as (ctx: Context, next: Next) => Promise<Response>,
   );
