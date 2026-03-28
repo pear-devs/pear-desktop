@@ -410,18 +410,18 @@ async function downloadSongUnsafe(
     presetSetting = DefaultPresetList['mp3 (256kbps)'];
   }
 
-  const downloadOptions: FormatOptions = {
+  const defaultDownloadOptions: FormatOptions = {
     type: (await isPremium()) ? 'audio' : 'video+audio', // Audio, video or video+audio
     quality: 'best', // Best, bestefficiency, 144p, 240p, 480p, 720p and so on.
     format: 'any', // Media container format
   };
 
-  const format = info.chooseFormat(downloadOptions);
+  const format1 = info.chooseFormat(defaultDownloadOptions);
 
   let targetFileExtension: string;
   if (!presetSetting?.extension) {
     targetFileExtension =
-      VideoFormatList.find((it) => it.itag === format.itag)?.container ??
+      VideoFormatList.find((it) => it.itag === format1.itag)?.container ??
       'mp3';
   } else {
     targetFileExtension = presetSetting?.extension ?? 'mp3';
@@ -441,42 +441,84 @@ async function downloadSongUnsafe(
     return;
   }
 
-  const stream = await info.download(downloadOptions);
+  const providers = ['YTMUSIC', 'ANDROID', 'WEB', 'TV_EMBEDDED', 'IOS'];
+  const maxRetriesPerProvider = 3;
 
-  console.info(
-    t('plugins.downloader.backend.feedback.download-info', {
-      artist: metadata.artist,
-      title: metadata.title,
-      videoId: metadata.videoId,
-    }),
-  );
+  let lastError: unknown;
+  let success = false;
 
-  const iterableStream = Utils.streamToIterable(stream);
+  for (const provider of providers) {
+    let providerSuccess = false;
+    for (let attempt = 1; attempt <= maxRetriesPerProvider; attempt++) {
+      try {
+        const downloadOptions: FormatOptions = {
+          ...defaultDownloadOptions,
+          client: provider as any,
+        };
 
-  if (!existsSync(dir)) {
-    mkdirSync(dir);
+        const stream = await info.download(downloadOptions);
+        const format = info.chooseFormat(downloadOptions);
+
+        console.info(
+          t('plugins.downloader.backend.feedback.download-info', {
+            artist: metadata.artist,
+            title: metadata.title,
+            videoId: metadata.videoId,
+          }),
+        );
+        
+        sendFeedback(
+          (attempt > 1 ? `[Retry ${attempt}/${maxRetriesPerProvider} - ${provider}] ` : `[${provider}] `) + 
+          (t('plugins.downloader.backend.feedback.downloading') || 'Downloading...'),
+          2
+        );
+
+        const iterableStream = Utils.streamToIterable(stream);
+
+        if (!existsSync(dir)) {
+          mkdirSync(dir);
+        }
+
+        let fileBuffer = await iterableStreamToProcessedUint8Array(
+          iterableStream,
+          targetFileExtension,
+          metadata,
+          presetSetting?.ffmpegArgs ?? [],
+          format.content_length ?? 0,
+          sendFeedback,
+          increasePlaylistProgress,
+        );
+
+        if (fileBuffer && targetFileExtension === 'mp3') {
+          fileBuffer = await writeID3(
+            Buffer.from(fileBuffer),
+            metadata,
+            sendFeedback,
+          );
+        }
+
+        if (fileBuffer) {
+          writeFileSync(filePath, fileBuffer);
+        } else {
+          throw new Error('File buffer is null after processing.');
+        }
+
+        providerSuccess = true;
+        break;
+      } catch (err) {
+        lastError = err;
+        console.warn(`[Downloader] Attempt ${attempt}/${maxRetriesPerProvider} for provider ${provider} failed: ${err}`);
+      }
+    }
+    
+    if (providerSuccess) {
+      success = true;
+      break;
+    }
   }
 
-  let fileBuffer = await iterableStreamToProcessedUint8Array(
-    iterableStream,
-    targetFileExtension,
-    metadata,
-    presetSetting?.ffmpegArgs ?? [],
-    format.content_length ?? 0,
-    sendFeedback,
-    increasePlaylistProgress,
-  );
-
-  if (fileBuffer && targetFileExtension === 'mp3') {
-    fileBuffer = await writeID3(
-      Buffer.from(fileBuffer),
-      metadata,
-      sendFeedback,
-    );
-  }
-
-  if (fileBuffer) {
-    writeFileSync(filePath, fileBuffer);
+  if (!success) {
+    throw new Error(`Todos los proveedores fallaron. Por favor verifica tu conexión o actualiza. Último error: ${lastError instanceof Error ? lastError.message : String(lastError)}`);
   }
 
   sendFeedback(null, -1);
@@ -580,9 +622,8 @@ async function iterableStreamToProcessedUint8Array(
         ffmpegInstance.FS('unlink', safeVideoNameWithExtension);
       }
     } catch (error: unknown) {
-      sendError(error as Error, safeVideoName);
+      throw error;
     }
-    return null;
   });
 }
 
@@ -626,8 +667,7 @@ async function writeID3(
 
     return NodeID3.write(tags, buffer);
   } catch (error: unknown) {
-    sendError(error as Error, `${metadata.artist} - ${metadata.title}`);
-    return null;
+    throw error;
   }
 }
 
