@@ -38,7 +38,7 @@ importers:
         version: 1.0.0
       '@electron-toolkit/tsconfig':
         specifier: 2.0.0
-        version: 2.0.0(@types/node@24.12.0)
+        version: 2.0.0(@types/node@25.5.0)
       '@electron/remote':
         specifier: 2.1.3
         version: 2.1.3(electron@40.8.5)
@@ -160,8 +160,8 @@ importers:
         specifier: 1.1.5
         version: 1.1.5
       happy-dom:
-        specifier: 20.5.0
-        version: 20.5.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+        specifier: 20.8.9
+        version: 20.8.9(bufferutil@4.1.0)(utf-8-validate@6.0.6)
       hono:
         specifier: 4.11.10
         version: 4.11.10
@@ -309,7 +309,7 @@ importers:
         version: 4.0.0
       electron-vite:
         specifier: 5.0.0
-        version: 5.0.0(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1))
+        version: 5.0.0(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1))
       eslint:
         specifier: 9.39.3
         version: 9.39.3(jiti@2.6.1)
@@ -351,16 +351,16 @@ importers:
         version: 6.0.6
       vite:
         specifier: npm:rolldown-vite@7.3.1
-        version: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1)
+        version: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1)
       vite-plugin-inspect:
         specifier: 11.3.3
-        version: 11.3.3(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1))
+        version: 11.3.3(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1))
       vite-plugin-resolve:
         specifier: 2.5.2
         version: 2.5.2
       vite-plugin-solid:
         specifier: 2.11.10
-        version: 2.11.10(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1))(solid-js@1.9.11)
+        version: 2.11.10(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1))(solid-js@1.9.11)
       ws:
         specifier: 8.19.0
         version: 8.19.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
@@ -1109,28 +1109,24 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-arm64-musl@1.0.0-beta.53':
     resolution: {integrity: sha512-bGe5EBB8FVjHBR1mOLOPEFg1Lp3//7geqWkU5NIhxe+yH0W8FVrQ6WRYOap4SUTKdklD/dC4qPLREkMMQ855FA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@rolldown/binding-linux-x64-gnu@1.0.0-beta.53':
     resolution: {integrity: sha512-qL+63WKVQs1CMvFedlPt0U9PiEKJOAL/bsHMKUDS6Vp2Q+YAv/QLPu8rcvkfIMvQ0FPU2WL0aX4eWwF6e/GAnA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-x64-musl@1.0.0-beta.53':
     resolution: {integrity: sha512-VGl9JIGjoJh3H8Mb+7xnVqODajBmrdOOb9lxWXdcmxyI+zjB2sux69br0hZJDTyLJfvBoYm439zPACYbCjGRmw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@rolldown/binding-openharmony-arm64@1.0.0-beta.53':
     resolution: {integrity: sha512-B4iIserJXuSnNzA5xBLFUIjTfhNy7d9sq4FUMQY3GhQWGVhS2RWWzzDnkSU6MUt7/aHUrep0CdQfXUJI9D3W7A==}
@@ -1272,8 +1268,8 @@ packages:
   '@types/node@24.12.0':
     resolution: {integrity: sha512-GYDxsZi3ChgmckRT9HPU0WEhKLP08ev/Yfcq2AstjrDASOYCSXeyjDsHg4v5t4jOj7cyDX3vmprafKlWIG9MXQ==}
 
-  '@types/node@24.3.0':
-    resolution: {integrity: sha512-aPTXCrfwnDLj4VvXrm+UUCQjNEvJgNA8s5F1cvwQU+3KNltTOkBm1j30uNLyqqPNe7gE3KFzImYoZEfLhp4Yow==}
+  '@types/node@25.5.0':
+    resolution: {integrity: sha512-jp2P3tQMSxWugkCUKLRPVUpGaL5MVFwF8RDuSRztfwgN1wmqJeMSbKlnEtQqU8UrhTmzEmZdu2I6v2dpp7XIxw==}
 
   '@types/plist@3.0.5':
     resolution: {integrity: sha512-E6OCaRmAe4WDmWNsL/9RMqdkkzDCY1etutkflWk4c+AcjDU07Pcz1fQwTX0TQz+Pxqn9i4L1TU3UFpjnrcDgxA==}
@@ -1448,49 +1444,41 @@ packages:
     resolution: {integrity: sha512-34gw7PjDGB9JgePJEmhEqBhWvCiiWCuXsL9hYphDF7crW7UgI05gyBAi6MF58uGcMOiOqSJ2ybEeCvHcq0BCmQ==}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@unrs/resolver-binding-linux-arm64-musl@1.11.1':
     resolution: {integrity: sha512-RyMIx6Uf53hhOtJDIamSbTskA99sPHS96wxVE/bJtePJJtpdKGXO1wY90oRdXuYOGOTuqjT8ACccMc4K6QmT3w==}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@unrs/resolver-binding-linux-ppc64-gnu@1.11.1':
     resolution: {integrity: sha512-D8Vae74A4/a+mZH0FbOkFJL9DSK2R6TFPC9M+jCWYia/q2einCubX10pecpDiTmkJVUH+y8K3BZClycD8nCShA==}
     cpu: [ppc64]
     os: [linux]
-    libc: [glibc]
 
   '@unrs/resolver-binding-linux-riscv64-gnu@1.11.1':
     resolution: {integrity: sha512-frxL4OrzOWVVsOc96+V3aqTIQl1O2TjgExV4EKgRY09AJ9leZpEg8Ak9phadbuX0BA4k8U5qtvMSQQGGmaJqcQ==}
     cpu: [riscv64]
     os: [linux]
-    libc: [glibc]
 
   '@unrs/resolver-binding-linux-riscv64-musl@1.11.1':
     resolution: {integrity: sha512-mJ5vuDaIZ+l/acv01sHoXfpnyrNKOk/3aDoEdLO/Xtn9HuZlDD6jKxHlkN8ZhWyLJsRBxfv9GYM2utQ1SChKew==}
     cpu: [riscv64]
     os: [linux]
-    libc: [musl]
 
   '@unrs/resolver-binding-linux-s390x-gnu@1.11.1':
     resolution: {integrity: sha512-kELo8ebBVtb9sA7rMe1Cph4QHreByhaZ2QEADd9NzIQsYNQpt9UkM9iqr2lhGr5afh885d/cB5QeTXSbZHTYPg==}
     cpu: [s390x]
     os: [linux]
-    libc: [glibc]
 
   '@unrs/resolver-binding-linux-x64-gnu@1.11.1':
     resolution: {integrity: sha512-C3ZAHugKgovV5YvAMsxhq0gtXuwESUKc5MhEtjBpLoHPLYM+iuwSj3lflFwK3DPm68660rZ7G8BMcwSro7hD5w==}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@unrs/resolver-binding-linux-x64-musl@1.11.1':
     resolution: {integrity: sha512-rV0YSoyhK2nZ4vEswT/QwqzqQXw5I6CjoaYMOX0TqBlWhojUf8P94mvI7nuJTeaCkkds3QE4+zS8Ko+GdXuZtA==}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@unrs/resolver-binding-wasm32-wasi@1.11.1':
     resolution: {integrity: sha512-5u4RkfxJm+Ng7IWgkzi3qrFOvLvQYnPBmjmZQ8+szTK/b31fQCnleNl1GgEt7nIsZRIf5PLhPwT0WM+q45x/UQ==}
@@ -2279,6 +2267,10 @@ packages:
     resolution: {integrity: sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g==}
     engines: {node: '>=0.12'}
 
+  entities@7.0.1:
+    resolution: {integrity: sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==}
+    engines: {node: '>=0.12'}
+
   env-paths@2.2.1:
     resolution: {integrity: sha512-+h1lkLKhZMTYjog1VEpJNG7NZJWcuc2DDk/qsqSTRRCOXiLjeQ1d1/udrUGhqMxUgAlwKNZ0cf2uqan5GLuS2A==}
     engines: {node: '>=6'}
@@ -2736,8 +2728,8 @@ packages:
   hanja@1.1.5:
     resolution: {integrity: sha512-gKNEkX+IIBmxXUIm5Lf859YlvHnGD01kbiHL+7CoV1ZxGI+EttflD1k/Ntz8zbymMVIlVELunTk8pK5SNYOVlg==}
 
-  happy-dom@20.5.0:
-    resolution: {integrity: sha512-VQe+Q5CYiGOgcCERXhcfNsbnrN92FDEKciMH/x6LppU9dd0j4aTjCTlqONFOIMcAm/5JxS3+utowbXV1OoFr+g==}
+  happy-dom@20.8.9:
+    resolution: {integrity: sha512-Tz23LR9T9jOGVZm2x1EPdXqwA37G/owYMxRwU0E4miurAtFsPMQ1d2Jc2okUaSjZqAFz2oEn3FLXC5a0a+siyA==}
     engines: {node: '>=20.0.0'}
 
   has-bigints@1.1.0:
@@ -3223,28 +3215,24 @@ packages:
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   lightningcss-linux-arm64-musl@1.32.0:
     resolution: {integrity: sha512-UpQkoenr4UJEzgVIYpI80lDFvRmPVg6oqboNHfoH4CQIfNA+HOrZ7Mo7KZP02dC6LjghPQJeBsvXhJod/wnIBg==}
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   lightningcss-linux-x64-gnu@1.32.0:
     resolution: {integrity: sha512-V7Qr52IhZmdKPVr+Vtw8o+WLsQJYCTd8loIfpDaMRWGUZfBOYEJeyJIkqGIDMZPwPx24pUMfwSxxI8phr/MbOA==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   lightningcss-linux-x64-musl@1.32.0:
     resolution: {integrity: sha512-bYcLp+Vb0awsiXg/80uCRezCYHNg1/l3mt0gzHnWV9XP1W5sKa5/TCdGWaR/zBM2PeF/HbsQv/j2URNOiVuxWg==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   lightningcss-win32-arm64-msvc@1.32.0:
     resolution: {integrity: sha512-8SbC8BR40pS6baCM8sbtYDSwEVQd4JlFTOlaD3gWGHfThTcABnNDBda6eTZeqbofalIJhFx0qKzgHJmcPTnGdw==}
@@ -4381,11 +4369,11 @@ packages:
     resolution: {integrity: sha512-nWJ91DjeOkej/TA8pXQ3myruKpKEYgqvpw9lz4OPHj/NWFNluYrjbz9j01CJ8yKQd2g4jFoOkINCTW2I5LEEyw==}
     engines: {node: '>= 0.4'}
 
-  undici-types@7.10.0:
-    resolution: {integrity: sha512-t5Fy/nfn+14LuOc2KNYg75vZqClpAiqscVvMygNnlsHBFpSXdJaYtXMcdNLpl/Qvc3P2cB3s6lOV51nqsFq4ag==}
-
   undici-types@7.16.0:
     resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
+
+  undici-types@7.18.2:
+    resolution: {integrity: sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w==}
 
   undici@6.21.3:
     resolution: {integrity: sha512-gBLkYIlEnSp8pFbT64yFgGE6UIB9tAkhukC23PmMDCe5Nd+cRqKxSjw5y54MK2AZMgZfJWMaNE4nYUHgi1XEOw==}
@@ -4912,9 +4900,9 @@ snapshots:
 
   '@discordjs/util@1.1.1': {}
 
-  '@electron-toolkit/tsconfig@2.0.0(@types/node@24.12.0)':
+  '@electron-toolkit/tsconfig@2.0.0(@types/node@25.5.0)':
     dependencies:
-      '@types/node': 24.12.0
+      '@types/node': 25.5.0
 
   '@electron/asar@3.4.1':
     dependencies:
@@ -5591,7 +5579,7 @@ snapshots:
     dependencies:
       '@types/http-cache-semantics': 4.0.4
       '@types/keyv': 3.1.4
-      '@types/node': 24.3.0
+      '@types/node': 25.5.0
       '@types/responselike': 1.0.3
 
   '@types/debug@4.1.12':
@@ -5608,7 +5596,7 @@ snapshots:
 
   '@types/fs-extra@9.0.13':
     dependencies:
-      '@types/node': 24.3.0
+      '@types/node': 25.5.0
 
   '@types/howler@2.2.12': {}
 
@@ -5622,7 +5610,7 @@ snapshots:
 
   '@types/keyv@3.1.4':
     dependencies:
-      '@types/node': 24.3.0
+      '@types/node': 25.5.0
 
   '@types/ms@2.1.0': {}
 
@@ -5630,19 +5618,19 @@ snapshots:
     dependencies:
       undici-types: 7.16.0
 
-  '@types/node@24.3.0':
+  '@types/node@25.5.0':
     dependencies:
-      undici-types: 7.10.0
+      undici-types: 7.18.2
 
   '@types/plist@3.0.5':
     dependencies:
-      '@types/node': 24.3.0
+      '@types/node': 25.5.0
       xmlbuilder: 15.1.1
     optional: true
 
   '@types/responselike@1.0.3':
     dependencies:
-      '@types/node': 24.3.0
+      '@types/node': 25.5.0
 
   '@types/semver@7.7.1': {}
 
@@ -5655,11 +5643,11 @@ snapshots:
 
   '@types/ws@8.18.1':
     dependencies:
-      '@types/node': 24.3.0
+      '@types/node': 25.5.0
 
   '@types/yauzl@2.10.3':
     dependencies:
-      '@types/node': 24.12.0
+      '@types/node': 25.5.0
     optional: true
 
   '@typescript-eslint/eslint-plugin@8.54.0(@typescript-eslint/parser@8.54.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)':
@@ -6740,7 +6728,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron-vite@5.0.0(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1)):
+  electron-vite@5.0.0(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1)):
     dependencies:
       '@babel/core': 7.29.0
       '@babel/plugin-transform-arrow-functions': 7.27.1(@babel/core@7.29.0)
@@ -6748,7 +6736,7 @@ snapshots:
       esbuild: 0.25.12
       magic-string: 0.30.21
       picocolors: 1.1.1
-      vite: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1)
+      vite: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -6785,6 +6773,8 @@ snapshots:
   entities@4.5.0: {}
 
   entities@6.0.1: {}
+
+  entities@7.0.1: {}
 
   env-paths@2.2.1: {}
 
@@ -7410,12 +7400,12 @@ snapshots:
 
   hanja@1.1.5: {}
 
-  happy-dom@20.5.0(bufferutil@4.1.0)(utf-8-validate@6.0.6):
+  happy-dom@20.8.9(bufferutil@4.1.0)(utf-8-validate@6.0.6):
     dependencies:
-      '@types/node': 24.3.0
+      '@types/node': 25.5.0
       '@types/whatwg-mimetype': 3.0.2
       '@types/ws': 8.18.1
-      entities: 4.5.0
+      entities: 7.0.1
       whatwg-mimetype: 3.0.0
       ws: 8.19.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
     transitivePeerDependencies:
@@ -8512,7 +8502,7 @@ snapshots:
       sprintf-js: 1.1.3
     optional: true
 
-  rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1):
+  rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1):
     dependencies:
       '@oxc-project/runtime': 0.101.0
       fdir: 6.5.0(picomatch@4.0.3)
@@ -8522,7 +8512,7 @@ snapshots:
       rolldown: 1.0.0-beta.53(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)
       tinyglobby: 0.2.15
     optionalDependencies:
-      '@types/node': 24.12.0
+      '@types/node': 25.5.0
       fsevents: 2.3.3
       jiti: 2.6.1
       yaml: 2.8.1
@@ -9049,9 +9039,9 @@ snapshots:
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
 
-  undici-types@7.10.0: {}
-
   undici-types@7.16.0: {}
+
+  undici-types@7.18.2: {}
 
   undici@6.21.3: {}
 
@@ -9136,17 +9126,17 @@ snapshots:
     optionalDependencies:
       solid-js: 1.9.11
 
-  vite-dev-rpc@1.1.0(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1)):
+  vite-dev-rpc@1.1.0(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1)):
     dependencies:
       birpc: 2.5.0
-      vite: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1)
-      vite-hot-client: 2.1.0(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1))
+      vite: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1)
+      vite-hot-client: 2.1.0(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1))
 
-  vite-hot-client@2.1.0(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1)):
+  vite-hot-client@2.1.0(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1)):
     dependencies:
-      vite: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1)
+      vite: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1)
 
-  vite-plugin-inspect@11.3.3(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1)):
+  vite-plugin-inspect@11.3.3(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1)):
     dependencies:
       ansis: 4.1.0
       debug: 4.4.1
@@ -9156,8 +9146,8 @@ snapshots:
       perfect-debounce: 2.0.0
       sirv: 3.0.1
       unplugin-utils: 0.3.0
-      vite: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1)
-      vite-dev-rpc: 1.1.0(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1))
+      vite: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1)
+      vite-dev-rpc: 1.1.0(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1))
     transitivePeerDependencies:
       - supports-color
 
@@ -9165,7 +9155,7 @@ snapshots:
     dependencies:
       lib-esm: 0.4.2
 
-  vite-plugin-solid@2.11.10(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1))(solid-js@1.9.11):
+  vite-plugin-solid@2.11.10(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1))(solid-js@1.9.11):
     dependencies:
       '@babel/core': 7.28.3
       '@types/babel__core': 7.20.5
@@ -9173,14 +9163,14 @@ snapshots:
       merge-anything: 5.1.7
       solid-js: 1.9.11
       solid-refresh: 0.6.3(solid-js@1.9.11)
-      vite: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1)
-      vitefu: 1.1.1(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1))
+      vite: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1)
+      vitefu: 1.1.1(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1))
     transitivePeerDependencies:
       - supports-color
 
-  vitefu@1.1.1(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1)):
+  vitefu@1.1.1(rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1)):
     optionalDependencies:
-      vite: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@24.12.0)(jiti@2.6.1)(yaml@2.8.1)
+      vite: rolldown-vite@7.3.1(@emnapi/core@1.4.5)(@emnapi/runtime@1.4.5)(@types/node@25.5.0)(jiti@2.6.1)(yaml@2.8.1)
 
   vudio@2.1.1(patch_hash=0e06c2ed11c02bdc490c209fa80070e98517c2735c641f5738b6e15d7dc1959d): {}
 
