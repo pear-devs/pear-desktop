@@ -320,6 +320,22 @@
         "hostname": {
           "label": "نام میزبان"
         },
+        "https": {
+          "label": "HTTPS و گواهینامه‌ها",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "پرونده گواهینامه HTTPS را انتخاب کنید",
+              "label": "پرونده گواهینامه (crt/.pem.)"
+            },
+            "enable-https": {
+              "label": "فعال کردن HTTPS"
+            },
+            "key": {
+              "dialogTitle": "پرونده کلید خصوصی HTTPS را انتخاب کنید",
+              "label": "پرونده کلید خصوصی (key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "پورت"
         }

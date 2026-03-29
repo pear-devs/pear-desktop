@@ -20,7 +20,7 @@ mac:
       arch:
         - x64
         - arm64
-  icon: assets/generated/icons/mac/icon.icns
+  icon: assets/generated/icons/mac/icon.icon
   compression: maximum
 win:
   icon: assets/generated/icons/win/icon.ico
@@ -109,7 +109,7 @@ deb:
     - libgbm1
 rpm:
   depends:
-    - /usr/lib64/libuuid.so.1
+    - libuuid
   fpm:
     - '--rpm-rpmbuild-define'
     - _build_id_links none

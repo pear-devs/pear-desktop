@@ -25,7 +25,8 @@
   "exclude": ["./dist"],
   "include": [
     "electron.vite.config.mts",
+    "playwright.config.ts",
     "./src/**/*",
-    "*.config.*js",
+    "*.config.*js"
   ]
 }

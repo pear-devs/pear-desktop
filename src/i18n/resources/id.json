@@ -161,7 +161,8 @@
                 "default": "Standar",
                 "force-show": "Pertunjukan paksa",
                 "hide": "Sembunyikan",
-                "label": "Tombol suka"
+                "label": "Tombol suka",
+                "swap": "Tukar urutan tombol suka"
               },
               "remove-upgrade-button": "Hapus tombol peningkatan",
               "theme": {
@@ -237,7 +238,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Aktifkan tema seekbar"
       },
       "name": "Tema Warna Album"
     },
@@ -320,6 +322,22 @@
         "hostname": {
           "label": "Nama host"
         },
+        "https": {
+          "label": "HTTPS & Sertifikat",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Pilih berkas sertifikat HTTPS",
+              "label": "Berkas sertifikat (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Aktifkan HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Pilih berkas kunci privat HTTPS",
+              "label": "Berkas kunci privat (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
@@ -395,6 +413,17 @@
         "no-captions": "tidak tersedia caption untuk lagu ini"
       }
     },
+    "clock": {
+      "description": "Tambahkan jam ke bilah navigasi",
+      "menu": {
+        "format": {
+          "24-hour-format": "Format 24 jam",
+          "display-seconds": "Tampilkan detik",
+          "label": "Format"
+        }
+      },
+      "name": "Jam"
+    },
     "compact-sidebar": {
       "description": "Selalu atur sidebar dalam mode kompak",
       "name": "Sidebar Ringkas"
@@ -461,9 +490,9 @@
         "set-status-display-type": {
           "label": "Teks status",
           "submenu": {
+            "application": "Sedang mendengarkan {{applicationName}}",
             "artist": "Sedang mendengarkan {artist}",
-            "title": "Sedang mendengarkan {song title}",
-            "application": "Sedang mendengarkan {{applicationName}}"
+            "title": "Sedang mendengarkan {song title}"
           }
         }
       },
@@ -813,6 +842,24 @@
         "not-found": "⚠️ Tidak ada lirik yang ditemukan untuk lagu ini."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Konversi karakter Tionghoa",
+          "submenu": {
+            "disabled": {
+              "label": "Dinonaktifkan",
+              "tooltip": "Nonaktifkan konversi karakter Tionghoa"
+            },
+            "simplified-to-traditional": {
+              "label": "Sederhana ke Tradisional",
+              "tooltip": "Konversi Tionghoa Sederhana ke Tionghoa Tradisional"
+            },
+            "traditional-to-simplified": {
+              "label": "Tradisional ke Sederhana",
+              "tooltip": "Konversi Tionghoa Tradisional ke Tionghoa Sederhana"
+            }
+          },
+          "tooltip": "Konversi karakter Tionghoa ke Tradisional atau Sederhana"
+        },
         "default-text-string": {
           "label": "Karakter default antara lirik",
           "tooltip": "Pilih karakter default yang akan digunakan untuk celah antar lirik"
