@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
-import { streamText } from 'hono/streaming';
+import { stream } from 'hono/streaming';
 import { serve, type ServerType } from '@hono/node-server';
+import { lazy } from 'lazy-var';
+import { Mutex } from 'async-mutex';
 
 import { createBackend } from '@/utils';
 import { type AudioStreamConfig } from './config';
@@ -11,6 +13,15 @@ const META_INT = 16_000;
 let config: AudioStreamConfig;
 const broadcast = new BroadcastStream();
 
+const ffmpeg = lazy(async () =>
+  (await import('@ffmpeg.wasm/main')).createFFmpeg({
+    log: true,
+    logger: console.log,
+    progress: console.log,
+  }),
+);
+const ffmpegMutex = new Mutex();
+
 export const backend = createBackend<
   {
     app: Hono;
@@ -19,24 +30,24 @@ export const backend = createBackend<
   AudioStreamConfig
 >({
   app: new Hono().get('/stream', (ctx) => {
+    ctx.header('Transfer-Encoding', 'chunked');
     const icyMetadata = ctx.req.header('Icy-Metadata');
-    if (icyMetadata === '1') {
-      ctx.header('icy-metaint', META_INT.toString(10));
-      ctx.header('icy-name', 'Pear Desktop');
-      ctx.header('icy-url', 'https://github.com/pear-devs/pear-desktop');
-      ctx.header(
-        'icy-audio-info',
-        `ice-channels=2;ice-samplerate=${config.sampleRate.toString(
-          10,
-        )};ice-bitrate=128`,
-      );
-      ctx.header('icy-pub', '1');
-      ctx.header('icy-sr', config.sampleRate.toString(10));
-      ctx.header('Content-Type', 'audio/L16');
-      ctx.header('Server', 'Pear Desktop');
-    }
 
-    return streamText(ctx, async (stream) => {
+    ctx.header('icy-metaint', META_INT.toString(10));
+    ctx.header('icy-name', 'Pear Desktop');
+    ctx.header('icy-url', 'https://github.com/pear-devs/pear-desktop');
+    ctx.header(
+      'icy-audio-info',
+      `ice-channels=2;ice-samplerate=${config.sampleRate.toString(
+        10,
+      )};ice-bitrate=128`,
+    );
+    ctx.header('icy-pub', '1');
+    ctx.header('icy-sr', config.sampleRate.toString(10));
+    ctx.header('Content-Type', 'audio/L16');
+    ctx.header('Server', 'Pear Desktop');
+
+    return stream(ctx, async (stream) => {
       let readable = broadcast.subscribe();
       if (icyMetadata === '1') {
         let bytesUntilMetadata = META_INT;
