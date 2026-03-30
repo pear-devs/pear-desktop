@@ -2,13 +2,13 @@
   "common": {
     "console": {
       "plugins": {
-        "execute-failed": "확장 {{pluginName}}::{{contextName}}을(를) 실행하지 못했습니다",
+        "execute-failed": "확장 {{pluginName}}::{{contextName}}을(를) 실행 실패함",
         "executed-at-ms": "확장 {{pluginName}}::{{contextName}}이 {{ms}}ms 만에 실행됨",
-        "initialize-failed": "확장 \"{{pluginName}}\"을(를) 초기화하지 못했습니다",
+        "initialize-failed": "확장 \"{{pluginName}}\"을(를) 초기화 실패함",
         "load-all": "모든 확장 로드 중",
         "load-failed": "확장 \"{{pluginName}}\"을(를) 로드하지 못했습니다",
         "loaded": "확장 \"{{pluginName}}\" 로드됨",
-        "unload-failed": "확장 \"{{pluginName}}\"을(를) 언로드하지 못했습니다",
+        "unload-failed": "확장 \"{{pluginName}}\"을(를) 언로드 실패함",
         "unloaded": "확장 \"{{pluginName}}\" 언로드 됨"
       }
     }
@@ -21,7 +21,7 @@
   "main": {
     "console": {
       "did-finish-load": {
-        "dev-tools": "로드가 완료되었습니다. 개발자 도구가 열렸습니다"
+        "dev-tools": "로드 완료. 개발자 도구 실행됨"
       },
       "i18n": {
         "loaded": "국제화 로드됨"
@@ -30,32 +30,32 @@
         "receive-command": "프로토콜을 통해 명령을 받았습니다: \"{{command}}\""
       },
       "theme": {
-        "css-file-not-found": "CSS 파일 \"{{cssFile}}\"이(가) 존재하지 않습니다. 무시합니다"
+        "css-file-not-found": "CSS 파일 \"{{cssFile}}\"이(가) 존재하지 않음. 무시됨"
       },
       "unresponsive": {
         "details": "응답 없음 오류!\n{{error}}"
       },
       "when-ready": {
-        "clearing-cache-after-20s": "앱 캐시 지우기"
+        "clearing-cache-after-20s": "앱 캐시 지우는 중"
       },
       "window": {
-        "tried-to-render-offscreen": "창이 오프스크린 렌더링을 시도했습니다. windowSize={{windowSize}}, displaySize={{displaySize}}, position={{position}}"
+        "tried-to-render-offscreen": "창이 오프스크린 렌더링을 시도했습니다, windowSize={{windowSize}}, displaySize={{displaySize}}, position={{position}}"
       }
     },
     "dialog": {
       "hide-menu-enabled": {
         "detail": "'Alt' 키를 눌러 숨겨진 메뉴를 표시할 수 있습니다 (인앱 메뉴를 사용하는 경우 'Esc' 키를 사용)",
-        "message": "메뉴 숨기기가 활성화되어 있습니다",
+        "message": "메뉴 숨기기가 활성화되어 있음",
         "title": "메뉴 숨기기 활성화됨"
       },
       "need-to-restart": {
         "buttons": {
-          "later": "나중에 하기",
+          "later": "나중에",
           "restart-now": "지금 재시작하기"
         },
         "detail": "\"{{pluginName}}\" 확장을 적용하려면 재시작해야 합니다",
         "message": "\"{{pluginName}}\"은(는) 재시작이 필요합니다",
-        "title": "재시작 필요"
+        "title": "재시작 필요함"
       },
       "unresponsive": {
         "buttons": {
@@ -63,17 +63,17 @@
           "relaunch": "재시작",
           "wait": "기다리기"
         },
-        "detail": "불편을 드려 죄송합니다! 방법을 선택해 주세요:",
+        "detail": "불편을 드려 죄송합니다! 다음 중 하나를 선택해 주세요.",
         "message": "애플리케이션이 응답하지 않습니다",
         "title": "창이 응답하지 않음"
       },
       "update-available": {
         "buttons": {
-          "disable": "업데이트 비활성화",
+          "disable": "업데이트 비활성화하기",
           "download": "다운로드",
           "ok": "확인"
         },
-        "detail": "새 버전이 출시되었습니다. {{downloadLink}}에서 다운로드할 수 있습니다",
+        "detail": "새 버전을 {{downloadLink}}에서 설치할 수 있습니다",
         "message": "새 버전을 사용할 수 있습니다",
         "title": "업데이트 사용 가능"
       }
@@ -96,23 +96,23 @@
           "advanced-options": {
             "label": "고급 설정",
             "submenu": {
-              "auto-reset-app-cache": "앱 시작 시 앱 캐시 초기화",
+              "auto-reset-app-cache": "앱 시작 시 앱 캐시 초기화하기",
               "disable-hardware-acceleration": "하드웨어 가속 비활성화",
               "edit-config-json": "config.json 편집",
-              "override-user-agent": "User-Agent 재정의",
-              "restart-on-config-changes": "설정 변경 시 재시작",
+              "override-user-agent": "User-Agent 재정의하기",
+              "restart-on-config-changes": "설정 변경 시 재시작하기",
               "set-proxy": {
-                "label": "프록시 설정",
+                "label": "프록시 설정하기",
                 "prompt": {
-                  "label": "프록시 주소를 입력하세요: (비워두면 비활성화됨)",
+                  "label": "프록시 주소를 입력하세요: (비어있을 시 비활성화됨)",
                   "placeholder": "예제: SOCKS5://127.0.0.1:9999",
-                  "title": "프록시 설정"
+                  "title": "프록시 설정하기"
                 }
               },
               "toggle-dev-tools": "DevTools 열기"
             }
           },
-          "always-on-top": "항상 최상단에 표시",
+          "always-on-top": "항상 최상단에 표시하기",
           "auto-update": "자동 업데이트",
           "hide-menu": {
             "dialog": {
@@ -153,15 +153,16 @@
               "custom-window-title": {
                 "label": "사용자 정의 앱 제목",
                 "prompt": {
-                  "label": "앱 제목으로 표시할 내용 : (빈 칸 일시 비활성화)",
+                  "label": "앱 제목으로 표시할 내용: (빈칸일 시 비활성화됨)",
                   "placeholder": "예: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "기본",
-                "force-show": "강제로 표시",
+                "force-show": "강제로 표시하기",
                 "hide": "숨기기",
-                "label": "좋아요 버튼"
+                "label": "좋아요 버튼",
+                "swap": "\"좋아요\" 버튼 순서 변경하기"
               },
               "remove-upgrade-button": "업그레이드 버튼 제거",
               "theme": {
@@ -186,7 +187,7 @@
       "plugins": {
         "enabled": "활성화",
         "label": "확장",
-        "new": "NEW"
+        "new": "새 플러그인"
       },
       "view": {
         "label": "보기",
@@ -215,7 +216,7 @@
   },
   "plugins": {
     "ad-speedup": {
-      "description": "광고가 재생될 때, 오디오가 음소거되고 재생 속도가 16배로 설정됩니다",
+      "description": "광고가 재생될 때 소리를 음소거하고 재생 속도를 16배로 설정합니다",
       "name": "광고 배속"
     },
     "adblocker": {
@@ -243,7 +244,7 @@
       "name": "앨범 컬러 기반 테마"
     },
     "ambient-mode": {
-      "description": "영상의 간접 조명을 화면 배경에 투사합니다",
+      "description": "영상의 간접 조명을 화면 배경에 투사하여 조명 효과를 적용합니다",
       "menu": {
         "blur-amount": {
           "label": "흐림 효과 강도",
@@ -252,7 +253,7 @@
           }
         },
         "buffer": {
-          "label": "버퍼링",
+          "label": "버퍼",
           "submenu": {
             "buffer": "{{buffer}}"
           }
@@ -289,7 +290,7 @@
     },
     "amuse": {
       "description": "6K Labs Amuse의 'now playing' 위젯에 {{applicationName}} 지원 추가",
-      "name": "Amuseio AB",
+      "name": "Amuse (어뮤즈)",
       "response": {
         "query": "Amuse API 서버가 실행 중입니다. GET /query로 노래 정보를 가져오세요."
       }
@@ -358,10 +359,10 @@
       "name": "오디오 컴프레서"
     },
     "auth-proxy-adapter": {
-      "description": "아이디/패스워드가 필요한 프록시를 지원합니다",
+      "description": "인증이 필요한 프록시를 지원합니다",
       "menu": {
-        "disable": "프록시 어댑터 차단",
-        "enable": "프록시 어댑터 허용",
+        "disable": "프록시 어댑터 비활성화",
+        "enable": "프록시 어댑터 활성화",
         "hostname": {
           "label": "호스트 명"
         },
@@ -372,11 +373,11 @@
       "name": "권한 프록시 어댑터",
       "prompt": {
         "hostname": {
-          "label": "로컬 프록시 서버의 호스트명 을 입력 해주세요 (재시동이 필요합니다):",
+          "label": "로컬 프록시 서버의 호스트명을 입력해주세요 (재시작이 필요합니다):",
           "title": "프록시 호스트명"
         },
         "port": {
-          "label": "로컬 프록시 서버의 포트를 입력 해주세요 (재시동이 필요합니다):",
+          "label": "로컬 프록시 서버의 포트를 입력 해주세요 (재시작이 필요합니다):",
           "title": "프록시 포트"
         }
       }
@@ -386,7 +387,7 @@
       "name": "탐색 바 흐림 효과"
     },
     "bypass-age-restrictions": {
-      "description": "음악 플레이어의 연령 확인 우회합니다",
+      "description": "플레이어의 연령 확인 인증 우회",
       "name": "나이 제한 우회"
     },
     "captions-selector": {
@@ -408,9 +409,20 @@
       },
       "toast": {
         "caption-changed": "자막 언어가 {{language}}(으)로 변경되었습니다",
-        "caption-disabled": "자막이 비활성화 되었습니다",
+        "caption-disabled": "자막 비활성화됨",
         "no-captions": "이 곡에는 자막이 없습니다"
       }
+    },
+    "clock": {
+      "description": "네비게이션 바 옆 시계 추가하기",
+      "menu": {
+        "format": {
+          "24-hour-format": "24시간 형식",
+          "display-seconds": "초 표시하기",
+          "label": "형식"
+        }
+      },
+      "name": "시계"
     },
     "compact-sidebar": {
       "description": "사이드바를 항상 컴팩트 모드로 설정합니다",
@@ -439,9 +451,9 @@
       }
     },
     "custom-output-device": {
-      "description": "미디어 출력 장치 구성",
+      "description": "미디어를 출력할­ 장치 구성하기",
       "menu": {
-        "device-selector": "장치 선택"
+        "device-selector": "장치를 선택하세요"
       },
       "name": "출력 장치 커스텀",
       "prompt": {
@@ -461,16 +473,16 @@
     "discord": {
       "backend": {
         "already-connected": "활성화 된 연결에 연결을 시도했습니다",
-        "connected": "디스코드에 연결됨",
-        "disconnected": "디스코드에서 연결이 끊김"
+        "connected": "Discord에 연결됨",
+        "disconnected": "Discord에서 연결이 끊김"
       },
-      "description": "활동 상태를 사용하여 친구들에게 내가 듣는 음악을 보여주세요",
+      "description": "Rich Presence를 사용하여 친구들에게 내가 듣는 음악을 보여주세요",
       "menu": {
-        "auto-reconnect": "자동 연결",
+        "auto-reconnect": "자동 재연결",
         "clear-activity": "활동 제거",
         "clear-activity-after-timeout": "시간 초과 시 활동 제거",
-        "connected": "연결 됨",
-        "disconnected": "연결 해제 됨",
+        "connected": "연결됨",
+        "disconnected": "연결 해제됨",
         "hide-duration-left": "남은 재생 시간 숨기기",
         "hide-github-button": "GitHub 링크 버튼 숨기기",
         "play-on-application": "{{applicationName}} 에서 재생",
@@ -484,7 +496,7 @@
           }
         }
       },
-      "name": "디스코드 활동 상태",
+      "name": "Discord 활동 상태",
       "prompt": {
         "set-inactivity-timeout": {
           "label": "비활성 시간 제한을 초 단위로 입력하세요:",
@@ -499,7 +511,7 @@
             "buttons": {
               "ok": "확인"
             },
-            "message": "죄송합니다. 다운로드가 실패했습니다…",
+            "message": "앗! 죄송합니다. 다운로드가 실패했습니다…",
             "title": "다운로드 중 오류 발생!"
           },
           "start-download-playlist": {
@@ -512,7 +524,7 @@
           }
         },
         "feedback": {
-          "conversion-progress": "변환: {{percent}}%",
+          "conversion-progress": "변환율: {{percent}}%",
           "converting": "변환 중…",
           "done": "완료: {{filePath}}",
           "download-info": "{{artist}} - {{title}} [{{videoId}} 다운로드 중",
@@ -527,7 +539,7 @@
           "playlist-has-only-one-song": "재생목록에 한 항목만 존재합니다. 직접 다운로드합니다",
           "playlist-id-not-found": "재생목록 ID를 찾을 수 없습니다",
           "playlist-is-empty": "재생목록이 비어있습니다",
-          "playlist-is-mix-or-private": "재생목록 정보 가져오는 중 오류 발생: 비공개 재생목록 또는 '유튜브 Mix' 재생목록이 아닌지 확인하세요\n\n{{error}}",
+          "playlist-is-mix-or-private": "재생목록 정보 가져오는 중 오류 발생: 비공개 재생목록 또는 \"나만을 위한 맞춤 믹스\" 재생목록이 아닌지 확인하세요\n\n{{error}}",
           "preparing-file": "파일 준비 중…",
           "saving": "저장 중…",
           "trying-to-get-playlist-id": "재생목록 ID를 가져오는 중: {{playlistId}}",

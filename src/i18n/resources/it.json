@@ -161,7 +161,8 @@
                 "default": "Predefinito",
                 "force-show": "Forza la visualizzazione",
                 "hide": "Nascondi",
-                "label": "Pulsanti Like"
+                "label": "Pulsanti Like",
+                "swap": "Scambia l'ordine dei pulsanti like"
               },
               "remove-upgrade-button": "Rimuovi il pulsante aggiorna",
               "theme": {
@@ -411,6 +412,17 @@
         "caption-disabled": "Sottotitoli disattivati",
         "no-captions": "Nessun sottotitolo disponibile per questa canzone"
       }
+    },
+    "clock": {
+      "description": "Aggiungi un orologio alla barra di navigazione",
+      "menu": {
+        "format": {
+          "24-hour-format": "Formato in 24 ore",
+          "display-seconds": "Mostra Secondi",
+          "label": "Formato"
+        }
+      },
+      "name": "Orologio"
     },
     "compact-sidebar": {
       "description": "Imposta sempre la barra laterale in modalità compatta",

@@ -19,32 +19,32 @@ test('chorus', () => {
     lines: [
       { duration: 12000, text: '', words: [], time: '00:00:00', timeInMs: 0 },
       {
-        duration: 5020,
+        duration: 5200,
         text: 'Line 1 lyrics',
         words: [],
         time: '00:12:00',
         timeInMs: 12000,
       },
       {
-        duration: 3990,
+        duration: 3900,
         text: 'Line 2 lyrics',
         words: [],
         time: '00:17:20',
-        timeInMs: 17020,
+        timeInMs: 17200,
       },
       {
         duration: 24000,
         text: 'Repeating lyrics (e.g. chorus)',
         words: [],
         time: '00:21:10',
-        timeInMs: 21010,
+        timeInMs: 21100,
       },
       {
         duration: Infinity,
         text: 'Repeating lyrics (e.g. chorus)',
         words: [],
         time: '00:45:10',
-        timeInMs: 45010,
+        timeInMs: 45100,
       },
     ],
     tags: [],
@@ -67,7 +67,7 @@ test('attributes', () => {
     lines: [
       { duration: 12000, text: '', words: [], time: '00:00:00', timeInMs: 0 },
       {
-        duration: 3030,
+        duration: 3300,
         text: 'Naku Penda Piya-Naku Taka Piya-Mpenziwe',
         words: [],
         time: '00:12:00',
@@ -78,7 +78,7 @@ test('attributes', () => {
         text: 'Some more lyrics ...',
         words: [],
         time: '00:15:30',
-        timeInMs: 15030,
+        timeInMs: 15300,
       },
     ],
     tags: [
@@ -105,35 +105,35 @@ test('karaoke', () => {
         timeInMs: 0,
         words: [
           {
-            timeInMs: 4,
+            timeInMs: 40,
             word: 'When',
           },
           {
-            timeInMs: 16,
+            timeInMs: 160,
             word: 'the',
           },
           {
-            timeInMs: 82,
+            timeInMs: 820,
             word: 'truth',
           },
           {
-            timeInMs: 1029,
+            timeInMs: 1290,
             word: 'is',
           },
           {
-            timeInMs: 1063,
+            timeInMs: 1630,
             word: 'found',
           },
           {
-            timeInMs: 3009,
+            timeInMs: 3090,
             word: 'to',
           },
           {
-            timeInMs: 3037,
+            timeInMs: 3370,
             word: 'be',
           },
           {
-            timeInMs: 5092,
+            timeInMs: 5920,
             word: 'lies',
           },
         ],

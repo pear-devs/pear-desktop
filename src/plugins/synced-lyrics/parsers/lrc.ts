@@ -18,10 +18,10 @@ interface LRC {
 
 const tagRegex = /^\[(?<tag>\w+):\s*(?<value>.+?)\s*\]$/;
 // prettier-ignore
-const timestampRegex = /^\[(?<minutes>\d+):(?<seconds>\d+)\.(?<milliseconds>\d+)\]/m;
+const timestampRegex = /^\[(?<minutes>\d+):(?<seconds>\d+)\.(?<centiseconds>\d+)\]/m;
 
 // prettier-ignore
-const wordRegex = /<(?<minutes>\d+):(?<seconds>\d+)\.(?<milliseconds>\d+)> *(?<word>\w+)/g;
+const wordRegex = /<(?<minutes>\d+):(?<seconds>\d+)\.(?<centiseconds>\d+)> *(?<word>\w+)/g;
 
 export const LRC = {
   parse: (text: string): LRC => {
@@ -39,14 +39,15 @@ export const LRC = {
       const timestamps = [];
       let match: Record<string, string> | undefined;
       while ((match = line.match(timestampRegex)?.groups)) {
-        const { minutes, seconds, milliseconds } = match;
+        const { minutes, seconds, centiseconds } = match;
+        const milliseconds = match.centiseconds.padEnd(3, '0');
         const timeInMs =
           parseInt(minutes) * 60 * 1000 +
           parseInt(seconds) * 1000 +
           parseInt(milliseconds);
 
         timestamps.push({
-          time: `${minutes}:${seconds}:${milliseconds}`,
+          time: `${minutes}:${seconds}:${centiseconds}`,
           timeInMs,
         });
 
@@ -71,7 +72,8 @@ export const LRC = {
 
       let text = line.trim();
       const words = Array.from(text.matchAll(wordRegex), ({ groups }) => {
-        const { minutes, seconds, milliseconds, word } = groups!;
+        const { minutes, seconds, centiseconds, word } = groups!;
+        const milliseconds = centiseconds.padEnd(3, '0');
         const timeInMs =
           parseInt(minutes) * 60 * 1000 +
           parseInt(seconds) * 1000 +

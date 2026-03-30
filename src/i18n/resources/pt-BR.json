@@ -161,7 +161,8 @@
                 "default": "Padrão",
                 "force-show": "Forçar exibir",
                 "hide": "Ocultar",
-                "label": "Botões de 'Curtir'"
+                "label": "Botões de 'Curtir'",
+                "swap": "Inverter ordem dos botões de curtir"
               },
               "remove-upgrade-button": "Remover botão de atualização",
               "theme": {
@@ -411,6 +412,17 @@
         "caption-disabled": "Legendas desativadas",
         "no-captions": "Sem legendas disponíveis para essa música"
       }
+    },
+    "clock": {
+      "description": "Adicionar relógio na barra de navegação",
+      "menu": {
+        "format": {
+          "24-hour-format": "Formato 24 horas",
+          "display-seconds": "Mostrar segundos",
+          "label": "Formato"
+        }
+      },
+      "name": "Relógio"
     },
     "compact-sidebar": {
       "description": "Sempre definir a barra lateral no modo compacto",
@@ -830,6 +842,24 @@
         "not-found": "⚠️ Nenhuma letra encontrada para esta música."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Converter caracteres Chineses",
+          "submenu": {
+            "disabled": {
+              "label": "Desativado",
+              "tooltip": "Desativar conversão de caracteres Chineses"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplificado para Tradicional",
+              "tooltip": "Converter Chinês Simplificado para Chinês Tradicional"
+            },
+            "traditional-to-simplified": {
+              "label": "Tradicional para Simplificado",
+              "tooltip": "Converter Chinês Tradicional para Chinês Simplificado"
+            }
+          },
+          "tooltip": "Converter caractere Chinês para Tradicional ou Simplificado"
+        },
         "default-text-string": {
           "label": "Caractere padrão entre letras",
           "tooltip": "Escolha o caractere padrão a ser usado para o intervalo entre as letras"
