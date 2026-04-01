@@ -1,4 +1,4 @@
-import { createSignal, createEffect, onCleanup, Show } from 'solid-js'; // Adicionado o Show aqui
+import { createSignal, createEffect, onCleanup, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 
 import style from './style.css?inline';
@@ -18,21 +18,27 @@ const DEFAULT_CONFIG: SlowedConfig = {
 
 export default createPlugin({
   name: () => 'Slowed',
+  // MUDANÇA: Créditos movidos da UI para a propriedade oficial do plugin
+  authors: ['The-Kryz'],
   restartNeeded: false,
   config: DEFAULT_CONFIG,
+  // MUDANÇA: Injeção nativa de CSS solicitada pelo mantenedor
   stylesheets: [style],
 
   renderer: {
     cleanup: null as (() => void) | null,
 
     start({ config, setConfig }) {
+      // Proteção contra erro de config indefinida
       const safeConfig = config || DEFAULT_CONFIG;
+      
       const [speed, setSpeed] = createSignal(safeConfig.speed ?? 1.0);
       const [keepPitch, setKeepPitch] = createSignal(safeConfig.keepPitch ?? false);
       const [collapsed, setCollapsed] = createSignal(false);
 
       const getVideo = () => document.querySelector<HTMLVideoElement>('video');
 
+      // Limpa qualquer resquício de execução anterior
       document.getElementById('sr-panel')?.remove();
 
       const panel = document.createElement('div');
@@ -46,7 +52,7 @@ export default createPlugin({
             <span class="sr-title"> SLOWED</span>
           </div>
           
-          {/* MUDANÇA PEDIDA: Uso do <Show> em vez de {&&} */}
+          {/* MUDANÇA: Uso do componente <Show> para reatividade correta no SolidJS */}
           <Show when={!collapsed()}>
             <div class="sr-body">
               <div class="sr-presets">
@@ -54,6 +60,7 @@ export default createPlugin({
                 <button class="sr-btn" onClick={() => { setSpeed(1.25); setKeepPitch(true); }}>Nightcore</button>
                 <button class="sr-btn sr-btn--danger" onClick={() => { setSpeed(1.0); setKeepPitch(false); }}>Reset</button>
               </div>
+              
               <div class="sr-row">
                 <div class="sr-label-row">
                   <span class="sr-label">Speed</span>
@@ -67,6 +74,7 @@ export default createPlugin({
                   style={{ '--fill': `${((speed() - 0.5) / (1.5 - 0.5)) * 100}%` }}
                 />
               </div>
+              
               <div class="sr-row sr-pitch-row">
                 <span class="sr-label">Keep pitch</span>
                 <label class="sr-switch">
@@ -74,7 +82,7 @@ export default createPlugin({
                   <span class="sr-thumb"></span>
                 </label>
               </div>
-              <div class="sr-footer">Made by Kryz &lt;3</div>
+              {/* O rodapé sr-footer foi removido daqui conforme solicitado */}
             </div>
           </Show>
         </div>
