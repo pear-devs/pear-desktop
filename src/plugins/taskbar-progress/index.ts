@@ -113,6 +113,9 @@ const startProgressInterval = (songInfo: SongInfo, window: BrowserWindow) => {
           },
           window,
         );
+        // Reset the interval start so timeDelta is measured per tick,
+        // avoiding cumulative over-counting of elapsed time.
+        intervalStart = performance.now();
       }
     }, 1000);
   }
