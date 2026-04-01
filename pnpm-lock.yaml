@@ -309,6 +309,9 @@ importers:
       '@types/trusted-types':
         specifier: 2.0.7
         version: 2.0.7
+      ajv-formats:
+        specifier: ^3.0.1
+        version: 3.0.1(ajv@8.18.0)
       bufferutil:
         specifier: 4.1.0
         version: 4.1.0
