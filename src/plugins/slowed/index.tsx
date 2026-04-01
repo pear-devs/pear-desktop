@@ -1,4 +1,4 @@
-import { createSignal, createEffect, onCleanup } from 'solid-js';
+import { createSignal, createEffect, onCleanup, Show } from 'solid-js'; // Adicionado o Show aqui
 import { render } from 'solid-js/web';
 
 import style from './style.css?inline';
@@ -23,7 +23,6 @@ export default createPlugin({
   stylesheets: [style],
 
   renderer: {
-    // Definimos variáveis fora do start para podermos limpar no stop
     cleanup: null as (() => void) | null,
 
     start({ config, setConfig }) {
@@ -34,10 +33,8 @@ export default createPlugin({
 
       const getVideo = () => document.querySelector<HTMLVideoElement>('video');
 
-      // 1. Remove qualquer resquício de execução anterior (Segurança máxima)
       document.getElementById('sr-panel')?.remove();
 
-      // 2. Cria o Painel
       const panel = document.createElement('div');
       panel.id = 'sr-panel';
       document.body.appendChild(panel);
@@ -49,7 +46,8 @@ export default createPlugin({
             <span class="sr-title"> SLOWED</span>
           </div>
           
-          {!collapsed() && (
+          {/* MUDANÇA PEDIDA: Uso do <Show> em vez de {&&} */}
+          <Show when={!collapsed()}>
             <div class="sr-body">
               <div class="sr-presets">
                 <button class="sr-btn" onClick={() => { setSpeed(0.75); setKeepPitch(false); }}>Slowed</button>
@@ -78,7 +76,7 @@ export default createPlugin({
               </div>
               <div class="sr-footer">Made by Kryz &lt;3</div>
             </div>
-          )}
+          </Show>
         </div>
       ), panel);
 
@@ -90,7 +88,6 @@ export default createPlugin({
         }
       }, 500);
 
-      // Criamos a função de limpeza que será chamada tanto pelo onCleanup quanto pelo stop
       const doCleanup = () => {
         clearInterval(interval);
         dispose();
@@ -105,7 +102,6 @@ export default createPlugin({
       this.cleanup = doCleanup;
       onCleanup(doCleanup);
 
-      // Efeitos de áudio e config
       createEffect(() => {
         const video = getVideo();
         if (video) {
@@ -119,8 +115,6 @@ export default createPlugin({
       });
     },
 
-    // O segredo está aqui: o método stop() é o que o YTMusic chama 
-    // quando você desmarca o plugin no menu.
     stop() {
       if (this.cleanup) {
         this.cleanup();
