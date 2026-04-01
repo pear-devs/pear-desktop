@@ -18,18 +18,15 @@ const DEFAULT_CONFIG: SlowedConfig = {
 
 export default createPlugin({
   name: () => 'Slowed',
-  // MUDANÇA: Créditos movidos da UI para a propriedade oficial do plugin
   authors: ['The-Kryz'],
   restartNeeded: false,
   config: DEFAULT_CONFIG,
-  // MUDANÇA: Injeção nativa de CSS solicitada pelo mantenedor
   stylesheets: [style],
 
   renderer: {
     cleanup: null as (() => void) | null,
 
     start({ config, setConfig }) {
-      // Proteção contra erro de config indefinida
       const safeConfig = config || DEFAULT_CONFIG;
       
       const [speed, setSpeed] = createSignal(safeConfig.speed ?? 1.0);
@@ -38,7 +35,6 @@ export default createPlugin({
 
       const getVideo = () => document.querySelector<HTMLVideoElement>('video');
 
-      // Limpa qualquer resquício de execução anterior
       document.getElementById('sr-panel')?.remove();
 
       const panel = document.createElement('div');
@@ -52,7 +48,6 @@ export default createPlugin({
             <span class="sr-title"> SLOWED</span>
           </div>
           
-          {/* MUDANÇA: Uso do componente <Show> para reatividade correta no SolidJS */}
           <Show when={!collapsed()}>
             <div class="sr-body">
               <div class="sr-presets">
@@ -82,17 +77,28 @@ export default createPlugin({
                   <span class="sr-thumb"></span>
                 </label>
               </div>
-              {/* O rodapé sr-footer foi removido daqui conforme solicitado */}
             </div>
           </Show>
         </div>
       ), panel);
 
+      // LOOP DE SEGURANÇA MELHORADO
       const interval = setInterval(() => {
         const video = getVideo();
-        if (video && Math.abs(video.playbackRate - speed()) > 0.01) {
+        if (!video) return;
+
+        // Verifica velocidade de forma independente
+        if (Math.abs(video.playbackRate - speed()) > 0.01) {
           video.playbackRate = speed();
+        }
+
+        // CORREÇÃO: Verifica o pitch de forma independente e agressiva
+        if (video.preservesPitch !== keepPitch()) {
           video.preservesPitch = keepPitch();
+          // @ts-ignore - Prefixos para garantir funcionamento no Electron/Chromium
+          video.webkitPreservesPitch = keepPitch();
+          // @ts-ignore
+          video.mozPreservesPitch = keepPitch();
         }
       }, 500);
 
@@ -110,11 +116,16 @@ export default createPlugin({
       this.cleanup = doCleanup;
       onCleanup(doCleanup);
 
+      // EFEITO REATIVO MELHORADO
       createEffect(() => {
         const video = getVideo();
         if (video) {
-          video.playbackRate = speed();
-          video.preservesPitch = keepPitch();
+          const s = speed();
+          const p = keepPitch();
+          video.playbackRate = s;
+          video.preservesPitch = p;
+          // @ts-ignore
+          video.webkitPreservesPitch = p;
         }
       });
 
