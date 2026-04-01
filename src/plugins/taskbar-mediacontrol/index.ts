@@ -1,10 +1,14 @@
-import { type NativeImage, nativeImage, nativeTheme } from 'electron';
-import { Jimp, JimpMime } from 'jimp';
+import { nativeImage, nativeTheme, type NativeImage } from 'electron';
 
-import playIcon from '@assets/media-icons-black/play.png?asset&asarUnpack';
-import pauseIcon from '@assets/media-icons-black/pause.png?asset&asarUnpack';
-import nextIcon from '@assets/media-icons-black/next.png?asset&asarUnpack';
-import previousIcon from '@assets/media-icons-black/previous.png?asset&asarUnpack';
+import playIconBlack from '@assets/media-icons-black/play.png?asset&asarUnpack';
+import pauseIconBlack from '@assets/media-icons-black/pause.png?asset&asarUnpack';
+import nextIconBlack from '@assets/media-icons-black/next.png?asset&asarUnpack';
+import previousIconBlack from '@assets/media-icons-black/previous.png?asset&asarUnpack';
+
+import playIconWhite from '@assets/media-icons-white/play.png?asset&asarUnpack';
+import pauseIconWhite from '@assets/media-icons-white/pause.png?asset&asarUnpack';
+import nextIconWhite from '@assets/media-icons-white/next.png?asset&asarUnpack';
+import previousIconWhite from '@assets/media-icons-white/previous.png?asset&asarUnpack';
 
 import { createPlugin } from '@/utils';
 import { getSongControls } from '@/providers/song-controls';
@@ -13,7 +17,6 @@ import {
   type SongInfo,
   SongInfoEvent,
 } from '@/providers/song-info';
-import { type mediaIcons } from '@/types/media-icons';
 import { t } from '@/i18n';
 import { Platform } from '@/types/plugins';
 
@@ -26,53 +29,37 @@ export default createPlugin({
     enabled: false,
   },
 
-  async backend({ window }) {
+  backend({ window }) {
     let currentSongInfo: SongInfo;
 
     const { playPause, next, previous } = getSongControls(window);
 
-    // Util
-    const getImagePath = (kind: keyof typeof mediaIcons): string => {
-      switch (kind) {
-        case 'play':
-          return playIcon;
-        case 'pause':
-          return pauseIcon;
-        case 'next':
-          return nextIcon;
-        case 'previous':
-          return previousIcon;
-        default:
-          return '';
-      }
+    const getImages = (): Record<
+      'play' | 'pause' | 'next' | 'previous',
+      NativeImage
+    > => {
+      const isDark = nativeTheme.shouldUseDarkColors;
+      return {
+        play: nativeImage.createFromPath(
+          isDark ? playIconWhite : playIconBlack,
+        ),
+        pause: nativeImage.createFromPath(
+          isDark ? pauseIconWhite : pauseIconBlack,
+        ),
+        next: nativeImage.createFromPath(
+          isDark ? nextIconWhite : nextIconBlack,
+        ),
+        previous: nativeImage.createFromPath(
+          isDark ? previousIconWhite : previousIconBlack,
+        ),
+      };
     };
+    let images = getImages();
 
-    const getNativeImage = async (
-      kind: keyof typeof mediaIcons,
-    ): Promise<NativeImage> => {
-      const imagePath = getImagePath(kind);
-
-      if (imagePath) {
-        const jimpImageBuffer = await Jimp.read(imagePath).then((img) => {
-          if (imagePath && nativeTheme.shouldUseDarkColors) {
-            return img.invert().getBuffer(JimpMime.png);
-          }
-          return img.getBuffer(JimpMime.png);
-        });
-
-        return nativeImage.createFromBuffer(jimpImageBuffer);
-      }
-
-      // return empty image
-      return nativeImage.createEmpty();
-    };
-
-    const images = {
-      play: await getNativeImage('play'),
-      pause: await getNativeImage('pause'),
-      next: await getNativeImage('next'),
-      previous: await getNativeImage('previous'),
-    };
+    nativeTheme.on('updated', () => {
+      images = getImages();
+      setThumbar(currentSongInfo);
+    });
 
     const setThumbar = (songInfo: SongInfo) => {
       // Wait for song to start before setting thumbar

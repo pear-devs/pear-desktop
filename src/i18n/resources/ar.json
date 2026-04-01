@@ -161,7 +161,8 @@
                 "default": "الافتراضي",
                 "force-show": "اجبار الظهور",
                 "hide": "اخفاء",
-                "label": "أزرار الاعجاب"
+                "label": "أزرار الاعجاب",
+                "swap": "تبديل ترتيب ازرار الاعجاب"
               },
               "remove-upgrade-button": "ازالة زر التطوير",
               "theme": {
@@ -237,7 +238,8 @@
           "submenu": {
             "percent": "{{ratio}}٪"
           }
-        }
+        },
+        "enable-seekbar": "تفعيل تخصيص لون شريط التمرير"
       },
       "name": "سمة ألوان الألبوم"
     },
@@ -259,7 +261,7 @@
         "opacity": {
           "label": "الشفافية",
           "submenu": {
-            "percent": "{{opacity}}٪"
+            "percent": "{{opacity}}%"
           }
         },
         "quality": {
@@ -319,6 +321,22 @@
         },
         "hostname": {
           "label": "اسم المضيف"
+        },
+        "https": {
+          "label": "HTTPS والشهادات",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "اختار ملف شهادة HTTP",
+              "label": "ملف الشهادة (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "تفعيل بروتوكول HTTPS"
+            },
+            "key": {
+              "dialogTitle": "اختر ملف المفتاح الخاص لـ HTTPS",
+              "label": "ملف المفتاح الخاص (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "المنفذ"
@@ -395,6 +413,17 @@
         "no-captions": "الترجمة لهاته الأغنية غير متاحة"
       }
     },
+    "clock": {
+      "description": "اضف ساعة في شريط التنقل",
+      "menu": {
+        "format": {
+          "24-hour-format": "تنسيق 24 ساعة",
+          "display-seconds": "عرض الثواني",
+          "label": "تنسيق الوقت"
+        }
+      },
+      "name": "ساعة"
+    },
     "compact-sidebar": {
       "description": "قم دائمًا بتعيين الشريط الجانبي في الوضع الملموم",
       "name": "شريط جانبي ملموم"
@@ -461,13 +490,13 @@
         "set-status-display-type": {
           "label": "نص الحالة",
           "submenu": {
-            "artist": "جار السمع ل{artist}",
             "application": "جار السمع ل{{applicationName}}",
+            "artist": "جار السمع ل{artist}",
             "title": "جار السمع ل{song title}"
           }
         }
       },
-      "name": "Discord Rich Presence",
+      "name": "حالة النشاط على ديسكورد (Discord Rich Presence)",
       "prompt": {
         "set-inactivity-timeout": {
           "label": "أدخل مهلة عدم النشاط بالثواني:",
@@ -666,8 +695,8 @@
       "name": "الإشعارات"
     },
     "performance-improvement": {
-      "description": "تحسين الأداء عبر تفعيل السكربتات التجريبية",
-      "name": "تحسين الأداء [تجريبي]"
+      "description": "تحسين الأداء عبر تفعيل السكريبتات التجريبية",
+      "name": "تحسين الأداء [نسخة تجريبية]"
     },
     "picture-in-picture": {
       "description": "يسمح بتحويل التطبيق إلى وضع الصورة داخل الصورة",
@@ -813,6 +842,24 @@
         "not-found": "⚠️ لم يتم العثور على كلمات لهذه الأغنية."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "تحويل الحروف الصينية",
+          "submenu": {
+            "disabled": {
+              "label": "معطل",
+              "tooltip": "تعطيل تحويل الحروف الصينية"
+            },
+            "simplified-to-traditional": {
+              "label": "من الصينية المبسطة إلى الصينية التقليدية",
+              "tooltip": "حول من الصينية المبسطة الي الصينية التقليدية"
+            },
+            "traditional-to-simplified": {
+              "label": "التقليدية الي المبسطة",
+              "tooltip": "حول من الصينية التقليدية الي الصينية المبسطة"
+            }
+          },
+          "tooltip": "حول الاحرف الصينية إلى التقليدية او المبسطة"
+        },
         "default-text-string": {
           "label": "المسافة الافتراضية بين كلمات الأغاني",
           "tooltip": "اختر الحرف الافتراضي لاستخدامه في الفجوة بين كلمات الأغنية"
