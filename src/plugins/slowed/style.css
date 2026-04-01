@@ -1,5 +1,5 @@
 /* =========================================================
-   Slowed by Kryz Plugin — Panel Styles
+   SLOWED Plugin — Panel Styles
    ========================================================= */
 
 #sr-panel {
@@ -33,10 +33,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 14px 8px;
+  padding: 10px 14px;
   background: linear-gradient(135deg, #2e1065 0%, #1e0d4a 100%);
   border-bottom: 1px solid #4c1d95;
-  cursor: default;
+  cursor: pointer; /* Barra inteira clicável para minimizar */
 }
 
 .sr-logo {
@@ -53,23 +53,6 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #d8b4fe;
-}
-
-.sr-collapse {
-  background: none;
-  border: none;
-  color: #a78bfa;
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  padding: 2px 4px;
-  border-radius: 4px;
-  transition: color 0.15s, background 0.15s;
-}
-
-.sr-collapse:hover {
-  color: #e9d5ff;
-  background: rgba(167, 139, 250, 0.15);
 }
 
 .sr-body {
@@ -245,4 +228,15 @@
   transform: translateX(16px);
   background: #a855f7;
   box-shadow: 0 0 8px rgba(168, 85, 247, 0.8);
+}
+
+/* Assinatura no rodapé */
+.sr-footer {
+  text-align: center;
+  font-size: 10px;
+  color: #8b5cf6;
+  opacity: 0.8;
+  margin-top: 6px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
 }
