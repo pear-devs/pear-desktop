@@ -82,23 +82,18 @@ export default createPlugin({
         </div>
       ), panel);
 
-      // LOOP DE SEGURANÇA MELHORADO
       const interval = setInterval(() => {
         const video = getVideo();
         if (!video) return;
 
-        // Verifica velocidade de forma independente
         if (Math.abs(video.playbackRate - speed()) > 0.01) {
           video.playbackRate = speed();
         }
 
-        // CORREÇÃO: Verifica o pitch de forma independente e agressiva
         if (video.preservesPitch !== keepPitch()) {
           video.preservesPitch = keepPitch();
           // @ts-ignore - Prefixos para garantir funcionamento no Electron/Chromium
           video.webkitPreservesPitch = keepPitch();
-          // @ts-ignore
-          video.mozPreservesPitch = keepPitch();
         }
       }, 500);
 
@@ -110,13 +105,14 @@ export default createPlugin({
         if (video) {
           video.playbackRate = 1.0;
           video.preservesPitch = true;
+          // @ts-ignore
+          video.webkitPreservesPitch = true;
         }
       };
 
       this.cleanup = doCleanup;
       onCleanup(doCleanup);
 
-      // EFEITO REATIVO MELHORADO
       createEffect(() => {
         const video = getVideo();
         if (video) {
