@@ -23,6 +23,7 @@ let progressInterval: ReturnType<typeof setInterval> | null = null;
 let hasRegisteredCallback = false;
 let isEnabled = false;
 let intervalStart: number | null = null;
+let baseElapsedSeconds: number | null = null;
 
 let isLinux;
 let bus: ReturnType<(typeof dbus)['sessionBus']>;
@@ -32,6 +33,7 @@ const stopProgressInterval = () => {
     clearInterval(progressInterval);
     progressInterval = null;
     intervalStart = null;
+    baseElapsedSeconds = null;
   }
 };
 
@@ -95,16 +97,17 @@ const startProgressInterval = (songInfo: SongInfo, window: BrowserWindow) => {
   stopProgressInterval();
   if (!songInfo.isPaused) {
     intervalStart = performance.now();
+    baseElapsedSeconds = songInfo.elapsedSeconds ?? 0;
     progressInterval = setInterval(() => {
       if (
         lastSongInfo &&
         !lastSongInfo.isPaused &&
-        typeof lastSongInfo.elapsedSeconds === 'number' &&
+        baseElapsedSeconds !== null &&
         intervalStart !== null
       ) {
         const timeDelta = (performance.now() - intervalStart) / 1000;
         const elapsedSeconds = Math.floor(
-          lastSongInfo.elapsedSeconds + timeDelta,
+          baseElapsedSeconds + timeDelta,
         );
         updateProgressBar(
           {
