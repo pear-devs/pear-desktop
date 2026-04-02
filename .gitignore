@@ -1,6 +1,7 @@
 node_modules
 /dist
 /pack
+package-lock.json
 .vscode/settings.json
 .idea
 

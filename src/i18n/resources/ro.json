@@ -548,6 +548,10 @@
         "button": "Descarcă"
       }
     },
+    "downloader-ytdlp": {
+      "name": "Descărcător (yt-dlp)",
+      "description": "Descarcă MP3 / sursa audio direct din interfață. O versiune a pluginului de descărcare care folosește yt-dlp.exe. Puteți seta o cale personalizată către executabil și un șir de cookie-uri pentru a crește șansele de descărcare reușită prin includerea unor cookie-uri valide."
+    },
     "equalizer": {
       "description": "Adauă un egalizator la player",
       "menu": {
@@ -948,3 +952,4 @@
     }
   }
 }
+
