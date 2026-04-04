@@ -412,6 +412,15 @@
         "no-captions": "Geen ondertitels beschikbaar voor dit lied"
       }
     },
+    "clock": {
+      "description": "Voeg een klok toe aan de navigatiebalk",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-uursformaat"
+        }
+      },
+      "name": "Klok"
+    },
     "compact-sidebar": {
       "description": "Stel de zijbalk altijd in op compacte modus",
       "name": "Compacte Zijbalk"
@@ -830,6 +839,18 @@
         "not-found": "⚠️ Er is geen songtekst gevonden voor dit nummer."
       },
       "menu": {
+        "convert-chinese-character": {
+          "submenu": {
+            "simplified-to-traditional": {
+              "label": "Vereenvoudigd naar Traditioneel",
+              "tooltip": "Zet Vereenvoudigd Chinees om naar Traditioneel Chinees"
+            },
+            "traditional-to-simplified": {
+              "label": "Traditioneel naar Vereenvoudigd",
+              "tooltip": "Zet Traditioneel Chinees om naar Vereenvoudigd Chinees"
+            }
+          }
+        },
         "default-text-string": {
           "label": "Standaardteken tussen songteksten",
           "tooltip": "Kies het standaardteken dat u wilt gebruiken voor de opening tussen de songteksten"

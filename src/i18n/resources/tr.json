@@ -36,7 +36,7 @@
         "details": "Yanıt verilmedi!\n{{error}}"
       },
       "when-ready": {
-        "clearing-cache-after-20s": "Uygulama ön belleği temizle"
+        "clearing-cache-after-20s": "Uygulama ön belleği temizleniyor"
       },
       "window": {
         "tried-to-render-offscreen": "Pencere ekranın dışında oluşturulmaya çalışıldı, windowSize={{windowSize}}, displaySize={{displaySize}}, position={{position}}"
@@ -296,7 +296,7 @@
       }
     },
     "api-server": {
-      "description": "Oynatıcıyı kontrol etmek için bir API sunucusu ekle",
+      "description": "Oynatıcıyı kontrol etmek için API sunucusu ekler",
       "dialog": {
         "request": {
           "buttons": {
@@ -342,11 +342,11 @@
           "label": "Port"
         }
       },
-      "name": "API sunucusu [Beta]",
+      "name": "API Sunucusu [Beta]",
       "prompt": {
         "hostname": {
-          "label": "API sunucusu için hostname (örneğin 0.0.0.0) girin:",
-          "title": "Hostname(Ana bilgisayar adı)"
+          "label": "API sunucusu için sunucu ismini (örneğin 0.0.0.0) girin:",
+          "title": "Sunucu ismi"
         },
         "port": {
           "label": "API sunucusu için port girin:",
@@ -417,9 +417,9 @@
       "description": "Navigasyon barına bir saat ekle",
       "menu": {
         "format": {
-          "24-hour-format": "24-Saat Formatı, Biçimi",
-          "display-seconds": "Saniyeleri göster",
-          "label": "Format, Biçim"
+          "24-hour-format": "24-Saat Formatı",
+          "display-seconds": "Saniyeleri Göster",
+          "label": "Format"
         }
       },
       "name": "Saat"
