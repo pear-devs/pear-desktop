@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ macos-13, ubuntu-latest, windows-latest, ubuntu-22.04 ]
+        os: [ macos-latest, ubuntu-latest, windows-latest, ubuntu-22.04 ]
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
