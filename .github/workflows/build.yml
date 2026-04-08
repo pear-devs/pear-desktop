@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ macos-26, ubuntu-latest, windows-latest ]
+        os: [ macos-26, ubuntu-latest, windows-latest, ubuntu-22.04 ]
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -72,7 +72,7 @@ jobs:
           pnpm release:mac
 
       - name: Build and release on Linux
-        if: startsWith(matrix.os, 'ubuntu') && (github.repository == 'pear-devs/pear-desktop' && github.event_name != 'pull_request')
+        if: matrix.os == 'ubuntu-latest' && (github.repository == 'pear-devs/pear-desktop' && github.event_name != 'pull_request')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -84,6 +84,12 @@ jobs:
           sudo flatpak install -y flathub org.freedesktop.Sdk/x86_64/24.08
           sudo flatpak install -y flathub org.electronjs.Electron2.BaseApp/x86_64/24.08
           pnpm release:linux
+
+      - name: Build specifically for Linux Mint (deb only)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          pnpm build
+          pnpm electron-builder --linux deb:x64 -p never
 
       - name: Build and release on Windows
         if: startsWith(matrix.os, 'windows') && (github.repository == 'pear-devs/pear-desktop' && github.event_name != 'pull_request')
