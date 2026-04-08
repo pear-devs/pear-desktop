@@ -108,6 +108,7 @@ jobs:
 
       - name: Build specifically for Linux Mint XFCE (deb only)
         run: |
+          find node_modules -name "app-builder" -exec chmod +x {} + || true
           pnpm build
           pnpm electron-builder --linux deb:x64 -p never
 
