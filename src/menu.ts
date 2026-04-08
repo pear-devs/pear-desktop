@@ -8,7 +8,6 @@ import {
   type MenuItem,
   shell,
 } from 'electron';
-import { autoUpdater } from 'electron-updater';
 import prompt from 'custom-electron-prompt';
 import { satisfies } from 'semver';
 
@@ -120,44 +119,8 @@ export const mainMenuTemplate = async (
     }),
   );
 
-  const pluginCategories = {
-    appearance: [
-      'ambient-mode',
-      'blur-nav-bar',
-      'compact-sidebar',
-      'in-app-menu',
-      'transparent-player',
-      'unobtrusive-player',
-      'visualizer',
-      'album-color-theme',
-    ],
-    player: [
-      'audio-compressor.ts',
-      'crossfade',
-      'disable-autoplay',
-      'equalizer',
-      'exponential-volume',
-      'playback-speed',
-      'precise-volume',
-      'quality-changer',
-      'skip-silences',
-      'video-toggle',
-    ],
-  };
-
-  const getCategory = (id: string) => {
-    if (pluginCategories.appearance.includes(id)) return 'appearance';
-    if (pluginCategories.player.includes(id)) return 'player';
-    return 'others';
-  };
-
-  const categorizedPlugins: Record<string, Electron.MenuItemConstructorOptions[]> = {
-    appearance: [],
-    player: [],
-    others: [],
-  };
-
-  await Promise.all(
+  const availablePlugins = Object.keys(await allPlugins());
+  const pluginMenus = await Promise.all(
     availablePlugins
       .sort((a, b) => {
         const aPluginLabel = allPluginsStubs[a]?.name?.() ?? a;
@@ -165,46 +128,27 @@ export const mainMenuTemplate = async (
 
         return aPluginLabel.localeCompare(bPluginLabel);
       })
-      .map(async (id) => {
-        let menuItem: Electron.MenuItemConstructorOptions;
+      .map((id) => {
         const predefinedTemplate = menuResult.find((it) => it[0] === id);
-        
-        if (predefinedTemplate) {
-          menuItem = predefinedTemplate[1];
-        } else {
-          const plugin = allPluginsStubs[id];
-          const pluginLabel = plugin?.name?.() ?? id;
-          const pluginDescription = plugin?.description?.() ?? undefined;
-          const isNew = plugin?.addedVersion
-            ? satisfies(packageJson.version, plugin.addedVersion)
-            : false;
+        if (predefinedTemplate) return predefinedTemplate[1];
 
-          menuItem = await pluginEnabledMenu(
-            id,
-            pluginLabel,
-            pluginDescription,
-            isNew,
-            true,
-            innerRefreshMenu,
-          );
-        }
+        const plugin = allPluginsStubs[id];
+        const pluginLabel = plugin?.name?.() ?? id;
+        const pluginDescription = plugin?.description?.() ?? undefined;
+        const isNew = plugin?.addedVersion
+          ? satisfies(packageJson.version, plugin.addedVersion)
+          : false;
 
-        categorizedPlugins[getCategory(id)].push(menuItem);
+        return pluginEnabledMenu(
+          id,
+          pluginLabel,
+          pluginDescription,
+          isNew,
+          true,
+          innerRefreshMenu,
+        );
       }),
   );
-
-  const pluginSubmenu: MenuTemplate = [
-    {
-      label: t('main.menu.plugins.categories.appearance'),
-      submenu: categorizedPlugins.appearance,
-    },
-    {
-      label: t('main.menu.plugins.categories.player'),
-      submenu: categorizedPlugins.player,
-    },
-    { type: 'separator' },
-    ...categorizedPlugins.others,
-  ];
 
   const langResources = await languageResources();
   const availableLanguages = Object.keys(langResources);
@@ -212,7 +156,7 @@ export const mainMenuTemplate = async (
   return [
     {
       label: t('main.menu.plugins.label'),
-      submenu: pluginSubmenu,
+      submenu: pluginMenus,
     },
     {
       label: t('main.menu.options.label'),
@@ -224,54 +168,6 @@ export const mainMenuTemplate = async (
           click(item: MenuItem) {
             config.setMenuOption('options.autoUpdates', item.checked);
           },
-        },
-        {
-          label: t('main.menu.options.submenu.check-for-updates'),
-          click() {
-            autoUpdater.checkForUpdatesAndNotify();
-          },
-        },
-        {
-          label: t('main.menu.options.submenu.update-channel.label'),
-          submenu: [
-            {
-              label: t('main.menu.options.submenu.update-channel.stable'),
-              type: 'radio',
-              checked: config.get('options.updateChannel') === 'latest',
-              click() {
-                config.set('options.updateChannel', 'latest');
-                autoUpdater.channel = 'latest';
-              },
-            },
-            {
-              label: t('main.menu.options.submenu.update-channel.experimental'),
-              type: 'radio',
-              checked: config.get('options.updateChannel') === 'beta',
-              async click(item: MenuItem) {
-                const { response } = await dialog.showMessageBox(win, {
-                  type: 'warning',
-                  title: t('main.dialog.experimental-warning.title'),
-                  message: t('main.dialog.experimental-warning.message'),
-                  buttons: [
-                    t('main.dialog.experimental-warning.buttons.confirm'),
-                    t('main.dialog.experimental-warning.buttons.cancel'),
-                  ],
-                  defaultId: 1,
-                  cancelId: 1,
-                });
-
-                if (response === 0) {
-                  config.set('options.updateChannel', 'beta');
-                  autoUpdater.channel = 'beta';
-                } else {
-                  item.checked = false;
-                  // Reset to stable if cancelled
-                  const stableItem = item.menu.items.find(i => i.label === t('main.menu.options.submenu.update-channel.stable'));
-                  if (stableItem) stableItem.checked = true;
-                }
-              },
-            },
-          ],
         },
         {
           label: t('main.menu.options.submenu.resume-on-start'),

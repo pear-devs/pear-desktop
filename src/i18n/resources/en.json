@@ -57,23 +57,6 @@
         "message": "\"{{pluginName}}\" needs to restart",
         "title": "Restart Required"
       },
-      "update-ready": {
-        "buttons": {
-          "install": "Install and Restart",
-          "later": "Later"
-        },
-        "detail": "Would you like to restart and install the update now?",
-        "message": "Version {{version}} has been downloaded.",
-        "title": "Update Ready"
-      },
-      "experimental-warning": {
-        "buttons": {
-          "cancel": "Cancel",
-          "confirm": "Confirm"
-        },
-        "message": "The experimental channel includes beta versions that might be unstable. Are you sure you want to switch?",
-        "title": "Experimental Channel"
-      },
       "unresponsive": {
         "buttons": {
           "quit": "Quit",
@@ -131,12 +114,6 @@
           },
           "always-on-top": "Always on top",
           "auto-update": "Auto Update",
-          "check-for-updates": "Check for Updates",
-          "update-channel": {
-            "experimental": "Experimental",
-            "label": "Update Channel",
-            "stable": "Stable"
-          },
           "hide-menu": {
             "dialog": {
               "message": "Menu will be hidden on next launch, use [Alt] to show it (or backtick [`] if using in-app-menu)",
@@ -208,10 +185,6 @@
         }
       },
       "plugins": {
-        "categories": {
-          "appearance": "Appearance",
-          "player": "Player"
-        },
         "enabled": "Enabled",
         "label": "Plugins",
         "new": "NEW"

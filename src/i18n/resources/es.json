@@ -57,23 +57,6 @@
         "message": "\"{{pluginName}}\" necesita reiniciar",
         "title": "Se requiere reinicio"
       },
-      "update-ready": {
-        "buttons": {
-          "install": "Instalar y reiniciar",
-          "later": "Más tarde"
-        },
-        "detail": "¿Te gustaría reiniciar e instalar la actualización ahora?",
-        "message": "Se ha descargado la versión {{version}}.",
-        "title": "Actualización lista"
-      },
-      "experimental-warning": {
-        "buttons": {
-          "cancel": "Cancelar",
-          "confirm": "Confirmar"
-        },
-        "message": "El canal experimental incluye versiones beta que pueden ser inestables. ¿Estás seguro de que quieres cambiar?",
-        "title": "Canal Experimental"
-      },
       "unresponsive": {
         "buttons": {
           "quit": "Salir",
@@ -131,12 +114,6 @@
           },
           "always-on-top": "Siempre al frente",
           "auto-update": "Actualización automática",
-          "check-for-updates": "Buscar actualizaciones",
-          "update-channel": {
-            "experimental": "Experimental",
-            "label": "Canal de actualizaciones",
-            "stable": "Estable"
-          },
           "hide-menu": {
             "dialog": {
               "message": "El menú se ocultará la próxima vez que inicies la aplicación, usa [Alt] para mostrarlo (o pulsa [`] si usas el menú dentro de la aplicación)",
@@ -208,10 +185,6 @@
         }
       },
       "plugins": {
-        "categories": {
-          "appearance": "Apariencia",
-          "player": "Reproductor"
-        },
         "enabled": "Habilitado",
         "label": "Complementos",
         "new": "NUEVO"

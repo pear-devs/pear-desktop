@@ -800,43 +800,53 @@ app.whenReady().then(async () => {
   });
 
   if (!is.dev() && config.get('options.autoUpdates')) {
-    autoUpdater.channel = config.get('options.updateChannel') || 'latest';
-    autoUpdater.autoDownload = true;
-
     const updateTimeout = setTimeout(() => {
-      autoUpdater.checkForUpdates();
+      autoUpdater.checkForUpdatesAndNotify();
       clearTimeout(updateTimeout);
     }, 2000);
-
-    autoUpdater.on('update-available', (info) => {
-      if (is.dev()) {
-        console.log(LoggerPrefix, 'Update available:', info.version);
-      }
-    });
-
-    autoUpdater.on('update-downloaded', (info) => {
+    autoUpdater.on('update-available', () => {
+      const downloadLink =
+        'https://github.com/pear-devs/pear-desktop/releases/latest';
       const dialogOptions: Electron.MessageBoxOptions = {
         type: 'info',
         buttons: [
-          t('main.dialog.update-ready.buttons.install'),
-          t('main.dialog.update-ready.buttons.later'),
+          t('main.dialog.update-available.buttons.ok'),
+          t('main.dialog.update-available.buttons.download'),
+          t('main.dialog.update-available.buttons.disable'),
         ],
-        title: t('main.dialog.update-ready.title'),
-        message: t('main.dialog.update-ready.message', { version: info.version }),
-        detail: t('main.dialog.update-ready.detail'),
-        defaultId: 0,
-        cancelId: 1,
+        title: t('main.dialog.update-available.title'),
+        message: t('main.dialog.update-available.message'),
+        detail: t('main.dialog.update-available.detail', { downloadLink }),
+        defaultId: 1,
+        cancelId: 0,
       };
 
-      dialog.showMessageBox(mainWindow!, dialogOptions).then((result) => {
-        if (result.response === 0) {
-          autoUpdater.quitAndInstall();
+      let dialogPromise: Promise<Electron.MessageBoxReturnValue>;
+      if (mainWindow) {
+        dialogPromise = dialog.showMessageBox(mainWindow, dialogOptions);
+      } else {
+        dialogPromise = dialog.showMessageBox(dialogOptions);
+      }
+
+      dialogPromise.then((dialogOutput) => {
+        switch (dialogOutput.response) {
+          // Download
+          case 1: {
+            shell.openExternal(downloadLink);
+            break;
+          }
+
+          // Disable updates
+          case 2: {
+            config.set('options.autoUpdates', false);
+            break;
+          }
+
+          case 0: {
+            break;
+          }
         }
       });
-    });
-
-    autoUpdater.on('error', (err) => {
-      console.error(LoggerPrefix, 'Update error:', err);
     });
   }
 

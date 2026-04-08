@@ -51,14 +51,9 @@ jobs:
         run: |
           pnpm build
 
-      - name: Test
-        uses: coactions/setup-xvfb@b6b4fcfb9f5a895edadc3bc76318fae0ac17c8b3
-        env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
-        with:
-          run: pnpm test:debug
-
       # Build and release if it's the main repository and is not pull-request
+
+
       - name: Build and release on Linux
         if: matrix.os == 'ubuntu-latest' && (github.repository == 'pear-devs/pear-desktop' && github.event_name != 'pull_request')
         env:
@@ -85,6 +80,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pnpm release:win
+
+      - name: Test
+        uses: coactions/setup-xvfb@b6b4fcfb9f5a895edadc3bc76318fae0ac17c8b3
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        with:
+          run: pnpm test:debug
 
 
   release:
@@ -140,22 +142,11 @@ jobs:
           name: ${{ env.VERSION_TAG }}
           replacebody: true
           body: |
-            ### 🚀 New Release: ${{ env.VERSION_TAG }}
-
-            This release includes the latest updates, bug fixes, and improvements.
-
-            #### 📋 Highlights
-            - Latest features and plugin updates.
-            - Improved stability and performance.
-            - Updated dependencies.
-
-            #### 📦 Artifacts
-            - **Linux**: `.AppImage`, `.deb`, `.rpm`, `.snap`, `.flatpak`, `.tar.gz`.
-            - **Windows**: `Web-Setup.exe` (Recommended), `.exe` (Portable).
-
-            See the full [changelog](https://github.com/pear-devs/pear-desktop/blob/master/changelog.md#${{ env.CHANGELOG_ANCHOR }}) for a detailed list of changes.
+            See [changelog](https://github.com/pear-devs/pear-desktop/blob/master/changelog.md#${{ env.CHANGELOG_ANCHOR }}) for the list of updates and the full diff.
 
             Thanks to all contributors! 🏅
+
+            (Note for Windows: `Pear-Desktop-Web-Setup-${{ env.VERSION_TAG }}.exe` is an installer, and `Pear-Desktop-${{ env.VERSION_TAG }}.exe` is a portable version)
 
       - name: Update changelog
         if: ${{ env.VERSION_HASH == '' }}

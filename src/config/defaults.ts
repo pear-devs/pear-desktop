@@ -37,7 +37,6 @@ export interface DefaultConfig {
     usePodcastParticipantAsArtist: boolean;
     themes: string[];
     customWindowTitle?: string;
-    updateChannel: 'latest' | 'beta';
   };
   'plugins': Record<string, unknown>;
 }
@@ -74,7 +73,6 @@ export const defaultConfig: DefaultConfig = {
     overrideUserAgent: false,
     usePodcastParticipantAsArtist: false,
     themes: [],
-    updateChannel: 'latest',
   },
   'plugins': {},
 };
