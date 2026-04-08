@@ -21,7 +21,7 @@ jobs:
     steps:
       - name: Check user permission
         id: check
-        uses: actions-cool/check-user-permission@7b90a27f92f3961b368376107661682c441f6103
+        uses: actions-cool/check-user-permission@dd299b8721172b30ae80fa66177e99b749e705e0
         with:
           require: write
           username: ${{ github.event.pull_request.user.login }}
