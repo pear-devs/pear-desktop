@@ -79,7 +79,9 @@
       "picomatch@<2.3.2": ">=2.3.2",
       "picomatch@>=4.0.0 <4.0.4": ">=4.0.4",
       "yaml@>=2.0.0 <2.8.3": ">=2.8.3",
-      "happy-dom@<20.8.9": ">=20.8.9"
+      "happy-dom@<20.8.9": ">=20.8.9",
+      "@develar/schema-utils>ajv": "6.14.0",
+      "@develar/schema-utils>ajv-keywords": "3.5.2"
     },
     "patchedDependencies": {
       "vudio@2.1.1": "patches/vudio@2.1.1.patch",
@@ -182,8 +184,8 @@
     "del-cli": "7.0.0",
     "discord-api-types": "0.38.40",
     "electron": "40.8.5",
-    "electron-builder": "26.7.0",
-    "electron-builder-squirrel-windows": "26.7.0",
+    "electron-builder": "26.8.1",
+    "electron-builder-squirrel-windows": "26.8.1",
     "electron-devtools-installer": "4.0.0",
     "electron-vite": "5.0.0",
     "eslint": "9.39.3",
