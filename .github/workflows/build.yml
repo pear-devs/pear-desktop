@@ -55,7 +55,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --no-frozen-lockfile
 
       # Only vite build without release if it is a fork, or it is a pull-request
       - name: Vite Build
