@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -31,26 +31,17 @@ jobs:
           run_install: false
 
       - name: Setup NodeJS
-        if: startsWith(matrix.os, 'macOS') != true
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: Setup NodeJS for macOS
-        if: startsWith(matrix.os, 'macOS')
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
-        with:
-          node-version: ${{ env.NODE_VERSION }}
+
 
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
 
-      - name: Build on macOS
-        if: startsWith(matrix.os, 'macOS')
-        run: |
-          pnpm dist:mac
-          pnpm dist:mac:arm64
+
 
       - name: Install Linux dependencies
         if: matrix.os == 'ubuntu-latest'
