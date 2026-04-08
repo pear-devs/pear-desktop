@@ -87,7 +87,7 @@ jobs:
   build-mint:
     name: Build Linux Mint XFCE
     if: github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 

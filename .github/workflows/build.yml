@@ -19,9 +19,9 @@ jobs:
     name: Build Pear Desktop
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
-        os: [ macos-latest, ubuntu-latest, windows-latest, ubuntu-22.04 ]
+        os: [ macos-latest, ubuntu-latest, windows-latest ]
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -86,7 +86,7 @@ jobs:
           pnpm release:linux
 
       - name: Build specifically for Linux Mint (deb only)
-        if: matrix.os == 'ubuntu-22.04'
+        if: matrix.os == 'ubuntu-latest' && github.event_name == 'pull_request'
         run: |
           pnpm build
           pnpm electron-builder --linux deb:x64 -p never
