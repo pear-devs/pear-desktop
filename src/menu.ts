@@ -131,7 +131,7 @@ export const mainMenuTemplate = async (
       'visualizer',
       'album-color-theme',
     ],
-    player: [
+    audio: [
       'audio-compressor.ts',
       'crossfade',
       'disable-autoplay',
@@ -142,18 +142,19 @@ export const mainMenuTemplate = async (
       'quality-changer',
       'skip-silences',
       'video-toggle',
+      'album-actions',
     ],
   };
 
   const getCategory = (id: string) => {
     if (pluginCategories.appearance.includes(id)) return 'appearance';
-    if (pluginCategories.player.includes(id)) return 'player';
+    if (pluginCategories.audio.includes(id)) return 'audio';
     return 'others';
   };
 
   const categorizedPlugins: Record<string, Electron.MenuItemConstructorOptions[]> = {
     appearance: [],
-    player: [],
+    audio: [],
     others: [],
   };
 
@@ -199,8 +200,8 @@ export const mainMenuTemplate = async (
       submenu: categorizedPlugins.appearance,
     },
     {
-      label: t('main.menu.plugins.categories.player'),
-      submenu: categorizedPlugins.player,
+      label: t('main.menu.plugins.categories.audio'),
+      submenu: categorizedPlugins.audio,
     },
     { type: 'separator' },
     ...categorizedPlugins.others,

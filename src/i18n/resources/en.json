@@ -210,7 +210,7 @@
       "plugins": {
         "categories": {
           "appearance": "Appearance",
-          "player": "Player"
+          "audio": "Audio"
         },
         "enabled": "Enabled",
         "label": "Plugins",

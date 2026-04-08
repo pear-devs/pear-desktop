@@ -1,0 +1,102 @@
+name: Build Pear Desktop (All Platforms)
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: "22.x"
+
+jobs:
+  build:
+    name: Build & Draft Release
+    permissions:
+      contents: write
+    if: github.event.pull_request.draft == false
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # macOS Specific: Setup Xcode
+      - name: Setup Xcode (macOS only)
+        if: matrix.os == 'macos-latest'
+        run: |
+          XCODE_APP=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -r | head -n 1)
+          if [ -z "$XCODE_APP" ]; then XCODE_APP=$(ls -d /Applications/Xcode*.app | sort -r | head -n 1); fi
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          xcodebuild -version
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      # Run Tests before building for release
+      - name: Test (Ubuntu/Windows)
+        if: matrix.os != 'macos-latest'
+        uses: coactions/setup-xvfb@v1
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        with:
+          run: pnpm test:debug
+
+      - name: Test (macOS)
+        if: matrix.os == 'macos-latest'
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
+        run: pnpm test:debug
+
+      # Linux Specific: Setup Flatpak/Snapcraft
+      - name: Setup Linux Environments
+        if: matrix.os == 'ubuntu-latest' && github.event_name != 'pull_request'
+        run: |
+          sudo snap install snapcraft --classic
+          sudo apt update
+          sudo apt install -y flatpak flatpak-builder
+          sudo flatpak remote-add --if-not-exists --system flathub https://flathub.org/repo/flathub.flatpakrepo
+          sudo flatpak install -y flathub org.freedesktop.Platform/x86_64/24.08
+          sudo flatpak install -y flathub org.freedesktop.Sdk/x86_64/24.08
+          sudo flatpak install -y flathub org.electronjs.Electron2.BaseApp/x86_64/24.08
+
+      # Build and Draft Release
+      - name: Build and Release
+        if: github.repository == 'pear-devs/pear-desktop' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            pnpm release:linux
+          elif [ "${{ matrix.os }}" = "windows-latest" ]; then
+            pnpm release:win
+          elif [ "${{ matrix.os }}" = "macos-latest" ]; then
+            pnpm release:mac
+          fi
+        shell: bash
+
+      # Pull Request artifact validation
+      - name: Build specifically for PR validation (Linux Mint deb only)
+        if: matrix.os == 'ubuntu-latest' && github.event_name == 'pull_request'
+        run: |
+          pnpm build
+          pnpm electron-builder --linux deb:x64 -p never

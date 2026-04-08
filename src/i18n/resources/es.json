@@ -210,7 +210,7 @@
       "plugins": {
         "categories": {
           "appearance": "Apariencia",
-          "player": "Reproductor"
+          "audio": "Audio"
         },
         "enabled": "Habilitado",
         "label": "Complementos",
