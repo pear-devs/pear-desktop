@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [macos-13, ubuntu-latest, windows-latest, ubuntu-22.04]
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -53,7 +53,7 @@ jobs:
           pnpm dist:mac:arm64
 
       - name: Install Linux dependencies
-        if: startsWith(matrix.os, 'ubuntu')
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo snap install snapcraft --classic
           sudo apt update
@@ -64,11 +64,17 @@ jobs:
           sudo flatpak install -y flathub org.electronjs.Electron2.BaseApp/x86_64/24.08
 
       - name: Build on Linux
-        if: startsWith(matrix.os, 'ubuntu')
+        if: matrix.os == 'ubuntu-latest'
         run: |
           pnpm dist:linux
           pnpm dist:linux:deb-arm64
           pnpm dist:linux:rpm-arm64
+
+      - name: Build specifically for Linux Mint XFCE (deb only)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          pnpm build
+          pnpm electron-builder --linux deb:x64 -p never
 
       - name: Build on Windows
         if: startsWith(matrix.os, 'windows')
