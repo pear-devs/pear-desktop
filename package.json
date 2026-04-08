@@ -50,8 +50,7 @@
       "xml2js": "0.6.2",
       "node-fetch": "3.3.2",
       "@electron/universal": "3.0.2",
-      "@babel/runtime": "7.28.6",
-      "app-builder-bin": "4.2.0"
+      "@babel/runtime": "7.28.6"
     },
     "patchedDependencies": {
       "vudio@2.1.1": "patches/vudio@2.1.1.patch",
@@ -157,8 +156,8 @@
     "del-cli": "7.0.0",
     "discord-api-types": "0.38.40",
     "electron": "40.8.5",
-    "electron-builder": "25.1.8",
-    "electron-builder-squirrel-windows": "25.1.8",
+    "electron-builder": "24.13.3",
+    "electron-builder-squirrel-windows": "24.13.3",
     "electron-devtools-installer": "4.0.0",
     "electron-vite": "5.0.0",
     "eslint": "9.39.3",
