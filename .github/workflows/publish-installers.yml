@@ -1,0 +1,144 @@
+name: Publish installers to Release
+
+on:
+  workflow_run:
+    workflows:
+      - "Build After macOS Artifacts"
+      - "Build After Pear Desktop Artifacts"
+    types:
+      - completed
+
+concurrency:
+  group: publish-installers
+  cancel-in-progress: false
+
+jobs:
+  collect-and-publish:
+    runs-on: ubuntu-latest
+    env:
+      OWNER: Rocket-Space
+      REPO: pear-desktop
+      WORKFLOW_A: "Build After macOS Artifacts"
+      WORKFLOW_B: "Build After Pear Desktop Artifacts"
+      # Extensiones detectadas como instaladores
+      INSTALLER_EXT_REGEX: '\.exe$|\.deb$|\.rpm$|\.AppImage$|\.msi$|\.zip$'
+      # Espera máxima (segundos) para encontrar runs coincidentes
+      WAIT_TIMEOUT: "1200"
+      POLL_INTERVAL: "15"
+      # Número de reintentos para descargas y uploads
+      CURL_RETRIES: "3"
+      GH_UPLOAD_RETRIES: "3"
+      # Tag format: timestamp (default)
+      TAG_PREFIX: "auto-release-"
+      # Lista de sistemas compatibles que se incluirán en la descripción
+      COMPATIBILITY: "Ubuntu (20.04+), Debian, Linux Mint (Cinnamon, MATE, Xfce), Fedora, CentOS/RHEL (via rpm), Arch (AppImage), Windows (exe, msi)"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq unzip curl
+          # Install gh CLI
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+          sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+          sudo apt-get update -y
+          sudo apt-get install -y gh
+
+      - name: Save download and publish script
+        run: |
+          mkdir -p .github/scripts
+          cat > .github/scripts/download_and_publish.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          IFS=$'\n\t'
+
+          OWNER="${OWNER}"
+          REPO="${REPO}"
+          GHTOKEN="${GHTOKEN}"
+          WORKFLOW_A="${WORKFLOW_A}"
+          WORKFLOW_B="${WORKFLOW_B}"
+          INSTALLER_EXT_REGEX="${INSTALLER_EXT_REGEX}"
+          WAIT_TIMEOUT="${WAIT_TIMEOUT}"
+          POLL_INTERVAL="${POLL_INTERVAL}"
+          CURL_RETRIES="${CURL_RETRIES}"
+          GH_UPLOAD_RETRIES="${GH_UPLOAD_RETRIES}"
+          TAG_PREFIX="${TAG_PREFIX}"
+          COMPATIBILITY="${COMPATIBILITY}"
+
+          api() {
+            curl -sS -H "Authorization: token ${GHTOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com$1"
+          }
+
+          # Get latest successful run for a workflow name, return JSON object of the run
+          get_latest_successful_run() {
+            local wf_name="$1"
+            local runs_json
+            runs_json=$(api "/repos/${OWNER}/${REPO}/actions/runs?per_page=100")
+            echo "$runs_json" | jq -c --arg name "$wf_name" '.workflow_runs[] | select(.name == $name and .conclusion == "success")' | head -n1 || true
+          }
+
+          # Download all artifacts for a run (by run id) into outdir
+          download_artifacts_for_run() {
+            local run_id="$1"
+            local outdir="$2"
+            mkdir -p "${outdir}"
+            local artifacts_json
+            artifacts_json=$(api "/repos/${OWNER}/${REPO}/actions/runs/${run_id}/artifacts")
+            echo "${artifacts_json}" | jq -r '.artifacts[] | @base64' | while read -r a; do
+              _jq() { echo "${a}" | base64 --decode | jq -r "${1}"; }
+              name=$(_jq '.name')
+              url=$(_jq '.archive_download_url')
+              out="${outdir}/${name}.zip"
+              echo "Downloading artifact ${name} from run ${run_id} -> ${out}"
+              n=0
+              until [ $n -ge "${CURL_RETRIES}" ]; do
+                if curl -sSL -H "Authorization: token ${GHTOKEN}" -H "Accept: application/vnd.github+json" -L "${url}" -o "${out}"; then
+                  echo "Downloaded ${name}"
+                  break
+                else
+                  n=$((n+1))
+                  echo "Retry ${n}/${CURL_RETRIES} for ${name}"
+                  sleep 2
+                fi
+              done
+              if [ ! -f "${out}" ]; then
+                echo "Failed to download artifact ${name} after ${CURL_RETRIES} attempts" >&2
+                return 1
+              fi
+            done
+          }
+
+          extract_installers() {
+            local srcdir="$1"
+            local destdir="$2"
+            mkdir -p "${destdir}"
+            shopt -s nullglob
+            for z in "${srcdir}"/*.zip; do
+              [ -f "$z" ] || continue
+              tmpdir=$(mktemp -d)
+              unzip -o "$z" -d "$tmpdir" >/dev/null
+              find "$tmpdir" -type f | while read -r f; do
+                if echo "$f" | grep -E "${INSTALLER_EXT_REGEX}" >/dev/null; then
+                  base=$(basename "$f")
+                  # avoid overwriting different files with same name by prefixing with run id timestamp
+                  cp -f "$f" "${destdir}/${base}"
+                  echo "Collected installer: ${base}"
+                fi
+              done
+              rm -rf "$tmpdir"
+            done
+            shopt -u nullglob
+          }
+
+          # Wait until both workflows have successful runs with the same head_sha
+          start_ts=$(date +%s)
+          deadline=$((start_ts + WAIT_TIMEOUT))
+          matched_run_a=""
+          matched_run_b=""
+          matched_sha=""
+
+          echo "Searching for matching successful runs for workflows:"
+          echo " - ${WORKFLOW_A}"
