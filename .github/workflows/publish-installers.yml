@@ -278,14 +278,4 @@ EOF
           REPO: ${{ env.REPO }}
           WORKFLOW_A: ${{ env.WORKFLOW_A }}
           WORKFLOW_B: ${{ env.WORKFLOW_B }}
-          INSTALLER_EXT_REGEX: ${{ env.INSTALLER_EXT_REGEX }}
-          WAIT_TIMEOUT: ${{ env.WAIT_TIMEOUT }}
-          POLL_INTERVAL: ${{ env.POLL_INTERVAL }}
-          CURL_RETRIES: ${{ env.CURL_RETRIES }}
-          GH_UPLOAD_RETRIES: ${{ env.GH_UPLOAD_RETRIES }}
-          TAG_PREFIX: ${{ env.TAG_PREFIX }}
-          COMPATIBILITY: ${{ env.COMPATIBILITY }}
-          DIAG_MODE: ${{ env.DIAG_MODE }}
-        run: |
-          set -euo pipefail
-          bash .github/scripts/download_and_publish_verbose.sh
+          INSTALLER_EXT_REGEX: ${{ env.INSTALL
