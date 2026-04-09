@@ -8,6 +8,10 @@ on:
     types:
       - completed
 
+permissions:
+  contents: write
+  actions: read
+
 concurrency:
   group: publish-installers
   cancel-in-progress: false
@@ -20,18 +24,15 @@ jobs:
       REPO: pear-desktop
       WORKFLOW_A: "Build After macOS Artifacts"
       WORKFLOW_B: "Build After Pear Desktop Artifacts"
-      # Extensiones detectadas como instaladores
       INSTALLER_EXT_REGEX: '\.exe$|\.deb$|\.rpm$|\.AppImage$|\.msi$|\.zip$'
-      # Espera máxima (segundos) para encontrar runs coincidentes
       WAIT_TIMEOUT: "1200"
       POLL_INTERVAL: "15"
-      # Número de reintentos para descargas y uploads
       CURL_RETRIES: "3"
       GH_UPLOAD_RETRIES: "3"
-      # Tag format: timestamp (default)
       TAG_PREFIX: "auto-release-"
-      # Lista de sistemas compatibles que se incluirán en la descripción
-      COMPATIBILITY: "Ubuntu (20.04+), Debian, Linux Mint (Cinnamon, MATE, Xfce), Fedora, CentOS/RHEL (via rpm), Arch (AppImage), Windows (exe, msi)"
+      COMPATIBILITY: "Ubuntu (20.04+), Debian, Linux Mint (Cinnamon, MATE, Xfce), Fedora, CentOS/RHEL, Arch (AppImage), Windows (exe, msi)"
+      DIAG_MODE: "true"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,98 +48,244 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y gh
 
-      - name: Save download and publish script
+      - name: Save download and publish script (fixed heredoc)
         run: |
           mkdir -p .github/scripts
-          cat > .github/scripts/download_and_publish.sh <<'EOF'
-          #!/usr/bin/env bash
+          cat > .github/scripts/download_and_publish_verbose.sh <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+set -x
+IFS=$'\n\t'
+
+OWNER="${OWNER}"
+REPO="${REPO}"
+GHTOKEN="${GHTOKEN}"
+WORKFLOW_A="${WORKFLOW_A}"
+WORKFLOW_B="${WORKFLOW_B}"
+INSTALLER_EXT_REGEX="${INSTALLER_EXT_REGEX}"
+WAIT_TIMEOUT="${WAIT_TIMEOUT}"
+POLL_INTERVAL="${POLL_INTERVAL}"
+CURL_RETRIES="${CURL_RETRIES}"
+GH_UPLOAD_RETRIES="${GH_UPLOAD_RETRIES}"
+TAG_PREFIX="${TAG_PREFIX}"
+COMPATIBILITY="${COMPATIBILITY}"
+DIAG_MODE="${DIAG_MODE}"
+
+API_BASE="https://api.github.com"
+
+log() { echo ">> $*"; }
+api() {
+  curl -sS -H "Authorization: token ${GHTOKEN}" -H "Accept: application/vnd.github+json" "${API_BASE}$1"
+}
+
+resolve_workflow_id() {
+  local wf_name="$1"
+  log "Resolving workflow id for: ${wf_name}"
+  local list
+  list=$(api "/repos/${OWNER}/${REPO}/actions/workflows?per_page=100")
+  if [ "${DIAG_MODE}" = "true" ]; then
+    echo "WORKFLOWS_JSON_COUNT: $(echo "$list" | jq -r '.workflows | length')"
+  fi
+  id=$(echo "$list" | jq -r --arg name "$wf_name" '.workflows[] | select(.name == $name) | .id' | head -n1 || true)
+  if [ -z "$id" ]; then
+    id=$(echo "$list" | jq -r --arg name "$wf_name" '.workflows[] | select(.path | contains($name)) | .id' | head -n1 || true)
+  fi
+  echo "${id:-}"
+}
+
+get_latest_successful_run_by_workflow_id() {
+  local wf_id="$1"
+  api "/repos/${OWNER}/${REPO}/actions/workflows/${wf_id}/runs?per_page=50" | jq -c '.workflow_runs[] | select(.conclusion=="success")' | head -n1 || true
+}
+
+download_artifacts_for_run() {
+  local run_id="$1"
+  local outdir="$2"
+  mkdir -p "${outdir}"
+  local artifacts_json
+  artifacts_json=$(api "/repos/${OWNER}/${REPO}/actions/runs/${run_id}/artifacts")
+  echo "${artifacts_json}" > "${outdir}/artifacts.json"
+  log "Artifacts JSON saved to ${outdir}/artifacts.json"
+  echo "${artifacts_json}" | jq -r '.artifacts[] | @base64' | while read -r a; do
+    _jq() { echo "${a}" | base64 --decode | jq -r "${1}"; }
+    name=$(_jq '.name')
+    url=$(_jq '.archive_download_url')
+    out="${outdir}/${name}.zip"
+    log "Downloading artifact ${name} from run ${run_id} -> ${out}"
+    n=0
+    until [ $n -ge "${CURL_RETRIES}" ]; do
+      if curl -sSL -H "Authorization: token ${GHTOKEN}" -H "Accept: application/vnd.github+json" -L "${url}" -o "${out}"; then
+        log "Downloaded ${name}"
+        break
+      else
+        n=$((n+1))
+        log "Retry ${n}/${CURL_RETRIES} for ${name}"
+        sleep 2
+      fi
+    done
+    if [ ! -f "${out}" ]; then
+      log "ERROR: Failed to download artifact ${name}"
+      return 1
+    fi
+  done
+}
+
+extract_installers() {
+  local srcdir="$1"
+  local destdir="$2"
+  mkdir -p "${destdir}"
+  shopt -s nullglob
+  for z in "${srcdir}"/*.zip; do
+    [ -f "$z" ] || continue
+    tmpdir=$(mktemp -d)
+    unzip -o "$z" -d "$tmpdir" >/dev/null
+    find "$tmpdir" -type f | while read -r f; do
+      if echo "$f" | grep -E "${INSTALLER_EXT_REGEX}" >/dev/null; then
+        base=$(basename "$f")
+        cp -f "$f" "${destdir}/${base}"
+        log "Collected installer: ${base}"
+      fi
+    done
+    rm -rf "$tmpdir"
+  done
+  shopt -u nullglob
+}
+
+start_ts=$(date +%s)
+deadline=$((start_ts + WAIT_TIMEOUT))
+matched_run_a=""
+matched_run_b=""
+matched_sha=""
+
+wf_a_id=$(resolve_workflow_id "${WORKFLOW_A}")
+wf_b_id=$(resolve_workflow_id "${WORKFLOW_B}")
+log "Resolved workflow ids: A=${wf_a_id:-none} B=${wf_b_id:-none}"
+if [ -z "${wf_a_id}" ] || [ -z "${wf_b_id}" ]; then
+  log "ERROR: Could not resolve one or both workflow ids. Check WORKFLOW_A/WORKFLOW_B names."
+  exit 10
+fi
+
+while [ "$(date +%s)" -le "${deadline}" ]; do
+  run_a_json=$(get_latest_successful_run_by_workflow_id "${wf_a_id}" || true)
+  run_b_json=$(get_latest_successful_run_by_workflow_id "${wf_b_id}" || true)
+
+  if [ -n "${run_a_json}" ] && [ -n "${run_b_json}" ]; then
+    sha_a=$(echo "${run_a_json}" | jq -r '.head_sha')
+    sha_b=$(echo "${run_b_json}" | jq -r '.head_sha')
+    id_a=$(echo "${run_a_json}" | jq -r '.id')
+    id_b=$(echo "${run_b_json}" | jq -r '.id')
+    log "Found runs: A(id=${id_a}, sha=${sha_a}) B(id=${id_b}, sha=${sha_b})"
+    if [ "${sha_a}" = "${sha_b}" ]; then
+      matched_run_a="${id_a}"
+      matched_run_b="${id_b}"
+      matched_sha="${sha_a}"
+      log "Matched runs with same commit: ${matched_sha}"
+      break
+    else
+      log "Runs do not match by commit. Waiting..."
+    fi
+  else
+    log "One or both runs not found yet. Polling..."
+  fi
+  sleep "${POLL_INTERVAL}"
+done
+
+if [ -z "${matched_run_a}" ] || [ -z "${matched_run_b}" ]; then
+  log "ERROR: Timeout reached (${WAIT_TIMEOUT}s) without finding matching successful runs for both workflows."
+  exit 2
+fi
+
+WORKDIR=$(mktemp -d)
+ART_DIR="${WORKDIR}/artifacts"
+mkdir -p "${ART_DIR}/A" "${ART_DIR}/B"
+INSTALLERS_DIR="${WORKDIR}/installers"
+mkdir -p "${INSTALLERS_DIR}"
+
+log "Downloading artifacts for run A=${matched_run_a}"
+download_artifacts_for_run "${matched_run_a}" "${ART_DIR}/A"
+log "Downloading artifacts for run B=${matched_run_b}"
+download_artifacts_for_run "${matched_run_b}" "${ART_DIR}/B"
+
+log "Listing downloaded artifact zips:"
+ls -la "${ART_DIR}" || true
+ls -la "${ART_DIR}/A" || true
+ls -la "${ART_DIR}/B" || true
+
+log "Extracting installers"
+extract_installers "${ART_DIR}/A" "${INSTALLERS_DIR}"
+extract_installers "${ART_DIR}/B" "${INSTALLERS_DIR}"
+
+log "Installers collected:"
+ls -la "${INSTALLERS_DIR}" || true
+
+if [ -z "$(ls -A ${INSTALLERS_DIR} 2>/dev/null || true)" ]; then
+  log "ERROR: No installer files found in artifacts."
+  exit 3
+fi
+
+TIMESTAMP=$(date +%Y%m%d%H%M%S)
+RELEASE_TAG="${TAG_PREFIX}${TIMESTAMP}"
+RELEASE_NAME="Automated release ${RELEASE_TAG}"
+RELEASE_BODY="Automated release combining artifacts from workflows:
+- ${WORKFLOW_A} (run ${matched_run_a})
+- ${WORKFLOW_B} (run ${matched_run_b})
+
+Commit: ${matched_sha}
+
+Compatible systems: ${COMPATIBILITY}
+"
+
+log "Authenticating gh CLI"
+echo "${GHTOKEN}" | gh auth login --with-token >/dev/null
+
+log "Creating release ${RELEASE_TAG}"
+gh release create "${RELEASE_TAG}" -t "${RELEASE_NAME}" -n "${RELEASE_BODY}" || true
+
+log "Uploading installers"
+for f in "${INSTALLERS_DIR}"/*; do
+  [ -f "$f" ] || continue
+  n=0
+  until [ $n -ge "${GH_UPLOAD_RETRIES}" ]; do
+    if gh release upload "${RELEASE_TAG}" "$f" --clobber; then
+      log "Uploaded $(basename "$f")"
+      break
+    else
+      n=$((n+1))
+      log "Retry ${n}/${GH_UPLOAD_RETRIES} uploading $(basename "$f")"
+      sleep 2
+    fi
+  done
+  if [ $n -ge "${GH_UPLOAD_RETRIES}" ]; then
+    log "ERROR: Failed to upload $(basename "$f") after ${GH_UPLOAD_RETRIES} attempts"
+    exit 4
+  fi
+done
+
+log "Release published: ${RELEASE_TAG}"
+echo "::set-output name=release_tag::${RELEASE_TAG}"
+EOF
+
+      - name: Verify script and show head
+        run: |
+          ls -la .github/scripts
+          echo "---- script head (first 120 lines) ----"
+          sed -n '1,120p' .github/scripts/download_and_publish_verbose.sh || true
+
+      - name: Run download and publish (verbose)
+        env:
+          GHTOKEN: ${{ secrets.RELEASE_PAT || secrets.GITHUB_TOKEN }}
+          OWNER: ${{ env.OWNER }}
+          REPO: ${{ env.REPO }}
+          WORKFLOW_A: ${{ env.WORKFLOW_A }}
+          WORKFLOW_B: ${{ env.WORKFLOW_B }}
+          INSTALLER_EXT_REGEX: ${{ env.INSTALLER_EXT_REGEX }}
+          WAIT_TIMEOUT: ${{ env.WAIT_TIMEOUT }}
+          POLL_INTERVAL: ${{ env.POLL_INTERVAL }}
+          CURL_RETRIES: ${{ env.CURL_RETRIES }}
+          GH_UPLOAD_RETRIES: ${{ env.GH_UPLOAD_RETRIES }}
+          TAG_PREFIX: ${{ env.TAG_PREFIX }}
+          COMPATIBILITY: ${{ env.COMPATIBILITY }}
+          DIAG_MODE: ${{ env.DIAG_MODE }}
+        run: |
           set -euo pipefail
-          IFS=$'\n\t'
-
-          OWNER="${OWNER}"
-          REPO="${REPO}"
-          GHTOKEN="${GHTOKEN}"
-          WORKFLOW_A="${WORKFLOW_A}"
-          WORKFLOW_B="${WORKFLOW_B}"
-          INSTALLER_EXT_REGEX="${INSTALLER_EXT_REGEX}"
-          WAIT_TIMEOUT="${WAIT_TIMEOUT}"
-          POLL_INTERVAL="${POLL_INTERVAL}"
-          CURL_RETRIES="${CURL_RETRIES}"
-          GH_UPLOAD_RETRIES="${GH_UPLOAD_RETRIES}"
-          TAG_PREFIX="${TAG_PREFIX}"
-          COMPATIBILITY="${COMPATIBILITY}"
-
-          api() {
-            curl -sS -H "Authorization: token ${GHTOKEN}" -H "Accept: application/vnd.github+json" "https://api.github.com$1"
-          }
-
-          # Get latest successful run for a workflow name, return JSON object of the run
-          get_latest_successful_run() {
-            local wf_name="$1"
-            local runs_json
-            runs_json=$(api "/repos/${OWNER}/${REPO}/actions/runs?per_page=100")
-            echo "$runs_json" | jq -c --arg name "$wf_name" '.workflow_runs[] | select(.name == $name and .conclusion == "success")' | head -n1 || true
-          }
-
-          # Download all artifacts for a run (by run id) into outdir
-          download_artifacts_for_run() {
-            local run_id="$1"
-            local outdir="$2"
-            mkdir -p "${outdir}"
-            local artifacts_json
-            artifacts_json=$(api "/repos/${OWNER}/${REPO}/actions/runs/${run_id}/artifacts")
-            echo "${artifacts_json}" | jq -r '.artifacts[] | @base64' | while read -r a; do
-              _jq() { echo "${a}" | base64 --decode | jq -r "${1}"; }
-              name=$(_jq '.name')
-              url=$(_jq '.archive_download_url')
-              out="${outdir}/${name}.zip"
-              echo "Downloading artifact ${name} from run ${run_id} -> ${out}"
-              n=0
-              until [ $n -ge "${CURL_RETRIES}" ]; do
-                if curl -sSL -H "Authorization: token ${GHTOKEN}" -H "Accept: application/vnd.github+json" -L "${url}" -o "${out}"; then
-                  echo "Downloaded ${name}"
-                  break
-                else
-                  n=$((n+1))
-                  echo "Retry ${n}/${CURL_RETRIES} for ${name}"
-                  sleep 2
-                fi
-              done
-              if [ ! -f "${out}" ]; then
-                echo "Failed to download artifact ${name} after ${CURL_RETRIES} attempts" >&2
-                return 1
-              fi
-            done
-          }
-
-          extract_installers() {
-            local srcdir="$1"
-            local destdir="$2"
-            mkdir -p "${destdir}"
-            shopt -s nullglob
-            for z in "${srcdir}"/*.zip; do
-              [ -f "$z" ] || continue
-              tmpdir=$(mktemp -d)
-              unzip -o "$z" -d "$tmpdir" >/dev/null
-              find "$tmpdir" -type f | while read -r f; do
-                if echo "$f" | grep -E "${INSTALLER_EXT_REGEX}" >/dev/null; then
-                  base=$(basename "$f")
-                  # avoid overwriting different files with same name by prefixing with run id timestamp
-                  cp -f "$f" "${destdir}/${base}"
-                  echo "Collected installer: ${base}"
-                fi
-              done
-              rm -rf "$tmpdir"
-            done
-            shopt -u nullglob
-          }
-
-          # Wait until both workflows have successful runs with the same head_sha
-          start_ts=$(date +%s)
-          deadline=$((start_ts + WAIT_TIMEOUT))
-          matched_run_a=""
-          matched_run_b=""
-          matched_sha=""
-
-          echo "Searching for matching successful runs for workflows:"
-          echo " - ${WORKFLOW_A}"
+          bash .github/scripts/download_and_publish_verbose.sh
