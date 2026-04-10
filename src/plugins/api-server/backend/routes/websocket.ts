@@ -55,6 +55,18 @@ export const register = (
     );
   };
 
+  // Notify all WebSocket clients that playback has stopped (e.g. app closing/hiding)
+  // We intentionally do NOT close or clear sockets here so that clients like
+  // Boring Notch keep their connection alive and can receive updates when
+  // Pear Desktop comes back from hiding.
+  wsNotifyClose = () => {
+    console.log(`[API Server WebSocket] NotifyClose called. Sending isPlaying:false to ${sockets.size} clients.`);
+    send(DataTypes.PlayerStateChanged, {
+      isPlaying: false,
+      position: lastSongInfo?.elapsedSeconds ?? 0,
+    });
+  };
+
   const createPlayerState = ({
     songInfo,
     volumeState,
@@ -131,7 +143,7 @@ export const register = (
     upgradeWebSocket(() => ({
       onOpen(_, ws) {
         // "Unsafe argument of type `WSContext<WebSocket>` assigned to a parameter of type `WSContext<WebSocket>`. (@typescript-eslint/no-unsafe-argument)" ????? what?
-        sockets.add(ws as WSContext<WebSocket>);
+        sockets.add(ws as unknown as WSContext<WebSocket>);
 
         ws.send(
           JSON.stringify({
@@ -147,8 +159,12 @@ export const register = (
       },
 
       onClose(_, ws) {
-        sockets.delete(ws as WSContext<WebSocket>);
+        sockets.delete(ws as unknown as WSContext<WebSocket>);
       },
     })) as (ctx: Context, next: Next) => Promise<Response>,
   );
 };
+
+// Exposed so the backend can call it on app close/hide
+export let wsNotifyClose: (() => void) | undefined;
+
