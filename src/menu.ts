@@ -120,8 +120,17 @@ export const mainMenuTemplate = async (
   );
 
   const availablePlugins = Object.keys(await allPlugins());
+
+  // IDs that will be merged into a single "Downloader" parent menu
+  const downloaderIds = ['downloader', 'downloader-ytdlp'] as const;
+  const downloaderLabels: Record<string, string> = {
+    'downloader': 'youtube.js (built-in)',
+    'downloader-ytdlp': 'ytdlp (external exe)',
+  };
+
   const pluginMenus = await Promise.all(
     availablePlugins
+      .filter((id) => !downloaderIds.includes(id as typeof downloaderIds[number]))
       .sort((a, b) => {
         const aPluginLabel = allPluginsStubs[a]?.name?.() ?? a;
         const bPluginLabel = allPluginsStubs[b]?.name?.() ?? b;
@@ -149,6 +158,70 @@ export const mainMenuTemplate = async (
         );
       }),
   );
+
+  // Build unified "Downloader" submenu from both downloader plugins
+  const downloaderSubmenus = await Promise.all(
+    downloaderIds.map(async (id) => {
+      const plugin = allPluginsStubs[id];
+      if (!plugin) return null;
+
+      const subLabel = downloaderLabels[id];
+      const pluginDescription = plugin?.description?.() ?? undefined;
+      const isEnabled = await config.plugins.isEnabled(id);
+      const predefinedTemplate = menuResult.find((it) => it[0] === id);
+
+      if (!isEnabled || !predefinedTemplate) {
+        // Plugin not enabled or has no custom menu — show just the Enabled checkbox
+        return {
+          label: subLabel,
+          toolTip: pluginDescription,
+          submenu: [
+            await pluginEnabledMenu(
+              id,
+              t('main.menu.plugins.enabled'),
+              pluginDescription,
+              false,
+              true,
+              innerRefreshMenu,
+            ),
+          ],
+        } satisfies Electron.MenuItemConstructorOptions;
+      }
+
+      // Plugin enabled with menu template
+      const template = (predefinedTemplate[1] as Electron.MenuItemConstructorOptions).submenu;
+      return {
+        label: subLabel,
+        toolTip: pluginDescription,
+        submenu: template,
+      } satisfies Electron.MenuItemConstructorOptions;
+    }),
+  );
+
+  const validDownloaderSubmenus: Electron.MenuItemConstructorOptions[] = downloaderSubmenus.filter(
+    (s): s is NonNullable<typeof s> => s !== null,
+  );
+
+  if (validDownloaderSubmenus.length > 0) {
+    // Insert unified Downloader menu in sorted position
+    const combinedDownloader: Electron.MenuItemConstructorOptions = {
+      label: t('plugins.downloader.name'),
+      submenu: validDownloaderSubmenus,
+    };
+    // Find insertion index to keep alphabetical order
+    const insertIdx = pluginMenus.findIndex((item) => {
+      const itemLabel =
+        typeof item === 'object' && 'label' in item
+          ? (item as Electron.MenuItemConstructorOptions).label ?? ''
+          : '';
+      return (itemLabel as string).localeCompare(t('plugins.downloader.name')) > 0;
+    });
+    if (insertIdx === -1) {
+      pluginMenus.push(combinedDownloader);
+    } else {
+      pluginMenus.splice(insertIdx, 0, combinedDownloader);
+    }
+  }
 
   const langResources = await languageResources();
   const availableLanguages = Object.keys(langResources);
