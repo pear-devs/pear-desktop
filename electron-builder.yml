@@ -20,7 +20,8 @@ mac:
       arch:
         - x64
         - arm64
-  icon: assets/generated/icons/mac/icon.icon
+  # Legacy .icns avoids electron-builder’s Icon Composer path (requires Xcode 26+ / actool).
+  icon: assets/generated/icons/mac/icon.icns
   compression: maximum
 win:
   icon: assets/generated/icons/win/icon.ico

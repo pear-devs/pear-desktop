@@ -163,11 +163,33 @@ electronDebug({
   showDevTools: false, // Disable automatic devTools on new window
 });
 
-let icon = 'assets/icon.png';
-if (process.platform === 'win32') {
-  icon = 'assets/generated/icons/win/icon.ico';
-} else if (process.platform === 'darwin') {
-  icon = 'assets/generated/icons/mac/icon.icns';
+/** Absolute path so dev (electron-vite preview), packaged app, and cwd all resolve correctly. */
+function getResolvedWindowIconPath(): string {
+  const relativeIcon =
+    process.platform === 'win32'
+      ? path.join('assets', 'generated', 'icons', 'win', 'icon.ico')
+      : process.platform === 'darwin'
+        ? path.join('assets', 'generated', 'icons', 'mac', 'icon.icns')
+        : path.join('assets', 'icon.png');
+
+  const candidates = [
+    path.join(app.getAppPath(), relativeIcon),
+    path.join(process.cwd(), relativeIcon),
+    path.resolve(
+      path.dirname(url.fileURLToPath(import.meta.url)),
+      '..',
+      '..',
+      relativeIcon,
+    ),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return candidates[0];
 }
 
 function onClosed() {
@@ -348,7 +370,7 @@ async function createMainWindow() {
   }
 
   const electronWindowSettings: Electron.BrowserWindowConstructorOptions = {
-    icon,
+    icon: getResolvedWindowIconPath(),
     width: windowSize.width,
     height: windowSize.height,
     minWidth: 325,
@@ -358,6 +380,8 @@ async function createMainWindow() {
     webPreferences: {
       contextIsolation: true,
       preload: path.join(__dirname, '..', 'preload', 'preload.cjs'),
+      // Keep timers/media scheduling steady; helps Web Audio when the window is in the background.
+      backgroundThrottling: false,
       ...(isTesting()
         ? undefined
         : {
@@ -370,6 +394,17 @@ async function createMainWindow() {
   };
 
   const win = new BrowserWindow(electronWindowSettings);
+
+  const nudgeRendererAudio = () => {
+    if (win.isDestroyed()) return;
+    win.webContents.send('peard:resume-audio-context');
+  };
+  win.on('focus', nudgeRendererAudio);
+  win.on('show', nudgeRendererAudio);
+
+  // Enhance session.webRequest before any plugin registers listeners; otherwise
+  // enableBlockingInSession attaches to the raw API and the replacement below drops it.
+  removeContentSecurityPolicy();
 
   await initHook(win);
   initTheme(win);
@@ -483,8 +518,6 @@ async function createMainWindow() {
       win.show();
     }
   });
-
-  removeContentSecurityPolicy();
 
   win.webContents.on('dom-ready', () => {
     if (useInlineMenu && is.windows()) {
@@ -794,10 +827,16 @@ app.whenReady().then(async () => {
     mainWindow.focus();
   });
 
-  // Autostart at login
-  app.setLoginItemSettings({
-    openAtLogin: config.get('options.startAtLogin'),
-  });
+  // Autostart at login (may fail under sandbox / missing macOS permission)
+  try {
+    app.setLoginItemSettings({
+      openAtLogin: config.get('options.startAtLogin'),
+    });
+  } catch (err) {
+    if (is.dev()) {
+      console.warn(LoggerPrefix, 'setLoginItemSettings skipped:', err);
+    }
+  }
 
   if (!is.dev() && config.get('options.autoUpdates')) {
     const updateTimeout = setTimeout(() => {
