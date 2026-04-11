@@ -40,7 +40,7 @@ overrides:
   picomatch@>=4.0.0 <4.0.4: '>=4.0.4'
   yaml@>=2.0.0 <2.8.3: '>=2.8.3'
   happy-dom@<20.8.9: '>=20.8.9'
-  '@develar/schema-utils>ajv': 6.14.0
+  '@develar/schema-utils>ajv': 8.18.0
   '@develar/schema-utils>ajv-keywords': 3.5.2
 
 patchedDependencies:
@@ -4623,8 +4623,8 @@ snapshots:
 
   '@develar/schema-utils@2.6.5':
     dependencies:
-      ajv: 6.14.0
-      ajv-keywords: 3.5.2(ajv@6.14.0)
+      ajv: 8.18.0
+      ajv-keywords: 3.5.2(ajv@8.18.0)
 
   '@discordjs/collection@2.1.1': {}
 
@@ -5545,9 +5545,9 @@ snapshots:
     optionalDependencies:
       ajv: 8.18.0
 
-  ajv-keywords@3.5.2(ajv@6.14.0):
+  ajv-keywords@3.5.2(ajv@8.18.0):
     dependencies:
-      ajv: 6.14.0
+      ajv: 8.18.0
 
   ajv@6.14.0:
     dependencies:
