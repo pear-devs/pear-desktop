@@ -88,7 +88,8 @@
       "@malept/flatpak-bundler@0.4.0": "patches/@malept__flatpak-bundler@0.4.0.patch",
       "kuromoji@0.1.2": "patches/kuromoji@0.1.2.patch",
       "electron-is@3.0.0": "patches/electron-is@3.0.0.patch",
-      "mdui@2.1.4": "patches/mdui@2.1.4.patch"
+      "mdui@2.1.4": "patches/mdui@2.1.4.patch",
+      "@jellybrick/dbus-next": "patches/@jellybrick__dbus-next.patch"
     },
     "neverBuiltDependencies": []
   },
