@@ -250,9 +250,11 @@ export default createPlugin<
             );
 
             await this.queue?.addVideos(videoList, event.payload.index);
-            await this.connection?.broadcast('ADD_SONGS', {
-              ...event.payload,
-              videoList,
+            await this.connection?.broadcast(
+              'ADD_SONGS',
+              {
+                ...event.payload,
+                videoList,
               },
               event.after,
             );
@@ -423,12 +425,14 @@ export default createPlugin<
             break;
           }
           case 'ADD_SONGS': {
-            await this.connection?.broadcast('ADD_SONGS', {
-              ...event.payload,
-              videoList: event.payload.videoList.map((it) => ({
-                ...it,
-                ownerId: it.ownerId ?? this.connection!.id,
-              })),
+            await this.connection?.broadcast(
+              'ADD_SONGS',
+              {
+                ...event.payload,
+                videoList: event.payload.videoList.map((it) => ({
+                  ...it,
+                  ownerId: it.ownerId ?? this.connection!.id,
+                })),
               },
               event.after,
             );
@@ -481,7 +485,6 @@ export default createPlugin<
             if (afterevent?.type === 'SET_INDEX') {
               this.queue?.setIndex(afterevent.payload.index);
             }
-
 
             break;
           }

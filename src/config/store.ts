@@ -1,10 +1,17 @@
-import Store from 'electron-store';
-
 import { defaultConfig as defaults } from './defaults';
 
 import { DefaultPresetList, type Preset } from '@/plugins/downloader/types';
 
 import type { SyncedLyricsPluginConfig } from '@/plugins/synced-lyrics/types';
+
+// HACK: electron-store is ESM, but rolldown has a bug that prevents it from being imported properly in CommonJS context, so we have to use require here
+// eslint-disable-next-line prettier/prettier
+const Store = (
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  require('electron-store') as {
+    default: typeof import('electron-store').default;
+  }
+).default;
 
 export type IStore = InstanceType<
   typeof import('conf').default<Record<string, unknown>>
@@ -267,4 +274,4 @@ export const store = new Store({
   },
   clearInvalidConfig: false,
   migrations,
-}) as Store & IStore;
+});

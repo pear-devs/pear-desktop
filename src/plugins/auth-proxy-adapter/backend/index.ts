@@ -61,7 +61,7 @@ export const backend = createBackend<BackendType, AuthProxyConfig>({
     // Create SOCKS proxy server
     const socksServer = net.createServer((socket) => {
       socket.once('data', (chunk) => {
-        if (chunk[0] === 0x05) {
+        if (Buffer.isBuffer(chunk) && chunk[0] === 0x05) {
           // SOCKS5
           this.handleSocks5(socket, chunk, upstreamProxyUrl);
         } else {
@@ -113,6 +113,7 @@ export const backend = createBackend<BackendType, AuthProxyConfig>({
 
       // Wait for client's connection request
       clientSocket.once('data', (data) => {
+        if (!Buffer.isBuffer(data)) return;
         this.processSocks5Request(clientSocket, data, upstreamProxyUrl);
       });
     } else {

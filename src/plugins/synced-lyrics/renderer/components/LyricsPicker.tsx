@@ -59,7 +59,6 @@ const shouldSwitchProvider = (providerData: ProviderState) => {
 const providerBias = (p: ProviderName) =>
   (lyricsStore.lyrics[p].state === 'done' ? 1 : -1) +
   (lyricsStore.lyrics[p].data?.lines?.length ? 2 : -1) +
-  // eslint-disable-next-line prettier/prettier
   (lyricsStore.lyrics[p].data?.lines?.length && p === ProviderNames.YTMusic
     ? 1
     : 0) +

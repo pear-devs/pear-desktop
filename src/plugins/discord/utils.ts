@@ -25,8 +25,11 @@ export const truncateString = (str: string, length: number): string => {
  * @param fallback - A fallback string to use if the input is empty or whitespace. Defaults to 'undefined'.
  * @returns The sanitized string, compliant with Discord's requirements.
  */
-export function sanitizeActivityText(input: string | undefined, fallback: string = 'undefined'): string {
-  const text = (input && input.trim()) ? input.trim() : fallback.trim();
+export function sanitizeActivityText(
+  input: string | undefined,
+  fallback: string = 'undefined',
+): string {
+  const text = input && input.trim() ? input.trim() : fallback.trim();
   let safeString = truncateString(text, 128);
 
   if (safeString.length === 0) {

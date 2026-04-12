@@ -54,10 +54,14 @@ export const renderer = createRenderer<
     navigator.mediaDevices.ondevicechange = async () =>
       await updateDeviceList(context);
 
-    document.addEventListener('peard:audio-can-play', this.audioCanPlayHandler, {
-      once: true,
-      passive: true,
-    });
+    document.addEventListener(
+      'peard:audio-can-play',
+      this.audioCanPlayHandler,
+      {
+        once: true,
+        passive: true,
+      },
+    );
     await updateDeviceList(context);
   },
 

@@ -4,11 +4,15 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions: {}
+
 env:
-  NODE_VERSION: "22.x"
+  NODE_VERSION: "24.x"
 
 jobs:
   check-permissions:
+    permissions:
+      contents: read
     if: github.event.pull_request.draft == false
     name: Check if user has write access
     runs-on: ubuntu-latest

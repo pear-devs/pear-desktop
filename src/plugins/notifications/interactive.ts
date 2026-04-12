@@ -13,7 +13,10 @@ import {
   type SongInfo,
   SongInfoEvent,
 } from '@/providers/song-info';
-import { APP_PROTOCOL, changeProtocolHandler } from '@/providers/protocol-handler';
+import {
+  APP_PROTOCOL,
+  changeProtocolHandler,
+} from '@/providers/protocol-handler';
 import { setTrayOnClick, setTrayOnDoubleClick } from '@/tray';
 import { mediaIcons } from '@/types/media-icons';
 

@@ -5,7 +5,7 @@ import { romanize as esHangulRomanize } from 'es-hangul';
 import hanja from 'hanja';
 import { pinyin } from 'pinyin-pro';
 import { romanize as romanizeThaiFrag } from '@dehoist/romanize-thai';
-import { lazy } from 'lazy-var';
+import lazyVar from 'lazy-var';
 import { detect } from 'tinyld';
 import { sify, tify } from 'chinese-conv';
 import Sanscript from '@indic-transliteration/sanscript';
@@ -145,7 +145,7 @@ const shinjitai = [
 ].map((codePoint) => String.fromCodePoint(codePoint));
 const shinjitaiRegex = new RegExp(`[${shinjitai.join('')}]`);
 
-const kuroshiro = lazy(async () => {
+const kuroshiro = lazyVar.lazy(async () => {
   const _kuroshiro = new Kuroshiro();
   await _kuroshiro.init(
     new KuromojiAnalyzer({

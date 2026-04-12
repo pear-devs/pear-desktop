@@ -4,6 +4,7 @@ import eslint from '@eslint/js';
 import prettier from 'eslint-plugin-prettier/recommended';
 import solid from 'eslint-plugin-solid/configs/recommended';
 import stylistic from '@stylistic/eslint-plugin';
+import perfectionist from 'eslint-plugin-perfectionist';
 import tsEslint from 'typescript-eslint';
 
 import * as importPlugin from 'eslint-plugin-import';
@@ -18,6 +19,7 @@ export default tsEslint.config(
   {
     plugins: {
       stylistic,
+      perfectionist,
       importPlugin,
     },
     languageOptions: {
@@ -36,7 +38,7 @@ export default tsEslint.config(
         'error',
         { when: 'never', children: true },
       ],
-      'stylistic/jsx-sort-props': 'error',
+      'perfectionist/sort-jsx-props': 'error',
       'prettier/prettier': [
         'error',
         {

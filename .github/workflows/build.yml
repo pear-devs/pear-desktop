@@ -4,11 +4,15 @@ on:
   push:
     branches: [ master ]
 
+permissions: {}
+
 env:
-  NODE_VERSION: "22.x"
+  NODE_VERSION: "24.x"
 
 jobs:
   build:
+    permissions:
+      contents: write
     if: github.event.pull_request.draft == false
     name: Build Pear Desktop
     runs-on: ${{ matrix.os }}
@@ -86,6 +90,8 @@ jobs:
 
 
   release:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     name: Release Pear Desktop
     if: github.repository == 'pear-devs/pear-desktop' && github.ref == 'refs/heads/master'

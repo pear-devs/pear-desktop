@@ -20,7 +20,7 @@ import {
 } from '@jellybrick/electron-better-web-request';
 import is from 'electron-is';
 import unhandled from 'electron-unhandled';
-import { autoUpdater } from 'electron-updater';
+import electronUpdater from 'electron-updater';
 import electronDebug from 'electron-debug';
 import { parse } from 'node-html-parser';
 import { deepmerge } from 'deepmerge-ts';
@@ -70,7 +70,7 @@ unhandled({
 
 // Prevent window being garbage collected
 let mainWindow: Electron.BrowserWindow | null;
-autoUpdater.autoDownload = false;
+electronUpdater.autoUpdater.autoDownload = false;
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -801,10 +801,10 @@ app.whenReady().then(async () => {
 
   if (!is.dev() && config.get('options.autoUpdates')) {
     const updateTimeout = setTimeout(() => {
-      autoUpdater.checkForUpdatesAndNotify();
+      electronUpdater.autoUpdater.checkForUpdatesAndNotify();
       clearTimeout(updateTimeout);
     }, 2000);
-    autoUpdater.on('update-available', () => {
+    electronUpdater.autoUpdater.on('update-available', () => {
       const downloadLink =
         'https://github.com/pear-devs/pear-desktop/releases/latest';
       const dialogOptions: Electron.MessageBoxOptions = {
