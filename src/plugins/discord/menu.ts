@@ -81,12 +81,14 @@ export const onMenu = async ({
       },
     },
     {
-      label: t('plugins.discord.menu.show-youtube-user'),
+      label: t('plugins.discord.menu.show-application-user', {
+        applicationName: APPLICATION_NAME,
+      }),
       type: 'checkbox',
-      checked: config.showYouTubeUser,
+      checked: config.showApplicationUser,
       click(item: Electron.MenuItem) {
         setConfig({
-          showYouTubeUser: item.checked,
+          showApplicationUser: item.checked,
         });
       },
     },
