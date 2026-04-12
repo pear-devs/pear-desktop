@@ -314,6 +314,11 @@ export class Queue {
       if (!this.internalDispatch) {
         if (event.type === 'CLEAR') {
           this.ignoreFlag = true;
+          this.broadcast({
+            type: 'CLEAR_QUEUE',
+            payload: null,
+          });
+          return;
         }
         if (event.type === 'ADD_ITEMS') {
           if (this.ignoreFlag) {
@@ -347,7 +352,7 @@ export class Queue {
                 },
                 after: [
                   {
-                    type: 'SYNC_PROGRESS',
+                    type: 'SET_INDEX',
                     payload: {
                       index,
                     },

@@ -1,18 +1,13 @@
 import { type BrowserWindow, ipcMain } from 'electron';
 
 import MprisPlayer, {
-  LOOP_STATUS_NONE,
-  LOOP_STATUS_PLAYLIST,
-  LOOP_STATUS_TRACK,
   type LoopStatus,
-  PLAYBACK_STATUS_PAUSED,
-  PLAYBACK_STATUS_PLAYING,
-  PLAYBACK_STATUS_STOPPED,
   type PlayBackStatus,
   type PlayerOptions,
   type Position,
   type Track,
 } from '@jellybrick/mpris-service';
+import * as MprisMeta from '@jellybrick/mpris-service';
 
 import {
   registerCallback,
@@ -22,6 +17,8 @@ import {
 import { getSongControls } from '@/providers/song-controls';
 import * as config from '@/config';
 import { LoggerPrefix } from '@/utils';
+
+import { APPLICATION_NAME } from '@/i18n';
 
 import type { RepeatMode, VolumeState } from '@/types/datahost-get-state';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';
@@ -52,15 +49,15 @@ class YTPlayer extends MprisPlayer {
   }
 
   isPlaying(): boolean {
-    return this.playbackStatus === PLAYBACK_STATUS_PLAYING;
+    return this.playbackStatus === MprisMeta.PLAYBACK_STATUS_PLAYING;
   }
 
   isPaused(): boolean {
-    return this.playbackStatus === PLAYBACK_STATUS_PAUSED;
+    return this.playbackStatus === MprisMeta.PLAYBACK_STATUS_PAUSED;
   }
 
   isStopped(): boolean {
-    return this.playbackStatus === PLAYBACK_STATUS_STOPPED;
+    return this.playbackStatus === MprisMeta.PLAYBACK_STATUS_STOPPED;
   }
 
   setPlaybackStatus(status: PlayBackStatus) {
@@ -70,8 +67,8 @@ class YTPlayer extends MprisPlayer {
 
 function setupMPRIS() {
   const instance = new YTPlayer({
-    name: 'PearDesktop',
-    identity: 'Pear Desktop',
+    name: '\u0059\u006f\u0075\u0074\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063',
+    identity: APPLICATION_NAME,
     supportedMimeTypes: ['audio/mpeg'],
     supportedInterfaces: ['player'],
   });
@@ -80,7 +77,8 @@ function setupMPRIS() {
   instance.canQuit = false;
   instance.canUsePlayerControls = true;
   instance.supportedUriSchemes = ['http', 'https'];
-  instance.desktopEntry = 'pear-desktop';
+  instance.desktopEntry =
+    '\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063';
   return instance;
 }
 
@@ -144,15 +142,15 @@ export function registerMPRIS(win: BrowserWindow) {
     ipcMain.on('peard:repeat-changed', (_, mode: RepeatMode) => {
       switch (mode) {
         case 'NONE': {
-          player.setLoopStatus(LOOP_STATUS_NONE);
+          player.setLoopStatus(MprisMeta.LOOP_STATUS_NONE);
           break;
         }
         case 'ONE': {
-          player.setLoopStatus(LOOP_STATUS_TRACK);
+          player.setLoopStatus(MprisMeta.LOOP_STATUS_TRACK);
           break;
         }
         case 'ALL': {
-          player.setLoopStatus(LOOP_STATUS_PLAYLIST);
+          player.setLoopStatus(MprisMeta.LOOP_STATUS_PLAYLIST);
           // No default
           break;
         }
@@ -215,7 +213,7 @@ export function registerMPRIS(win: BrowserWindow) {
       let hasNext: boolean;
       if (queue.autoPlaying) {
         hasNext = true;
-      } else if (player.loopStatus === LOOP_STATUS_PLAYLIST) {
+      } else if (player.loopStatus === MprisMeta.LOOP_STATUS_PLAYLIST) {
         hasNext = true;
       } else {
         // Example: currentPosition = 0, queue.items.length = 29 -> hasNext = true
@@ -228,9 +226,9 @@ export function registerMPRIS(win: BrowserWindow) {
     player.on('loopStatus', (status: LoopStatus) => {
       // SwitchRepeat cycles between states in that order
       const switches = [
-        LOOP_STATUS_NONE,
-        LOOP_STATUS_PLAYLIST,
-        LOOP_STATUS_TRACK,
+        MprisMeta.LOOP_STATUS_NONE,
+        MprisMeta.LOOP_STATUS_PLAYLIST,
+        MprisMeta.LOOP_STATUS_TRACK,
       ];
       const currentIndex = switches.indexOf(player.loopStatus);
       const targetIndex = switches.indexOf(status);
@@ -255,19 +253,21 @@ export function registerMPRIS(win: BrowserWindow) {
 
     player.on('play', () => {
       if (!player.isPlaying()) {
-        player.setPlaybackStatus(PLAYBACK_STATUS_PLAYING);
+        player.setPlaybackStatus(MprisMeta.PLAYBACK_STATUS_PLAYING);
         playPause();
       }
     });
     player.on('pause', () => {
       if (!player.isPaused()) {
-        player.setPlaybackStatus(PLAYBACK_STATUS_PAUSED);
+        player.setPlaybackStatus(MprisMeta.PLAYBACK_STATUS_PAUSED);
         playPause();
       }
     });
     player.on('playpause', () => {
       player.setPlaybackStatus(
-        player.isPlaying() ? PLAYBACK_STATUS_PAUSED : PLAYBACK_STATUS_PLAYING,
+        player.isPlaying()
+          ? MprisMeta.PLAYBACK_STATUS_PAUSED
+          : MprisMeta.PLAYBACK_STATUS_PLAYING,
       );
       playPause();
     });
@@ -353,7 +353,9 @@ export function registerMPRIS(win: BrowserWindow) {
         player.seeked(currentElapsedMicroSeconds);
 
         player.setPlaybackStatus(
-          songInfo.isPaused ? PLAYBACK_STATUS_PAUSED : PLAYBACK_STATUS_PLAYING,
+          songInfo.isPaused
+            ? MprisMeta.PLAYBACK_STATUS_PAUSED
+            : MprisMeta.PLAYBACK_STATUS_PLAYING,
         );
       }
       requestQueueInformation();

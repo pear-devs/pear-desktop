@@ -24,7 +24,7 @@ window.ipcRenderer.on(
   },
 );
 
-// Used because 'loadeddata' or 'loadedmetadata' weren't firing on song start for some users (https://github.com/pear-devs/pear-music/issues/473)
+// Used because 'loadeddata' or 'loadedmetadata' weren't firing on song start for some users (https://github.com/pear-devs/pear-desktop/issues/473)
 const srcChangedEvent = new CustomEvent('peard:src-changed');
 
 export const setupSeekedListener = singleton(() => {
@@ -52,7 +52,7 @@ export const setupTimeChangedListener = singleton(() => {
 
 export const setupRepeatChangedListener = singleton(() => {
   const repeatObserver = new MutationObserver((mutations) => {
-    // provided by Pear Desktop
+    // provided by App
     window.ipcRenderer.send(
       'peard:repeat-changed',
       (
@@ -69,7 +69,7 @@ export const setupRepeatChangedListener = singleton(() => {
   });
 
   // Emit the initial value as well; as it's persistent between launches.
-  // provided by Pear Desktop
+  // provided by App
   window.ipcRenderer.send(
     'peard:repeat-changed',
     document

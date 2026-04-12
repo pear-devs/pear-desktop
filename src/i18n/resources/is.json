@@ -201,8 +201,8 @@
       "restart": "Endurræstu Forritið",
       "show": "Sýna glugga",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -335,7 +335,7 @@
       "name": "Farið Framhjá Aldurstakmörkunum"
     },
     "captions-selector": {
-      "description": "Skjátextavali fyrir Pear Desktop hljóðrásir",
+      "description": "Skjátextavali fyrir {{applicationName}} hljóðrásir",
       "menu": {
         "autoload": "Veldu sjálfkrafa síðast notaða myndatexta",
         "disable-captions": "Engir skjátextar sjálfgefið"
@@ -400,7 +400,7 @@
         "disconnected": "Aftengt",
         "hide-duration-left": "Fela tímalengd til vinstri",
         "hide-github-button": "Fela GitHub tengilhnapp",
-        "play-on-pear-desktop": "Spilaðu á Pear Desktop",
+        "play-on-application": "Spilaðu á {{applicationName}}",
         "set-inactivity-timeout": "Stilltu tímamörk fyrir óvirkni"
       },
       "name": "Discord Rík Nærvera",

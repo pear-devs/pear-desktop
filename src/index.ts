@@ -14,12 +14,13 @@ import {
   protocol,
   type BrowserWindowConstructorOptions,
 } from 'electron';
-import enhanceWebRequest, {
+import {
+  enhanceWebRequest,
   type BetterSession,
 } from '@jellybrick/electron-better-web-request';
 import is from 'electron-is';
 import unhandled from 'electron-unhandled';
-import { autoUpdater } from 'electron-updater';
+import electronUpdater from 'electron-updater';
 import electronDebug from 'electron-debug';
 import { parse } from 'node-html-parser';
 import { deepmerge } from 'deepmerge-ts';
@@ -53,7 +54,7 @@ import {
 } from '@/loader/main';
 
 import { LoggerPrefix } from '@/utils';
-import { loadI18n, setLanguage, t } from '@/i18n';
+import { APPLICATION_NAME, loadI18n, setLanguage, t } from '@/i18n';
 
 import ErrorHtmlAsset from '@assets/error.html?asset';
 
@@ -69,7 +70,7 @@ unhandled({
 
 // Prevent window being garbage collected
 let mainWindow: Electron.BrowserWindow | null;
-autoUpdater.autoDownload = false;
+electronUpdater.autoUpdater.autoDownload = false;
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -104,11 +105,6 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'mailto', privileges: { standard: true } },
 ]);
 
-// https://github.com/electron/electron/issues/46538#issuecomment-2808806722
-if (is.linux()) {
-  app.commandLine.appendSwitch('gtk-version', '3');
-}
-
 // Ozone platform hint: Required for Wayland support
 app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
 // SharedArrayBuffer: Required for downloader (@ffmpeg/core-mt)
@@ -131,7 +127,9 @@ if (config.get('options.disableHardwareAcceleration')) {
 
 if (is.linux()) {
   // Overrides WM_CLASS for X11 to correspond to icon filename
-  app.setName('com.github.th_ch.pear_music');
+  app.setName(
+    'com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063',
+  );
 
   // Stops chromium from launching its own MPRIS service
   if (await config.plugins.isEnabled('shortcuts')) {
@@ -167,9 +165,9 @@ electronDebug({
 
 let icon = 'assets/icon.png';
 if (process.platform === 'win32') {
-  icon = 'assets/generated/icon.ico';
+  icon = 'assets/generated/icons/win/icon.ico';
 } else if (process.platform === 'darwin') {
-  icon = 'assets/generated/icon.icns';
+  icon = 'assets/generated/icons/mac/icon.icns';
 }
 
 function onClosed() {
@@ -663,7 +661,8 @@ app.whenReady().then(async () => {
 
   // Register appID on windows
   if (is.windows()) {
-    const appID = 'com.github.th-ch.pear-music';
+    const appID =
+      'com.github.th-ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063';
     app.setAppUserModelId(appID);
     const appLocation = process.execPath;
     const appData = app.getPath('appData');
@@ -678,7 +677,7 @@ app.whenReady().then(async () => {
         'Windows',
         'Start Menu',
         'Programs',
-        'Pear Desktop.lnk',
+        `${APPLICATION_NAME}.lnk`,
       );
       try {
         // Check if shortcut is registered and valid
@@ -698,7 +697,7 @@ app.whenReady().then(async () => {
           {
             target: appLocation,
             cwd: path.dirname(appLocation),
-            description: 'Pear Desktop App - including custom plugins',
+            description: `${APPLICATION_NAME} Desktop App - including custom plugins`,
             appUserModelId: appID,
           },
         );
@@ -802,10 +801,10 @@ app.whenReady().then(async () => {
 
   if (!is.dev() && config.get('options.autoUpdates')) {
     const updateTimeout = setTimeout(() => {
-      autoUpdater.checkForUpdatesAndNotify();
+      electronUpdater.autoUpdater.checkForUpdatesAndNotify();
       clearTimeout(updateTimeout);
     }, 2000);
-    autoUpdater.on('update-available', () => {
+    electronUpdater.autoUpdater.on('update-available', () => {
       const downloadLink =
         'https://github.com/pear-devs/pear-desktop/releases/latest';
       const dialogOptions: Electron.MessageBoxOptions = {

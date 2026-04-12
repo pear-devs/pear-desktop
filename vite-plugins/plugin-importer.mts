@@ -1,9 +1,10 @@
-import { basename, relative, resolve, extname, dirname } from 'node:path';
+import { basename, resolve, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { globSync } from 'glob';
 import { Project } from 'ts-morph';
 
+// HACK: DO NOT USE @ ALIAS IN THIS FILE, IT WILL CAUSE PROBLEMS
 import { Platform } from '../src/types/plugins';
 
 const kebabToCamel = (text: string) =>
@@ -46,14 +47,11 @@ export const pluginVirtualModuleGenerator = (
     'vm:pluginIndexes',
     (writer) => {
       for (const { name, path } of plugins) {
-        const relativePath = relative(resolve(srcPath, '..'), path).replace(
-          /\\/g,
-          '/',
-        );
+        const absolutePath = resolve(srcPath, '..', path).replace(/\\/g, '/');
         if (mode === 'main') {
           // dynamic import (for main)
           writer.writeLine(
-            `const ${kebabToCamel(name)}PluginImport = () => import('./${relativePath}');`,
+            `const ${kebabToCamel(name)}PluginImport = () => import('${absolutePath}');`,
           );
           writer.writeLine(
             `const ${kebabToCamel(name)}Plugin = async () => (await ${kebabToCamel(name)}PluginImport()).default;`,
@@ -64,7 +62,7 @@ export const pluginVirtualModuleGenerator = (
         } else {
           // static import (preload does not support dynamic import)
           writer.writeLine(
-            `import ${kebabToCamel(name)}PluginImport, { pluginStub as ${kebabToCamel(name)}PluginStubImport } from "./${relativePath}";`,
+            `import ${kebabToCamel(name)}PluginImport, { pluginStub as ${kebabToCamel(name)}PluginStubImport } from "${absolutePath}";`,
           );
           writer.writeLine(
             `const ${kebabToCamel(name)}Plugin = () => Promise.resolve(${kebabToCamel(name)}PluginImport);`,
@@ -77,7 +75,7 @@ export const pluginVirtualModuleGenerator = (
 
       writer.blankLine();
       if (mode === 'main' || mode === 'preload') {
-        writer.writeLine("import * as is from 'electron-is';");
+        writer.writeLine("import is from 'electron-is';");
         writer.writeLine('globalThis.electronIs = is;');
       }
       writer.write(supportsPlatform.toString());

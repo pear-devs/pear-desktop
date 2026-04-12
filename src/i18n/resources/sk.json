@@ -154,14 +154,15 @@
                 "label": "Vlastný názov okna",
                 "prompt": {
                   "label": "Napíšte vlastný názov okna: (nechajte prázdne pre vypnutie)",
-                  "placeholder": "Napríklad: Pear Desktop"
+                  "placeholder": "Napríklad: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "Základný",
                 "force-show": "Vynútiť zobrazenie",
                 "hide": "Skryť",
-                "label": "Like tlačítko"
+                "label": "Like tlačítko",
+                "swap": "Otočiť poradie tlačidiel „Páči sa mi“"
               },
               "remove-upgrade-button": "Odstrániť tlačidlo povýšiť",
               "theme": {
@@ -208,8 +209,8 @@
       "restart": "Reštartovať aplikáciu",
       "show": "Zobraziť okno",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +238,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Povoliť farebnú tému aj v seekbare"
       },
       "name": "Farebná téma albumu"
     },
@@ -287,7 +289,7 @@
       "name": "Ambientný mód"
     },
     "amuse": {
-      "description": "Pridáva Pear Desktop podporu pre Amuse práve prehráva widget od 6K Labs",
+      "description": "Pridáva {{applicationName}} podporu pre Amuse práve prehráva widget od 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API server beží. GET /query to get song info."
@@ -319,6 +321,22 @@
         },
         "hostname": {
           "label": "Hostname"
+        },
+        "https": {
+          "label": "HTTPS a Certifikáty",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Vybrať súbor certifikátu HTTPS",
+              "label": "Súbor certifikátov (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Zapnúť HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Vybrať súbor privátneho kľúča HTTPS",
+              "label": "Súbor privátneho kľúča (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -373,7 +391,7 @@
       "name": "Obísť vekové obmedzenia"
     },
     "captions-selector": {
-      "description": "Selektor titulkov pre zvukové stopy Pear Desktop",
+      "description": "Selektor titulkov pre zvukové stopy {{applicationName}}",
       "menu": {
         "autoload": "Automatický výber naposledy použitých titulkov",
         "disable-captions": "Žiadne titulky"
@@ -394,6 +412,17 @@
         "caption-disabled": "Deaktivované titulky",
         "no-captions": "Pre túto skladbu nie sú dostupné žiadne titulky"
       }
+    },
+    "clock": {
+      "description": "Pridať hodiny do navigačnej lišty",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-hodinový formát",
+          "display-seconds": "Zobraz sekundy",
+          "label": "Formát"
+        }
+      },
+      "name": "Hodiny"
     },
     "compact-sidebar": {
       "description": "Vždy nastaviť bočný panel do kompaktného režimu",
@@ -456,14 +485,14 @@
         "disconnected": "Odpojené",
         "hide-duration-left": "Skryť zostávajúcu dobu trvania",
         "hide-github-button": "Skryť tlačidlo s odkazom na GitHub",
-        "play-on-pear-desktop": "Spustiť na Pear Desktop",
+        "play-on-application": "Spustiť na {{applicationName}}",
         "set-inactivity-timeout": "Nastaviť časový limit nečinnosti",
         "set-status-display-type": {
           "label": "Text stavu",
           "submenu": {
-            "artist": "Aktuálne si prehráva {artist}",
-            "pear-desktop": "Aktuálne prehráva Pear Desktop",
-            "title": "Aktuálne si prehráva {song title}"
+            "application": "Počúvať {{applicationName}}",
+            "artist": "Práve počúvate {artist}",
+            "title": "Práve počúvate {song title}"
           }
         }
       },
@@ -532,7 +561,7 @@
             "advanced": "Rozšírené",
             "enabled": "Povolené",
             "mode": "Časový režim",
-            "percent": "Percento",
+            "percent": "Percent",
             "seconds": "Sekundy"
           }
         },
@@ -592,7 +621,7 @@
       },
       "internal": {
         "save": "Uložiť",
-        "track-source": "Sledovať zdroj",
+        "track-source": "Zdroj piesne",
         "unknown-user": "Neznámy užívateľ"
       },
       "menu": {
@@ -601,7 +630,7 @@
         "connected-users": "Pripojení užívatelia",
         "disconnect": "Odpojiť Music Together",
         "empty-user": "Žiadni pripojení užívatelia",
-        "host": "Music Together Host",
+        "host": "Hudba spolu Hostiteľ",
         "join": "Pripojiť sa k Music Together",
         "permission": {
           "all": "Umožniť hosťom ovládať zoznam a prehrávač",
@@ -670,7 +699,7 @@
       "name": "Zlepšenie výkonu [Beta]"
     },
     "picture-in-picture": {
-      "description": "Umožňuje prepnúť aplikáciu do režimu obraz v obraze",
+      "description": "Umožňuje prepnúť aplikáciu do režimu obraz-v-obraze",
       "menu": {
         "always-on-top": "Vždy na vrchu",
         "hotkey": {
@@ -731,50 +760,221 @@
             "title": "Výber kvality videa"
           }
         }
+      },
+      "description": "Povoľuje zmenu kvality videa pomocou tlačidla na prekrytí videa",
+      "name": "Menič kvality videa",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "Otvoriť menič kvality prehrávača"
+        }
       }
+    },
+    "scrobbler": {
+      "description": "Pridať podporu scrobbling (napr. last.fm, Listenbrainz)",
+      "dialog": {
+        "lastfm": {
+          "auth-failed": {
+            "message": "Nepodarilo sa autentifikovať s Last.fm\nSkryť vyskakovacie okno do ďalšieho reštartu.",
+            "title": "Autentifikácia zlyhala"
+          }
+        }
+      },
+      "menu": {
+        "lastfm": {
+          "api-settings": "Last.fm API Nastavenia"
+        },
+        "listenbrainz": {
+          "token": "Vložiť ListenBrainz používateľský token"
+        },
+        "scrobble-alternative-artist": "Použiť alternatívnych umelcov",
+        "scrobble-alternative-title": "Použiť alternatívne názvy",
+        "scrobble-other-media": "Scrobble iných médií"
+      },
+      "name": "Posuvník",
+      "prompt": {
+        "lastfm": {
+          "api-key": "Last.fm API kľúč",
+          "api-secret": "Last.fm API tajomstvo"
+        },
+        "listenbrainz": {
+          "token": {
+            "label": "Vlož svoj ListenBrainz používateľský token:",
+            "title": "ListenBrainz token"
+          }
+        }
+      }
+    },
+    "shortcuts": {
+      "description": "Povoľuje nastaviť globálne klávesové skratky pre prehrávanie (Prehrať/Pozastaviť/Ďalšie/Predošlé) a vypínať media OSD prepisovaním media kľúčov, zapne Ctrl/CMD + F pre vyhľadávanie, zapne Linux MPRIS podporu pre media kľúče a vlastné klávesové skratky pre pokročilých používateľov",
+      "menu": {
+        "override-media-keys": "Prepísať Media Kľúče",
+        "set-keybinds": "Globálne ovládanie skladieb"
+      },
+      "name": "Skratky (& MPRIS)",
+      "prompt": {
+        "keybind": {
+          "keybind-options": {
+            "next": "Ďalšia",
+            "play-pause": "Prehrať / Pauza",
+            "previous": "Predošlá"
+          },
+          "label": "Zvoliť globálne klávesové skratky na ovládanie skladieb:",
+          "title": "Globálne priradenia kláves"
+        }
+      }
+    },
+    "skip-disliked-songs": {
+      "description": "Preskakuje skladby označené Nepáči sa",
+      "name": "Preskakovať skladby označené Nepáči sa"
+    },
+    "skip-silences": {
+      "description": "Automaticky preskakovať tiché časti v hudbe",
+      "name": "Preskakuj tiché časti"
+    },
+    "sponsorblock": {
+      "description": "Automaticky preskakuje nehudbné časti ako intro/outro, alebo tie časti videoklipov v ktorých nehrá hudba",
+      "name": "Sponzorský blok"
     },
     "synced-lyrics": {
       "description": "Poskytuje synchronizované texty k skladbám, pričom používa poskytovateľov ako LRClib.",
       "errors": {
+        "fetch": "⚠️\tPri získavaní textu sa vyskytla chyba.\n Skúste znova neskôr.",
         "not-found": "⚠️Pre túto skladbu nebol nájdený žiadny text."
       },
       "menu": {
-        "line-effect": {
+        "convert-chinese-character": {
+          "label": "Konvertovať čínske znaky",
           "submenu": {
-            "offset": {
-              "label": "Offset"
+            "disabled": {
+              "label": "Vypnuté",
+              "tooltip": "Zakázať zmenu Čínskych znakov"
+            },
+            "simplified-to-traditional": {
+              "label": "Zjednodušená na tradičnú",
+              "tooltip": "Konvertovať Zjednodušenú čínštinu na Tradičnú čínštinu"
+            },
+            "traditional-to-simplified": {
+              "label": "Tradičná na Zjednodušenú",
+              "tooltip": "Konvertovať Tradičnú čínštinu na Zjednodušenú čínštinu"
             }
-          }
+          },
+          "tooltip": "Konvertovať Čínsky znak na Tradičný alebo Zjednodušený"
+        },
+        "default-text-string": {
+          "label": "Predvolený charakter medzi textami",
+          "tooltip": "Vyberte predvolený znak na použitie pre medzeru medzi textami"
+        },
+        "line-effect": {
+          "label": "Čiarový efekt",
+          "submenu": {
+            "fancy": {
+              "label": "Luxusné",
+              "tooltip": "Použi veľké, aplikačné efekty na aktuálny riadok"
+            },
+            "focus": {
+              "label": "Zameranie",
+              "tooltip": "Urob len aktuálny riadok biely"
+            },
+            "offset": {
+              "label": "Offset",
+              "tooltip": "Offset na pravej strane aktuálneho riadku"
+            },
+            "scale": {
+              "label": "Mierka",
+              "tooltip": "Zväčšiť konkrétny riadok"
+            }
+          },
+          "tooltip": "Vyber efekt pre aktuálny riadok"
         },
         "precise-timing": {
-          "label": "Dokonale synchronizovať text piesne"
+          "label": "Dokonale synchronizovať text piesne",
+          "tooltip": "Vypočítaj na presnú milisekundu zobrazenie ďalšieho riadku (môže mať menší vplyv na výkon)"
         },
         "preferred-provider": {
           "label": "Preferovaný Poskytovateľ",
           "none": {
             "label": "Žiadne",
             "tooltip": "Žiadny preferovaný poskytovateľ"
-          }
+          },
+          "tooltip": "Vybrať predvoleného poskytovateľa"
+        },
+        "romanization": {
+          "label": "prepísať texty do latinky",
+          "tooltip": "Ak sú texty v inom jazyku, skúste zobraziť verziu latinky."
+        },
+        "show-lyrics-even-if-inexact": {
+          "label": "Zobraziť texty, aj keď sú nepresné",
+          "tooltip": "Ak nie je nájdená pieseň, plugin sa opäť posnaží s iným vyhľadávaním.\nVýsledok z druhého pokusu nemusí byť presný."
+        },
+        "show-time-codes": {
+          "label": "Zobraziť časové značky",
+          "tooltip": "Zobraziť časové kódy vedľa textov"
         }
+      },
+      "name": "Synchronizované texty",
+      "refetch-btn": {
+        "fetching": "Sťahujem...",
+        "normal": "Znova Stiahnuť texty"
+      },
+      "warnings": {
+        "duration-mismatch": "⚠️ - Texty môžu byť nesynchronizované kvôli dĺžkovému nesúladu.",
+        "inexact": "⚠️ - Texty pre túto pieseň nemusia byť presné",
+        "instrumental": "⚠️ - Toto je inštrumentálna pieseň"
       }
     },
+    "taskbar-mediacontrol": {
+      "description": "Ovládanie prehrávača pomocou Windows taskbaru",
+      "name": "Ovládanie Médií Taskbarom"
+    },
     "touchbar": {
+      "description": "Pridáva TouchBar widget pre používateľov MacOS",
       "name": "Dotykový Panel"
     },
     "transparent-player": {
-      "description": "Nastaví okno aplikácie ako priehľadné"
+      "description": "Nastaví okno aplikácie ako priehľadné",
+      "menu": {
+        "opacity": {
+          "label": "Priehľadnosť",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Typ",
+          "submenu": {
+            "acrylic": "Acrylické",
+            "mica": "Mica",
+            "none": "Žiadne/y",
+            "tabbed": "Tabnutý"
+          }
+        }
+      },
+      "name": "Transparentný prehrávač"
+    },
+    "tuna-obs": {
+      "description": "Integrácia s OBS pluginom Tuna",
+      "name": "Tuna OBS"
+    },
+    "unobtrusive-player": {
+      "description": "Zabráni vyskočeniu prehrávača pri prehrávaní piesne",
+      "name": "Nenápadný prehrávač"
     },
     "video-toggle": {
+      "description": "Pridáva tlačidlo Prepnúť medzi režimom Video/Pieseň. Môže tiež voliteľne odstrániť celú video kartu",
       "menu": {
         "align": {
+          "label": "Zarovnanie",
           "submenu": {
             "left": "Vľavo",
             "middle": "Stred",
             "right": "Vpravo"
           }
         },
+        "force-hide": "Nasilu odstrániť video kartu",
         "mode": {
+          "label": "Mód",
           "submenu": {
+            "custom": "Vlastný prepínač",
             "disabled": "Vypnuté",
             "native": "Natívny prepínač"
           }

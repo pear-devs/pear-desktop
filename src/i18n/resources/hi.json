@@ -161,7 +161,8 @@
                 "default": "डिफॉल्ट",
                 "force-show": "बल पूर्वक दिखाएं",
                 "hide": "छुपाएं",
-                "label": "लाइक बटंस"
+                "label": "लाइक बटंस",
+                "swap": "लाइक बटन का क्रम बदलें"
               },
               "remove-upgrade-button": "अपग्रेड बटन हटाएं",
               "theme": {
@@ -208,8 +209,8 @@
       "restart": "ऐप पुनः प्रारंभ करें",
       "show": "ऐप दिखाए",
       "tooltip": {
-        "default": "पियर डेस्कटॉप",
-        "with-song-info": "पियर डेस्कटॉप: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +238,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "सीकबार थीमिंग सक्षम करें"
       },
       "name": "एल्बम रंग थीम"
     },
@@ -320,6 +322,22 @@
         "hostname": {
           "label": "होस्टनेम"
         },
+        "https": {
+          "label": "HTTPS और प्रमाणपत्र",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "HTTPS प्रमाणपत्र फ़ाइल चुनें",
+              "label": "प्रमाणपत्र फ़ाइल (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "HTTPS सक्षम करें"
+            },
+            "key": {
+              "dialogTitle": "HTTPS निजी कुंजी फ़ाइल चुनें",
+              "label": "निजी कुंजी फ़ाइल (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "पोर्ट"
         }
@@ -373,7 +391,7 @@
       "name": "आयु प्रतिबंध को बायपास करें"
     },
     "captions-selector": {
-      "description": "Pear Desktop म्यूज़िक ऑडियो ट्रैक के लिए कैप्शन चयनकर्ता",
+      "description": "{{applicationName}} म्यूज़िक ऑडियो ट्रैक के लिए कैप्शन चयनकर्ता",
       "menu": {
         "autoload": "अंतिम बार उपयोग किए गए कैप्शन का ऑटोमैटिक रूप से चयन करें",
         "disable-captions": "डिफ़ॉल्ट रूप में कोई कैप्शन नहीं"
@@ -394,6 +412,17 @@
         "caption-disabled": "कैप्शन बंद कर दिए गए हैं",
         "no-captions": "इस गाने के लिए कोई कैप्शन उपलब्ध नहीं हैं"
       }
+    },
+    "clock": {
+      "description": "नेविगेशन बार में घड़ी जोड़ें",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-घंटे का प्रारूप",
+          "display-seconds": "सेकंड दिखाएं",
+          "label": "प्रारूप"
+        }
+      },
+      "name": "घड़ी"
     },
     "compact-sidebar": {
       "description": "साइडबार को हमेशा कॉम्पैक्ट मोड में सेट करें",
@@ -456,13 +485,13 @@
         "disconnected": "डिस्कनेक्ट किया गया",
         "hide-duration-left": "शेष अवधि छिपाएँ",
         "hide-github-button": "GitHub लिंक के बटन को छिपाएँ",
-        "play-on-pear-desktop": "Pear Desktop म्यूज़िक पर चलाएँ",
+        "play-on-application": "{{applicationName}} म्यूज़िक पर चलाएँ",
         "set-inactivity-timeout": "निष्क्रियता समय समाप्ति सेट करें",
         "set-status-display-type": {
           "label": "स्टेटस टेक्स्ट",
           "submenu": {
+            "application": "{{applicationName}} सुन रहे है",
             "artist": "{artist} को सुन रहे है",
-            "pear-desktop": "Pear Desktop सुन रहे है",
             "title": "{song title} सुन रहे है"
           }
         }

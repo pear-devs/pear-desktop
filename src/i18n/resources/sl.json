@@ -201,8 +201,8 @@
       "restart": "Ponovni zagon",
       "show": "Pokaži okno",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -335,7 +335,7 @@
       "name": "Preskoči starostno omejitev"
     },
     "captions-selector": {
-      "description": "Izberi podnapise za Pear Desktop zvočne posnetke",
+      "description": "Izberi podnapise za {{applicationName}} zvočne posnetke",
       "menu": {
         "autoload": "Avtomatsko uporabi zadnje izbrane podnapise",
         "disable-captions": "Avtomatsko brez podnapisov"
@@ -400,7 +400,7 @@
         "disconnected": "Prekinjena povezava",
         "hide-duration-left": "Skrij preostali čas",
         "hide-github-button": "Skrij povezavo do GitHub-a",
-        "play-on-pear-desktop": "Predvajaj v Pear Desktop",
+        "play-on-application": "Predvajaj v {{applicationName}}",
         "set-inactivity-timeout": "Nastavite časovno omejitev neaktivnosti"
       },
       "name": "Discord bogata prisotnost (Rich Presence)",

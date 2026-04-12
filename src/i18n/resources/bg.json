@@ -154,7 +154,7 @@
                 "label": "Персонализирано заглавие на прозорец",
                 "prompt": {
                   "label": "Въведи персонализирано заглавие: (остави празно за да изключиш)",
-                  "placeholder": "Пример: Pear Desktop"
+                  "placeholder": "Пример: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Рестартирай приложението",
       "show": "Покажи прозорец",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Атмосферен режим"
     },
     "amuse": {
-      "description": "Добавя поддръжка на Pear Desktop за джаджата Amuse Now Play от 6K Labs",
+      "description": "Добавя поддръжка на {{applicationName}} за джаджата Amuse Now Play от 6K Labs",
       "name": "Забавление",
       "response": {
         "query": "Сървърът на Amuse API работи. Изпратете GET /query за информация за песента."
@@ -373,7 +373,7 @@
       "name": "Избягване на възрастови ограничения"
     },
     "captions-selector": {
-      "description": "Избор на надписи за аудио тракове в Pear Desktop",
+      "description": "Избор на надписи за аудио тракове в {{applicationName}}",
       "menu": {
         "autoload": "Автоматично избиране на последно използвания надпис",
         "disable-captions": "Без надписи по подразбиране"
@@ -456,14 +456,14 @@
         "disconnected": "Прекъснато",
         "hide-duration-left": "Скрий оставащото време",
         "hide-github-button": "Скрий бутона за линк към GitHub",
-        "play-on-pear-desktop": "Възпроизведи в Pear Desktop",
+        "play-on-application": "Възпроизведи в {{applicationName}}",
         "set-inactivity-timeout": "Задай таймаут за неактивност",
         "set-status-display-type": {
           "label": "Статус текст",
           "submenu": {
             "artist": "Слушам {artist}",
             "title": "Слушам {song title}",
-            "pear-desktop": "Слушам Pear Desktop"
+            "application": "Слушам {{applicationName}}"
           }
         }
       },

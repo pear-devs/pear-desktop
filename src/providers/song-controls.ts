@@ -85,7 +85,10 @@ export const getSongControls = (win: BrowserWindow) => {
       const isFullscreenValue = parseBooleanFromArgsType(isFullscreen);
       if (isFullscreenValue !== null) {
         win.setFullScreen(isFullscreenValue);
-        win.webContents.send('peard:click-fullscreen-button', isFullscreenValue);
+        win.webContents.send(
+          'peard:click-fullscreen-button',
+          isFullscreenValue,
+        );
       }
     },
     requestFullscreenInformation: () => {

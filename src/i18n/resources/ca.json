@@ -2,7 +2,7 @@
   "common": {
     "console": {
       "plugins": {
-        "execute-failed": "Ha fallat l'execució de l'extensió {{pluginName}}::{{contextName}}",
+        "execute-failed": "Error en l'execució de l'extensió {{pluginName}}::{{contextName}}",
         "executed-at-ms": "L'extensió {{pluginName}}::{{contextName}} s'ha executat als {{ms}}ms",
         "initialize-failed": "Ha fallat la inicialització de l'extensió \"{{pluginName}}\"",
         "load-all": "Carregant totes les extensions",
@@ -154,14 +154,15 @@
                 "label": "Títol personalitzat de la finestra",
                 "prompt": {
                   "label": "Introdueix un títol personalitzat per a la finestra (deixa-ho buit per deshabilitar-ho)",
-                  "placeholder": "Exemple: Pear Desktop"
+                  "placeholder": "Exemple: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "Per defecte",
                 "force-show": "Força que es mostri",
                 "hide": "Amaga",
-                "label": "Botons de «m'agrada»"
+                "label": "Botons de «m'agrada»",
+                "swap": "Intercambiar l'ordre dels botons de m'agrada"
               },
               "remove-upgrade-button": "Elimina el botó «Actualitza a Music Premium»",
               "theme": {
@@ -208,8 +209,8 @@
       "restart": "Reinicia l'aplicació",
       "show": "Mostra la finestra",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +238,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Activar el tema en la barra de progrés"
       },
       "name": "Tema de color de l'àlbum"
     },
@@ -287,7 +289,7 @@
       "name": "Mode ambient"
     },
     "amuse": {
-      "description": "Afegeix suport a Pear Desktop per el widget \"now playing\" d'Amuse per 6K Labs",
+      "description": "Afegeix suport a {{applicationName}} per el widget \"now playing\" d'Amuse per 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "L'API del servidor de Amuse està funcionant. GET /query per tenir informació de la cançó."
@@ -319,6 +321,22 @@
         },
         "hostname": {
           "label": "Nom del host"
+        },
+        "https": {
+          "label": "HTTPS i Certificats",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Seleccionar arxiu de certificat HTTPS",
+              "label": "Certificar fitxer (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Habilitar HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Selecciona arxiu de clau HTTPS privada",
+              "label": "Arxiu de clau privada (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -373,7 +391,7 @@
       "name": "Esquiva les restriccions d'edat"
     },
     "captions-selector": {
-      "description": "Selector de subtítols per les pistes d'àudio de Pear Desktop",
+      "description": "Selector de subtítols per les pistes d'àudio de {{applicationName}}",
       "menu": {
         "autoload": "Selecciona automàticament l'últim subtítol emprat",
         "disable-captions": "Sense subtítols per defecte"
@@ -394,6 +412,17 @@
         "caption-disabled": "Subtítols desactivats",
         "no-captions": "Subtítols no disponibles per aquesta cançó"
       }
+    },
+    "clock": {
+      "description": "Afegeix un rellotge a la barra de navegació",
+      "menu": {
+        "format": {
+          "24-hour-format": "Format 24 Hores",
+          "display-seconds": "Mostra els segons",
+          "label": "Format"
+        }
+      },
+      "name": "Rellotge"
     },
     "compact-sidebar": {
       "description": "Sempre mostrar la barra lateral en mode compacte",
@@ -456,14 +485,14 @@
         "disconnected": "Desconnectat",
         "hide-duration-left": "Amaga la durada restant",
         "hide-github-button": "Amaga el botó de l'enllaç a GitHub",
-        "play-on-pear-desktop": "Reprodueix a Pear Desktop",
+        "play-on-application": "Reprodueix a {{applicationName}}",
         "set-inactivity-timeout": "Estableix temps d'espera d'inactivitat",
         "set-status-display-type": {
           "label": "Text d'estat",
           "submenu": {
+            "application": "Escoltant {{applicationName}}",
             "artist": "Escoltant {artist}",
-            "title": "Escoltant {song title}",
-            "pear-desktop": "Escoltant Pear Desktop"
+            "title": "Escoltant {song title}"
           }
         }
       },
@@ -813,6 +842,24 @@
         "not-found": "⚠️ No s'ha trobat la lletra per aquesta cançó."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Converteix Caràcters Xinesos",
+          "submenu": {
+            "disabled": {
+              "label": "Deshabilitat",
+              "tooltip": "Deshabilitar la conversió de caràcters Xinesos"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplificat al Tradicional",
+              "tooltip": "Converteix Xinés Simplificat a Xinés Tradicional"
+            },
+            "traditional-to-simplified": {
+              "label": "Tradicional a Simplificat",
+              "tooltip": "Converteix Xinès Tradicional a Xinès Simplificat"
+            }
+          },
+          "tooltip": "Converteix caràcter Xinès a Tradicional o Simplificat"
+        },
         "default-text-string": {
           "label": "Caràcter per defecte entre lletres",
           "tooltip": "Tria el caràcter per defecte que es mostrarà a l'espai entre les lletres"
@@ -825,7 +872,7 @@
               "tooltip": "Utilitza efectes grans \"app-like\" en la línia actual"
             },
             "focus": {
-              "label": "Focus",
+              "label": "Centrar",
               "tooltip": "Mostra tan sols la línia actual en blanc"
             },
             "offset": {

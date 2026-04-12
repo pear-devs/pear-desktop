@@ -11,6 +11,9 @@ export interface APIServerConfig {
   secret: string;
 
   authorizedClients: string[];
+  useHttps: boolean;
+  certPath: string;
+  keyPath: string;
 }
 
 export const defaultAPIServerConfig: APIServerConfig = {
@@ -21,4 +24,7 @@ export const defaultAPIServerConfig: APIServerConfig = {
   secret: Date.now().toString(36),
 
   authorizedClients: [],
+  useHttps: false,
+  certPath: '',
+  keyPath: '',
 };

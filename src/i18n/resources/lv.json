@@ -208,8 +208,8 @@
       "restart": "Restartēt Lietotni",
       "show": "Rādīt logu",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Ambientais Režīms"
     },
     "amuse": {
-      "description": "Pievieno Pear Desktop atblastu priekš Amuse \"tagad spēlē\" no 6K Labs",
+      "description": "Pievieno {{applicationName}} atblastu priekš Amuse \"tagad spēlē\" no 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API serveris ir palaists. GET /query lai dabūtu dziesmas info."
@@ -373,7 +373,7 @@
       "name": "Apiet Vecuma Ierobežojumus"
     },
     "captions-selector": {
-      "description": "Subtitru izvēlne priekš Pear Desktop audio ceļiem",
+      "description": "Subtitru izvēlne priekš {{applicationName}} audio ceļiem",
       "menu": {
         "autoload": "Automātiski izvēlēties pēdējo izmantotos subtitrus",
         "disable-captions": "Bez subtitriem pēc noklusējuma"
@@ -456,7 +456,7 @@
         "disconnected": "Atvienojies",
         "hide-duration-left": "Paslēpt cik palika laika",
         "hide-github-button": "Paslēpt GitHub saites pogu",
-        "play-on-pear-desktop": "Atskaņot uz Pear Desktop",
+        "play-on-application": "Atskaņot uz {{applicationName}}",
         "set-inactivity-timeout": "Iestatīt neaktivitātes taimeru",
         "set-status-display-type": {
           "label": "Statusa teksts",

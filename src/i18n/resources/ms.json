@@ -154,7 +154,7 @@
                 "label": "Tajuk tetingkap tersuai",
                 "prompt": {
                   "label": "Masukkan tajuk tetingkap tersuai: (biarkan kosong untuk matikan)",
-                  "placeholder": "Contoh: Pear Desktop"
+                  "placeholder": "Contoh: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -208,8 +208,8 @@
       "restart": "Mulakan Semula Aplikasi",
       "show": "Papar tetingkap",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop : {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -287,7 +287,7 @@
       "name": "Mod Sekitaran"
     },
     "amuse": {
-      "description": "Menambahkan sokongan Pear Desktop untuk widget sedang dimain Amuse oleh 6K Labs",
+      "description": "Menambahkan sokongan {{applicationName}} untuk widget sedang dimain Amuse oleh 6K Labs",
       "name": "Terhibur",
       "response": {
         "query": "API server Amuse telah berjalan. GET /query untuk mendapatkan maklumat lagu."
@@ -373,7 +373,7 @@
       "name": "Pintas Sekatan Umur"
     },
     "captions-selector": {
-      "description": "Pemilih kapsyen untuk trek audio Pear Desktop",
+      "description": "Pemilih kapsyen untuk trek audio {{applicationName}}",
       "menu": {
         "autoload": "Pilih kapsyen terakhir diguna secara automatik",
         "disable-captions": "Tiada kapsyen secara lalai"
@@ -456,13 +456,13 @@
         "disconnected": "Tidak disambungkan",
         "hide-duration-left": "Sembunyikan tempoh yang tinggal",
         "hide-github-button": "Sembunyikan Butang pautan GitHub",
-        "play-on-pear-desktop": "Main di Pear Desktop",
+        "play-on-application": "Main di {{applicationName}}",
         "set-inactivity-timeout": "Tetapkan tamat masa tidak aktif",
         "set-status-display-type": {
           "label": "Teks status",
           "submenu": {
             "artist": "Sedang mendengar {artist}",
-            "pear-desktop": "Mendengar Pear Desktop",
+            "application": "Mendengar {{applicationName}}",
             "title": "Sedang mendengar {tajuk lagu}"
           }
         }

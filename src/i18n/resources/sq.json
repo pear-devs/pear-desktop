@@ -3,7 +3,56 @@
     "console": {
       "plugins": {
         "execute-failed": "Dështoi në ekzekutimin e plugin-it {{pluginName}}::{{contextName}}",
-        "executed-at-ms": "Shtojca {{pluginName}}::{{contextName}} u ekzekutua në {{ms}}ms"
+        "executed-at-ms": "Shtojca {{pluginName}}::{{contextName}} u ekzekutua në {{ms}}ms",
+        "initialize-failed": "Dështoi ekzekutimi i plugin-it \"{{pluginName}}\"",
+        "load-all": "Duke ngarkuar të gjithe plugins",
+        "load-failed": "Dështoi në ngarkimin e plugin-it \"{{pluginName}}\"",
+        "loaded": "Plugin \"{{pluginName}}\" u ngarkua",
+        "unload-failed": "Shkarkimi i plugin-it \"{{pluginName}}\" dështoi",
+        "unloaded": "Plugin \"{{pluginName}}\" u shkarkua"
+      }
+    }
+  },
+  "language": {
+    "name": "Emri i gjuhës në anglisht. p.sh. japonisht, koreanisht, anglisht, rusisht"
+  },
+  "main": {
+    "console": {
+      "did-finish-load": {
+        "dev-tools": "Ngarkimi përfundoi. DevTools u hap."
+      },
+      "i18n": {
+        "loaded": "i18n i ngarkuar"
+      },
+      "second-instance": {
+        "receive-command": "U mor komanda mbi protokollin: \"{{command}}\""
+      },
+      "theme": {
+        "css-file-not-found": "Skedari CSS \"{{cssFile}}\" nuk ekziston, duke u injoruar"
+      },
+      "unresponsive": {
+        "details": "Gabim i Papërgjigjes!\n{{error}}"
+      },
+      "when-ready": {
+        "clearing-cache-after-20s": "Duke pastruar memorien e përkohshme të aplikacionit"
+      },
+      "window": {
+        "tried-to-render-offscreen": "Dritarja u përpoq të renderohej jashtë ekranit, windowSize={{windowSize}}, displaySize={{displaySize}}, position={{position}}"
+      }
+    },
+    "dialog": {
+      "hide-menu-enabled": {
+        "detail": "Menuja është e fshehur, përdorni 'Alt' për ta shfaqur (ose 'Escape' nëse përdorni Menunë brenda aplikacionit)",
+        "message": "Fshehja e menusë është aktivizuar",
+        "title": "Fshih Menunë Aktivizuar"
+      },
+      "need-to-restart": {
+        "buttons": {
+          "later": "Më vonë",
+          "restart-now": "Rinisni Tani"
+        },
+        "detail": "\"{{pluginName}}\" kërkon një restart që të hyjë në fuqi",
+        "message": "\"{{pluginName}}\" kerkon restart"
       }
     }
   }

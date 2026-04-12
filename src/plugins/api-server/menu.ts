@@ -1,3 +1,4 @@
+import { dialog } from 'electron';
 import prompt from 'custom-electron-prompt';
 
 import { t } from '@/i18n';
@@ -89,6 +90,52 @@ export const onMenu = async ({
           checked: config.authStrategy === AuthStrategy.NONE,
           click() {
             setConfig({ ...config, authStrategy: AuthStrategy.NONE });
+          },
+        },
+      ],
+    },
+    {
+      label: t('plugins.api-server.menu.https.label'),
+      type: 'submenu',
+      submenu: [
+        {
+          label: t('plugins.api-server.menu.https.submenu.enable-https.label'),
+          type: 'checkbox',
+          checked: config.useHttps,
+          click(menuItem) {
+            setConfig({ ...config, useHttps: menuItem.checked });
+          },
+        },
+        {
+          label: t('plugins.api-server.menu.https.submenu.cert.label'),
+          type: 'normal',
+          async click() {
+            const config = await getConfig();
+            const result = await dialog.showOpenDialog(window, {
+              title: t(
+                'plugins.api-server.menu.https.submenu.cert.dialogTitle',
+              ),
+              filters: [{ name: 'Certificate', extensions: ['crt', 'pem'] }],
+              properties: ['openFile'],
+            });
+            if (!result.canceled && result.filePaths.length > 0) {
+              setConfig({ ...config, certPath: result.filePaths[0] });
+            }
+          },
+        },
+        {
+          label: t('plugins.api-server.menu.https.submenu.key.label'),
+          type: 'normal',
+          async click() {
+            const config = await getConfig();
+            const result = await dialog.showOpenDialog(window, {
+              title: t('plugins.api-server.menu.https.submenu.key.dialogTitle'),
+              filters: [{ name: 'Private Key', extensions: ['key', 'pem'] }],
+              properties: ['openFile'],
+            });
+            if (!result.canceled && result.filePaths.length > 0) {
+              setConfig({ ...config, keyPath: result.filePaths[0] });
+            }
           },
         },
       ],

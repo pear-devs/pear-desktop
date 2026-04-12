@@ -10,6 +10,8 @@ on:
         required: true
         type: string
 
+permissions: {}
+
 jobs:
   winget:
     name: Publish winget package
@@ -20,7 +22,7 @@ jobs:
           TAG_NAME: ${{ inputs.tag_name || github.event.release.tag_name }}
         run: echo "WINGET_TAG_NAME=$(echo ${TAG_NAME#v})" >> $GITHUB_ENV
       - name: Submit package to Windows Package Manager Community Repository
-        uses: vedantmgoyal2009/winget-releaser@main
+        uses: vedantmgoyal9/winget-releaser@7bd472be23763def6e16bd06cc8b1cdfab0e2fd5
         with:
           identifier: pear-devs.PearDesktop
           installers-regex: '^Pear-Desktop-Web-Setup-[\d\.]+\.exe$'

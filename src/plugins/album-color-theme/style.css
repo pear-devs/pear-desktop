@@ -81,3 +81,14 @@ ytmusic-browse-response[has-background]:not([disable-gradient]) .background-grad
 #background.immersive-background.style-scope.ytmusic-browse-response {
   opacity: 0.6;
 }
+
+ytmusic-search-box[is-bauhaus-sidenav-enabled] {
+  --ytmusic-search-background: var(--ytmusic-color-black3) !important;
+}
+
+.seekbar-theme #progress-bar.ytmusic-player-bar {
+  --paper-slider-active-color: linear-gradient(to right, var(--paper-progress-active-color-1) 80%, var(--paper-progress-active-color-2) 100%) !important;
+  --paper-slider-knob-color: var(--paper-progress-active-color-1) !important;
+  --paper-slider-knob-start-color: var(--paper-progress-active-color-2) !important;
+}
+

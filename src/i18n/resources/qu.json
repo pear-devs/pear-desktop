@@ -1,0 +1,15 @@
+{
+  "common": {
+    "console": {
+      "plugins": {
+        "execute-failed": "Pluginta mana ruwayta atirqanchu {{pluginName}}::{{contextName}}",
+        "executed-at-ms": "Plugin nisqa {{pluginName}}::{{contextName}} ejecutado en {{ms}}ms",
+        "initialize-failed": "Plugin qallariyta mana atirqanchu \"{{pluginName}}\"",
+        "load-all": "Llapanta cargaspa",
+        "load-failed": "Pluginta mana kargayta atirqanchu \"{{pluginName}}\"",
+        "loaded": "Plugin nisqa \"{{pluginName}}\" cargado",
+        "unload-failed": "Pluginta mana uraykachiyta atirqanchu \"{{pluginName}}\""
+      }
+    }
+  }
+}

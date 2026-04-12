@@ -201,8 +201,8 @@
       "restart": "නැවත ආරම්භ කරන්න",
       "show": "තිරය පෙන්වන්න",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },

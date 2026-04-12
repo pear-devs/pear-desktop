@@ -154,7 +154,7 @@
                 "label": "Título de xanela personalizado",
                 "prompt": {
                   "label": "Introduza o título personalizado da xanela (deixe baleiro para desactivala)",
-                  "placeholder": "Exemplo: Pear Desktop"
+                  "placeholder": "Exemplo: {{applicationName}}"
                 }
               },
               "like-buttons": {

@@ -36,7 +36,7 @@
         "details": "Yanıt verilmedi!\n{{error}}"
       },
       "when-ready": {
-        "clearing-cache-after-20s": "Uygulama ön belleği temizle"
+        "clearing-cache-after-20s": "Uygulama ön belleği temizleniyor"
       },
       "window": {
         "tried-to-render-offscreen": "Pencere ekranın dışında oluşturulmaya çalışıldı, windowSize={{windowSize}}, displaySize={{displaySize}}, position={{position}}"
@@ -53,9 +53,9 @@
           "later": "Daha Sonra",
           "restart-now": "Şimdi yeniden başlat"
         },
-        "detail": "\"{{pluginName}}\" eklentisinin çalışabilmesi için yeniden başlatman gerekiyor",
-        "message": "\"{{pluginName}}\" için yeniden başlatman gerekiyor",
-        "title": "Uygulamayı yeniden başlatman gerekiyor"
+        "detail": "\"{{pluginName}}\" eklentisinin çalışması için uygulamanın yeniden başlatılması gerekiyor",
+        "message": "\"{{pluginName}}\" eklentisi için uygulamanın yeniden başlatılması gerekiyor",
+        "title": "Uygulamanın yeniden başlatılması gerekiyor"
       },
       "unresponsive": {
         "buttons": {
@@ -154,14 +154,15 @@
                 "label": "Özel pencere başlığı",
                 "prompt": {
                   "label": "Özel pencere başlığı girin: (devre dışı bırakmak için boş bırakın)",
-                  "placeholder": "Örnek: Pear Desktop"
+                  "placeholder": "Örnek: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "Varsayılan",
                 "force-show": "Zorla göster",
                 "hide": "Gizle",
-                "label": "Beğenme düğmeleri"
+                "label": "Beğenme düğmeleri",
+                "swap": "Beğenme butonlarının sıralamasını değiştir"
               },
               "remove-upgrade-button": "Yükseltme düğmesini kaldır",
               "theme": {
@@ -208,8 +209,8 @@
       "restart": "Yeniden başlat",
       "show": "Pencereyi görüntüle",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -237,7 +238,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Arama çubuğu temalarını etkinleştir"
       },
       "name": "Albüm Renk Teması"
     },
@@ -287,14 +289,14 @@
       "name": "Ambiyans Modu"
     },
     "amuse": {
-      "description": "6K Labs'ın Amuse oynatma widget'ı için Pear Desktop desteği ekler",
+      "description": "6K Labs'ın Amuse oynatma widget'ı için {{applicationName}} desteği ekler",
       "name": "Amuse",
       "response": {
         "query": "Amuse API sunucusu çalışıyor. Şarkı bilgilerini almak için GET /query kullanabilirsiniz."
       }
     },
     "api-server": {
-      "description": "Oynatıcıyı kontrol etmek için bir API sunucusu ekle",
+      "description": "Oynatıcıyı kontrol etmek için API sunucusu ekler",
       "dialog": {
         "request": {
           "buttons": {
@@ -320,15 +322,31 @@
         "hostname": {
           "label": "Ana bilgisayar adı"
         },
+        "https": {
+          "label": "HTTPS & Sertifikalar",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "HTTPS sertifika dosyası seç",
+              "label": "Sertifika dosyası (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "HTTPS'i aktifleştir"
+            },
+            "key": {
+              "dialogTitle": "HTTPS özel anahtar dosyası seç",
+              "label": "Özel anahtar dosyası (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
       },
-      "name": "API sunucusu [Beta]",
+      "name": "API Sunucusu [Beta]",
       "prompt": {
         "hostname": {
-          "label": "API sunucusu için hostname (örneğin 0.0.0.0) girin:",
-          "title": "Hostname(Ana bilgisayar adı)"
+          "label": "API sunucusu için sunucu ismini (örneğin 0.0.0.0) girin:",
+          "title": "Sunucu ismi"
         },
         "port": {
           "label": "API sunucusu için port girin:",
@@ -373,7 +391,7 @@
       "name": "Yaş doğrulamasını atla"
     },
     "captions-selector": {
-      "description": "Pear Desktop için altyazı seçici",
+      "description": "{{applicationName}} için altyazı seçici",
       "menu": {
         "autoload": "Son kullanılan altyazıyı otomatik olarak seç",
         "disable-captions": "Varsayılan olarak altyazı yok"
@@ -394,6 +412,17 @@
         "caption-disabled": "Altyazılar devre dışı",
         "no-captions": "Bu şarkı için altyazı mevcut değil"
       }
+    },
+    "clock": {
+      "description": "Navigasyon barına bir saat ekle",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-Saat Formatı",
+          "display-seconds": "Saniyeleri Göster",
+          "label": "Format"
+        }
+      },
+      "name": "Saat"
     },
     "compact-sidebar": {
       "description": "Her zaman kompakt kenar çubugu",
@@ -456,14 +485,14 @@
         "disconnected": "Bağlantı kesildi",
         "hide-duration-left": "Kalan süreyi gizle",
         "hide-github-button": "GitHub bağlantısını gizle",
-        "play-on-pear-desktop": "Pear Desktop de oynat",
+        "play-on-application": "{{applicationName}} de oynat",
         "set-inactivity-timeout": "Hareketsizlik zaman aşımını ayarla",
         "set-status-display-type": {
           "label": "Durum metni",
           "submenu": {
+            "application": "{{applicationName}} Dinleniyor",
             "artist": "{artist} Dinleniyor",
-            "title": "{song title} Dinleniyor",
-            "pear-desktop": "Pear Desktop Dinleniyor"
+            "title": "{song title} Dinleniyor"
           }
         }
       },
@@ -813,6 +842,24 @@
         "not-found": "⚠️ Bu şarkı için şarkı sözleri bulunamadı."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Çince karakterleri çevir",
+          "submenu": {
+            "disabled": {
+              "label": "Devre dışı bırak",
+              "tooltip": "Çince karakterleri çevirmeyi devre dışı bırak"
+            },
+            "simplified-to-traditional": {
+              "label": "Basitleştirilmişten Geleneksele",
+              "tooltip": "Basitleştirilmiş Ç*nceyi Geleneksel Ç*nceye Çevir"
+            },
+            "traditional-to-simplified": {
+              "label": "Gelenekselden Basitleştirilmişe",
+              "tooltip": "Geleneksel Çince'yi Basitleştirilmiş Çince'ye dönüştür"
+            }
+          },
+          "tooltip": "Çince karakterleri Geleneksel veya Basitleştirilmiş Çinceye dönüştür"
+        },
         "default-text-string": {
           "label": "Şarkı sözleri arasında varsayılan karakter",
           "tooltip": "Şarkı sözleri arasındaki boşluk için kullanılacak varsayılan karakteri seçin"
