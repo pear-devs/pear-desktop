@@ -49,9 +49,9 @@ export class DiscordService {
   mainWindow: Electron.BrowserWindow;
 
   /**
-   * Stores the logged-in YouTube Music user information.
+   * Stores the logged-in Application user information.
    */
-  private youtubeUser: { name: string; avatar: string } | null = null;
+  private applicationUser: { name: string; avatar: string } | null = null;
 
   /**
    * Initializes the Discord service with configuration and main window reference.
@@ -129,11 +129,11 @@ export class DiscordService {
       largeImageText: songInfo.album
         ? sanitizeActivityText(songInfo.album)
         : undefined,
-      smallImageKey: config.showYouTubeUser
-        ? this.getYouTubeUserAvatar()
+      smallImageKey: config.showApplicationUser
+        ? this.getApplicationUserAvatar()
         : undefined,
-      smallImageText: config.showYouTubeUser
-        ? this.getYouTubeUserName()
+      smallImageText: config.showApplicationUser
+        ? this.getApplicationUserName()
         : undefined,
       buttons: buildDiscordButtons(config, songInfo),
     };
@@ -184,7 +184,7 @@ export class DiscordService {
    */
   private resetInfo() {
     this.ready = false;
-    this.youtubeUser = null;
+    this.applicationUser = null;
     this.lastSongInfo = undefined;
     this.lastProgressUpdate = 0;
     this.timerManager.clearAll();
@@ -433,28 +433,28 @@ export class DiscordService {
   }
 
   /**
-   * Sets the YouTube Music user info used for Rich Presence.
+   * Sets the Application user info used for Rich Presence.
    * @param user - The user info (name, avatar).
    */
-  setYouTubeUser(user: { name: string; avatar: string }) {
+  setApplicationUser(user: { name: string; avatar: string }) {
     if (!user) {
-      if (dev()) {
-        console.warn(LoggerPrefix, 'Received undefined YouTube user info');
+      if (is.dev()) {
+        console.warn(LoggerPrefix, 'Received undefined Application user info');
       }
       return;
     }
 
     if (
-      this.youtubeUser &&
-      this.youtubeUser.name === user.name &&
-      this.youtubeUser.avatar === user.avatar
+      this.applicationUser &&
+      this.applicationUser.name === user.name &&
+      this.applicationUser.avatar === user.avatar
     ) {
       return;
     }
 
-    this.youtubeUser = user;
-    if (dev()) {
-      console.log(LoggerPrefix, `Fetched YouTube user: ${user.name}`);
+    this.applicationUser = user;
+    if (is.dev()) {
+      console.log(LoggerPrefix, `Fetched Application user: ${user.name}`);
       console.log(LoggerPrefix, `Fetched Avatar URL: ${user.avatar}`);
     }
 
@@ -464,19 +464,19 @@ export class DiscordService {
   }
 
   /**
-   * Get the YouTube user's avatar URL for use in rich presence.
+   * Get the Application user's avatar URL for use in rich presence.
    * @returns The avatar URL or undefined if not available
    */
-  private getYouTubeUserAvatar(): string | undefined {
-    return this.youtubeUser?.avatar ?? undefined;
+  private getApplicationUserAvatar(): string | undefined {
+    return this.applicationUser?.avatar ?? undefined;
   }
 
   /**
-   * Get the YouTube user's name for use in rich presence.
+   * Get the Application user's name for use in rich presence.
    * @returns The username or undefined if not available
    */
-  private getYouTubeUserName(): string | undefined {
-    return this.youtubeUser?.name ?? undefined;
+  private getApplicationUserName(): string | undefined {
+    return this.applicationUser?.name ?? undefined;
   }
   /**
    * Cleans up resources: disconnects RPC, clears all timers, and clears callbacks.
