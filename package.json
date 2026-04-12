@@ -169,7 +169,7 @@
     "eslint-plugin-solid": "0.14.5",
     "glob": "13.0.6",
     "node-gyp": "12.2.0",
-    "ts-morph": "27.0.2",
+    "ts-morph": "28.0.0",
     "typescript": "6.0.2",
     "typescript-eslint": "8.58.1",
     "utf-8-validate": "6.0.6",
