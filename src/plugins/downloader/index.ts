@@ -1,6 +1,7 @@
 import { DefaultPresetList, type Preset } from './types';
 
 import style from './style.css?inline';
+import dmStyle from './templates/download-manager.css?inline';
 
 import { createPlugin } from '@/utils';
 import { onConfigChange, onMainLoad } from './main';
@@ -22,6 +23,7 @@ export type DownloaderPluginConfig = {
   customPresetSetting: Preset;
   skipExisting: boolean;
   playlistMaxItems?: number;
+  maxConcurrentDownloads: number;
 };
 
 export const defaultConfig: DownloaderPluginConfig = {
@@ -38,6 +40,7 @@ export const defaultConfig: DownloaderPluginConfig = {
   customPresetSetting: DefaultPresetList['mp3 (256kbps)'], // Presets
   skipExisting: false,
   playlistMaxItems: undefined,
+  maxConcurrentDownloads: 1,
 };
 
 export default createPlugin({
@@ -45,7 +48,7 @@ export default createPlugin({
   description: () => t('plugins.downloader.description'),
   restartNeeded: true,
   config: defaultConfig,
-  stylesheets: [style],
+  stylesheets: [style, dmStyle],
   menu: onMenu,
   backend: {
     start: onMainLoad,

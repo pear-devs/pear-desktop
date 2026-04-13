@@ -12,6 +12,7 @@ import {
 } from '@/plugins/utils/renderer/check';
 
 import { DownloadButton } from './templates/download';
+import { DownloadManagerPanel } from './templates/download-manager';
 
 import type { RendererContext } from '@/types/contexts';
 import type { DownloaderPluginConfig } from './index';
@@ -85,6 +86,12 @@ export const onRendererLoad = ({
     const targetHtml = feedback || t('plugins.downloader.templates.button');
     setDownloadButtonText(targetHtml);
   });
+
+  // Render the download manager panel
+  const dmContainer = document.createElement('div');
+  dmContainer.id = 'ytmd-download-manager-root';
+  document.body.appendChild(dmContainer);
+  render(() => <DownloadManagerPanel ipc={ipc} />, dmContainer);
 };
 
 export const onPlayerApiReady = () => {

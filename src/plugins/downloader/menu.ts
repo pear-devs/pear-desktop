@@ -214,5 +214,17 @@ export const onMenu = async ({
         setConfig({ skipExisting: item.checked });
       },
     },
+    {
+      label: t('plugins.downloader.menu.concurrent-downloads') || 'Descargas simultáneas',
+      type: 'submenu',
+      submenu: [1, 2, 3, 4, 5].map((n) => ({
+        label: `${n}`,
+        type: 'radio' as const,
+        checked: (config.maxConcurrentDownloads ?? 1) === n,
+        click() {
+          setConfig({ maxConcurrentDownloads: n });
+        },
+      })),
+    },
   ];
 };

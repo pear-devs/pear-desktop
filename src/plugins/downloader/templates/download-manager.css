@@ -1,0 +1,479 @@
+/* ─── Download Manager Floating Panel ──────────────────────────────────────── */
+
+.dm-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e0e0e0;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  flex-shrink: 0;
+}
+
+.dm-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.dm-toggle-btn.dm-active {
+  background: rgba(120, 86, 255, 0.25);
+  color: #a78bfa;
+}
+
+.dm-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  animation: dm-badge-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes dm-badge-pop {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+
+/* ─── Panel Container ─────────────────────────────────────────────────────── */
+
+.dm-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 380px;
+  height: 100vh;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  background: rgba(18, 18, 24, 0.95);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: 'Google Sans', 'Roboto', sans-serif;
+}
+
+.dm-panel.dm-open {
+  transform: translateX(0);
+}
+
+/* ─── Header ──────────────────────────────────────────────────────────────── */
+
+.dm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.dm-header-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dm-header-title svg {
+  width: 20px;
+  height: 20px;
+  opacity: 0.7;
+}
+
+.dm-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: #999;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.dm-close-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+/* ─── Controls Bar ────────────────────────────────────────────────────────── */
+
+.dm-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.dm-concurrent-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #999;
+}
+
+.dm-concurrent-selector select {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e0e0e0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.dm-concurrent-selector select:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dm-ctrl-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: #bbb;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.dm-ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.dm-ctrl-btn.dm-pause {
+  background: rgba(234, 179, 8, 0.12);
+  color: #eab308;
+}
+
+.dm-ctrl-btn.dm-pause:hover {
+  background: rgba(234, 179, 8, 0.2);
+}
+
+.dm-ctrl-btn.dm-retry {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+}
+
+.dm-ctrl-btn.dm-retry:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.dm-ctrl-btn.dm-clear {
+  background: rgba(255, 255, 255, 0.04);
+  color: #888;
+}
+
+.dm-ctrl-btn.dm-clear:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #bbb;
+}
+
+/* ─── Tabs ────────────────────────────────────────────────────────────────── */
+
+.dm-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.dm-tab {
+  flex: 1;
+  padding: 10px 0;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  color: #777;
+  cursor: pointer;
+  border: none;
+  background: none;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.dm-tab:hover {
+  color: #bbb;
+}
+
+.dm-tab.dm-tab-active {
+  color: #a78bfa;
+}
+
+.dm-tab.dm-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
+  border-radius: 1px;
+}
+
+.dm-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 0 4px;
+  margin-left: 4px;
+  color: inherit;
+}
+
+.dm-tab.dm-tab-active .dm-tab-badge {
+  background: rgba(167, 139, 250, 0.2);
+  color: #a78bfa;
+}
+
+/* ─── List ────────────────────────────────────────────────────────────────── */
+
+.dm-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 0;
+}
+
+.dm-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dm-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dm-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.dm-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+  color: #555;
+  font-size: 13px;
+  gap: 12px;
+}
+
+.dm-empty svg {
+  width: 48px;
+  height: 48px;
+  opacity: 0.3;
+}
+
+/* ─── Item ────────────────────────────────────────────────────────────────── */
+
+.dm-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  transition: background 0.15s ease;
+  position: relative;
+}
+
+.dm-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dm-item-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.dm-item-icon.dm-queued {
+  background: rgba(255, 255, 255, 0.06);
+  color: #888;
+}
+
+.dm-item-icon.dm-downloading {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  animation: dm-pulse 1.5s ease-in-out infinite;
+}
+
+.dm-item-icon.dm-completed {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.dm-item-icon.dm-failed {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.dm-item-icon.dm-skipped {
+  background: rgba(234, 179, 8, 0.1);
+  color: #eab308;
+}
+
+@keyframes dm-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.dm-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dm-item-title {
+  font-size: 13px;
+  color: #ddd;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.dm-item-subtitle {
+  font-size: 11px;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.dm-item-progress {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 1.5px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.dm-item-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
+  border-radius: 1.5px;
+  transition: width 0.3s ease;
+}
+
+.dm-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.dm-item-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: #888;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 12px;
+}
+
+.dm-item-action-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.dm-item-action-btn.dm-retry-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.dm-item-action-btn.dm-remove-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+/* ─── Stats Bar ───────────────────────────────────────────────────────────── */
+
+.dm-stats {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 10px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #666;
+}
+
+.dm-stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dm-stat-value {
+  font-weight: 600;
+  color: #999;
+}
+
+.dm-stat.dm-stat-completed .dm-stat-value {
+  color: #22c55e;
+}
+
+.dm-stat.dm-stat-failed .dm-stat-value {
+  color: #ef4444;
+}
+
+.dm-stat.dm-stat-skipped .dm-stat-value {
+  color: #eab308;
+}

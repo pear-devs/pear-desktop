@@ -550,6 +550,7 @@
       "description": "Downloads MP3 / source audio directly from the interface",
       "menu": {
         "choose-download-folder": "Choose download folder",
+        "concurrent-downloads": "Concurrent downloads",
         "download-finish-settings": {
           "label": "Download on finish",
           "prompt": {
@@ -570,6 +571,28 @@
         "skip-existing": "Skip existing files"
       },
       "name": "Downloader",
+      "download-manager": {
+        "title": "Download Manager",
+        "tabs": {
+          "queue": "Queue",
+          "failed": "Failed",
+          "completed": "Done"
+        },
+        "concurrent-downloads": "Concurrent",
+        "retry-failed": "Retry",
+        "clear-completed": "Clear",
+        "pause": "Pause",
+        "resume": "Resume",
+        "no-items": "No downloads",
+        "active": "active",
+        "status": {
+          "queued": "Queued…",
+          "downloading": "Downloading… {{progress}}% — {{provider}} ({{attempt}}/3)",
+          "completed": "Completed",
+          "failed": "Failed",
+          "skipped": "Skipped (already exists)"
+        }
+      },
       "renderer": {
         "can-not-update-progress": "Cannot update progress"
       },

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
-import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, type BrowserWindow, ipcMain } from 'electron';
 import {
   Innertube,
   UniversalCache,
@@ -23,6 +23,7 @@ import {
   sendFeedback as sendFeedback_,
   setBadge,
 } from './utils';
+import { downloadManager, type DownloadItem } from './download-manager-engine';
 import {
   registerCallback,
   cleanupName,
@@ -115,15 +116,9 @@ const sendError = (error: Error, source?: string) => {
     : '';
   const message = `${error.toString()}${songNameMessage}${cause}`;
 
-  console.error(message);
+  console.error('[Downloader]', message);
   console.trace(error);
-  dialog.showMessageBox(win, {
-    type: 'info',
-    buttons: [t('plugins.downloader.backend.dialog.error.buttons.ok')],
-    title: t('plugins.downloader.backend.dialog.error.title'),
-    message: t('plugins.downloader.backend.dialog.error.message'),
-    detail: message,
-  });
+  // No dialog - errors are tracked in the download manager UI
 };
 
 export const getCookieFromWindow = async (win: BrowserWindow) => {
@@ -145,6 +140,11 @@ export const onMainLoad = async ({
 }: BackendContext<DownloaderPluginConfig>) => {
   win = _win;
   config = await getConfig();
+
+  // Initialize download manager
+  downloadManager.setWindow(win);
+  downloadManager.setMaxConcurrent(config.maxConcurrentDownloads ?? 1);
+  downloadManager.setDownloadFunction(createManagedDownloadFn());
 
   yt = await Innertube.create({
     cache: new UniversalCache(false),
@@ -212,7 +212,7 @@ export const onMainLoad = async ({
     }
   }
 
-  ipc.handle('download-song', (url: string) => downloadSong(url));
+  ipc.handle('download-song', (url: string) => downloadSongViaManager(url));
   ipc.on('peard:video-src-changed', (data: GetPlayerResponse) => {
     playingUrl = data.microformat.microformatDataRenderer.urlCanonical;
   });
@@ -220,12 +220,97 @@ export const onMainLoad = async ({
     downloadPlaylist(url),
   );
 
+  // Download manager IPC handlers
+  ipc.handle('download-manager-get-state', () => downloadManager.getState());
+  ipc.handle('download-manager-set-concurrent', (max: number) => {
+    downloadManager.setMaxConcurrent(max);
+    // Persist config
+    config.maxConcurrentDownloads = max;
+  });
+  ipc.handle('download-manager-retry-failed', () => downloadManager.retryFailed());
+  ipc.handle('download-manager-retry-single', (id: string) => downloadManager.retrySingle(id));
+  ipc.handle('download-manager-remove-failed', (id: string) => downloadManager.removeFailed(id));
+  ipc.handle('download-manager-clear-completed', () => downloadManager.clearCompleted());
+  ipc.handle('download-manager-pause', () => downloadManager.pauseAll());
+  ipc.handle('download-manager-resume', () => downloadManager.resumeAll());
+
   downloadSongOnFinishSetup({ ipc, getConfig });
 };
 
 export const onConfigChange = (newConfig: DownloaderPluginConfig) => {
   config = newConfig;
+  downloadManager.setMaxConcurrent(newConfig.maxConcurrentDownloads ?? 1);
 };
+
+/**
+ * Queue a song download through the download manager (no blocking dialogs)
+ */
+async function downloadSongViaManager(
+  url: string,
+  playlistFolder?: string,
+  trackId?: string,
+): Promise<void> {
+  try {
+    let id: string | null;
+    id = getVideoId(url);
+    if (typeof id !== 'string') {
+      console.error('[Downloader] Video ID not found for URL:', url);
+      return;
+    }
+
+    const info = await yt.music.getInfo(id);
+    if (!info) {
+      console.error('[Downloader] Could not get info for ID:', id);
+      return;
+    }
+
+    const metadata = getMetadata(info);
+    if (metadata.album === 'N/A') {
+      metadata.album = '';
+    }
+    metadata.trackId = trackId;
+
+    const selectedPreset = config.selectedPreset ?? 'mp3 (256kbps)';
+    let presetSetting: Preset;
+    if (selectedPreset === 'Custom') {
+      presetSetting = config.customPresetSetting ?? DefaultPresetList['Custom'];
+    } else if (selectedPreset === 'Source') {
+      presetSetting = DefaultPresetList['Source'];
+    } else {
+      presetSetting = DefaultPresetList['mp3 (256kbps)'];
+    }
+
+    const defaultDownloadOptions: FormatOptions = {
+      type: (await isPremium()) ? 'audio' : 'video+audio',
+      quality: 'best',
+      format: 'any',
+    };
+
+    const format1 = info.chooseFormat(defaultDownloadOptions);
+    let targetFileExtension: string;
+    if (!presetSetting?.extension) {
+      targetFileExtension =
+        VideoFormatList.find((it) => it.itag === format1.itag)?.container ?? 'mp3';
+    } else {
+      targetFileExtension = presetSetting?.extension ?? 'mp3';
+    }
+
+    const downloadFolder = playlistFolder || config.downloadFolder || app.getPath('downloads');
+
+    downloadManager.addToQueue({
+      url,
+      title: metadata.title ?? 'Unknown',
+      artist: metadata.artist ?? '',
+      playlistFolder,
+      trackId,
+      isPlaylist: !!playlistFolder,
+      downloadFolder,
+      fileExtension: targetFileExtension,
+    });
+  } catch (error) {
+    console.error('[Downloader] Error queuing song:', error);
+  }
+}
 
 export async function downloadSong(
   url: string,
@@ -682,9 +767,7 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
     getPlaylistID(givenUrl) || getPlaylistID(new URL(playingUrl));
 
   if (!playlistId) {
-    sendError(
-      new Error(t('plugins.downloader.backend.feedback.playlist-id-not-found')),
-    );
+    console.error('[Downloader]', t('plugins.downloader.backend.feedback.playlist-id-not-found'));
     return;
   }
 
@@ -709,20 +792,16 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
       items.push(...filteredItems);
     }
   } catch (error: unknown) {
-    sendError(
-      Error(
-        t('plugins.downloader.backend.feedback.playlist-is-mix-or-private', {
-          error: String(error),
-        }),
-      ),
-    );
+    console.error('[Downloader]', t('plugins.downloader.backend.feedback.playlist-is-mix-or-private', {
+      error: String(error),
+    }));
+    sendFeedback();
     return;
   }
 
   if (!playlist || !playlist.items || playlist.items.length === 0) {
-    sendError(
-      new Error(t('plugins.downloader.backend.feedback.playlist-is-empty')),
-    );
+    console.error('[Downloader]', t('plugins.downloader.backend.feedback.playlist-is-empty'));
+    sendFeedback();
     return;
   }
 
@@ -751,10 +830,9 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
   }
 
   if (items.length === 1) {
-    sendFeedback(
-      t('plugins.downloader.backend.feedback.playlist-has-only-one-song'),
-    );
-    await downloadSongFromId(items.at(0)!.id!);
+    // Single song - queue it directly via manager
+    await downloadSongViaManagerFromId(items.at(0)!.id!);
+    sendFeedback();
     return;
   }
 
@@ -765,102 +843,226 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
 
   const folder = getFolder(config.downloadFolder ?? '');
   const playlistFolder = join(folder, safePlaylistTitle);
-  if (existsSync(playlistFolder)) {
-    if (!config.skipExisting) {
-      sendError(
-        new Error(
-          t('plugins.downloader.backend.feedback.folder-already-exists', {
-            playlistFolder,
-          }),
-        ),
-      );
-      return;
-    }
-  } else {
+  if (!existsSync(playlistFolder)) {
     mkdirSync(playlistFolder, { recursive: true });
   }
 
-  dialog.showMessageBox(win, {
-    type: 'info',
-    buttons: [
-      t('plugins.downloader.backend.dialog.start-download-playlist.buttons.ok'),
-    ],
-    title: t('plugins.downloader.backend.dialog.start-download-playlist.title'),
-    message: t(
-      'plugins.downloader.backend.dialog.start-download-playlist.message',
-      {
-        playlistTitle,
-      },
-    ),
-    detail: t(
-      'plugins.downloader.backend.dialog.start-download-playlist.detail',
-      {
-        playlistSize: items.length,
-      },
-    ),
-  });
+  console.log(
+    `[Downloader] Queuing playlist "${playlistTitle}" - ${items.length} songs`,
+  );
 
-  if (is.dev()) {
-    console.log(
-      t('plugins.downloader.backend.feedback.downloading-playlist', {
-        playlistTitle,
-        playlistSize: items.length,
-        playlistId,
-      }),
-    );
-  }
-
-  win.setProgressBar(2); // Starts with indefinite bar
-
-  setBadge(items.length);
-
+  // Queue all songs through the download manager - no blocking dialogs!
   let counter = 1;
-
-  const progressStep = 1 / items.length;
-
-  const increaseProgress = (itemPercentage: number) => {
-    const currentProgress = (counter - 1) / (items.length ?? 1);
-    const newProgress = currentProgress + progressStep * itemPercentage;
-    win.setProgressBar(newProgress);
-  };
-
-  try {
-    for (const song of items) {
-      sendFeedback(
-        t('plugins.downloader.backend.feedback.downloading-counter', {
-          current: counter,
-          total: items.length,
-        }),
-      );
-      const trackId = isAlbum ? counter : undefined;
-      await downloadSongFromId(
+  for (const song of items) {
+    const trackId = isAlbum ? counter : undefined;
+    try {
+      await downloadSongViaManagerFromId(
         song.id!,
         playlistFolder,
         trackId?.toString(),
-        increaseProgress,
-      ).catch((error) =>
-        sendError(
-          new Error(
-            t('plugins.downloader.backend.feedback.error-while-downloading', {
-              author: song.author!.name,
-              title: song.title!,
-              error: String(error),
-            }),
-          ),
-        ),
       );
-
-      win.setProgressBar(counter / items.length);
-      setBadge(items.length - counter);
-      counter++;
+    } catch (error) {
+      console.warn(`[Downloader] Error queuing song ${song.title}: ${error}`);
     }
-  } catch (error: unknown) {
-    sendError(error as Error);
-  } finally {
-    win.setProgressBar(-1); // Close progress bar
-    setBadge(0); // Close badge counter
-    sendFeedback(); // Clear feedback
+    counter++;
   }
+
+  sendFeedback(); // Clear feedback - manager handles progress now
+}
+
+/**
+ * Queue a song by ID through the download manager
+ */
+async function downloadSongViaManagerFromId(
+  id: string,
+  playlistFolder?: string,
+  trackId?: string,
+): Promise<void> {
+  try {
+    const info = await yt.music.getInfo(id);
+    if (!info) {
+      console.error('[Downloader] Could not get info for ID:', id);
+      return;
+    }
+
+    const metadata = getMetadata(info);
+    if (metadata.album === 'N/A') {
+      metadata.album = '';
+    }
+    metadata.trackId = trackId;
+
+    const selectedPreset = config.selectedPreset ?? 'mp3 (256kbps)';
+    let presetSetting: Preset;
+    if (selectedPreset === 'Custom') {
+      presetSetting = config.customPresetSetting ?? DefaultPresetList['Custom'];
+    } else if (selectedPreset === 'Source') {
+      presetSetting = DefaultPresetList['Source'];
+    } else {
+      presetSetting = DefaultPresetList['mp3 (256kbps)'];
+    }
+
+    const defaultDownloadOptions: FormatOptions = {
+      type: (await isPremium()) ? 'audio' : 'video+audio',
+      quality: 'best',
+      format: 'any',
+    };
+
+    const format1 = info.chooseFormat(defaultDownloadOptions);
+    let targetFileExtension: string;
+    if (!presetSetting?.extension) {
+      targetFileExtension =
+        VideoFormatList.find((it) => it.itag === format1.itag)?.container ?? 'mp3';
+    } else {
+      targetFileExtension = presetSetting?.extension ?? 'mp3';
+    }
+
+    const downloadFolder = playlistFolder || config.downloadFolder || app.getPath('downloads');
+
+    downloadManager.addToQueue({
+      url: `https://music.youtube.com/watch?v=${id}`,
+      title: metadata.title ?? 'Unknown',
+      artist: metadata.artist ?? '',
+      playlistFolder,
+      trackId,
+      isPlaylist: !!playlistFolder,
+      downloadFolder,
+      fileExtension: targetFileExtension,
+    });
+  } catch (error) {
+    console.error('[Downloader] Error queuing song by ID:', error);
+  }
+}
+
+/**
+ * Creates the managed download function used by the engine.
+ * Each call represents one download attempt with a specific provider.
+ */
+function createManagedDownloadFn() {
+  return async (
+    item: DownloadItem,
+    onProgress: (progress: number, provider: string, attempt: number) => void,
+  ): Promise<void> => {
+    const provider = item.currentProvider;
+    const attempt = item.currentAttempt;
+
+    const sendFeedback = (_message: unknown, _progress?: number) => {
+      // Progress is handled by the manager UI now
+    };
+
+    let id: string | null = getVideoId(item.url);
+    if (typeof id !== 'string') {
+      throw new Error(t('plugins.downloader.backend.feedback.video-id-not-found'));
+    }
+
+    let info = await yt.music.getInfo(id);
+    if (!info) {
+      throw new Error(t('plugins.downloader.backend.feedback.video-id-not-found'));
+    }
+
+    const metadata = getMetadata(info);
+    if (metadata.album === 'N/A') metadata.album = '';
+    metadata.trackId = item.trackId;
+
+    let playabilityStatus = info.playability_status;
+    if (playabilityStatus?.status === 'LOGIN_REQUIRED') {
+      const bypassedResult = await getAndroidTvInfo(id);
+      playabilityStatus = bypassedResult.playability_status;
+      if (playabilityStatus?.status === 'LOGIN_REQUIRED') {
+        throw new Error(`[${playabilityStatus.status}] ${playabilityStatus.reason}`);
+      }
+      info = bypassedResult as unknown as typeof info;
+    }
+
+    if (playabilityStatus?.status === 'UNPLAYABLE') {
+      const errorScreen = playabilityStatus.error_screen as PlayerErrorMessage | null;
+      throw new Error(
+        `[${playabilityStatus.status}] ${errorScreen?.reason.text}: ${errorScreen?.subreason.text}`,
+      );
+    }
+
+    const selectedPreset = config.selectedPreset ?? 'mp3 (256kbps)';
+    let presetSetting: Preset;
+    if (selectedPreset === 'Custom') {
+      presetSetting = config.customPresetSetting ?? DefaultPresetList['Custom'];
+    } else if (selectedPreset === 'Source') {
+      presetSetting = DefaultPresetList['Source'];
+    } else {
+      presetSetting = DefaultPresetList['mp3 (256kbps)'];
+    }
+
+    const defaultDownloadOptions: FormatOptions = {
+      type: (await isPremium()) ? 'audio' : 'video+audio',
+      quality: 'best',
+      format: 'any',
+    };
+
+    const format1 = info.chooseFormat(defaultDownloadOptions);
+    let targetFileExtension: string;
+    if (!presetSetting?.extension) {
+      targetFileExtension =
+        VideoFormatList.find((it) => it.itag === format1.itag)?.container ?? 'mp3';
+    } else {
+      targetFileExtension = presetSetting?.extension ?? 'mp3';
+    }
+
+    const dir = item.playlistFolder || config.downloadFolder || app.getPath('downloads');
+    const name = `${metadata.artist ? `${metadata.artist} - ` : ''}${metadata.title}`;
+
+    let filename = filenamify(`${name}.${targetFileExtension}`, {
+      replacement: '_',
+      maxLength: 255,
+    });
+    if (!is.macOS()) {
+      filename = filename.normalize('NFC');
+    }
+    const filePath = join(dir, filename);
+
+    // Skip if exists
+    if (existsSync(filePath)) {
+      return; // Already downloaded
+    }
+
+    const downloadOptions: FormatOptions = {
+      ...defaultDownloadOptions,
+      client: provider as any,
+    };
+
+    const stream = await info.download(downloadOptions);
+    const format = info.chooseFormat(downloadOptions);
+
+    onProgress(5, provider, attempt);
+
+    const iterableStream = Utils.streamToIterable(stream);
+
+    if (!existsSync(dir)) {
+      mkdirSync(dir, { recursive: true });
+    }
+
+    let fileBuffer = await iterableStreamToProcessedUint8Array(
+      iterableStream,
+      targetFileExtension,
+      metadata,
+      presetSetting?.ffmpegArgs ?? [],
+      format.content_length ?? 0,
+      (msg, progress) => {
+        if (progress && !isNaN(progress) && progress > 0 && progress <= 1) {
+          onProgress(Math.floor(progress * 100), provider, attempt);
+        }
+      },
+    );
+
+    if (fileBuffer && targetFileExtension === 'mp3') {
+      fileBuffer = await writeID3(Buffer.from(fileBuffer), metadata, sendFeedback);
+    }
+
+    if (fileBuffer) {
+      writeFileSync(filePath, fileBuffer);
+    } else {
+      throw new Error('File buffer is null after processing.');
+    }
+
+    onProgress(100, provider, attempt);
+  };
 }
 
 function getFFmpegMetadataArgs(metadata: CustomSongInfo) {

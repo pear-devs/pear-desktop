@@ -550,6 +550,7 @@
       "description": "Descarga audio MP3 / fuente directamente desde la interfaz",
       "menu": {
         "choose-download-folder": "Elija la carpeta de descarga",
+        "concurrent-downloads": "Descargas simultáneas",
         "download-finish-settings": {
           "label": "Descargar al finalizar",
           "prompt": {
@@ -570,6 +571,28 @@
         "skip-existing": "Saltar archivos existentes"
       },
       "name": "Gestor de descargas",
+      "download-manager": {
+        "title": "Gestor de Descargas",
+        "tabs": {
+          "queue": "Cola",
+          "failed": "Fallidas",
+          "completed": "Listas"
+        },
+        "concurrent-downloads": "Simultáneas",
+        "retry-failed": "Reintentar",
+        "clear-completed": "Limpiar",
+        "pause": "Pausar",
+        "resume": "Reanudar",
+        "no-items": "No hay descargas",
+        "active": "activas",
+        "status": {
+          "queued": "En cola…",
+          "downloading": "Descargando… {{progress}}% — {{provider}} ({{attempt}}/3)",
+          "completed": "Completada",
+          "failed": "Fallida",
+          "skipped": "Omitida (ya existe)"
+        }
+      },
       "renderer": {
         "can-not-update-progress": "No se puede actualizar el progreso"
       },
