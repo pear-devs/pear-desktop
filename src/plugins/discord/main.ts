@@ -51,8 +51,15 @@ export const backend = createBackend<
 
     ctx.ipc.on(
       'discord:youtube-info',
-      (info: { name: string; avatar: string }) => {
-        discordService?.setApplicationUser(info);
+      (info: unknown) => {
+        if (
+          typeof info === 'object' &&
+          info !== null &&
+          typeof (info as { name?: unknown }).name === 'string' &&
+          typeof (info as { avatar?: unknown }).avatar === 'string'
+        ) {
+          discordService?.setApplicationUser(info as { name: string; avatar: string });
+        }
       },
     );
 
