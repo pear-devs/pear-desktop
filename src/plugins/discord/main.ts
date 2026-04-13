@@ -52,7 +52,7 @@ export const backend = createBackend<
     ctx.ipc.on(
       'discord:youtube-info',
       (info: { name: string; avatar: string }) => {
-        discordService?.setYouTubeUser(info);
+        discordService?.setApplicationUser(info);
       },
     );
 

@@ -2,12 +2,26 @@ import { ipcRenderer } from 'electron';
 
 import { createPreload } from '@/utils';
 
-export const preload = createPreload({
-  start() {
+import type { DiscordPluginConfig } from './index';
+
+export const preload = createPreload<object, DiscordPluginConfig>({
+  async start(ctx) {
+    const config = await ctx.getConfig();
+    if (!config.showApplicationUser) {
+      return;
+    }
+
     let checkCount = 0;
     const maxChecks = 20;
+    let lookupInFlight = false;
+    let sent = false;
 
     const findUserInfo = async () => {
+      if (lookupInFlight || sent) {
+        return false;
+      }
+
+      lookupInFlight = true;
       try {
         let avatar: string | null = null;
 
@@ -38,7 +52,7 @@ export const preload = createPreload({
             'ytmusic-settings-button tp-yt-paper-icon-button',
           );
 
-        let name = 'Pear Desktop User';
+        let name: string | null = null;
 
         if (settingsButton) {
           // Click to open the menu
@@ -57,7 +71,7 @@ export const preload = createPreload({
               name =
                 accountNameElement.textContent?.trim() ||
                 accountNameElement.getAttribute('title') ||
-                name;
+                null;
               break;
             }
           }
@@ -68,11 +82,18 @@ export const preload = createPreload({
           );
         }
 
+        if (!name) {
+          return false;
+        }
+
         ipcRenderer.send('discord:youtube-info', { name, avatar });
+        sent = true;
         return true;
       } catch (e) {
         console.error('Failed to fetch YouTube user info:', e);
         return false;
+      } finally {
+        lookupInFlight = false;
       }
     };
 
@@ -91,13 +112,16 @@ export const preload = createPreload({
     });
 
     const startObserver = () => {
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-      });
+      findUserInfo().then((found) => {
+        if (found) {
+          return;
+        }
 
-      // Also try immediately
-      findUserInfo();
+        observer.observe(document.body, {
+          childList: true,
+          subtree: true,
+        });
+      });
     };
 
     if (document.body) {
