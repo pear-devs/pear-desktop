@@ -29,11 +29,11 @@ const LIBREFM_API_SECRET = 'test';
 const decodeHtmlEntities = (text: string): string => {
   return text
     .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, '&');
+    .replace(/&apos;/g, "'");
 };
 
 export class LibreFmScrobbler extends ScrobblerBase {
@@ -207,10 +207,7 @@ export class LibreFmScrobbler extends ScrobblerBase {
         : songInfo.title;
 
     // Always prefer songInfo.artist over tags
-    const rawArtist =
-      config.alternativeArtist && songInfo.tags?.at(0) !== undefined
-        ? songInfo.tags?.at(0)
-        : songInfo.artist;
+    const rawArtist = songInfo.artist;
 
     // Decode HTML entities (handle undefined values)
     const title = rawTitle ? decodeHtmlEntities(rawTitle) : '';
@@ -256,27 +253,53 @@ export class LibreFmScrobbler extends ScrobblerBase {
       });
 
       const text = await response.text();
-      console.log(`Libre.fm ${data.method} response:`, text);
 
+      // Fix 2: Log only HTTP status + non-sensitive fields; never log raw body
+      // which may contain tokens, session keys, or other credentials.
+      let json: { error?: number; message?: string } | undefined;
       try {
-        const json = JSON.parse(text) as {
-          error?: number;
-          message?: string;
-        };
-
-        if (json.error === 9) {
-          // Session expired, need to re-authenticate
-          console.log('Libre.fm session expired, clearing session key');
-          config.scrobblers.librefm.sessionKey = undefined;
-          await setConfig(config);
-        } else if (json.error) {
-          console.error(
-            `Libre.fm ${data.method} error:`,
-            json.message || json.error,
-          );
-        }
+        json = JSON.parse(text) as { error?: number; message?: string };
+        const SENSITIVE_KEYS = new Set([
+          'token',
+          'session',
+          'key',
+          'auth',
+          'secret',
+          'sk',
+          'api_key',
+          'api_sig',
+        ]);
+        const safeSummary = Object.fromEntries(
+          Object.entries(json).filter(
+            ([k]) => !SENSITIVE_KEYS.has(k.toLowerCase()),
+          ),
+        );
+        console.log(
+          `Libre.fm ${data.method} response: HTTP ${response.status}`,
+          safeSummary,
+        );
       } catch {
-        // Response might not be JSON, that's okay
+        // Response is not JSON — log status only, never the raw body
+        console.log(
+          `Libre.fm ${data.method} response: HTTP ${response.status} (non-JSON)`,
+        );
+      }
+
+      if (json?.error === 9) {
+        // Fix 1: Session expired — clear key and automatically restart the auth flow
+        // mirroring the same pattern used in lastfm.ts on error 9.
+        console.log('Libre.fm session expired, restarting auth flow');
+        config.scrobblers.librefm.sessionKey = undefined;
+        await setConfig(config);
+        this.createSession(config, setConfig).catch((error: unknown) => {
+          console.error('Libre.fm re-authentication failed:', error);
+          setConfig(config);
+        });
+      } else if (json?.error) {
+        console.error(
+          `Libre.fm ${data.method} error:`,
+          json.message || json.error,
+        );
       }
     } catch (error) {
       console.error(`Libre.fm ${data.method} error:`, error);
