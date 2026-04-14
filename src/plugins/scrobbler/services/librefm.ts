@@ -23,6 +23,9 @@ interface LibreFmSongData {
 const LIBREFM_API_KEY = 'test';
 const LIBREFM_API_SECRET = 'test';
 
+// Guards against multiple simultaneous re-auth flows triggered by concurrent error-9 responses
+let librefmAuthPromise: Promise<ScrobblerPluginConfig> | null = null;
+
 /**
  * Decode HTML entities in a string
  */
@@ -60,17 +63,27 @@ export class LibreFmScrobbler extends ScrobblerBase {
       const tokenText = await tokenResponse.text();
 
       let token: string;
+      let tokenParsedAsJson = false;
       try {
         const tokenJson = JSON.parse(tokenText) as {
           token?: string;
           error?: number;
+          message?: string;
         };
-        if (!tokenJson.token) {
-          throw new Error('Failed to get authentication token');
+        tokenParsedAsJson = true;
+        if (tokenJson.error || !tokenJson.token) {
+          throw new Error(
+            tokenJson.message ??
+              `API error ${tokenJson.error ?? 'unknown'}: Failed to get authentication token`,
+          );
         }
         token = tokenJson.token;
-      } catch {
-        // Try parsing as XML if JSON fails
+      } catch (err) {
+        if (tokenParsedAsJson) {
+          // JSON parsed successfully but contained an API error — propagate it
+          throw err;
+        }
+        // JSON.parse itself failed — try XML fallback
         const tokenMatch = tokenText.match(/<token>([^<]+)<\/token>/);
         if (!tokenMatch) {
           throw new Error('Failed to parse token from response');
@@ -109,29 +122,36 @@ export class LibreFmScrobbler extends ScrobblerBase {
       const sessionResponse = await net.fetch(sessionUrl);
       const sessionText = await sessionResponse.text();
 
+      let sessionParsedAsJson = false;
       try {
         const sessionJson = JSON.parse(sessionText) as {
           session?: { key: string; name: string };
           error?: number;
           message?: string;
         };
-
-        if (sessionJson.session) {
-          config.scrobblers.librefm.sessionKey = sessionJson.session.key;
-          await setConfig(config);
-
-          dialog.showMessageBox({
-            title: 'Libre.fm Authentication Successful',
-            message: `Successfully authenticated as ${sessionJson.session.name}!`,
-            type: 'info',
-          });
-        } else {
-          throw new Error(sessionJson.message || 'Failed to get session key');
+        sessionParsedAsJson = true;
+        if (sessionJson.error || !sessionJson.session) {
+          throw new Error(
+            sessionJson.message ??
+              `API error ${sessionJson.error ?? 'unknown'}: Failed to get session key`,
+          );
         }
-      } catch {
-        // Try parsing as XML
+        config.scrobblers.librefm.sessionKey = sessionJson.session.key;
+        await setConfig(config);
+
+        dialog.showMessageBox({
+          title: 'Libre.fm Authentication Successful',
+          message: `Successfully authenticated as ${sessionJson.session.name}!`,
+          type: 'info',
+        });
+      } catch (err) {
+        if (sessionParsedAsJson) {
+          // JSON parsed successfully but contained an API error — propagate it
+          throw err;
+        }
+        // JSON.parse itself failed — try XML fallback
         const keyMatch = sessionText.match(/<key>([^<]+)<\/key>/);
-        const nameMatch = sessionText.match(/<name>([^<]+)<\/name>/);
+        const nameMatch = sessionText.match(/<n>([^<]+)<\/name>/);
 
         if (keyMatch) {
           config.scrobblers.librefm.sessionKey = keyMatch[1];
@@ -219,6 +239,7 @@ export class LibreFmScrobbler extends ScrobblerBase {
       ...data,
       track: title,
       artist: artist,
+      format: 'json',
       api_key: LIBREFM_API_KEY,
       sk: config.scrobblers.librefm.sessionKey,
     };
@@ -288,12 +309,19 @@ export class LibreFmScrobbler extends ScrobblerBase {
       }
 
       if (json?.error === 9) {
-        // Fix 1: Session expired — clear key and automatically restart the auth flow
-        // mirroring the same pattern used in lastfm.ts on error 9.
+        // Session expired — clear key and restart the auth flow, but guard against
+        // multiple simultaneous re-auth flows from concurrent error-9 responses.
         console.log('Libre.fm session expired, restarting auth flow');
         config.scrobblers.librefm.sessionKey = undefined;
         await setConfig(config);
-        this.createSession(config, setConfig).catch((error: unknown) => {
+        if (!librefmAuthPromise) {
+          librefmAuthPromise = this.createSession(config, setConfig).finally(
+            () => {
+              librefmAuthPromise = null;
+            },
+          );
+        }
+        librefmAuthPromise.catch((error: unknown) => {
           console.error('Libre.fm re-authentication failed:', error);
           setConfig(config);
         });
