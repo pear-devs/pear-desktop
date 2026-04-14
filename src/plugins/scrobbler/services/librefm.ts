@@ -29,11 +29,11 @@ const LIBREFM_API_SECRET = 'test';
 const decodeHtmlEntities = (text: string): string => {
   return text
     .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'");
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&');
 };
 
 export class LibreFmScrobbler extends ScrobblerBase {
@@ -207,7 +207,10 @@ export class LibreFmScrobbler extends ScrobblerBase {
         : songInfo.title;
 
     // Always prefer songInfo.artist over tags
-    const rawArtist = songInfo.artist;
+    const rawArtist =
+      config.alternativeArtist && songInfo.tags?.at(0) !== undefined
+        ? songInfo.tags?.at(0)
+        : songInfo.artist;
 
     // Decode HTML entities (handle undefined values)
     const title = rawTitle ? decodeHtmlEntities(rawTitle) : '';

@@ -68,8 +68,8 @@ async function promptLibreFmAuth(
     await scrobbler.createSession(options, setConfig);
   } else {
     dialog.showMessageBox({
-      title: 'Libre.fm Not Enabled',
-      message: 'Please enable Libre.fm first before authenticating.',
+      title: t('plugins.scrobbler.dialog.librefm.not-enabled.title'),
+      message: t('plugins.scrobbler.dialog.librefm.not-enabled.message'),
       type: 'warning',
     });
   }
@@ -167,7 +167,7 @@ export const onMenu = async ({
           },
         },
         {
-          label: 'Authenticate with Libre.fm',
+          label: t('plugins.scrobbler.menu.librefm.authenticate'),
           click() {
             promptLibreFmAuth(config, setConfig, window);
           },
