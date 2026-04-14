@@ -161,8 +161,8 @@ importers:
         specifier: 1.1.5
         version: 1.1.5
       happy-dom:
-        specifier: 20.8.9
-        version: 20.8.9(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+        specifier: 20.9.0
+        version: 20.9.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
       hono:
         specifier: 4.12.12
         version: 4.12.12
@@ -2621,8 +2621,8 @@ packages:
   hanja@1.1.5:
     resolution: {integrity: sha512-gKNEkX+IIBmxXUIm5Lf859YlvHnGD01kbiHL+7CoV1ZxGI+EttflD1k/Ntz8zbymMVIlVELunTk8pK5SNYOVlg==}
 
-  happy-dom@20.8.9:
-    resolution: {integrity: sha512-Tz23LR9T9jOGVZm2x1EPdXqwA37G/owYMxRwU0E4miurAtFsPMQ1d2Jc2okUaSjZqAFz2oEn3FLXC5a0a+siyA==}
+  happy-dom@20.9.0:
+    resolution: {integrity: sha512-GZZ9mKe8r646NUAf/zemnGbjYh4Bt8/MqASJY+pSm5ZDtc3YQox+4gsLI7yi1hba6o+eCsGxpHn5+iEVn31/FQ==}
     engines: {node: '>=20.0.0'}
 
   has-bigints@1.1.0:
@@ -7090,7 +7090,7 @@ snapshots:
 
   hanja@1.1.5: {}
 
-  happy-dom@20.8.9(bufferutil@4.1.0)(utf-8-validate@6.0.6):
+  happy-dom@20.9.0(bufferutil@4.1.0)(utf-8-validate@6.0.6):
     dependencies:
       '@types/node': 25.5.2
       '@types/whatwg-mimetype': 3.0.2
