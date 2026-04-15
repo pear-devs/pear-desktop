@@ -15,7 +15,7 @@ import {
   type BrowserWindowConstructorOptions,
 } from 'electron';
 import {
-  enhanceWebRequest,
+  default as enhanceWebRequest,
   type BetterSession,
 } from '@jellybrick/electron-better-web-request';
 import is from 'electron-is';
@@ -336,8 +336,8 @@ async function createMainWindow() {
     titleBarStyle: useInlineMenu
       ? 'hidden'
       : is.macOS()
-        ? 'hiddenInset'
-        : 'default',
+      ? 'hiddenInset'
+      : 'default',
     autoHideMenuBar: config.get('options.hideMenu'),
   };
 
@@ -533,8 +533,8 @@ app.once('browser-window-created', (_event, win) => {
     const updatedUserAgent = is.macOS()
       ? userAgents.mac
       : is.windows()
-        ? userAgents.windows
-        : userAgents.linux;
+      ? userAgents.windows
+      : userAgents.linux;
 
     win.webContents.userAgent = updatedUserAgent;
     app.userAgentFallback = updatedUserAgent;
@@ -956,17 +956,16 @@ function removeContentSecurityPolicy(
   betterSession.webRequest.setResolver(
     'onHeadersReceived',
     async (listeners) => {
-      return listeners.reduce(
-        async (accumulator, listener) => {
-          const acc = await accumulator;
-          if (acc.cancel) {
-            return acc;
-          }
+      return listeners.reduce(async (accumulator, listener) => {
+        const acc = await accumulator;
+        if (acc.cancel) {
+          return acc;
+        }
 
-          const result = await listener.apply();
-          return { ...accumulator, ...result };
-        },
-        Promise.resolve({ cancel: false }),
+        const result = await listener.apply();
+        return { ...accumulator, ...result };
+      },
+      Promise.resolve({ cancel: false }),
       );
     },
   );
