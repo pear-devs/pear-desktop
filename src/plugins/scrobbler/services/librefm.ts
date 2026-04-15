@@ -151,7 +151,7 @@ export class LibreFmScrobbler extends ScrobblerBase {
         }
         // JSON.parse itself failed — try XML fallback
         const keyMatch = sessionText.match(/<key>([^<]+)<\/key>/);
-        const nameMatch = sessionText.match(/<n>([^<]+)<\/name>/);
+        const nameMatch = sessionText.match(/<name>([^<]+)<\/name>/);
 
         if (keyMatch) {
           config.scrobblers.librefm.sessionKey = keyMatch[1];
