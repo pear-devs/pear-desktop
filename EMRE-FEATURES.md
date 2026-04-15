@@ -1,307 +1,203 @@
-# Emre's YouTube Music Player - Custom Features
+# Feature Pack: Desktop Workflow Enhancements
 
-A collection of custom features and enhancements for [th-ch/youtube-music](https://github.com/th-ch/youtube-music), focused on virtual desktop workflows, memory optimization, playback reliability, and tray UX improvements.
+A set of four opt-in features for power users who run YouTube Music as a background audio companion on desktop — particularly those who use virtual desktops, minimize to tray, and want quick playback control without opening the full window.
 
----
-
-## Table of Contents
-
-1. [Audio-Only Mode](#1-audio-only-mode) (Plugin)
-2. [Playback Recovery](#2-playback-recovery) (Plugin)
-3. [Virtual Desktop Awareness](#3-virtual-desktop-awareness) (Core setting)
-4. [Tray Hover Mini-Player](#4-tray-hover-mini-player) (Notification plugin extension)
-5. [DevTools Control](#5-devtools-control) (Core tweak)
-6. [Diagnostic Tools](#6-diagnostic-tools) (External scripts)
-7. [Build & Launch Scripts](#7-build--launch-scripts)
+Every feature defaults to **off** and is toggled from the existing settings/plugin menu. No existing behavior is changed unless the user explicitly enables a feature.
 
 ---
 
 ## 1. Audio-Only Mode
 
-**Type:** Plugin
-**Location:** `src/plugins/audio-only/index.ts`
-**Toggle:** Settings > Plugins > Audio Only (requires restart)
-**Default:** Off
+**Plugin** | Settings > Plugins > Audio Only | Requires restart
 
-### What it does
+### The problem
 
-Forces YouTube Music to stream audio only, eliminating video decoding and buffering entirely. This cuts memory usage by roughly 300+ MB.
+YouTube Music streams video even when the window is minimized or hidden in the tray. On a desktop app used purely for music, this wastes ~300 MB of RAM on video decoding and buffering that nobody is watching.
+
+### The solution
+
+A renderer plugin that forces YouTube Music into its audio-only playback path — the same mode the mobile app uses on audio-only plans. Video decoding stops entirely, album art is shown instead, and memory usage drops significantly.
 
 ### How it works
 
-1. Sets `playback-mode="ATV_PREFERRED"` on the `ytmusic-player` element (tells YouTube this is an audio-only device)
-2. Calls `moviePlayer.setPlaybackQuality('tiny')` and `setPlaybackQualityRange('tiny')` via the internal player API
-3. Hides the `<video>` element and the `#song-video` container, forces album art (`#song-image`) visible
-4. Uses a `MutationObserver` to lock the `playback-mode` attribute — YouTube periodically tries to flip it back to `OMV_PREFERRED`; this prevents that
-5. Re-applies on every song change via the `videodatachange` event
+- Sets `playback-mode="ATV_PREFERRED"` on the player element, telling YouTube's player this is an audio-only surface
+- Calls `setPlaybackQuality('tiny')` via the internal player API to prevent video stream selection
+- Hides the `<video>` element and shows album art (`#song-image`) instead
+- A `MutationObserver` locks the `playback-mode` attribute — YouTube periodically tries to flip it back to video mode; this prevents that
+- Re-applies on every song change via the `videodatachange` event
 
-### Config
+### Files
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enabled` | boolean | `false` | Enable audio-only mode |
+| File | Role |
+|------|------|
+| `src/plugins/audio-only/index.ts` | Full plugin (renderer-side) |
 
 ---
 
 ## 2. Playback Recovery
 
-**Type:** Plugin
-**Location:** `src/plugins/playback-recovery/index.ts`
-**Toggle:** Settings > Plugins > Playback Recovery
-**Default:** Off
+**Plugin** | Settings > Plugins > Playback Recovery
 
-### What it does
+### The problem
 
-Automatically detects and recovers from stuck, stalled, or dead playback states. When YouTube Music's player freezes (which happens regularly), this plugin intervenes without user action.
+YouTube Music's web player occasionally enters a stuck state — the progress bar stops, audio cuts out, but the UI still shows "playing." This happens more frequently during long listening sessions, on flaky connections, or after the system wakes from sleep. The only fix is to manually skip the track or reload the app.
+
+### The solution
+
+A watchdog plugin that monitors the `<video>` element's health every 3 seconds and applies progressive recovery strategies when playback stalls. It handles dead playback, frozen progress, buffer exhaustion, media errors, and stream stalls — all without user intervention.
 
 ### How it works
 
-**Watchdog (runs every 3 seconds):**
-- Checks if `readyState === 0` while the player reports "playing" (completely dead)
-- Checks if `currentTime` hasn't advanced while not paused (frozen playback)
-- Checks if buffered data is exhausted while playing
+**Detection (watchdog runs every 3 seconds):**
 
-**Media event hooks:**
-- `error` — immediate recovery attempt on media errors
-- `stalled` — waits for the stall timeout, then recovers if unresolved
-- `waiting` — monitors if buffering persists too long
-- `timeupdate` — tracks healthy playback (resets failure counters)
-
-**MutationObserver:**
-- Watches for the `<video>` element being removed and recreated by YouTube's player
-- Re-attaches recovery hooks to the new element automatically
+| Condition | Meaning |
+|-----------|---------|
+| `readyState === 0` while player state is "playing" | Completely dead — no media data loaded |
+| `currentTime` not advancing while not paused | Frozen — player thinks it's playing but nothing moves |
+| Buffer end <= current time while `readyState < 3` | Buffer exhausted — nothing left to play |
 
 **Recovery strategies (progressive):**
-1. **Seek to current position** (attempts 1-2) — forces buffer reload
-2. **Seek forward 1 second** (attempts 3-4) — gets past potentially corrupt segments
-3. **Skip to next track** (after max retries) — gives up on the current song
+
+| Attempt | Strategy | What it does |
+|---------|----------|-------------|
+| 1-2 | Seek to current position | Forces the player to re-request the current buffer segment |
+| 3-4 | Seek forward 1 second | Jumps past a potentially corrupt segment |
+| 5+ | Skip to next track | Gives up on the current song and moves on |
+
+**Event hooks:** Also listens for `error`, `stalled`, and `waiting` events for immediate detection. A `MutationObserver` watches for the `<video>` element being destroyed and recreated by YouTube's player, automatically re-attaching hooks to the new element.
 
 ### Config
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enabled` | boolean | `false` | Enable playback recovery |
-| `stallTimeoutMs` | number | `8000` | Milliseconds before a stall triggers recovery |
-| `maxRetries` | number | `5` | Max recovery attempts before skipping the track |
-| `logToConsole` | boolean | `true` | Log recovery events to the DevTools console |
+| Option | Default | Description |
+|--------|---------|-------------|
+| `stallTimeoutMs` | `8000` | How long to wait before a stall triggers recovery |
+| `maxRetries` | `5` | Max recovery attempts before skipping to next track |
+| `logToConsole` | `true` | Log recovery events to DevTools console for debugging |
 
-### Menu
+### Files
 
-- **Log recovery events to console** (checkbox) — under the plugin's settings
+| File | Role |
+|------|------|
+| `src/plugins/playback-recovery/index.ts` | Full plugin (renderer-side, watchdog + event hooks) |
 
 ---
 
 ## 3. Virtual Desktop Awareness
 
-**Type:** Core setting (not a plugin)
-**Location:** `src/window-utils.ts`, `src/tray.ts`, `src/index.ts`
-**Toggle:** Options > Tray > "Move to current virtual desktop on show"
-**Default:** Off
+**Core setting** | Options > Tray > "Move to current virtual desktop on show"
 
-### What it does
+### The problem
 
-When enabled, clicking the tray icon (or launching a second instance) **moves the YouTube Music window to your current virtual desktop** instead of yanking you back to the desktop where the window originally opened.
+On Windows 10/11 (and macOS/Linux with workspaces), if YouTube Music is open on Desktop 1 and you're working on Desktop 3, clicking the tray icon or launching a second instance **yanks you back to Desktop 1** instead of bringing the window to you. This breaks the flow for anyone who uses virtual desktops to organize their work.
+
+### The solution
+
+When this setting is enabled, showing the YouTube Music window — whether by tray click, the "Show" context menu, or launching a second instance — **moves the window to your current desktop** instead of switching desktops.
 
 ### How it works
 
-Uses Electron's `setVisibleOnAllWorkspaces` API:
-1. `win.setVisibleOnAllWorkspaces(true)` — temporarily pins the window to all desktops (makes it appear on the current one)
-2. `win.show()` — shows and focuses the window
-3. `win.setVisibleOnAllWorkspaces(false)` — unpins it, leaving it on the current desktop
+Uses Electron's `setVisibleOnAllWorkspaces` API with a pin/unpin technique:
 
-**Applied at 3 call sites:**
-- Tray icon single-click (show window)
-- Tray right-click menu > "Show"
-- Second-instance handler (when you double-click the app shortcut while it's already running)
+```
+win.setVisibleOnAllWorkspaces(true)   // Pin to all desktops (appears on current)
+win.show()                             // Show and focus
+win.setVisibleOnAllWorkspaces(false)  // Unpin (stays on current desktop)
+```
 
-### Config
+Applied at all 3 places where the window is shown:
+1. Tray icon click (show window)
+2. Tray right-click > "Show" menu item
+3. Second-instance handler (launching the app while it's already running)
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `options.trayMoveToCurrentDesktop` | boolean | `false` | Move window to current virtual desktop on show |
+Cross-platform: works on Windows virtual desktops, macOS Spaces, and Linux workspaces.
+
+### Files
+
+| File | Role |
+|------|------|
+| `src/window-utils.ts` | `showOnCurrentDesktop()` helper (new file) |
+| `src/tray.ts` | Uses helper in click + "Show" menu handlers |
+| `src/index.ts` | Uses helper in second-instance handler |
+| `src/config/defaults.ts` | `trayMoveToCurrentDesktop` option |
+| `src/menu.ts` | Toggle in Options > Tray submenu |
 
 ---
 
 ## 4. Tray Hover Mini-Player
 
-**Type:** Notification plugin extension
-**Location:** `src/plugins/notifications/hover-popup.ts`, `assets/hover-popup.html`
-**Toggle:** Notifications plugin > Interactive Settings > "Show mini-player on tray hover"
-**Default:** Off
-**Prerequisite:** Notifications plugin must be enabled
+**Notification plugin extension** | Interactive Settings > "Show mini-player on tray hover"
 
-### What it does
+### The problem
 
-When you hover over the YouTube Music tray icon, a compact floating mini-player appears showing the current song's album art, title, artist, and playback controls (previous / play-pause / next). The popup stays visible as long as your mouse is on the tray icon or on the popup itself, then fades out when you move away.
+The existing interactive toast notification shows song info and controls when a song changes, but it auto-dismisses after 5 seconds. If you miss it or want to skip a track 30 seconds later, your only options are:
 
-This solves the problem of YouTube Music's native toast notifications disappearing after 5 seconds before you can interact with them.
+- **Double-click the tray icon** — opens the full window (overkill for just pressing "next")
+- **Right-click the tray** — opens a basic text menu (functional but no album art, no visual feedback)
+
+There's no quick, on-demand way to see what's playing and control it without opening the full app.
+
+### The solution
+
+Hovering over the tray icon shows a compact floating mini-player with album art, song title, artist, and previous/play-pause/next buttons. It stays visible as long as your mouse is on the tray icon or the popup, and fades out when you move away.
+
+This gives users three tiers of tray interaction:
+1. **Hover** — Quick glance + controls via the mini-player
+2. **Single click** — Toggle the toast notification (existing behavior)
+3. **Double click** — Open the full window (existing behavior)
 
 ### How it works
 
 **Popup window:**
-- Frameless, transparent, always-on-top `BrowserWindow` (380x85 content area)
-- Dark theme matching YouTube Music's aesthetic (#282828 background)
-- Positioned above the tray icon, centered
-- Uses `setIgnoreMouseEvents(true, { forward: true })` for transparent areas (click-through) and toggles to `setIgnoreMouseEvents(false)` when mouse enters the popup card
+- Frameless, transparent, always-on-top `BrowserWindow` positioned above the tray icon
+- Dark theme (#282828) matching YouTube Music's aesthetic
+- Shows album art (56x56), song title, artist, and SVG icon buttons
 
-**Hover tracking:**
-- `tray.on('mouse-move')` detects when the cursor is over the tray icon
-- When `mouse-move` stops firing for 300ms, the tray is considered "left"
-- The popup's HTML tracks `mouseenter`/`mouseleave` on the card itself
-- A 400ms grace period allows moving between tray and popup without dismissing
-- Communication between HTML and main process uses `console.log('__IPC__:...')` messages intercepted via `webContents.on('console-message')`
+**Hover tracking (main process cursor polling):**
+- `tray.on('mouse-move')` triggers the popup to appear
+- A 150ms `setInterval` polls `screen.getCursorScreenPoint()` and checks if the cursor is over the popup bounds or the tray icon bounds
+- If the cursor is on neither for a full cycle, the popup fades out
+- This approach is more reliable on Windows than HTML-based mouseenter/mouseleave events
 
-**Song info:**
-- Registers its own `registerCallback` for song change events
-- Pushes updates to the popup via `webContents.executeJavaScript()`
+**Button clicks (`document.title` IPC):**
+- Buttons use `onmousedown` (fires before window activation) and set `document.title` to signal the action
+- Main process listens via `BrowserWindow.on('page-title-updated')` — reliable regardless of window focus state
+- A counter is appended to ensure repeated clicks on the same button always trigger
 
-### Config
+**Toast suppression:**
+- When the hover popup is visible, the interactive toast notification is suppressed to prevent both from appearing simultaneously
+- The popup exports `isHoverPopupVisible()` which `interactive.ts` checks before showing a toast
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `hoverControls` | boolean | `false` | Show mini-player popup on tray hover |
+### Infrastructure fix: Deferred tray event handlers
 
----
+Plugins load (`loadAllMainPlugins`) before the tray is created (`setUpTray`). Any `setTrayOnClick`, `setTrayOnDoubleClick`, or `setTrayOnMouseMove` calls from plugins were silently dropped because the tray didn't exist yet.
 
-## 5. DevTools Control
+Fixed by queuing handlers registered before the tray exists and applying them at the end of `setUpTray`. This fix also benefits the existing notification plugin's `trayControls` feature, which had the same latent timing bug.
 
-**Type:** Core tweak
-**Location:** `src/index.ts` (line ~315)
-**Toggle:** Environment variable `OPEN_DEVTOOLS=1`
-**Default:** DevTools do NOT auto-open in dev mode
+### Files
 
-### What it does
-
-By default in the upstream repo, DevTools auto-open whenever you run in dev mode. This change gates that behind an environment variable so DevTools only open when explicitly requested.
-
-### How to use
-
-- **Normal dev mode:** `pnpm dev` — DevTools stay closed
-- **With DevTools:** `OPEN_DEVTOOLS=1 pnpm dev`
-- **Manual toggle:** Press `Ctrl+Shift+I` at any time in the running app
+| File | Role |
+|------|------|
+| `src/plugins/notifications/hover-popup.ts` | Popup window management, cursor tracking, IPC (new file) |
+| `assets/hover-popup.html` | Mini-player UI: HTML, CSS, button handlers (new file) |
+| `src/plugins/notifications/index.ts` | `hoverControls` config option |
+| `src/plugins/notifications/main.ts` | Wires up `setupHoverPopup()` |
+| `src/plugins/notifications/menu.ts` | Menu toggle |
+| `src/plugins/notifications/interactive.ts` | Toast suppression check |
+| `src/tray.ts` | `setTrayOnMouseMove()`, `getTrayBounds()`, deferred handler queue |
 
 ---
 
-## 6. Diagnostic Tools
+## Summary
 
-External scripts for debugging playback issues without modifying the app's source code. These connect via Chrome DevTools Protocol (CDP) when the app is launched with `--remote-debugging-port=9222`.
+| Feature | Type | Toggle | Default | Platform |
+|---------|------|--------|---------|----------|
+| Audio-Only Mode | Plugin | Plugin settings | Off | All |
+| Playback Recovery | Plugin | Plugin settings | Off | All |
+| Virtual Desktop Awareness | Core setting | Options > Tray | Off | Windows, macOS, Linux |
+| Tray Hover Mini-Player | Plugin extension | Notifications > Interactive Settings | Off | Windows, macOS |
 
-### monitor.cjs
-
-**Location:** `monitor.cjs` (root)
-**Purpose:** Real-time playback diagnostics
-
-Connects to the running app via CDP and monitors:
-- All media events (play, pause, error, stalled, waiting, ended, etc.)
-- Flicker detection (rapid play/pause cycling)
-- Video element recreation
-- "Are you still listening?" popup detection
-- Network failures on media resources
-- ReadyState drops and buffer exhaustion
-
-Output is color-coded with tags: `INFO`, `PLAY`, `PAUSE`, `WARN`, `ERROR`, `EVENT`, `DIALOG`, `NET`, `CONSOLE`.
-
-**Usage:** `node monitor.cjs` (while app runs with debug port)
-
-### inject-lightweight.cjs
-
-**Location:** `inject-lightweight.cjs` (root)
-**Purpose:** Runtime audio-only injection (non-permanent alternative to the Audio-Only plugin)
-
-Injects via CDP to:
-1. Block 68+ video stream URLs (itag 13-702) from googlevideo.com using `Network.setBlockedURLs`
-2. Intercept `fetch()` calls and return 204 for video MIME types
-3. Force `playback-mode="ATV_PREFERRED"`
-4. Hide video element, show album art
-5. Run periodic buffer monitoring (logs every 30s)
-
-**Usage:** `node inject-lightweight.cjs` (while app runs with debug port)
-
-> **Note:** The Audio-Only plugin (feature #1) is the permanent, built-in version of this. Use `inject-lightweight.cjs` only for one-off testing without rebuilding.
-
----
-
-## 7. Build & Launch Scripts
-
-### build.bat
-
-**Location:** `build.bat` (root)
-
-One-click rebuild: `pnpm clean` > `pnpm build` > `pnpm electron-builder --win dir:x64 -p never`
-
-Output: `pack\win-unpacked\YouTube Music.exe`
-
-### start.bat
-
-**Location:** `start.bat` (root)
-
-Launches the built exe from `pack\win-unpacked\YouTube Music.exe`.
-
-### diagnose.bat
-
-**Location:** `diagnose.bat` (root)
-
-Launches the app with `--remote-debugging-port=9222` and starts `monitor.cjs` for live playback diagnostics.
-
-### Icon & Shortcut Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `make-icon.ps1` | Converts `assets/icon.png` to `icon.ico` (multi-size) |
-| `update-shortcut.ps1` | Creates/updates desktop shortcut pointing to the built exe with the custom icon |
-| `pin-shortcut.ps1` | Old dev-mode shortcut script (obsolete) |
-
----
-
-## File Map
-
-All custom files at a glance:
-
-```
-z_youtube_player/
-  EMRE-FEATURES.md              <- This file
-  build.bat                      <- Build script
-  start.bat                      <- Launch script
-  diagnose.bat                   <- Debug launcher
-  monitor.cjs                    <- CDP playback monitor
-  inject-lightweight.cjs         <- CDP audio-only injector
-  icon.ico                       <- Custom app icon
-  make-icon.ps1                  <- Icon generator
-  update-shortcut.ps1            <- Shortcut updater
-  pin-shortcut.ps1               <- (obsolete)
-  assets/
-    hover-popup.html             <- Tray hover mini-player UI
-  src/
-    window-utils.ts              <- Virtual desktop helper
-    plugins/
-      audio-only/
-        index.ts                 <- Audio-Only plugin
-      playback-recovery/
-        index.ts                 <- Playback Recovery plugin
-      notifications/
-        hover-popup.ts           <- Tray hover mini-player logic
-  Modified core files:
-    src/index.ts                 <- DevTools gate + virtual desktop
-    src/tray.ts                  <- Virtual desktop + mouse-move support
-    src/config/defaults.ts       <- trayMoveToCurrentDesktop option
-    src/menu.ts                  <- Virtual desktop menu item
-    src/i18n/resources/en.json   <- All new labels
-    src/plugins/notifications/
-      index.ts                   <- hoverControls config
-      main.ts                    <- Hover popup wiring
-      menu.ts                    <- Hover controls menu item
-```
-
----
-
-## Feature Status Summary
-
-| # | Feature | Type | Toggle | Default |
-|---|---------|------|--------|---------|
-| 1 | Audio-Only Mode | Plugin | Plugin settings | Off |
-| 2 | Playback Recovery | Plugin | Plugin settings | Off |
-| 3 | Virtual Desktop Awareness | Core setting | Options > Tray | Off |
-| 4 | Tray Hover Mini-Player | Plugin extension | Notifications > Interactive Settings | Off |
-| 5 | DevTools Control | Core tweak | `OPEN_DEVTOOLS=1` env var | Off |
-| 6 | Diagnostic Tools | External scripts | Run manually | N/A |
-| 7 | Build Scripts | External scripts | Run manually | N/A |
+All features are:
+- **Opt-in** — disabled by default, no impact on existing users
+- **Independent** — can be enabled in any combination
+- **Consistent** — follow existing plugin/config/menu/i18n patterns
+- **Reversible** — toggle off and restart to fully revert
