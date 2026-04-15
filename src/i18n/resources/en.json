@@ -504,6 +504,17 @@
         }
       }
     },
+    "slack-now-playing": {
+      "description": "Sets your Slack status to the currently playing song",
+      "menu": {
+        "settings": "Settings",
+        "token": "Slack API Token",
+        "cookie-token": "Slack Cookie Token",
+        "emoji-name": "Custom Emoji Name"
+      },
+      "name": "Slack Now Playing",
+      "status-text": "Now Playing: {{artist}} - {{title}}"
+    },
     "downloader": {
       "backend": {
         "dialog": {
