@@ -11,6 +11,7 @@ import * as config from './config';
 import { restart } from './providers/app-controls';
 import { registerCallback, SongInfoEvent } from './providers/song-info';
 import { getSongControls } from './providers/song-controls';
+import { showOnCurrentDesktop } from './window-utils';
 
 import { APPLICATION_NAME, t } from '@/i18n';
 
@@ -24,8 +25,20 @@ type TrayEvent = (
   bounds: Electron.Rectangle,
 ) => void;
 
+type MouseMoveEvent = (
+  event: Electron.KeyboardEvent,
+  position: Electron.Point,
+) => void;
+
+// Plugins load before the tray is created, so queue handlers
+// registered early and apply them once setUpTray runs.
+let pendingClick: TrayEvent | null = null;
+let pendingDoubleClick: TrayEvent | null = null;
+let pendingMouseMove: MouseMoveEvent | null = null;
+
 export const setTrayOnClick = (fn: TrayEvent) => {
   if (!tray) {
+    pendingClick = fn;
     return;
   }
 
@@ -36,12 +49,26 @@ export const setTrayOnClick = (fn: TrayEvent) => {
 // Won't do anything on macOS since its disabled
 export const setTrayOnDoubleClick = (fn: TrayEvent) => {
   if (!tray) {
+    pendingDoubleClick = fn;
     return;
   }
 
   tray.removeAllListeners('double-click');
   tray.on('double-click', fn);
 };
+
+// macOS and Windows only
+export const setTrayOnMouseMove = (fn: MouseMoveEvent) => {
+  if (!tray) {
+    pendingMouseMove = fn;
+    return;
+  }
+
+  tray.removeAllListeners('mouse-move');
+  tray.on('mouse-move', fn);
+};
+
+export const getTrayBounds = () => tray?.getBounds();
 
 export const setUpTray = (app: Electron.App, win: Electron.BrowserWindow) => {
   if (!config.get('options.tray')) {
@@ -86,7 +113,11 @@ export const setUpTray = (app: Electron.App, win: Electron.BrowserWindow) => {
       win.hide();
       app.dock?.hide();
     } else {
-      win.show();
+      if (config.get('options.trayMoveToCurrentDesktop')) {
+        showOnCurrentDesktop(win);
+      } else {
+        win.show();
+      }
       app.dock?.show();
     }
   });
@@ -113,7 +144,11 @@ export const setUpTray = (app: Electron.App, win: Electron.BrowserWindow) => {
     {
       label: t('main.tray.show'),
       click() {
-        win.show();
+        if (config.get('options.trayMoveToCurrentDesktop')) {
+          showOnCurrentDesktop(win);
+        } else {
+          win.show();
+        }
         app.dock?.show();
       },
     },
@@ -152,4 +187,22 @@ export const setUpTray = (app: Electron.App, win: Electron.BrowserWindow) => {
       tray.setImage(songInfo.isPaused ? pausedTrayIcon : defaultTrayIcon);
     }
   });
+
+  // Apply any handlers that plugins registered before the tray existed
+  if (pendingClick) {
+    tray.removeAllListeners('click');
+    tray.on('click', pendingClick);
+    pendingClick = null;
+  }
+
+  if (pendingDoubleClick) {
+    tray.removeAllListeners('double-click');
+    tray.on('double-click', pendingDoubleClick);
+    pendingDoubleClick = null;
+  }
+
+  if (pendingMouseMove) {
+    tray.on('mouse-move', pendingMouseMove);
+    pendingMouseMove = null;
+  }
 };

@@ -6,6 +6,7 @@ import nextIcon from '@assets/media-icons-black/next.png?asset&asarUnpack';
 import previousIcon from '@assets/media-icons-black/previous.png?asset&asarUnpack';
 
 import { notificationImage, secondsToMinutes, ToastStyles } from './utils';
+import { isHoverPopupVisible } from './hover-popup';
 
 import { getSongControls } from '@/providers/song-controls';
 import {
@@ -282,7 +283,10 @@ export default (
       (songInfo.url !== lastUrl || config().unpauseNotification)
     ) {
       lastUrl = songInfo.url;
-      sendNotification(songInfo);
+      // Don't show toast when hover popup is already visible
+      if (!isHoverPopupVisible()) {
+        sendNotification(songInfo);
+      }
     }
   });
 

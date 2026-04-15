@@ -144,6 +144,7 @@
               "disabled": "Disabled",
               "enabled-and-hide-app": "Enabled and hide app",
               "enabled-and-show-app": "Enabled and show app",
+              "move-to-current-desktop": "Move to current virtual desktop on show",
               "play-pause-on-click": "Play/Pause on click"
             }
           },
@@ -242,6 +243,10 @@
         "enable-seekbar": "Enable seekbar theming"
       },
       "name": "Album Color Theme"
+    },
+    "audio-only": {
+      "description": "Forces audio-only mode — blocks all video streams at network and player level to save RAM and bandwidth",
+      "name": "Audio Only"
     },
     "ambient-mode": {
       "description": "Applies a lighting effect by casting gentle colors from the video, into your screen’s background",
@@ -684,6 +689,7 @@
           "label": "Interactive Settings",
           "submenu": {
             "hide-button-text": "Hide button text",
+            "hover-controls": "Show mini-player on tray hover",
             "refresh-on-play-pause": "Refresh on Play/Pause",
             "tray-controls": "Open/Close on tray click"
           }
@@ -697,6 +703,13 @@
     "performance-improvement": {
       "description": "Improve performance by enabling experimental scripts",
       "name": "Performance improvement [Beta]"
+    },
+    "playback-recovery": {
+      "description": "Automatically recovers from stuck, stalled, or dead playback states",
+      "menu": {
+        "log-to-console": "Log recovery events to console"
+      },
+      "name": "Playback Recovery"
     },
     "picture-in-picture": {
       "description": "Allows to switch the app to picture-in-picture mode",
