@@ -18,10 +18,8 @@ interface LibreFmSongData {
   timestamp?: number;
 }
 
-// Libre.fm uses a special API key - you should register your own at https://libre.fm/api/account
-// For now using a generic test key
-const LIBREFM_API_KEY = 'test';
-const LIBREFM_API_SECRET = 'test';
+const LIBREFM_API_KEY = 'ba02767a32bf0d4c5e048fab86065fe4';
+const LIBREFM_API_SECRET = 'baa68bbef1bc6a5f4514dc76b48bc0d5';
 
 // Guards against multiple simultaneous re-auth flows triggered by concurrent error-9 responses
 let librefmAuthPromise: Promise<ScrobblerPluginConfig> | null = null;
@@ -36,7 +34,7 @@ const decodeHtmlEntities = (text: string): string => {
     .replace(/&gt;/g, '>')
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, '&'); // Must be last to avoid double-decoding (e.g. &amp;lt; -> &lt; -> <)
+    .replace(/&amp;/g, '&');
 };
 
 export class LibreFmScrobbler extends ScrobblerBase {
@@ -92,7 +90,7 @@ export class LibreFmScrobbler extends ScrobblerBase {
       }
 
       // Step 2: Open browser for user to authorize
-      const authUrl = `https://libre.fm/api/auth/?api_key=${LIBREFM_API_KEY}&token=${token}`;
+      const authUrl = `https://libre.fm/api/auth/?api_key=${LIBREFM_API_KEY}&token=${encodeURIComponent(token)}`;
       const authWindow = new BrowserWindow({
         width: 600,
         height: 700,
@@ -101,12 +99,17 @@ export class LibreFmScrobbler extends ScrobblerBase {
         },
       });
 
-      await authWindow.loadURL(authUrl);
+      try {
+        await authWindow.loadURL(authUrl);
 
-      // Wait for user to authorize
-      await new Promise<void>((resolve) => {
-        authWindow.on('closed', () => resolve());
-      });
+        // Wait for user to authorize
+        await new Promise<void>((resolve) => {
+          authWindow.on('closed', () => resolve());
+        });
+      } catch (err) {
+        authWindow.destroy();
+        throw err;
+      }
 
       // Step 3: Get session key
       const sessionParams: Record<string, string> = {
@@ -276,9 +279,6 @@ export class LibreFmScrobbler extends ScrobblerBase {
       });
 
       const text = await response.text();
-
-      // Fix 2: Log only HTTP status + non-sensitive fields; never log raw body
-      // which may contain tokens, session keys, or other credentials.
       let json: { error?: number; message?: string } | undefined;
       try {
         json = JSON.parse(text) as { error?: number; message?: string };
