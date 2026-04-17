@@ -58,9 +58,13 @@ const DownloadManagerTitleButton = () => {
       title="Gestor de Descargas"
       data-active={isOpen()}
     >
-      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-      </svg>
+      <div class="ytmd-dm-icon-container">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" class="ytmd-dm-download-icon">
+          <path d="M12 3v12m-6-6l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <path d="M5 18v2h14v-2H5z" fill="currentColor"/>
+        </svg>
+        <div class="ytmd-dm-wave"></div>
+      </div>
       <Show when={badgeCount() > 0}>
         <span class="ytmd-dm-title-badge">{badgeCount()}</span>
       </Show>
@@ -478,9 +482,9 @@ export const TitleBar = (props: TitleBarProps) => {
             }}
           </Index>
         </Show>
+        {/* Download Manager Button */}
+        <DownloadManagerTitleButton />
       </TransitionGroup>
-      {/* Download Manager Button */}
-      <DownloadManagerTitleButton />
 
       <Show when={props.enableController}>
         <div style={{ flex: 1 }} />

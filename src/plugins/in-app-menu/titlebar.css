@@ -95,22 +95,24 @@ ytmusic-player[player-ui-state='FULLSCREEN'] {
   align-items: center;
   justify-content: center;
   position: relative;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
   border: none;
   background: transparent;
   color: #e0e0e0;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   flex-shrink: 0;
   margin-left: 4px;
   -webkit-app-region: no-drag;
+  overflow: hidden;
 }
 
 .ytmd-dm-title-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
+  transform: scale(1.05);
 }
 
 .ytmd-dm-title-btn[data-active='true'] {
@@ -118,18 +120,73 @@ ytmusic-player[player-ui-state='FULLSCREEN'] {
   color: #a78bfa;
 }
 
-.ytmd-dm-title-btn svg {
-  width: 18px;
-  height: 18px;
+.ytmd-dm-icon-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ytmd-dm-download-icon {
+  position: relative;
+  z-index: 2;
+  color: #e0e0e0;
+  transition: color 0.25s ease;
+}
+
+.ytmd-dm-title-btn:hover .ytmd-dm-download-icon {
+  color: #fff;
+}
+
+.ytmd-dm-title-btn[data-active='true'] .ytmd-dm-download-icon {
+  color: #a78bfa;
+}
+
+.ytmd-dm-wave {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.6) 0%, rgba(59, 130, 246, 0) 70%);
+  opacity: 0;
+  animation: ytmd-dm-wave-flow 2s ease-in-out infinite;
+  z-index: 1;
+}
+
+@keyframes ytmd-dm-wave-flow {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate(-50%, 30%) scale(1.2);
+    opacity: 0.3;
+  }
+  75% {
+    transform: translate(-50%, 50%) scale(1.5);
+    opacity: 0.1;
+  }
+  100% {
+    transform: translate(-50%, 100%) scale(2);
+    opacity: 0;
+  }
 }
 
 .ytmd-dm-title-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 14px;
-  height: 14px;
-  border-radius: 7px;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: #fff;
   font-size: 9px;
@@ -139,8 +196,9 @@ ytmusic-player[player-ui-state='FULLSCREEN'] {
   justify-content: center;
   padding: 0 3px;
   line-height: 1;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   animation: ytmd-dm-badge-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 3;
 }
 
 @keyframes ytmd-dm-badge-pop {
