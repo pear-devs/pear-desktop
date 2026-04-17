@@ -110,7 +110,6 @@ export function DownloadManagerPanel(props: DownloadManagerProps) {
   // Toast notifications state
   const [toasts, setToasts] = createSignal<Toast[]>([]);
   const [previousQueueLength, setPreviousQueueLength] = createSignal(0);
-  const [notifiedPlaylists, setNotifiedPlaylists] = createSignal<Set<string>>(new Set());
 
   // Listen for state updates from backend
   const onStateUpdate = (state: DownloadManagerState) => {
@@ -157,49 +156,16 @@ export function DownloadManagerPanel(props: DownloadManagerProps) {
   // Show toast notification when new downloads start
   createEffect(() => {
     const currentItems = items();
-    const queuedItems = currentItems.filter(
+    const currentQueueLength = currentItems.filter(
       (i) => i.status === 'queued' || i.status === 'downloading'
-    );
-    const currentQueueLength = queuedItems.length;
+    ).length;
 
     // Check if new items were added
     if (currentQueueLength > previousQueueLength()) {
-      const newQueuedItems = currentItems.filter((i) => i.status === 'queued');
-      
-      // Group by playlist to detect new playlists
-      const playlistGroups = new Map<string, DownloadItem[]>();
-      const individualSongs: DownloadItem[] = [];
-      
-      newQueuedItems.forEach(item => {
-        if (item.isPlaylist && item.playlistFolder) {
-          if (!playlistGroups.has(item.playlistFolder)) {
-            playlistGroups.set(item.playlistFolder, []);
-          }
-          playlistGroups.get(item.playlistFolder)!.push(item);
-        } else {
-          individualSongs.push(item);
-        }
-      });
-
-      // Notify for new playlists
-      const currentNotified = notifiedPlaylists();
-      const newNotified = new Set(currentNotified);
-      
-      playlistGroups.forEach((playlistItems, playlistName) => {
-        if (!currentNotified.has(playlistName)) {
-          const playlistTitle = playlistItems[0]?.title || playlistName;
-          const songCount = playlistItems.length;
-          addToast(`Descargando playlist: ${playlistTitle} (${songCount} canciones)`, 'info');
-          newNotified.add(playlistName);
-        }
-      });
-
-      // Notify for individual songs (only if not part of a playlist)
-      if (individualSongs.length > 0) {
+      const newItems = currentItems.filter((i) => i.status === 'queued').length;
+      if (newItems > 0) {
         addToast(`Descarga iniciada - Ver en el botón del gestor`, 'info');
       }
-
-      setNotifiedPlaylists(newNotified);
     }
 
     setPreviousQueueLength(currentQueueLength);
