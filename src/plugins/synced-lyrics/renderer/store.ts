@@ -1,5 +1,6 @@
 import { createStore } from 'solid-js/store';
 import { createMemo } from 'solid-js';
+import { detect } from 'tinyld';
 
 import { getSongInfo } from '@/providers/song-info-front';
 
@@ -10,7 +11,7 @@ import {
 } from '../providers';
 import { providers } from '../providers/renderer';
 
-import type { LyricProvider } from '../types';
+import type { LyricProvider, LyricResult } from '../types';
 import type { SongInfo } from '@/providers/song-info';
 
 type LyricsStore = {
@@ -41,6 +42,24 @@ export const currentLyrics = createMemo(() => {
   return lyricsStore.lyrics[provider];
 });
 
+/**
+ * Returns the best available provider result that has a detected language,
+ * without requiring lyricsStore.provider to have been set by LyricsPicker.
+ * Prefers the currently selected provider, then falls back to any done provider
+ * with a language so that auto-skip works even when the lyrics panel is hidden.
+ */
+export const bestLanguageResult = createMemo(() => {
+  const current = lyricsStore.lyrics[lyricsStore.provider];
+  if (current.state === 'done' && current.data?.language) return current;
+
+  for (const name of providerNames) {
+    const state = lyricsStore.lyrics[name];
+    if (state.state === 'done' && state.data?.language) return state;
+  }
+
+  return null;
+});
+
 type VideoId = string;
 
 type SearchCacheData = Record<ProviderName, ProviderState>;
@@ -51,6 +70,44 @@ interface SearchCache {
 
 // TODO: Maybe use localStorage for the cache.
 const searchCache = new Map<VideoId, SearchCache>();
+
+/**
+ * Detects the language of lyrics and adds it to the result.
+ * Handles edge cases: no lyrics, empty text, detection failure.
+ */
+const detectLyricsLanguage = (
+  result: LyricResult | null,
+): LyricResult | null => {
+  if (!result) return null;
+
+  try {
+    // Extract text from either plain lyrics or synced lines
+    let textToAnalyze = '';
+
+    if (result.lyrics) {
+      textToAnalyze = result.lyrics.trim();
+    } else if (result.lines && result.lines.length > 0) {
+      textToAnalyze = result.lines
+        .map((line) => line.text)
+        .join('\n')
+        .trim();
+    }
+
+    // Only attempt detection if we have meaningful text
+    if (textToAnalyze.length > 0) {
+      const detectedLang = detect(textToAnalyze);
+      // Only set language if detection was successful (not empty string)
+      if (detectedLang) {
+        return { ...result, language: detectedLang };
+      }
+    }
+  } catch (error) {
+    // Detection failed - log but don't throw, just leave language undefined
+    console.warn('Language detection failed:', error);
+  }
+
+  return result;
+};
 export const fetchLyrics = (info: SongInfo) => {
   if (searchCache.has(info.videoId)) {
     const cache = searchCache.get(info.videoId)!;
@@ -100,8 +157,11 @@ export const fetchLyrics = (info: SongInfo) => {
       provider
         .search(info)
         .then((res) => {
+          // Detect language from the lyrics result
+          const resultWithLanguage = detectLyricsLanguage(res);
+
           pCache.state = 'done';
-          pCache.data = res;
+          pCache.data = resultWithLanguage;
 
           if (getSongInfo().videoId === info.videoId) {
             setLyricsStore('lyrics', (old) => {
@@ -109,7 +169,7 @@ export const fetchLyrics = (info: SongInfo) => {
                 ...old,
                 [providerName]: {
                   state: 'done',
-                  data: res ? { ...res } : null,
+                  data: resultWithLanguage ? { ...resultWithLanguage } : null,
                   error: null,
                 },
               };
@@ -157,10 +217,13 @@ export const retrySearch = (provider: ProviderName, info: SongInfo) => {
   providers[provider]
     .search(info)
     .then((res) => {
+      // Detect language from the lyrics result
+      const resultWithLanguage = detectLyricsLanguage(res);
+
       setLyricsStore('lyrics', (old) => {
         return {
           ...old,
-          [provider]: { state: 'done', data: res, error: null },
+          [provider]: { state: 'done', data: resultWithLanguage, error: null },
         };
       });
     })
