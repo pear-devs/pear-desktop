@@ -19,55 +19,35 @@ import { PanelItem } from './PanelItem';
 import { IconButton } from './IconButton';
 import { WindowController } from './WindowController';
 
-// Download Manager Button Component
+// Download Manager Button Component - Simplified for testing
 const DownloadManagerTitleButton = () => {
-  const [badgeCount, setBadgeCount] = createSignal(0);
-  const [isOpen, setIsOpen] = createSignal(false);
-
-  onMount(() => {
-    // Listen for badge count updates from download manager
-    const handleBadgeUpdate = (e: CustomEvent<number>) => {
-      setBadgeCount(e.detail);
-    };
-    window.addEventListener('ytmd-download-badge-update', handleBadgeUpdate as EventListener);
-
-    // Check if download manager is open
-    const handleToggle = () => setIsOpen((prev) => !prev);
-    window.addEventListener('ytmd-download-manager-toggle', handleToggle);
-
-    // Try to get initial badge count
-    const win = window as unknown as { ytmdDownloadBadgeCount?: number };
-    if (win.ytmdDownloadBadgeCount !== undefined) {
-      setBadgeCount(win.ytmdDownloadBadgeCount);
-    }
-
-    onCleanup(() => {
-      window.removeEventListener('ytmd-download-badge-update', handleBadgeUpdate as EventListener);
-      window.removeEventListener('ytmd-download-manager-toggle', handleToggle);
-    });
-  });
-
   const handleClick = () => {
+    console.log('Download Manager button clicked');
     window.dispatchEvent(new CustomEvent('ytmd-download-manager-toggle'));
   };
 
   return (
     <button
-      class="ytmd-dm-title-btn"
       onClick={handleClick}
       title="Gestor de Descargas"
-      data-active={isOpen()}
+      style={{
+        width: '32px',
+        height: '32px',
+        borderRadius: '50%',
+        border: 'none',
+        background: 'rgba(255, 255, 255, 0.1)',
+        color: '#e0e0e0',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: '8px'
+      }}
     >
-      <div class="ytmd-dm-icon-container">
-        <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18" class="ytmd-dm-download-icon">
-          <path d="M12 3v12m-6-6l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-          <path d="M5 18v2h14v-2H5z" fill="currentColor"/>
-        </svg>
-        <div class="ytmd-dm-wave"></div>
-      </div>
-      <Show when={badgeCount() > 0}>
-        <span class="ytmd-dm-title-badge">{badgeCount()}</span>
-      </Show>
+      <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+        <path d="M12 3v12m-6-6l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <path d="M5 18v2h14v-2H5z" fill="currentColor"/>
+      </svg>
     </button>
   );
 };
