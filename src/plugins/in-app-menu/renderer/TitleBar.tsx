@@ -482,9 +482,9 @@ export const TitleBar = (props: TitleBarProps) => {
             }}
           </Index>
         </Show>
+        {/* Download Manager Button */}
+        <DownloadManagerTitleButton />
       </TransitionGroup>
-      {/* Download Manager Button - Always Visible */}
-      <DownloadManagerTitleButton />
 
       <Show when={props.enableController}>
         <div style={{ flex: 1 }} />
