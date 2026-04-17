@@ -19,55 +19,6 @@ import { PanelItem } from './PanelItem';
 import { IconButton } from './IconButton';
 import { WindowController } from './WindowController';
 
-// Download Manager Button Component
-const DownloadManagerTitleButton = () => {
-  const [badgeCount, setBadgeCount] = createSignal(0);
-  const [isOpen, setIsOpen] = createSignal(false);
-
-  onMount(() => {
-    // Listen for badge count updates from download manager
-    const handleBadgeUpdate = (e: CustomEvent<number>) => {
-      setBadgeCount(e.detail);
-    };
-    window.addEventListener('ytmd-download-badge-update', handleBadgeUpdate as EventListener);
-
-    // Check if download manager is open
-    const handleToggle = () => setIsOpen((prev) => !prev);
-    window.addEventListener('ytmd-download-manager-toggle', handleToggle);
-
-    // Try to get initial badge count
-    const win = window as unknown as { ytmdDownloadBadgeCount?: number };
-    if (win.ytmdDownloadBadgeCount !== undefined) {
-      setBadgeCount(win.ytmdDownloadBadgeCount);
-    }
-
-    onCleanup(() => {
-      window.removeEventListener('ytmd-download-badge-update', handleBadgeUpdate as EventListener);
-      window.removeEventListener('ytmd-download-manager-toggle', handleToggle);
-    });
-  });
-
-  const handleClick = () => {
-    window.dispatchEvent(new CustomEvent('ytmd-download-manager-toggle'));
-  };
-
-  return (
-    <button
-      class="ytmd-dm-title-btn"
-      onClick={handleClick}
-      title="Gestor de Descargas"
-      data-active={isOpen()}
-    >
-      <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" />
-      </svg>
-      <Show when={badgeCount() > 0}>
-        <span class="ytmd-dm-title-badge">{badgeCount()}</span>
-      </Show>
-    </button>
-  );
-};
-
 import { cacheNoArgs } from '@/providers/decorators';
 
 import type { RendererContext } from '@/types/contexts';
@@ -479,9 +430,6 @@ export const TitleBar = (props: TitleBarProps) => {
           </Index>
         </Show>
       </TransitionGroup>
-      {/* Download Manager Button */}
-      <DownloadManagerTitleButton />
-
       <Show when={props.enableController}>
         <div style={{ flex: 1 }} />
         <WindowController

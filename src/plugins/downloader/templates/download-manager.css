@@ -5,21 +5,21 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   border: none;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.08);
   color: #e0e0e0;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   flex-shrink: 0;
-  margin-left: 4px;
 }
 
 .dm-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.16);
   color: #fff;
+  transform: scale(1.05);
 }
 
 .dm-toggle-btn.dm-active {
@@ -27,28 +27,23 @@
   color: #a78bfa;
 }
 
-.dm-toggle-btn svg {
-  width: 18px;
-  height: 18px;
-}
-
 .dm-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 14px;
-  height: 14px;
-  border-radius: 7px;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: #fff;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 3px;
+  padding: 0 4px;
   line-height: 1;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
   animation: dm-badge-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
@@ -57,136 +52,8 @@
   100% { transform: scale(1); }
 }
 
-/* ─── Toast Notifications ─────────────────────────────────────────────────── */
+/* ─── Panel Container ─────────────────────────────────────────────────────── */
 
-.dm-toast-container {
-  position: fixed;
-  top: 50px;
-  right: 20px;
-  z-index: 100001;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  pointer-events: none;
-}
-
-.dm-toast {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 16px;
-  background: rgba(30, 30, 40, 0.98);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  pointer-events: auto;
-  animation: dm-toast-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  max-width: 300px;
-}
-
-.dm-toast-exit {
-  animation: dm-toast-out 0.2s ease forwards;
-}
-
-@keyframes dm-toast-in {
-  0% {
-    opacity: 0;
-    transform: translateX(100%) scale(0.9);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-}
-
-@keyframes dm-toast-out {
-  0% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translateX(100%) scale(0.9);
-  }
-}
-
-.dm-toast-info {
-  border-left: 3px solid #60a5fa;
-}
-
-.dm-toast-success {
-  border-left: 3px solid #22c55e;
-}
-
-.dm-toast-error {
-  border-left: 3px solid #ef4444;
-}
-
-.dm-toast-message {
-  flex: 1;
-  font-size: 13px;
-  color: #e0e0e0;
-  line-height: 1.4;
-}
-
-.dm-toast-close {
-  width: 20px;
-  height: 20px;
-  border: none;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 4px;
-  color: #888;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-
-.dm-toast-close:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-}
-
-.dm-toast-close svg {
-  width: 14px;
-  height: 14px;
-}
-
-/* ─── Floating Panel ──────────────────────────────────────────────────────── */
-
-.dm-floating-panel {
-  position: fixed;
-  width: 380px;
-  max-height: 500px;
-  z-index: 100000;
-  display: flex;
-  flex-direction: column;
-  background: rgba(22, 22, 28, 0.98);
-  backdrop-filter: blur(20px) saturate(1.5);
-  -webkit-backdrop-filter: blur(20px) saturate(1.5);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.2);
-  font-family: 'Google Sans', 'Roboto', sans-serif;
-  animation: dm-panel-in 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  overflow: hidden;
-}
-
-@keyframes dm-panel-in {
-  0% {
-    opacity: 0;
-    transform: scale(0.95) translateY(-10px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
-
-/* Legacy panel styles for backward compatibility */
 .dm-panel {
   position: fixed;
   top: 0;
@@ -253,23 +120,6 @@
 .dm-close-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
-}
-
-.dm-drag-handle {
-  cursor: move;
-  cursor: grab;
-}
-
-.dm-drag-handle:active {
-  cursor: grabbing;
-}
-
-.dm-drag-hint {
-  font-size: 10px;
-  color: #666;
-  margin-left: 6px;
-  opacity: 0.6;
-  user-select: none;
 }
 
 /* ─── Controls Bar ────────────────────────────────────────────────────────── */

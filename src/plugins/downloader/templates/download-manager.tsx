@@ -1,4 +1,4 @@
-import { createSignal, createEffect, For, Show, onCleanup, onMount } from 'solid-js';
+import { createSignal, createEffect, For, Show, onCleanup } from 'solid-js';
 
 import type { IpcRenderer } from 'electron';
 
@@ -84,14 +84,6 @@ export interface DownloadManagerProps {
 
 type TabType = 'queue' | 'failed' | 'completed';
 
-// Toast notification interface
-interface Toast {
-  id: string;
-  message: string;
-  type: 'info' | 'success' | 'error';
-  countdown: number;
-}
-
 export function DownloadManagerPanel(props: DownloadManagerProps) {
   const [isOpen, setIsOpen] = createSignal(false);
   const [activeTab, setActiveTab] = createSignal<TabType>('queue');
@@ -101,15 +93,6 @@ export function DownloadManagerPanel(props: DownloadManagerProps) {
   const [totalCompleted, setTotalCompleted] = createSignal(0);
   const [totalFailed, setTotalFailed] = createSignal(0);
   const [totalSkipped, setTotalSkipped] = createSignal(0);
-
-  // Draggable window state
-  const [position, setPosition] = createSignal({ x: window.innerWidth - 420, y: 50 });
-  const [isDragging, setIsDragging] = createSignal(false);
-  const [dragOffset, setDragOffset] = createSignal({ x: 0, y: 0 });
-
-  // Toast notifications state
-  const [toasts, setToasts] = createSignal<Toast[]>([]);
-  const [previousQueueLength, setPreviousQueueLength] = createSignal(0);
 
   // Listen for state updates from backend
   const onStateUpdate = (state: DownloadManagerState) => {
@@ -146,78 +129,12 @@ export function DownloadManagerPanel(props: DownloadManagerProps) {
     if (state) onStateUpdate(state as DownloadManagerState);
   });
 
-  // Listen for toggle event from title bar
-  onMount(() => {
-    const handleToggle = () => setIsOpen(!isOpen());
-    window.addEventListener('ytmd-download-manager-toggle', handleToggle);
-    onCleanup(() => window.removeEventListener('ytmd-download-manager-toggle', handleToggle));
-  });
-
-  // Show toast notification when new downloads start
+  // Auto-open when downloads start
   createEffect(() => {
-    const currentItems = items();
-    const currentQueueLength = currentItems.filter(
-      (i) => i.status === 'queued' || i.status === 'downloading'
-    ).length;
-
-    // Check if new items were added
-    if (currentQueueLength > previousQueueLength()) {
-      const newItems = currentItems.filter((i) => i.status === 'queued').length;
-      if (newItems > 0) {
-        addToast(`Descarga iniciada - Ver en el botón del gestor`, 'info');
-      }
+    const activeItems = items().filter((i) => i.status === 'downloading' || i.status === 'queued');
+    if (activeItems.length > 0 && !isOpen()) {
+      setIsOpen(true);
     }
-
-    setPreviousQueueLength(currentQueueLength);
-  });
-
-  // Toast functions
-  const addToast = (message: string, type: Toast['type'] = 'info') => {
-    const id = Date.now().toString();
-    const toast: Toast = { id, message, type, countdown: 5 };
-    setToasts((prev) => [...prev, toast]);
-
-    // Auto remove after 5 seconds
-    setTimeout(() => {
-      removeToast(id);
-    }, 5000);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
-
-  // Drag functions
-  const handleMouseDown = (e: MouseEvent) => {
-    if ((e.target as HTMLElement).closest('.dm-close-btn, .dm-tab, .dm-ctrl-btn, .dm-item-action-btn, select')) {
-      return;
-    }
-    setIsDragging(true);
-    setDragOffset({
-      x: e.clientX - position().x,
-      y: e.clientY - position().y,
-    });
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!isDragging()) return;
-    const newX = Math.max(0, Math.min(window.innerWidth - 400, e.clientX - dragOffset().x));
-    const newY = Math.max(32, Math.min(window.innerHeight - 500, e.clientY - dragOffset().y));
-    setPosition({ x: newX, y: newY });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  // Global mouse events for dragging
-  onMount(() => {
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-    onCleanup(() => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    });
   });
 
   // ─── Derived data ────────────────────────────────────────────────
@@ -246,12 +163,6 @@ export function DownloadManagerPanel(props: DownloadManagerProps) {
   };
 
   const badgeCount = () => queueItems().length + failedItems().length;
-
-  // Expose badge count to window for title bar button
-  createEffect(() => {
-    (window as unknown as { ytmdDownloadBadgeCount: number }).ytmdDownloadBadgeCount = badgeCount();
-    window.dispatchEvent(new CustomEvent('ytmd-download-badge-update', { detail: badgeCount() }));
-  });
 
   // ─── Actions ─────────────────────────────────────────────────────
 
@@ -307,41 +218,31 @@ export function DownloadManagerPanel(props: DownloadManagerProps) {
 
   return (
     <>
-      {/* Toast Notifications */}
-      <div class="dm-toast-container">
-        <For each={toasts()}>
-          {(toast) => (
-            <div class={`dm-toast dm-toast-${toast.type}`}>
-              <span class="dm-toast-message">{toast.message}</span>
-              <button class="dm-toast-close" onClick={() => removeToast(toast.id)}>
-                <CloseIcon />
-              </button>
-            </div>
-          )}
-        </For>
-      </div>
+      {/* Toggle Button */}
+      <button
+        class={`dm-toggle-btn ${isOpen() ? 'dm-active' : ''}`}
+        onClick={() => setIsOpen(!isOpen())}
+        title="Gestor de Descargas"
+        id="ytmd-download-manager-toggle"
+      >
+        <DownloadIcon />
+        <Show when={badgeCount() > 0}>
+          <span class="dm-badge">{badgeCount()}</span>
+        </Show>
+      </button>
 
-      {/* Floating Panel */}
-      <Show when={isOpen()}>
-        <div
-          class="dm-floating-panel"
-          style={{
-            left: `${position().x}px`,
-            top: `${position().y}px`,
-          }}
-          onMouseDown={handleMouseDown}
-        >
-          {/* Header with drag handle */}
-          <div class="dm-header dm-drag-handle">
-            <div class="dm-header-title">
-              <DownloadIcon />
-              <span>Gestor de Descargas</span>
-              <span class="dm-drag-hint">⣿</span>
-            </div>
-            <button class="dm-close-btn" onClick={() => setIsOpen(false)}>
-              <CloseIcon />
-            </button>
+      {/* Panel */}
+      <div class={`dm-panel ${isOpen() ? 'dm-open' : ''}`} id="ytmd-download-manager-panel">
+        {/* Header */}
+        <div class="dm-header">
+          <div class="dm-header-title">
+            <DownloadIcon />
+            <span>Gestor de Descargas</span>
           </div>
+          <button class="dm-close-btn" onClick={() => setIsOpen(false)}>
+            <CloseIcon />
+          </button>
+        </div>
 
         {/* Controls */}
         <div class="dm-controls">
@@ -457,23 +358,22 @@ export function DownloadManagerPanel(props: DownloadManagerProps) {
           </Show>
         </div>
 
-          {/* Stats */}
-          <div class="dm-stats">
-            <div class="dm-stat">
-              ⬇️ <span class="dm-stat-value">{activeCount()}</span> activas
-            </div>
-            <div class="dm-stat dm-stat-completed">
-              ✅ <span class="dm-stat-value">{totalCompleted()}</span>
-            </div>
-            <div class="dm-stat dm-stat-failed">
-              ❌ <span class="dm-stat-value">{totalFailed()}</span>
-            </div>
-            <div class="dm-stat dm-stat-skipped">
-              ⏭️ <span class="dm-stat-value">{totalSkipped()}</span>
-            </div>
+        {/* Stats */}
+        <div class="dm-stats">
+          <div class="dm-stat">
+            ⬇️ <span class="dm-stat-value">{activeCount()}</span> activas
+          </div>
+          <div class="dm-stat dm-stat-completed">
+            ✅ <span class="dm-stat-value">{totalCompleted()}</span>
+          </div>
+          <div class="dm-stat dm-stat-failed">
+            ❌ <span class="dm-stat-value">{totalFailed()}</span>
+          </div>
+          <div class="dm-stat dm-stat-skipped">
+            ⏭️ <span class="dm-stat-value">{totalSkipped()}</span>
           </div>
         </div>
-      </Show>
+      </div>
     </>
   );
 }
