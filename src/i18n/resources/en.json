@@ -244,7 +244,7 @@
       "name": "Album Color Theme"
     },
     "ambient-mode": {
-      "description": "Applies a lighting effect by casting gentle colors from the video, into your screen’s background",
+      "description": "Applies a lighting effect by casting gentle colors from the video, into your screen's background",
       "menu": {
         "blur-amount": {
           "label": "Blur amount",
@@ -777,11 +777,20 @@
             "message": "Failed to authenticate with Last.fm\nHide the popup until the next restart.",
             "title": "Authentication Failed"
           }
+        },
+        "librefm": {
+          "not-enabled": {
+            "title": "Libre.fm Not Enabled",
+            "message": "Please enable Libre.fm first before authenticating."
+          }
         }
       },
       "menu": {
         "lastfm": {
           "api-settings": "Last.fm API Settings"
+        },
+        "librefm": {
+          "authenticate": "Authenticate with Libre.fm"
         },
         "listenbrainz": {
           "token": "Enter ListenBrainz user token"
