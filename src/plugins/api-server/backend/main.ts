@@ -14,7 +14,7 @@ import { registerCallback } from '@/providers/song-info';
 import { createBackend } from '@/utils';
 
 import { JWTPayloadSchema } from './scheme';
-import { registerAuth, registerControl, registerWebsocket } from './routes';
+import { registerAuth, registerControl, registerWebsocket, wsNotifyClose } from './routes';
 
 import { APPLICATION_NAME } from '@/i18n';
 
@@ -31,7 +31,13 @@ import type {
 
 export const backend = createBackend<BackendType, APIServerConfig>({
   async start(ctx) {
+    const { app } = await import('electron');
     const config = await ctx.getConfig();
+
+    // Notify WebSocket clients that playback has stopped before quitting
+    app.on('before-quit', () => {
+      wsNotifyClose?.();
+    });
 
     this.init(ctx);
     registerCallback((songInfo) => {
@@ -201,6 +207,7 @@ export const backend = createBackend<BackendType, APIServerConfig>({
     }
   },
   end() {
+    wsNotifyClose?.();
     this.server?.close();
     this.server = undefined;
   },
