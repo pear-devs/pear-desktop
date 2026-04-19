@@ -4,6 +4,7 @@ import is from 'electron-is';
 
 import { notificationImage } from './utils';
 import interactive from './interactive';
+import { setupHoverPopup } from './hover-popup';
 
 import {
   registerCallback,
@@ -60,6 +61,10 @@ export const onMainLoad = async (
   if (is.windows() && config.interactive)
     interactive(context.window, () => config, context);
   else setup();
+
+  if (config.hoverControls) {
+    setupHoverPopup(context.window);
+  }
 };
 
 export const onConfigChange = (newConfig: NotificationsPluginConfig) => {
