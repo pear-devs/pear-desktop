@@ -456,6 +456,7 @@
         "disconnected": "Від'єднано",
         "hide-duration-left": "Приховати тривалість, яка залишилася",
         "hide-github-button": "Приховати посилання на GitHub",
+        "show-application-user": "Показати інформацію користувача {{applicationName}}",
         "play-on-application": "Слухати на {{applicationName}}",
         "set-inactivity-timeout": "Встановити тайм-аут бездіяльності",
         "set-status-display-type": {

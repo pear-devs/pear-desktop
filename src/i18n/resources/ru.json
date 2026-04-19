@@ -485,6 +485,7 @@
         "disconnected": "Отключено",
         "hide-duration-left": "Скрыть сколько осталось времени",
         "hide-github-button": "Скрыть ссылку на GitHub",
+        "show-application-user": "Показать информацию пользователя {{applicationName}}",
         "play-on-application": "Воспроизвести на {{applicationName}}",
         "set-inactivity-timeout": "Поставить таймер неактивности",
         "set-status-display-type": {

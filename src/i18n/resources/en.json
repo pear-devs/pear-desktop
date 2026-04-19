@@ -485,6 +485,7 @@
         "disconnected": "Disconnected",
         "hide-duration-left": "Hide duration left",
         "hide-github-button": "Hide GitHub link Button",
+        "show-application-user": "Show {{applicationName}} user info",
         "play-on-application": "Play on {{applicationName}}",
         "set-inactivity-timeout": "Set inactivity timeout",
         "set-status-display-type": {
