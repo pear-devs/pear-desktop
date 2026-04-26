@@ -7,7 +7,16 @@ import MprisPlayer, {
   type Position,
   type Track,
 } from '@jellybrick/mpris-service';
-import * as MprisMeta from '@jellybrick/mpris-service';
+
+const Mpris = MprisPlayer as typeof MprisPlayer & {
+  PLAYBACK_STATUS_PLAYING: PlayBackStatus;
+  PLAYBACK_STATUS_PAUSED: PlayBackStatus;
+  PLAYBACK_STATUS_STOPPED: PlayBackStatus;
+
+  LOOP_STATUS_NONE: LoopStatus;
+  LOOP_STATUS_TRACK: LoopStatus;
+  LOOP_STATUS_PLAYLIST: LoopStatus;
+};
 
 import {
   registerCallback,
@@ -49,15 +58,15 @@ class YTPlayer extends MprisPlayer {
   }
 
   isPlaying(): boolean {
-    return this.playbackStatus === MprisMeta.PLAYBACK_STATUS_PLAYING;
+    return this.playbackStatus === Mpris.PLAYBACK_STATUS_PLAYING;
   }
 
   isPaused(): boolean {
-    return this.playbackStatus === MprisMeta.PLAYBACK_STATUS_PAUSED;
+    return this.playbackStatus === Mpris.PLAYBACK_STATUS_PAUSED;
   }
 
   isStopped(): boolean {
-    return this.playbackStatus === MprisMeta.PLAYBACK_STATUS_STOPPED;
+    return this.playbackStatus === Mpris.PLAYBACK_STATUS_STOPPED;
   }
 
   setPlaybackStatus(status: PlayBackStatus) {
@@ -142,15 +151,15 @@ export function registerMPRIS(win: BrowserWindow) {
     ipcMain.on('peard:repeat-changed', (_, mode: RepeatMode) => {
       switch (mode) {
         case 'NONE': {
-          player.setLoopStatus(MprisMeta.LOOP_STATUS_NONE);
+          player.setLoopStatus(Mpris.LOOP_STATUS_NONE);
           break;
         }
         case 'ONE': {
-          player.setLoopStatus(MprisMeta.LOOP_STATUS_TRACK);
+          player.setLoopStatus(Mpris.LOOP_STATUS_TRACK);
           break;
         }
         case 'ALL': {
-          player.setLoopStatus(MprisMeta.LOOP_STATUS_PLAYLIST);
+          player.setLoopStatus(Mpris.LOOP_STATUS_PLAYLIST);
           // No default
           break;
         }
@@ -213,7 +222,7 @@ export function registerMPRIS(win: BrowserWindow) {
       let hasNext: boolean;
       if (queue.autoPlaying) {
         hasNext = true;
-      } else if (player.loopStatus === MprisMeta.LOOP_STATUS_PLAYLIST) {
+      } else if (player.loopStatus === Mpris.LOOP_STATUS_PLAYLIST) {
         hasNext = true;
       } else {
         // Example: currentPosition = 0, queue.items.length = 29 -> hasNext = true
@@ -226,9 +235,9 @@ export function registerMPRIS(win: BrowserWindow) {
     player.on('loopStatus', (status: LoopStatus) => {
       // SwitchRepeat cycles between states in that order
       const switches = [
-        MprisMeta.LOOP_STATUS_NONE,
-        MprisMeta.LOOP_STATUS_PLAYLIST,
-        MprisMeta.LOOP_STATUS_TRACK,
+        Mpris.LOOP_STATUS_NONE,
+        Mpris.LOOP_STATUS_PLAYLIST,
+        Mpris.LOOP_STATUS_TRACK,
       ];
       const currentIndex = switches.indexOf(player.loopStatus);
       const targetIndex = switches.indexOf(status);
@@ -253,21 +262,21 @@ export function registerMPRIS(win: BrowserWindow) {
 
     player.on('play', () => {
       if (!player.isPlaying()) {
-        player.setPlaybackStatus(MprisMeta.PLAYBACK_STATUS_PLAYING);
+        player.setPlaybackStatus(Mpris.PLAYBACK_STATUS_PLAYING);
         playPause();
       }
     });
     player.on('pause', () => {
       if (!player.isPaused()) {
-        player.setPlaybackStatus(MprisMeta.PLAYBACK_STATUS_PAUSED);
+        player.setPlaybackStatus(Mpris.PLAYBACK_STATUS_PAUSED);
         playPause();
       }
     });
     player.on('playpause', () => {
       player.setPlaybackStatus(
         player.isPlaying()
-          ? MprisMeta.PLAYBACK_STATUS_PAUSED
-          : MprisMeta.PLAYBACK_STATUS_PLAYING,
+          ? Mpris.PLAYBACK_STATUS_PAUSED
+          : Mpris.PLAYBACK_STATUS_PLAYING,
       );
       playPause();
     });
@@ -354,8 +363,8 @@ export function registerMPRIS(win: BrowserWindow) {
 
         player.setPlaybackStatus(
           songInfo.isPaused
-            ? MprisMeta.PLAYBACK_STATUS_PAUSED
-            : MprisMeta.PLAYBACK_STATUS_PLAYING,
+            ? Mpris.PLAYBACK_STATUS_PAUSED
+            : Mpris.PLAYBACK_STATUS_PLAYING,
         );
       }
       requestQueueInformation();
