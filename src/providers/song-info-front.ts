@@ -27,11 +27,11 @@ window.ipcRenderer.on(
 // Used because 'loadeddata' or 'loadedmetadata' weren't firing on song start for some users (https://github.com/pear-devs/pear-desktop/issues/473)
 const srcChangedEvent = new CustomEvent('peard:src-changed');
 
+const getTime = () => songInfo.elapsedSeconds ?? 0;
+
 export const setupSeekedListener = singleton(() => {
-  document.querySelector('video')?.addEventListener('seeked', (v) => {
-    if (v.target instanceof HTMLVideoElement) {
-      window.ipcRenderer.send('peard:seeked', v.target.currentTime);
-    }
+  document.querySelector('video')?.addEventListener('seeked', () => {
+    window.ipcRenderer.send('peard:seeked', getTime());
   });
 });
 
@@ -227,13 +227,10 @@ export const setupSongInfo = (api: MusicPlayer) => {
   });
 
   const playPausedHandler = (e: Event, status: string) => {
-    if (
-      e.target instanceof HTMLVideoElement &&
-      Math.round(e.target.currentTime) > 0
-    ) {
+    if (e.target instanceof HTMLVideoElement) {
       window.ipcRenderer.send('peard:play-or-paused', {
         isPaused: status === 'pause',
-        elapsedSeconds: Math.floor(e.target.currentTime),
+        elapsedSeconds: getTime(),
       });
     }
   };
