@@ -5,10 +5,10 @@
         "execute-failed": "Błąd uruchamiania wtyczki {{pluginName}}::{{contextName}}",
         "executed-at-ms": "Wtyczka {{pluginName}}::{{contextName}} uruchomiona w {{ms}}ms",
         "initialize-failed": "Błąd inicjalizacji wtyczki \"{{pluginName}}\"",
-        "load-all": "Ładowanie wszystkich wtyczek",
+        "load-all": "Wszystkie wtyczki",
         "load-failed": "Błąd w ładowaniu wtyczki \"{{pluginName}}\"",
         "loaded": "Wtyczka \"{{pluginName}}\" załadowana",
-        "unload-failed": "Błąd w odłączaniu wtyczki \"{{pluginName}}\"",
+        "unload-failed": "Błąd w odłączeniu wtyczki \"{{pluginName}}\"",
         "unloaded": "Wtyczka \"{{pluginName}}\" odłączona"
       }
     }
@@ -21,7 +21,7 @@
   "main": {
     "console": {
       "did-finish-load": {
-        "dev-tools": "Ukończono ładowanie. Narzędzia deweloperskie otwarte"
+        "dev-tools": "Ukończono ładowanie. Narzędzia deweloperskie włączono"
       },
       "i18n": {
         "loaded": "i18n załadowane"
@@ -161,7 +161,8 @@
                 "default": "Domyślne",
                 "force-show": "Wymuś pokazywanie",
                 "hide": "Ukryj",
-                "label": "Przyciski polubienia"
+                "label": "Przyciski polubienia",
+                "swap": "Zamień kolejność przycisków polubień"
               },
               "remove-upgrade-button": "Usuń przycisk subskrypcji premium",
               "theme": {
@@ -411,6 +412,17 @@
         "caption-disabled": "Napisy zostały wyłączone",
         "no-captions": "Nie znaleziono napisów dla tego utworu"
       }
+    },
+    "clock": {
+      "description": "Dodaj zegar do nawigacyjnego baru",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-Godzinny Format",
+          "display-seconds": "Wyświetl sekundy",
+          "label": "Format"
+        }
+      },
+      "name": "Zegar"
     },
     "compact-sidebar": {
       "description": "Zawsze ustawiaj pasek boczny w trybie kompaktowym",
@@ -830,6 +842,18 @@
         "not-found": "⚠️ Nie znaleziono napisów dla tego utworu."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Konwertuj chiński znak",
+          "submenu": {
+            "disabled": {
+              "label": "Wyłączony"
+            },
+            "traditional-to-simplified": {
+              "tooltip": "Konwertuj język chiński tradycyjny na chiński uproszczony"
+            }
+          },
+          "tooltip": "Konwertuj znaki chińskie na tradycyjne lub uproszczone"
+        },
         "default-text-string": {
           "label": "Standardowy znak luki",
           "tooltip": "Wybierz domyślny znak, który ma być wyświetlany jako pauza między słowami"

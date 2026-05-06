@@ -161,7 +161,8 @@
                 "default": "Per defecte",
                 "force-show": "Força que es mostri",
                 "hide": "Amaga",
-                "label": "Botons de «m'agrada»"
+                "label": "Botons de «m'agrada»",
+                "swap": "Intercambiar l'ordre dels botons de m'agrada"
               },
               "remove-upgrade-button": "Elimina el botó «Actualitza a Music Premium»",
               "theme": {
@@ -326,10 +327,10 @@
           "submenu": {
             "cert": {
               "dialogTitle": "Seleccionar arxiu de certificat HTTPS",
-              "label": "Arxiu de certificat (.crt/.pem)"
+              "label": "Certificar fitxer (.crt/.pem)"
             },
             "enable-https": {
-              "label": "Activa HTTPS"
+              "label": "Habilitar HTTPS"
             },
             "key": {
               "dialogTitle": "Selecciona arxiu de clau HTTPS privada",
@@ -411,6 +412,17 @@
         "caption-disabled": "Subtítols desactivats",
         "no-captions": "Subtítols no disponibles per aquesta cançó"
       }
+    },
+    "clock": {
+      "description": "Afegeix un rellotge a la barra de navegació",
+      "menu": {
+        "format": {
+          "24-hour-format": "Format 24 Hores",
+          "display-seconds": "Mostra els segons",
+          "label": "Format"
+        }
+      },
+      "name": "Rellotge"
     },
     "compact-sidebar": {
       "description": "Sempre mostrar la barra lateral en mode compacte",
@@ -830,6 +842,24 @@
         "not-found": "⚠️ No s'ha trobat la lletra per aquesta cançó."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Converteix Caràcters Xinesos",
+          "submenu": {
+            "disabled": {
+              "label": "Deshabilitat",
+              "tooltip": "Deshabilitar la conversió de caràcters Xinesos"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplificat al Tradicional",
+              "tooltip": "Converteix Xinés Simplificat a Xinés Tradicional"
+            },
+            "traditional-to-simplified": {
+              "label": "Tradicional a Simplificat",
+              "tooltip": "Converteix Xinès Tradicional a Xinès Simplificat"
+            }
+          },
+          "tooltip": "Converteix caràcter Xinès a Tradicional o Simplificat"
+        },
         "default-text-string": {
           "label": "Caràcter per defecte entre lletres",
           "tooltip": "Tria el caràcter per defecte que es mostrarà a l'espai entre les lletres"
@@ -842,7 +872,7 @@
               "tooltip": "Utilitza efectes grans \"app-like\" en la línia actual"
             },
             "focus": {
-              "label": "Focus",
+              "label": "Centrar",
               "tooltip": "Mostra tan sols la línia actual en blanc"
             },
             "offset": {

@@ -161,7 +161,8 @@
                 "default": "डिफॉल्ट",
                 "force-show": "बल पूर्वक दिखाएं",
                 "hide": "छुपाएं",
-                "label": "लाइक बटंस"
+                "label": "लाइक बटंस",
+                "swap": "लाइक बटन का क्रम बदलें"
               },
               "remove-upgrade-button": "अपग्रेड बटन हटाएं",
               "theme": {
@@ -237,7 +238,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "सीकबार थीमिंग सक्षम करें"
       },
       "name": "एल्बम रंग थीम"
     },
@@ -320,6 +322,22 @@
         "hostname": {
           "label": "होस्टनेम"
         },
+        "https": {
+          "label": "HTTPS और प्रमाणपत्र",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "HTTPS प्रमाणपत्र फ़ाइल चुनें",
+              "label": "प्रमाणपत्र फ़ाइल (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "HTTPS सक्षम करें"
+            },
+            "key": {
+              "dialogTitle": "HTTPS निजी कुंजी फ़ाइल चुनें",
+              "label": "निजी कुंजी फ़ाइल (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "पोर्ट"
         }
@@ -394,6 +412,17 @@
         "caption-disabled": "कैप्शन बंद कर दिए गए हैं",
         "no-captions": "इस गाने के लिए कोई कैप्शन उपलब्ध नहीं हैं"
       }
+    },
+    "clock": {
+      "description": "नेविगेशन बार में घड़ी जोड़ें",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-घंटे का प्रारूप",
+          "display-seconds": "सेकंड दिखाएं",
+          "label": "प्रारूप"
+        }
+      },
+      "name": "घड़ी"
     },
     "compact-sidebar": {
       "description": "साइडबार को हमेशा कॉम्पैक्ट मोड में सेट करें",

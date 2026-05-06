@@ -161,7 +161,8 @@
                 "default": "Predeterminado",
                 "force-show": "Forzar la visualización",
                 "hide": "Ocultar",
-                "label": "Botones de \"Me Gusta\""
+                "label": "Botones de \"Me Gusta\"",
+                "swap": "Intercambiar el orden de los botones de \"Me Gusta\""
               },
               "remove-upgrade-button": "Eliminar el botón de Actualización",
               "theme": {
@@ -322,10 +323,10 @@
           "label": "Nombre del host"
         },
         "https": {
-          "label": "HTTPS & Certificados",
+          "label": "HTTPS y Certificados",
           "submenu": {
             "cert": {
-              "dialogTitle": "Selecciona el archivo de certificado HTTPS",
+              "dialogTitle": "Seleccione el archivo de certificado HTTPS",
               "label": "Archivo de certificado (.crt/.pem)"
             },
             "enable-https": {
@@ -411,6 +412,17 @@
         "caption-disabled": "Subtítulos desactivados",
         "no-captions": "Sin subtítulos para ésta canción"
       }
+    },
+    "clock": {
+      "description": "Añade un reloj a la barra de navegación",
+      "menu": {
+        "format": {
+          "24-hour-format": "Formato 24 horas",
+          "display-seconds": "Mostrar segundos",
+          "label": "Formato"
+        }
+      },
+      "name": "Reloj"
     },
     "compact-sidebar": {
       "description": "Establecer siempre la barra lateral en modo compacto",
@@ -830,6 +842,24 @@
         "not-found": "⚠️ No se han encontrado letras para esta canción."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Convertir carácter Chino",
+          "submenu": {
+            "disabled": {
+              "label": "Deshabilitado",
+              "tooltip": "Deshabilitar conversión de caracteres Chinos"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplificar a Tradicional",
+              "tooltip": "Convertir Chino Simplifcado en Chino Tradicional"
+            },
+            "traditional-to-simplified": {
+              "label": "Tradicional a Simplificado",
+              "tooltip": "Convertir Chino Tradicional a Chino Simplificado"
+            }
+          },
+          "tooltip": "Convertir carácter Chino a Tradicional o Simplificado"
+        },
         "default-text-string": {
           "label": "Carácter predeterminado entre letras",
           "tooltip": "Elige el carácter predeterminado que se utilizará para el espacio entre letras"

@@ -140,7 +140,8 @@
           },
           "tray": {
             "submenu": {
-              "disabled": "Deaktiv edilib"
+              "disabled": "Deaktiv edilib",
+              "play-pause-on-click": "Kliklədikdə Başlat/Dayan"
             }
           },
           "visual-tweaks": {
@@ -166,6 +167,63 @@
               }
             }
           }
+        }
+      },
+      "view": {
+        "submenu": {
+          "reset-zoom": "Həqiqi Ölçü",
+          "toggle-fullscreen": "Bütün Ekranı Aktivləşdir",
+          "zoom-in": "Yaxınlaşdır",
+          "zoom-out": "Uzaqlaşdır"
+        }
+      }
+    },
+    "tray": {
+      "next": "Sonrakı",
+      "play-pause": "Başlat/Dayan",
+      "previous": "Əvvəlki",
+      "quit": "Çıxış",
+      "restart": "Tətbiqi Yenidən Başlat",
+      "show": "Pəncərəni Göstər"
+    }
+  },
+  "plugins": {
+    "ad-speedup": {
+      "description": "Reklam çıxarsa səssizə al və oynanış sürətini 16 dəfə artır",
+      "name": "Reklam Oynanış Sürətini Artırmaq"
+    },
+    "adblocker": {
+      "description": "Bütün reklamları və izləməni birbaşa blokla",
+      "menu": {
+        "blocker": "Bloklayıcı"
+      },
+      "name": "Reklam Bloklayıcı"
+    },
+    "album-actions": {
+      "description": "Bəyənməməni geri alma, Bəyənməmə, Bəyənmə və Bəyənməni geri alma düymələrini bütün mahnı və albumlara tətbiq etməyi əlavə et",
+      "name": "Albom Düymələri"
+    },
+    "ambient-mode": {
+      "menu": {
+        "use-fullscreen": {
+          "label": "Bütün Ekran modunu istifadə et"
+        }
+      }
+    },
+    "api-server": {
+      "menu": {
+        "auth-strategy": {
+          "submenu": {
+            "auth-at-first": {
+              "label": "İlk istəkdə səlahiyyətləndir"
+            },
+            "none": {
+              "label": "Səlahiyyətləndirmə yoxdur"
+            }
+          }
+        },
+        "hostname": {
+          "label": "Sahib adı"
         }
       }
     }

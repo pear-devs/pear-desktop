@@ -842,6 +842,24 @@
         "not-found": "⚠️ Aucune paroles trouvées pour ce titre."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Convertir les caractères Chinois",
+          "submenu": {
+            "disabled": {
+              "label": "Désactivé",
+              "tooltip": "Désactiver la conversion des caractères Chinois"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplifié a Traditionnel",
+              "tooltip": "Convertir le Chinois Simplifié au Chinois Traditionnel"
+            },
+            "traditional-to-simplified": {
+              "label": "Traditionnel a Simplifié",
+              "tooltip": "Convertir le Chinois Traditionnel au Chinois Simplifié"
+            }
+          },
+          "tooltip": "Convertir les caractères Chinois en Traditionnel ou Simplifié"
+        },
         "default-text-string": {
           "label": "Caractère par défaut entre les paroles",
           "tooltip": "Choisi le caractère par défaut à utiliser pour les blancs entre les paroles"

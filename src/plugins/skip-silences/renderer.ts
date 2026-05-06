@@ -14,7 +14,10 @@ const speakingHistory = Array.from({ length: history }).fill(0) as number[];
 
 let playOrSeekHandler: (() => void) | undefined;
 
-const getMaxVolume = (analyser: AnalyserNode, fftBins: Float32Array) => {
+const getMaxVolume = (
+  analyser: AnalyserNode,
+  fftBins: Float32Array<ArrayBuffer>,
+) => {
   let maxVolume = Number.NEGATIVE_INFINITY;
   analyser.getFloatFrequencyData(fftBins);
 

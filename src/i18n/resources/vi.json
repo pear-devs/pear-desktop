@@ -161,7 +161,8 @@
                 "default": "Mặc định",
                 "force-show": "Tập trung hiển thị",
                 "hide": "Ẩn",
-                "label": "Nút thích"
+                "label": "Nút thích",
+                "swap": "Hoán đổi thứ tự nút Thích"
               },
               "remove-upgrade-button": "Xóa nút nâng cấp",
               "theme": {
@@ -237,7 +238,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Bật tùy chỉnh giao diện cho thanh trượt"
       },
       "name": "Màu nền album"
     },
@@ -321,9 +323,18 @@
           "label": "Tên máy chủ"
         },
         "https": {
+          "label": "HTTPS & Chứng chỉ",
           "submenu": {
+            "cert": {
+              "dialogTitle": "Chọn tệp chứng chỉ HTTPS",
+              "label": "Tệp chứng chỉ (.crt/.pem)"
+            },
             "enable-https": {
               "label": "Bật HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Chọn tệp khóa riêng HTTPS",
+              "label": "Tệp khóa riêng (.key/.pem)"
             }
           }
         },
@@ -401,6 +412,17 @@
         "caption-disabled": "Tắt phụ đề",
         "no-captions": "Không có phụ đề nào cho bài hát này"
       }
+    },
+    "clock": {
+      "description": "Thêm đồng hồ vào thanh điều hướng",
+      "menu": {
+        "format": {
+          "24-hour-format": "Định dạng 24h",
+          "display-seconds": "Hiển thị giây",
+          "label": "Định dạng"
+        }
+      },
+      "name": "Đồng hồ"
     },
     "compact-sidebar": {
       "description": "Luôn đặt thanh bên ở chế độ thu gọn",
@@ -820,6 +842,24 @@
         "not-found": "⚠️ Không tìm thấy lời cho bài hát này."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Chuyển đổi kí tự tiếng Trung",
+          "submenu": {
+            "disabled": {
+              "label": "Vô hiệu hóa",
+              "tooltip": "Vô hiệu hóa chuyển đổi kí tự tiếng Trung"
+            },
+            "simplified-to-traditional": {
+              "label": "Giản thể sang Phồn thể",
+              "tooltip": "Chuyển đổi tiếng Trung Giản thể sang tiếng Trung Phồn thể"
+            },
+            "traditional-to-simplified": {
+              "label": "Phồn thể sang Giản thể",
+              "tooltip": "Chuyển đổi tiếng Trung Phồn thể sang tiếng Trung Giản thể"
+            }
+          },
+          "tooltip": "Chuyển đổi kí tự tiếng Trung sang Phồn thể hoặc Giản thể"
+        },
         "default-text-string": {
           "label": "Kí tự giữa các lời bài hát",
           "tooltip": "Chọn kí tự mặc định cho khoảng trống giữa các lời bài hát"

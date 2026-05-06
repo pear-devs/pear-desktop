@@ -161,7 +161,8 @@
                 "default": "Predeterminado",
                 "force-show": "Forzar a visualización",
                 "hide": "Agochar",
-                "label": "Botóns de Gústame"
+                "label": "Botóns de Gústame",
+                "swap": "Cambiar a orde dos botóns de Gústame"
               },
               "remove-upgrade-button": "Retirar o botón de anovación",
               "theme": {
@@ -204,7 +205,108 @@
       "next": "Seguinte",
       "play-pause": "Reproducir/Pausar",
       "previous": "Anterior",
-      "quit": "Saír"
+      "quit": "Saír",
+      "restart": "Reiniciar aplicativo",
+      "show": "Mostrar ventá",
+      "tooltip": {
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}}-{{title}}"
+      }
+    }
+  },
+  "plugins": {
+    "adblocker": {
+      "name": "Bloqueador de anuncios"
+    },
+    "album-actions": {
+      "name": "Accións do álbum"
+    },
+    "album-color-theme": {
+      "description": "Aplicar un tema dinámico e efectos visuáis baseados na paleta de cor do álbum",
+      "menu": {
+        "color-mix-ratio": {
+          "label": "Proporción da mezcla de cores",
+          "submenu": {
+            "percent": "{{ratio}}%"
+          }
+        }
+      },
+      "name": "Temas de cor do álbum"
+    },
+    "ambient-mode": {
+      "menu": {
+        "blur-amount": {
+          "label": "Cantidade de difuminado",
+          "submenu": {
+            "pixels": "{{blurAmount}} pixeles"
+          }
+        },
+        "buffer": {
+          "submenu": {
+            "buffer": "{{buffer}}"
+          }
+        },
+        "opacity": {
+          "label": "Opacidade",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "quality": {
+          "label": "Calidade",
+          "submenu": {
+            "pixels": "{{quality}} pixeles"
+          }
+        },
+        "size": {
+          "label": "Tamaño",
+          "submenu": {
+            "percent": "{{size}}%"
+          }
+        },
+        "use-fullscreen": {
+          "label": "Usando pantalla completa"
+        }
+      },
+      "name": "Modo ambiente"
+    },
+    "api-server": {
+      "dialog": {
+        "request": {
+          "buttons": {
+            "allow": "Permitir",
+            "deny": "Rexeitar"
+          }
+        }
+      },
+      "menu": {
+        "hostname": {
+          "label": "Nome do host"
+        },
+        "https": {
+          "label": "HTTPS e certificados",
+          "submenu": {
+            "cert": {
+              "label": "Arquivo de certificado (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Habilitar HTTPS"
+            }
+          }
+        },
+        "port": {
+          "label": "Porto"
+        }
+      }
+    },
+    "audio-compressor": {
+      "name": "Compresor de audio"
+    },
+    "auth-proxy-adapter": {
+      "menu": {
+        "disable": "Desabilitar adaptador Proxy",
+        "enable": "Habilitar adaptador Proxy"
+      }
     }
   }
 }

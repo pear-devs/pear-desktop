@@ -4,11 +4,15 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+permissions: {}
+
 env:
-  NODE_VERSION: "22.x"
+  NODE_VERSION: "24.x"
 
 jobs:
   check-permissions:
+    permissions:
+      contents: read
     if: github.event.pull_request.draft == false
     name: Check if user has write access
     runs-on: ubuntu-latest
@@ -17,7 +21,7 @@ jobs:
     steps:
       - name: Check user permission
         id: check
-        uses: actions-cool/check-user-permission@v2
+        uses: actions-cool/check-user-permission@7b90a27f92f3961b368376107661682c441f6103
         with:
           require: write
           username: ${{ github.event.pull_request.user.login }}
@@ -33,24 +37,24 @@ jobs:
         os: [macos-latest, ubuntu-latest, windows-latest]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with:
           version: 10
           run_install: false
 
       - name: Setup NodeJS
         if: startsWith(matrix.os, 'macOS') != true
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Setup NodeJS for macOS
         if: startsWith(matrix.os, 'macOS')
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -87,7 +91,7 @@ jobs:
           pnpm dist:win
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
           name: build-artifacts-${{ matrix.os }}
           path: pack/
@@ -103,7 +107,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Create comment
-        uses: actions/github-script@v8
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
         with:
           script: |
             const runId = context.runId;

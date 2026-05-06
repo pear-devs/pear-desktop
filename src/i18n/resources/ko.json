@@ -842,6 +842,13 @@
         "not-found": "⚠️ 이 노래의 가사를 찾을 수 없습니다."
       },
       "menu": {
+        "convert-chinese-character": {
+          "submenu": {
+            "disabled": {
+              "label": "비활성화됨"
+            }
+          }
+        },
         "default-text-string": {
           "label": "가사 사이에 표시할 문자",
           "tooltip": "가사 사이의 빈 공간에 사용할 문자를 선택합니다"

@@ -161,7 +161,8 @@
                 "default": "Standard",
                 "force-show": "Zeigen erzwungen",
                 "hide": "Versteckt",
-                "label": "Gefällt mir-Knopf"
+                "label": "Gefällt mir-Knopf",
+                "swap": "Gefällt mir-Knopf Reihenfolge ändern"
               },
               "remove-upgrade-button": "Upgrade-Schaltfläche entfernen",
               "theme": {
@@ -411,6 +412,17 @@
         "caption-disabled": "Untertitel deaktiviert",
         "no-captions": "Keine Untertitel für dieses Lied verfügbar"
       }
+    },
+    "clock": {
+      "description": "Füge eine Uhr der Navigationsleiste hinzu",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-Stunden Format",
+          "display-seconds": "Sekunden anzeigen",
+          "label": "Format"
+        }
+      },
+      "name": "Uhr"
     },
     "compact-sidebar": {
       "description": "Seitenleiste immer in den kompakten Modus setzen",
@@ -830,6 +842,24 @@
         "not-found": "⚠️ Kein Text für diesen Song gefunden."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Chinesische Zeichen Umwandeln",
+          "submenu": {
+            "disabled": {
+              "label": "Deaktiviert",
+              "tooltip": "Chinesische Zeichenkonvertierung deaktivieren"
+            },
+            "simplified-to-traditional": {
+              "label": "Vereinfacht zu Traditionell",
+              "tooltip": "Vereinfachtes Chinesisch in traditionelles Chinesisch umwandeln"
+            },
+            "traditional-to-simplified": {
+              "label": "Traditionell zu Vereinfacht",
+              "tooltip": "Traditionelles Chinesisch in vereinfachtes Chinesisch umwandeln"
+            }
+          },
+          "tooltip": "Chinesische Zeichen in traditionell oder vereinfacht umwandeln"
+        },
         "default-text-string": {
           "label": "Standardzeichen zwischen Texten",
           "tooltip": "Standardzeichen für die Lücke zwischen Songtexten auswählen"

@@ -842,6 +842,24 @@
         "not-found": "⚠️未找到該首歌曲的歌詞。"
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "繁簡轉換",
+          "submenu": {
+            "disabled": {
+              "label": "已停用",
+              "tooltip": "停用繁簡轉換"
+            },
+            "simplified-to-traditional": {
+              "label": "簡體轉繁體",
+              "tooltip": "轉換簡體中文至繁體中文"
+            },
+            "traditional-to-simplified": {
+              "label": "繁體轉簡體",
+              "tooltip": "轉換繁體中文至簡體中文"
+            }
+          },
+          "tooltip": "轉換中文字符至繁體或簡體"
+        },
         "default-text-string": {
           "label": "預設歌詞中間隔的符號",
           "tooltip": "選擇歌詞中間隔要使用的符號"

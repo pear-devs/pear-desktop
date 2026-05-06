@@ -3,13 +3,16 @@ name: Build Pear Desktop
 on:
   push:
     branches: [ master ]
-  pull_request:
+
+permissions: {}
 
 env:
-  NODE_VERSION: "22.x"
+  NODE_VERSION: "24.x"
 
 jobs:
   build:
+    permissions:
+      contents: write
     if: github.event.pull_request.draft == false
     name: Build Pear Desktop
     runs-on: ${{ matrix.os }}
@@ -19,24 +22,24 @@ jobs:
         os: [ macos-26, ubuntu-latest, windows-latest ]
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with:
           version: 10
           run_install: false
 
       - name: Setup NodeJS
         if: startsWith(matrix.os, 'macOS') != true
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Setup NodeJS for macOS
         if: startsWith(matrix.os, 'macOS')
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -79,7 +82,7 @@ jobs:
           pnpm release:win
 
       - name: Test
-        uses: coactions/setup-xvfb@v1
+        uses: coactions/setup-xvfb@b6b4fcfb9f5a895edadc3bc76318fae0ac17c8b3
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
         with:
@@ -87,31 +90,33 @@ jobs:
 
 
   release:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     name: Release Pear Desktop
     if: github.repository == 'pear-devs/pear-desktop' && github.ref == 'refs/heads/master'
     needs: build
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           fetch-depth: 0
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with:
           version: 10
           run_install: false
 
       - name: Setup NodeJS
         if: startsWith(matrix.os, 'macOS') != true
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Setup NodeJS for macOS
         if: startsWith(matrix.os, 'macOS')
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
 
@@ -129,7 +134,7 @@ jobs:
 
       - name: Fetch draft release
         if: ${{ env.VERSION_HASH == '' }}
-        uses: cardinalby/git-get-release-action@v1
+        uses: cardinalby/git-get-release-action@cedef2faf69cb7c55b285bad07688d04430b7ada
         id: get_draft_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -140,7 +145,7 @@ jobs:
 
       - name: Publish Release (if it does not exist)
         if: ${{ env.VERSION_HASH == '' }}
-        uses: irongut/EditRelease@v1.2.0
+        uses: irongut/EditRelease@ccf529ad26dddf9996e7dd0f24ca5da4ea507cc2
         with:
           token: ${{ secrets.GH_TOKEN }}
           id: ${{ steps.get_draft_release.outputs.id }}
@@ -163,7 +168,7 @@ jobs:
 
       - name: Commit changelog
         if: ${{ env.VERSION_HASH == '' }}
-        uses: stefanzweifel/git-auto-commit-action@v6
+        uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9
         with:
           commit_message: Update changelog for ${{ env.VERSION_TAG }}
           file_pattern: "changelog.md"
