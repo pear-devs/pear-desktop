@@ -41,7 +41,9 @@ export class YTMusic implements LyricProvider {
     const { browseId } = lyricsTab?.tabRenderer?.endpoint?.browseEndpoint ?? {};
     if (!browseId) return null;
 
-    const { contents } = await this.fetchBrowse(browseId);
+    const browseData = await this.fetchBrowse(browseId);
+    if (!browseData) return null;
+    const { contents } = browseData;
     if (!contents) return null;
 
     /*
@@ -124,7 +126,7 @@ export class YTMusic implements LyricProvider {
     });
   }
 
-  private fetchBrowse(browseId: string): Promise<BrowseData> {
+  private fetchBrowse(browseId: string): Promise<BrowseData | null> {
     if (config()?.useYTMLyricsWithoutProxy) {
       return this.fetchBrowseDirect(browseId);
     }
@@ -143,10 +145,10 @@ export class YTMusic implements LyricProvider {
   // network manager, which injects the visitor/auth tokens that the request
   // would otherwise be missing when called from regions where the unauthenticated
   // call is geo-restricted.
-  private async fetchBrowseDirect(browseId: string): Promise<BrowseData> {
+  private async fetchBrowseDirect(browseId: string): Promise<BrowseData | null> {
     const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
     if (!app) {
-      throw new Error('ytmusic-app element not found');
+      return null;
     }
 
     return await app.networkManager.fetch<BrowseData, { browseId: string }>(
