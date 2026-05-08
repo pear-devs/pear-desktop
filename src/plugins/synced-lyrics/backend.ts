@@ -461,12 +461,17 @@ export const backend = createBackend({
         resizable: true,
         minimizable: true,
         hasShadow: true,
+        focusable: true,
+        type: 'toolbar',
         webPreferences: {
           nodeIntegration: true,
           contextIsolation: false,
           sandbox: false,
         },
       });
+
+      floatingWin.setAlwaysOnTop(true, 'screen-saver', 1);
+      floatingWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
 
       floatingWin.loadURL(
         `data:text/html;charset=utf-8,${encodeURIComponent(FLOATING_HTML)}`,
@@ -522,7 +527,15 @@ export const backend = createBackend({
     ipcMain.handle('floating-lyrics:toggle-pin', () => {
       if (floatingWin && !floatingWin.isDestroyed()) {
         const isOnTop = floatingWin.isAlwaysOnTop();
-        floatingWin.setAlwaysOnTop(!isOnTop);
+        if (isOnTop) {
+          floatingWin.setAlwaysOnTop(false);
+          floatingWin.setVisibleOnAllWorkspaces(false);
+        } else {
+          floatingWin.setAlwaysOnTop(true, 'screen-saver', 1);
+          floatingWin.setVisibleOnAllWorkspaces(true, {
+            visibleOnFullScreen: true,
+          });
+        }
         return !isOnTop;
       }
       return false;
