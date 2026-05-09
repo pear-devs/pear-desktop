@@ -462,7 +462,9 @@ export const backend = createBackend({
         minimizable: false,
         hasShadow: true,
         focusable: true,
-        type: 'utility',
+        parent: ctx.window,
+        type: 'panel',
+        show: false,
         webPreferences: {
           nodeIntegration: true,
           contextIsolation: false,
@@ -470,8 +472,13 @@ export const backend = createBackend({
         },
       });
 
-      floatingWin.setAlwaysOnTop(true, 'screen-saver', 1);
-      floatingWin.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+      floatingWin.once('ready-to-show', () => {
+        floatingWin?.show();
+        floatingWin?.setAlwaysOnTop(true, 'status', 1);
+        floatingWin?.setVisibleOnAllWorkspaces(true, {
+          visibleOnFullScreen: true,
+        });
+      });
 
       floatingWin.loadURL(
         `data:text/html;charset=utf-8,${encodeURIComponent(FLOATING_HTML)}`,
@@ -538,7 +545,7 @@ export const backend = createBackend({
           floatingWin.setAlwaysOnTop(false);
           floatingWin.setVisibleOnAllWorkspaces(false);
         } else {
-          floatingWin.setAlwaysOnTop(true, 'screen-saver', 1);
+          floatingWin.setAlwaysOnTop(true, 'status', 1);
           floatingWin.setVisibleOnAllWorkspaces(true, {
             visibleOnFullScreen: true,
           });
