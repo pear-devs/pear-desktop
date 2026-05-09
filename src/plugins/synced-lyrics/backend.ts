@@ -457,12 +457,12 @@ export const backend = createBackend({
         frame: false,
         transparent: true,
         alwaysOnTop: true,
-        skipTaskbar: false,
+        skipTaskbar: true,
         resizable: true,
-        minimizable: true,
+        minimizable: false,
         hasShadow: true,
         focusable: true,
-        type: 'toolbar',
+        type: 'utility',
         webPreferences: {
           nodeIntegration: true,
           contextIsolation: false,
@@ -480,6 +480,13 @@ export const backend = createBackend({
       floatingWin.on('closed', () => {
         floatingWin = null;
         ctx.ipc.send('synced-lyrics:floating-closed');
+      });
+
+      floatingWin.on('blur', () => {
+        if (floatingWin && !floatingWin.isDestroyed() && floatingWin.isAlwaysOnTop()) {
+          // Aggressively enforce always-on-top on focus loss (for strict Linux WMs)
+          floatingWin.setAlwaysOnTop(true, 'screen-saver', 1);
+        }
       });
     });
 
