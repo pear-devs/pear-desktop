@@ -462,8 +462,7 @@ export const backend = createBackend({
         minimizable: false,
         hasShadow: true,
         focusable: true,
-        parent: ctx.window,
-        type: 'panel',
+        type: 'dock',
         show: false,
         webPreferences: {
           nodeIntegration: true,
@@ -474,7 +473,7 @@ export const backend = createBackend({
 
       floatingWin.once('ready-to-show', () => {
         floatingWin?.show();
-        floatingWin?.setAlwaysOnTop(true, 'status', 1);
+        floatingWin?.setAlwaysOnTop(true, 'screen-saver', 1);
         floatingWin?.setVisibleOnAllWorkspaces(true, {
           visibleOnFullScreen: true,
         });
@@ -545,7 +544,7 @@ export const backend = createBackend({
           floatingWin.setAlwaysOnTop(false);
           floatingWin.setVisibleOnAllWorkspaces(false);
         } else {
-          floatingWin.setAlwaysOnTop(true, 'status', 1);
+          floatingWin.setAlwaysOnTop(true, 'screen-saver', 1);
           floatingWin.setVisibleOnAllWorkspaces(true, {
             visibleOnFullScreen: true,
           });
