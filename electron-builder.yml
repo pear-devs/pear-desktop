@@ -5,10 +5,9 @@ files:
   - dist
   - assets
   - license
-  - '!node_modules'
-  - 'node_modules/custom-electron-prompt/**'
-  - 'node_modules/@ghostery/adblocker-electron-preload/**'
-  - 'node_modules/@ffmpeg.wasm/core-mt/**'
+  # electron-vite externalizes most npm deps from the main/preload bundles, so
+  # they have to be shipped via node_modules. Let electron-builder include
+  # production deps by default; just trim out source maps and TypeScript.
   - '!node_modules/**/*.map'
   - '!node_modules/**/*.ts'
 asarUnpack:
