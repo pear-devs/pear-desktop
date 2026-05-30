@@ -16,7 +16,7 @@ import {
 import is from 'electron-is';
 import filenamify from 'filenamify';
 import { Mutex } from 'async-mutex';
-import * as NodeID3 from 'node-id3';
+import NodeID3 from 'node-id3';
 import { BG, type BgConfig } from 'bgutils-js';
 import lazyVar from 'lazy-var';
 
