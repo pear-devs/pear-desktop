@@ -100,9 +100,7 @@ const handleData = async (
     }
     // Used for options.resumeOnStart
     config.set('url', microformat.urlCanonical);
-    songInfo.alternativeTitle = microformat.linkAlternates.find(
-      (link) => link.title,
-    )?.title;
+    songInfo.alternativeTitle = microformat.title;
     songInfo.tags = Array.isArray(microformat.tags) ? microformat.tags : [];
   }
 
@@ -116,6 +114,11 @@ const handleData = async (
     songInfo.isPaused = videoDetails.isPaused;
     songInfo.videoId = videoDetails.videoId;
     songInfo.album = videoDetails.album; // Will be undefined if video exist
+
+    // Prefer YouTube Music metadata title when available
+    if (songInfo.alternativeTitle) {
+      songInfo.title = songInfo.alternativeTitle;
+    }
 
     switch (videoDetails?.musicVideoType) {
       case 'MUSIC_VIDEO_TYPE_ATV':
