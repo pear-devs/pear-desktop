@@ -413,6 +413,18 @@
         "no-captions": "No captions available for this song"
       }
     },
+    "chromecast": {
+      "name": "Chromecast",
+      "description": "Cast audio to Google Cast devices (Chromecast, Google Home, Nest) on your local network",
+      "menu": {
+        "devices": "Cast to device",
+        "no-devices": "Searching for devices…",
+        "stop-casting": "Stop casting",
+        "refresh-devices": "Refresh device list",
+        "mute-local": "Mute local playback while casting",
+        "auto-connect": "Reconnect to last device on startup"
+      }
+    },
     "clock": {
       "description": "Add a clock to the navigation bar",
       "name": "Clock",

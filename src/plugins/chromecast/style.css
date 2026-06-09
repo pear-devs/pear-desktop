@@ -1,0 +1,96 @@
+.chromecast-button-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.chromecast-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.chromecast-button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.chromecast-button svg {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+.chromecast-button-container.casting .chromecast-button {
+  color: #3ea6ff;
+}
+
+.chromecast-popup {
+  position: absolute;
+  bottom: 48px;
+  right: 0;
+  min-width: 240px;
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 8px 0;
+  background: #212121;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+}
+
+.chromecast-popup-header {
+  padding: 6px 16px 10px;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.chromecast-device {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.chromecast-device:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.chromecast-device.active .chromecast-device-name {
+  color: #3ea6ff;
+  font-weight: 500;
+}
+
+.chromecast-device-name {
+  font-size: 14px;
+}
+
+.chromecast-device-model {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.chromecast-empty {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+}
