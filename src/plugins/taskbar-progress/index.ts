@@ -44,7 +44,7 @@ const setProgressBar = async (
 ) => {
   window.setProgressBar(progress, options);
 
-  isLinux ??= (await import('electron-is')).linux();
+  isLinux ??= process.platform === 'linux';
   if (isLinux) {
     bus ??= dbus.sessionBus();
 
