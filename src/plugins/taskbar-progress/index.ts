@@ -14,7 +14,7 @@ import type { BrowserWindow } from 'electron';
 const requiredSongInfoSchema = z.object({
   title: z.string().min(1),
   elapsedSeconds: z.number().optional(),
-  songDuration: z.number(),
+  songDuration: z.number().positive(),
   isPaused: z.boolean().optional(),
 });
 
@@ -85,7 +85,9 @@ const updateProgressBar = (songInfo: SongInfo, window: BrowserWindow) => {
     lastSongInfo = songInfo;
   }
 
-  const progress = (elapsedSeconds ?? 0) / songDuration;
+  const progress = songDuration > 0
+    ? (elapsedSeconds ?? 0) / songDuration
+    : 0;
   const options: { mode: 'normal' | 'paused' } = {
     mode: isPaused ? 'paused' : 'normal',
   };
@@ -116,6 +118,7 @@ const startProgressInterval = (songInfo: SongInfo, window: BrowserWindow) => {
           },
           window,
         );
+        baseElapsedSeconds = elapsedSeconds;
         // Reset the interval start so timeDelta is measured per tick,
         // avoiding cumulative over-counting of elapsed time.
         intervalStart = performance.now();
