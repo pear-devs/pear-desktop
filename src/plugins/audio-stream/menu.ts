@@ -13,7 +13,7 @@ import {
 
 // Quality and latency presets
 const SAMPLE_RATES = [44100, 48000, 96000];
-const BIT_DEPTHS = [16, 32];
+const BITRATES = [96000, 128000, 192000, 256000];
 const CHANNELS = [1, 2];
 const BUFFER_SIZES = [1024, 2048, 4096, 8192];
 
@@ -77,16 +77,16 @@ export const onMenu = async ({
           })),
         },
         {
-          label: t('plugins.audio-stream.menu.quality-latency.submenu.bit-depth.label'),
+          label: t('plugins.audio-stream.menu.quality-latency.submenu.bitrate.label'),
           type: 'submenu',
-          submenu: BIT_DEPTHS.map((bitDepth) => ({
-            label: `${bitDepth}-bit`,
+          submenu: BITRATES.map((bitrate) => ({
+            label: `${bitrate / 1000} kbps`,
             type: 'radio' as const,
-            checked: config.bitDepth === bitDepth,
+            checked: config.bitrate === bitrate,
             async click() {
               const currentConfig = await getConfig();
-              if (currentConfig.bitDepth !== bitDepth) {
-                await setConfig({ ...currentConfig, bitDepth });
+              if (currentConfig.bitrate !== bitrate) {
+                await setConfig({ ...currentConfig, bitrate });
               }
             },
           })),

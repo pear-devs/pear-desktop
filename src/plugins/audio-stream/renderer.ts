@@ -7,69 +7,46 @@ import type { MusicPlayer } from '@/types/music-player';
 
 import type { AudioStreamConfig } from './config';
 
-type ProcessingQueueItem = {
-  buffer: Int16Array | Int32Array;
-  metadata: {
-    timestamp: number;
-    sampleRate: number;
-    bitDepth: number;
-    channels: number;
-  };
-};
+const ENCODE_RATE = 48000; // Opus operates at 48 kHz; bridge resamples to this.
+
+// Minimal OpusHead (RFC 7845), used only if WebCodecs doesn't supply one via
+// decoderConfig.description (Chromium normally does).
+function synthOpusHead(channels: number): Uint8Array {
+  const head = new Uint8Array(19);
+  const dv = new DataView(head.buffer);
+  head.set(new TextEncoder().encode('OpusHead'), 0);
+  head[8] = 1; // version
+  head[9] = channels;
+  dv.setUint16(10, 312, true); // pre-skip (~6.5 ms)
+  dv.setUint32(12, ENCODE_RATE, true); // original input sample rate
+  dv.setUint16(16, 0, true); // output gain
+  head[18] = 0; // channel mapping family 0
+  return head;
+}
 
 type RendererProperties = {
   audioContext?: AudioContext;
   audioSource?: AudioNode;
-  scriptProcessor?: ScriptProcessorNode;
   config?: AudioStreamConfig;
   context?: RendererContext<AudioStreamConfig>;
   isStreaming: boolean;
-  batchBuffer: Int16Array | Int32Array | null;
-  batchCount: number;
-  processingQueue: ProcessingQueueItem[];
-  isProcessing: boolean;
+  // WebCodecs Opus pipeline state.
+  bridgeContext?: AudioContext;
+  encoder?: AudioEncoder;
+  encodedFrames: number; // 48 kHz samples fed to the encoder (for timestamps)
+  sentHead: boolean;
   startStreaming: (
     ipc: RendererContext<{ enabled: boolean }>['ipc'],
     audioContext: AudioContext,
     audioSource: AudioNode,
   ) => void;
+  stop: () => void;
 };
-
-function writeString(view: DataView, offset: number, str: string) {
-  for (let i = 0; i < str.length; i++) {
-    view.setUint8(offset + i, str.charCodeAt(i));
-  }
-}
-
-function createWavHeader(
-  sampleRate: number,
-  numChannels: number,
-  dataLength: number,
-) {
-  const header = new ArrayBuffer(44);
-  const view = new DataView(header);
-  writeString(view, 0, 'RIFF');
-  view.setUint32(4, 36 + dataLength, true); // file size - 8
-  writeString(view, 8, 'WAVE');
-  writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true); // subchunk1 size (16 for PCM)
-  view.setUint16(20, 1, true); // audio format (1 = PCM)
-  view.setUint16(22, numChannels, true); // number of channels
-  view.setUint32(24, sampleRate, true); // sample rate
-  view.setUint32(28, sampleRate * numChannels * 2, true); // byte rate
-  view.setUint16(32, numChannels * 2, true); // block align
-  view.setUint16(34, 16, true); // bits per sample
-  writeString(view, 36, 'data');
-  view.setUint32(40, dataLength, true); // data chunk size
-  return new Uint8Array(header);
-}
 
 export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
   isStreaming: false,
-  batchBuffer: null,
-  batchCount: 0,
-  processingQueue: [],
-  isProcessing: false,
+  encodedFrames: 0,
+  sentHead: false,
 
   async onPlayerApiReady(
     _: MusicPlayer,
@@ -108,105 +85,120 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
 
     this.audioContext = audioContext;
     this.audioSource = audioSource;
+    this.encodedFrames = 0;
+    this.sentHead = false;
 
-    const sampleRate = audioContext.sampleRate;
+    // Opus needs 48 kHz; the app's AudioContext may be 44.1 kHz. Fan the source
+    // out to a MediaStream and read it back through our own 48 kHz context,
+    // which resamples for free. This extra connect does not disturb the app's
+    // own audio output.
+    const msDest = audioContext.createMediaStreamDestination();
+    audioSource.connect(msDest);
+
+    const bridge = new AudioContext({ sampleRate: ENCODE_RATE });
+    this.bridgeContext = bridge;
+    const bridgeSource = bridge.createMediaStreamSource(msDest.stream);
+
+    // Set up the Opus encoder. Each EncodedAudioChunk is one Opus packet.
+    const encoder = new AudioEncoder({
+      output: (chunk, meta) => {
+        if (!this.sentHead) {
+          const desc = meta?.decoderConfig?.description;
+          const head = desc
+            ? ArrayBuffer.isView(desc)
+              ? new Uint8Array(
+                  desc.buffer.slice(
+                    desc.byteOffset,
+                    desc.byteOffset + desc.byteLength,
+                  ),
+                )
+              : new Uint8Array(desc.slice(0))
+            : synthOpusHead(2); // fallback if Chromium omits the description
+          ipc.send('audio-stream:opus-head', head);
+          this.sentHead = true;
+        }
+        const bytes = new Uint8Array(chunk.byteLength);
+        chunk.copyTo(bytes);
+        ipc.send('audio-stream:opus', {
+          bytes,
+          durationUs: chunk.duration ?? 0,
+        });
+      },
+      error: (err) => console.error('[Audio Stream] Opus encoder error:', err),
+    });
+    encoder.configure({
+      codec: 'opus',
+      sampleRate: ENCODE_RATE,
+      numberOfChannels: 2,
+      bitrate: this.config!.bitrate ?? 128000,
+    });
+    this.encoder = encoder;
 
     const blob = new Blob([workletCode], { type: 'application/javascript' });
     const blobUrl = URL.createObjectURL(blob);
 
-    try {
-      audioContext.audioWorklet
-        .addModule(blobUrl)
-        .then(() => {
-          const workletNode = new AudioWorkletNode(
-            audioContext,
-            'recorder-processor',
-            {
-              sampleRate: this.config!.sampleRate,
-              bufferSize: bufferSize,
-            },
-          );
-
-          workletNode.port.onmessage = (event) => {
-            // Received a Float32Array of interleaved stereo samples from the worklet
-            const float32Data = event.data;
-
-            // Convert floats [-1,1] to 16-bit PCM
-            const int16Buffer = new ArrayBuffer(float32Data.length * 2);
-            const view = new DataView(int16Buffer);
-            for (let i = 0; i < float32Data.length; i++) {
-              const s = Math.max(-1, Math.min(1, float32Data[i])); // clamp
-              // Scale to 16-bit signed range
-              view.setInt16(i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-            }
-            const pcmData = new Uint8Array(int16Buffer);
-
-            // Build WAV header (16-bit, stereo, given sample rate, data length = pcmData.byteLength)
-            const wavHeader = createWavHeader(
-              audioContext.sampleRate,
-              2,
-              pcmData.byteLength,
-            );
-
-            // Combine header + PCM data into one Uint8Array
-            const wavChunk = new Uint8Array(wavHeader.length + pcmData.length);
-            wavChunk.set(wavHeader, 0);
-            wavChunk.set(pcmData, wavHeader.length);
-
-            ipc.send('audio-stream:pcm-binary', wavChunk);
-          };
-
-          audioSource.connect(workletNode);
-          this.isStreaming = true;
-        })
-        .catch((err) => {
-          console.error(
-            '[Audio Stream] Failed to add audio worklet module:',
-            err,
-          );
+    bridge.audioWorklet
+      .addModule(blobUrl)
+      .then(() => {
+        const workletNode = new AudioWorkletNode(bridge, 'recorder-processor', {
+          processorOptions: { bufferSize },
         });
-    } catch (err) {
-      console.error('[Audio Stream] AudioWorklet setup failed:', err);
-    }
-    this.isStreaming = true;
 
-    console.log('[Audio Stream] Started PCM streaming:');
+        workletNode.port.onmessage = (event) => {
+          if (!this.encoder || this.encoder.state !== 'configured') return;
+          // Interleaved stereo Float32 at 48 kHz from the worklet.
+          const interleaved: Float32Array = event.data;
+          const numberOfFrames = interleaved.length / 2;
+          const audioData = new AudioData({
+            format: 'f32',
+            sampleRate: ENCODE_RATE,
+            numberOfFrames,
+            numberOfChannels: 2,
+            timestamp: Math.round((this.encodedFrames / ENCODE_RATE) * 1e6),
+            data: interleaved as unknown as BufferSource,
+          });
+          this.encodedFrames += numberOfFrames;
+          try {
+            this.encoder.encode(audioData);
+          } finally {
+            audioData.close();
+          }
+        };
+
+        bridgeSource.connect(workletNode);
+        // A muted sink keeps the bridge graph pulling without playing the audio
+        // a second time (the app already outputs it on its own context).
+        const mute = bridge.createGain();
+        mute.gain.value = 0;
+        workletNode.connect(mute).connect(bridge.destination);
+        this.isStreaming = true;
+        console.log('[Audio Stream] Started Opus streaming');
+      })
+      .catch((err) => {
+        console.error('[Audio Stream] Failed to add audio worklet module:', err);
+      });
+
+    this.isStreaming = true;
   },
 
   stop() {
     this.isStreaming = false;
 
-    // Clear processing queue to prevent sending stale data
-    this.processingQueue = [];
-    this.isProcessing = false;
-
-    // Flush any remaining batched data
-    if (this.batchBuffer && this.batchBuffer.length > 0 && this.context) {
+    // Tear down the Opus encoder and the 48 kHz bridge context.
+    if (this.encoder) {
       try {
-        let buffer: ArrayBuffer;
-        if (this.batchBuffer.buffer instanceof SharedArrayBuffer) {
-          buffer = new ArrayBuffer(this.batchBuffer.buffer.byteLength);
-          new Uint8Array(buffer).set(new Uint8Array(this.batchBuffer.buffer));
-        } else {
-          buffer = this.batchBuffer.buffer;
-        }
-        const uint8 = new Uint8Array(buffer);
-        this.context.ipc.send('audio-stream:pcm-binary', uint8);
+        if (this.encoder.state !== 'closed') this.encoder.close();
       } catch {
-        // Ignore flush errors
+        // Ignore close errors
       }
-      this.batchBuffer = null;
-      this.batchCount = 0;
+      this.encoder = undefined;
     }
-
-    if (this.scriptProcessor) {
-      try {
-        this.scriptProcessor.disconnect();
-      } catch {
-        // Ignore disconnect errors
-      }
-      this.scriptProcessor = undefined;
+    if (this.bridgeContext) {
+      this.bridgeContext.close().catch(() => {});
+      this.bridgeContext = undefined;
     }
+    this.sentHead = false;
+    this.encodedFrames = 0;
 
     this.audioContext = undefined;
     this.audioSource = undefined;
@@ -214,13 +206,13 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
 
   onConfigChange(config: AudioStreamConfig) {
     const wasEnabled = this.config?.enabled;
-    const oldBitDepth = this.config?.bitDepth;
+    const oldBitrate = this.config?.bitrate;
     const oldChannels = this.config?.channels;
     const oldBufferSize = this.config?.bufferSize;
 
     // Check if quality/latency settings changed
     const qualityChanged =
-      oldBitDepth !== config.bitDepth ||
+      oldBitrate !== config.bitrate ||
       oldChannels !== config.channels ||
       oldBufferSize !== config.bufferSize;
 
@@ -251,19 +243,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
       }
     } else if (!config.enabled && wasEnabled) {
       // Stop streaming
-      this.isStreaming = false;
-
-      if (this.scriptProcessor) {
-        try {
-          this.scriptProcessor.disconnect();
-        } catch {
-          // Ignore disconnect errors
-        }
-        this.scriptProcessor = undefined;
-      }
-
-      this.audioContext = undefined;
-      this.audioSource = undefined;
+      this.stop();
     } else if (
       config.enabled &&
       wasEnabled &&
@@ -272,25 +252,11 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
     ) {
       // Quality/latency settings changed while streaming - restart with new settings
       if (this.audioContext && this.audioSource) {
-        // Stop current streaming
-        this.isStreaming = false;
-
-        // Clear processing queue to prevent sending stale data
-        this.processingQueue = [];
-        this.isProcessing = false;
-
         // Store references before cleanup
         const audioContext = this.audioContext;
         const audioSource = this.audioSource;
 
-        if (this.scriptProcessor) {
-          try {
-            this.scriptProcessor.disconnect();
-          } catch (error) {
-            // Ignore disconnect errors
-          }
-          this.scriptProcessor = undefined;
-        }
+        this.stop();
 
         // Use requestAnimationFrame to ensure cleanup is complete before restarting
         requestAnimationFrame(() => {

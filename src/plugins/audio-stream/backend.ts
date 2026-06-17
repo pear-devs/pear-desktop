@@ -1,26 +1,34 @@
 import { Hono } from 'hono';
 import { stream } from 'hono/streaming';
 import { serve, type ServerType } from '@hono/node-server';
-import { lazy } from 'lazy-var';
-import { Mutex } from 'async-mutex';
 
 import { createBackend } from '@/utils';
+import { registerCallback, type SongInfo } from '@/providers/song-info';
 import { type AudioStreamConfig } from './config';
 import { BroadcastStream } from './BroadcastStream';
+import { OggOpusMuxer, OggDechainer } from './ogg-opus';
 
-const META_INT = 16_000;
+const VENDOR = 'Pear Desktop';
 
 let config: AudioStreamConfig;
 const broadcast = new BroadcastStream();
 
-const ffmpeg = lazy(async () =>
-  (await import('@ffmpeg.wasm/main')).createFFmpeg({
-    log: true,
-    logger: console.log,
-    progress: console.log,
-  }),
-);
-const ffmpegMutex = new Mutex();
+// Current track metadata (no ffprobe - comes straight from the player).
+let currentSong: SongInfo | null = null;
+
+// Chained Ogg/Opus stream: one logical stream per song. Pages go straight to
+// every subscriber; the muxer caches the current stream's header pages for late
+// joiners.
+const muxer = new OggOpusMuxer((page) => broadcast.write(page));
+
+// OpusTags comments for the current track (text only).
+function currentComments(): string[] {
+  const comments: string[] = [];
+  if (currentSong?.title) comments.push(`TITLE=${currentSong.title}`);
+  if (currentSong?.artist) comments.push(`ARTIST=${currentSong.artist}`);
+  if (currentSong?.album) comments.push(`ALBUM=${currentSong.album}`);
+  return comments.length ? comments : ['TITLE=Pear Desktop'];
+}
 
 export const backend = createBackend<
   {
@@ -29,75 +37,51 @@ export const backend = createBackend<
   },
   AudioStreamConfig
 >({
-  app: new Hono().get('/stream', (ctx) => {
-    ctx.header('Transfer-Encoding', 'chunked');
-    const icyMetadata = ctx.req.header('Icy-Metadata');
+  app: new Hono()
+    .get('/stream', (ctx) => {
+      // Per-song TEXT metadata is carried in-band via chained Ogg logical streams
+      // (OpusTags per track). Some clients can't follow chains - browsers
+      // (<audio>/MSE) reload on a new BOS, and VLC's clock chokes on it - so they
+      // get a de-chained single logical stream instead.
+      const ua = ctx.req.header('User-Agent') ?? '';
+      const needsDechain = /Mozilla|VLC/i.test(ua);
 
-    ctx.header('icy-metaint', META_INT.toString(10));
-    ctx.header('icy-name', 'Pear Desktop');
-    ctx.header('icy-url', 'https://github.com/pear-devs/pear-desktop');
-    ctx.header(
-      'icy-audio-info',
-      `ice-channels=2;ice-samplerate=${config.sampleRate.toString(
-        10,
-      )};ice-bitrate=128`,
-    );
-    ctx.header('icy-pub', '1');
-    ctx.header('icy-sr', config.sampleRate.toString(10));
-    ctx.header('Content-Type', 'audio/L16');
-    ctx.header('Server', 'Pear Desktop');
+      ctx.header('Content-Type', 'audio/ogg');
+      ctx.header('Transfer-Encoding', 'chunked');
 
-    return stream(ctx, async (stream) => {
-      let readable = broadcast.subscribe();
-      if (icyMetadata === '1') {
-        let bytesUntilMetadata = META_INT;
-
-        readable = readable.pipeThrough(
-          new TransformStream({
-            transform(
-              chunk: Uint8Array,
-              controller: TransformStreamDefaultController<Uint8Array>,
-            ) {
-              console.log({ bytesUntilMetadata });
-              let offset = 0;
-
-              while (offset < chunk.byteLength) {
-                if (bytesUntilMetadata === 0) {
-                  const encoder = new TextEncoder();
-
-                  // TODO: add real metadata
-                  const metaBuffer = encoder.encode(
-                    ".StreamTitle='My Cool Stream Title';",
-                  );
-
-                  const padding = (16 - (metaBuffer.byteLength % 16)) % 16;
-                  const metaLength = metaBuffer.byteLength + padding;
-                  const lengthByte = metaLength / 16;
-
-                  controller.enqueue(Uint8Array.from([lengthByte]));
-
-                  if (metaLength > 0) {
-                    controller.enqueue(Uint8Array.from(metaBuffer));
-                  }
-
-                  bytesUntilMetadata = META_INT;
-                }
-
-                const chunkRemaining = chunk.byteLength - offset;
-                const canSend = Math.min(chunkRemaining, bytesUntilMetadata);
-                controller.enqueue(chunk.subarray(offset, offset + canSend));
-
-                bytesUntilMetadata -= canSend;
-                offset += canSend;
-              }
-            },
-          }),
+      if (!needsDechain) {
+        ctx.header('icy-name', 'Pear Desktop');
+        ctx.header('icy-url', 'https://github.com/pear-devs/pear-desktop');
+        ctx.header(
+          'icy-audio-info',
+          `ice-channels=2;ice-samplerate=48000;ice-bitrate=${Math.round(
+            config.bitrate / 1000,
+          )}`,
         );
+        ctx.header('icy-pub', '1');
       }
 
-      return await stream.pipe(readable);
-    });
-  }),
+      ctx.header('Server', 'Pear Desktop');
+
+      return stream(ctx, async (stream) => {
+        // New subscriber gets the cached OpusHead + OpusTags pages first, so the
+        // decoder can initialise before any audio page arrives.
+        let readable = broadcast.subscribe(muxer.headerPages);
+
+        if (needsDechain) {
+          const dechainer = new OggDechainer();
+          readable = readable.pipeThrough(
+            new TransformStream<Uint8Array, Uint8Array>({
+              transform(page, controller) {
+                for (const out of dechainer.push(page)) controller.enqueue(out);
+              },
+            }),
+          );
+        }
+
+        return await stream.pipe(readable);
+      });
+    }),
 
   async start({ getConfig, ipc }) {
     config = await getConfig();
@@ -111,15 +95,39 @@ export const backend = createBackend<
       ({ address, port }) => console.log('Listening on', { address, port }),
     );
 
-    ipc.on('audio-stream:pcm-binary', (chunk: Uint8Array) => {
-      broadcast.write(chunk);
+    // Track metadata (no ffprobe needed). On an actual song change, start a new
+    // logical stream so the new title/artist/album are embedded in-band.
+    // SongInfo also fires for play/pause and time updates, so gate on videoId.
+    let lastVideoId = '';
+    registerCallback((songInfo: SongInfo) => {
+      currentSong = songInfo;
+      if (songInfo.videoId && songInfo.videoId !== lastVideoId) {
+        lastVideoId = songInfo.videoId;
+        if (muxer.ready) muxer.chain(VENDOR, currentComments());
+      }
     });
+
+    // OpusHead (from WebCodecs decoderConfig.description) opens the first stream.
+    ipc.on('audio-stream:opus-head', (head: Uint8Array) => {
+      muxer.setHead(head);
+      muxer.start(VENDOR, currentComments());
+    });
+
+    // Each Opus packet → one Ogg audio page. durationUs is the packet length;
+    // Opus granule positions are counted in 48 kHz samples.
+    ipc.on(
+      'audio-stream:opus',
+      (packet: { bytes: Uint8Array; durationUs: number }) => {
+        const samples = (packet.durationUs * 48000) / 1_000_000;
+        muxer.writePacket(packet.bytes, samples);
+      },
+    );
   },
   async stop() {
-    let resolve;
+    let resolve: (value?: unknown) => void;
 
     const promise = new Promise((r) => (resolve = r));
-    this.server?.close(resolve);
+    this.server?.close(resolve!);
 
     await promise;
   },

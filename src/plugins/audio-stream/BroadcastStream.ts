@@ -2,26 +2,34 @@ export class BroadcastStream {
   private subscribers: Set<ReadableStreamDefaultController<Uint8Array>> =
     new Set();
 
-  // A way for readers to get a new stream
-  subscribe() {
+  // Get a new stream. Any priming pages (e.g. cached Ogg header pages) are
+  // enqueued first so the subscriber can initialise its decoder before the
+  // live audio pages arrive.
+  subscribe(primingPages: Uint8Array[] = []) {
     let controller!: ReadableStreamDefaultController<Uint8Array>;
+    const subscribers = this.subscribers;
     const stream = new ReadableStream<Uint8Array>({
       start(c) {
         controller = c;
+        for (const page of primingPages) c.enqueue(page);
+        subscribers.add(c);
       },
-      cancel: () => {
-        this.subscribers.delete(controller);
+      cancel() {
+        subscribers.delete(controller);
       },
     });
 
-    this.subscribers.add(controller);
     return stream;
   }
 
-  // A way for you to write data to all readers
+  // Write data to all readers.
   write(chunk: Uint8Array) {
     for (const controller of this.subscribers) {
-      controller.enqueue(chunk);
+      try {
+        controller.enqueue(chunk);
+      } catch {
+        this.subscribers.delete(controller);
+      }
     }
   }
 

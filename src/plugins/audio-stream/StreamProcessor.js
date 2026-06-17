@@ -2,7 +2,7 @@
 class RecorderProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
-    const bufferSize = options.bufferSize || 4096;
+    const bufferSize = options?.processorOptions?.bufferSize || 4096;
     // Prepare an interleaved stereo buffer [L,R,L,R,...]
     this.buffer = new Float32Array(bufferSize * 2);
     this.bufferIndex = 0;
