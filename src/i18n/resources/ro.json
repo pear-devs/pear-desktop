@@ -161,7 +161,8 @@
                 "default": "Default",
                 "force-show": "Forțează randarea",
                 "hide": "Ascunde",
-                "label": "Butoane de like"
+                "label": "Butoane de like",
+                "swap": "Schimbă ordinea butoanelor like"
               },
               "remove-upgrade-button": "Elimina butonul de upgrade",
               "theme": {
@@ -320,6 +321,18 @@
         "hostname": {
           "label": "Nume host"
         },
+        "https": {
+          "label": "HTTPS și Certificate",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Selectează fișierul de certificare HTTPS",
+              "label": "Fișier de certificare (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Activează HTTPS"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
@@ -395,6 +408,14 @@
         "no-captions": "Nu exista subtitrari disponibile pentru aceasta piesa"
       }
     },
+    "clock": {
+      "menu": {
+        "format": {
+          "label": "Format"
+        }
+      },
+      "name": "Ceas"
+    },
     "compact-sidebar": {
       "description": "Păstrează bara laterală mereu în modul compact",
       "name": "Bara Laterală Compactă"
@@ -461,9 +482,9 @@
         "set-status-display-type": {
           "label": "Text stare",
           "submenu": {
+            "application": "Ascultând {{applicationName}}",
             "artist": "Ascultând {artist}",
-            "title": "Ascultând {song title}",
-            "application": "Ascultând {{applicationName}}"
+            "title": "Ascultând {song title}"
           }
         }
       },
@@ -813,6 +834,13 @@
         "not-found": "⚠️ Nu au fost găsite versuri pentru această melodie."
       },
       "menu": {
+        "convert-chinese-character": {
+          "submenu": {
+            "disabled": {
+              "label": "Dezactivat"
+            }
+          }
+        },
         "default-text-string": {
           "label": "Caracter implicit între versuri",
           "tooltip": "Alege caracterul implicit folosit pentru spațiul dintre versuri"

@@ -846,7 +846,8 @@
           "label": "Konwertuj chiński znak",
           "submenu": {
             "disabled": {
-              "label": "Wyłączony"
+              "label": "Wyłączony",
+              "tooltip": "Wyłącz konwersje chińskich znaków"
             },
             "traditional-to-simplified": {
               "tooltip": "Konwertuj język chiński tradycyjny na chiński uproszczony"

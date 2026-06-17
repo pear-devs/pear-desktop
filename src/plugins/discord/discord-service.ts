@@ -1,5 +1,5 @@
 import { Client as DiscordClient } from '@xhayper/discord-rpc';
-import { dev } from 'electron-is';
+import is from 'electron-is';
 import { ActivityType } from 'discord-api-types/v10';
 
 import { t } from '@/i18n';
@@ -78,7 +78,7 @@ export class DiscordService {
     this.rpc = new DiscordClient({ clientId });
 
     this.rpc.on('connected', () => {
-      if (dev()) {
+      if (is.dev()) {
         console.log(LoggerPrefix, t('plugins.discord.backend.connected'));
       }
       this.refreshCallbacks.forEach((cb) => cb());
@@ -115,12 +115,10 @@ export class DiscordService {
       type: ActivityType.Listening,
       statusDisplayType: config.statusDisplayType,
       details: sanitizeActivityText(
-        songInfo.alternativeTitle ?? songInfo.title
+        songInfo.alternativeTitle ?? songInfo.title,
       ), // Song title
       detailsUrl: songInfo.url ?? undefined,
-      state: sanitizeActivityText(
-        songInfo.tags?.at(0) ?? songInfo.artist
-      ), // Artist name
+      state: sanitizeActivityText(songInfo.tags?.at(0) ?? songInfo.artist), // Artist name
       stateUrl: songInfo.artistUrl,
       largeImageKey: songInfo.imageSrc ?? undefined,
       largeImageText: songInfo.album
@@ -178,7 +176,7 @@ export class DiscordService {
     this.lastSongInfo = undefined;
     this.lastProgressUpdate = 0;
     this.timerManager.clearAll();
-    if (dev()) {
+    if (electronIs.dev()) {
       console.log(LoggerPrefix, t('plugins.discord.backend.disconnected'));
     }
   }
@@ -237,7 +235,7 @@ export class DiscordService {
    */
   connect(showErrorDialog = false): void {
     if (this.rpc.isConnected) {
-      if (dev()) {
+      if (electronIs.dev()) {
         console.log(
           LoggerPrefix,
           t('plugins.discord.backend.already-connected'),

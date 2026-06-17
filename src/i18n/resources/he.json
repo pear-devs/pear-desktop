@@ -151,15 +151,18 @@
             "label": "תיקונים חזותיים",
             "submenu": {
               "custom-window-title": {
+                "label": "כותרת מותאמת אישית",
                 "prompt": {
-                  "placeholder": "לדוגמה: שולחן כתיבה אגסי"
+                  "label": "בחר כותרת מותאמת אישית: (השאר ריק כדי לכבות)",
+                  "placeholder": "לדוגמה: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "ברירת מחדל",
                 "force-show": "הפעל בכוח",
                 "hide": "הסתר",
-                "label": "כפתורי לייק"
+                "label": "כפתורי לייק",
+                "swap": "החלפת סדר כפתורי לייק"
               },
               "remove-upgrade-button": "הסר לחצן שדרוג",
               "theme": {

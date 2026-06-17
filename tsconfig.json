@@ -11,7 +11,6 @@
     "moduleResolution": "bundler",
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
-    "baseUrl": ".",
     "outDir": "./dist",
     "strict": true,
     "noImplicitAny": true,
