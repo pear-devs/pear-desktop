@@ -46,27 +46,31 @@ const setProgressBar = async (
 
   isLinux ??= process.platform === 'linux';
   if (isLinux) {
-    bus ??= dbus.sessionBus();
+    try {
+      bus ??= dbus.sessionBus();
 
-    const signal = new dbus.Message({
-      type: dbus.MessageType.SIGNAL,
-      path: '/', // I don't know what should be put as a path, but anything works
-      interface: 'com.canonical.Unity.LauncherEntry',
-      member: 'Update',
-      signature: 'sa{sv}',
-      body: [
-        'application://com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063.desktop',
-        {
-          'progress': new dbus.Variant('d', progress),
-          'progress-visible': new dbus.Variant(
-            'b',
-            options.mode === 'normal' && progress > 0,
-          ),
-        },
-      ],
-    });
+      const signal = new dbus.Message({
+        type: dbus.MessageType.SIGNAL,
+        path: '/', // I don't know what should be put as a path, but anything works
+        interface: 'com.canonical.Unity.LauncherEntry',
+        member: 'Update',
+        signature: 'sa{sv}',
+        body: [
+          'application://com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063.desktop',
+          {
+            'progress': new dbus.Variant('d', progress),
+            'progress-visible': new dbus.Variant(
+              'b',
+              options.mode === 'normal' && progress > 0,
+            ),
+          },
+        ],
+      });
 
-    bus.send(signal);
+      bus.send(signal);
+    } catch (error) {
+      console.error('Failed to update Linux taskbar progress', error);
+    }
   }
 };
 
