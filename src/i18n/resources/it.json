@@ -842,6 +842,24 @@
         "not-found": "⚠️ Nessun testo trovato per questa canzone."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Converti carattere Cinese",
+          "submenu": {
+            "disabled": {
+              "label": "Disabilitato",
+              "tooltip": "Disabilita conversione carettere Cinese"
+            },
+            "simplified-to-traditional": {
+              "label": "Da Semplificato a Tradizionale",
+              "tooltip": "Converti Cinese Semplificato in Cinese Tradizionale"
+            },
+            "traditional-to-simplified": {
+              "label": "Da Tradizionale a Semplificato",
+              "tooltip": "Converti Cinese Tradizionale a Cinese Semplificato"
+            }
+          },
+          "tooltip": "Converti carettere Cinese da Tradizionale a Semplificato"
+        },
         "default-text-string": {
           "label": "Carattere predefinito tra i testi",
           "tooltip": "Scegliere il carattere predefinito da utilizzare per l'intervallo tra i testi"

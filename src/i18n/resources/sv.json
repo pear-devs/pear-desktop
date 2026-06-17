@@ -161,7 +161,8 @@
                 "default": "Standard",
                 "force-show": "Tvinga fram visning",
                 "hide": "Dölj",
-                "label": "Gilla-knappar"
+                "label": "Gilla-knappar",
+                "swap": "Byt ordning på liknande knappar"
               },
               "remove-upgrade-button": "Ta bort knappen för uppgradering",
               "theme": {
@@ -411,6 +412,17 @@
         "caption-disabled": "Textning inaktiverad",
         "no-captions": "Inga undertexter tillgängliga för denna låt"
       }
+    },
+    "clock": {
+      "description": "Lägg till en klocka till navigationsfältet",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-timmars format",
+          "display-seconds": "Visa sekunder",
+          "label": "Format"
+        }
+      },
+      "name": "Klocka"
     },
     "compact-sidebar": {
       "description": "Sätt alltid sidomenyn i kompakt läge",
@@ -830,6 +842,24 @@
         "not-found": "⚠️ Inga texter hittades för denna låt."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Konvertera kinesiska tecken",
+          "submenu": {
+            "disabled": {
+              "label": "Inaktiverad",
+              "tooltip": "Inaktivera konvertering av kinesiska tecken"
+            },
+            "simplified-to-traditional": {
+              "label": "Förenklad till traditionell",
+              "tooltip": "Konvertera förenklad kinesiska till traditionell kinesiska"
+            },
+            "traditional-to-simplified": {
+              "label": "Traditionell till förenklad",
+              "tooltip": "Konvertera traditionell kinesiska till förenklad kinesiska"
+            }
+          },
+          "tooltip": "Konvertera kinesiska tecken till traditionell eller förenklad"
+        },
         "default-text-string": {
           "label": "Standardtecken mellan låttexter",
           "tooltip": "Välj standardtecken att använda för mellanrummet mellan låttexter"

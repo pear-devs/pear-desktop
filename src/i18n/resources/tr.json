@@ -559,7 +559,7 @@
           },
           "submenu": {
             "advanced": "Gelişmiş",
-            "enabled": "Etkin",
+            "enabled": "Etkinleştirildi",
             "mode": "Zaman türü",
             "percent": "Yüzde",
             "seconds": "Saniye"

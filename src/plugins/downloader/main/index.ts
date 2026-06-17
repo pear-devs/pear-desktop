@@ -9,13 +9,16 @@ import {
   Utils,
   YTNodes,
   Platform,
+  type YT,
+  type YTMusic,
+  type Types,
 } from '\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js';
 import is from 'electron-is';
 import filenamify from 'filenamify';
 import { Mutex } from 'async-mutex';
 import * as NodeID3 from 'node-id3';
 import { BG, type BgConfig } from 'bgutils-js';
-import { lazy } from 'lazy-var';
+import lazyVar from 'lazy-var';
 
 import {
   cropMaxWidth,
@@ -39,17 +42,10 @@ import { DefaultPresetList, type Preset, VideoFormatList } from '../types';
 import type { DownloaderPluginConfig } from '../index';
 import type { BackendContext } from '@/types/contexts';
 import type { GetPlayerResponse } from '@/types/get-player-response';
-import type { FormatOptions } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/types';
-import type { VideoInfo } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/\u0079\u006f\u0075\u0074\u0075\u0062\u0065';
-import type { PlayerErrorMessage } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/nodes';
-import type {
-  TrackInfo,
-  Playlist,
-} from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/ytmusic';
 
 type CustomSongInfo = SongInfo & { trackId?: string };
 
-const ffmpeg = lazy(async () =>
+const ffmpeg = lazyVar.lazy(async () =>
   (await import('@ffmpeg.wasm/main')).createFFmpeg({
     log: false,
     logger() {}, // Console.log,
@@ -58,21 +54,25 @@ const ffmpeg = lazy(async () =>
 );
 const ffmpegMutex = new Mutex();
 
-Platform.shim.eval = async (data: Types.BuildScriptResult, env: Record<string, Types.VMPrimative>) => {
+Platform.shim.eval = (
+  data: Types.BuildScriptResult,
+  env: Record<string, Types.VMPrimative>,
+) => {
   const properties = [];
 
-  if(env.n) {
-    properties.push(`n: exportedVars.nFunction("${env.n}")`)
+  if (env.n) {
+    properties.push(`n: exportedVars.nFunction("${env.n}")`);
   }
 
   if (env.sig) {
-    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
+    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`);
   }
 
   const code = `${data.output}\nreturn { ${properties.join(', ')} }`;
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return,@typescript-eslint/no-implied-eval,@typescript-eslint/no-unsafe-call
   return new Function(code)();
-}
+};
 
 let yt: Innertube;
 let win: BrowserWindow;
@@ -354,7 +354,7 @@ async function downloadSongUnsafe(
       );
   }
 
-  let info: TrackInfo | VideoInfo = await yt.music.getInfo(id);
+  let info: YTMusic.TrackInfo | YT.VideoInfo = await yt.music.getInfo(id);
 
   if (!info) {
     throw new Error(
@@ -394,7 +394,7 @@ async function downloadSongUnsafe(
 
   if (playabilityStatus?.status === 'UNPLAYABLE') {
     const errorScreen =
-      playabilityStatus.error_screen as PlayerErrorMessage | null;
+      playabilityStatus.error_screen as YTNodes.PlayerErrorMessage | null;
     throw new Error(
       `[${playabilityStatus.status}] ${errorScreen?.reason.text}: ${errorScreen?.subreason.text}`,
     );
@@ -410,7 +410,7 @@ async function downloadSongUnsafe(
     presetSetting = DefaultPresetList['mp3 (256kbps)'];
   }
 
-  const downloadOptions: FormatOptions = {
+  const downloadOptions: Types.FormatOptions = {
     type: (await isPremium()) ? 'audio' : 'video+audio', // Audio, video or video+audio
     quality: 'best', // Best, bestefficiency, 144p, 240p, 480p, 720p and so on.
     format: 'any', // Media container format
@@ -421,8 +421,7 @@ async function downloadSongUnsafe(
   let targetFileExtension: string;
   if (!presetSetting?.extension) {
     targetFileExtension =
-      VideoFormatList.find((it) => it.itag === format.itag)?.container ??
-      'mp3';
+      VideoFormatList.find((it) => it.itag === format.itag)?.container ?? 'mp3';
   } else {
     targetFileExtension = presetSetting?.extension ?? 'mp3';
   }
@@ -656,7 +655,7 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
     }),
   );
   sendFeedback(t('plugins.downloader.backend.feedback.getting-playlist-info'));
-  let playlist: Playlist;
+  let playlist: YTMusic.Playlist;
   const items: YTNodes.MusicResponsiveListItem[] = [];
   try {
     playlist = await yt.music.getPlaylist(playlistId);
@@ -853,7 +852,7 @@ const getVideoId = (url: URL | string): string | null => {
   return new URL(url).searchParams.get('v');
 };
 
-const getMetadata = (info: TrackInfo): CustomSongInfo => ({
+const getMetadata = (info: YTMusic.TrackInfo): CustomSongInfo => ({
   videoId: info.basic_info.id!,
   title: cleanupName(info.basic_info.title!),
   artist: cleanupName(info.basic_info.author!),
@@ -868,7 +867,7 @@ const getMetadata = (info: TrackInfo): CustomSongInfo => ({
 });
 
 // This is used to bypass age restrictions
-const getAndroidTvInfo = async (id: string): Promise<VideoInfo> => {
+const getAndroidTvInfo = async (id: string): Promise<YT.VideoInfo> => {
   // GetInfo 404s with the bypass, so we use getBasicInfo instead
   // that's fine as we only need the streaming data
   return await yt.getBasicInfo(id, {

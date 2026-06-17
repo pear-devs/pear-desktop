@@ -420,27 +420,20 @@ async function onApiLoaded() {
   }
 }
 
-/**
- * Original still using ES5, so we need to define custom elements using ES5 style
- */
 const definePearTransElements = () => {
-  const PearTrans = function () {};
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  PearTrans.prototype = Object.create(HTMLElement.prototype);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  PearTrans.prototype.connectedCallback = function () {
-    const that = this as HTMLElement;
-    const key = that.getAttribute('key');
-    if (key) {
-      const targetHtml = i18t(key);
-      (that.innerHTML as string | TrustedHTML) = defaultTrustedTypePolicy
-        ? defaultTrustedTypePolicy.createHTML(targetHtml)
-        : targetHtml;
-    }
-  };
   customElements.define(
     'pear-trans',
-    PearTrans as unknown as CustomElementConstructor,
+    class extends HTMLElement {
+      connectedCallback() {
+        const key = this.getAttribute('key');
+        if (key) {
+          const targetHtml = i18t(key);
+          (this.innerHTML as string | TrustedHTML) = defaultTrustedTypePolicy
+            ? defaultTrustedTypePolicy.createHTML(targetHtml)
+            : targetHtml;
+        }
+      }
+    },
   );
 };
 

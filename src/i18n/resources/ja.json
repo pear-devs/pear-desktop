@@ -135,7 +135,7 @@
           "single-instance-lock": "単一インスタンスロック",
           "start-at-login": "windowsのログイン時に起動",
           "starting-page": {
-            "label": "スターティングページ",
+            "label": "スタートページ",
             "unset": "未設定"
           },
           "tray": {
@@ -161,7 +161,8 @@
                 "default": "デフォルト",
                 "force-show": "強制的に表示",
                 "hide": "非表示",
-                "label": "いいねボタン"
+                "label": "いいねボタン",
+                "swap": "ボタンの順序などを入れ替える"
               },
               "remove-upgrade-button": "アップグレードボタンを削除",
               "theme": {
@@ -237,7 +238,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "シークバーのテーマを有効にする"
       },
       "name": "アルバムカラーベースのテーマ"
     },
@@ -319,6 +321,14 @@
         },
         "hostname": {
           "label": "ホスト名"
+        },
+        "https": {
+          "label": "HTTPSと証明書",
+          "submenu": {
+            "enable-https": {
+              "label": "HTTPSを有効化"
+            }
+          }
         },
         "port": {
           "label": "ポート"
@@ -461,8 +471,8 @@
         "set-status-display-type": {
           "label": "ステータステキスト",
           "submenu": {
-            "artist": "{artist}を聴いている",
             "application": "{{applicationName}}を聴く",
+            "artist": "{artist}を聴いている",
             "title": "{曲名}を聴いている"
           }
         }
