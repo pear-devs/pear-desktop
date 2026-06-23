@@ -9,6 +9,7 @@ import {
 import { createBackend } from '@/utils';
 
 import { LastFmScrobbler } from './services/lastfm';
+import { LibreFmScrobbler } from './services/librefm';
 import { ListenbrainzScrobbler } from './services/listenbrainz';
 
 import type { ScrobblerPluginConfig } from './index';
@@ -42,6 +43,12 @@ export const backend = createBackend<
       this.enabledScrobblers.set('lastfm', new LastFmScrobbler(window));
     } else {
       this.enabledScrobblers.delete('lastfm');
+    }
+
+    if (config.scrobblers.librefm && config.scrobblers.librefm.enabled) {
+      this.enabledScrobblers.set('librefm', new LibreFmScrobbler());
+    } else {
+      this.enabledScrobblers.delete('librefm');
     }
 
     if (
