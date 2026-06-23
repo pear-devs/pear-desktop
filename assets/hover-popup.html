@@ -1,0 +1,138 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  background: transparent !important;
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+body {
+  padding: 8px;
+  user-select: none;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+#popup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #282828;
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  height: calc(100% - 0px);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+#popup.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+#albumArt {
+  width: 56px;
+  height: 56px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #333;
+}
+#info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+#title {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#artist {
+  color: #aaa;
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  padding: 0;
+}
+.btn:hover { background: rgba(255, 255, 255, 0.12); }
+.btn:active { background: rgba(255, 255, 255, 0.20); }
+.btn svg { width: 18px; height: 18px; fill: #fff; }
+.btn.pp svg { width: 22px; height: 22px; }
+</style>
+</head>
+<body>
+<div id="popup">
+  <img id="albumArt" />
+  <div id="info">
+    <div id="title">No song playing</div>
+    <div id="artist"></div>
+  </div>
+  <div id="controls">
+    <button class="btn" id="prev" title="Previous">
+      <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zM18 6v12l-8.5-6z"/></svg>
+    </button>
+    <button class="btn pp" id="pp" title="Play/Pause">
+      <svg viewBox="0 0 24 24" id="ppSvg"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <button class="btn" id="next" title="Next">
+      <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+    </button>
+  </div>
+</div>
+<script>
+(function() {
+  var popup = document.getElementById('popup');
+
+  var n = 0;
+  document.getElementById('prev').onmousedown = function(e) { e.preventDefault(); document.title = 'act:previous:' + (++n); };
+  document.getElementById('next').onmousedown = function(e) { e.preventDefault(); document.title = 'act:next:' + (++n); };
+  document.getElementById('pp').onmousedown = function(e) { e.preventDefault(); document.title = 'act:playPause:' + (++n); };
+
+  window.updateSongInfo = function(data) {
+    document.getElementById('title').textContent = data.title || 'No song playing';
+    document.getElementById('artist').textContent = data.artist || '';
+    var art = document.getElementById('albumArt');
+    if (data.imageSrc) { art.src = data.imageSrc; art.style.display = ''; }
+    else { art.style.display = 'none'; }
+    document.getElementById('ppSvg').innerHTML = data.isPaused
+      ? '<path d="M8 5v14l11-7z"/>'
+      : '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>';
+  };
+
+  window.showPopup = function() { popup.classList.add('visible'); };
+  window.hidePopup = function() { popup.classList.remove('visible'); };
+})();
+</script>
+</body>
+</html>

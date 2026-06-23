@@ -85,6 +85,15 @@ export const onMenu = async ({
               click: (item: MenuItem) =>
                 setConfig({ refreshOnPlayPause: item.checked }),
             },
+            {
+              label: t(
+                'plugins.notifications.menu.interactive-settings.submenu.hover-controls',
+              ),
+              type: 'checkbox',
+              checked: config.hoverControls,
+              click: (item: MenuItem) =>
+                setConfig({ hoverControls: item.checked }),
+            },
           ],
         },
         {

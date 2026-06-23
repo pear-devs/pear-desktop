@@ -26,6 +26,7 @@ export interface DefaultConfig {
     removeUpgradeButton: boolean;
     restartOnConfigChanges: boolean;
     trayClickPlayPause: boolean;
+    trayMoveToCurrentDesktop: boolean;
     autoResetAppCache: boolean;
     resumeOnStart: boolean;
     likeButtons: string;
@@ -64,6 +65,7 @@ export const defaultConfig: DefaultConfig = {
     removeUpgradeButton: false,
     restartOnConfigChanges: false,
     trayClickPlayPause: false,
+    trayMoveToCurrentDesktop: false,
     autoResetAppCache: false,
     resumeOnStart: true,
     likeButtons: '',

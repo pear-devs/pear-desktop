@@ -478,6 +478,19 @@ export const mainMenuTemplate = async (
                 );
               },
             },
+            {
+              label: t(
+                'main.menu.options.submenu.tray.submenu.move-to-current-desktop',
+              ),
+              type: 'checkbox',
+              checked: config.get('options.trayMoveToCurrentDesktop'),
+              click(item: MenuItem) {
+                config.setMenuOption(
+                  'options.trayMoveToCurrentDesktop',
+                  item.checked,
+                );
+              },
+            },
           ],
         },
         {

@@ -54,6 +54,7 @@ import {
 } from '@/loader/main';
 
 import { LoggerPrefix } from '@/utils';
+import { showOnCurrentDesktop } from '@/window-utils';
 import { APPLICATION_NAME, loadI18n, setLanguage, t } from '@/i18n';
 
 import ErrorHtmlAsset from '@assets/error.html?asset';
@@ -311,7 +312,7 @@ function initTheme(win: BrowserWindow) {
   }
 
   win.webContents.once('did-finish-load', () => {
-    if (is.dev()) {
+    if (is.dev() && process.env.OPEN_DEVTOOLS) {
       console.debug(LoggerPrefix, t('main.console.did-finish-load.dev-tools'));
       win.webContents.openDevTools();
     }
@@ -787,11 +788,14 @@ app.whenReady().then(async () => {
       mainWindow.restore();
     }
 
-    if (!mainWindow.isVisible()) {
-      mainWindow.show();
+    if (config.get('options.trayMoveToCurrentDesktop')) {
+      showOnCurrentDesktop(mainWindow);
+    } else {
+      if (!mainWindow.isVisible()) {
+        mainWindow.show();
+      }
+      mainWindow.focus();
     }
-
-    mainWindow.focus();
   });
 
   // Autostart at login
