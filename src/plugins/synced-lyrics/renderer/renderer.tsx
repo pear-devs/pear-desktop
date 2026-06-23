@@ -20,7 +20,12 @@ import {
   PlainLyrics,
 } from './components';
 
-import { currentLyrics } from './store';
+import { bestLanguageResult, currentLyrics } from './store';
+
+import { getSongInfo } from '@/providers/song-info-front';
+import { t } from '@/i18n';
+
+import type { AppElement } from '@/types/queue';
 
 import type { LineLyrics, SyncedLyricsPluginConfig } from '../types';
 
@@ -123,6 +128,72 @@ createEffect(() => {
       root.style.setProperty('--lyrics-active-scale', '1');
       root.style.setProperty('--lyrics-active-offset', '0');
       break;
+  }
+});
+
+// Auto-skip songs based on detected language
+let skippedVideoId: string | null = null;
+let skipTimer: ReturnType<typeof setTimeout> | null = null;
+createEffect(() => {
+  const cfg = config();
+  const lyrics = bestLanguageResult();
+
+  if (!cfg?.enabled || !cfg.autoSkipLanguages || !lyrics?.data?.language) {
+    // lyrics is null while providers are fetching (i.e. a new song just started).
+    // Also reset guards when auto-skip is disabled or configured languages are cleared.
+    if (!lyrics || !cfg?.enabled || !cfg.autoSkipLanguages) {
+      skippedVideoId = null;
+    }
+    if (skipTimer !== null) {
+      clearTimeout(skipTimer);
+      skipTimer = null;
+    }
+    return;
+  }
+
+  const skipLanguages = cfg.autoSkipLanguages
+    .split(',')
+    .map((lang) => lang.trim().toLowerCase())
+    .filter((lang) => lang.length > 0);
+
+  if (skipLanguages.length === 0) return;
+
+  const detectedLanguage = lyrics.data.language.toLowerCase();
+
+  if (skipLanguages.includes(detectedLanguage)) {
+    const videoId = getSongInfo().videoId;
+    if (videoId === skippedVideoId) return;
+    skippedVideoId = videoId;
+
+    const appApi = document.querySelector<AppElement>('ytmusic-app');
+
+    // Show toast notification
+    appApi?.toastService?.show(
+      t('plugins.synced-lyrics.toast.auto-skip', {
+        language: lyrics.data.language.toUpperCase(),
+      }),
+    );
+
+    // Optionally dislike the song
+    if (cfg.autoDislikeSkippedLanguages) {
+      const dislikeButton = document.querySelector<HTMLButtonElement>(
+        '#button-shape-dislike > button[aria-pressed="false"]',
+      );
+      if (dislikeButton) {
+        dislikeButton.click();
+      }
+    }
+
+    // Skip to next song — timer lives outside the effect so re-runs don't cancel it.
+    // Capture videoId so the callback can verify the track hasn't changed by the time it fires.
+    const scheduledFor = videoId;
+    if (skipTimer !== null) clearTimeout(skipTimer);
+    skipTimer = setTimeout(() => {
+      skipTimer = null;
+      if (getSongInfo().videoId === scheduledFor) {
+        appApi?.playerApi?.nextVideo();
+      }
+    }, 500);
   }
 });
 

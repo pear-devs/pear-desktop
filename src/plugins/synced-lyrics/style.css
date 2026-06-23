@@ -195,6 +195,13 @@
   transition: transform 0.25s ease-in-out;
 }
 
+.provider-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
 .lyrics-picker-dot {
   display: inline-block;
   cursor: pointer;
@@ -230,6 +237,17 @@ div:has(> .lyrics-picker) {
 
     backdrop-filter: blur(5px);
   }
+}
+
+.language-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ytmusic-text-primary);
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  text-transform: uppercase;
 }
 
 /* Animations */
