@@ -36,6 +36,10 @@ export type DiscordPluginConfig = {
    */
   'hideDurationLeft': boolean;
   /**
+   * Hide the artist avatar image in the rich presence
+   */
+  'hideArtistImage': boolean;
+  /**
    * Controls which field is displayed in the Discord status text
    */
   'statusDisplayType': (typeof StatusDisplayType)[keyof typeof StatusDisplayType];
@@ -53,6 +57,7 @@ export default createPlugin({
     'playOn\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063': true,
     'hideGitHubButton': false,
     'hideDurationLeft': false,
+    'hideArtistImage': false,
     'statusDisplayType': StatusDisplayType.Details,
   } as DiscordPluginConfig,
   menu: onMenu,

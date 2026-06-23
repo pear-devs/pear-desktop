@@ -484,6 +484,7 @@
         "connected": "Conectado",
         "disconnected": "Desconectado",
         "hide-duration-left": "Ocultar la duración restante",
+        "hide-artist-image": "Ocultar la imagen de perfil del artista",
         "hide-github-button": "Ocultar el botón de enlace a GitHub",
         "play-on-application": "Reproducir en {{applicationName}}",
         "set-inactivity-timeout": "Establecer tiempo de inactividad",

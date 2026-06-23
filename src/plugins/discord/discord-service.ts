@@ -118,11 +118,18 @@ export class DiscordService {
         songInfo.alternativeTitle ?? songInfo.title,
       ), // Song title
       detailsUrl: songInfo.url ?? undefined,
-      state: sanitizeActivityText(songInfo.tags?.at(0) ?? songInfo.artist), // Artist name
+      state: sanitizeActivityText(songInfo.artist), // Artist name
       stateUrl: songInfo.artistUrl,
       largeImageKey: songInfo.imageSrc ?? undefined,
       largeImageText: songInfo.album
         ? sanitizeActivityText(songInfo.album)
+        : undefined,
+      smallImageKey:
+        !config.hideArtistImage && songInfo.artistImageSrc
+          ? songInfo.artistImageSrc
+          : undefined,
+      smallImageText: !config.hideArtistImage
+        ? sanitizeActivityText(songInfo.artist)
         : undefined,
       buttons: buildDiscordButtons(config, songInfo),
     };
@@ -310,12 +317,14 @@ export class DiscordService {
 
     const songChanged = songInfo.videoId !== this.lastSongInfo?.videoId;
     const pauseChanged = songInfo.isPaused !== this.lastSongInfo?.isPaused;
+    const artistImageChanged =
+      songInfo.artistImageSrc !== this.lastSongInfo?.artistImageSrc;
     const seeked =
       !songChanged &&
       isSeek(this.lastSongInfo?.elapsedSeconds ?? 0, elapsedSeconds);
 
     if (
-      (songChanged || pauseChanged || seeked) &&
+      (songChanged || pauseChanged || seeked || artistImageChanged) &&
       this.lastSongInfo !== undefined
     ) {
       this.timerManager.clear(TimerKey.UpdateTimeout);
