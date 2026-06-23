@@ -208,16 +208,24 @@ export const fetchArtistImage = async (artistUrl: string): Promise<string | null
           }
         }
       } catch (err) {
-        // stream error, fallback to full page load
+        // stream error
       }
-    }
 
-    const html = await response.text();
-    const match = html.match(/<meta property="og:image" content="([^"]+)"/);
-    if (match && match[1]) {
-      const imgSrc = match[1];
-      artistImageCache.set(artistUrl, imgSrc);
-      return imgSrc;
+      // Check if we accumulated the tag but finished or broke before matching
+      const match = htmlBuffer.match(/<meta property="og:image" content="([^"]+)"/);
+      if (match && match[1]) {
+        const imgSrc = match[1];
+        artistImageCache.set(artistUrl, imgSrc);
+        return imgSrc;
+      }
+    } else {
+      const html = await response.text();
+      const match = html.match(/<meta property="og:image" content="([^"]+)"/);
+      if (match && match[1]) {
+        const imgSrc = match[1];
+        artistImageCache.set(artistUrl, imgSrc);
+        return imgSrc;
+      }
     }
   } catch (error) {
     console.error('Error fetching artist image:', error);
