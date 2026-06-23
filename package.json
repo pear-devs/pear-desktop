@@ -123,7 +123,7 @@
   "devDependencies": {
     "@electron-toolkit/tsconfig": "2.0.0",
     "@malept/flatpak-bundler": "0.4.0",
-    "@playwright/test": "1.61.0",
+    "@playwright/test": "1.61.1",
     "@stylistic/eslint-plugin": "5.10.0",
     "@total-typescript/ts-reset": "0.6.1",
     "@types/electron-localshortcut": "3.1.3",
