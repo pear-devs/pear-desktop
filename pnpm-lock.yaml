@@ -287,8 +287,8 @@ importers:
         specifier: 7.0.0
         version: 7.0.0
       discord-api-types:
-        specifier: 0.38.45
-        version: 0.38.45
+        specifier: 0.38.49
+        version: 0.38.49
       electron:
         specifier: 41.2.0
         version: 41.2.0
@@ -1984,8 +1984,8 @@ packages:
   dir-compare@4.2.0:
     resolution: {integrity: sha512-2xMCmOoMrdQIPHdsTawECdNPwlVFB9zGcz3kuhmBO6U3oU+UQjsue0i8ayLKpgBcm+hcXPMVSGUN9d+pvJ6+VQ==}
 
-  discord-api-types@0.38.45:
-    resolution: {integrity: sha512-DiI01i00FPv6n+hXcFkFxK8Y/rFRpKs6U6aP32N4T73nTbj37Eua3H/95TBpLktLWB6xnLXhYDGvyLq6zzYY2w==}
+  discord-api-types@0.38.49:
+    resolution: {integrity: sha512-XnqcWmnFZFAE8ZM8SHAw9DIV8D3Or00rMQ8iQLotrEA2PmXhl+ykaf6L6q4l474hrSUH1JaYcv+iOMRWp2p6Tg==}
 
   dmg-builder@26.8.1:
     resolution: {integrity: sha512-glMJgnTreo8CFINujtAhCgN96QAqApDMZ8Vl1r8f0QT8QprvC1UCltV4CcWj20YoIyLZx6IUskaJZ0NV8fokcg==}
@@ -4633,14 +4633,14 @@ snapshots:
       '@sapphire/async-queue': 1.5.5
       '@sapphire/snowflake': 3.5.5
       '@vladfrangu/async_event_emitter': 2.4.7
-      discord-api-types: 0.38.45
+      discord-api-types: 0.38.49
       magic-bytes.js: 1.13.0
       tslib: 2.8.1
       undici: 6.24.1
 
   '@discordjs/util@1.2.0':
     dependencies:
-      discord-api-types: 0.38.45
+      discord-api-types: 0.38.49
 
   '@electron-toolkit/tsconfig@2.0.0(@types/node@25.5.2)':
     dependencies:
@@ -5522,7 +5522,7 @@ snapshots:
     dependencies:
       '@discordjs/rest': 2.6.1
       '@vladfrangu/async_event_emitter': 2.4.7
-      discord-api-types: 0.38.45
+      discord-api-types: 0.38.49
       ws: 8.20.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
     transitivePeerDependencies:
       - bufferutil
@@ -6197,7 +6197,7 @@ snapshots:
       minimatch: 3.1.5
       p-limit: 3.1.0
 
-  discord-api-types@0.38.45: {}
+  discord-api-types@0.38.49: {}
 
   dmg-builder@26.8.1(electron-builder-squirrel-windows@26.8.1):
     dependencies:
