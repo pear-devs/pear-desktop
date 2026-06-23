@@ -151,7 +151,7 @@
     "node-gyp": "13.0.0",
     "ts-morph": "28.0.0",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.61.1",
+    "typescript-eslint": "8.62.0",
     "utf-8-validate": "6.0.6",
     "vite": "8.1.0",
     "vite-plugin-inspect": "11.4.1",
