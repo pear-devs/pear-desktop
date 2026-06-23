@@ -154,7 +154,7 @@
     "typescript": "6.0.2",
     "typescript-eslint": "8.58.1",
     "utf-8-validate": "6.0.6",
-    "vite": "8.0.8",
+    "vite": "8.0.16",
     "vite-plugin-inspect": "11.3.3",
     "vite-plugin-resolve": "2.5.2",
     "vite-plugin-solid": "2.11.12",

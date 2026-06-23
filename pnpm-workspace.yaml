@@ -6,7 +6,7 @@ allowBuilds:
   unrs-resolver: true
   utf-8-validate: true
 overrides:
-  vite: 8.0.8
+  vite: 8.0.16
   node-gyp: 12.2.0
   xml2js: 0.6.2
   node-fetch: 3.3.2
