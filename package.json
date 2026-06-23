@@ -101,7 +101,7 @@
     "kuroshiro-analyzer-kuromoji": "1.1.0",
     "lazy-var": "2.2.2",
     "mdui": "2.1.4",
-    "node-html-parser": "8.0.2",
+    "node-html-parser": "8.0.3",
     "node-id3": "0.2.9",
     "peerjs": "1.5.5",
     "pinyin-pro": "^3.27.0",
