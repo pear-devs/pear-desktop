@@ -10,7 +10,7 @@ overrides:
   xml2js: 0.6.2
   node-fetch: 3.3.2
   '@electron/universal': 3.0.4
-  '@babel/runtime': 7.29.7
+  '@babel/runtime': 8.0.0
   '@xmldom/xmldom@<0.8.12': 0.8.13
 
 patchedDependencies:
@@ -435,9 +435,8 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
-  '@babel/runtime@7.29.7':
-    resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
-    engines: {node: '>=6.9.0'}
+  '@babel/runtime@8.0.0':
+    resolution: {integrity: sha512-sL6cvO2IfkSu/iU+zs2S/w01B7A8V7suXSIKEN4hPFFdZoiPGxrj5pAG0lCaqLWiEIrjKzdznIWuaLcxPR53qw==}
 
   '@babel/template@7.29.7':
     resolution: {integrity: sha512-puq+Gf35oI24FeN11LkoUQFqv9uwNeWpxXZi/Ji3rRIoKAzKnxRaZ+Gkj0vKS9ZCiTESfng1N9LyOyXvo+m+Gg==}
@@ -4344,7 +4343,7 @@ snapshots:
       '@babel/core': 7.29.0
       '@babel/helper-plugin-utils': 7.27.1
 
-  '@babel/runtime@7.29.7': {}
+  '@babel/runtime@8.0.0': {}
 
   '@babel/template@7.29.7':
     dependencies:
@@ -5572,7 +5571,7 @@ snapshots:
 
   butterchurn-presets@3.0.0-beta.4:
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 8.0.0
 
   butterchurn@3.0.0-beta.5:
     dependencies:
@@ -6825,7 +6824,7 @@ snapshots:
 
   kuroshiro@1.2.0:
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 8.0.0
 
   lazy-val@1.0.5: {}
 

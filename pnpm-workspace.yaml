@@ -12,7 +12,7 @@ overrides:
   xml2js: 0.6.2
   node-fetch: 3.3.2
   '@electron/universal': 3.0.4
-  '@babel/runtime': 7.29.7
+  '@babel/runtime': 8.0.0
   '@xmldom/xmldom@<0.8.12': 0.8.13
 patchedDependencies:
   vudio@2.1.1: patches/vudio@2.1.1.patch
