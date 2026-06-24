@@ -149,7 +149,7 @@
     "glob": "13.0.6",
     "node-gyp": "13.0.0",
     "oxfmt": "0.56.0",
-    "oxlint": "1.70.0",
+    "oxlint": "1.71.0",
     "oxlint-tsgolint": "0.23.0",
     "ts-morph": "28.0.0",
     "typescript": "6.0.3",
