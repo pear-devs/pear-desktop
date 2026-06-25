@@ -1,10 +1,10 @@
-import titlebarStyle from './titlebar.css?inline';
-import { createPlugin } from '@/utils';
+import { defaultInAppMenuConfig } from './constants';
 import { onMainLoad } from './main';
 import { onMenu } from './menu';
 import { onConfigChange, onPlayerApiReady, onRendererLoad } from './renderer';
+import titlebarStyle from './titlebar.css?inline';
 import { t } from '@/i18n';
-import { defaultInAppMenuConfig } from './constants';
+import { createPlugin } from '@/utils';
 
 export default createPlugin({
   name: () => t('plugins.in-app-menu.name'),

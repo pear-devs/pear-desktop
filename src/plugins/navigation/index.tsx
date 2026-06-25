@@ -1,12 +1,10 @@
-import { render } from 'solid-js/web';
-
 import { IconChevronLeft } from '@mdui/icons/chevron-left.js';
 import { IconChevronRight } from '@mdui/icons/chevron-right.js';
-
-import { createPlugin } from '@/utils';
+import { render } from 'solid-js/web';
 
 import { t } from '@/i18n';
 import { LitElementWrapper } from '@/solit';
+import { createPlugin } from '@/utils';
 
 export default createPlugin({
   name: () => t('plugins.navigation.name'),

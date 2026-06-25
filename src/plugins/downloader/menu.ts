@@ -1,19 +1,16 @@
-import { dialog } from 'electron';
 import prompt from 'custom-electron-prompt';
 import { deepmerge } from 'deepmerge-ts';
+import { dialog } from 'electron';
 
+import { type DownloaderPluginConfig, defaultConfig } from './index';
 import { downloadPlaylist } from './main';
 import { getFolder } from './main/utils';
 import { DefaultPresetList } from './types';
-
 import { t } from '@/i18n';
-
 import promptOptions from '@/providers/prompt-options';
 
-import { type DownloaderPluginConfig, defaultConfig } from './index';
-
-import type { MenuContext } from '@/types/contexts';
 import type { MenuTemplate } from '@/menu';
+import type { MenuContext } from '@/types/contexts';
 
 export const onMenu = async ({
   getConfig,

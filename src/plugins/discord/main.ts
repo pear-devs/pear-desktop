@@ -1,10 +1,9 @@
 import { app } from 'electron';
 
+import { TIME_UPDATE_DEBOUNCE_MS } from './constants';
+import { DiscordService } from './discord-service';
 import { registerCallback, SongInfoEvent } from '@/providers/song-info';
 import { createBackend } from '@/utils';
-
-import { DiscordService } from './discord-service';
-import { TIME_UPDATE_DEBOUNCE_MS } from './constants';
 
 import type { DiscordPluginConfig } from './index';
 

@@ -13,16 +13,15 @@ import {
 import { css } from 'solid-styled-components';
 import { TransitionGroup } from 'solid-transition-group';
 
+import { IconButton } from './IconButton';
 import { MenuButton } from './MenuButton';
 import { Panel } from './Panel';
 import { PanelItem } from './PanelItem';
-import { IconButton } from './IconButton';
 import { WindowController } from './WindowController';
-
 import { cacheNoArgs } from '@/providers/decorators';
 
-import type { RendererContext } from '@/types/contexts';
 import type { InAppMenuConfig } from '../constants';
+import type { RendererContext } from '@/types/contexts';
 
 const titleStyle = cacheNoArgs(
   () => css`

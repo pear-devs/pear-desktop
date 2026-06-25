@@ -192,13 +192,6 @@
     }
   },
   "plugins": {
-    "adblocker": {
-      "description": "Stenger ute reklame og sporing",
-      "menu": {
-        "blocker": "Blokkering"
-      },
-      "name": "Reklameblokkering"
-    },
     "album-color-theme": {
       "description": "Ifører dynamisk drakt og visuelle effekter basert på albumsfargepaletten",
       "name": "Albumsfargedrakt"

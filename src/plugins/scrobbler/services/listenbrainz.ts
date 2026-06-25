@@ -1,11 +1,11 @@
 import { net } from 'electron';
 
 import { ScrobblerBase } from './base';
+import { APPLICATION_NAME } from '@/i18n';
 
+import type { ScrobblerPluginConfig } from '../index';
 import type { SetConfType } from '../main';
 import type { SongInfo } from '@/providers/song-info';
-import type { ScrobblerPluginConfig } from '../index';
-import { APPLICATION_NAME } from '@/i18n';
 
 interface ListenbrainzRequestBody {
   listen_type?: string;

@@ -1,5 +1,5 @@
-import type { RendererContext } from '@/types/contexts';
 import type { SkipSilencesPluginConfig } from './index';
+import type { RendererContext } from '@/types/contexts';
 
 let config: SkipSilencesPluginConfig;
 
@@ -14,7 +14,10 @@ const speakingHistory = Array.from({ length: history }).fill(0) as number[];
 
 let playOrSeekHandler: (() => void) | undefined;
 
-const getMaxVolume = (analyser: AnalyserNode, fftBins: Float32Array) => {
+const getMaxVolume = (
+  analyser: AnalyserNode,
+  fftBins: Float32Array<ArrayBuffer>,
+) => {
   let maxVolume = Number.NEGATIVE_INFINITY;
   analyser.getFloatFrequencyData(fftBins);
 

@@ -1,18 +1,19 @@
+import type { PluginConfig } from '@/types/plugins';
 import type {
   IpcMain,
   IpcRenderer,
   WebContents,
   BrowserWindow,
 } from 'electron';
-import type { PluginConfig } from '@/types/plugins';
 
 export interface BaseContext<Config extends PluginConfig> {
   getConfig: () => Promise<Config> | Config;
   setConfig: (conf: Partial<Omit<Config, 'enabled'>>) => Promise<void> | void;
 }
 
-export interface BackendContext<Config extends PluginConfig>
-  extends BaseContext<Config> {
+export interface BackendContext<
+  Config extends PluginConfig,
+> extends BaseContext<Config> {
   ipc: {
     send: WebContents['send'];
     handle: (event: string, listener: CallableFunction) => void;
@@ -23,18 +24,21 @@ export interface BackendContext<Config extends PluginConfig>
   window: BrowserWindow;
 }
 
-export interface MenuContext<Config extends PluginConfig>
-  extends BaseContext<Config> {
+export interface MenuContext<
+  Config extends PluginConfig,
+> extends BaseContext<Config> {
   window: BrowserWindow;
   refresh: () => Promise<void> | void;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface PreloadContext<Config extends PluginConfig>
-  extends BaseContext<Config> {}
+// oxlint-disable-next-line typescript/no-empty-object-type
+export interface PreloadContext<
+  Config extends PluginConfig,
+> extends BaseContext<Config> {}
 
-export interface RendererContext<Config extends PluginConfig>
-  extends BaseContext<Config> {
+export interface RendererContext<
+  Config extends PluginConfig,
+> extends BaseContext<Config> {
   ipc: {
     send: IpcRenderer['send'];
     invoke: IpcRenderer['invoke'];

@@ -1,5 +1,5 @@
-import { ElementFromHtml } from '@/plugins/utils/renderer';
 import { t } from '@/i18n';
+import { ElementFromHtml } from '@/plugins/utils/renderer';
 
 import statusHTML from '../templates/status.html?raw';
 

@@ -161,7 +161,8 @@
                 "default": "Predefinito",
                 "force-show": "Forza la visualizzazione",
                 "hide": "Nascondi",
-                "label": "Pulsanti Like"
+                "label": "Pulsanti Like",
+                "swap": "Scambia l'ordine dei pulsanti like"
               },
               "remove-upgrade-button": "Rimuovi il pulsante aggiorna",
               "theme": {
@@ -218,13 +219,6 @@
       "description": "Se viene riprodotto un annuncio, l'audio viene disattivato e viene impostata la velocità di riproduzione su 16x",
       "name": "Accelerazione ad"
     },
-    "adblocker": {
-      "description": "Blocca tutti gli annunci e i tracker",
-      "menu": {
-        "blocker": "Blocco"
-      },
-      "name": "Ad blocker"
-    },
     "album-actions": {
       "description": "Aggiunge i pulsanti Undislike, Dislike, Like e Unlike a tutti i brani di una playlist o di un album",
       "name": "Azioni album"
@@ -237,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Abilita tematizzazione della barra di regolazione"
       },
       "name": "Tema abbinato a colore album"
     },
@@ -320,6 +315,22 @@
         "hostname": {
           "label": "Hostname"
         },
+        "https": {
+          "label": "HTTPS & Certificati",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Seleziona file di certificato HTTPS",
+              "label": "File di certificato (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Abilita HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Seleziona il file della chiave privata HTTPS",
+              "label": "File della chiave privata (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Porta"
         }
@@ -395,6 +406,17 @@
         "no-captions": "Nessun sottotitolo disponibile per questa canzone"
       }
     },
+    "clock": {
+      "description": "Aggiungi un orologio alla barra di navigazione",
+      "menu": {
+        "format": {
+          "24-hour-format": "Formato in 24 ore",
+          "display-seconds": "Mostra Secondi",
+          "label": "Formato"
+        }
+      },
+      "name": "Orologio"
+    },
     "compact-sidebar": {
       "description": "Imposta sempre la barra laterale in modalità compatta",
       "name": "Barra laterale compatta"
@@ -461,9 +483,9 @@
         "set-status-display-type": {
           "label": "Testo dello status",
           "submenu": {
+            "application": "Ascoltando {{applicationName}}",
             "artist": "Stai ascoltando {artist}",
-            "title": "Stai ascoltando {song title}",
-            "application": "Ascoltando {{applicationName}}"
+            "title": "Stai ascoltando {song title}"
           }
         }
       },
@@ -813,6 +835,24 @@
         "not-found": "⚠️ Nessun testo trovato per questa canzone."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Convertire i caratteri Cinesi",
+          "submenu": {
+            "disabled": {
+              "label": "Disabilitato",
+              "tooltip": "Disabilita conversione caretteri Cinesi"
+            },
+            "simplified-to-traditional": {
+              "label": "Semplificato al Tradizionale",
+              "tooltip": "Converti Cinese Semplificato in Cinese Tradizionale"
+            },
+            "traditional-to-simplified": {
+              "label": "Da Tradizionale a Semplificato",
+              "tooltip": "Converti Cinese Tradizionale a Cinese Semplificato"
+            }
+          },
+          "tooltip": "Converti carettere Cinese da Tradizionale a Semplificato"
+        },
         "default-text-string": {
           "label": "Carattere predefinito tra i testi",
           "tooltip": "Scegliere il carattere predefinito da utilizzare per l'intervallo tra i testi"
@@ -866,7 +906,7 @@
       },
       "name": "Testi sincronizzati",
       "refetch-btn": {
-        "fetching": "Sto recuperando...",
+        "fetching": "Caricamento...",
         "normal": "Recupera i testi"
       },
       "warnings": {

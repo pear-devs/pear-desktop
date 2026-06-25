@@ -1,9 +1,9 @@
 import { StatusDisplayType } from 'discord-api-types/v10';
 
-import { createPlugin } from '@/utils';
 import { backend } from './main';
 import { onMenu } from './menu';
 import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 export type DiscordPluginConfig = {
   'enabled': boolean;

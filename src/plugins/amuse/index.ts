@@ -1,6 +1,6 @@
-import { createPlugin } from '@/utils';
 import backend from './backend';
 import { APPLICATION_NAME, t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 export interface MusicWidgetConfig {
   enabled: boolean;

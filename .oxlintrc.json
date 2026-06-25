@@ -1,0 +1,94 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "import"],
+  "jsPlugins": [
+    "eslint-plugin-perfectionist",
+    "@stylistic/eslint-plugin",
+    "eslint-plugin-solid",
+    { "name": "eslint-core-plugin", "specifier": "./tools/eslint-core-plugin.mjs" }
+  ],
+  "categories": { "correctness": "error" },
+  "rules": {
+    "import/first": "error",
+    "import/no-duplicates": "error",
+
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-void": "error",
+    "no-empty": "off",
+    "prefer-promise-reject-errors": "off",
+    "class-methods-use-this": "off",
+
+    "typescript/no-require-imports": "error",
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "fixStyle": "inline-type-imports",
+        "prefer": "type-imports",
+        "disallowTypeAnnotations": false
+      }
+    ],
+    "typescript/no-non-null-assertion": "off",
+    "typescript/no-floating-promises": "off",
+    "typescript/no-misused-promises": "off",
+    "typescript/no-useless-default-assignment": "warn",
+    "typescript/no-misused-spread": "warn",
+
+    "@stylistic/arrow-parens": ["error", "always"],
+    "@stylistic/object-curly-spacing": ["error", "always"],
+    "@stylistic/jsx-pascal-case": "error",
+    "@stylistic/no-mixed-operators": "warn",
+    "@stylistic/no-multi-spaces": ["error", { "ignoreEOLComments": true }],
+    "@stylistic/no-tabs": "error",
+    "@stylistic/quotes": [
+      "error",
+      "single",
+      { "avoidEscape": true, "allowTemplateLiterals": "never" }
+    ],
+    "@stylistic/semi": ["error", "always"],
+
+    "perfectionist/sort-jsx-props": "error",
+    "perfectionist/sort-imports": [
+      "warn",
+      {
+        "type": "natural",
+        "order": "asc",
+        "groups": [
+          "builtin",
+          "external",
+          ["internal", "index", "sibling"],
+          "parent",
+          "type"
+        ],
+        "newlinesBetween": 1
+      }
+    ],
+
+    "eslint-core-plugin/camelcase": ["error", { "properties": "never" }],
+
+    "solid/jsx-no-duplicate-props": "error",
+    "solid/jsx-no-undef": "error",
+    "solid/jsx-uses-vars": "error",
+    "solid/no-unknown-namespaces": "error",
+    "solid/no-innerhtml": "error",
+    "solid/jsx-no-script-url": "error",
+    "solid/no-destructure": "error",
+    "solid/prefer-for": "error",
+    "solid/components-return-once": "warn",
+    "solid/reactivity": "warn",
+    "solid/event-handlers": "warn",
+    "solid/imports": "warn",
+    "solid/style-prop": "warn",
+    "solid/no-react-deps": "warn",
+    "solid/no-react-specific-props": "warn",
+    "solid/self-closing-comp": "warn"
+  },
+  "env": { "builtin": true, "browser": true, "node": true, "es2024": true },
+  "ignorePatterns": [
+    "dist/**",
+    "node_modules/**",
+    "**/*.d.ts",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "src/plugins/performance-improvement/scripts/**/*.js"
+  ]
+}

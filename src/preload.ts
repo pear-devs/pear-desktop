@@ -7,7 +7,6 @@ import {
 import is from 'electron-is';
 
 import * as config from './config';
-
 import {
   forceLoadPreloadPlugin,
   forceUnloadPreloadPlugin,

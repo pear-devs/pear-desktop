@@ -2,11 +2,10 @@ import { t } from '@/i18n';
 import { ElementFromHtml } from '@/plugins/utils/renderer';
 
 import { Popup } from '../element';
-import { createStatus } from '../ui/status';
-
 import IconKey from '../icons/key.svg?raw';
 import IconOff from '../icons/off.svg?raw';
 import IconTune from '../icons/tune.svg?raw';
+import { createStatus } from '../ui/status';
 
 export type HostPopupProps = {
   onItemClick: (id: string) => void;

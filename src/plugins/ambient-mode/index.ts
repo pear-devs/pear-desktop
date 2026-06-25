@@ -1,9 +1,8 @@
+import { menu } from './menu';
 import style from './style.css?inline';
-
+import { type AmbientModePluginConfig } from './types';
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
-import { menu } from './menu';
-import { type AmbientModePluginConfig } from './types';
 import { waitForElement } from '@/utils/wait-for-element';
 
 const defaultConfig: AmbientModePluginConfig = {

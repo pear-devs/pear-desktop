@@ -1,3 +1,5 @@
+import style from './style.css?inline';
+import { MaterialType, type TransparentPlayerConfig } from './types';
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 

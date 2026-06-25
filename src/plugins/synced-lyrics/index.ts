@@ -1,10 +1,9 @@
-import style from './style.css?inline';
-import { createPlugin } from '@/utils';
-import { t } from '@/i18n';
-
+import { backend } from './backend';
 import { menu } from './menu';
 import { renderer } from './renderer';
-import { backend } from './backend';
+import style from './style.css?inline';
+import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 import type { SyncedLyricsPluginConfig } from './types';
 

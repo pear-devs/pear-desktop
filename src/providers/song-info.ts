@@ -1,6 +1,5 @@
-import { type BrowserWindow, ipcMain, nativeImage, net } from 'electron';
-
 import { Mutex } from 'async-mutex';
+import { type BrowserWindow, ipcMain, nativeImage, net } from 'electron';
 
 import * as config from '@/config';
 
