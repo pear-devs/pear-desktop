@@ -1,19 +1,19 @@
 import { createRoute, z } from '@hono/zod-openapi';
-import { verify } from 'hono/jwt';
 import { app as electronApp } from 'electron';
+import { verify } from 'hono/jwt';
 
 import {
   registerCallback,
   type SongInfo,
   SongInfoEvent,
 } from '@/providers/song-info';
+import { LoggerPrefix } from '@/utils';
 
-import { AuthStrategy } from '@/plugins/api-server/config';
-
+import { AuthStrategy, type APIServerConfig } from '../../config';
 import { API_VERSION } from '../api-version';
+import { JWTPayloadSchema } from '../scheme';
 
 import type { HonoApp } from '../types';
-import type { APIServerConfig } from '@/plugins/api-server/config';
 import type { BackendContext } from '@/types/contexts';
 import type { RepeatMode, VolumeState } from '@/types/datahost-get-state';
 import type { WebSocketLike, upgradeWebSocket } from '@hono/node-server';
@@ -143,7 +143,7 @@ export const register = (
         },
       },
     }),
-    uws(() => ({
+    uws((ctx) => ({
       async onOpen(_, ws) {
         const config = await getConfig();
 
@@ -156,13 +156,15 @@ export const register = (
           }
 
           try {
-            const payload = await verify(token, config.secret);
+            const payload = await verify(token, config.secret, 'HS256');
+            const parsedPayload = await JWTPayloadSchema.safeParseAsync(payload);
 
-            if (!config.authorizedClients.includes(payload.id as string)) {
+            if (!parsedPayload.success || !config.authorizedClients.includes(parsedPayload.data.id)) {
               ws.close(1008, 'Unauthorized');
               return;
             }
-          } catch {
+          } catch (err) {
+            console.error(LoggerPrefix, 'WebSocket authentication failed:', err);
             ws.close(1008, 'Unauthorized');
             return;
           }
