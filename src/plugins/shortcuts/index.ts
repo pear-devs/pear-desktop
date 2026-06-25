@@ -1,7 +1,7 @@
-import { createPlugin } from '@/utils';
 import { onMainLoad } from './main';
 import { onMenu } from './menu';
 import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 export type ShortcutMappingType = {
   previous: string;

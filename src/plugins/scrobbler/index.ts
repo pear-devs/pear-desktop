@@ -1,13 +1,12 @@
-import { createPlugin } from '@/utils';
-import { t } from '@/i18n';
-
-import { onMenu } from './menu';
 import { backend } from './main';
+import { onMenu } from './menu';
+import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 export interface ScrobblerPluginConfig {
   enabled: boolean;
   /**
-   * Attempt to scrobble other video types (e.g. Podcasts, normal YouTube videos)
+   * Attempt to scrobble other video types (e.g. Podcasts, normal videos)
    *
    * @default true
    */

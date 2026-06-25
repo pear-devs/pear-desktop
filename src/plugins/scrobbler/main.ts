@@ -1,5 +1,7 @@
 import { type BrowserWindow } from 'electron';
 
+import { LastFmScrobbler } from './services/lastfm';
+import { ListenbrainzScrobbler } from './services/listenbrainz';
 import {
   registerCallback,
   MediaType,
@@ -7,9 +9,6 @@ import {
   SongInfoEvent,
 } from '@/providers/song-info';
 import { createBackend } from '@/utils';
-
-import { LastFmScrobbler } from './services/lastfm';
-import { ListenbrainzScrobbler } from './services/listenbrainz';
 
 import type { ScrobblerPluginConfig } from './index';
 import type { ScrobblerBase } from './services/base';

@@ -1,11 +1,10 @@
+import { autoUpdate, offset, size } from '@floating-ui/dom';
+import { useFloating } from 'solid-floating-ui';
 import { createSignal, Match, Show, Switch } from 'solid-js';
 import { type JSX } from 'solid-js/jsx-runtime';
-import { css } from 'solid-styled-components';
 import { Portal } from 'solid-js/web';
-
+import { css } from 'solid-styled-components';
 import { Transition } from 'solid-transition-group';
-import { useFloating } from 'solid-floating-ui';
-import { autoUpdate, offset, size } from '@floating-ui/dom';
 
 import { Panel } from './Panel';
 import { cacheNoArgs } from '@/providers/decorators';
@@ -278,7 +277,7 @@ export const PanelItem = (props: PanelItemProps) => {
   };
 
   const handleClick = async () => {
-    await window.ipcRenderer.invoke('ytmd:menu-event', props.commandId);
+    await window.ipcRenderer.invoke('peard:menu-event', props.commandId);
     if (props.type === 'radio') {
       props.onChange?.(!props.checked);
     } else if (props.type === 'checkbox') {

@@ -2,40 +2,59 @@ name: reviewdog
 
 on: [pull_request_target]
 
+permissions: {}
+
 env:
-  NODE_VERSION: "22.x"
+  NODE_VERSION: "24.x"
 
 jobs:
-  eslint:
-    name: runner / eslint
+  oxlint:
+    if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
+    name: runner / oxlint
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
       checks: write
     steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with:
-          version: 10
+          version: 11
           run_install: false
 
       - name: Setup NodeJS
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
-      - uses: reviewdog/action-eslint@v1.34.0
+      - name: Checkout PR source files
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          reporter: github-pr-review # Change reporter.
-          eslint_flags: './src'
-          fail_level: error
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: src
+          path: __pr_src
+
+      - name: Overlay PR source
+        run: |
+          rm -rf src
+          cp -r __pr_src/src src
+          rm -rf __pr_src
+
+      - name: Setup reviewdog
+        uses: reviewdog/action-setup@d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f
+        with:
+          reviewdog_version: latest
+
+      - name: Run oxlint with reviewdog
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pnpm exec oxlint --type-aware src --format=checkstyle |
+            reviewdog -f=checkstyle -name=oxlint -reporter=github-pr-review -fail-level=error

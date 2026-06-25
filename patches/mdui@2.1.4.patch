@@ -1,0 +1,40 @@
+diff --git a/jsx.en.d.ts b/jsx.en.d.ts
+index 514d455dcdb436aaf7b2ee88deaefe01943c8b4b..48dff045dead4315936afd931336198996c88217 100644
+--- a/jsx.en.d.ts
++++ b/jsx.en.d.ts
+@@ -1,12 +1,8 @@
+-import React from 'react';
+ import { JQ } from '@mdui/jq';
+
+-type HTMLElementProps = React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement>;
++type HTMLElementProps = import("solid-js").JSX.HTMLAttributes<HTMLElement>;
+
+-declare global {
+-  namespace React {
+-    namespace JSX {
+-      interface IntrinsicElements {
++export interface IntrinsicElements {
+         /**
+         * Avatar Component
+        *
+@@ -3296,7 +3292,4 @@ declare global {
+           */
+           'order'?: number;
+         } & HTMLElementProps;
+-      }
+-    }
+-  }
+ }
+diff --git a/package.json b/package.json
+index 3fa3eeb471ce4c31d7ac1c9bcb2d6823947e91ca..c4b062020bf20b8db34ccfea500fa682a4af19a6 100644
+--- a/package.json
++++ b/package.json
+@@ -60,5 +60,8 @@
+     "tslib": "^2.8.1",
+     "@mdui/shared": "^1.0.8",
+     "@mdui/jq": "^3.0.3"
++  },
++  "peerDependencies": {
++    "solid-js": "^1.9.7"
+   }
+ }

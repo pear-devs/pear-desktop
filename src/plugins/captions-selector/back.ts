@@ -1,13 +1,13 @@
 import prompt from 'custom-electron-prompt';
 
+import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 import { createBackend } from '@/utils';
-import { t } from '@/i18n';
 
 export default createBackend({
   start({ ipc: { handle }, window }) {
     handle(
-      'ytmd:captions-selector',
+      'peard:captions-selector',
       async (captionLabels: Record<string, string>, currentIndex: string) =>
         await prompt(
           {

@@ -1,16 +1,13 @@
-import { render } from 'solid-js/web';
-
 import { createSignal } from 'solid-js';
-
-import { getSongMenu } from '@/providers/dom-elements';
+import { render } from 'solid-js/web';
 
 import { PlaybackSpeedSlider } from './components/slider';
 import { t } from '@/i18n';
-
 import {
   isMusicOrVideoTrack,
   isPlayerMenu,
 } from '@/plugins/utils/renderer/check';
+import { getSongMenu } from '@/providers/dom-elements';
 
 const MIN_PLAYBACK_SPEED = 0.07;
 const MAX_PLAYBACK_SPEED = 16;
@@ -109,7 +106,7 @@ export const onPlayerApiReady = () => {
     const video = document.querySelector<HTMLVideoElement>('video');
     if (video) {
       video.addEventListener('ratechange', forcePlaybackRate);
-      video.addEventListener('ytmd:src-changed', forcePlaybackRate);
+      video.addEventListener('peard:src-changed', forcePlaybackRate);
     }
   };
 
@@ -121,7 +118,7 @@ export const onUnload = () => {
   const video = document.querySelector<HTMLVideoElement>('video');
   if (video) {
     video.removeEventListener('ratechange', forcePlaybackRate);
-    video.removeEventListener('ytmd:src-changed', forcePlaybackRate);
+    video.removeEventListener('peard:src-changed', forcePlaybackRate);
   }
   getSongMenu()?.removeChild(sliderContainer);
 };

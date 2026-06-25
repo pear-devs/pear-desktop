@@ -1,13 +1,11 @@
 import { dialog } from 'electron';
-
 import { render } from 'solid-js/web';
 
-import { createPlugin } from '@/utils';
-import { t } from '@/i18n';
-
 import { QualitySettingButton } from './templates/quality-setting-button';
+import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
-import type { YoutubePlayer } from '@/types/youtube-player';
+import type { MusicPlayer } from '@/types/music-player';
 
 export default createPlugin({
   name: () => t('plugins.quality-changer.name'),
@@ -19,7 +17,7 @@ export default createPlugin({
 
   backend({ ipc, window }) {
     ipc.handle(
-      'ytmd:quality-changer',
+      'peard:quality-changer',
       async (qualityLabels: string[], currentIndex: number) =>
         await dialog.showMessageBox(window, {
           type: 'question',
@@ -44,7 +42,7 @@ export default createPlugin({
 
   renderer: {
     qualitySettingsButtonContainer: document.createElement('div'),
-    onPlayerApiReady(api: YoutubePlayer, context) {
+    onPlayerApiReady(api: MusicPlayer, context) {
       const chooseQuality = async (e: MouseEvent) => {
         e.stopPropagation();
 
@@ -53,7 +51,7 @@ export default createPlugin({
         const currentIndex = qualityLevels.indexOf(api.getPlaybackQuality());
 
         const quality = (await context.ipc.invoke(
-          'ytmd:quality-changer',
+          'peard:quality-changer',
           api.getAvailableQualityLabels(),
           currentIndex,
         )) as {

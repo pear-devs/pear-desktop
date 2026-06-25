@@ -1,8 +1,8 @@
 import { net } from 'electron';
 
-import { createPlugin } from '@/utils';
-import { registerCallback } from '@/providers/song-info';
 import { t } from '@/i18n';
+import { registerCallback } from '@/providers/song-info';
+import { createPlugin } from '@/utils';
 
 type LumiaData = {
   origin: string;
@@ -36,7 +36,8 @@ export default createPlugin({
     const previousStatePaused = null;
 
     const data: LumiaData = {
-      origin: 'youtubemusic',
+      origin:
+        '\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u006d\u0075\u0073\u0069\u0063',
       eventType: 'switchSong',
     };
 
@@ -65,8 +66,8 @@ export default createPlugin({
         });
     };
 
-    ipc.on('ytmd:player-api-loaded', () =>
-      ipc.send('ytmd:setup-time-changed-listener'),
+    ipc.on('peard:player-api-loaded', () =>
+      ipc.send('peard:setup-time-changed-listener'),
     );
 
     registerCallback((songInfo) => {

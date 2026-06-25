@@ -3,7 +3,7 @@
     "console": {
       "plugins": {
         "execute-failed": "Erweiterung {{pluginName}}::{{contextName}} konnte nicht ausgeführt werden",
-        "executed-at-ms": "Erweiterung {{pluginName}}::{{contextName}} ausgeführt in {{ms}}ms",
+        "executed-at-ms": "Erweiterung {{pluginName}}::{{contextName}} in {{ms}}ms ausgeführt",
         "initialize-failed": "Initialisierung der Erweiterung \"{{pluginName}}\" fehlgeschlagen",
         "load-all": "Lade alle Erweiterungen",
         "load-failed": "Laden der Erweiterung \"{{pluginName}}\" fehlgeschlagen",
@@ -154,14 +154,15 @@
                 "label": "Benutzerdefinierter Fenstertitel",
                 "prompt": {
                   "label": "Benutzerdefinierten Fenstertitel eingeben: (zum Deaktivieren leer lassen)",
-                  "placeholder": "Beispiel: YouTube Music"
+                  "placeholder": "Beispiel: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "Standard",
                 "force-show": "Zeigen erzwungen",
                 "hide": "Versteckt",
-                "label": "Gefällt mir-Knopf"
+                "label": "Gefällt mir-Knopf",
+                "swap": "Gefällt mir-Knopf Reihenfolge ändern"
               },
               "remove-upgrade-button": "Upgrade-Schaltfläche entfernen",
               "theme": {
@@ -208,8 +209,8 @@
       "restart": "Anwendung neu starten",
       "show": "Fenster anzeigen",
       "tooltip": {
-        "default": "YouTube Musik",
-        "with-song-info": "YouTube Musik: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -217,13 +218,6 @@
     "ad-speedup": {
       "description": "Wenn eine Werbung spielt, stummt es das Audio und setzt die Wiedergabegeschwindigkeit auf 16x",
       "name": "Werbungsbeschleunigung"
-    },
-    "adblocker": {
-      "description": "Blockiere jegliche Werbung und Tracker",
-      "menu": {
-        "blocker": "Abfangmethode"
-      },
-      "name": "Werbeblocker"
     },
     "album-actions": {
       "description": "Fügt Undislike, Dislike, Like und Unlike-Knöpfe hinzu, welche sich auf alle Lieder in einer Playlist oder Album auswirken",
@@ -237,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Suchleisten-Design aktivieren"
       },
       "name": "Thema aus Albumfarbe"
     },
@@ -287,7 +282,7 @@
       "name": "Ambiente-Modus"
     },
     "amuse": {
-      "description": "Fügt Unterstützung für das Amuse \"Spielt gerade\"-Widget von 6K Labs hinzu",
+      "description": "Fügt {{applicationName}} Unterstützung für das Amuse \"Spielt gerade\"-Widget von 6K Labs hinzu",
       "name": "Amuse",
       "response": {
         "query": "Amuse API-Server läuft. /query für Liedinformationen."
@@ -319,6 +314,22 @@
         },
         "hostname": {
           "label": "Hostname"
+        },
+        "https": {
+          "label": "HTTPS & Zertifikate",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "HTTPS Zertifikat Datei auswählen",
+              "label": "Zertifikate Datei (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "HTTPS aktivieren"
+            },
+            "key": {
+              "dialogTitle": "HTTPS privaten Schlüssel Datei auswählen",
+              "label": "Privater Schlüssel Datei (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -369,11 +380,11 @@
       "name": "Verschwommene Navigationsleiste"
     },
     "bypass-age-restrictions": {
-      "description": "Youtubes Altersbestätigung umgehen",
+      "description": "Music Player Altersbestätigung umgehen",
       "name": "Altersbeschränkungen umgehen"
     },
     "captions-selector": {
-      "description": "Untertitelwähler für YouTube Music-Audio-Lieder",
+      "description": "Untertitelwähler für {{applicationName}}-Audio-Lieder",
       "menu": {
         "autoload": "Wähle automatisch den zuletzt verwendeten Untertitel",
         "disable-captions": "Standardmäßig keine Untertitel"
@@ -394,6 +405,17 @@
         "caption-disabled": "Untertitel deaktiviert",
         "no-captions": "Keine Untertitel für dieses Lied verfügbar"
       }
+    },
+    "clock": {
+      "description": "Füge eine Uhr der Navigationsleiste hinzu",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-Stunden Format",
+          "display-seconds": "Sekunden anzeigen",
+          "label": "Format"
+        }
+      },
+      "name": "Uhr"
     },
     "compact-sidebar": {
       "description": "Seitenleiste immer in den kompakten Modus setzen",
@@ -421,6 +443,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Einen maßgeschneiderten Ausgabemedienträger für Lieder einrichten",
+      "menu": {
+        "device-selector": "Gerät auswählen"
+      },
+      "name": "Benutzerdefiniertes Ausgabegerät",
+      "prompt": {
+        "device-selector": {
+          "label": "Wähle das Ausgabegerät, welches benutzt werden soll",
+          "title": "Wähle ein Ausgabegerät"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Startet Lied im pausierten Modus",
       "menu": {
@@ -443,8 +478,16 @@
         "disconnected": "Getrennt",
         "hide-duration-left": "Verbleibende Zeit verstecken",
         "hide-github-button": "Knopf mit Link zu GitHub ausblenden",
-        "play-on-youtube-music": "Auf YouTube Music abspielen",
-        "set-inactivity-timeout": "Inaktivitätstimeout setzen"
+        "play-on-application": "Auf {{applicationName}} abspielen",
+        "set-inactivity-timeout": "Inaktivitätstimeout setzen",
+        "set-status-display-type": {
+          "label": "Status Text",
+          "submenu": {
+            "application": "Hört {{applicationName}}",
+            "artist": "Hört {artist} zu",
+            "title": "Du hörst {song title}"
+          }
+        }
       },
       "name": "Discords Aktivitätsstatus",
       "prompt": {
@@ -585,7 +628,7 @@
         "permission": {
           "all": "Gästen erlauben, Wiederhabeliste und Player zu bedienen",
           "host-only": "Nur der Host kann die Playlist und den Player kontrollieren",
-          "playlist": "Gäste das Kontrollieren der Playlist erlauben"
+          "playlist": "Gästen das Kontrollieren der Playlist erlauben"
         },
         "set-permission": "Kontrollberechtigung ändern",
         "status": {
@@ -736,6 +779,7 @@
         "listenbrainz": {
           "token": "ListenBrainz-Benutzer-Token eintragen"
         },
+        "scrobble-alternative-artist": "Benutze Alternative Künstler",
         "scrobble-alternative-title": "Nutze alternative Titel",
         "scrobble-other-media": "Andere Medien scrobbeln"
       },
@@ -791,6 +835,24 @@
         "not-found": "⚠️ Kein Text für diesen Song gefunden."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Chinesische Zeichen Umwandeln",
+          "submenu": {
+            "disabled": {
+              "label": "Deaktiviert",
+              "tooltip": "Chinesische Zeichenkonvertierung deaktivieren"
+            },
+            "simplified-to-traditional": {
+              "label": "Vereinfacht zu Traditionell",
+              "tooltip": "Vereinfachtes Chinesisch in traditionelles Chinesisch umwandeln"
+            },
+            "traditional-to-simplified": {
+              "label": "Traditionell zu Vereinfacht",
+              "tooltip": "Traditionelles Chinesisch in vereinfachtes Chinesisch umwandeln"
+            }
+          },
+          "tooltip": "Chinesische Zeichen in traditionell oder vereinfacht umwandeln"
+        },
         "default-text-string": {
           "label": "Standardzeichen zwischen Texten",
           "tooltip": "Standardzeichen für die Lücke zwischen Songtexten auswählen"
@@ -821,6 +883,14 @@
           "label": "Den Songtext perfekt synchronisieren",
           "tooltip": "Auf die Millisekunde genau berechnen, wann die nächste Zeile angezeigt werden soll (Kann Einfluss auf die Leistung haben)"
         },
+        "preferred-provider": {
+          "label": "bevorzugter Anbieter",
+          "none": {
+            "label": "Nichts",
+            "tooltip": "Kein bevorzugter Anbieter"
+          },
+          "tooltip": "Standardanbieter auswählen"
+        },
         "romanization": {
           "label": "Lateinische Umschrift anzeigen",
           "tooltip": "Wenn der Liedtext in einer anderen Schrift ist, zeige nach Möglichkeit eine Version in lateinischer Schrift an."
@@ -836,12 +906,12 @@
       },
       "name": "Synchronisierte Texte",
       "refetch-btn": {
-        "fetching": "Hole Songtext...",
-        "normal": "Songtext neu holen"
+        "fetching": "Laden...",
+        "normal": "Songtext neu laden"
       },
       "warnings": {
         "duration-mismatch": "⚠️ - Es kann sein, dass die Synchronization nicht stimmt, da die Songdauer nicht übereinstimmt.",
-        "inexact": "⚠️ - Der Songtext stimmt möglicherweise nicht überein",
+        "inexact": "⚠️ - Es ist möglich, dass der Songtext für diesen Song nicht übereinstimmt.",
         "instrumental": "⚠️ - Das ist ein instrumentales Lied"
       }
     },
@@ -855,7 +925,6 @@
     },
     "transparent-player": {
       "description": "Macht das Player-Fenster transparent",
-      "name": "Transparent Player",
       "menu": {
         "opacity": {
           "label": "Hintergrund-Sichtbarkeit",
@@ -866,12 +935,14 @@
         "type": {
           "label": "Typ",
           "submenu": {
-            "acrylic": "Acrylic",
+            "acrylic": "Acryl",
             "mica": "Mica",
-            "tabbed": "Tabbed"
+            "none": "Nichts",
+            "tabbed": "Mit Registerkarten"
           }
         }
-      }
+      },
+      "name": "Transparenter Player"
     },
     "tuna-obs": {
       "description": "Integration mit dem OBS-Plugin Tuna",

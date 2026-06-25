@@ -1,3 +1,5 @@
+import { type IntrinsicElements as MDUIElements } from 'mdui/jsx.en';
+
 import type { Icons } from '@/types/icons';
 import type { ComponentProps } from 'solid-js';
 
@@ -33,13 +35,13 @@ declare module 'solid-js' {
       icon: Icons;
     }
 
-    interface YtmdTransProps {
+    interface PearTransProps {
       key?: string;
     }
 
-    interface IntrinsicElements {
+    interface IntrinsicElements extends MDUIElements {
       'center': ComponentProps<'div'>;
-      'ytmd-trans': ComponentProps<'span'> & YtmdTransProps;
+      'pear-trans': ComponentProps<'span'> & PearTransProps;
       'yt-formatted-string': ComponentProps<'span'> & YtFormattedStringProps;
       'yt-button-renderer': ComponentProps<'button'> & YtButtonRendererProps;
       'yt-touch-feedback-shape': ComponentProps<'div'>;

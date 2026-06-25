@@ -29,6 +29,7 @@ export interface DefaultConfig {
     autoResetAppCache: boolean;
     resumeOnStart: boolean;
     likeButtons: string;
+    swapLikeButtonsOrder: boolean;
     proxy: string;
     startingPage: string;
     backgroundMaterial?: 'none' | 'mica' | 'acrylic' | 'tabbed';
@@ -50,7 +51,7 @@ export const defaultConfig: DefaultConfig = {
     x: -1,
     y: -1,
   },
-  'url': 'https://music.youtube.com',
+  'url': 'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com',
   'options': {
     tray: false,
     appVisible: true,
@@ -66,6 +67,7 @@ export const defaultConfig: DefaultConfig = {
     autoResetAppCache: false,
     resumeOnStart: true,
     likeButtons: '',
+    swapLikeButtonsOrder: false,
     proxy: '',
     startingPage: '',
     overrideUserAgent: false,

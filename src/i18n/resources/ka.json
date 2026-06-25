@@ -2,7 +2,7 @@
   "common": {
     "console": {
       "plugins": {
-        "execute-failed": "პლაგინის დაყენების შეცდომა {{pluginName}}::{{contextName}}",
+        "execute-failed": "დამატების შესრულების შეცდომა {{pluginName}}::{{contextName}}",
         "executed-at-ms": "პლაგინი {{pluginName}}::{{contextName}} გაეშვა {{ms}} მილიწამში",
         "initialize-failed": "პლაგინის ინიციალიზაცია ვერ მოხდა\"{{pluginName}}\"",
         "load-all": "იტვირთება ყველა პლაგინი",
@@ -37,26 +37,45 @@
       },
       "when-ready": {
         "clearing-cache-after-20s": "აპლიკაციის ქეშის გაწმენდვა"
+      },
+      "window": {
+        "tried-to-render-offscreen": "ფანჯარამ სცადა, ეკრანსმიღმა გახსნილიყო, ფანჯრის ზომა={{windowSize}}, ეკრანის ზომა={{displaySize}}, მდებარეობა={{position}}"
       }
     },
     "dialog": {
+      "hide-menu-enabled": {
+        "detail": "მენიუ დამალულია, გამოიყენეთ 'Alt', რათა გამოაჩინოთ ის (ან 'Escape' თუ იყენებთ აპლიკაციის შიგნითა მენიუს)",
+        "message": "მენიუს დამალვა ჩართულია",
+        "title": "მენიუს დამალვა ჩართულია"
+      },
       "need-to-restart": {
         "buttons": {
-          "later": "მოგვიანებით"
-        }
+          "later": "მოგვიანებით",
+          "restart-now": "გადატვირთვა ახლავე"
+        },
+        "detail": "„{{pluginName}}“ დანამატის ძალაში შესასვლელად გადატვირთვა საჭიროა",
+        "message": "\"{{pluginName}}\" საჭიროებს გადატვირთვას",
+        "title": "საჭიროებს გადატვირთვას"
       },
       "unresponsive": {
         "buttons": {
           "quit": "გასვლა",
           "relaunch": "თავიდან გაშვება",
           "wait": "მოცდა"
-        }
+        },
+        "detail": "ბოდიშს გიხდით მოუხერხელობისათვის! გთხოვთ აირჩიეთ რა უნდა გაკეთდეს:",
+        "message": "აპლიკაცია არ პასუხობს",
+        "title": "ფანჯარა არ პასუხობს"
       },
       "update-available": {
         "buttons": {
+          "disable": "განახლებების გამორთვა",
           "download": "გადმოწერა",
           "ok": "დიახ"
-        }
+        },
+        "detail": "ახალი ვერსიაა ხელმისაწვდომი, მისი ჩამოტვირთვა შესაძლებელია {{downloadLink}}-დან",
+        "message": "ახალი ვერსია ხელმისაწვდომია",
+        "title": "განახლება ხელმისაწვდომია"
       }
     },
     "menu": {
@@ -64,37 +83,101 @@
       "navigation": {
         "label": "ნავიგაცია",
         "submenu": {
-          "quit": "გასვლა"
+          "copy-current-url": "მიმდინარე URL-ის დაკოპირება",
+          "go-back": "უკან დაბრუნება",
+          "go-forward": "წინ გადასვლა",
+          "quit": "გასვლა",
+          "restart": "აპლიკაციის გადატვირთვა"
         }
       },
       "options": {
         "label": "მორგება",
         "submenu": {
-          "language": {
-            "label": "ენა"
+          "advanced-options": {
+            "label": "გაფართოებული პარამეტრები",
+            "submenu": {
+              "auto-reset-app-cache": "აპლიკაციის ქეშის გადატვირთვა როცა აპლიკაცია დაიწყება",
+              "disable-hardware-acceleration": "აპარატურული აჩქარების გამორთვა",
+              "edit-config-json": "config.json-ის რედაქტირება",
+              "override-user-agent": "მომხმარებლის აგენტის შეცვლა",
+              "restart-on-config-changes": "გადატვირთვა კონფიგურაციის ცვლილებების დროს",
+              "set-proxy": {
+                "label": "პროქსის დაყენება",
+                "prompt": {
+                  "label": "შეიყვანეთ პროქსის მისამართი: (გამორთვისთვის დატოვეთ ცარიელი)",
+                  "placeholder": "მაგალითი: SOCKS5://127.0.0.1:9999",
+                  "title": "პროქსის დაყენება"
+                }
+              },
+              "toggle-dev-tools": "DevTools-ის გადართვა"
+            }
           },
+          "always-on-top": "მუდამ ზემოთ",
+          "auto-update": "ავტომატური განახლება",
+          "hide-menu": {
+            "dialog": {
+              "message": "მენიუ შემდეგი გაშვებისას დაიმალება, მის საჩვენებლად გამოიყენეთ [Alt] (ან თუ აპლიკაციის მენიუს იყენებთ, უკან დააწკაპუნეთ [`])",
+              "title": "მენიუს დამალვა ჩაირთო"
+            },
+            "label": "მენიუს დამალვა"
+          },
+          "language": {
+            "dialog": {
+              "message": "გადატვირთვის შემდეგ ენა შეიცვლება",
+              "title": "ენა შეიცვალა"
+            },
+            "label": "ენა",
+            "submenu": {
+              "to-help-translate": "გსურთ დაგვეხმაროთ თარგმნაში? დააწკაპუნეთ აქ"
+            }
+          },
+          "resume-on-start": "აპლიკაციის თავიდან გაშვებისას ბოლო სიმღერა დაუკრას",
+          "single-instance-lock": "ერთჯერადი ინსტანციის საკეტი",
+          "start-at-login": "შესვლისას ჩართვა",
           "starting-page": {
+            "label": "საწყისი გვერდი",
             "unset": "მოხსნა"
           },
           "tray": {
+            "label": "დაფა",
             "submenu": {
-              "disabled": "გამორთულია"
+              "disabled": "გამორთულია",
+              "enabled-and-hide-app": "ჩართე და დამალე პროგრამა",
+              "enabled-and-show-app": "ჩართე და დატოვე პროგრამა",
+              "play-pause-on-click": "დაჭერით ჩართე/დააპაუზე"
             }
           },
           "visual-tweaks": {
+            "label": "ვიზუალური ცვლილებები",
             "submenu": {
+              "custom-window-title": {
+                "label": "პერსონალიზებული ფანჯრის სათაური",
+                "prompt": {
+                  "label": "შეიყვანე პერსონალიზებული ფანჯრის სათაური: (დატოვე ცარიელი გასათიშად)"
+                }
+              },
               "like-buttons": {
                 "default": "ნაგულისხმევი",
-                "hide": "დამალვა"
+                "force-show": "დააძალე ჩვენება",
+                "hide": "დამალე",
+                "label": "დალაიქების ღილაკები",
+                "swap": "დალაიქების ღილაკები ჩაანაცვლე ერთმანეთში"
               },
+              "remove-upgrade-button": "გააქრე \"upgrade\" ღილაკი",
               "theme": {
                 "dialog": {
                   "button": {
                     "cancel": "გაუქმება",
                     "remove": "წაშლა"
-                  }
+                  },
+                  "remove-theme": "დარწმუნებული ხარ რომ გინდა პერსონალიზებული თემის გათიშვა?",
+                  "remove-theme-message": "ეს პერსონალიზებულ ტემას გათიშავს"
                 },
-                "label": "თემა"
+                "label": "თემა",
+                "submenu": {
+                  "import-css-file": "პერსონალიზებული CSS ფაილის იმპორტირება",
+                  "no-theme": "არ არის თემა"
+                }
               }
             }
           }
@@ -102,13 +185,18 @@
       },
       "plugins": {
         "enabled": "ჩართულია",
-        "label": "დამატებები",
+        "label": "ფლაგინები",
         "new": "ახალი"
       },
       "view": {
         "label": "ხედი",
         "submenu": {
-          "reload": "თავიდან ჩატვირთვა"
+          "force-reload": "ძალით გადატვირთვა",
+          "reload": "გადატვირთვა",
+          "reset-zoom": "ჩვეული ზომა",
+          "toggle-fullscreen": "სრული ეკრანი",
+          "zoom-in": "გადიდება",
+          "zoom-out": "დაპატარავება"
         }
       }
     },
@@ -116,51 +204,74 @@
       "next": "შემდეგი",
       "play-pause": "დაკვრა/შეჩერება",
       "previous": "წინა",
-      "quit": "გასვლა"
+      "quit": "გასვლა",
+      "restart": "პროგრამის დარესტარტება",
+      "show": "ფანჯრის ჩვენება"
     }
   },
   "plugins": {
-    "adblocker": {
-      "menu": {
-        "blocker": "დამბლოკავი"
-      }
+    "ad-speedup": {
+      "description": "თუ რეკლამა ჩაირთვება ხმას თიშავს და 16-ჯერ აჩქარებს",
+      "name": "რეკლამის აჩქარება"
+    },
+    "album-actions": {
+      "description": "ამატებს დისლაიქის მოხსნას, დისლაიქს, ლაიქს და განლაიქების ღილაკებს რომელიც ეხება სიმღერებს მთლიან ფლეილისთში ან ალბომებში",
+      "name": "ალბუმის ურთიერთობა"
     },
     "album-color-theme": {
+      "description": "დინამიურ თემატიკას და ვიზუალურ ეფეკტებს ამატებს ალბომის ფოტოს ფერების მიხედვით",
       "menu": {
         "color-mix-ratio": {
+          "label": "ფერის შერევის შეფარდება",
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
-      }
+        },
+        "enable-seekbar": "ჩართე მართვის ზოლის თემა"
+      },
+      "name": "ალბომის ფერის თემა"
     },
     "ambient-mode": {
+      "description": "ვიდეოს ფერებით უკანა ფონზე განათების ეფექტს ამატებს",
       "menu": {
+        "blur-amount": {
+          "label": "დაბუნდოვნების დონე",
+          "submenu": {
+            "pixels": "{{blurAmount}} პიკსელები"
+          }
+        },
         "buffer": {
-          "label": "ბუფერი",
+          "label": "ბაფერი",
           "submenu": {
             "buffer": "{{buffer}}"
           }
         },
         "opacity": {
-          "label": "გაუმჭვირვალობა",
+          "label": "გამჭვირვალობა",
           "submenu": {
             "percent": "{{opacity}}%"
           }
         },
         "quality": {
-          "label": "ხარისხი"
+          "label": "ხარისხი",
+          "submenu": {
+            "pixels": "{{quality}} პიქსელები"
+          }
         },
         "size": {
           "label": "ზომა",
           "submenu": {
             "percent": "{{size}}%"
           }
+        },
+        "use-fullscreen": {
+          "label": "სრული ეკრანის გამოყენება"
         }
-      }
+      },
+      "name": "გარემოს რეჟიმი"
     },
     "amuse": {
-      "name": "Amuse"
+      "name": "გაკვირვება"
     },
     "api-server": {
       "dialog": {
@@ -261,6 +372,13 @@
         "status": {
           "disconnected": "გათიშული"
         }
+      },
+      "toast": {
+        "closed": "Music Together-ის ორგანიზატორი დაიხურა",
+        "disconnected": "Music Together-ის კავშირი გათიშულია",
+        "host-failed": "Music Together-ის გამოცხადება ვერ მოხერხდა",
+        "id-copied": "გამოსაცხადებელი ID დაკოპირებულია ბუფერში",
+        "id-copy-failed": "გამოსაცხადებელი ID-ის ვერ დაკოპირდა ბუფერში"
       }
     },
     "navigation": {
@@ -303,6 +421,30 @@
           }
         }
       }
+    },
+    "video-toggle": {
+      "menu": {
+        "mode": {
+          "label": "რეჟიმი",
+          "submenu": {
+            "custom": "მორგებული გადამრთველი",
+            "disabled": "გამორთულია",
+            "native": "ადგილობრივი გადართვა"
+          }
+        }
+      },
+      "name": "ვიდეოს გადართვა",
+      "templates": {
+        "button-song": "სიმღერა",
+        "button-video": "ვიდეო"
+      }
+    },
+    "visualizer": {
+      "description": "პლეიერს ვიზუალიზატორს უმატებს",
+      "menu": {
+        "visualizer-type": "ვიზუალიზატორის ტიპი"
+      },
+      "name": "ვიზუალიზატორი"
     }
   }
 }

@@ -1,4 +1,4 @@
-import is from 'electron-is';
+import prompt from 'custom-electron-prompt';
 import {
   app,
   type BrowserWindow,
@@ -8,21 +8,17 @@ import {
   type MenuItem,
   shell,
 } from 'electron';
-import prompt from 'custom-electron-prompt';
+import is from 'electron-is';
 import { satisfies } from 'semver';
-
+import { languageResources } from 'virtual:i18n';
 import { allPlugins } from 'virtual:plugins';
 
-import { languageResources } from 'virtual:i18n';
-
 import * as config from './config';
-
+import { getAllMenuTemplate, loadAllMenuPlugins } from './loader/menu';
 import { restart } from './providers/app-controls';
 import { startingPages } from './providers/extracted-data';
 import promptOptions from './providers/prompt-options';
-
-import { getAllMenuTemplate, loadAllMenuPlugins } from './loader/menu';
-import { setLanguage, t } from '@/i18n';
+import { APPLICATION_NAME, setLanguage, t } from '@/i18n';
 
 import packageJson from '../package.json';
 
@@ -128,7 +124,7 @@ export const mainMenuTemplate = async (
 
         return aPluginLabel.localeCompare(bPluginLabel);
       })
-      .map((id) => {
+      .map(async (id) => {
         const predefinedTemplate = menuResult.find((it) => it[0] === id);
         if (predefinedTemplate) return predefinedTemplate[1];
 
@@ -235,6 +231,9 @@ export const mainMenuTemplate = async (
                       type: 'text',
                       placeholder: t(
                         'main.menu.options.submenu.visual-tweaks.submenu.custom-window-title.prompt.placeholder',
+                        {
+                          applicationName: APPLICATION_NAME,
+                        },
                       ),
                     },
                     width: 500,
@@ -280,6 +279,19 @@ export const mainMenuTemplate = async (
                   checked: config.get('options.likeButtons') === 'hide',
                   click() {
                     config.set('options.likeButtons', 'hide');
+                  },
+                },
+                {
+                  label: t(
+                    'main.menu.options.submenu.visual-tweaks.submenu.like-buttons.swap',
+                  ),
+                  type: 'checkbox',
+                  checked: config.get('options.swapLikeButtonsOrder'),
+                  click(item: MenuItem) {
+                    config.setMenuOption(
+                      'options.swapLikeButtonsOrder',
+                      item.checked,
+                    );
                   },
                 },
               ],
@@ -473,7 +485,7 @@ export const mainMenuTemplate = async (
               ),
               type: 'normal',
               click() {
-                const url = 'https://hosted.weblate.org/engage/youtube-music/';
+                const url = 'https://bit.ly/48n5YF7';
                 shell.openExternal(url);
               },
             } as Electron.MenuItemConstructorOptions,

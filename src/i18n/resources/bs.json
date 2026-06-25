@@ -154,7 +154,7 @@
                 "label": "Prilagođeni naslov prozora",
                 "prompt": {
                   "label": "Unesite vlastiti naslov prozora: (ostavite prazno za isključenje)",
-                  "placeholder": "Primjer: YouTube Music"
+                  "placeholder": "Primjer: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -184,9 +184,31 @@
         }
       },
       "plugins": {
-        "enabled": "Omogući",
+        "enabled": "Omogućeno",
         "label": "Dodaci",
         "new": "Novo"
+      },
+      "view": {
+        "label": "Pogled",
+        "submenu": {
+          "force-reload": "Silom Ponovo Učitaj",
+          "reload": "Ponovo Učitaj",
+          "reset-zoom": "Stvarna Veličina",
+          "toggle-fullscreen": "Uključi/Isključi Prikaz Cijelog Ekrana",
+          "zoom-in": "Uvećaj",
+          "zoom-out": "Umanji"
+        }
+      }
+    },
+    "tray": {
+      "next": "Slijedeće",
+      "play-pause": "Plej/Pauza",
+      "previous": "Prethodno",
+      "quit": "Izlaz",
+      "restart": "Ponovo Pokreni Aplikaciju",
+      "show": "Pokaži prozor",
+      "tooltip": {
+        "default": "{{applicationName}}"
       }
     }
   },
@@ -195,6 +217,53 @@
       "menu": {
         "quality": {
           "label": "Kvalitet"
+        }
+      }
+    },
+    "discord": {
+      "menu": {
+        "set-status-display-type": {
+          "submenu": {
+            "application": "Slušate {{applicationName}}",
+            "artist": "Slušate {muzičar}",
+            "title": "Slušate {naziv pesme}"
+          }
+        }
+      },
+      "name": "Diskord Rich Presence",
+      "prompt": {
+        "set-inactivity-timeout": {
+          "label": "Unesi ograničenje neaktivnosti u sekundama:",
+          "title": "Postavi ograničenje neaktivnosti"
+        }
+      }
+    },
+    "downloader": {
+      "backend": {
+        "dialog": {
+          "error": {
+            "buttons": {
+              "ok": "OK"
+            },
+            "message": "Ufff! Izvinite, preuzimanje nije uspelo…",
+            "title": "Greška u preuzimanju!"
+          },
+          "start-download-playlist": {
+            "buttons": {
+              "ok": "OK"
+            },
+            "detail": "({{Playlist Size}} pjesme)",
+            "message": "Preuzimanje Plejliste {{playlist Title}}",
+            "title": "Preuzimanje počelo"
+          }
+        },
+        "feedback": {
+          "conversion-progress": "Pretvaranje: {{percent}}%",
+          "converting": "Pretvaranje…",
+          "done": "Gotovo: {{file Path}}",
+          "download-info": "Preuzimanje {{artist}} - {{title}} [{{videoId}}",
+          "download-progress": "Preuzimanje: {{percent}}%",
+          "downloading": "Preuzimanje…"
         }
       }
     }

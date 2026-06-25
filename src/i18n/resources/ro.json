@@ -154,14 +154,15 @@
                 "label": "Titlul ferestrei personalizate",
                 "prompt": {
                   "label": "Introduceți titlul ferestrei personalizate: (lăsați gol pentru a dezactiva)",
-                  "placeholder": "Exemplu: Youtube Music"
+                  "placeholder": "Exemplu: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "Default",
                 "force-show": "Forțează randarea",
                 "hide": "Ascunde",
-                "label": "Butoane de like"
+                "label": "Butoane de like",
+                "swap": "Schimbă ordinea butoanelor like"
               },
               "remove-upgrade-button": "Elimina butonul de upgrade",
               "theme": {
@@ -208,8 +209,8 @@
       "restart": "Reporneste aplicatia",
       "show": "Arata fereastra",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -217,13 +218,6 @@
     "ad-speedup": {
       "description": "Reclamele au sunetul dezactivat si viteza de redare este x16",
       "name": "Accelerare reclame"
-    },
-    "adblocker": {
-      "description": "Blocheaza toate reclamele si trackers",
-      "menu": {
-        "blocker": "Blocator"
-      },
-      "name": "Blocator de reclame"
     },
     "album-actions": {
       "description": "Adauga butoane pentru Undislike, Like si Unlike pentru toate piesele dintr-un playlist sau album",
@@ -287,7 +281,7 @@
       "name": "Mod ambiental"
     },
     "amuse": {
-      "description": "Adauga suport Youtube Music pentru Amuse se redă acum widget de 6K Labs",
+      "description": "Adauga suport {{applicationName}} pentru Amuse se redă acum widget de 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Server-ul API-ului Amuse rulează. GET /query pentru a obține informații despre melodie."
@@ -319,6 +313,18 @@
         },
         "hostname": {
           "label": "Nume host"
+        },
+        "https": {
+          "label": "HTTPS și Certificate",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Selectează fișierul de certificare HTTPS",
+              "label": "Fișier de certificare (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Activează HTTPS"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -369,11 +375,11 @@
       "name": "Estompează Bara de Navigație"
     },
     "bypass-age-restrictions": {
-      "description": "Treci peste verificarea de vârstă a YouTube-ului",
+      "description": "Treci peste verificarea de vârstă a Music Player",
       "name": "Ignoră restricțiile de vârstă"
     },
     "captions-selector": {
-      "description": "Selector de subtitrări pentru piesele audio de pe YouTube Music",
+      "description": "Selector de subtitrări pentru piesele audio de pe {{applicationName}}",
       "menu": {
         "autoload": "Selectează automat ultima subtitrare folosită",
         "disable-captions": "Fără subtitrări în mod implicit"
@@ -394,6 +400,14 @@
         "caption-disabled": "Subtitrari dezactivate",
         "no-captions": "Nu exista subtitrari disponibile pentru aceasta piesa"
       }
+    },
+    "clock": {
+      "menu": {
+        "format": {
+          "label": "Format"
+        }
+      },
+      "name": "Ceas"
     },
     "compact-sidebar": {
       "description": "Păstrează bara laterală mereu în modul compact",
@@ -421,6 +435,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Configurați un dispozitiv de ieșire personalizat pentru melodii",
+      "menu": {
+        "device-selector": "Selectați dispozitivul"
+      },
+      "name": "Dispozitiv de ieșire personalizat",
+      "prompt": {
+        "device-selector": {
+          "label": "Alegeți dispozitivul media de ieșire care va fi utilizat",
+          "title": "Selectați dispozitivul de ieșire"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Face cântecul să înceapă în modul \"pauză\"",
       "menu": {
@@ -443,8 +470,16 @@
         "disconnected": "Deconectat",
         "hide-duration-left": "Ascunde timpul rămas",
         "hide-github-button": "Ascunde butonul cu link-ul GitHub",
-        "play-on-youtube-music": "Redă pe YouTube Music",
-        "set-inactivity-timeout": "Setează intervalul de inactivitate"
+        "play-on-application": "Redă pe {{applicationName}}",
+        "set-inactivity-timeout": "Setează intervalul de inactivitate",
+        "set-status-display-type": {
+          "label": "Text stare",
+          "submenu": {
+            "application": "Ascultând {{applicationName}}",
+            "artist": "Ascultând {artist}",
+            "title": "Ascultând {song title}"
+          }
+        }
       },
       "name": "Discord Rich Presence",
       "prompt": {
@@ -712,7 +747,12 @@
         }
       },
       "description": "Permite schimbarea calității video cu un buton prezent peste video",
-      "name": "Schimbător de calitate video"
+      "name": "Schimbător de calitate video",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "Deschide setările de calitate"
+        }
+      }
     },
     "scrobbler": {
       "description": "Adaugă asistenta pentru scrobbling (etc. last.fm, Listenbrainz)",
@@ -731,6 +771,7 @@
         "listenbrainz": {
           "token": "Introdu token-ul de utilizator ListenBrainz"
         },
+        "scrobble-alternative-artist": "Utilizați artiști alternativi",
         "scrobble-alternative-title": "Folosește titluri alternative",
         "scrobble-other-media": "Scrobble alte surse media"
       },
@@ -786,6 +827,13 @@
         "not-found": "⚠️ Nu au fost găsite versuri pentru această melodie."
       },
       "menu": {
+        "convert-chinese-character": {
+          "submenu": {
+            "disabled": {
+              "label": "Dezactivat"
+            }
+          }
+        },
         "default-text-string": {
           "label": "Caracter implicit între versuri",
           "tooltip": "Alege caracterul implicit folosit pentru spațiul dintre versuri"
@@ -815,6 +863,14 @@
         "precise-timing": {
           "label": "Sincronizează versurile perfect",
           "tooltip": "Calculează afisarea următoarei linii până la milisecundă (poate afecta performanța)"
+        },
+        "preferred-provider": {
+          "label": "Furnizor preferat",
+          "none": {
+            "label": "Niciunul",
+            "tooltip": "Niciun furnizor preferat"
+          },
+          "tooltip": "Alegeți furnizorul preferat"
         },
         "romanization": {
           "label": "Transcrie versurile în alfabet latin",
@@ -847,6 +903,27 @@
     "touchbar": {
       "description": "Adaugă un widget TouchBar pentru utilizatorii macOS",
       "name": "TouchBar"
+    },
+    "transparent-player": {
+      "description": "Face fereastra aplicației transparentă",
+      "menu": {
+        "opacity": {
+          "label": "Opacitate",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Tip",
+          "submenu": {
+            "acrylic": "Acrilic",
+            "mica": "Efect mica",
+            "none": "Niciunul",
+            "tabbed": "Cu file"
+          }
+        }
+      },
+      "name": "Player transparent"
     },
     "tuna-obs": {
       "description": "Integrare cu plugin-ul OBS Tuna",

@@ -15,7 +15,7 @@ declare global {
   }
 
   interface DocumentEventMap {
-    'ytmd:audio-can-play': CustomEvent<Compressor>;
+    'peard:audio-can-play': CustomEvent<Compressor>;
     'videodatachange': CustomEvent<VideoDataChanged>;
   }
 
@@ -28,7 +28,7 @@ declare global {
     electronIs: typeof is;
     ELECTRON_RENDERER_URL: string | undefined;
     /**
-     * YouTube Music internal variable (Last interaction time)
+     * Internal variable (Last interaction time)
      */
     _lact: number;
     navigation: Navigation;
