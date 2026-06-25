@@ -232,8 +232,8 @@ importers:
         specifier: 2.3.0
         version: 2.3.0
       youtubei.js:
-        specifier: 17.1.0
-        version: 17.1.0
+        specifier: 17.2.0
+        version: 17.2.0
       zod:
         specifier: 4.4.3
         version: 4.4.3
@@ -4232,8 +4232,8 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
-  youtubei.js@17.1.0:
-    resolution: {integrity: sha512-3iwxjao9VmlqxhxSl81v6qe/tLVsYDhAQp06dHbeTVBN3F/2jqWxpZNofgn6VOkSkFnLFdDfVn5ypVXIX6WsHw==}
+  youtubei.js@17.2.0:
+    resolution: {integrity: sha512-XLNsgRKO1h7t4i9tIMWSQSeWdD7Ujkk5v1m5YCaumaHMhu/xuLqtO3M0Hq7CXNup9HlJ1NGrT1Y+HLIHnL6Ujg==}
 
   zlibjs@0.3.1:
     resolution: {integrity: sha512-+J9RrgTKOmlxFSDHo0pI1xM6BLVUv+o0ZT9ANtCxGkjIVCCUdx9alUF8Gm+dGLKbkkkidWIHFDZHDMpfITt4+w==}
@@ -8074,7 +8074,7 @@ snapshots:
 
   yocto-queue@0.1.0: {}
 
-  youtubei.js@17.1.0:
+  youtubei.js@17.2.0:
     dependencies:
       '@bufbuild/protobuf': 2.12.1
       fflate: 0.8.3
