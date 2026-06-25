@@ -21,6 +21,7 @@ export default createPlugin({
     defaultTextString: '♪',
     lineEffect: 'fancy',
     romanization: true,
+    useYTMLyricsWithoutProxy: false,
   } satisfies SyncedLyricsPluginConfig as SyncedLyricsPluginConfig,
 
   menu,

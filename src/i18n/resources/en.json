@@ -892,6 +892,10 @@
           "label": "Show time codes",
           "tooltip": "Show the time codes next to the lyrics"
         },
+        "use-ytm-lyrics-without-proxy": {
+          "label": "Use YTM lyrics with no proxy",
+          "tooltip": "Skip the YTM browse proxy and call YouTube Music directly using the app's authenticated session. Useful if you trust your network/region to allow direct browse calls."
+        },
         "convert-chinese-character": {
           "label": "Convert Chinese character",
           "submenu": {

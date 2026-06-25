@@ -232,5 +232,20 @@ export const menu = async (
         });
       },
     },
+    {
+      label: t(
+        'plugins.synced-lyrics.menu.use-ytm-lyrics-without-proxy.label',
+      ),
+      toolTip: t(
+        'plugins.synced-lyrics.menu.use-ytm-lyrics-without-proxy.tooltip',
+      ),
+      type: 'checkbox',
+      checked: config.useYTMLyricsWithoutProxy,
+      click(item) {
+        ctx.setConfig({
+          useYTMLyricsWithoutProxy: item.checked,
+        });
+      },
+    },
   ];
 };
