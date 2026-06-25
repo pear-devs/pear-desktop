@@ -1,5 +1,3 @@
-import { type BrowserWindow, ipcMain } from 'electron';
-
 import MprisPlayer, {
   type LoopStatus,
   type PlayBackStatus,
@@ -8,17 +6,17 @@ import MprisPlayer, {
   type Track,
 } from '@jellybrick/mpris-service';
 import * as MprisMeta from '@jellybrick/mpris-service';
+import { type BrowserWindow, ipcMain } from 'electron';
 
+import * as config from '@/config';
+import { APPLICATION_NAME } from '@/i18n';
+import { getSongControls } from '@/providers/song-controls';
 import {
   registerCallback,
   type SongInfo,
   SongInfoEvent,
 } from '@/providers/song-info';
-import { getSongControls } from '@/providers/song-controls';
-import * as config from '@/config';
 import { LoggerPrefix } from '@/utils';
-
-import { APPLICATION_NAME } from '@/i18n';
 
 import type { RepeatMode, VolumeState } from '@/types/datahost-get-state';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';

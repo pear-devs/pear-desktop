@@ -219,13 +219,6 @@
       "description": "使用静音以及 16 倍速播放跳过广告片段",
       "name": "广告加速跳过"
     },
-    "adblocker": {
-      "description": "屏蔽所有广告与跟踪器",
-      "menu": {
-        "blocker": "屏蔽器"
-      },
-      "name": "广告屏蔽器"
-    },
     "album-actions": {
       "description": "添加作用于播放列表或专辑中所有歌曲的全局“点赞/取消点赞”与“喜欢/取消喜欢”按钮",
       "name": "专辑操作"

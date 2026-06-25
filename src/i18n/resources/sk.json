@@ -219,13 +219,6 @@
       "description": "Ak sa spustí reklama, stlmí sa zvuk a nastaví sa rýchlosť prehrávania na 16x",
       "name": "Zrýchľovač reklám"
     },
-    "adblocker": {
-      "description": "Blokovať všetky reklamy a sledovania hneď od začiatku",
-      "menu": {
-        "blocker": "Blokovač"
-      },
-      "name": "Blokovač reklám"
-    },
     "album-actions": {
       "description": "Pridáva Undislike, Dislike, Like, a Unlike tlačítka k aplikovaniu tohto ku všetkým pesničkám v zozname pesničiek alebo albume",
       "name": "Možnosti albumu"

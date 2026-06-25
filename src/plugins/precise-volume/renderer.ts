@@ -1,5 +1,4 @@
 import { type PreciseVolumePluginConfig } from './index';
-
 import { debounce } from '@/providers/decorators';
 
 import type { RendererContext } from '@/types/contexts';

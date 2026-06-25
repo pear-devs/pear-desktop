@@ -1,11 +1,10 @@
 import * as net from 'node:net';
 
-import { SocksClient, type SocksClientOptions } from 'socks';
 import is from 'electron-is';
-
-import { createBackend, LoggerPrefix } from '@/utils';
+import { SocksClient, type SocksClientOptions } from 'socks';
 
 import * as config from '@/config';
+import { createBackend, LoggerPrefix } from '@/utils';
 
 import { type AuthProxyConfig, defaultAuthProxyConfig } from '../config';
 

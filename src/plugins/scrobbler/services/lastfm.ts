@@ -3,7 +3,6 @@ import crypto from 'node:crypto';
 import { BrowserWindow, dialog, net } from 'electron';
 
 import { ScrobblerBase } from './base';
-
 import { t } from '@/i18n';
 
 import type { ScrobblerPluginConfig } from '../index';

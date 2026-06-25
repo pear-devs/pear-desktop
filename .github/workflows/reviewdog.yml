@@ -8,9 +8,9 @@ env:
   NODE_VERSION: "24.x"
 
 jobs:
-  eslint:
+  oxlint:
     if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
-    name: runner / eslint
+    name: runner / oxlint
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -22,7 +22,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with:
-          version: 10
+          version: 11
           run_install: false
 
       - name: Setup NodeJS
@@ -47,9 +47,14 @@ jobs:
           cp -r __pr_src/src src
           rm -rf __pr_src
 
-      - uses: reviewdog/action-eslint@556a3fdaf8b4201d4d74d406013386aa4f7dab96
+      - name: Setup reviewdog
+        uses: reviewdog/action-setup@d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          reporter: github-pr-review
-          eslint_flags: './src'
-          fail_level: error
+          reviewdog_version: latest
+
+      - name: Run oxlint with reviewdog
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pnpm exec oxlint --type-aware src --format=checkstyle |
+            reviewdog -f=checkstyle -name=oxlint -reporter=github-pr-review -fail-level=error

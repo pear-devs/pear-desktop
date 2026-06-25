@@ -1,9 +1,7 @@
 import { Client as DiscordClient } from '@xhayper/discord-rpc';
-import is from 'electron-is';
 import { ActivityType } from 'discord-api-types/v10';
+import is from 'electron-is';
 
-import { t } from '@/i18n';
-import { LoggerPrefix } from '@/utils';
 import { clientId, PROGRESS_THROTTLE_MS, TimerKey } from './constants';
 import { TimerManager } from './timer-manager';
 import {
@@ -12,6 +10,8 @@ import {
   sanitizeActivityText,
   isSeek,
 } from './utils';
+import { t } from '@/i18n';
+import { LoggerPrefix } from '@/utils';
 
 import type { DiscordPluginConfig } from './index';
 import type { SongInfo } from '@/providers/song-info';

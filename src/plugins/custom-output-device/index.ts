@@ -1,9 +1,9 @@
 import prompt from 'custom-electron-prompt';
 
+import { renderer } from './renderer';
 import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 import { createPlugin } from '@/utils';
-import { renderer } from './renderer';
 
 export interface CustomOutputPluginConfig {
   enabled: boolean;

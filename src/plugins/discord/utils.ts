@@ -1,10 +1,9 @@
 import { HANGUL_FILLER } from './constants';
-
 import { APPLICATION_NAME } from '@/i18n';
 
-import type { GatewayActivityButton } from 'discord-api-types/v10';
-import type { SongInfo } from '@/providers/song-info';
 import type { DiscordPluginConfig } from './index';
+import type { SongInfo } from '@/providers/song-info';
+import type { GatewayActivityButton } from 'discord-api-types/v10';
 
 /**
  * Truncates a string to a specified length, adding ellipsis if truncated.

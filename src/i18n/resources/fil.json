@@ -218,13 +218,6 @@
       "description": "Pag mag-play ng ad, I-mute ang audio at i-set ang bilis ng playback ng 16x",
       "name": "Pagbilis ng Ad"
     },
-    "adblocker": {
-      "description": "I-block ang lahat ng ad at tracking",
-      "menu": {
-        "blocker": "Blocker"
-      },
-      "name": "Pag-block ng Ad"
-    },
     "album-actions": {
       "description": "Idadagdag ang Undislike, Dislike, Like, at Unlike na button para ilapat ito sa lahat ng kanta sa isang playlist o album",
       "name": "Mga aksyon sa Album"

@@ -1,17 +1,16 @@
-import { dialog } from 'electron';
 import prompt from 'custom-electron-prompt';
-
-import { t } from '@/i18n';
-import promptOptions from '@/providers/prompt-options';
+import { dialog } from 'electron';
 
 import {
   type APIServerConfig,
   AuthStrategy,
   defaultAPIServerConfig,
 } from './config';
+import { t } from '@/i18n';
+import promptOptions from '@/providers/prompt-options';
 
-import type { MenuContext } from '@/types/contexts';
 import type { MenuTemplate } from '@/menu';
+import type { MenuContext } from '@/types/contexts';
 
 export const onMenu = async ({
   getConfig,

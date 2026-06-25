@@ -2,7 +2,6 @@ import { deepmerge } from 'deepmerge-ts';
 import { allPlugins } from 'virtual:plugins';
 
 import { store } from './store';
-
 import { restart } from '@/providers/app-controls';
 
 import type { PluginConfig } from '@/types/plugins';

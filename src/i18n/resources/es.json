@@ -219,13 +219,6 @@
       "description": "Si se reproduce un anuncio, silencia el audio y fija la velocidad de reproducción en 16x",
       "name": "Aumento de la velocidad de anuncios"
     },
-    "adblocker": {
-      "description": "Bloquear todos los anuncios y el rastreo por defecto",
-      "menu": {
-        "blocker": "Bloqueador"
-      },
-      "name": "Bloqueador de anuncios"
-    },
     "album-actions": {
       "description": "Añade los botones \"Quitar no me gusta\", \"No me gusta\", \"Me gusta\" y \"Quitar me gusta\" para aplicarlos a todas las canciones de una lista de reproducción o un álbum",
       "name": "Acciones en el álbum"

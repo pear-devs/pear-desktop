@@ -1,8 +1,7 @@
-import { createPlugin } from '@/utils';
-import { t } from '@/i18n';
-
-import { onMenu } from './menu';
 import { backend } from './main';
+import { onMenu } from './menu';
+import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 export interface ScrobblerPluginConfig {
   enabled: boolean;

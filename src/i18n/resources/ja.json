@@ -219,13 +219,6 @@
       "description": "広告が再生されると、自動的にミュートされ、再生速度が16倍に設定されます",
       "name": "広告のスピードを上げる"
     },
-    "adblocker": {
-      "description": "すべての広告とトラッカーをブロックj",
-      "menu": {
-        "blocker": "ブロッカー"
-      },
-      "name": "広告ブロッカー"
-    },
     "album-actions": {
       "description": "「Undislike（嫌いではない）」「Dislike（嫌い）」「Like（好き）」「Unlike（好きではない）」ボタンを追加し、プレイリストやアルバム内のすべての曲にこれらを適用します",
       "name": "アルバムアクション"

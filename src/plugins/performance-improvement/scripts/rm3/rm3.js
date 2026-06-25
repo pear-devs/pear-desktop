@@ -522,7 +522,8 @@ export const injectRm3 = () => {
 
     let onPageContainer = null;
 
-    const createComponentDefine_ = function (a, b, c) {
+    // onCreateComponentError - see https://github.com/cyfung1031/userscript-supports/issues/99
+    const createComponentDefine_ = function (a, b, c, onCreateComponentError) {
       Promise.resolve().then(timeCheck);
 
       const creatorTag = this?.is || this?.nodeName?.toLowerCase() || '';
@@ -678,7 +679,7 @@ export const injectRm3 = () => {
       // const pool = reusePool.get(componentTag); // xx858
       // if (!(pool instanceof LinkedArray)) throw new Error(); // xx858
 
-      const newElement = this.createComponent9512_(a, b, c);
+      const newElement = this.createComponent9512_(a, b, c, onCreateComponentError);
       // if(componentTag.indexOf( 'ticker')>=0)console.log(1883, a,newElement)
 
       try {
@@ -764,7 +765,10 @@ export const injectRm3 = () => {
             if (
               !cProto.createComponent9512_ &&
               typeof cProto.createComponent_ === 'function' &&
-              cProto.createComponent_.length === 3
+              (
+                cProto.createComponent_.length === 4 ||
+                cProto.createComponent_.length === 3
+              )
             ) {
               cProto.createComponent9512_ = cProto.createComponent_;
 
@@ -774,7 +778,10 @@ export const injectRm3 = () => {
           } else {
             if (
               typeof cnt.createComponent_ === 'function' &&
-              cnt.createComponent_.length === 3
+              (
+                cnt.createComponent_.length === 4 ||
+                cnt.createComponent_.length === 3
+              )
             ) {
               cnt.createComponent9512_ = cnt.createComponent_;
 

@@ -1,12 +1,12 @@
 import emptyStyle from './empty-player.css?inline';
-import { createPlugin } from '@/utils';
-import { type Visualizer } from './visualizers/visualizer';
 import {
   ButterchurnVisualizer as butterchurn,
   VudioVisualizer as vudio,
   WaveVisualizer as wave,
 } from './visualizers';
+import { type Visualizer } from './visualizers/visualizer';
 import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 type WaveColor = {
   gradient: string[];

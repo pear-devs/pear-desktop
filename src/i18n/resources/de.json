@@ -219,13 +219,6 @@
       "description": "Wenn eine Werbung spielt, stummt es das Audio und setzt die Wiedergabegeschwindigkeit auf 16x",
       "name": "Werbungsbeschleunigung"
     },
-    "adblocker": {
-      "description": "Blockiere jegliche Werbung und Tracker",
-      "menu": {
-        "blocker": "Abfangmethode"
-      },
-      "name": "Werbeblocker"
-    },
     "album-actions": {
       "description": "Fügt Undislike, Dislike, Like und Unlike-Knöpfe hinzu, welche sich auf alle Lieder in einer Playlist oder Album auswirken",
       "name": "Album-Aktionen"

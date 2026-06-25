@@ -1,26 +1,21 @@
+import { readFileSync } from 'node:fs';
 import { createServer as createHttpServer } from 'node:http';
 import { createServer as createHttpsServer } from 'node:https';
-import { readFileSync } from 'node:fs';
 
-import { jwt } from 'hono/jwt';
-
+import { serve, upgradeWebSocket } from '@hono/node-server';
+import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono as Hono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
-import { swaggerUI } from '@hono/swagger-ui';
-import { serve } from '@hono/node-server';
-import { createNodeWebSocket } from '@hono/node-ws';
+import { jwt } from 'hono/jwt';
+import { WebSocketServer } from 'ws';
 
+import { registerAuth, registerControl, registerWebsocket } from './routes';
+import { JWTPayloadSchema } from './scheme';
+import { APPLICATION_NAME } from '@/i18n';
 import { registerCallback } from '@/providers/song-info';
 import { createBackend } from '@/utils';
 
-import { JWTPayloadSchema } from './scheme';
-import { registerAuth, registerControl, registerWebsocket } from './routes';
-
-import { APPLICATION_NAME } from '@/i18n';
-
 import { type APIServerConfig, AuthStrategy } from '../config';
-
-import type { MiddlewareHandler } from 'hono';
 
 import type { BackendType } from './types';
 import type {
@@ -28,6 +23,7 @@ import type {
   RepeatMode,
   VolumeState,
 } from '@/types/datahost-get-state';
+import type { MiddlewareHandler } from 'hono';
 
 export const backend = createBackend<BackendType, APIServerConfig>({
   async start(ctx) {
@@ -84,10 +80,6 @@ export const backend = createBackend<BackendType, APIServerConfig>({
   init(backendCtx) {
     this.app = new Hono();
 
-    const ws = createNodeWebSocket({
-      app: this.app,
-    });
-
     this.app.use('*', cors());
 
     // for web remote control
@@ -137,7 +129,7 @@ export const backend = createBackend<BackendType, APIServerConfig>({
       () => this.volumeState,
     );
     registerAuth(this.app, backendCtx);
-    registerWebsocket(this.app, backendCtx, ws);
+    registerWebsocket(this.app, backendCtx, upgradeWebSocket);
 
     // swagger
     this.app.openAPIRegistry.registerComponent(
@@ -165,13 +157,12 @@ export const backend = createBackend<BackendType, APIServerConfig>({
     });
 
     this.app.get('/swagger', swaggerUI({ url: '/doc' }));
-
-    this.injectWebSocket = ws.injectWebSocket.bind(this);
   },
   run(config) {
     if (!this.app) return;
 
     try {
+      const wss = new WebSocketServer({ noServer: true });
       const serveOptions =
         config.useHttps && config.certPath && config.keyPath
           ? {
@@ -183,19 +174,17 @@ export const backend = createBackend<BackendType, APIServerConfig>({
                 key: readFileSync(config.keyPath),
                 cert: readFileSync(config.certPath),
               },
+              websocket: { server: wss },
             }
           : {
               fetch: this.app.fetch.bind(this.app),
               port: config.port,
               hostname: config.hostname,
               createServer: createHttpServer,
+              websocket: { server: wss },
             };
 
       this.server = serve(serveOptions);
-
-      if (this.injectWebSocket && this.server) {
-        this.injectWebSocket(this.server);
-      }
     } catch (err) {
       console.error(err);
     }

@@ -1,10 +1,8 @@
-import { t } from '@/i18n';
-import { createPlugin } from '@/utils';
-import { Platform } from '@/types/plugins';
-
-import { MaterialType, type TransparentPlayerConfig } from './types';
-
 import style from './style.css?inline';
+import { MaterialType, type TransparentPlayerConfig } from './types';
+import { t } from '@/i18n';
+import { Platform } from '@/types/plugins';
+import { createPlugin } from '@/utils';
 
 import type { BrowserWindow } from 'electron';
 

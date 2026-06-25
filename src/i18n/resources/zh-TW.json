@@ -219,13 +219,6 @@
       "description": "使用 16 倍速播放及靜音來跳過廣告片段",
       "name": "加速略過"
     },
-    "adblocker": {
-      "description": "阻擋所有廣告",
-      "menu": {
-        "blocker": "阻擋方式"
-      },
-      "name": "廣告攔截器"
-    },
     "album-actions": {
       "description": "新增支援對整個播放清單或專輯\"喜歡／不喜歡\"\"取消喜歡／取消不喜歡\"的按鈕",
       "name": "進階專輯操作"

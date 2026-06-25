@@ -1,11 +1,9 @@
 import { dialog } from 'electron';
-
 import { render } from 'solid-js/web';
 
-import { createPlugin } from '@/utils';
-import { t } from '@/i18n';
-
 import { QualitySettingButton } from './templates/quality-setting-button';
+import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 import type { MusicPlayer } from '@/types/music-player';
 

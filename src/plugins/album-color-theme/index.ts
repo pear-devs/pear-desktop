@@ -1,10 +1,9 @@
-import { FastAverageColor } from 'fast-average-color';
 import Color, { type ColorInstance } from 'color';
+import { FastAverageColor } from 'fast-average-color';
 
 import style from './style.css?inline';
-
-import { createPlugin } from '@/utils';
 import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 const COLOR_KEY = '--ytmusic-album-color';
 const DARK_COLOR_KEY = '--ytmusic-album-color-dark';

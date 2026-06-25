@@ -1,6 +1,6 @@
-import { createPlugin } from '@/utils';
 import { onPlayerApiReady, onUnload } from './renderer';
 import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 export default createPlugin({
   name: () => t('plugins.playback-speed.name'),

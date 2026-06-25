@@ -219,13 +219,6 @@
       "description": "Si es reprodueix un anunci, silencia l'àudio i el reprodueix a la velocitat 16x",
       "name": "Accelera els anuncis"
     },
-    "adblocker": {
-      "description": "Bloqueja tots els anuncis i el seguiment",
-      "menu": {
-        "blocker": "Bloquejador"
-      },
-      "name": "Bloquejador d'anuncis"
-    },
     "album-actions": {
       "description": "Afegeix botons de «no m'agrada / retirar el no m'agrada» i «m'agrada / retirar el m'agrada» per aplicar-ho a totes les cançons en una llista de reproducció o àlbum",
       "name": "Accions a l'àlbum"

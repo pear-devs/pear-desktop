@@ -1,6 +1,5 @@
 import { getMusicQueueRenderer } from './song';
 import { mapQueueItem } from './utils';
-
 import { t } from '@/i18n';
 
 import { getDefaultProfile, type Profile, type VideoData } from '../types';

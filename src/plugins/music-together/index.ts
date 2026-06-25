@@ -1,30 +1,28 @@
 import prompt from 'custom-electron-prompt';
 
-import { t } from '@/i18n';
-import { createPlugin } from '@/utils';
-import promptOptions from '@/providers/prompt-options';
-import { waitForElement } from '@/utils/wait-for-element';
-
+import { Connection, type ConnectionEventUnion } from './connection';
+import { Queue } from './queue';
+import style from './style.css?inline';
+import settingHTML from './templates/setting.html?raw';
 import {
   getDefaultProfile,
   type Permission,
   type Profile,
   type VideoData,
 } from './types';
-import { Queue } from './queue';
-import { Connection, type ConnectionEventUnion } from './connection';
-import { createHostPopup } from './ui/host';
 import { createGuestPopup } from './ui/guest';
+import { createHostPopup } from './ui/host';
 import { createSettingPopup } from './ui/setting';
+import { t } from '@/i18n';
+import promptOptions from '@/providers/prompt-options';
+import { createPlugin } from '@/utils';
+import { waitForElement } from '@/utils/wait-for-element';
 
-import settingHTML from './templates/setting.html?raw';
-import style from './style.css?inline';
-
-import type { DataConnection } from 'peerjs';
-import type { MusicPlayer } from '@/types/music-player';
 import type { RendererContext } from '@/types/contexts';
-import type { VideoDataChanged } from '@/types/video-data-changed';
+import type { MusicPlayer } from '@/types/music-player';
 import type { AppElement } from '@/types/queue';
+import type { VideoDataChanged } from '@/types/video-data-changed';
+import type { DataConnection } from 'peerjs';
 
 type RawAccountData = {
   accountName: {
