@@ -134,7 +134,13 @@ export const register = (
       description: 'WebSocket endpoint for real-time updates',
       request: {
         query: z.object({
-          token: z.string().optional(),
+          token: z
+            .string()
+            .openapi({
+              description:
+                'Authentication token. Required when the API server authStrategy is not NONE; optional otherwise.',
+            })
+            .optional(),
         }),
       },
       responses: {
