@@ -620,6 +620,13 @@ export const register = (
     ctx.status(204);
     return ctx.body(null);
   });
+  app.openapi(routes.playPlaylist, (ctx) => {
+    const { playlistId, videoId } = ctx.req.valid('json');
+    controller.playPlaylist(playlistId, videoId);
+
+    ctx.status(204);
+    return ctx.body(null);
+  });
   app.openapi(routes.pause, (ctx) => {
     controller.pause();
 
