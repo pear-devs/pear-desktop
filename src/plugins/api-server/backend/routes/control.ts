@@ -66,6 +66,29 @@ const routes = {
       },
     },
   }),
+    playPlaylist: createRoute({
+    method: 'post',
+    path: `/api/${API_VERSION}/playPlaylist`,
+    summary: 'play playlist',
+    description: 'Plays a playlist given its ID and optionally a video ID',
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: z.object({
+              playlistId: z.string().describe('Playlist ID'),
+              videoId: z.string().optional().describe('Video ID (optional)'),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      204: {
+        description: 'Success',
+      },
+    },
+  }),
   pause: createRoute({
     method: 'post',
     path: `/api/${API_VERSION}/pause`,
