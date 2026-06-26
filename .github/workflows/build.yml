@@ -3,7 +3,6 @@ name: Build Pear Desktop
 on:
   push:
     branches: [ master ]
-  workflow_dispatch:
 
 
 permissions: {}
