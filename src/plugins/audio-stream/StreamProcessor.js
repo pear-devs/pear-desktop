@@ -1,4 +1,4 @@
-// audio-processor.js (loaded by audioContext.audioWorklet.addModule)
+/* eslint-disable no-undef, typescript/no-unsafe-assignment, typescript/no-unsafe-member-access, typescript/no-unsafe-call */
 class RecorderProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();

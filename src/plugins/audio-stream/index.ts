@@ -1,8 +1,8 @@
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 
-import { defaultAudioStreamConfig } from './config';
 import { backend } from './backend';
+import { defaultAudioStreamConfig } from './config';
 import { onMenu } from './menu';
 import { renderer } from './renderer';
 

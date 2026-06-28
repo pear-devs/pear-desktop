@@ -1,11 +1,12 @@
+import { serve, type ServerType } from '@hono/node-server';
 import { Hono } from 'hono';
 import { stream } from 'hono/streaming';
-import { serve, type ServerType } from '@hono/node-server';
 
-import { createBackend } from '@/utils';
 import { registerCallback, type SongInfo } from '@/providers/song-info';
-import { type AudioStreamConfig } from './config';
+import { createBackend } from '@/utils';
+
 import { BroadcastStream } from './BroadcastStream';
+import { type AudioStreamConfig } from './config';
 import { OggOpusMuxer, OggDechainer } from './ogg-opus';
 
 const VENDOR = 'Pear Desktop';

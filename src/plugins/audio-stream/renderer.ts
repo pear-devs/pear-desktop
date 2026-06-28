@@ -2,10 +2,9 @@ import { createRenderer } from '@/utils';
 
 import workletCode from './StreamProcessor.js?raw';
 
+import type { AudioStreamConfig } from './config';
 import type { RendererContext } from '@/types/contexts';
 import type { MusicPlayer } from '@/types/music-player';
-
-import type { AudioStreamConfig } from './config';
 
 const ENCODE_RATE = 48000; // Opus operates at 48 kHz; bridge resamples to this.
 
@@ -149,7 +148,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
         workletNode.port.onmessage = (event) => {
           if (!this.encoder || this.encoder.state !== 'configured') return;
           // Interleaved stereo Float32 at 48 kHz from the worklet.
-          const interleaved: Float32Array = event.data;
+          const interleaved = event.data as Float32Array;
           const numberOfFrames = interleaved.length / 2;
           const audioData = new AudioData({
             format: 'f32',

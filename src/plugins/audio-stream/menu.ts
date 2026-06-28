@@ -5,8 +5,8 @@ import promptOptions from '@/providers/prompt-options';
 
 import { type AudioStreamConfig, defaultAudioStreamConfig } from './config';
 
-import type { MenuContext } from '@/types/contexts';
 import type { MenuTemplate } from '@/menu';
+import type { MenuContext } from '@/types/contexts';
 
 // Quality and latency presets
 const SAMPLE_RATES = [44100, 48000, 96000];
