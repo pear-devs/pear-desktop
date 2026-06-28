@@ -86,7 +86,7 @@
           "copy-current-url": "Kopiera nuvarande länk",
           "go-back": "Gå tillbaka",
           "go-forward": "Gå framåt",
-          "quit": "Lämna",
+          "quit": "Stäng",
           "restart": "Starta om appen"
         }
       },
@@ -154,14 +154,15 @@
                 "label": "Anpassad titel på fönstret",
                 "prompt": {
                   "label": "Ange anpassad fönstertitel: (lämna tomt för att inaktivera)",
-                  "placeholder": "Exempelvis: YouTube Music"
+                  "placeholder": "Exempelvis: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "Standard",
                 "force-show": "Tvinga fram visning",
                 "hide": "Dölj",
-                "label": "Gilla-knappar"
+                "label": "Gilla-knappar",
+                "swap": "Byt ordning på liknande knappar"
               },
               "remove-upgrade-button": "Ta bort knappen för uppgradering",
               "theme": {
@@ -208,8 +209,8 @@
       "restart": "Starta om appen",
       "show": "Visa fönster",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} – {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -217,13 +218,6 @@
     "ad-speedup": {
       "description": "Om en annons spelas, tystas ljudet och uppspelningshastigheten sätts till 16×",
       "name": "Snabba upp annonser"
-    },
-    "adblocker": {
-      "description": "Blockerar annonser och spårning automatiskt",
-      "menu": {
-        "blocker": "Blockerare"
-      },
-      "name": "Annonsblockerare"
     },
     "album-actions": {
       "description": "Lägger till knappar för Undislike, Dislike, Like och Unlike för att använda detta på alla spår i en spellista eller ett album",
@@ -237,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}} %"
           }
-        }
+        },
+        "enable-seekbar": "Aktivera temaanpassning av uppspelningsreglaget"
       },
       "name": "Albumfärgtema"
     },
@@ -287,7 +282,7 @@
       "name": "Ambiensläge"
     },
     "amuse": {
-      "description": "Lägger till stöd för YouTube Music i Amuse ‘Now Playing’-widgeten av 6K Labs",
+      "description": "Lägger till stöd för {{applicationName}} i Amuse ‘Now Playing’-widgeten av 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API-servern körs. Använd GET /query för att hämta information om låt."
@@ -319,6 +314,22 @@
         },
         "hostname": {
           "label": "Värdnamn"
+        },
+        "https": {
+          "label": "HTTPS och certifikat",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Välj HTTPS-certifikatfil",
+              "label": "Certifikatfil (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Aktivera HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Välj privat nyckelfil (.key/.pem)",
+              "label": "Privat nyckelfil (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -369,11 +380,11 @@
       "name": "Suddigt Navigeringsfält"
     },
     "bypass-age-restrictions": {
-      "description": "Hoppa över YouTubes åldersverifiering",
+      "description": "Hoppa över Music Player åldersverifiering",
       "name": "Hoppa Över Åldersbegränsningar"
     },
     "captions-selector": {
-      "description": "Välj textning för YouTube Music-ljudspår",
+      "description": "Välj textning för {{applicationName}}-ljudspår",
       "menu": {
         "autoload": "Välj automatiskt senast använda textning",
         "disable-captions": "Ingen textning som standard"
@@ -394,6 +405,17 @@
         "caption-disabled": "Textning inaktiverad",
         "no-captions": "Inga undertexter tillgängliga för denna låt"
       }
+    },
+    "clock": {
+      "description": "Lägg till en klocka till navigationsfältet",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-timmars format",
+          "display-seconds": "Visa sekunder",
+          "label": "Format"
+        }
+      },
+      "name": "Klocka"
     },
     "compact-sidebar": {
       "description": "Sätt alltid sidomenyn i kompakt läge",
@@ -421,6 +443,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Konfigurera en anpassad utdataenhet för låtar",
+      "menu": {
+        "device-selector": "Välj enhet"
+      },
+      "name": "Anpassad Utdataenhet",
+      "prompt": {
+        "device-selector": {
+          "label": "Välj den utdataenhet som ska användas",
+          "title": "Välj utdataenhet"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Starta låt i \"pausat\" läge",
       "menu": {
@@ -443,8 +478,16 @@
         "disconnected": "Frånkopplad",
         "hide-duration-left": "Dölj återstående tid",
         "hide-github-button": "Dölj knapp för GitHub-länk",
-        "play-on-youtube-music": "Spela på YouTube Music",
-        "set-inactivity-timeout": "Ställ in inaktivitetstid"
+        "play-on-application": "Spela på {{applicationName}}",
+        "set-inactivity-timeout": "Ställ in inaktivitetstid",
+        "set-status-display-type": {
+          "label": "Statusmeddelande",
+          "submenu": {
+            "application": "Lyssnar på {{applicationName}}",
+            "artist": "Lyssnar på {artist}",
+            "title": "Lyssnar på {song title}"
+          }
+        }
       },
       "name": "Discord Aktivitetsdelning",
       "prompt": {
@@ -736,6 +779,7 @@
         "listenbrainz": {
           "token": "Ange ListenBrainz användartoken"
         },
+        "scrobble-alternative-artist": "Använd alternativa artister",
         "scrobble-alternative-title": "Använd alternativa titlar",
         "scrobble-other-media": "Scrobbla annan media"
       },
@@ -791,6 +835,24 @@
         "not-found": "⚠️ Inga texter hittades för denna låt."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Konvertera kinesiska tecken",
+          "submenu": {
+            "disabled": {
+              "label": "Inaktiverad",
+              "tooltip": "Inaktivera konvertering av kinesiska tecken"
+            },
+            "simplified-to-traditional": {
+              "label": "Förenklad till traditionell",
+              "tooltip": "Konvertera förenklad kinesiska till traditionell kinesiska"
+            },
+            "traditional-to-simplified": {
+              "label": "Traditionell till förenklad",
+              "tooltip": "Konvertera traditionell kinesiska till förenklad kinesiska"
+            }
+          },
+          "tooltip": "Konvertera kinesiska tecken till traditionell eller förenklad"
+        },
         "default-text-string": {
           "label": "Standardtecken mellan låttexter",
           "tooltip": "Välj standardtecken att använda för mellanrummet mellan låttexter"
@@ -820,6 +882,14 @@
         "precise-timing": {
           "label": "Gör låttexterna perfekt synkroniserade",
           "tooltip": "Beräkna till millisekunden när nästa rad ska visas (kan ha en liten inverkan på prestanda)"
+        },
+        "preferred-provider": {
+          "label": "Föredragen leverantör",
+          "none": {
+            "label": "Ingen",
+            "tooltip": "Ingen föredragen leverantör"
+          },
+          "tooltip": "Välj standardleverantör att använda"
         },
         "romanization": {
           "label": "Romanisera låttexter",
@@ -852,6 +922,27 @@
     "touchbar": {
       "description": "Lägger till en TouchBar-widget för macOS-användare",
       "name": "TouchBar"
+    },
+    "transparent-player": {
+      "description": "Gör appfönstret genomskinligt",
+      "menu": {
+        "opacity": {
+          "label": "Opacitet",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Typ",
+          "submenu": {
+            "acrylic": "Akryl",
+            "mica": "Mica",
+            "none": "Ingen",
+            "tabbed": "Flikad"
+          }
+        }
+      },
+      "name": "Genomskinlig Spelare"
     },
     "tuna-obs": {
       "description": "Integration med OBS-pluginprogrammet Tuna",

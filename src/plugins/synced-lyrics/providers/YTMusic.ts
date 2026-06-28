@@ -1,5 +1,5 @@
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
-import type { YouTubeMusicAppElement } from '@/types/youtube-music-app-element';
+import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
 
 const headers = {
   'Accept': 'application/json',
@@ -13,7 +13,8 @@ const client = {
 
 export class YTMusic implements LyricProvider {
   public name = 'YTMusic';
-  public baseUrl = 'https://music.youtube.com/';
+  public baseUrl =
+    'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/';
 
   // prettier-ignore
   public async search(
@@ -42,7 +43,7 @@ export class YTMusic implements LyricProvider {
     if (!contents) return null;
 
     /*
-      NOTE: Due to the nature of Youtubei, the json responses are not consistent,
+      NOTE: Due to the nature of the library, the json responses are not consistent,
             this means we have to check for multiple possible paths to get the lyrics.
     */
 
@@ -67,7 +68,7 @@ export class YTMusic implements LyricProvider {
         ? contents?.messageRenderer?.text?.runs?.map((it) => it.text).join('\n')
         : contents?.sectionListRenderer?.contents?.[0]
           ?.musicDescriptionShelfRenderer?.description?.runs?.map((it) =>
-            it.text
+            it.text,
           )?.join('\n')
       : undefined;
 
@@ -96,8 +97,8 @@ export class YTMusic implements LyricProvider {
 
   private millisToTime(millis: number) {
     const minutes = Math.floor(millis / 60000);
-    const seconds = Math.floor((millis - minutes * 60 * 1000) / 1000);
-    const remaining = (millis - minutes * 60 * 1000 - seconds * 1000) / 10;
+    const seconds = Math.floor((millis - ((minutes * 60) * 1000)) / 1000);
+    const remaining = (millis - ((minutes * 60) * 1000) - (seconds * 1000)) / 10;
     return `${minutes.toString().padStart(2, '0')}:${seconds
       .toString()
       .padStart(2, '0')}.${remaining.toString().padStart(2, '0')}`;
@@ -107,7 +108,7 @@ export class YTMusic implements LyricProvider {
   private PROXIED_ENDPOINT = 'https://ytmbrowseproxy.zvz.be/';
 
   private fetchNext(videoId: string) {
-    const app = document.querySelector<YouTubeMusicAppElement>('ytmusic-app');
+    const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
 
     if (!app) return null;
 

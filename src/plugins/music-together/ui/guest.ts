@@ -1,11 +1,9 @@
+import { t } from '@/i18n';
 import { ElementFromHtml } from '@/plugins/utils/renderer';
 
-import { t } from '@/i18n';
-
 import { Popup } from '../element';
-import { createStatus } from '../ui/status';
-
 import IconOff from '../icons/off.svg?raw';
+import { createStatus } from '../ui/status';
 
 export type GuestPopupProps = {
   onItemClick: (id: string) => void;

@@ -150,11 +150,19 @@
           "visual-tweaks": {
             "label": "תיקונים חזותיים",
             "submenu": {
+              "custom-window-title": {
+                "label": "כותרת מותאמת אישית",
+                "prompt": {
+                  "label": "בחר כותרת מותאמת אישית: (השאר ריק כדי לכבות)",
+                  "placeholder": "לדוגמה: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "ברירת מחדל",
                 "force-show": "הפעל בכוח",
                 "hide": "הסתר",
-                "label": "כפתורי לייק"
+                "label": "כפתורי לייק",
+                "swap": "החלפת סדר כפתורי לייק"
               },
               "remove-upgrade-button": "הסר לחצן שדרוג",
               "theme": {
@@ -201,8 +209,8 @@
       "restart": "הפעל מחדש",
       "show": "הראה חלון",
       "tooltip": {
-        "default": "יוטיוב מיוזיק",
-        "with-song-info": "יוטיוב מיוזיק: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -210,13 +218,6 @@
     "ad-speedup": {
       "description": "במקרה של פרסומת, הסאונד מושתק ומהירות הוידאו מוכפלת ב-16",
       "name": "הגבר מהירות פרסומת"
-    },
-    "adblocker": {
-      "description": "חסום את כל המודעות והמעקב מחוץ לקופסה",
-      "menu": {
-        "blocker": "חוסם"
-      },
-      "name": "חוסם פרסומות"
     },
     "album-actions": {
       "description": "מוסיף לחצני ביטול אהבתי, דיסלייק, 'אהבתי' ו'לא אהבתי' כדי להחיל זאת על כל השירים ברשימת השמעה או אלבום",
@@ -244,6 +245,7 @@
           }
         },
         "buffer": {
+          "label": "חוצץ",
           "submenu": {
             "buffer": "{{buffer}}"
           }
@@ -279,7 +281,7 @@
       "name": "מצב אווירה"
     },
     "amuse": {
-      "description": "מוסיף תמיכה ב-YouTube Music עבור הווידג'ט של Amuse המתנגן כעת על ידי 6K Labs",
+      "description": "מוסיף תמיכה ב-{{applicationName}} עבור הווידג'ט של Amuse המתנגן כעת על ידי 6K Labs",
       "name": "משעשע",
       "response": {
         "query": "שרת ה-API של Amuse פועל. קבל מידע על השיר באמצעות GET /query."
@@ -365,7 +367,7 @@
       "name": "עקוף את ההחמרות של הגיל"
     },
     "captions-selector": {
-      "description": "בורר כתוביות עבור רצועות אודיו של YouTube Music",
+      "description": "בורר כתוביות עבור רצועות אודיו של {{applicationName}}",
       "menu": {
         "autoload": "בחר אוטומטי את הכתובית האחרונה שנבחרה",
         "disable-captions": "ברירת מחד ללא כתוביות"
@@ -380,6 +382,11 @@
       },
       "templates": {
         "title": "פתח בחירת כתוביות"
+      },
+      "toast": {
+        "caption-changed": "תרגום שונה ל {{שפה}}",
+        "caption-disabled": "תרגום בוטל",
+        "no-captions": "אין תרגום זמין לשיר הזה"
       }
     },
     "compact-sidebar": {
@@ -391,9 +398,11 @@
       "menu": {
         "advanced": "מתקדם"
       },
+      "name": "התפיידות צלב[בית]",
       "prompt": {
         "options": {
           "multi-input": {
+            "fade-in-duration": "תתפייד בזמן[מילישניות]",
             "fade-scaling": {
               "linear": "לינארי",
               "logarithmic": "לוגריתמי"
@@ -419,7 +428,7 @@
         "connected": "מחובר",
         "disconnected": "מנותק",
         "hide-github-button": "הסתר את לחצן הקישור של GitHub",
-        "play-on-youtube-music": "הפעל ביוטיוב מיוזיק",
+        "play-on-application": "הפעל ביוטיוב מיוזיק",
         "set-inactivity-timeout": "הגדר פסק זמן לחוסר פעילות"
       }
     },

@@ -2,22 +2,20 @@ import { toKeyEvent } from 'keyboardevent-from-electron-accelerator';
 import keyEventAreEqual from 'keyboardevents-areequal';
 import { render } from 'solid-js/web';
 
-import { getSongMenu } from '@/providers/dom-elements';
+import { PictureInPictureButton } from './templates/picture-in-picture-button';
+import { t } from '@/i18n';
 import {
   isMusicOrVideoTrack,
   isPlayerMenu,
 } from '@/plugins/utils/renderer/check';
+import { getSongMenu } from '@/providers/dom-elements';
 
-import { t } from '@/i18n';
-
-import { PictureInPictureButton } from './templates/picture-in-picture-button';
-
-import type { YoutubePlayer } from '@/types/youtube-player';
 import type { PictureInPicturePluginConfig } from './index';
 import type { RendererContext } from '@/types/contexts';
+import type { MusicPlayer } from '@/types/music-player';
 
 export const onPlayerApiReady = async (
-  _: YoutubePlayer,
+  _: MusicPlayer,
   { ipc, getConfig }: RendererContext<PictureInPicturePluginConfig>,
 ) => {
   const config = await getConfig();
@@ -89,7 +87,7 @@ export const onPlayerApiReady = async (
     await togglePictureInPicture();
   };
 
-  ipc.on('ytmd:pip-toggle', (isPip: boolean) => {
+  ipc.on('peard:pip-toggle', (isPip: boolean) => {
     if (exitFullScreenButton && player) {
       if (isPip) {
         exitFullScreenButton?.addEventListener('click', pipClickEventListener);

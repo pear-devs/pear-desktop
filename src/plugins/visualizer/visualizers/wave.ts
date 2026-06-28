@@ -4,35 +4,24 @@ import { Visualizer } from './visualizer';
 
 import type { VisualizerPluginConfig } from '../index';
 
-class WaveVisualizer extends Visualizer<Wave> {
-  name = 'wave';
-
-  visualizer: Wave;
+class WaveVisualizer extends Visualizer {
+  private readonly visualizer: Wave;
 
   constructor(
     audioContext: AudioContext,
     audioSource: MediaElementAudioSourceNode,
-    visualizerContainer: HTMLElement,
     canvas: HTMLCanvasElement,
     audioNode: GainNode,
-    stream: MediaStream,
-    options: VisualizerPluginConfig,
+    _stream: MediaStream,
+    config: VisualizerPluginConfig,
   ) {
-    super(
-      audioContext,
-      audioSource,
-      visualizerContainer,
-      canvas,
-      audioNode,
-      stream,
-      options,
-    );
+    super(audioSource, audioNode);
 
     this.visualizer = new Wave(
       { context: audioContext, source: audioSource },
       canvas,
     );
-    for (const animation of options.wave.animations) {
+    for (const animation of config.wave.animations) {
       const TargetVisualizer =
         this.visualizer.animations[
           animation.type as keyof typeof this.visualizer.animations
@@ -46,7 +35,12 @@ class WaveVisualizer extends Visualizer<Wave> {
 
   resize(_: number, __: number) {}
 
-  render() {}
+  destroy() {
+    this.visualizer.clearAnimations();
+    try {
+      this.audioSource.disconnect(this.audioNode);
+    } catch {}
+  }
 }
 
 export default WaveVisualizer;

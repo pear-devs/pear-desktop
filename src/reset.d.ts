@@ -1,11 +1,10 @@
 import '@total-typescript/ts-reset';
 
+import type * as config from './config';
+import type { t } from '@/i18n';
+import type { VideoDataChanged } from '@/types/video-data-changed';
 import type { ipcRenderer as electronIpcRenderer } from 'electron';
 import type is from 'electron-is';
-
-import type * as config from './config';
-import type { VideoDataChanged } from '@/types/video-data-changed';
-import type { t } from '@/i18n';
 import type { trustedTypes } from 'trusted-types';
 
 declare global {
@@ -15,11 +14,9 @@ declare global {
   }
 
   interface DocumentEventMap {
-    'ytmd:audio-can-play': CustomEvent<Compressor>;
+    'peard:audio-can-play': CustomEvent<Compressor>;
     'videodatachange': CustomEvent<VideoDataChanged>;
   }
-
-  declare var electronIs: typeof import('electron-is');
 
   interface Window {
     trustedTypes?: typeof trustedTypes;
@@ -28,7 +25,7 @@ declare global {
     electronIs: typeof is;
     ELECTRON_RENDERER_URL: string | undefined;
     /**
-     * YouTube Music internal variable (Last interaction time)
+     * Internal variable (Last interaction time)
      */
     _lact: number;
     navigation: Navigation;

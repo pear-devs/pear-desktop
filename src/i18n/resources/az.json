@@ -116,9 +116,107 @@
           "auto-update": "Avtomatik Yeniləmə",
           "hide-menu": {
             "dialog": {
-              "message": "Menu will be hidden on next launch, use [Alt] to show it (or backtick [`] if using in-app-menu)"
+              "message": "Menyu növbəti açılışda gizlədiləcək, göstərmək üçün [Alt] düyməsini basın (proqramdaxili menyudan istifadə edildikdə isə, [`] düyməsi).",
+              "title": "Menyu gizlətmə aktivdir"
+            },
+            "label": "Menyunu gizlət"
+          },
+          "language": {
+            "dialog": {
+              "message": "Dil yenidən başlatmadan sonra dəyişiləcək",
+              "title": "Dil dəyişdirildi"
+            },
+            "label": "Dil",
+            "submenu": {
+              "to-help-translate": "Tərcüməyə kömək etmək istəyirsiniz? Buraya basın"
+            }
+          },
+          "resume-on-start": "Tətbiq başladıqda son mahnıdan davam et",
+          "single-instance-lock": "Tək proqram kilidi",
+          "start-at-login": "Giriş səhifəsində başlat",
+          "starting-page": {
+            "label": "Giriş səhifəsi",
+            "unset": "Təyin edilməyib"
+          },
+          "tray": {
+            "submenu": {
+              "disabled": "Deaktiv edilib",
+              "play-pause-on-click": "Kliklədikdə Başlat/Dayan"
+            }
+          },
+          "visual-tweaks": {
+            "label": "Vizual düzəlişlər",
+            "submenu": {
+              "custom-window-title": {
+                "prompt": {
+                  "placeholder": "Nümunə: {{applicationName}}"
+                }
+              },
+              "like-buttons": {
+                "default": "Standart",
+                "hide": "Gizlət"
+              },
+              "remove-upgrade-button": "Yeniləmə düyməsini sil",
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "Ləğv et",
+                    "remove": "Sil"
+                  }
+                }
+              }
             }
           }
+        }
+      },
+      "view": {
+        "submenu": {
+          "reset-zoom": "Həqiqi Ölçü",
+          "toggle-fullscreen": "Bütün Ekranı Aktivləşdir",
+          "zoom-in": "Yaxınlaşdır",
+          "zoom-out": "Uzaqlaşdır"
+        }
+      }
+    },
+    "tray": {
+      "next": "Sonrakı",
+      "play-pause": "Başlat/Dayan",
+      "previous": "Əvvəlki",
+      "quit": "Çıxış",
+      "restart": "Tətbiqi Yenidən Başlat",
+      "show": "Pəncərəni Göstər"
+    }
+  },
+  "plugins": {
+    "ad-speedup": {
+      "description": "Reklam çıxarsa səssizə al və oynanış sürətini 16 dəfə artır",
+      "name": "Reklam Oynanış Sürətini Artırmaq"
+    },
+    "album-actions": {
+      "description": "Bəyənməməni geri alma, Bəyənməmə, Bəyənmə və Bəyənməni geri alma düymələrini bütün mahnı və albumlara tətbiq etməyi əlavə et",
+      "name": "Albom Düymələri"
+    },
+    "ambient-mode": {
+      "menu": {
+        "use-fullscreen": {
+          "label": "Bütün Ekran modunu istifadə et"
+        }
+      }
+    },
+    "api-server": {
+      "menu": {
+        "auth-strategy": {
+          "submenu": {
+            "auth-at-first": {
+              "label": "İlk istəkdə səlahiyyətləndir"
+            },
+            "none": {
+              "label": "Səlahiyyətləndirmə yoxdur"
+            }
+          }
+        },
+        "hostname": {
+          "label": "Sahib adı"
         }
       }
     }

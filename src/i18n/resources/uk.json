@@ -150,11 +150,19 @@
           "visual-tweaks": {
             "label": "Візуальні налаштування",
             "submenu": {
+              "custom-window-title": {
+                "label": "Налаштування заголовка вікна",
+                "prompt": {
+                  "label": "Введіть власний заголовок вікна: (залиште порожнім, щоб вимкнути)",
+                  "placeholder": "Приклад: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "За замовчуванням",
                 "force-show": "Завжди показувати",
                 "hide": "Приховати",
-                "label": "Як кнопки"
+                "label": "Як кнопки",
+                "swap": "Замінити місцями порядок кнопок лайка"
               },
               "remove-upgrade-button": "Прибрати кнопку оновлення",
               "theme": {
@@ -201,8 +209,8 @@
       "restart": "Перезапустити програму",
       "show": "Показати вікно",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -210,13 +218,6 @@
     "ad-speedup": {
       "description": "При програванні реклами звук вимикається і встановлюється швидкість відтворення 16х",
       "name": "Пришвидшення реклами"
-    },
-    "adblocker": {
-      "description": "Блокувати всю рекламу та відстеження з коробки",
-      "menu": {
-        "blocker": "Блокувальник"
-      },
-      "name": "Блокувальник реклами"
     },
     "album-actions": {
       "description": "Додати андізлайк, дізлайк, лайк та анлайк кнопки щоб застосувати це до всіх пісень в плейлисті або альбомі",
@@ -230,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Увімкнути стилізацію (тему) повзунка прогресу"
       },
       "name": "Кольорова тема альбому"
     },
@@ -280,7 +282,7 @@
       "name": "Режим навколишнього середовища"
     },
     "amuse": {
-      "description": "Додає підтримку YouTube Music для віджета Amuse now playing від 6K Labs",
+      "description": "Додає підтримку {{applicationName}} для віджета Amuse now playing від 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Сервер Amuse API запущено. Запит GET /query для отримання інформації про пісню."
@@ -312,6 +314,22 @@
         },
         "hostname": {
           "label": "Назва серверу"
+        },
+        "https": {
+          "label": "HTTPS і сертифікати",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Виберіть файл HTTPS сертифікату",
+              "label": "Файл сертифіката (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Увімкнути HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Виберіть файл приватного ключа HTTPS",
+              "label": "Файл приватного ключа (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Порт"
@@ -362,11 +380,11 @@
       "name": "Розмиття панелі навігації"
     },
     "bypass-age-restrictions": {
-      "description": "Обхід перевірки віку на YouTube",
+      "description": "Обхід перевірки віку на Music Player",
       "name": "Обхід вікових обмежень"
     },
     "captions-selector": {
-      "description": "Вибір субтитрів для аудіодоріжок YouTube Music",
+      "description": "Вибір субтитрів для аудіодоріжок {{applicationName}}",
       "menu": {
         "autoload": "Автоматичний вибір останніх використаних субтитрів",
         "disable-captions": "За замовчуванням субтитри відсутні"
@@ -381,7 +399,23 @@
       },
       "templates": {
         "title": "Відкрити селектор субтитрів"
+      },
+      "toast": {
+        "caption-changed": "Субтитри змінені на {{language}}",
+        "caption-disabled": "Субтитри відключені",
+        "no-captions": "Субтитри не доступні для цієї пісні"
       }
+    },
+    "clock": {
+      "description": "Додати годинник до панелі навігації",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-годинний формат",
+          "display-seconds": "Відображати секунди",
+          "label": "Формат"
+        }
+      },
+      "name": "Годинник"
     },
     "compact-sidebar": {
       "description": "Бічна панель завжди в компактному режимі",
@@ -409,6 +443,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Налаштування власного пристрою для відтворення пісень",
+      "menu": {
+        "device-selector": "Обрати пристрій"
+      },
+      "name": "Спеціальний пристрій виводу",
+      "prompt": {
+        "device-selector": {
+          "label": "Оберіть пристрій для виводу медіа",
+          "title": "Оберіть пристрій виводу"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Запуск пісні в режимі \"пауза\"",
       "menu": {
@@ -431,8 +478,16 @@
         "disconnected": "Від'єднано",
         "hide-duration-left": "Приховати тривалість, яка залишилася",
         "hide-github-button": "Приховати посилання на GitHub",
-        "play-on-youtube-music": "Слухати на YouTube Music",
-        "set-inactivity-timeout": "Встановити тайм-аут бездіяльності"
+        "play-on-application": "Слухати на {{applicationName}}",
+        "set-inactivity-timeout": "Встановити тайм-аут бездіяльності",
+        "set-status-display-type": {
+          "label": "Статус",
+          "submenu": {
+            "application": "Відтворення з {{applicationName}}",
+            "artist": "Ви слухаєте {artist}",
+            "title": "Ви слухаєте {song title}"
+          }
+        }
       },
       "name": "Активність Discord",
       "prompt": {
@@ -600,7 +655,15 @@
     },
     "navigation": {
       "description": "Стрілки навігації Вперед/Назад безпосередньо інтегровані в інтерфейс, як у вашому браузері, який ви використовуєте",
-      "name": "Навігація"
+      "name": "Навігація",
+      "templates": {
+        "back": {
+          "title": "Перейти на минулу сторінку"
+        },
+        "forward": {
+          "title": "Перейти на наступну сторінку"
+        }
+      }
     },
     "no-google-login": {
       "description": "Видалити кнопки та посилання для входу через Google з інтерфейсу",
@@ -692,7 +755,12 @@
         }
       },
       "description": "Дозволяє змінювати якість відео за допомогою кнопки на відео оверлеї",
-      "name": "Зміна якості відео"
+      "name": "Зміна якості відео",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "Відкрити налаштування якості плеєру"
+        }
+      }
     },
     "scrobbler": {
       "description": "Додає підтримку скроблінгу (last.fm, Listenbrainz тощо)",
@@ -711,6 +779,7 @@
         "listenbrainz": {
           "token": "Ввести токен користувача ListenBrainz"
         },
+        "scrobble-alternative-artist": "Використати іншого виконавця",
         "scrobble-alternative-title": "Використовувати альтернативні назви",
         "scrobble-other-media": "Скробилити інші медіа"
       },
@@ -762,10 +831,28 @@
     "synced-lyrics": {
       "description": "Додає синхронізовані тексти до пісень використовуючи провайдери, такі як LRClib.",
       "errors": {
-        "fetch": "⚠️ - При завантаженні слів пісні сталась помилка. Спробуйте пізніше.",
+        "fetch": "⚠️ - При завантаженні слів пісні сталась помилка.\nСпробуйте будь ласка пізніше.",
         "not-found": "⚠️ До цієї пісні текст не знайдено."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Конвертувати китайські символи",
+          "submenu": {
+            "disabled": {
+              "label": "Вимкнено",
+              "tooltip": "Вимкнути конвертування китайськіх символів"
+            },
+            "simplified-to-traditional": {
+              "label": "Спрощені до традиційних",
+              "tooltip": "Перетворити спрощену китайську на традиційну китайську"
+            },
+            "traditional-to-simplified": {
+              "label": "Традиційні до спрощених",
+              "tooltip": "Перетворити традиційну китайську на спрощену китайську"
+            }
+          },
+          "tooltip": "Перетворити китайський ієрогліф на традиційний або спрощений"
+        },
         "default-text-string": {
           "label": "Символ за замовчуванням між текстами пісень",
           "tooltip": "Виберіть символ за замовчуванням, який буде використовуватися для проміжку між текстами пісень"
@@ -795,6 +882,14 @@
         "precise-timing": {
           "label": "Зробити текст пісні ідеально синхронізованим",
           "tooltip": "Обчисли до мілісекунд відображення наступного рядка (може мати невеликий вплив на продуктивність)"
+        },
+        "preferred-provider": {
+          "label": "Пріорітетний Провайдер",
+          "none": {
+            "label": "Жоден",
+            "tooltip": "Нема провайдера за замовчуванням"
+          },
+          "tooltip": "Оберіть якого провайдера використовувати за замовчуванням"
         },
         "romanization": {
           "label": "Транслітерувати текст пісень",
@@ -828,6 +923,27 @@
       "description": "Додає віджет TouchBar для користувачів macOS",
       "name": "TouchBar"
     },
+    "transparent-player": {
+      "description": "Зробити вікно програми прозорим",
+      "menu": {
+        "opacity": {
+          "label": "Прозорість",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Тип",
+          "submenu": {
+            "acrylic": "Акриловий",
+            "mica": "Міка",
+            "none": "Жоден",
+            "tabbed": "З роздільниками"
+          }
+        }
+      },
+      "name": "Прозорий Плеєр"
+    },
     "tuna-obs": {
       "description": "Інтеграція з плагіном Tuna для OBS",
       "name": "Tuna OBS"
@@ -859,7 +975,8 @@
       },
       "name": "Перемикач відео",
       "templates": {
-        "button-song": "Пісня"
+        "button-song": "Пісня",
+        "button-video": "Відео"
       }
     },
     "visualizer": {

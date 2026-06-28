@@ -1,4 +1,4 @@
-import type { YouTubeMusicAppElement } from '@/types/youtube-music-app-element';
+import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
 import type { QueueElement } from '@/types/queue';
 
 type QueueRendererResponse = {
@@ -13,7 +13,7 @@ export const getMusicQueueRenderer = async (
   videoIds: string[],
 ): Promise<QueueRendererResponse | null> => {
   const queue = document.querySelector<QueueElement>('#queue');
-  const app = document.querySelector<YouTubeMusicAppElement>('ytmusic-app');
+  const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
   if (!app) return null;
 
   const store = queue?.queue.store.store;

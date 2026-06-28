@@ -1,15 +1,13 @@
 import prompt from 'custom-electron-prompt';
-
 import { type BrowserWindow } from 'electron';
-
-import { t } from '@/i18n';
-import promptOptions from '@/providers/prompt-options';
 
 import { type ScrobblerPluginConfig } from './index';
 import { type SetConfType, backend } from './main';
+import { t } from '@/i18n';
+import promptOptions from '@/providers/prompt-options';
 
-import type { MenuContext } from '@/types/contexts';
 import type { MenuTemplate } from '@/menu';
+import type { MenuContext } from '@/types/contexts';
 
 async function promptLastFmOptions(
   options: ScrobblerPluginConfig,

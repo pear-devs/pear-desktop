@@ -3,8 +3,8 @@ import is from 'electron-is';
 import { t } from '@/i18n';
 
 import type { InAppMenuConfig } from './constants';
-import type { MenuContext } from '@/types/contexts';
 import type { MenuTemplate } from '@/menu';
+import type { MenuContext } from '@/types/contexts';
 
 export const onMenu = async ({
   getConfig,

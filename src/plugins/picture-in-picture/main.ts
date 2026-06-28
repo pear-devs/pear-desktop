@@ -1,7 +1,6 @@
 import { app } from 'electron';
 
 import type { PictureInPicturePluginConfig } from './index';
-
 import type { BackendContext } from '@/types/contexts';
 
 let config: PictureInPicturePluginConfig;
@@ -45,7 +44,7 @@ export const onMainLoad = async ({
       window.setMaximizable(false);
       window.setFullScreenable(false);
 
-      send('ytmd:pip-toggle', true);
+      send('peard:pip-toggle', true);
 
       app.dock?.hide();
       window.setVisibleOnAllWorkspaces(true, {
@@ -63,7 +62,7 @@ export const onMainLoad = async ({
       window.setMaximizable(true);
       window.setFullScreenable(true);
 
-      send('ytmd:pip-toggle', false);
+      send('peard:pip-toggle', false);
 
       window.setVisibleOnAllWorkspaces(false);
       window.setAlwaysOnTop(false);

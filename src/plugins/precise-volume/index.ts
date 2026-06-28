@@ -1,13 +1,12 @@
-import { globalShortcut, type MenuItem } from 'electron';
 import prompt, { type KeybindOptions } from 'custom-electron-prompt';
+import { globalShortcut, type MenuItem } from 'electron';
 
-import hudStyle from './volume-hud.css?inline';
-import { createPlugin } from '@/utils';
-
-import promptOptions from '@/providers/prompt-options';
 import { overrideListener } from './override';
 import { onConfigChange, onPlayerApiReady } from './renderer';
+import hudStyle from './volume-hud.css?inline';
 import { t } from '@/i18n';
+import promptOptions from '@/providers/prompt-options';
+import { createPlugin } from '@/utils';
 
 export type PreciseVolumePluginConfig = {
   enabled: boolean;
@@ -157,7 +156,7 @@ export default createPlugin({
         type: 'checkbox',
         checked: Boolean(
           config.globalShortcuts?.volumeUp ??
-            config.globalShortcuts?.volumeDown,
+          config.globalShortcuts?.volumeDown,
         ),
         click: (item) => promptGlobalShortcuts(config, item),
       },
