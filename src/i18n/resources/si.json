@@ -44,7 +44,7 @@
     },
     "dialog": {
       "hide-menu-enabled": {
-        "detail": "මෙනුව සැගවී ඇත, නැවත පෙන්වීමට 'Alt' යතුර භාවිතා කරන්න. (හෝ In-App මෙනුවේ 'Escape')",
+        "detail": "මෙනුව සැගවී ඇත, නැවත පෙන්වීමට 'Alt' භාවිතා කරන්න. (මෙනුවේ 'Escape')",
         "message": "මෙනුව සැගවීම සක්‍රීය කර ඇත",
         "title": "මෙනුව සැගවීම සක්‍රීයයි"
       },
@@ -98,11 +98,114 @@
             "submenu": {
               "auto-reset-app-cache": "යෙදුම් කෑච් යෙදුම ආරම්භයේදී යලි පිහිටුවන්න",
               "disable-hardware-acceleration": "දෘඩාංග භාවිත වේගවත් කිරීම් අක්‍රීය කරන්න",
-              "edit-config-json": "config.json සකසන්න"
+              "edit-config-json": "config.json සකසන්න",
+              "override-user-agent": "User-Agent ව වෙනස් කරන්න",
+              "restart-on-config-changes": "Config change එකක් වෙද්දී app එක auto restart වෙන්න",
+              "set-proxy": {
+                "label": "Proxy එක set කරන්න",
+                "prompt": {
+                  "label": "Proxy ලිපිනය ඇතුළත් කරන්න: (නවතන්න නම් හිස්ව තබන්න)",
+                  "placeholder": "උදාහරණය: SOCKS5://127.0.0.1:9999",
+                  "title": "Proxy එක set කරන්න"
+                }
+              },
+              "toggle-dev-tools": "DevTools On/Off කරන්න"
+            }
+          },
+          "always-on-top": "Always on top කරන්න",
+          "auto-update": "Auto Update කරන්න",
+          "hide-menu": {
+            "dialog": {
+              "message": "Menu එක ඊළඟ වතාවට ආරම්භක වෙලාවේ හෝ hide වෙයි. දැක්වීමට [Alt] හෝ in-app menu එකේ නම් [`] key එක ඔබන්න",
+              "title": "Menu hide කිරීම enable කරලා"
+            },
+            "label": "Menu hide කරන්න"
+          },
+          "language": {
+            "dialog": {
+              "message": "Restart කිරීමෙන් පසු භාෂාව වෙනස් වේ",
+              "title": "Language change වුනා"
+            },
+            "label": "භාෂාව",
+            "submenu": {
+              "to-help-translate": "පරිවර්තනය කිරීමට උදව් කරන්න ඕනේද? මෙතන ක්ලික් කරන්න"
+            }
+          },
+          "resume-on-start": "App එක start වෙද්දි අවසන් ගීතය නැවත ඇරඹෙන්න",
+          "single-instance-lock": "Single Instance Lock සක්‍රීය කරන්න",
+          "start-at-login": "ලොගින් වුන විට start කරන්න",
+          "starting-page": {
+            "label": "ආරම්භක පිටුව",
+            "unset": "අවලංගු කරන්න"
+          },
+          "tray": {
+            "label": "ට්‍රේ එක",
+            "submenu": {
+              "disabled": "Disable කරන ලදී",
+              "enabled-and-hide-app": "ට්‍රේ එක enable කරලා, app window එක hide කරන්න",
+              "enabled-and-show-app": "Enable කරලා app එක පෙන්වන්න",
+              "play-pause-on-click": "Click කළ විට play/ pause වෙනවා"
+            }
+          },
+          "visual-tweaks": {
+            "label": "Visual tweaks කරන්න",
+            "submenu": {
+              "like-buttons": {
+                "default": "මූලික",
+                "force-show": "Force show කරන්න",
+                "hide": "සඟවන්න",
+                "label": "Like බොත්තම්"
+              },
+              "remove-upgrade-button": "Upgrade බොත්තම ඉවත් කරන්න",
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "අවලංගු කරන්න",
+                    "remove": "ඉවත් කරන්න"
+                  },
+                  "remove-theme": "ඔබට විශ්වාසද ඔබගේ custom theme එක ඉවත් කිරීමට අවශ්‍ය බව?",
+                  "remove-theme-message": "මෙය custom theme එක ඉවත් කරයි"
+                },
+                "label": "Theme",
+                "submenu": {
+                  "import-css-file": "Custom CSS ගොනුව import කරන්න",
+                  "no-theme": "Theme එකක් නැහැ"
+                }
+              }
             }
           }
         }
+      },
+      "plugins": {
+        "enabled": "සක්රිය කරන්න",
+        "label": "ප්ලගීන",
+        "new": "නව"
+      },
+      "view": {
+        "label": "බලන්න",
+        "submenu": {
+          "force-reload": "බලෙන් රීලෝඩ් කරන්න",
+          "reload": "රීලෝඩ් කරන්න",
+          "reset-zoom": "සැබෑ ප්රමාණය",
+          "toggle-fullscreen": "සම්පූර්ණ තිරය ටොගල් කරන්න",
+          "zoom-in": "විශාලනය කරන්න",
+          "zoom-out": "කුඩා කරන්න"
+        }
+      }
+    },
+    "tray": {
+      "next": "ඊළඟ",
+      "play-pause": "වාදනය / විරාමය",
+      "previous": "පෙර",
+      "quit": "පිටවීම",
+      "restart": "නැවත ආරම්භ කරන්න",
+      "show": "තිරය පෙන්වන්න",
+      "tooltip": {
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
+  },
+  "plugins": {
   }
 }

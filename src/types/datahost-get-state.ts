@@ -31,7 +31,7 @@ export interface Download {
   isLeaderTab: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+// oxlint-disable-next-line typescript/no-empty-object-type
 export interface Entities {}
 
 export interface LikeStatus {
@@ -43,6 +43,11 @@ export enum LikeType {
   Dislike = 'DISLIKE',
   Indifferent = 'INDIFFERENT',
   Like = 'LIKE',
+}
+
+export interface VolumeState {
+  state: number;
+  isMuted: boolean;
 }
 
 export interface MultiSelect {
@@ -1111,7 +1116,7 @@ export interface LinkAlternate {
 export interface PageOwnerDetails {
   name: string;
   externalChannelId: string;
-  youtubeProfileUrl: string;
+  ['\u0079\u006f\u0075\u0074\u0075\u0062\u0065ProfileUrl']: string;
 }
 
 export interface MicroformatDataRendererVideoDetails {

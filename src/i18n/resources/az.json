@@ -1,0 +1,224 @@
+{
+  "common": {
+    "console": {
+      "plugins": {
+        "execute-failed": "Plagini icra etmək mümkün olmadı {{pluginName}}::{{contextName}}",
+        "executed-at-ms": "Plagin {{pluginName}}::{{contextName}} {{ms}} millisaniyədə icra edildi",
+        "initialize-failed": "\"{{pluginName}}\" plaginini başlatmaq mümkün olmadı",
+        "load-all": "Bütün plaginlər yüklənir",
+        "load-failed": "\"{{pluginName}}\" plaginini yükləmək mümkün olmadı",
+        "loaded": "\"{{pluginName}}\" plagini yükləndi",
+        "unload-failed": "\"{{pluginName}}\" plaqinini yükləmək mümkün olmadı",
+        "unloaded": "\"{{pluginName}}\" plaqini yükləmədən çıxarıldı"
+      }
+    }
+  },
+  "language": {
+    "code": "az",
+    "local-name": "Azərbaycan dili",
+    "name": "Azerbaijani"
+  },
+  "main": {
+    "console": {
+      "did-finish-load": {
+        "dev-tools": "Yükləmə tamamlandı. DevTools açıldı"
+      },
+      "i18n": {
+        "loaded": "i18n yükləndi"
+      },
+      "second-instance": {
+        "receive-command": "Protokol üzərindən əmr alındı: \"{{command}}\""
+      },
+      "theme": {
+        "css-file-not-found": "CSS faylı \"{{cssFile}}\" mövcud deyil, nəzərə alınmır"
+      },
+      "unresponsive": {
+        "details": "Cavabsız Səhv!\n{{error}}"
+      },
+      "when-ready": {
+        "clearing-cache-after-20s": "Proqram keşi təmizlənir"
+      },
+      "window": {
+        "tried-to-render-offscreen": "Pəncərə ekran kənarında göstərilməyə çalışıldı, PəncərəÖlçüsü={{windowSize}}, EkranÖlçüsü={{displaySize}}, Vəziyyət={{position}}"
+      }
+    },
+    "dialog": {
+      "hide-menu-enabled": {
+        "detail": "Menu gizlədildi, yenidən göstərmək üçün 'Alt' istifadə edin (Proqramiçi menu üçün 'Esc')",
+        "message": "Gizlət menusu aktivləşdirildi",
+        "title": "Gizlət menusu aktivləşdirildi"
+      },
+      "need-to-restart": {
+        "buttons": {
+          "later": "Sonra",
+          "restart-now": "Yenidən başlat"
+        },
+        "detail": "\"{{pluginName}}\" plaginin işləməsi üçün proqramı yenidən başladın",
+        "message": "\"{{pluginName}}\" üçün proqram yenidən başlamalıdır",
+        "title": "Yenidən başlatmaq tələb edilir"
+      },
+      "unresponsive": {
+        "buttons": {
+          "quit": "Tərk et",
+          "relaunch": "Yenidən işə sal",
+          "wait": "Gözləyin"
+        },
+        "detail": "Narahatçılıq üçün üzr istəyirik! Nə etməli olduğumuzu seçin:",
+        "message": "Proqram cavab vermir",
+        "title": "Pəncərə Cavab vermir"
+      },
+      "update-available": {
+        "buttons": {
+          "disable": "Yeniləmələri deaktiv et",
+          "download": "Yüklə",
+          "ok": "Oldu"
+        },
+        "detail": "Yeni versiya mövcuddur və bu linkdən yüklənə bilər {{downloadLink}}",
+        "message": "Yeni versiya mövcuddur",
+        "title": "Yeniləmə mövcuddur"
+      }
+    },
+    "menu": {
+      "about": "Haqqında",
+      "navigation": {
+        "label": "İstiqamət",
+        "submenu": {
+          "copy-current-url": "Hazırkı linki kopyala",
+          "go-back": "Geri qayıt",
+          "go-forward": "İrəli get",
+          "quit": "Çıx",
+          "restart": "Proqramı Yenidən Başlat"
+        }
+      },
+      "options": {
+        "label": "Seçimlər",
+        "submenu": {
+          "advanced-options": {
+            "label": "Əlavə seçimlər",
+            "submenu": {
+              "auto-reset-app-cache": "Proqram başlayanda keşi təmizlə",
+              "disable-hardware-acceleration": "Aparat təminatı sürətlənməsini deaktiv et",
+              "edit-config-json": "Config.json dəyiş",
+              "override-user-agent": "User-Agent dəyişdirildi",
+              "restart-on-config-changes": "Konfiqurasiya dəyişikliklərində yenidən başladılır",
+              "set-proxy": {
+                "label": "Proxy təyin et",
+                "prompt": {
+                  "label": "Proxy Ünvanını daxil edin: (deaktiv etmək üçün boş buraxın)",
+                  "placeholder": "Nümunə: SOCKS5://127.0.0.1:9999",
+                  "title": "Proxy təyin et"
+                }
+              },
+              "toggle-dev-tools": "DevTools-u açıb bağla"
+            }
+          },
+          "always-on-top": "Həmişə üst tərəfdə",
+          "auto-update": "Avtomatik Yeniləmə",
+          "hide-menu": {
+            "dialog": {
+              "message": "Menyu növbəti açılışda gizlədiləcək, göstərmək üçün [Alt] düyməsini basın (proqramdaxili menyudan istifadə edildikdə isə, [`] düyməsi).",
+              "title": "Menyu gizlətmə aktivdir"
+            },
+            "label": "Menyunu gizlət"
+          },
+          "language": {
+            "dialog": {
+              "message": "Dil yenidən başlatmadan sonra dəyişiləcək",
+              "title": "Dil dəyişdirildi"
+            },
+            "label": "Dil",
+            "submenu": {
+              "to-help-translate": "Tərcüməyə kömək etmək istəyirsiniz? Buraya basın"
+            }
+          },
+          "resume-on-start": "Tətbiq başladıqda son mahnıdan davam et",
+          "single-instance-lock": "Tək proqram kilidi",
+          "start-at-login": "Giriş səhifəsində başlat",
+          "starting-page": {
+            "label": "Giriş səhifəsi",
+            "unset": "Təyin edilməyib"
+          },
+          "tray": {
+            "submenu": {
+              "disabled": "Deaktiv edilib",
+              "play-pause-on-click": "Kliklədikdə Başlat/Dayan"
+            }
+          },
+          "visual-tweaks": {
+            "label": "Vizual düzəlişlər",
+            "submenu": {
+              "custom-window-title": {
+                "prompt": {
+                  "placeholder": "Nümunə: {{applicationName}}"
+                }
+              },
+              "like-buttons": {
+                "default": "Standart",
+                "hide": "Gizlət"
+              },
+              "remove-upgrade-button": "Yeniləmə düyməsini sil",
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "Ləğv et",
+                    "remove": "Sil"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "view": {
+        "submenu": {
+          "reset-zoom": "Həqiqi Ölçü",
+          "toggle-fullscreen": "Bütün Ekranı Aktivləşdir",
+          "zoom-in": "Yaxınlaşdır",
+          "zoom-out": "Uzaqlaşdır"
+        }
+      }
+    },
+    "tray": {
+      "next": "Sonrakı",
+      "play-pause": "Başlat/Dayan",
+      "previous": "Əvvəlki",
+      "quit": "Çıxış",
+      "restart": "Tətbiqi Yenidən Başlat",
+      "show": "Pəncərəni Göstər"
+    }
+  },
+  "plugins": {
+    "ad-speedup": {
+      "description": "Reklam çıxarsa səssizə al və oynanış sürətini 16 dəfə artır",
+      "name": "Reklam Oynanış Sürətini Artırmaq"
+    },
+    "album-actions": {
+      "description": "Bəyənməməni geri alma, Bəyənməmə, Bəyənmə və Bəyənməni geri alma düymələrini bütün mahnı və albumlara tətbiq etməyi əlavə et",
+      "name": "Albom Düymələri"
+    },
+    "ambient-mode": {
+      "menu": {
+        "use-fullscreen": {
+          "label": "Bütün Ekran modunu istifadə et"
+        }
+      }
+    },
+    "api-server": {
+      "menu": {
+        "auth-strategy": {
+          "submenu": {
+            "auth-at-first": {
+              "label": "İlk istəkdə səlahiyyətləndir"
+            },
+            "none": {
+              "label": "Səlahiyyətləndirmə yoxdur"
+            }
+          }
+        },
+        "hostname": {
+          "label": "Sahib adı"
+        }
+      }
+    }
+  }
+}

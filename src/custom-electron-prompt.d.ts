@@ -1,5 +1,5 @@
 declare module 'custom-electron-prompt' {
-  import { BrowserWindow } from 'electron';
+  import { type BrowserWindow } from 'electron';
 
   export type SelectOptions = Record<string, string>;
 

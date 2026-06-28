@@ -1,0 +1,619 @@
+{
+  "common": {
+    "console": {
+      "plugins": {
+        "execute-failed": "Problēma ielādēt plaginu {{pluginName}}::{{contextName}}",
+        "executed-at-ms": "Plagins {{pluginName}}::{{contextName}} ielādējās par{{ms}}ms",
+        "initialize-failed": "Kļūda inicializējot plaginu \"{{pluginName}}\"",
+        "load-all": "Ielādē visus plaginus",
+        "load-failed": "Kļūda ielādējot plaginu \"{{pluginName}}\"",
+        "loaded": "Plagins \"{{pluginName}}\" ielādēts",
+        "unload-failed": "Kļūda izlādējot plaginu \"{{pluginName}}\"",
+        "unloaded": "Plagins \"{{pluginName}}\" izlādēts"
+      }
+    }
+  },
+  "language": {
+    "code": "lv",
+    "local-name": "Latviešu",
+    "name": "Latvian"
+  },
+  "main": {
+    "console": {
+      "did-finish-load": {
+        "dev-tools": "Lejupielāde pabeigta. DevTools atvērts"
+      },
+      "i18n": {
+        "loaded": "i18n ielādēts"
+      },
+      "second-instance": {
+        "receive-command": "Saņemta komanda pāri protokolam: \"{{command}}\""
+      },
+      "theme": {
+        "css-file-not-found": "CSS fails \"{{cssFile}}\" neeksistē, ignorējas"
+      },
+      "unresponsive": {
+        "details": "Lietotne neatbild\n{{error}}"
+      },
+      "when-ready": {
+        "clearing-cache-after-20s": "Iztīra lietotnes kešu"
+      },
+      "window": {
+        "tried-to-render-offscreen": "Logs mēģināja atvērties ārpuss ekrāna barjeriem, loga izmērs={{windowSize}}, ekrāna izškirtspēja={{displaySize}}, pozīcija={{position}}"
+      }
+    },
+    "dialog": {
+      "hide-menu-enabled": {
+        "detail": "Izvēlne ir noslēpta, izmantojiet 'Alt' lai to parādītu (vai 'Escape' ja izmanto lietotnes iekšējo izvēlni)",
+        "message": "Izvēlnes noslēpšana ir ieslēgta",
+        "title": "Izvēlnes noslēpšana ieslēgta"
+      },
+      "need-to-restart": {
+        "buttons": {
+          "later": "Vēlāk",
+          "restart-now": "Restartēt Tagad"
+        },
+        "detail": "Restartējiet lietotni lai aktivizētu plaginu {{pluginName}}",
+        "message": "{{pluginName}} pieprasa restartēšanu",
+        "title": "Vajadzīga restartēšana"
+      },
+      "unresponsive": {
+        "buttons": {
+          "quit": "Iziet",
+          "relaunch": "Restartēt",
+          "wait": "Pagaidat"
+        },
+        "detail": "Atvainojamies par neērtībām! Lūdzu izvēlaties ko darīt:",
+        "message": "Lietotne neatbild",
+        "title": "Logs neatbild"
+      },
+      "update-available": {
+        "buttons": {
+          "disable": "Izslēgt atjauninājumus",
+          "download": "Lejupielādēt",
+          "ok": "OK"
+        },
+        "detail": "Jauna versija ir pieejama, un var tikt lejupielādēta šeit {{downloadLink}}",
+        "message": "Pieejama jauna versija",
+        "title": "Pieejams atjauninājums"
+      }
+    },
+    "menu": {
+      "about": "Par",
+      "navigation": {
+        "label": "Navigācija",
+        "submenu": {
+          "copy-current-url": "Kopēt pašreizējo URL",
+          "go-back": "Atgriezties",
+          "go-forward": "Uz priekšu",
+          "quit": "Iziet",
+          "restart": "Restartēt lietotni"
+        }
+      },
+      "options": {
+        "label": "Iestatījumi",
+        "submenu": {
+          "advanced-options": {
+            "label": "Paplašināti iestatījumi",
+            "submenu": {
+              "auto-reset-app-cache": "Iztīrīt kešu kad lietotne palaižas",
+              "disable-hardware-acceleration": "Atslēgt aparatūras paātrinājumu",
+              "edit-config-json": "Labot config.json",
+              "override-user-agent": "Pārrakstīt lietotāja aģenta informāciju",
+              "restart-on-config-changes": "Restartēt kad mainās konfigurācija",
+              "set-proxy": {
+                "label": "Iestatīt proxy",
+                "prompt": {
+                  "label": "Ievadiet Proxy adresi: (atstajiet tukšu lai izslēgtu)",
+                  "placeholder": "Piemērs: SOCKS5://127.0.0.1:9999",
+                  "title": "Iestatīt proxy"
+                }
+              },
+              "toggle-dev-tools": "Ieslēgt DevTools"
+            }
+          },
+          "always-on-top": "Vienmēr priekšā",
+          "auto-update": "Automātiski atjauninājumi",
+          "hide-menu": {
+            "dialog": {
+              "message": "Izvēlne tiks paslēpta kad palaidīsiet letotni atkal, izmantojiet [Alt] lai parādīt to (vai [`] ja izmantojiet lietotnes iekšējo izvēlni)",
+              "title": "Izvēlnes paslepšana ieslēgta"
+            },
+            "label": "Paslēpt izvēlni"
+          },
+          "language": {
+            "dialog": {
+              "message": "Valoda tiks pamainīta pēc restartēšanas",
+              "title": "Valoda pamainīta"
+            },
+            "label": "Valoda",
+            "submenu": {
+              "to-help-translate": "Gribat palīdzēt ar tulkošanu? Spiežat šeit"
+            }
+          },
+          "resume-on-start": "Turpināt pēdējo dziesmu kad lietotne palaižas",
+          "single-instance-lock": "Liegums palaists vairākas lietotnes",
+          "start-at-login": "Palaist ieslēdzot datoru",
+          "starting-page": {
+            "label": "Sākuma lapa",
+            "unset": "Nav iestatīts"
+          },
+          "tray": {
+            "label": "Minimizēt uz teknīti",
+            "submenu": {
+              "disabled": "Izslēgts",
+              "enabled-and-hide-app": "Teknīte ieslēgta, paslēpt lietotnes logu",
+              "enabled-and-show-app": "Ielsēgts un rādīt lietotni",
+              "play-pause-on-click": "Atskaņot/Pauzēt piespiežot"
+            }
+          },
+          "visual-tweaks": {
+            "label": "Vizuāli Iestatījumi",
+            "submenu": {
+              "custom-window-title": {
+                "label": "Pielāgots loga nosaukums",
+                "prompt": {
+                  "label": "Ievadiet pielāgotu loga nosaukumu: (atstājiet tukšu, lai atspējotu)",
+                  "placeholder": "Piemērs: Pear mūzika"
+                }
+              },
+              "like-buttons": {
+                "default": "Noklusējums",
+                "force-show": "Vienmēr rādīt",
+                "hide": "Paslēpt",
+                "label": "Like pogas"
+              },
+              "remove-upgrade-button": "Noslēpt Premium pogu",
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "Atcelt",
+                    "remove": "Noņemt"
+                  },
+                  "remove-theme": "Vai tiešām, gribat noņemt šo lietotāj tēmu?",
+                  "remove-theme-message": "Šis noņems lietotāja tēmu"
+                },
+                "label": "Tēma",
+                "submenu": {
+                  "import-css-file": "Importēt CSS failu",
+                  "no-theme": "Bez tēmas"
+                }
+              }
+            }
+          }
+        }
+      },
+      "plugins": {
+        "enabled": "Ieslēgts",
+        "label": "Plagini",
+        "new": "JAUNS"
+      },
+      "view": {
+        "label": "Skats",
+        "submenu": {
+          "force-reload": "Piespiedu Restartēt",
+          "reload": "Atsvaidzināt",
+          "reset-zoom": "Noklusējuma izmērs",
+          "toggle-fullscreen": "Pārslēgt pilnekrāna režīmu",
+          "zoom-in": "Pietuvināt",
+          "zoom-out": "Attālināt"
+        }
+      }
+    },
+    "tray": {
+      "next": "Nākošais",
+      "play-pause": "Atskaņot/Pauzēt",
+      "previous": "Iepriekšējais",
+      "quit": "Iziet",
+      "restart": "Restartēt Lietotni",
+      "show": "Rādīt logu",
+      "tooltip": {
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
+      }
+    }
+  },
+  "plugins": {
+    "ad-speedup": {
+      "description": "Ja reklāma atskaņojas, tad skaņa izlēdzas, un ātrums pārslēdzas uz 16x",
+      "name": "Reklāmu paātrinājums"
+    },
+    "album-actions": {
+      "description": "Pievieno Undislike, Dislike, Like, un Unlike pogas lai izdarītu to visām dziesmām Mūzikas sarakstā vai albumā",
+      "name": "Darbības ar Albumu"
+    },
+    "album-color-theme": {
+      "description": "Iestata dinamisku motīvu un efektus, pamatojoties uz albuma krāsu paleti",
+      "menu": {
+        "color-mix-ratio": {
+          "label": "Krāsu attiecība",
+          "submenu": {
+            "percent": "{{ratio}}%"
+          }
+        }
+      },
+      "name": "Albuma krāsu tēma"
+    },
+    "ambient-mode": {
+      "description": "Pielieto apgaismojuma efektu, kas maigā krāsā atstaro video attēlu uz ekrāna fona",
+      "menu": {
+        "blur-amount": {
+          "label": "Izplūšanas itensitāte",
+          "submenu": {
+            "pixels": "{{blurAmount}} pikseļi"
+          }
+        },
+        "buffer": {
+          "label": "buferis",
+          "submenu": {
+            "buffer": "{{buffer}}"
+          }
+        },
+        "opacity": {
+          "label": "Caurspīdīgums",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "quality": {
+          "label": "Kvalitāte",
+          "submenu": {
+            "pixels": "{{quality}} pikseļi"
+          }
+        },
+        "size": {
+          "label": "Izmērs",
+          "submenu": {
+            "percent": "{{size}}%"
+          }
+        },
+        "smoothness-transition": {
+          "label": "Vienmērīga pāreja",
+          "submenu": {
+            "during": "Pa {{interpolationTime}} s"
+          }
+        },
+        "use-fullscreen": {
+          "label": "Izmantot pilnekrāna režīmu"
+        }
+      },
+      "name": "Ambientais Režīms"
+    },
+    "amuse": {
+      "description": "Pievieno {{applicationName}} atblastu priekš Amuse \"tagad spēlē\" no 6K Labs",
+      "name": "Amuse",
+      "response": {
+        "query": "Amuse API serveris ir palaists. GET /query lai dabūtu dziesmas info."
+      }
+    },
+    "api-server": {
+      "description": "Pievieno API serveri lai kontrolētu atskaņotāju",
+      "dialog": {
+        "request": {
+          "buttons": {
+            "allow": "Atļaut",
+            "deny": "Aizliegt"
+          },
+          "message": "Vai atļaut {{ID}} ({{origin}}) piekļūt pie API?",
+          "title": "API autorizācijas pieprasījums"
+        }
+      },
+      "menu": {
+        "auth-strategy": {
+          "label": "Autorizācijas veids",
+          "submenu": {
+            "auth-at-first": {
+              "label": "Autorizēt pie pirmā pieprasījuma"
+            },
+            "none": {
+              "label": "Bez autorizācijas"
+            }
+          }
+        },
+        "hostname": {
+          "label": "Hosta nosaukums"
+        },
+        "port": {
+          "label": "Ports"
+        }
+      },
+      "name": "API Serveris [BETA]",
+      "prompt": {
+        "hostname": {
+          "label": "Ievadiet hosta vārdu (piemēram 0.0.0.0) priekš API severa:",
+          "title": "Hosta vārds"
+        },
+        "port": {
+          "label": "Ievadiet portu priekš API servera:",
+          "title": "Ports"
+        }
+      }
+    },
+    "audio-compressor": {
+      "description": "Pievieno saspiešanu pie audio (samazina skaļāko audio daļu skaļumu un palielina mīkstāko daļu skaļumu)",
+      "name": "Audio saspiedējs"
+    },
+    "auth-proxy-adapter": {
+      "description": "Atbalsts priekš proxy servisu autentifikācijas",
+      "menu": {
+        "disable": "Izslēgt Proxy Adapteri",
+        "enable": "Ieslēgt Proxy Adapteri",
+        "hostname": {
+          "label": "Hosta vārds"
+        },
+        "port": {
+          "label": "Ports"
+        }
+      },
+      "name": "Autorizācijas Proxy Adapteris",
+      "prompt": {
+        "hostname": {
+          "label": "Ievadiet hosta vārdu priekš lokālā proxy servera (nepieciešama restartēšana):",
+          "title": "Proxy hosta vārds"
+        },
+        "port": {
+          "label": "Ievadiet portu priekš lokālā proxy servera (nepieciešams restartēt):",
+          "title": "Proxy Ports"
+        }
+      }
+    },
+    "blur-nav-bar": {
+      "description": "Taisa navigāzijas joslu caurspīdīgu un izplūdušu",
+      "name": "Izplūdusi Navigācijas Josla"
+    },
+    "bypass-age-restrictions": {
+      "description": "Apiet Music Player vecuma pārbaudi",
+      "name": "Apiet Vecuma Ierobežojumus"
+    },
+    "captions-selector": {
+      "description": "Subtitru izvēlne priekš {{applicationName}} audio ceļiem",
+      "menu": {
+        "autoload": "Automātiski izvēlēties pēdējo izmantotos subtitrus",
+        "disable-captions": "Bez subtitriem pēc noklusējuma"
+      },
+      "name": "Subtitru Izvēlne",
+      "prompt": {
+        "selector": {
+          "label": "Tekošā subtitru valoda: {{language}}",
+          "none": "Neviens",
+          "title": "Izvēlieties subtitru valodu"
+        }
+      },
+      "templates": {
+        "title": "Atvērt subtitru izvēlni"
+      },
+      "toast": {
+        "caption-changed": "Subtitri pamainīti uz {{language}}",
+        "caption-disabled": "Subtitri izslēgti",
+        "no-captions": "Subtitri nav pieejami priekš šīs dziesmas"
+      }
+    },
+    "compact-sidebar": {
+      "description": "Vienmēr iestatīt malējo paneli kompaktajā režīmā",
+      "name": "Kompakts malējais panelis"
+    },
+    "crossfade": {
+      "description": "Maiga pāreja starp dziesmām",
+      "menu": {
+        "advanced": "Paplašināts"
+      },
+      "name": "Maiga pāreja [BETA]",
+      "prompt": {
+        "options": {
+          "multi-input": {
+            "fade-in-duration": "Ieplūšanas ilgums (ms)",
+            "fade-out-duration": "Izplūšanas ilgums (ms)",
+            "fade-scaling": {
+              "label": "Pārejas stiprums",
+              "linear": "Lineārs",
+              "logarithmic": "Logaritmisks"
+            },
+            "seconds-before-end": "Maigas pārejas N sekundes pirms beigām"
+          },
+          "title": "Maigas pārejas iestatījumi"
+        }
+      }
+    },
+    "custom-output-device": {
+      "description": "Pielāgotas izvades multivides ierīces konfigurēšana dziesmām",
+      "menu": {
+        "device-selector": "Izvēlieties ierīci"
+      },
+      "name": "Pielāgota izvades ierīce",
+      "prompt": {
+        "device-selector": {
+          "label": "Izvēlieties izmantojamo izvades multivides ierīci",
+          "title": "Izvēlieties izvades ierīci"
+        }
+      }
+    },
+    "disable-autoplay": {
+      "description": "Palaiž dziesmu nopauzētu",
+      "menu": {
+        "apply-once": "Iedarbojas tikai palaišanas brīdī"
+      },
+      "name": "Atspējot automātisku atskaņošanu"
+    },
+    "discord": {
+      "backend": {
+        "already-connected": "Mēģināja pieslēgties jau ar aktīvu savienojumu",
+        "connected": "Pieslēgts pie Discord",
+        "disconnected": "Atslēgts no Discord"
+      },
+      "description": "Parādiet saviem draugiem ko jūs klausaties ar Rich Presence",
+      "menu": {
+        "auto-reconnect": "Automātiska atkārtota pieslēgšanās",
+        "clear-activity": "Attīrīt aktivitāti",
+        "clear-activity-after-timeout": "Attīrīt aktivitāti pēc taimauta",
+        "connected": "Pievienojies",
+        "disconnected": "Atvienojies",
+        "hide-duration-left": "Paslēpt cik palika laika",
+        "hide-github-button": "Paslēpt GitHub saites pogu",
+        "play-on-application": "Atskaņot uz {{applicationName}}",
+        "set-inactivity-timeout": "Iestatīt neaktivitātes taimeru",
+        "set-status-display-type": {
+          "label": "Statusa teksts",
+          "submenu": {
+            "artist": "Klausos {mākslinieku}",
+            "title": "Klausos {dziesmas nosaukums}"
+          }
+        }
+      },
+      "name": "Discord Rich Presence",
+      "prompt": {
+        "set-inactivity-timeout": {
+          "label": "Ievadiet neaktivitātes taimeru sekundēs:",
+          "title": "Iestatīt neaktivitātes taimeru"
+        }
+      }
+    },
+    "downloader": {
+      "backend": {
+        "dialog": {
+          "error": {
+            "buttons": {
+              "ok": "OK"
+            },
+            "message": "Atvainojamies, lejupielāde neizdevās…",
+            "title": "Lejupielādes kļūda!"
+          },
+          "start-download-playlist": {
+            "buttons": {
+              "ok": "OK"
+            },
+            "detail": "({{playlistSize}}Dziesmas)",
+            "message": "Lejupielādē atskaņošanas sarakstu {{playlistTitle}}",
+            "title": "Lejupielāde sākta"
+          }
+        },
+        "feedback": {
+          "conversion-progress": "Konvertēšana: {{percent}}%",
+          "converting": "Konvertēšana…",
+          "done": "Pabeigts: {{filePath}}",
+          "download-info": "Lejupielādē {{artist}} - {{title}}{{videoId}}",
+          "download-progress": "Lejupielāde: {{percent}}%",
+          "downloading": "Lejupielādē…",
+          "downloading-counter": "Notiek lejupielāde {{current}}/{{total}}…",
+          "downloading-playlist": "Atskaņošanas saraksta lejupielāde \"{{playlistTitle}}\" - {{playlistSize}} songs ({{playlistId}})",
+          "error-while-downloading": "Kļūda lejuplādējot \"{{author}} - {{title}}\": {{error}}",
+          "folder-already-exists": "Mape {{playlistFolder}} jau eksistē",
+          "getting-playlist-info": "Tiek iegūta atskaņošanas saraksta informācija…",
+          "loading": "Ielādē…",
+          "playlist-has-only-one-song": "Sarakstā ir tikai viena dziesma, tā tiek lejupielādēta uzreiz",
+          "playlist-id-not-found": "Neizdevās atrast atskaņošanas saraksta ID",
+          "playlist-is-empty": "Atskaņošanas saraksts ir tukšs",
+          "playlist-is-mix-or-private": "Neizdevās iegūt atskaņošanas saraksta informāciju: pārliecinieties, ka tas nav privāts vai \"Jums izveidotā izlase\" saraksts.\n\n{{error}}",
+          "preparing-file": "Faila sagatavošana…",
+          "saving": "Saglabāšana…",
+          "trying-to-get-playlist-id": "Mēģinu iegūt atskaņošanas saraksta ID: {{playlistId}}",
+          "video-id-not-found": "Video nav atrasts",
+          "writing-id3": "Rakstam ID3 tegus…"
+        }
+      },
+      "description": "Lejupielādē MP3/avota audio tieši no saskarnes",
+      "menu": {
+        "choose-download-folder": "Izvēlieties lejupielādes mapi",
+        "download-finish-settings": {
+          "label": "Lejupielādēt pēc pabeigšanas",
+          "prompt": {
+            "last-percent": "Pēc x procentiem",
+            "last-seconds": "Pēdējās x sekundes",
+            "title": "Konfigurējiet lejupielādes laiku"
+          },
+          "submenu": {
+            "advanced": "Paplašināts",
+            "enabled": "Iespējots",
+            "mode": "Laika režīms",
+            "percent": "Procenti",
+            "seconds": "Sekundes"
+          }
+        },
+        "download-playlist": "Lejupielādēt atskaņošanas sarakstu",
+        "presets": "Iepriekšiestatījumi",
+        "skip-existing": "Izlaist esošos failus"
+      },
+      "name": "Lejupielādētājs",
+      "renderer": {
+        "can-not-update-progress": "Nevar atjaunināt progresu"
+      },
+      "templates": {
+        "button": "Lejupielādēt"
+      }
+    },
+    "equalizer": {
+      "description": "Pievieno atskaņotājam ekvalaizeru",
+      "menu": {
+        "presets": {
+          "label": "Iepriekšiestatījumi",
+          "list": {
+            "bass-booster": "Basu pastiprinātājs"
+          }
+        }
+      },
+      "name": "Ekvalaizers"
+    },
+    "exponential-volume": {
+      "description": "Padara skaļuma slīdni eksponenciālu, lai būtu vieglāk izvēlēties zemākus skaļumus.",
+      "name": "Eksponenciālais apjoms"
+    },
+    "in-app-menu": {
+      "description": "Piešķir izvēļņu joslām greznu, tumšu vai albuma krāsas izskatu",
+      "menu": {
+        "hide-dom-window-controls": "Slēpt DOM loga vadīklas"
+      },
+      "name": "Lietotnes izvēlne"
+    },
+    "lumiastream": {
+      "description": "Pievieno Lumia Stream atbalstu",
+      "name": "Lumia Stream [Beta versija]"
+    },
+    "lyrics-genius": {
+      "description": "Pievieno dziesmu tekstu atbalstu lielākajai daļai dziesmu",
+      "menu": {
+        "romanized-lyrics": "Romanizēti dziesmu teksti"
+      },
+      "name": "Dziesmu vārdu ģēnijs",
+      "renderer": {
+        "fetched-lyrics": "Iegūti dziesmu vārdi priekš oriģināla"
+      }
+    },
+    "music-together": {
+      "description": "Kopīgojiet atskaņošanas sarakstu ar citiem. Kad vadītājs atskaņo dziesmu, visi pārējie dzirdēs to pašu dziesmu.",
+      "dialog": {
+        "enter-host": "Ievadiet resursdatora ID"
+      },
+      "internal": {
+        "save": "Saglabāt",
+        "track-source": "Dziesmas avots",
+        "unknown-user": "Nezināms lietotājs"
+      },
+      "menu": {
+        "click-to-copy-id": "Kopēt resursdatora ID",
+        "close": "Aizvērt mūziku kopā",
+        "connected-users": "Savienotie lietotāji",
+        "disconnect": "Atvienojiet mūziku kopā",
+        "empty-user": "Nav pievienotu lietotāju",
+        "host": "Kopklausīšanās vadītājs",
+        "join": "Pievienojieties mūzikai kopā",
+        "permission": {
+          "all": "Atļaut viesiem kontrolēt atskaņošanas sarakstu un atskaņotāju",
+          "host-only": "Tikai resursdators var kontrolēt atskaņošanas sarakstu un atskaņotāju",
+          "playlist": "Atļaut viesiem kontrolēt atskaņošanas sarakstu"
+        },
+        "set-permission": "Izmainīt kontroles piekļuvi",
+        "status": {
+          "disconnected": "Atvienots",
+          "guest": "Pieslēdzies kā viesis",
+          "host": "Pieslēdzies kā vadītājs"
+        }
+      },
+      "name": "Mūzika Kopā [Beta]",
+      "toast": {
+        "add-song-failed": "Neizdevās pievienot dziesmu",
+        "closed": "Mūzika Kopā slēgta",
+        "disconnected": "Mūzika Kopā atvienota",
+        "host-failed": "Neizdevās uzsākt Mūziku Kopā"
+      }
+    }
+  }
+}

@@ -1,23 +1,28 @@
-import { createPlugin } from '@/utils';
-import { t } from '@/i18n';
-
-import { onMenu } from './menu';
 import { backend } from './main';
+import { onMenu } from './menu';
+import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 export interface ScrobblerPluginConfig {
   enabled: boolean;
   /**
-   * Attempt to scrobble other video types (e.g. Podcasts, normal YouTube videos)
+   * Attempt to scrobble other video types (e.g. Podcasts, normal videos)
    *
    * @default true
    */
   scrobbleOtherMedia: boolean;
   /**
-   * Use alternative titles for scrobbling (Useful for non-roman song titles)
+   * Use alternative titles for scrobbling (Useful for non-roman song titles, e.g. (Not) A Devil -> デビルじゃないもん)
    *
-   * @default false
+   * @default true
    */
   alternativeTitles: boolean;
+  /**
+   * Use alternative artist for scrobbling (e.g., DECO27 & (or) PinocchioP -> DECO27 / marasy -> まらしぃ)
+   *
+   * @default true
+   */
+  alternativeArtist: boolean;
   scrobblers: {
     lastfm: {
       /**
@@ -77,7 +82,8 @@ export interface ScrobblerPluginConfig {
 export const defaultConfig: ScrobblerPluginConfig = {
   enabled: false,
   scrobbleOtherMedia: true,
-  alternativeTitles: false,
+  alternativeTitles: true,
+  alternativeArtist: true,
   scrobblers: {
     lastfm: {
       enabled: false,

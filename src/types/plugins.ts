@@ -1,11 +1,10 @@
-import type { YoutubePlayer } from '@/types/youtube-player';
-
 import type {
   BackendContext,
   MenuContext,
   PreloadContext,
   RendererContext,
 } from './contexts';
+import type { MusicPlayer } from '@/types/music-player';
 
 type Author = string;
 
@@ -26,7 +25,7 @@ export type RendererPluginLifecycleExtra<Config, Context, This> = This &
   PluginLifecycleExtra<Config, Context, This> & {
     onPlayerApiReady?: (
       this: This,
-      playerApi: YoutubePlayer,
+      playerApi: MusicPlayer,
       context: Context,
     ) => void | Promise<void>;
   };
@@ -37,6 +36,13 @@ export type PluginLifecycle<Config, Context, This> =
 export type RendererPluginLifecycle<Config, Context, This> =
   | PluginLifecycleSimple<Context, This>
   | RendererPluginLifecycleExtra<Config, Context, This>;
+
+export enum Platform {
+  Windows = 1 << 0,
+  macOS = 1 << 1,
+  Linux = 1 << 2,
+  Freebsd = 1 << 3,
+}
 
 export interface PluginDef<
   BackendProperties,
@@ -49,6 +55,7 @@ export interface PluginDef<
   description?: () => string;
   addedVersion?: string;
   config?: Config;
+  platform?: Platform;
 
   menu?: (
     ctx: MenuContext<Config>,

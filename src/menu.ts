@@ -1,49 +1,45 @@
-import is from 'electron-is';
+import prompt from 'custom-electron-prompt';
 import {
   app,
-  BrowserWindow,
+  type BrowserWindow,
   clipboard,
   dialog,
   Menu,
-  MenuItem,
+  type MenuItem,
   shell,
 } from 'electron';
-import prompt from 'custom-electron-prompt';
+import is from 'electron-is';
 import { satisfies } from 'semver';
-
+import { languageResources } from 'virtual:i18n';
 import { allPlugins } from 'virtual:plugins';
 
-import { languageResources } from 'virtual:i18n';
-
-import config from './config';
-
+import * as config from './config';
+import { getAllMenuTemplate, loadAllMenuPlugins } from './loader/menu';
 import { restart } from './providers/app-controls';
 import { startingPages } from './providers/extracted-data';
 import promptOptions from './providers/prompt-options';
-
-import { getAllMenuTemplate, loadAllMenuPlugins } from './loader/menu';
-import { setLanguage, t } from '@/i18n';
+import { APPLICATION_NAME, setLanguage, t } from '@/i18n';
 
 import packageJson from '../package.json';
 
 export type MenuTemplate = Electron.MenuItemConstructorOptions[];
 
 // True only if in-app-menu was loaded on launch
-const inAppMenuActive = config.plugins.isEnabled('in-app-menu');
+const inAppMenuActive = await config.plugins.isEnabled('in-app-menu');
 
-const pluginEnabledMenu = (
+const pluginEnabledMenu = async (
   plugin: string,
   label = '',
-  description: string | undefined = undefined,
+  description?: string ,
   isNew = false,
   hasSubmenu = false,
-  refreshMenu: (() => void) | undefined = undefined,
-): Electron.MenuItemConstructorOptions => ({
+  refreshMenu?: (() => void) ,
+): Promise<Electron.MenuItemConstructorOptions> => ({
   label: label || plugin,
   sublabel: isNew ? t('main.menu.plugins.new') : undefined,
   toolTip: description,
   type: 'checkbox',
-  checked: config.plugins.isEnabled(plugin),
+  checked: await config.plugins.isEnabled(plugin),
   click(item: Electron.MenuItem) {
     if (item.checked) {
       config.plugins.enable(plugin);
@@ -71,19 +67,21 @@ export const mainMenuTemplate = async (
   const { navigationHistory } = win.webContents;
   await loadAllMenuPlugins(win);
 
-  const menuResult = Object.entries(getAllMenuTemplate()).map(
-    ([id, template]) => {
-      const plugin = allPlugins[id];
+  const allPluginsStubs = await allPlugins();
+
+  const menuResult = await Promise.all(
+    Object.entries(getAllMenuTemplate()).map(async ([id, template]) => {
+      const plugin = allPluginsStubs[id];
       const pluginLabel = plugin?.name?.() ?? id;
       const pluginDescription = plugin?.description?.() ?? undefined;
       const isNew = plugin?.addedVersion
         ? satisfies(packageJson.version, plugin.addedVersion)
         : false;
 
-      if (!config.plugins.isEnabled(id)) {
+      if (!(await config.plugins.isEnabled(id))) {
         return [
           id,
-          pluginEnabledMenu(
+          await pluginEnabledMenu(
             id,
             pluginLabel,
             pluginDescription,
@@ -101,7 +99,7 @@ export const mainMenuTemplate = async (
           sublabel: isNew ? t('main.menu.plugins.new') : undefined,
           toolTip: pluginDescription,
           submenu: [
-            pluginEnabledMenu(
+            await pluginEnabledMenu(
               id,
               t('main.menu.plugins.enabled'),
               undefined,
@@ -114,39 +112,42 @@ export const mainMenuTemplate = async (
           ],
         } satisfies Electron.MenuItemConstructorOptions,
       ] as const;
-    },
+    }),
   );
 
-  const availablePlugins = Object.keys(allPlugins);
-  const pluginMenus = availablePlugins
-    .sort((a, b) => {
-      const aPluginLabel = allPlugins[a]?.name?.() ?? a;
-      const bPluginLabel = allPlugins[b]?.name?.() ?? b;
+  const availablePlugins = Object.keys(await allPlugins());
+  const pluginMenus = await Promise.all(
+    availablePlugins
+      .sort((a, b) => {
+        const aPluginLabel = allPluginsStubs[a]?.name?.() ?? a;
+        const bPluginLabel = allPluginsStubs[b]?.name?.() ?? b;
 
-      return aPluginLabel.localeCompare(bPluginLabel);
-    })
-    .map((id) => {
-      const predefinedTemplate = menuResult.find((it) => it[0] === id);
-      if (predefinedTemplate) return predefinedTemplate[1];
+        return aPluginLabel.localeCompare(bPluginLabel);
+      })
+      .map(async (id) => {
+        const predefinedTemplate = menuResult.find((it) => it[0] === id);
+        if (predefinedTemplate) return predefinedTemplate[1];
 
-      const plugin = allPlugins[id];
-      const pluginLabel = plugin?.name?.() ?? id;
-      const pluginDescription = plugin?.description?.() ?? undefined;
-      const isNew = plugin?.addedVersion
-        ? satisfies(packageJson.version, plugin.addedVersion)
-        : false;
+        const plugin = allPluginsStubs[id];
+        const pluginLabel = plugin?.name?.() ?? id;
+        const pluginDescription = plugin?.description?.() ?? undefined;
+        const isNew = plugin?.addedVersion
+          ? satisfies(packageJson.version, plugin.addedVersion)
+          : false;
 
-      return pluginEnabledMenu(
-        id,
-        pluginLabel,
-        pluginDescription,
-        isNew,
-        true,
-        innerRefreshMenu,
-      );
-    });
+        return pluginEnabledMenu(
+          id,
+          pluginLabel,
+          pluginDescription,
+          isNew,
+          true,
+          innerRefreshMenu,
+        );
+      }),
+  );
 
-  const availableLanguages = Object.keys(languageResources);
+  const langResources = await languageResources();
+  const availableLanguages = Object.keys(langResources);
 
   return [
     {
@@ -213,6 +214,40 @@ export const mainMenuTemplate = async (
             },
             {
               label: t(
+                'main.menu.options.submenu.visual-tweaks.submenu.custom-window-title.label',
+              ),
+              async click() {
+                const output = await prompt(
+                  {
+                    title: t(
+                      'main.menu.options.submenu.visual-tweaks.submenu.custom-window-title.label',
+                    ),
+                    label: t(
+                      'main.menu.options.submenu.visual-tweaks.submenu.custom-window-title.prompt.label',
+                    ),
+                    value: config.get('options.customWindowTitle') || '',
+                    type: 'input',
+                    inputAttrs: {
+                      type: 'text',
+                      placeholder: t(
+                        'main.menu.options.submenu.visual-tweaks.submenu.custom-window-title.prompt.placeholder',
+                        {
+                          applicationName: APPLICATION_NAME,
+                        },
+                      ),
+                    },
+                    width: 500,
+                    ...promptOptions(),
+                  },
+                  win,
+                );
+                if (typeof output === 'string') {
+                  config.setMenuOption('options.customWindowTitle', output);
+                }
+              },
+            },
+            {
+              label: t(
                 'main.menu.options.submenu.visual-tweaks.submenu.like-buttons.label',
               ),
               submenu: [
@@ -244,6 +279,19 @@ export const mainMenuTemplate = async (
                   checked: config.get('options.likeButtons') === 'hide',
                   click() {
                     config.set('options.likeButtons', 'hide');
+                  },
+                },
+                {
+                  label: t(
+                    'main.menu.options.submenu.visual-tweaks.submenu.like-buttons.swap',
+                  ),
+                  type: 'checkbox',
+                  checked: config.get('options.swapLikeButtonsOrder'),
+                  click(item: MenuItem) {
+                    config.setMenuOption(
+                      'options.swapLikeButtonsOrder',
+                      item.checked,
+                    );
                   },
                 },
               ],
@@ -437,7 +485,7 @@ export const mainMenuTemplate = async (
               ),
               type: 'normal',
               click() {
-                const url = 'https://hosted.weblate.org/engage/youtube-music/';
+                const url = 'https://bit.ly/48n5YF7';
                 shell.openExternal(url);
               },
             } as Electron.MenuItemConstructorOptions,
@@ -445,7 +493,7 @@ export const mainMenuTemplate = async (
             availableLanguages
               .map(
                 (lang): Electron.MenuItemConstructorOptions => ({
-                  label: `${languageResources[lang].translation.language?.name ?? 'Unknown'} (${languageResources[lang].translation.language?.['local-name'] ?? 'Unknown'})`,
+                  label: `${langResources[lang].translation.language?.name ?? 'Unknown'} (${langResources[lang].translation.language?.['local-name'] ?? 'Unknown'})`,
                   type: 'checkbox',
                   checked: (config.get('options.language') ?? 'en') === lang,
                   click() {

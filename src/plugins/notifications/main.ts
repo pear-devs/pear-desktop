@@ -1,11 +1,10 @@
 import { Notification } from 'electron';
-
 import is from 'electron-is';
 
-import { notificationImage } from './utils';
 import interactive from './interactive';
-
-import registerCallback, {
+import { notificationImage } from './utils';
+import {
+  registerCallback,
   type SongInfo,
   SongInfoEvent,
 } from '@/providers/song-info';

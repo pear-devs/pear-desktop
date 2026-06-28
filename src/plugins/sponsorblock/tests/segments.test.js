@@ -1,10 +1,6 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
+import { test, expect } from '@playwright/test';
 
-// eslint-disable-next-line no-undef
-const { test, expect } = require('@playwright/test');
-
-// eslint-disable-next-line no-undef
-const { sortSegments } = require('../segments');
+import { sortSegments } from '../segments';
 
 test('Segment sorting', () => {
   expect(

@@ -150,6 +150,13 @@
           "visual-tweaks": {
             "label": "ปรับแต่งหน้าตาแอป",
             "submenu": {
+              "custom-window-title": {
+                "label": "ชื่อหน้าต่างกำหนดเอง",
+                "prompt": {
+                  "label": "กำหนดชื่อหน้าต่างที่ต้องการ: (ปล่อยว่างเพื่อปิดใช้งาน)",
+                  "placeholder": "ตัวอย่าง: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "ค่าเริ่มต้น",
                 "force-show": "บังคับให้แสดง",
@@ -201,8 +208,8 @@
       "restart": "รีสตาร์ตแอป",
       "show": "แสดงหน้าต่าง",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -210,13 +217,6 @@
     "ad-speedup": {
       "description": "หากมีโฆษณาเล่นขึ้น เสียงจะถูกปิดและตั้งความเร็วในการเล่นเป็น 16 เท่า",
       "name": "เพิ่มความเร็วโฆษณา"
-    },
-    "adblocker": {
-      "description": "บล็อกโฆษณาและการติดตามทั้งหมดอย่างอัตโนมัติ",
-      "menu": {
-        "blocker": "เครื่องมือบล็อก"
-      },
-      "name": "ตัวบล็อกโฆษณา"
     },
     "album-actions": {
       "description": "เพิ่ม ยกเลิกไม่ชอบ, ไม่ชอบ, ถูกใจ, และ ยกเลิกถูกใจ ที่มีผลกับเพลงทั้งหมดในรายการเพลงหรืออัลบั้ม",
@@ -280,7 +280,7 @@
       "name": "โหมดสภาพแวดล้อม"
     },
     "amuse": {
-      "description": "เพิ่มการรองรับ Youtube Music สำหรับ Widget Amuse Now Playing ของ 6K Labs",
+      "description": "เพิ่มการรองรับ {{applicationName}} สำหรับ Widget Amuse Now Playing ของ 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "API Server ของ Amuse ทำงานอยู่ ส่ง GET ไปที่ /query เพื่อขอข้อมูลเกี่ยวกับเพลง"
@@ -333,16 +333,40 @@
       "description": "ใช้การบีบอัดเสียง (ลดระดับเสียงของส่วนที่ดังที่สุดของสัญญาณและเพิ่มระดับเสียงของส่วนที่เบาที่สุด)",
       "name": "เครื่องมือบีบอัดเสียง"
     },
+    "auth-proxy-adapter": {
+      "description": "รองรับการใช้พร็อกซีสำหรับการตรวจสอบสิทธิ์",
+      "menu": {
+        "disable": "เปิดใช้งาน ตัวเชื่อมต่อพร็อกซี",
+        "enable": "ปิดใช้งาน ตัวเชื่อมต่อพร็อกซี",
+        "hostname": {
+          "label": "ชื่อโฮสต์"
+        },
+        "port": {
+          "label": "พอร์ต"
+        }
+      },
+      "name": "ตัวเชื่อมต่อสำหรับตรวจสอบสิทธิ์ผ่านพร็อกซี",
+      "prompt": {
+        "hostname": {
+          "label": "ป้อนชื่อโฮสต์สำหรับพร็อกซีเซิร์ฟเวอร์ภายในเครื่อง (ต้องรีสตาร์ท):",
+          "title": "ชื่อโฮสต์พร็อกซี"
+        },
+        "port": {
+          "label": "ป้อนพอร์ตสำหรับพร็อกซีเซิร์ฟเวอร์ภายในเครื่อง (ต้องรีสตาร์ท):",
+          "title": "พอร์ตพร็อกซี"
+        }
+      }
+    },
     "blur-nav-bar": {
       "description": "ทำให้แถบนำทางโปร่งแสงและเบลอ",
       "name": "เบลอแถบนำทาง"
     },
     "bypass-age-restrictions": {
-      "description": "ข้ามการตรวจสอบอายุของ YouTube",
+      "description": "ข้ามการตรวจสอบอายุของ Music Player",
       "name": "ข้ามข้อจำกัดอายุ"
     },
     "captions-selector": {
-      "description": "ตัวเลือกคำบรรยายสำหรับเพลงใน YouTube Music",
+      "description": "ตัวเลือกคำบรรยายสำหรับเพลงใน {{applicationName}}",
       "menu": {
         "autoload": "เลือกคำบรรยายที่ใช้ครั้งล่าสุดโดยอัตโนมัติ",
         "disable-captions": "ไม่มีคำบรรยายเป็นค่าเริ่มต้น"
@@ -357,6 +381,11 @@
       },
       "templates": {
         "title": "เปิดตัวเลือกคำบรรยาย"
+      },
+      "toast": {
+        "caption-changed": "เปลี่ยนคำบรรยายเป็นภาษา {{language}}",
+        "caption-disabled": "คำบรรยายถูกปิดใช้งาน",
+        "no-captions": "ไม่มีคำบรรยายสำหรับเพลงนี้"
       }
     },
     "compact-sidebar": {
@@ -385,6 +414,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "ตั้งค่าอุปกรณ์เสียงออกสำหรับเพลง",
+      "menu": {
+        "device-selector": "เลือกอุปกรณ์"
+      },
+      "name": "อุปกรณ์เสียงออกที่กำหนดเอง",
+      "prompt": {
+        "device-selector": {
+          "label": "เลือกอุปกรณ์เสียงออกที่ต้องการใช้",
+          "title": "เลือกอุปกรณ์เสียงออก"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "เริ่มเพลงในโหมดหยุดชั่วคราว",
       "menu": {
@@ -407,8 +449,16 @@
         "disconnected": "ตัดการเชื่อมต่อ",
         "hide-duration-left": "ซ่อนระยะเวลาที่เหลือ",
         "hide-github-button": "ซ่อนปุ่มลิงก์ GitHub",
-        "play-on-youtube-music": "เล่นบน YouTube Music",
-        "set-inactivity-timeout": "ตั้งระยะเวลาไม่มีกิจกรรม"
+        "play-on-application": "เล่นบน {{applicationName}}",
+        "set-inactivity-timeout": "ตั้งระยะเวลาไม่มีกิจกรรม",
+        "set-status-display-type": {
+          "label": "ข้อความสถานะ",
+          "submenu": {
+            "artist": "กำลังฟัง {ชื่อนักร้อง}",
+            "title": "กำลังฟัง {ชื่อเพลง}",
+            "application": "กำลังฟัง {{applicationName}}"
+          }
+        }
       },
       "name": "แสดงกิจกรรมบนดิสคอร์ด",
       "prompt": {
@@ -576,7 +626,15 @@
     },
     "navigation": {
       "description": "ลูกศรนำทางถัดไป/ย้อนกลับรวมอยู่ในอินเทอร์เฟซโดยตรง เช่นเดียวกับในเบราว์เซอร์ที่คุณชื่นชอบ",
-      "name": "การนำทาง"
+      "name": "การนำทาง",
+      "templates": {
+        "back": {
+          "title": "ไปหน้าก่อนหน้า"
+        },
+        "forward": {
+          "title": "ไปหน้าถัดไป"
+        }
+      }
     },
     "no-google-login": {
       "description": "ลบปุ่มเข้าสู่ระบบ Google และลิงก์ออกจากอินเทอร์เฟซ",
@@ -599,6 +657,10 @@
         "unpause-notification": "แสดงการแจ้งเตือนเมื่อหยุดพัก"
       },
       "name": "การแจ้งเตือน"
+    },
+    "performance-improvement": {
+      "description": "ปรับปรุงประสิทธิภาพโดยเปิดใช้งานสคริปต์ทดลอง",
+      "name": "ปรับปรุงประสิทธิภาพ [Beta]"
     },
     "picture-in-picture": {
       "description": "อนุญาตให้สลับแอปเป็นโหมดภาพในภาพ",
@@ -664,7 +726,12 @@
         }
       },
       "description": "อนุญาตให้เปลี่ยนคุณภาพของวิดีโอด้วยปุ่มที่แสดงเหนือวิดีโอ",
-      "name": "ที่เปลี่ยนคุณภาพวิดีโอ"
+      "name": "ที่เปลี่ยนคุณภาพวิดีโอ",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "เปิดตัวเปลี่ยนคุณภาพเครื่องเล่น"
+        }
+      }
     },
     "scrobbler": {
       "description": "รองรับการบันทึกการเล่นเพลง (เช่น last.fm, Listenbrainz)",
@@ -683,6 +750,7 @@
         "listenbrainz": {
           "token": "ใส่ user token ของ ListenBrainz"
         },
+        "scrobble-alternative-artist": "ใช้ชื่อศิลปินอื่น",
         "scrobble-alternative-title": "ใช้ชื่ออื่น",
         "scrobble-other-media": "บันทึกการเล่นสื่ออื่นๆ"
       },
@@ -768,6 +836,14 @@
           "label": "ให้เนื้อเพลงตรงกับเพลงเป๊ะๆ",
           "tooltip": "คำนวณมิลิวินาทีในการแสดงบรรทัดถัดไป (มีผลเล็กน้อยกับประสิทธิภาพการทำงาน)"
         },
+        "preferred-provider": {
+          "label": "ผู้ให้บริการที่ต้องการ",
+          "none": {
+            "label": "ไม่มี",
+            "tooltip": "ไม่มีผู้ให้บริการที่ต้องการ"
+          },
+          "tooltip": "เลือกผู้ให้บริการที่ต้องการใช้งาน"
+        },
         "romanization": {
           "label": "เนื้อเพลงตัวด้วยอักษรโรมัน",
           "tooltip": "ถ้าหากเนื้อเพลงอยู่ในภาษาอื่น ลองเปลี่ยนการแสดงผลโดยใช้เวอร์ชั่นลาติน"
@@ -800,6 +876,27 @@
       "description": "เพิ่ม Widget บน TouchBar สำหรับผู้ใช้ macOS",
       "name": "TouchBar"
     },
+    "transparent-player": {
+      "description": "ทำให้หน้าต่างของแอปโปร่งใส",
+      "menu": {
+        "opacity": {
+          "label": "ความทึบแสง",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "ประเภท",
+          "submenu": {
+            "acrylic": "อะคริลิก",
+            "mica": "ไมกา",
+            "none": "ไม่มี",
+            "tabbed": "Tabbed"
+          }
+        }
+      },
+      "name": "ที่เล่นเพลงโปร่งใส"
+    },
     "tuna-obs": {
       "description": "ใช้งานร่วมกันกับปลั้กอิน Tuna บน OBS",
       "name": "Tuna OBS"
@@ -831,7 +928,8 @@
       },
       "name": "ปุ่มวิดีโอ",
       "templates": {
-        "button": "เพลง"
+        "button-song": "เพลง",
+        "button-video": "วิดีโอ"
       }
     },
     "visualizer": {

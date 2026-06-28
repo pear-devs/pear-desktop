@@ -1,21 +1,20 @@
-import style from './style.css?inline';
-import { createPlugin } from '@/utils';
-
 import { onConfigChange, onMainLoad } from './main';
 import { onMenu } from './menu';
-import { onPlayerApiReady, onRendererLoad } from './renderer';
+import { onPlayerApiReady } from './renderer';
+import style from './style.css?inline';
 import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 export type PictureInPicturePluginConfig = {
-  enabled: boolean;
-  alwaysOnTop: boolean;
-  savePosition: boolean;
-  saveSize: boolean;
-  hotkey: 'P';
+  'enabled': boolean;
+  'alwaysOnTop': boolean;
+  'savePosition': boolean;
+  'saveSize': boolean;
+  'hotkey': 'P';
   'pip-position': [number, number];
   'pip-size': [number, number];
-  isInPiP: boolean;
-  useNativePiP: boolean;
+  'isInPiP': boolean;
+  'useNativePiP': boolean;
 };
 
 export default createPlugin({
@@ -41,7 +40,6 @@ export default createPlugin({
     onConfigChange,
   },
   renderer: {
-    start: onRendererLoad,
     onPlayerApiReady,
   },
 });

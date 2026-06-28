@@ -150,11 +150,19 @@
           "visual-tweaks": {
             "label": "视觉调整",
             "submenu": {
+              "custom-window-title": {
+                "label": "自定义窗口标题",
+                "prompt": {
+                  "label": "输入自定义窗口标题：（留空表示停用）",
+                  "placeholder": "示例：{{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "默认",
                 "force-show": "强制显示",
                 "hide": "隐藏",
-                "label": "点赞按钮"
+                "label": "点赞按钮",
+                "swap": "交换“点赞”按钮顺序"
               },
               "remove-upgrade-button": "移除升级按钮",
               "theme": {
@@ -201,8 +209,8 @@
       "restart": "重启应用",
       "show": "显示窗口",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -210,13 +218,6 @@
     "ad-speedup": {
       "description": "使用静音以及 16 倍速播放跳过广告片段",
       "name": "广告加速跳过"
-    },
-    "adblocker": {
-      "description": "屏蔽所有广告与跟踪器",
-      "menu": {
-        "blocker": "屏蔽器"
-      },
-      "name": "广告屏蔽器"
     },
     "album-actions": {
       "description": "添加作用于播放列表或专辑中所有歌曲的全局“点赞/取消点赞”与“喜欢/取消喜欢”按钮",
@@ -230,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "启用进度条主题"
       },
       "name": "专辑配色主题"
     },
@@ -280,7 +282,7 @@
       "name": "沉浸模式"
     },
     "amuse": {
-      "description": "为 6K Labs 的 Amuse 正在播放小部件添加 YouTube Music 支持",
+      "description": "为 6K Labs 的 Amuse 正在播放小部件添加 {{applicationName}} 支持",
       "name": "Amuse",
       "response": {
         "query": "Amuse API服务器已在运行。使用 /query 以获取歌曲信息。"
@@ -313,6 +315,22 @@
         "hostname": {
           "label": "主机名"
         },
+        "https": {
+          "label": "HTTPS & 数字证书",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "选择 HTTPS 证书文件",
+              "label": "证书文件（.crt/.pem）"
+            },
+            "enable-https": {
+              "label": "启用 HTTPS"
+            },
+            "key": {
+              "dialogTitle": "选择 HTTPS 私钥文件",
+              "label": "私钥文件（.key/.pem）"
+            }
+          }
+        },
         "port": {
           "label": "端口号"
         }
@@ -333,16 +351,40 @@
       "description": "对音频应用压缩（压低响亮部分，提升柔和部分）",
       "name": "音频压缩器"
     },
+    "auth-proxy-adapter": {
+      "description": "支持使用需要身份验证的代理",
+      "menu": {
+        "disable": "禁用代理适配",
+        "enable": "启用代理适配",
+        "hostname": {
+          "label": "主机名"
+        },
+        "port": {
+          "label": "端口"
+        }
+      },
+      "name": "认证代理适配",
+      "prompt": {
+        "hostname": {
+          "label": "请输入本地代理服务器的主机名（需要重启）：",
+          "title": "代理主机名"
+        },
+        "port": {
+          "label": "请输入本地代理服务器的端口号（需要重启）：",
+          "title": "代理端口"
+        }
+      }
+    },
     "blur-nav-bar": {
       "description": "让导航栏透明及模糊",
       "name": "模糊导航栏"
     },
     "bypass-age-restrictions": {
-      "description": "绕过 YouTube 年龄验证",
+      "description": "绕过 Music Player 年龄验证",
       "name": "绕过年龄验证"
     },
     "captions-selector": {
-      "description": "YouTube Music 音轨字幕选择器",
+      "description": "{{applicationName}} 音轨字幕选择器",
       "menu": {
         "autoload": "自动选择上次使用的字幕",
         "disable-captions": "默认无字幕"
@@ -357,7 +399,23 @@
       },
       "templates": {
         "title": "开启字幕选择器"
+      },
+      "toast": {
+        "caption-changed": "字幕语言更改为 {{language}}",
+        "caption-disabled": "停用了字幕",
+        "no-captions": "这首歌没有字幕"
       }
+    },
+    "clock": {
+      "description": "添加时钟到导航栏",
+      "menu": {
+        "format": {
+          "24-hour-format": "24 小时格式",
+          "display-seconds": "显示秒数",
+          "label": "格式"
+        }
+      },
+      "name": "时钟"
     },
     "compact-sidebar": {
       "description": "始终将侧边栏设为紧凑模式",
@@ -385,6 +443,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "配置歌曲的自定义输出媒体设备",
+      "menu": {
+        "device-selector": "选择设备"
+      },
+      "name": "自定义输出设备",
+      "prompt": {
+        "device-selector": {
+          "label": "选择要使用的输出媒体设备",
+          "title": "选择输出设备"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "让曲目开始时处于 “暂停” 模式",
       "menu": {
@@ -407,8 +478,16 @@
         "disconnected": "已断开连接",
         "hide-duration-left": "隐藏剩余时长",
         "hide-github-button": "隐藏 GitHub 链接按钮",
-        "play-on-youtube-music": "转至 YouTube Music 播放",
-        "set-inactivity-timeout": "设置非活跃时长"
+        "play-on-application": "转至 {{applicationName}} 播放",
+        "set-inactivity-timeout": "设置非活跃时长",
+        "set-status-display-type": {
+          "label": "状态文本",
+          "submenu": {
+            "application": "在听 {{applicationName}}",
+            "artist": "在听 {artist}",
+            "title": "在听 {song title}"
+          }
+        }
       },
       "name": "Discord Rich Presence 状态显示",
       "prompt": {
@@ -576,7 +655,15 @@
     },
     "navigation": {
       "description": "如同浏览器般，在应用界面内直接显示前进/后退导航按钮",
-      "name": "导航"
+      "name": "导航",
+      "templates": {
+        "back": {
+          "title": "转到上一页"
+        },
+        "forward": {
+          "title": "转到下一页"
+        }
+      }
     },
     "no-google-login": {
       "description": "从界面内移除 Google 登录按钮和链接",
@@ -599,6 +686,10 @@
         "unpause-notification": "取消暂停时显示通知"
       },
       "name": "通知"
+    },
+    "performance-improvement": {
+      "description": "通过开启实验性脚本改进性能",
+      "name": "性能改进 [公测]"
     },
     "picture-in-picture": {
       "description": "允许应用切换到画中画模式",
@@ -664,7 +755,12 @@
         }
       },
       "description": "允许在视频上显示切换画质按钮",
-      "name": "视频画质切换器"
+      "name": "视频画质切换器",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "打开播放器音质更改程序"
+        }
+      }
     },
     "scrobbler": {
       "description": "添加歌曲追踪支持（如 Last.fm 和 Listenbrainz）",
@@ -683,6 +779,7 @@
         "listenbrainz": {
           "token": "输入 ListenBrainz 用户令牌"
         },
+        "scrobble-alternative-artist": "使用替代艺术家",
         "scrobble-alternative-title": "使用替代标题",
         "scrobble-other-media": "记录其他媒体文件"
       },
@@ -738,6 +835,24 @@
         "not-found": "⚠️ 未找到此歌曲的歌词。"
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "转换中文字符",
+          "submenu": {
+            "disabled": {
+              "label": "已停用",
+              "tooltip": "禁用中文字符转换"
+            },
+            "simplified-to-traditional": {
+              "label": "简体到繁体",
+              "tooltip": "转换简体中文到繁体中文"
+            },
+            "traditional-to-simplified": {
+              "label": "繁体到简体",
+              "tooltip": "转换繁体中文到简体中文"
+            }
+          },
+          "tooltip": "转换简繁体中文字符"
+        },
         "default-text-string": {
           "label": "默认的歌词行间字符",
           "tooltip": "选择在歌词间隙期间默认显示的字符"
@@ -767,6 +882,14 @@
         "precise-timing": {
           "label": "让滚动歌词完全同步",
           "tooltip": "以毫秒精度估算下句歌词的显示时间（可能对性能有小幅影响）"
+        },
+        "preferred-provider": {
+          "label": "首选歌词源",
+          "none": {
+            "label": "无",
+            "tooltip": "没有首选的歌词源"
+          },
+          "tooltip": "选择默认要用的源"
         },
         "romanization": {
           "label": "将歌词罗马化",
@@ -800,6 +923,27 @@
       "description": "为 macOS 用户启用 TouchBar 支持",
       "name": "TouchBar"
     },
+    "transparent-player": {
+      "description": "把应用窗口变透明",
+      "menu": {
+        "opacity": {
+          "label": "不透明",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "类型",
+          "submenu": {
+            "acrylic": "亚克力",
+            "mica": "云母",
+            "none": "无",
+            "tabbed": "标签"
+          }
+        }
+      },
+      "name": "透明播放器"
+    },
     "tuna-obs": {
       "description": "与 OBS 的 Tuna 插件集成",
       "name": "Tuna OBS"
@@ -831,7 +975,8 @@
       },
       "name": "视频切换开关",
       "templates": {
-        "button": "歌曲"
+        "button-song": "歌曲",
+        "button-video": "视频"
       }
     },
     "visualizer": {

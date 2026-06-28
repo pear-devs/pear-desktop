@@ -3,18 +3,17 @@ declare module 'virtual:plugins' {
 
   type Plugin = PluginDef<unknown, unknown, unknown, PluginConfig>;
 
-  export const mainPlugins: Record<string, Plugin>;
-  export const preloadPlugins: Record<string, Plugin>;
-  export const rendererPlugins: Record<string, Plugin>;
+  export const mainPlugins: () => Promise<Record<string, Plugin>>;
+  export const preloadPlugins: () => Promise<Record<string, Plugin>>;
+  export const rendererPlugins: () => Promise<Record<string, Plugin>>;
 
-  export const allPlugins: Record<
-    string,
-    Omit<Plugin, 'backend' | 'preload' | 'renderer'>
+  export const allPlugins: () => Promise<
+    Record<string, Omit<Plugin, 'backend' | 'preload' | 'renderer'>>
   >;
 }
 
 declare module 'virtual:i18n' {
   import type { LanguageResources } from '@/i18n/resources/@types';
 
-  export const languageResources: LanguageResources;
+  export const languageResources: () => Promise<LanguageResources>;
 }

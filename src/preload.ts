@@ -1,13 +1,12 @@
 import {
   contextBridge,
   ipcRenderer,
-  IpcRendererEvent,
+  type IpcRendererEvent,
   webFrame,
 } from 'electron';
 import is from 'electron-is';
 
-import config from './config';
-
+import * as config from './config';
 import {
   forceLoadPreloadPlugin,
   forceUnloadPreloadPlugin,
@@ -15,9 +14,32 @@ import {
 } from './loader/preload';
 import { loadI18n, setLanguage } from '@/i18n';
 
+// @ts-expect-error dummy
+globalThis.customElements = { define() {} };
+
+new MutationObserver((mutations, observer) => {
+  for (const mutation of mutations) {
+    for (const node of mutation.addedNodes) {
+      const elem = node as HTMLElement;
+      if (elem.tagName !== 'SCRIPT') continue;
+
+      const script = elem as HTMLScriptElement;
+      if (
+        !script.getAttribute('src')?.endsWith('custom-elements-es5-adapter.js')
+      )
+        continue;
+
+      script.remove();
+
+      observer.disconnect();
+      return;
+    }
+  }
+}).observe(document, { subtree: true, childList: true });
+
 loadI18n().then(async () => {
   await setLanguage(config.get('options.language') ?? 'en');
-  loadAllPreloadPlugins();
+  await loadAllPreloadPlugins();
 });
 
 ipcRenderer.on('plugin:unload', async (_, id: string) => {
@@ -54,7 +76,7 @@ contextBridge.exposeInMainWorld('ipcRenderer', {
     ipcRenderer.sendToHost(channel, ...args),
 });
 contextBridge.exposeInMainWorld('reload', () =>
-  ipcRenderer.send('ytmd:reload'),
+  ipcRenderer.send('peard:reload'),
 );
 contextBridge.exposeInMainWorld(
   'ELECTRON_RENDERER_URL',

@@ -1,14 +1,13 @@
 import path from 'node:path';
 
-import { app, BrowserWindow } from 'electron';
+import { app, type BrowserWindow } from 'electron';
 
-import getSongControls from './song-controls';
+import { getSongControls } from './song-controls';
 
-export const APP_PROTOCOL = 'youtubemusic';
+export const APP_PROTOCOL =
+  '\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u006d\u0075\u0073\u0069\u0063';
 
-let protocolHandler:
-  | ((cmd: string, args: string[] | undefined) => void)
-  | undefined;
+let protocolHandler: ((cmd: string, ...args: string[]) => void) | undefined;
 
 export function setupProtocolHandler(win: BrowserWindow) {
   if (process.defaultApp && process.argv.length >= 2) {
@@ -21,29 +20,20 @@ export function setupProtocolHandler(win: BrowserWindow) {
 
   const songControls = getSongControls(win);
 
-  protocolHandler = ((
-    cmd: keyof typeof songControls,
-    args: string[] | undefined = undefined,
-  ) => {
+  protocolHandler = ((cmd: keyof typeof songControls, ...args) => {
     if (Object.keys(songControls).includes(cmd)) {
-      songControls[cmd](args as never);
+      // @ts-expect-error: cmd is a key of songControls
+      songControls[cmd](...args);
     }
-  }) as (cmd: string) => void;
+  }) as (cmd: string, ...args: string[]) => void;
 }
 
-export function handleProtocol(cmd: string, args: string[] | undefined) {
-  protocolHandler?.(cmd, args);
+export function handleProtocol(cmd: string, ...args: string[]) {
+  protocolHandler?.(cmd, ...args);
 }
 
 export function changeProtocolHandler(
-  f: (cmd: string, args: string[] | undefined) => void,
+  f: (cmd: string, ...args: string[]) => void,
 ) {
   protocolHandler = f;
 }
-
-export default {
-  APP_PROTOCOL,
-  setupProtocolHandler,
-  handleProtocol,
-  changeProtocolHandler,
-};

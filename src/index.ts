@@ -1,7 +1,13 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import url from 'node:url';
-import fs from 'node:fs';
 
+import ErrorHtmlAsset from '@assets/error.html?asset';
+import {
+  enhanceWebRequest,
+  type BetterSession,
+} from '@jellybrick/electron-better-web-request';
+import { deepmerge } from 'deepmerge-ts';
 import {
   BrowserWindow,
   app,
@@ -14,57 +20,39 @@ import {
   protocol,
   type BrowserWindowConstructorOptions,
 } from 'electron';
-import enhanceWebRequest, {
-  BetterSession,
-} from '@jellybrick/electron-better-web-request';
+import electronDebug from 'electron-debug';
 import is from 'electron-is';
 import unhandled from 'electron-unhandled';
-import { autoUpdater } from 'electron-updater';
-import electronDebug from 'electron-debug';
-import { parse } from 'node-html-parser';
-import { deepmerge } from 'deepmerge-ts';
+import electronUpdater from 'electron-updater';
 import { deepEqual } from 'fast-equals';
-
+import { parse } from 'node-html-parser';
+import { languageResources } from 'virtual:i18n';
 import { allPlugins, mainPlugins } from 'virtual:plugins';
 
-import { languageResources } from 'virtual:i18n';
-
-import config from '@/config';
-
-import { refreshMenu, setApplicationMenu } from '@/menu';
-import { fileExists, injectCSS, injectCSSAsFile } from '@/plugins/utils/main';
-import { isTesting } from '@/utils/testing';
-import { setUpTray } from '@/tray';
-import { setupSongInfo } from '@/providers/song-info';
-import { restart, setupAppControls } from '@/providers/app-controls';
-import {
-  APP_PROTOCOL,
-  handleProtocol,
-  setupProtocolHandler,
-} from '@/providers/protocol-handler';
-
-import youtubeMusicCSS from '@/youtube-music.css?inline';
-
+import * as config from '@/config';
+import { APPLICATION_NAME, loadI18n, setLanguage, t } from '@/i18n';
 import {
   forceLoadMainPlugin,
   forceUnloadMainPlugin,
   getAllLoadedMainPlugins,
   loadAllMainPlugins,
 } from '@/loader/main';
-
+import { refreshMenu, setApplicationMenu } from '@/menu';
+import musicPlayerCss from '@/music-player.css?inline';
+import { defaultAuthProxyConfig } from '@/plugins/auth-proxy-adapter/config';
+import { fileExists, injectCSS, injectCSSAsFile } from '@/plugins/utils/main';
+import { restart, setupAppControls } from '@/providers/app-controls';
+import {
+  APP_PROTOCOL,
+  handleProtocol,
+  setupProtocolHandler,
+} from '@/providers/protocol-handler';
+import { setupSongInfo } from '@/providers/song-info';
+import { setUpTray } from '@/tray';
 import { LoggerPrefix } from '@/utils';
-import { loadI18n, setLanguage, t } from '@/i18n';
-
-import ErrorHtmlAsset from '@assets/error.html?asset';
+import { isTesting } from '@/utils/testing';
 
 import type { PluginConfig } from '@/types/plugins';
-
-if (!is.macOS()) {
-  delete allPlugins['touchbar'];
-}
-if (!is.windows()) {
-  delete allPlugins['taskbar-mediacontrol'];
-}
 
 // Catch errors and log them
 unhandled({
@@ -72,12 +60,9 @@ unhandled({
   showDialog: false,
 });
 
-// Disable Node options if the env var is set
-process.env.NODE_OPTIONS = '';
-
 // Prevent window being garbage collected
 let mainWindow: Electron.BrowserWindow | null;
-autoUpdater.autoDownload = false;
+electronUpdater.autoUpdater.autoDownload = false;
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -114,6 +99,7 @@ protocol.registerSchemesAsPrivileged([
 
 // Ozone platform hint: Required for Wayland support
 app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
+
 // SharedArrayBuffer: Required for downloader (@ffmpeg/core-mt)
 // OverlayScrollbar: Required for overlay scrollbars
 // UseOzonePlatform: Required for Wayland support
@@ -122,26 +108,60 @@ app.commandLine.appendSwitch(
   'enable-features',
   'OverlayScrollbar,SharedArrayBuffer,UseOzonePlatform,WaylandWindowDecorations',
 );
-if (config.get('options.disableHardwareAcceleration')) {
-  if (is.dev()) {
-    console.log('Disabling hardware acceleration');
+
+// Disable Fluent Scrollbar (for OverlayScrollbar)
+const disabledFeatures = ['FluentScrollbar'];
+let disableHardwareAcceleration = config.get(
+  'options.disableHardwareAcceleration',
+);
+
+// Linux specific fixes
+if (is.linux()) {
+  // Stops chromium from launching its own MPRIS service
+  if (await config.plugins.isEnabled('shortcuts')) {
+    disabledFeatures.push('MediaSessionService');
   }
 
+  // https://github.com/electron/electron/issues/15947
+  if (await config.plugins.isEnabled('transparent-player')) {
+    disableHardwareAcceleration = true;
+    app.commandLine.appendSwitch('enable-transparent-visuals');
+    app.commandLine.appendSwitch('enable-unsafe-swiftshader');
+  }
+
+  // Overrides WM_CLASS for X11 to correspond to icon filename
+  app.setName(
+    'com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063',
+  );
+}
+
+if (disableHardwareAcceleration) {
+  if (is.dev()) console.log('Disabling hardware acceleration');
   app.disableHardwareAcceleration();
 }
 
-if (is.linux()) {
-  // Overrides WM_CLASS for X11 to correspond to icon filename
-  app.setName('com.github.th_ch.youtube_music');
-
-  // Stops chromium from launching its own MPRIS service
-  if (config.plugins.isEnabled('shortcuts')) {
-    app.commandLine.appendSwitch('disable-features', 'MediaSessionService');
-  }
-}
+// Apply disabled features
+app.commandLine.appendSwitch('disable-features', disabledFeatures.join(','));
 
 if (config.get('options.proxy')) {
-  app.commandLine.appendSwitch('proxy-server', config.get('options.proxy'));
+  const authProxyEnabled = await config.plugins.isEnabled('auth-proxy-adapter');
+
+  let proxyToUse = '';
+  if (authProxyEnabled) {
+    // Use proxy from Auth-Proxy-Adapter plugin
+    const authProxyConfig = deepmerge(
+      defaultAuthProxyConfig,
+      config.get('plugins.auth-proxy-adapter') ?? {},
+    ) as typeof defaultAuthProxyConfig;
+
+    const { hostname, port } = authProxyConfig;
+    proxyToUse = `socks5://${hostname}:${port}`;
+  } else if (config.get('options.proxy')) {
+    // Use global proxy settings
+    proxyToUse = config.get('options.proxy');
+  }
+  console.log(LoggerPrefix, `Using proxy: ${proxyToUse}`);
+  app.commandLine.appendSwitch('proxy-server', proxyToUse);
 }
 
 // Adds debug features like hotkeys for triggering dev tools and reload
@@ -149,11 +169,11 @@ electronDebug({
   showDevTools: false, // Disable automatic devTools on new window
 });
 
-let icon = 'assets/youtube-music.png';
+let icon = 'assets/icon.png';
 if (process.platform === 'win32') {
-  icon = 'assets/generated/icon.ico';
+  icon = 'assets/generated/icons/win/icon.ico';
 } else if (process.platform === 'darwin') {
-  icon = 'assets/generated/icon.icns';
+  icon = 'assets/generated/icons/mac/icon.icns';
 }
 
 function onClosed() {
@@ -162,19 +182,23 @@ function onClosed() {
   mainWindow = null;
 }
 
-ipcMain.handle('ytmd:get-main-plugin-names', () => Object.keys(mainPlugins));
+ipcMain.handle('peard:get-main-plugin-names', async () =>
+  Object.keys(await mainPlugins()),
+);
 
-const initHook = (win: BrowserWindow) => {
+const initHook = async (win: BrowserWindow) => {
+  const allPluginStubs = await allPlugins();
+
   ipcMain.handle(
-    'ytmd:get-config',
+    'peard:get-config',
     (_, id: string) =>
       deepmerge(
-        allPlugins[id].config ?? { enabled: false },
+        allPluginStubs[id].config ?? { enabled: false },
         config.get(`plugins.${id}`) ?? {},
       ) as PluginConfig,
   );
-  ipcMain.handle('ytmd:set-config', (_, name: string, obj: object) =>
-    config.setPartial(`plugins.${name}`, obj, allPlugins[name].config),
+  ipcMain.handle('peard:set-config', (_, name: string, obj: object) =>
+    config.setPartial(`plugins.${name}`, obj, allPluginStubs[name].config),
   );
 
   config.watch((newValue, oldValue) => {
@@ -193,7 +217,7 @@ const initHook = (win: BrowserWindow) => {
       if (!isEqual) {
         const oldConfig = oldPluginConfigList[id] as PluginConfig;
         const config = deepmerge(
-          allPlugins[id].config ?? { enabled: false },
+          allPluginStubs[id].config ?? { enabled: false },
           newPluginConfig ?? {},
         ) as PluginConfig;
 
@@ -208,7 +232,7 @@ const initHook = (win: BrowserWindow) => {
             forceUnloadMainPlugin(id, win);
           }
 
-          if (allPlugins[id]?.restartNeeded) {
+          if (allPluginStubs[id]?.restartNeeded) {
             showNeedToRestartDialog(id);
           }
         }
@@ -229,8 +253,8 @@ const initHook = (win: BrowserWindow) => {
   });
 };
 
-const showNeedToRestartDialog = (id: string) => {
-  const plugin = allPlugins[id];
+const showNeedToRestartDialog = async (id: string) => {
+  const plugin = (await allPlugins())[id];
 
   const dialogOptions: Electron.MessageBoxOptions = {
     type: 'info',
@@ -272,7 +296,7 @@ const showNeedToRestartDialog = (id: string) => {
 };
 
 function initTheme(win: BrowserWindow) {
-  injectCSS(win.webContents, youtubeMusicCSS);
+  injectCSS(win.webContents, musicPlayerCss);
   // Load user CSS
   const themes: string[] = config.get('options.themes');
   if (Array.isArray(themes)) {
@@ -304,7 +328,7 @@ async function createMainWindow() {
   const windowSize = config.get('window-size');
   const windowMaximized = config.get('window-maximized');
   const windowPosition: Electron.Point = config.get('window-position');
-  const useInlineMenu = config.plugins.isEnabled('in-app-menu');
+  const useInlineMenu = await config.plugins.isEnabled('in-app-menu');
 
   const defaultTitleBarOverlayOptions: Electron.TitleBarOverlay = {
     color: '#00000000',
@@ -329,15 +353,17 @@ async function createMainWindow() {
     delete decorations.titleBarStyle;
   }
 
-  const win = new BrowserWindow({
+  const electronWindowSettings: Electron.BrowserWindowConstructorOptions = {
     icon,
     width: windowSize.width,
     height: windowSize.height,
+    minWidth: 325,
+    minHeight: 425,
     backgroundColor: '#000',
     show: false,
     webPreferences: {
       contextIsolation: true,
-      preload: path.join(__dirname, '..', 'preload', 'preload.js'),
+      preload: path.join(__dirname, '..', 'preload', 'preload.cjs'),
       ...(isTesting()
         ? undefined
         : {
@@ -347,8 +373,11 @@ async function createMainWindow() {
           }),
     },
     ...decorations,
-  });
-  initHook(win);
+  };
+
+  const win = new BrowserWindow(electronWindowSettings);
+
+  await initHook(win);
   initTheme(win);
 
   await loadAllMainPlugins(win);
@@ -369,10 +398,10 @@ async function createMainWindow() {
     const scaledY = windowY;
 
     if (
-      scaledX + scaledWidth / 2 < display.bounds.x - 8 || // Left
-      scaledX + scaledWidth / 2 > display.bounds.x + display.bounds.width || // Right
+      scaledX + (scaledWidth / 2) < display.bounds.x - 8 || // Left
+      scaledX + (scaledWidth / 2) > display.bounds.x + display.bounds.width || // Right
       scaledY < display.bounds.y - 8 || // Top
-      scaledY + scaledHeight / 2 > display.bounds.y + display.bounds.height // Bottom
+      scaledY + (scaledHeight / 2) > display.bounds.y + display.bounds.height // Bottom
     ) {
       // Window is offscreen
       if (is.dev()) {
@@ -475,14 +504,18 @@ async function createMainWindow() {
     }
   });
   win.webContents.on('will-redirect', (event) => {
-    const url = new URL(event.url);
+    const url = URL.parse(event.url);
 
     // Workarounds for regions where YTM is restricted
-    if (url.hostname.endsWith('youtube.com') && url.pathname === '/premium') {
+    if (
+      url &&
+      url.hostname.endsWith('\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com') &&
+      url.pathname === '/premium'
+    ) {
       event.preventDefault();
 
       win.webContents.loadURL(
-        'https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26next%3Dhttps%253A%252F%252Fmusic.youtube.com%252F',
+        'https://accounts.google.com/ServiceLogin?ltmpl=music&service=\u0079\u006f\u0075\u0074\u0075\u0062\u0065&continue=https%3A%2F%2Fwww.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com%2Fsignin%3Faction_handle_signin%3Dtrue%26next%3Dhttps%253A%252F%252Fmusic.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com%252F',
       );
     }
   });
@@ -560,7 +593,7 @@ app.once('browser-window-created', (_event, win) => {
       if (
         errorCode !== -3 &&
         // Workaround for #2435
-        !new URL(validatedURL).hostname.includes('doubleclick.net')
+        !URL.parse(validatedURL)?.hostname?.includes('doubleclick.net')
       ) {
         // -3 is a false positive
         win.webContents.send('log', log);
@@ -572,6 +605,15 @@ app.once('browser-window-created', (_event, win) => {
   win.webContents.on('will-prevent-unload', (event) => {
     event.preventDefault();
   });
+
+  const customWindowTitle = config.get('options.customWindowTitle');
+
+  if (customWindowTitle) {
+    win.on('page-title-updated', (event) => {
+      event.preventDefault();
+      win.setTitle(customWindowTitle);
+    });
+  }
 });
 
 app.on('window-all-closed', () => {
@@ -593,12 +635,12 @@ app.on('activate', async () => {
   }
 });
 
-const getDefaultLocale = (locale: string) =>
-  Object.keys(languageResources).includes(locale) ? locale : null;
+const getDefaultLocale = async (locale: string) =>
+  Object.keys(await languageResources()).includes(locale) ? locale : null;
 
 app.whenReady().then(async () => {
   if (!config.get('options.language')) {
-    const locale = getDefaultLocale(app.getLocale());
+    const locale = await getDefaultLocale(app.getLocale());
     if (locale) {
       config.set('options.language', locale);
     }
@@ -626,7 +668,8 @@ app.whenReady().then(async () => {
 
   // Register appID on windows
   if (is.windows()) {
-    const appID = 'com.github.th-ch.youtube-music';
+    const appID =
+      'com.github.th-ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063';
     app.setAppUserModelId(appID);
     const appLocation = process.execPath;
     const appData = app.getPath('appData');
@@ -641,7 +684,7 @@ app.whenReady().then(async () => {
         'Windows',
         'Start Menu',
         'Programs',
-        'YouTube Music.lnk',
+        `${APPLICATION_NAME}.lnk`,
       );
       try {
         // Check if shortcut is registered and valid
@@ -650,7 +693,7 @@ app.whenReady().then(async () => {
           shortcutDetails.target !== appLocation ||
           shortcutDetails.appUserModelId !== appID
         ) {
-          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          // oxlint-disable-next-line typescript/only-throw-error
           throw 'needUpdate';
         }
       } catch (error) {
@@ -661,7 +704,7 @@ app.whenReady().then(async () => {
           {
             target: appLocation,
             cwd: path.dirname(appLocation),
-            description: 'YouTube Music Desktop App - including custom plugins',
+            description: `${APPLICATION_NAME} Desktop App - including custom plugins`,
             appUserModelId: appID,
           },
         );
@@ -739,7 +782,7 @@ app.whenReady().then(async () => {
 
       const splited = decodeURIComponent(command).split(' ');
 
-      handleProtocol(splited.shift()!, splited);
+      handleProtocol(splited.shift()!, ...splited);
       return;
     }
 
@@ -765,12 +808,12 @@ app.whenReady().then(async () => {
 
   if (!is.dev() && config.get('options.autoUpdates')) {
     const updateTimeout = setTimeout(() => {
-      autoUpdater.checkForUpdatesAndNotify();
+      electronUpdater.autoUpdater.checkForUpdatesAndNotify();
       clearTimeout(updateTimeout);
     }, 2000);
-    autoUpdater.on('update-available', () => {
+    electronUpdater.autoUpdater.on('update-available', () => {
       const downloadLink =
-        'https://github.com/th-ch/youtube-music/releases/latest';
+        'https://github.com/pear-devs/pear-desktop/releases/latest';
       const dialogOptions: Electron.MessageBoxOptions = {
         type: 'info',
         buttons: [
@@ -898,7 +941,7 @@ function removeContentSecurityPolicy(
     details.responseHeaders ??= {};
 
     // prettier-ignore
-    if (new URL(details.url).protocol === 'https:') {
+    if (URL.parse(details.url)?.protocol === 'https:') {
       // Remove the content security policy
       delete details.responseHeaders['content-security-policy-report-only'];
       delete details.responseHeaders['Content-Security-Policy-Report-Only'];
@@ -909,7 +952,7 @@ function removeContentSecurityPolicy(
         !details.responseHeaders['access-control-allow-origin'] &&
         !details.responseHeaders['Access-Control-Allow-Origin']
       ) {
-        details.responseHeaders['access-control-allow-origin'] = ['https://music.youtube.com'];
+        details.responseHeaders['access-control-allow-origin'] = ['https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com'];
       }
     }
 
@@ -928,7 +971,7 @@ function removeContentSecurityPolicy(
           }
 
           const result = await listener.apply();
-          return { ...accumulator, ...result };
+          return { ...acc, ...result };
         },
         Promise.resolve({ cancel: false }),
       );

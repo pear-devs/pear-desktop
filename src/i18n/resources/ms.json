@@ -6,6 +6,7 @@
         "executed-at-ms": "Plugin {{pluginName}}::{{contextName}} dilaksanakan pada {{ms}}ms",
         "initialize-failed": "Gagal untuk memulakan plugin \"{{pluginName}}\"",
         "load-all": "Memuatkan semua plugin",
+        "load-failed": "Gagal untuk memuatkan \"{{pluginName}}\"",
         "loaded": "Plugin \"{{pluginName}}\" dimuatkan",
         "unload-failed": "Gagal untuk memunggah plugin \"{{pluginName}}\"",
         "unloaded": "Plugin \"{{pluginName}}\" dipunggahkan"
@@ -31,19 +32,28 @@
       "theme": {
         "css-file-not-found": "Fail CSS \"{{cssFile}}\" tidak wujud, mengabaikan"
       },
+      "unresponsive": {
+        "details": "Ralat Tidak Bertindak Balas!\n{{error}}"
+      },
       "when-ready": {
         "clearing-cache-after-20s": "Membersihkan cache aplikasi"
+      },
+      "window": {
+        "tried-to-render-offscreen": "Tetingkap cuba dirender di luar skrin, windowSize={{windowSize}}, displaySize={{displaySize}}, position={{position}}"
       }
     },
     "dialog": {
       "hide-menu-enabled": {
-        "detail": "Menu telah disembunyikan, guna 'Alt' untuk menunjukkannya (atau 'Escape' jika menggunakan In-App Menu)"
+        "detail": "Menu telah disembunyikan, guna 'Alt' untuk menunjukkannya (atau 'Escape' jika menggunakan In-App Menu)",
+        "message": "Sembunyikan Menu telah diaktifkan",
+        "title": "Sembunyikan Menu diaktifkan"
       },
       "need-to-restart": {
         "buttons": {
           "later": "Nanti",
           "restart-now": "Restart Sekarang"
         },
+        "detail": "\"{{pluginName}}\" plugin memerlukan mula semula untuk ambil keberkesanan",
         "message": "\"{{pluginName}}\" perlu dimulakan semula",
         "title": "Mulakan Semula Diperlukan"
       },
@@ -59,10 +69,13 @@
       },
       "update-available": {
         "buttons": {
+          "disable": "Lumpuhkan Kemas Kini",
           "download": "Muat Turun",
           "ok": "OK"
         },
-        "detail": "Versi baharu kini tersedia dan boleh dimuat turun di {{downloadLink}}"
+        "detail": "Versi baharu kini tersedia dan boleh dimuat turun di {{downloadLink}}",
+        "message": "Versi baharu kini tersedia",
+        "title": "Kemas Kini Tersedia"
       }
     },
     "menu": {
@@ -73,7 +86,8 @@
           "copy-current-url": "Salin URL semasa",
           "go-back": "Belakang",
           "go-forward": "Depan",
-          "quit": "Keluar"
+          "quit": "Keluar",
+          "restart": "Mula Semula Aplikasi"
         }
       },
       "options": {
@@ -82,25 +96,35 @@
           "advanced-options": {
             "label": "Tetapan Lanjutan",
             "submenu": {
+              "auto-reset-app-cache": "Tetapkan semula cache aplikasi apabila aplikasi dimulakan",
+              "disable-hardware-acceleration": "Lumpuhkan pecutan perkakasan",
+              "edit-config-json": "Ubah suai config.json",
+              "override-user-agent": "Gantikan Ejen Pengguna",
+              "restart-on-config-changes": "Mulakan semula pada perubahan konfigurasi",
               "set-proxy": {
+                "label": "Tetapkan proksi",
                 "prompt": {
+                  "label": "Masukkan Alamat Proksi: (biarkan kosong untuk menyahdayakan)",
                   "placeholder": "Contoh: SOCKS5://127.0.0.1:9999",
                   "title": "Set proksi"
                 }
-              }
+              },
+              "toggle-dev-tools": "Togol DevTools"
             }
           },
           "always-on-top": "Sentiasa di atas",
           "auto-update": "Kemas Kini Automatik",
           "hide-menu": {
             "dialog": {
-              "message": "Menu akan disembunyikan pada pelancaran seterusnya, gunakan [Alt] untuk menunjukkannya (atau backtick [`] jika menggunakan dalam aplikasi-menu)"
-            }
+              "message": "Menu akan disembunyikan pada pelancaran seterusnya, gunakan [Alt] untuk menunjukkannya (atau backtick [`] jika menggunakan dalam aplikasi-menu)",
+              "title": "Sembunyikan Menu Diaktifkan"
+            },
+            "label": "Sembunyikan Menu"
           },
           "language": {
             "dialog": {
               "message": "Bahasa akan ditukar selepas dimulakan semula",
-              "title": "Bahasa Berubah"
+              "title": "Bahasa diubah"
             },
             "label": "Bahasa",
             "submenu": {
@@ -108,33 +132,71 @@
             }
           },
           "resume-on-start": "Mulakan semula lagu terakhir apabila aplikasi dimulakan",
+          "single-instance-lock": "Kunci Kejadian Tunggal",
           "start-at-login": "Mulakan semasa log masuk",
           "starting-page": {
-            "label": "Halaman Permulaan"
+            "label": "Halaman Permulaan",
+            "unset": "Nyahset"
           },
           "tray": {
+            "label": "Dulang",
             "submenu": {
+              "disabled": "Dilumpuhkan",
+              "enabled-and-hide-app": "Didayakan dan sembunyikan aplikasi",
+              "enabled-and-show-app": "Didayakan dan paparkan aplikasi",
               "play-pause-on-click": "Main / Hentikan pada klik"
             }
           },
           "visual-tweaks": {
             "label": "Pembaikan Visual",
             "submenu": {
+              "custom-window-title": {
+                "label": "Tajuk tetingkap tersuai",
+                "prompt": {
+                  "label": "Masukkan tajuk tetingkap tersuai: (biarkan kosong untuk matikan)",
+                  "placeholder": "Contoh: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "Lalai",
-                "hide": "Sembunyi"
+                "force-show": "Paksa pamer",
+                "hide": "Sembunyi",
+                "label": "Butang suka"
               },
+              "remove-upgrade-button": "Buang butang naik taraf",
               "theme": {
                 "dialog": {
                   "button": {
                     "cancel": "Batalkan",
                     "remove": "Padam"
-                  }
+                  },
+                  "remove-theme": "Adakah anda pasti mahu mengalih keluar tema tersuai?",
+                  "remove-theme-message": "Ini akan membuang tema tersuai"
                 },
-                "label": "Tema"
+                "label": "Tema",
+                "submenu": {
+                  "import-css-file": "Import fail CSS tersuai",
+                  "no-theme": "Tiada tema"
+                }
               }
             }
           }
+        }
+      },
+      "plugins": {
+        "enabled": "Didayakan",
+        "label": "Pemalam",
+        "new": "BARU"
+      },
+      "view": {
+        "label": "Pandangan",
+        "submenu": {
+          "force-reload": "Paksa Muat Semula",
+          "reload": "Muat semula",
+          "reset-zoom": "Saiz Sebenar",
+          "toggle-fullscreen": "Togol Skrin Penuh",
+          "zoom-in": "Zum Masuk",
+          "zoom-out": "Zum Keluar"
         }
       }
     },
@@ -143,28 +205,441 @@
       "play-pause": "Main / Jeda",
       "previous": "Sebelumnya",
       "quit": "Keluar",
-      "restart": "Mulakan Semula Aplikasi"
+      "restart": "Mulakan Semula Aplikasi",
+      "show": "Papar tetingkap",
+      "tooltip": {
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
+      }
     }
   },
   "plugins": {
-    "ambient-mode": {
+    "ad-speedup": {
+      "description": "Jika iklan dimainkan, ia meredamkan audio dan menetapkan kelajuan main semula kepada 16x",
+      "name": "Kelajuan Iklan"
+    },
+    "album-actions": {
+      "description": "Menambah butang Suka dan Tidak Suka pada semua lagu dalam senarai main atau album",
+      "name": "Tindakan Album"
+    },
+    "album-color-theme": {
+      "description": "Menggunakan tema dinamik dan kesan visual berdasarkan palet warna album",
       "menu": {
+        "color-mix-ratio": {
+          "label": "Nisbah campuran warna",
+          "submenu": {
+            "percent": "{{ratio}}%"
+          }
+        }
+      },
+      "name": "Tema Warna Album"
+    },
+    "ambient-mode": {
+      "description": "Menggunakan kesan pencahayaan dengan menghantar warna lembut daripada video, ke latar belakang skrin anda",
+      "menu": {
+        "blur-amount": {
+          "label": "Jumlah Kekaburan",
+          "submenu": {
+            "pixels": "{{blurAmount}}piksel"
+          }
+        },
+        "buffer": {
+          "label": "Buffer",
+          "submenu": {
+            "buffer": "{{buffer}}"
+          }
+        },
+        "opacity": {
+          "label": "Kelegapan",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
         "quality": {
-          "label": "Kualiti"
+          "label": "Kualiti",
+          "submenu": {
+            "pixels": "{{kualiti}} piksel"
+          }
         },
         "size": {
-          "label": "Saiz"
+          "label": "Saiz",
+          "submenu": {
+            "percent": "{{size}}%"
+          }
+        },
+        "smoothness-transition": {
+          "label": "Kelancaran transisi",
+          "submenu": {
+            "during": "Semasa {{masaInterpolasi}}s"
+          }
+        },
+        "use-fullscreen": {
+          "label": "Menggunakan skrin penuh"
+        }
+      },
+      "name": "Mod Sekitaran"
+    },
+    "amuse": {
+      "description": "Menambahkan sokongan {{applicationName}} untuk widget sedang dimain Amuse oleh 6K Labs",
+      "name": "Terhibur",
+      "response": {
+        "query": "API server Amuse telah berjalan. GET /query untuk mendapatkan maklumat lagu."
+      }
+    },
+    "api-server": {
+      "description": "Perlukan server API untuk mengawal pemain",
+      "dialog": {
+        "request": {
+          "buttons": {
+            "allow": "Benarkan",
+            "deny": "Nafi"
+          },
+          "message": "Benarkan {{ID}} {{origin}} untuk akses API?",
+          "title": "Permintaan pemberian kuasa kepada API"
+        }
+      },
+      "menu": {
+        "auth-strategy": {
+          "label": "Strategi Pengesahan",
+          "submenu": {
+            "auth-at-first": {
+              "label": "Pengesahan pada permintaan pertama"
+            },
+            "none": {
+              "label": "Tiada pengesahan"
+            }
+          }
+        },
+        "hostname": {
+          "label": "Nama perumah"
+        },
+        "port": {
+          "label": "Port"
+        }
+      },
+      "name": "Server API [Beta]",
+      "prompt": {
+        "hostname": {
+          "label": "Masukkan nama perumah (seperti 0.0.0.0) untuk server API:",
+          "title": "Nama perumah"
+        },
+        "port": {
+          "label": "Masukkan port untuk API server:",
+          "title": "Port"
         }
       }
     },
+    "audio-compressor": {
+      "description": "Laksanakan pemampatan untuk audio (mengurangkan kelantangan bagi bahagian signal yang kuat dan menaikkan kelantangan untuk bahagian yang lembut)",
+      "name": "Pemampat Audio"
+    },
+    "auth-proxy-adapter": {
+      "description": "Sokongan untuk penggunaan perkhidmatan proksi pengesahan",
+      "menu": {
+        "disable": "Matikan adapter proksi",
+        "enable": "Nyalakan adapter proksi",
+        "hostname": {
+          "label": "Nama perumah"
+        },
+        "port": {
+          "label": "Port"
+        }
+      },
+      "name": "Adapter Auth Proksi",
+      "prompt": {
+        "hostname": {
+          "label": "Nyatakan nama hos untuk server proksi tempatan (memerlukan mulakan semula):",
+          "title": "Nama hos proksi"
+        },
+        "port": {
+          "label": "Masukkan port untuk server proksi tempatan (memerlukan restart):",
+          "title": "Port Proksi"
+        }
+      }
+    },
+    "blur-nav-bar": {
+      "description": "Menjadikan bar navigasi telus dan kabur",
+      "name": "Kaburkan Bar navigasi"
+    },
+    "bypass-age-restrictions": {
+      "description": "Pintas verifikasi umur Music Player",
+      "name": "Pintas Sekatan Umur"
+    },
     "captions-selector": {
+      "description": "Pemilih kapsyen untuk trek audio {{applicationName}}",
+      "menu": {
+        "autoload": "Pilih kapsyen terakhir diguna secara automatik",
+        "disable-captions": "Tiada kapsyen secara lalai"
+      },
+      "name": "Pemilih kapsyen",
       "prompt": {
         "selector": {
+          "label": "Bahasa kapsyen sekarang: {{bahasa}}",
+          "none": "Tiada",
           "title": "Pilih bahasa kapsyen"
+        }
+      },
+      "templates": {
+        "title": "Buka pemilih kapsyen"
+      },
+      "toast": {
+        "caption-changed": "Sarikata berubah kepada {{language}}",
+        "caption-disabled": "Sarikata dimatikan",
+        "no-captions": "Tiada sarikata untuk lagu ini"
+      }
+    },
+    "compact-sidebar": {
+      "description": "Sentiasa tetapkan bar sisi dalam mod padat",
+      "name": "Bar Sisi Padat"
+    },
+    "crossfade": {
+      "description": "Pudar silang antara lagu",
+      "menu": {
+        "advanced": "Maju"
+      },
+      "name": "Pudar Selang [Beta]",
+      "prompt": {
+        "options": {
+          "multi-input": {
+            "fade-in-duration": "Pudar dalam tempoh (ms)",
+            "fade-out-duration": "Tempoh pudar (ms)",
+            "fade-scaling": {
+              "label": "Penskalaan pudar",
+              "linear": "Linear",
+              "logarithmic": "Logaritma"
+            },
+            "seconds-before-end": "Pudar silang N saat sebelum tamat"
+          },
+          "title": "Opsi pudar silang"
+        }
+      }
+    },
+    "custom-output-device": {
+      "description": "Konfigurasikan peranti media output tersuai untuk lagu",
+      "menu": {
+        "device-selector": "Pilih peranti"
+      },
+      "name": "Peranti Output Tersuai",
+      "prompt": {
+        "device-selector": {
+          "label": "Pilih peranti media output yang akan digunakan",
+          "title": "Pilih Peranti Output"
+        }
+      }
+    },
+    "disable-autoplay": {
+      "description": "Membuat lagu bermula dalam mod \"jeda\"",
+      "menu": {
+        "apply-once": "Terpakai hanya pada permulaan"
+      },
+      "name": "Matikan automain"
+    },
+    "discord": {
+      "backend": {
+        "already-connected": "Cuba untuk menyambung dengan sambungan aktif",
+        "connected": "Disambungkan ke Discord",
+        "disconnected": "Diputuskan sambungan daripada Discord"
+      },
+      "description": "Tunjukkan kepada rakan anda perkara yang anda dengar dengan Rich Presence",
+      "menu": {
+        "auto-reconnect": "Auto sambung semula",
+        "clear-activity": "Padamkan aktiviti",
+        "clear-activity-after-timeout": "Kosongkan aktiviti selepas tamat masa",
+        "connected": "Tersambung",
+        "disconnected": "Tidak disambungkan",
+        "hide-duration-left": "Sembunyikan tempoh yang tinggal",
+        "hide-github-button": "Sembunyikan Butang pautan GitHub",
+        "play-on-application": "Main di {{applicationName}}",
+        "set-inactivity-timeout": "Tetapkan tamat masa tidak aktif",
+        "set-status-display-type": {
+          "label": "Teks status",
+          "submenu": {
+            "artist": "Sedang mendengar {artist}",
+            "application": "Mendengar {{applicationName}}",
+            "title": "Sedang mendengar {tajuk lagu}"
+          }
+        }
+      },
+      "name": "Discord Rich Presence",
+      "prompt": {
+        "set-inactivity-timeout": {
+          "label": "Masukkan tamat masa tidak aktif dalam beberapa saat:",
+          "title": "Tetapkan tamat masa tidak aktif"
+        }
+      }
+    },
+    "downloader": {
+      "backend": {
+        "dialog": {
+          "error": {
+            "buttons": {
+              "ok": "OK"
+            },
+            "message": "Argh! Maaf, muat turun gagal…",
+            "title": "Ralat dalam muat turun!"
+          },
+          "start-download-playlist": {
+            "buttons": {
+              "ok": "OK"
+            },
+            "detail": "({{playlistSize}} lagu)",
+            "message": "Memuat turun senarai main {{playlistTitle}}",
+            "title": "Memuat turn bermula"
+          }
+        },
+        "feedback": {
+          "conversion-progress": "Penukaran: {{percent}}%",
+          "converting": "Menukarkan…",
+          "done": "Selesai: {{filePath}}",
+          "download-info": "Memuat turun {{artist}} - {{title}} [{{videoId}}",
+          "download-progress": "Muat turun: {{percent}}%",
+          "downloading": "Memuat turun…",
+          "downloading-counter": "Memuat turun {{current}}/{{total}}…",
+          "downloading-playlist": "Memuat turun senarai main \"{{playlistTitle}}\" - {{playlistSize}} lagu ({{playlistId}})",
+          "error-while-downloading": "Gagal memuat turun \"{{author}} - {{title}}\": {{error}}",
+          "folder-already-exists": "Folder {{playlistFolder}} sudah ada",
+          "getting-playlist-info": "Mendapatkan maklumat senarai main…",
+          "loading": "Memuat…",
+          "playlist-has-only-one-song": "Senarai main hanya mempunyai satu item, memuat turunnya terus",
+          "playlist-id-not-found": "ID senarai main tidak dijumpai",
+          "playlist-is-empty": "Senarai main kosong",
+          "playlist-is-mix-or-private": "Ralat dalam mendapatkan senarai info main: pastikan ia tidak peribadi atau di dalam senarai main \"Campuran untuk anda\"\n\n{{error}}",
+          "preparing-file": "Menyediakan fail…",
+          "saving": "Menyimpan…",
+          "trying-to-get-playlist-id": "Mencuba untuk mendapatkan ID senarai main: {{playlistId}}",
+          "video-id-not-found": "Video tidak dijumpai",
+          "writing-id3": "Sedang menulis tag ID3…"
+        }
+      },
+      "description": "Memuat turun audio MP3 / sumber terus dari antara muka",
+      "menu": {
+        "choose-download-folder": "Pilih folder muat turun",
+        "download-finish-settings": {
+          "label": "Muat turun selesai",
+          "prompt": {
+            "last-percent": "Selepas peratus x",
+            "last-seconds": "Saat x terakhir",
+            "title": "Konfigurasikan masa untuk memuat turun"
+          },
+          "submenu": {
+            "advanced": "Lanjutan",
+            "enabled": "Dinyalakan",
+            "mode": "Mod masa",
+            "percent": "Peratus",
+            "seconds": "Saat"
+          }
+        },
+        "download-playlist": "Muat turun senarai main",
+        "presets": "Pratetap",
+        "skip-existing": "Langkau fail sedia ada"
+      },
+      "name": "Pemuat turun",
+      "renderer": {
+        "can-not-update-progress": "Tidak boleh memuat turun perkembangan"
+      },
+      "templates": {
+        "button": "Memuat turun"
+      }
+    },
+    "equalizer": {
+      "description": "Menambahkan penyamaan kepada pemain",
+      "menu": {
+        "presets": {
+          "label": "Pratetap",
+          "list": {
+            "bass-booster": "Penggalak bass"
+          }
+        }
+      }
+    },
+    "exponential-volume": {
+      "description": "Menjadikan gelangsar kelantangan eksponen supaya lebih mudah memilih kelantangan yang lebih rendah."
+    },
+    "in-app-menu": {
+      "description": "Memberi bar menu rupa yang mewah, gelap atau warna album",
+      "menu": {
+        "hide-dom-window-controls": "Sembunyikan kawalan tetingkap DOM"
+      },
+      "name": "Menu Dalam Apl"
+    },
+    "lumiastream": {
+      "description": "Menambah sokongan Lumia Stream",
+      "name": "Lumia Stream [Beta]"
+    },
+    "lyrics-genius": {
+      "description": "Menambahkan sokongan lirik untuk kebanyakan lagu",
+      "menu": {
+        "romanized-lyrics": "Lirik Romanized"
+      },
+      "name": "Lirik Genius",
+      "renderer": {
+        "fetched-lyrics": "Lirik yang diambil untuk Genius"
+      }
+    },
+    "music-together": {
+      "description": "Kongsi senarai main dengan orang lain. Apabila hos memainkan lagu, semua orang akan mendengar lagu yang sama",
+      "dialog": {
+        "enter-host": "Masukkan ID Hos"
+      },
+      "internal": {
+        "save": "Simpan",
+        "unknown-user": "Pengguna tidak diketahui"
+      },
+      "menu": {
+        "click-to-copy-id": "Salin ID Hos",
+        "close": "Tutup Music Together",
+        "connected-users": "Pengguna yang telah berhubung",
+        "disconnect": "Putuskan Sambungan Music Together",
+        "empty-user": "Tiada pengguna yang disambungkan",
+        "host": "Hos Music Together",
+        "join": "Sertai Music Together",
+        "permission": {
+          "all": "Benarkan tetamu mengawal senarai main dan pemain",
+          "host-only": "Hanya hos boleh mengawal senarai main dan pemain",
+          "playlist": "Benarkan tetamu mengawal senarai main"
+        },
+        "set-permission": "Tukar Kebenaran Kawalan",
+        "status": {
+          "disconnected": "Terputus",
+          "guest": "Disambungkan sebagai Tetamu",
+          "host": "Disambungkan sebagai Hos"
+        }
+      },
+      "name": "Music Together [Beta]",
+      "toast": {
+        "add-song-failed": "Gagal menambah lagu",
+        "closed": "Music Together ditutup",
+        "disconnected": "Music Together terputus",
+        "host-failed": "Gagal untuk menjadi hos Music Together",
+        "id-copied": "ID hos disalin ke papan keratan",
+        "id-copy-failed": "Gagal menyalin ID Hos ke papan keratan"
+      }
+    },
+    "navigation": {
+      "name": "Navigasi"
+    },
+    "notifications": {
+      "name": "Notifikasi"
+    },
+    "scrobbler": {
+      "dialog": {
+        "lastfm": {
+          "auth-failed": {
+            "title": "Atuntikasi Gagal"
+          }
+        }
+      },
+      "prompt": {
+        "lastfm": {
+          "api-key": "kunci API Last.fm",
+          "api-secret": "rahasia API Last.fm"
         }
       }
     },
     "synced-lyrics": {
+      "errors": {
+        "not-found": "⚠️ Tak ada liriks untuk lagu ini."
+      },
       "menu": {
         "show-lyrics-even-if-inexact": {
           "label": "Tunjukkan lirik walaupun tidak tepat",
@@ -196,7 +671,7 @@
         }
       },
       "templates": {
-        "button": "Lagu"
+        "button-song": "Lagu"
       }
     }
   }

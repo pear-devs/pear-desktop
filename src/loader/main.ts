@@ -1,15 +1,13 @@
-import { BrowserWindow, ipcMain } from 'electron';
-
 import { deepmerge } from 'deepmerge-ts';
+import { type BrowserWindow, ipcMain } from 'electron';
 import { allPlugins, mainPlugins } from 'virtual:plugins';
 
-import config from '@/config';
+import * as config from '@/config';
+import { t } from '@/i18n';
 import { LoggerPrefix, startPlugin, stopPlugin } from '@/utils';
 
-import { t } from '@/i18n';
-
-import type { PluginConfig, PluginDef } from '@/types/plugins';
 import type { BackendContext } from '@/types/contexts';
+import type { PluginConfig, PluginDef } from '@/types/plugins';
 
 const loadedPluginMap: Record<
   string,
@@ -20,13 +18,17 @@ const createContext = (
   id: string,
   win: BrowserWindow,
 ): BackendContext<PluginConfig> => ({
-  getConfig: () =>
+  getConfig: async () =>
     deepmerge(
-      allPlugins[id].config ?? { enabled: false },
+      (await allPlugins())[id].config ?? { enabled: false },
       config.get(`plugins.${id}`) ?? {},
     ) as PluginConfig,
-  setConfig: (newConfig) => {
-    config.setPartial(`plugins.${id}`, newConfig, allPlugins[id].config);
+  setConfig: async (newConfig) => {
+    config.setPartial(
+      `plugins.${id}`,
+      newConfig,
+      (await allPlugins())[id].config,
+    );
   },
 
   ipc: {
@@ -34,12 +36,12 @@ const createContext = (
       win.webContents.send(event, ...args);
     },
     handle: (event: string, listener: CallableFunction) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return,@typescript-eslint/no-unsafe-call
+      // oxlint-disable-next-line typescript/no-unsafe-return,typescript/no-unsafe-call
       ipcMain.handle(event, (_, ...args: unknown[]) => listener(...args));
     },
     on: (event: string, listener: CallableFunction) => {
       ipcMain.on(event, (_, ...args: unknown[]) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        // oxlint-disable-next-line typescript/no-unsafe-call
         listener(...args);
       });
     },
@@ -96,7 +98,7 @@ export const forceLoadMainPlugin = async (
   id: string,
   win: BrowserWindow,
 ): Promise<void> => {
-  const plugin = mainPlugins[id];
+  const plugin = (await mainPlugins())[id];
   if (!plugin) return;
 
   try {
@@ -133,7 +135,7 @@ export const loadAllMainPlugins = async (win: BrowserWindow) => {
   const pluginConfigs = config.plugins.getPlugins();
   const queue: Promise<void>[] = [];
 
-  for (const [plugin, pluginDef] of Object.entries(mainPlugins)) {
+  for (const [plugin, pluginDef] of Object.entries(await mainPlugins())) {
     const config = deepmerge(pluginDef.config, pluginConfigs[plugin] ?? {});
     if (config.enabled) {
       queue.push(forceLoadMainPlugin(plugin, win));

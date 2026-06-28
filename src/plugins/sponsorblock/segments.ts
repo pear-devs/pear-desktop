@@ -1,5 +1,5 @@
 // Segments are an array [ [start, end], … ]
-import { Segment } from './types';
+import type { Segment } from './types';
 
 export const sortSegments = (segments: Segment[]) => {
   segments.sort((segment1, segment2) =>

@@ -1,15 +1,13 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
+import path from 'node:path';
+import process from 'node:process';
 
-const path = require('node:path');
-
-const { _electron: electron } = require('playwright');
-const { test, expect } = require('@playwright/test');
+import { test, expect, _electron as electron } from '@playwright/test';
 
 process.env.NODE_ENV = 'test';
 
-const appPath = path.resolve(__dirname, '..');
+const appPath = path.resolve(import.meta.dirname, '..');
 
-test('YouTube Music App - With default settings, app is launched and visible', async () => {
+test('Pear Desktop App - With default settings, app is launched and visible', async () => {
   const app = await electron.launch({
     cwd: appPath,
     args: [
@@ -24,17 +22,21 @@ test('YouTube Music App - With default settings, app is launched and visible', a
   const window = await app.firstWindow();
 
   const consentForm = await window.$(
-    "form[action='https://consent.youtube.com/save']",
+    "form[action='https://consent.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/save']",
   );
   if (consentForm) {
     await consentForm.click('button');
   }
 
   // const title = await window.title();
-  // expect(title.replaceAll(/\s/g, ' ')).toEqual('YouTube Music');
+  // expect(title.replaceAll(/\s/g, ' ')).toEqual('Pear Desktop');
 
   const url = window.url();
-  expect(url.startsWith('https://music.youtube.com')).toBe(true);
+  expect(
+    url.startsWith(
+      'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com',
+    ),
+  ).toBe(true);
 
   await app.close();
 });

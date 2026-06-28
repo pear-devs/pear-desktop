@@ -53,17 +53,17 @@
           "later": "稍後",
           "restart-now": "立即重啟"
         },
-        "detail": "\"{{pluginName}}\" 外掛需要重新啟動之後才會生效",
-        "message": "\"{{pluginName}}\" 需要重新啟動",
-        "title": "需要重新啟動"
+        "detail": "外掛 \"{{pluginName}}\" 需要重啟應用才會生效",
+        "message": "\"{{pluginName}}\" 需要重啟應用",
+        "title": "需要重啟應用"
       },
       "unresponsive": {
         "buttons": {
-          "quit": "結束",
-          "relaunch": "重新啟動",
-          "wait": "等一下"
+          "quit": "離開",
+          "relaunch": "重啟應用",
+          "wait": "稍等"
         },
-        "detail": "造成不便我們深表歉意！請選擇動作：",
+        "detail": "造成不便我們深表歉意！請選擇動作:",
         "message": "應用程式沒有回應",
         "title": "視窗沒有回應"
       },
@@ -73,7 +73,7 @@
           "download": "前往下載",
           "ok": "略過"
         },
-        "detail": "新版本已經推出，你可以至 {{downloadLink}} 下載",
+        "detail": "新版本已經推出，前往下載 {{downloadLink}}",
         "message": "有新版本可用",
         "title": "有可用的更新"
       }
@@ -83,11 +83,11 @@
       "navigation": {
         "label": "導覽列",
         "submenu": {
-          "copy-current-url": "複製目前頁面的網址",
-          "go-back": "回到上一頁",
-          "go-forward": "回到下一頁",
-          "quit": "結束",
-          "restart": "重新啟動"
+          "copy-current-url": "複製當前頁面的網址",
+          "go-back": "返回上一頁",
+          "go-forward": "前往下一頁",
+          "quit": "退出",
+          "restart": "重啟應用"
         }
       },
       "options": {
@@ -96,20 +96,20 @@
           "advanced-options": {
             "label": "進階選項",
             "submenu": {
-              "auto-reset-app-cache": "啟動時重設應用快取",
+              "auto-reset-app-cache": "啟動時清除應用程式快取",
               "disable-hardware-acceleration": "關閉硬體加速",
               "edit-config-json": "編輯 config.json",
               "override-user-agent": "覆寫使用者代理",
-              "restart-on-config-changes": "設定變更時自動重新啟動",
+              "restart-on-config-changes": "設定變更時自動重啟應用",
               "set-proxy": {
                 "label": "設定代理伺服器",
                 "prompt": {
                   "label": "輸入代理伺服器位置：（留空以停用本設定）",
-                  "placeholder": "範例：SOCKS5://127.0.0.1:9999",
+                  "placeholder": "例: SOCKS5://127.0.0.1:9999",
                   "title": "設定代理伺服器"
                 }
               },
-              "toggle-dev-tools": "切換開發者人員工具"
+              "toggle-dev-tools": "開發人員工具"
             }
           },
           "always-on-top": "最上層顯示",
@@ -123,7 +123,7 @@
           },
           "language": {
             "dialog": {
-              "message": "語言會在重新啟動後變更",
+              "message": "語言會在重啟應用後變更",
               "title": "語言已變更"
             },
             "label": "語言",
@@ -150,11 +150,19 @@
           "visual-tweaks": {
             "label": "介面設定",
             "submenu": {
+              "custom-window-title": {
+                "label": "自訂窗口標題",
+                "prompt": {
+                  "label": "輸入自訂視窗標題: (留空將其停用)",
+                  "placeholder": "例如: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "預設",
                 "force-show": "強制顯示",
                 "hide": "隱藏",
-                "label": "按讚按鈕"
+                "label": "按讚按鈕",
+                "swap": "交換讚及倒讚的按鈕位置"
               },
               "remove-upgrade-button": "移除升級按鈕",
               "theme": {
@@ -201,8 +209,8 @@
       "restart": "重新啟動應用程式",
       "show": "顯示視窗",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -210,13 +218,6 @@
     "ad-speedup": {
       "description": "使用 16 倍速播放及靜音來跳過廣告片段",
       "name": "加速略過"
-    },
-    "adblocker": {
-      "description": "阻擋所有廣告",
-      "menu": {
-        "blocker": "阻擋方式"
-      },
-      "name": "廣告攔截器"
     },
     "album-actions": {
       "description": "新增支援對整個播放清單或專輯\"喜歡／不喜歡\"\"取消喜歡／取消不喜歡\"的按鈕",
@@ -230,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "啟用進度條主題樣式"
       },
       "name": "隨歌曲色調變更主題"
     },
@@ -280,7 +282,7 @@
       "name": "微光效果"
     },
     "amuse": {
-      "description": "加入支援 6K Labs 的 Amuse OBS 外掛以取得 YouTube Music 現正播放資訊",
+      "description": "加入支援 6K Labs 的 Amuse OBS 外掛以取得 {{applicationName}} 現正播放資訊",
       "name": "Amuse",
       "response": {
         "query": "Amuse API 伺服器正在運作中，使用 /query 以取得歌曲資訊。"
@@ -313,6 +315,22 @@
         "hostname": {
           "label": "主機名稱"
         },
+        "https": {
+          "label": "HTTPS 及 憑證",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "選擇憑證檔案",
+              "label": "憑證檔案（.crt/.pem）"
+            },
+            "enable-https": {
+              "label": "啟用 HTTPS"
+            },
+            "key": {
+              "dialogTitle": "選擇私人金鑰檔案",
+              "label": "私人金鑰檔案（.key/.pem）"
+            }
+          }
+        },
         "port": {
           "label": "連接埠"
         }
@@ -333,31 +351,71 @@
       "description": "使用音效壓縮 (大聲部份的音量降低，柔和部份的音量提高)",
       "name": "音效壓縮器"
     },
+    "auth-proxy-adapter": {
+      "description": "支援使用 Proxy 驗證服務",
+      "menu": {
+        "disable": "中斷 Proxy 連線",
+        "enable": "啟用 Proxy 連線",
+        "hostname": {
+          "label": "主機名稱"
+        },
+        "port": {
+          "label": "連接埠"
+        }
+      },
+      "name": "Proxy 連線驗證",
+      "prompt": {
+        "hostname": {
+          "label": "本地 Proxy 伺服器主機名稱（需要重啟應用）：",
+          "title": "Proxy 主機名稱"
+        },
+        "port": {
+          "label": "本地 Proxy 伺服器連接埠（需要重啟應用）：",
+          "title": "Proxy 連接埠"
+        }
+      }
+    },
     "blur-nav-bar": {
       "description": "使導覽列透明及模糊",
       "name": "模糊導覽列"
     },
     "bypass-age-restrictions": {
-      "description": "繞過 YouTube 年齡驗證",
+      "description": "繞過年齡驗證",
       "name": "繞過年齡驗證"
     },
     "captions-selector": {
-      "description": "YouTube Music 音軌字幕選擇器",
+      "description": "{{applicationName}} 音軌字幕選項",
       "menu": {
         "autoload": "自動選擇上次使用的字幕",
-        "disable-captions": "預設無標題"
+        "disable-captions": "預設無字幕"
       },
-      "name": "標題選擇器",
+      "name": "字幕選項",
       "prompt": {
         "selector": {
-          "label": "目前字幕語言：{{language}}",
+          "label": "當前語言: {{language}}",
           "none": "無",
           "title": "選擇字幕語言"
         }
       },
       "templates": {
-        "title": "打開標題選擇器"
+        "title": "開啟字幕選項"
+      },
+      "toast": {
+        "caption-changed": "字幕語言已更改至 {{language}}",
+        "caption-disabled": "字幕已停用",
+        "no-captions": "該首歌曲無可用的字幕"
       }
+    },
+    "clock": {
+      "description": "新增時鐘至應用程式上方",
+      "menu": {
+        "format": {
+          "24-hour-format": "24 小時制",
+          "display-seconds": "顯示秒數",
+          "label": "時間格式"
+        }
+      },
+      "name": "時鐘"
     },
     "compact-sidebar": {
       "description": "永遠讓側邊欄保持收合狀態",
@@ -385,6 +443,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "為歌曲設定自訂輸出媒體裝置",
+      "menu": {
+        "device-selector": "選擇裝置"
+      },
+      "name": "自訂輸出裝置",
+      "prompt": {
+        "device-selector": {
+          "label": "選擇要使用的輸出媒體裝置",
+          "title": "選擇輸出裝置"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "讓歌曲開始時為暫停模式",
       "menu": {
@@ -407,8 +478,16 @@
         "disconnected": "已斷開連線",
         "hide-duration-left": "隱藏音樂剩餘時間狀態",
         "hide-github-button": "隱藏 GitHub 頁面按鈕",
-        "play-on-youtube-music": "顯示 Play on YouTube Music 按鈕",
-        "set-inactivity-timeout": "設定閒置狀態時長"
+        "play-on-application": "顯示 Play on {{applicationName}} 按鈕",
+        "set-inactivity-timeout": "設定閒置狀態時長",
+        "set-status-display-type": {
+          "label": "狀態樣式",
+          "submenu": {
+            "application": "正在聆聽 {{applicationName}}",
+            "artist": "正在聆聽 {artist} 的歌曲",
+            "title": "正在聆聽 {song title}"
+          }
+        }
       },
       "name": "Discord 狀態",
       "prompt": {
@@ -545,7 +624,7 @@
         "disconnect": "斷開連線共享音樂",
         "empty-user": "無已連線的使用者",
         "host": "發起共享音樂",
-        "join": "已加入共享音樂",
+        "join": "加入共享音樂",
         "permission": {
           "all": "允許加入的使用者控制播放清單及播放控制",
           "host-only": "不允許加入的使用者控制播放清單及播放控制",
@@ -554,7 +633,7 @@
         "set-permission": "切換共享音樂播放許可權",
         "status": {
           "disconnected": "已斷開連線",
-          "guest": "以訪客者身份加入",
+          "guest": "以訪客身份加入",
           "host": "以主持人身份加入"
         }
       },
@@ -567,7 +646,7 @@
         "id-copied": "已複製主持人 ID",
         "id-copy-failed": "複製主持人 ID 失敗",
         "join-failed": "加入共享音樂失敗",
-        "joined": "加入共享音樂",
+        "joined": "已加入共享音樂",
         "permission-changed": "共享音樂播放權限已切換至 \"{{permission}}\"",
         "remove-song-failed": "歌曲移除失敗",
         "user-connected": "{{name}} 已加入共享音樂",
@@ -576,7 +655,15 @@
     },
     "navigation": {
       "description": "允許應用程式上方顯示上一頁／下一頁按鈕",
-      "name": "導覽列"
+      "name": "導覽列",
+      "templates": {
+        "back": {
+          "title": "回到上一頁"
+        },
+        "forward": {
+          "title": "前往下一頁"
+        }
+      }
     },
     "no-google-login": {
       "description": "移除 Google 登入按鈕及連結",
@@ -599,6 +686,10 @@
         "unpause-notification": "在取消暫停時傳送通知"
       },
       "name": "歌曲播放通知"
+    },
+    "performance-improvement": {
+      "description": "使用實驗性的腳本以優化效能",
+      "name": "效能優化 [Beta]"
     },
     "picture-in-picture": {
       "description": "允許應用程式切換至子母畫面模式",
@@ -664,14 +755,19 @@
         }
       },
       "description": "允許在影片內進行畫質更改",
-      "name": "允許變更影片畫質"
+      "name": "允許變更影片畫質",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "開啟畫質調整器"
+        }
+      }
     },
     "scrobbler": {
       "description": "額外新增 scrobbling 支援 (例如：last.fm, Listenbrainz)",
       "dialog": {
         "lastfm": {
           "auth-failed": {
-            "message": "Last.fm 認證失敗\n將隱藏彈窗直到重啟。",
+            "message": "Last.fm 認證失敗\n將隱藏彈出視窗直到重啟。",
             "title": "認證失敗"
           }
         }
@@ -683,6 +779,7 @@
         "listenbrainz": {
           "token": "輸入 ListenBrainz 使用者憑證"
         },
+        "scrobble-alternative-artist": "使用替代的藝人",
         "scrobble-alternative-title": "使用替代歌曲標題",
         "scrobble-other-media": "紀錄其他媒體檔案"
       },
@@ -690,7 +787,7 @@
       "prompt": {
         "lastfm": {
           "api-key": "Last.fm API 金鑰",
-          "api-secret": "Last.fm API 金鑰"
+          "api-secret": "Last.fm API 密鑰"
         },
         "listenbrainz": {
           "token": {
@@ -706,7 +803,7 @@
         "override-media-keys": "覆寫媒體快捷鍵",
         "set-keybinds": "設定全域歌曲控制"
       },
-      "name": "Shortcuts (& MPRIS)",
+      "name": "快捷鍵 (& MPRIS)",
       "prompt": {
         "keybind": {
           "keybind-options": {
@@ -738,6 +835,24 @@
         "not-found": "⚠️未找到該首歌曲的歌詞。"
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "繁簡轉換",
+          "submenu": {
+            "disabled": {
+              "label": "已停用",
+              "tooltip": "停用繁簡轉換"
+            },
+            "simplified-to-traditional": {
+              "label": "簡體轉繁體",
+              "tooltip": "轉換簡體中文至繁體中文"
+            },
+            "traditional-to-simplified": {
+              "label": "繁體轉簡體",
+              "tooltip": "轉換繁體中文至簡體中文"
+            }
+          },
+          "tooltip": "轉換中文字符至繁體或簡體"
+        },
         "default-text-string": {
           "label": "預設歌詞中間隔的符號",
           "tooltip": "選擇歌詞中間隔要使用的符號"
@@ -767,6 +882,14 @@
         "precise-timing": {
           "label": "使歌詞完美同步",
           "tooltip": "更精確的計算下一行歌詞的顯示 (將會降低些許效能)"
+        },
+        "preferred-provider": {
+          "label": "偏好提供者",
+          "none": {
+            "label": "無",
+            "tooltip": "沒有偏好的提供者"
+          },
+          "tooltip": "選擇預設的歌詞提供者"
         },
         "romanization": {
           "label": "羅馬拼音化歌詞",
@@ -800,6 +923,27 @@
       "description": "為 macOS 使用者新增觸控列支援",
       "name": "觸控列 (Touchbar) 支援"
     },
+    "transparent-player": {
+      "description": "讓視窗背景變為透明糢糊",
+      "menu": {
+        "opacity": {
+          "label": "不透明度",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "樣式",
+          "submenu": {
+            "acrylic": "壓克力(Acrylic)",
+            "mica": "雲母(Mica)",
+            "none": "無",
+            "tabbed": "分頁式(Tabbed)"
+          }
+        }
+      },
+      "name": "透明糢糊效果"
+    },
     "tuna-obs": {
       "description": "與 OBS 的 Tuna 外掛連線",
       "name": "Tuna OBS"
@@ -831,13 +975,14 @@
       },
       "name": "歌曲／影片切換",
       "templates": {
-        "button": "歌曲"
+        "button-song": "歌曲",
+        "button-video": "影片"
       }
     },
     "visualizer": {
-      "description": "新增一個視覺化音樂效果",
+      "description": "在播放器新增視覺化效果",
       "menu": {
-        "visualizer-type": "視覺化效果類型"
+        "visualizer-type": "視覺化效果樣式"
       },
       "name": "視覺化效果"
     }

@@ -1,16 +1,17 @@
+import musicPlayerIcon from '@assets/icon.png?asset&asarUnpack';
 import { nativeImage, type NativeImage, TouchBar } from 'electron';
 
-import { createPlugin } from '@/utils';
-import getSongControls from '@/providers/song-controls';
-import registerCallback, { SongInfoEvent } from '@/providers/song-info';
 import { t } from '@/i18n';
-
-import youtubeMusicIcon from '@assets/youtube-music.png?asset&asarUnpack';
+import { getSongControls } from '@/providers/song-controls';
+import { registerCallback, SongInfoEvent } from '@/providers/song-info';
+import { Platform } from '@/types/plugins';
+import { createPlugin } from '@/utils';
 
 export default createPlugin({
   name: () => t('plugins.touchbar.name'),
   description: () => t('plugins.touchbar.description'),
   restartNeeded: true,
+  platform: Platform.macOS,
   config: {
     enabled: false,
   },
@@ -95,7 +96,7 @@ export default createPlugin({
         songImage.icon = (
           songInfo.image
             ? songInfo.image
-            : nativeImage.createFromPath(youtubeMusicIcon)
+            : nativeImage.createFromPath(musicPlayerIcon)
         ).resize({ height: 23 });
 
         window.setTouchBar(touchBar);

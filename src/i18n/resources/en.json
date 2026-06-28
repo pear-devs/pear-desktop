@@ -154,7 +154,15 @@
                 "default": "Default",
                 "force-show": "Force show",
                 "hide": "Hide",
+                "swap": "Swap like buttons order",
                 "label": "Like buttons"
+              },
+              "custom-window-title": {
+                "label": "Custom window title",
+                "prompt": {
+                  "label": "Enter custom window title: (leave empty to disable)",
+                  "placeholder": "Example: {{applicationName}}"
+                }
               },
               "remove-upgrade-button": "Remove upgrade button",
               "theme": {
@@ -201,8 +209,8 @@
       "restart": "Restart App",
       "show": "Show window",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -210,13 +218,6 @@
     "ad-speedup": {
       "description": "If an ad play it mutes the audio and sets playback speed to 16x",
       "name": "Ad Speedup"
-    },
-    "adblocker": {
-      "description": "Block all ads and tracking out of the box",
-      "menu": {
-        "blocker": "Blocker"
-      },
-      "name": "Ad Blocker"
     },
     "album-actions": {
       "description": "Adds Undislike, Dislike, Like, and Unlike buttons to apply this to all songs in a playlist or album",
@@ -230,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Enable seekbar theming"
       },
       "name": "Album Color Theme"
     },
@@ -280,7 +282,7 @@
       "name": "Ambient Mode"
     },
     "amuse": {
-      "description": "Adds YouTube Music support for the Amuse now playing widget by 6K Labs",
+      "description": "Adds {{applicationName}} support for the Amuse now playing widget by 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API server is running. GET /query to get song info."
@@ -315,6 +317,22 @@
         },
         "port": {
           "label": "Port"
+        },
+        "https": {
+          "label": "HTTPS & Certificates",
+          "submenu": {
+            "enable-https": {
+              "label": "Enable HTTPS"
+            },
+            "cert": {
+              "label": "Certificate file (.crt/.pem)",
+              "dialogTitle": "Select HTTPS certificate file"
+            },
+            "key": {
+              "label": "Private key file (.key/.pem)",
+              "dialogTitle": "Select HTTPS private key file"
+            }
+          }
         }
       },
       "name": "API Server [Beta]",
@@ -333,16 +351,40 @@
       "description": "Apply compression to audio (lowers the volume of the loudest parts of the signal and raises the volume of the softest parts)",
       "name": "Audio Compressor"
     },
+    "auth-proxy-adapter": {
+      "description": "Support for the use of authentication proxy services",
+      "menu": {
+        "disable": "Disable Proxy Adapter",
+        "enable": "Enable Proxy Adapter",
+        "hostname": {
+          "label": "Hostname"
+        },
+        "port": {
+          "label": "Port"
+        }
+      },
+      "name": "Auth Proxy Adapter",
+      "prompt": {
+        "hostname": {
+          "title": "Proxy Hostname",
+          "label": "Enter hostname for local proxy server (requires restart):"
+        },
+        "port": {
+          "title": "Proxy Port",
+          "label": "Enter port for local proxy server (requires restart):"
+        }
+      }
+    },
     "blur-nav-bar": {
       "description": "Makes navigation bar transparent and blurry",
       "name": "Blur Navigation Bar"
     },
     "bypass-age-restrictions": {
-      "description": "Bypass YouTube's age verification",
+      "description": "Bypass Music Player's age verification",
       "name": "Bypass Age Restrictions"
     },
     "captions-selector": {
-      "description": "Caption selector for YouTube Music audio tracks",
+      "description": "Caption selector for {{applicationName}} audio tracks",
       "menu": {
         "autoload": "Automatically select last used caption",
         "disable-captions": "No captions by default"
@@ -357,6 +399,22 @@
       },
       "templates": {
         "title": "Open captions selector"
+      },
+      "toast": {
+        "caption-changed": "Caption changed to {{language}}",
+        "caption-disabled": "Captions disabled",
+        "no-captions": "No captions available for this song"
+      }
+    },
+    "clock": {
+      "description": "Add a clock to the navigation bar",
+      "name": "Clock",
+      "menu": {
+        "format": {
+          "label": "Format",
+          "display-seconds": "Display Seconds",
+          "24-hour-format": "24-Hour Format"
+        }
       }
     },
     "compact-sidebar": {
@@ -385,6 +443,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Configure a custom output media device for songs",
+      "menu": {
+        "device-selector": "Select Device"
+      },
+      "name": "Custom Output Device",
+      "prompt": {
+        "device-selector": {
+          "label": "Choose the output media device to be used",
+          "title": "Select Output Device"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Makes song start in \"paused\" mode",
       "menu": {
@@ -407,8 +478,16 @@
         "disconnected": "Disconnected",
         "hide-duration-left": "Hide duration left",
         "hide-github-button": "Hide GitHub link Button",
-        "play-on-youtube-music": "Play on YouTube Music",
-        "set-inactivity-timeout": "Set inactivity timeout"
+        "play-on-application": "Play on {{applicationName}}",
+        "set-inactivity-timeout": "Set inactivity timeout",
+        "set-status-display-type": {
+          "label": "Status text",
+          "submenu": {
+            "application": "Listening to {{applicationName}}",
+            "artist": "Listening to {artist}",
+            "title": "Listening to {song title}"
+          }
+        }
       },
       "name": "Discord Rich Presence",
       "prompt": {
@@ -417,6 +496,13 @@
           "title": "Set inactivity timeout"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Block all tracking out of the box",
+      "menu": {
+        "blocker": "Blocker"
+      },
+      "name": "Do Not Track"
     },
     "downloader": {
       "backend": {
@@ -491,6 +577,18 @@
         "button": "Download"
       }
     },
+    "equalizer": {
+      "description": "Adds an equalizer to the player",
+      "menu": {
+        "presets": {
+          "label": "Presets",
+          "list": {
+            "bass-booster": "Bass booster"
+          }
+        }
+      },
+      "name": "Equalizer"
+    },
     "exponential-volume": {
       "description": "Makes the volume slider exponential so it's easier to select lower volumes.",
       "name": "Exponential Volume"
@@ -564,7 +662,15 @@
     },
     "navigation": {
       "description": "Next/Back navigation arrows directly integrated in the interface, like in your favorite browser",
-      "name": "Navigation"
+      "name": "Navigation",
+      "templates": {
+        "back": {
+          "title": "Go to previous page"
+        },
+        "forward": {
+          "title": "Go to next page"
+        }
+      }
     },
     "no-google-login": {
       "description": "Remove Google login buttons and links from the interface",
@@ -587,6 +693,10 @@
         "unpause-notification": "Show notification on unpause"
       },
       "name": "Notifications"
+    },
+    "performance-improvement": {
+      "description": "Improve performance by enabling experimental scripts",
+      "name": "Performance improvement [Beta]"
     },
     "picture-in-picture": {
       "description": "Allows to switch the app to picture-in-picture mode",
@@ -659,7 +769,12 @@
         }
       },
       "description": "Allows changing the video quality with a button on the video overlay",
-      "name": "Video Quality Changer"
+      "name": "Video Quality Changer",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "Open player quality changer"
+        }
+      }
     },
     "scrobbler": {
       "description": "Add scrobbling support (etc. last.fm, Listenbrainz)",
@@ -678,8 +793,9 @@
         "listenbrainz": {
           "token": "Enter ListenBrainz user token"
         },
-        "scrobble-other-media": "Scrobble other media",
-        "scrobble-alternative-title": "Use alternative titles"
+        "scrobble-alternative-title": "Use alternative titles",
+        "scrobble-alternative-artist": "Use alternative artists",
+        "scrobble-other-media": "Scrobble other media"
       },
       "name": "Scrobbler",
       "prompt": {
@@ -733,6 +849,14 @@
         "not-found": "⚠️ No lyrics found for this song."
       },
       "menu": {
+        "preferred-provider": {
+          "label": "Preferred Provider",
+          "tooltip": "Choose the default provider to use",
+          "none": {
+            "label": "None",
+            "tooltip": "No preferred provider"
+          }
+        },
         "default-text-string": {
           "label": "Default character between lyrics",
           "tooltip": "Choose the default character to use for the gap between lyrics"
@@ -774,6 +898,24 @@
         "show-time-codes": {
           "label": "Show time codes",
           "tooltip": "Show the time codes next to the lyrics"
+        },
+        "convert-chinese-character": {
+          "label": "Convert Chinese character",
+          "submenu": {
+            "disabled": {
+              "label": "Disabled",
+              "tooltip": "Disable Chinese character conversion"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplified to Traditional",
+              "tooltip": "Convert Simplified Chinese to Traditional Chinese"
+            },
+            "traditional-to-simplified": {
+              "label": "Traditional to Simplified",
+              "tooltip": "Convert Traditional Chinese to Simplified Chinese"
+            }
+          },
+          "tooltip": "Convert Chinese character to Traditional or Simplified"
         }
       },
       "name": "Synced Lyrics",
@@ -794,6 +936,32 @@
     "touchbar": {
       "description": "Adds a TouchBar widget for macOS users",
       "name": "TouchBar"
+    },
+    "transparent-player": {
+      "description": "Makes the app window transparent",
+      "name": "Transparent Player",
+      "menu": {
+        "opacity": {
+          "label": "Opacity",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Type",
+          "submenu": {
+            "acrylic": "Acrylic",
+            "content": "Content",
+            "fullscreen-ui": "Fullscreen UI",
+            "mica": "Mica",
+            "tabbed": "Tabbed",
+            "under-page": "Under Page",
+            "under-window": "Under Window",
+            "window": "Window",
+            "none": "None"
+          }
+        }
+      }
     },
     "tuna-obs": {
       "description": "Integration with OBS's plugin Tuna",
@@ -826,7 +994,8 @@
       },
       "name": "Video Toggle",
       "templates": {
-        "button": "Song"
+        "button-song": "Song",
+        "button-video": "Video"
       }
     },
     "visualizer": {
@@ -835,18 +1004,6 @@
         "visualizer-type": "Visualizer Type"
       },
       "name": "Visualizer"
-    },
-    "equalizer": {
-      "description": "Adds an equalizer to the player",
-      "name": "Equalizer",
-      "menu": {
-        "presets": {
-          "label": "Presets",
-          "list": {
-            "bass-booster": "Bass booster"
-          }
-        }
-      }
     }
   }
 }

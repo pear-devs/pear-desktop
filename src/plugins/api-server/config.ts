@@ -11,14 +11,20 @@ export interface APIServerConfig {
   secret: string;
 
   authorizedClients: string[];
+  useHttps: boolean;
+  certPath: string;
+  keyPath: string;
 }
 
 export const defaultAPIServerConfig: APIServerConfig = {
-  enabled: true,
+  enabled: false,
   hostname: '0.0.0.0',
   port: 26538,
   authStrategy: AuthStrategy.AUTH_AT_FIRST,
   secret: Date.now().toString(36),
 
   authorizedClients: [],
+  useHttps: false,
+  certPath: '',
+  keyPath: '',
 };

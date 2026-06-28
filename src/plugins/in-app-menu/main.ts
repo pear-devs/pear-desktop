@@ -1,16 +1,15 @@
-import { register } from 'electron-localshortcut';
-
 import {
   BrowserWindow,
   Menu,
-  MenuItem,
+  type MenuItem,
   ipcMain,
   nativeImage,
-  WebContents,
+  type WebContents,
 } from 'electron';
+import { register } from 'electron-localshortcut';
 
-import type { BackendContext } from '@/types/contexts';
 import type { InAppMenuConfig } from './constants';
+import type { BackendContext } from '@/types/contexts';
 
 export const onMainLoad = ({
   window: win,
@@ -28,10 +27,8 @@ export const onMainLoad = ({
 
   handle('get-menu', () =>
     JSON.parse(
-      JSON.stringify(
-        Menu.getApplicationMenu(),
-        (key: string, value: unknown) =>
-          key !== 'commandsMap' && key !== 'menu' ? value : undefined,
+      JSON.stringify(Menu.getApplicationMenu(), (key: string, value: unknown) =>
+        key !== 'commandsMap' && key !== 'menu' ? value : undefined,
       ),
     ),
   );
@@ -54,7 +51,7 @@ export const onMainLoad = ({
     return target;
   };
 
-  ipcMain.handle('ytmd:menu-event', (event, commandId: number) => {
+  ipcMain.handle('peard:menu-event', (event, commandId: number) => {
     const target = getMenuItemById(commandId);
     if (target)
       (

@@ -1,0 +1,27 @@
+diff --git a/is.d.ts b/is.d.ts
+index fb861f7b401914f0f89cb4edf25c51df5cb05812..82144733cd34d88e2deb2e4713b104418e673f2e 100644
+--- a/is.d.ts
++++ b/is.d.ts
+@@ -5,6 +5,7 @@ declare namespace is {
+   export function macOS(): boolean;
+   export function windows(): boolean;
+   export function linux(): boolean;
++  export function freebsd(): boolean;
+   export function x86(): boolean;
+   export function x64(): boolean;
+   export function production(): boolean;
+diff --git a/is.js b/is.js
+index a76bb1755a2728bde185b35d847031d3b8ea4ab0..f6b03406c17342f5af078de069e5bbbd2246e152 100644
+--- a/is.js
++++ b/is.js
+@@ -39,6 +39,10 @@ module.exports = {
+   linux: function () {
+     return process.platform === 'linux'
+   },
++  // Checks if we are under FreeBSD OS
++  freebsd: function () {
++    return process.platform === "freebsd"
++  },
+   // Checks if we are the processor's arch is x86
+   x86: function () {
+     return process.arch === 'ia32'

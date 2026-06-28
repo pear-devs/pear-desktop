@@ -1,0 +1,960 @@
+{
+  "common": {
+    "console": {
+      "plugins": {
+        "execute-failed": "প্লাগইন {{pluginName}}::{{contextName}} কার্যকর করতে ব্যর্থ হয়েছে",
+        "executed-at-ms": "প্লাগইন {{pluginName}}::{{contextName}} {{ms}}মিলিসেকেন্ডে কার্যকর হয়েছে",
+        "initialize-failed": "প্লাগইন \"{{pluginName}}\" চালু করতে ব্যর্থ হয়েছে",
+        "load-all": "সকল প্লাগইন লোড করা হচ্ছে",
+        "load-failed": "প্লাগইন \"{{pluginName}}\" লোড হতে ব্যর্থ হয়েছে",
+        "loaded": "প্লাগইন \"{{pluginName}}\" লোড হয়েছে",
+        "unload-failed": "প্লাগইন \"{{pluginName}}\" আনলোড করতে ব্যর্থ হয়েছে",
+        "unloaded": "প্লাগইন \"{{pluginName}}\" আনলোড হয়েছে"
+      }
+    }
+  },
+  "language": {
+    "code": "bn",
+    "local-name": "বাংলা",
+    "name": "Bengali"
+  },
+  "main": {
+    "console": {
+      "did-finish-load": {
+        "dev-tools": "লোড সম্পন্ন হয়েছে। ডেভটুলস খোলা হয়েছে"
+      },
+      "i18n": {
+        "loaded": "i18n লোড হয়েছে"
+      },
+      "second-instance": {
+        "receive-command": "প্রোটোকলের মাধ্যমে কমান্ড গ্রহণ করা হয়েছে: \"{{command}}\""
+      },
+      "theme": {
+        "css-file-not-found": "CSS ফাইল \"{{cssFile}}\" পাওয়া যায়নি, ইগনোর করা হয়েছে"
+      },
+      "unresponsive": {
+        "details": "অকার্যকর ত্রুটি!\n{{error}}"
+      },
+      "when-ready": {
+        "clearing-cache-after-20s": "অ্যাপ ক্যাশ মুছে ফেলা হচ্ছে"
+      },
+      "window": {
+        "tried-to-render-offscreen": "উইন্ডোটি স্ক্রিনের বাইরে রেন্ডার করার চেষ্টা করেছে, windowSize={{windowSize}}, displaySize={{displaySize}}, position={{position}}"
+      }
+    },
+    "dialog": {
+      "hide-menu-enabled": {
+        "detail": "মেনু লুকানো রয়েছে, দেখতে 'Alt' চাপুন ( অথবা ইন-অ্যাপ মেনু ব্যবহার করে থাকলে 'Escape' চাপুন )",
+        "message": "মেনু লুকান সক্রিয় করা হয়েছে",
+        "title": "মেনু লুকান সক্রিয় হয়েছে"
+      },
+      "need-to-restart": {
+        "buttons": {
+          "later": "পরে",
+          "restart-now": "রিস্টার্ট করুন"
+        },
+        "detail": "\"{{pluginName}}\" প্লাগইন কার্যকর করতে পুনরারম্ভ করতে হবে",
+        "message": "\"{{pluginName}}\" পুনরায় চালু করা প্রয়োজন",
+        "title": "পুনরায় চালু করা প্রয়োজন"
+      },
+      "unresponsive": {
+        "buttons": {
+          "quit": "বন্ধ করুন",
+          "relaunch": "পুনরায় চালু করুন",
+          "wait": "অপেক্ষা করুন"
+        },
+        "detail": "অসুবিধার জন্য আমরা দুঃখিত! অনুগ্রহ করে কী করতে চান তা নির্বাচন করুন:",
+        "message": "অ্যাপ্লিকেশনটি কাজ করছে না",
+        "title": "উইন্ডোটি কাজ করছে না"
+      },
+      "update-available": {
+        "buttons": {
+          "disable": "আপডেট বন্ধ করুন",
+          "download": "ডাউনলোড",
+          "ok": "ওকে"
+        },
+        "detail": "একটি নতুন ভার্সন এসেছে এবং এটি {{downloadLink}} থেকে ডাউনলোড করতে পারেন",
+        "message": "একটি নতুন ভার্সন এসেছে",
+        "title": "আপডেট করতে পারেন"
+      }
+    },
+    "menu": {
+      "about": "সম্পর্কে",
+      "navigation": {
+        "label": "নেভিগেশন",
+        "submenu": {
+          "copy-current-url": "বর্তমান URL কপি করুন",
+          "go-back": "পেছনে যান",
+          "go-forward": "সামনে যান",
+          "quit": "বন্ধ",
+          "restart": "অ্যাপ পুনরায় চালু করুন"
+        }
+      },
+      "options": {
+        "label": "অপশন",
+        "submenu": {
+          "advanced-options": {
+            "label": "এডভ্যান্স অপশন",
+            "submenu": {
+              "auto-reset-app-cache": "অ্যাপ চালুর সময় ক্যাশ রিসেট করুন",
+              "disable-hardware-acceleration": "হার্ডওয়্যার অ্যাকসেলারেশন নিষ্ক্রিয় করুন",
+              "edit-config-json": "config.json এডিট করুন",
+              "override-user-agent": "ইউজার এজেন্ট বদলান",
+              "restart-on-config-changes": "কনফিগ পরিবর্তন হলে আবার চালু করুন",
+              "set-proxy": {
+                "label": "প্রক্সি সেট করুন",
+                "prompt": {
+                  "label": "প্রক্সি ঠিকানা দিন: (বন্ধ করতে ফাকা রাখুন)",
+                  "placeholder": "যেমন: SOCKS5://127.0.0.1:9999",
+                  "title": "প্রক্সি সেট করুন"
+                }
+              },
+              "toggle-dev-tools": "ডেভ টুল চালু/বন্ধ"
+            }
+          },
+          "always-on-top": "সবসময় উপরে রাখুন",
+          "auto-update": "স্বয়ংক্রিয় আপডেট চালু করুন",
+          "hide-menu": {
+            "dialog": {
+              "message": "পরবর্তী চালুর সময় মেনু লুকানো থাকবে, দেখতে [Alt] চাপুন (অথবা ইন-অ্যাপ মেনু হলে [`] ব্যবহার করুন)",
+              "title": "মেনু লুকানো হয়েছে"
+            },
+            "label": "মেনু লুকান"
+          },
+          "language": {
+            "dialog": {
+              "message": "পুনরায় চালু করলে ভাষা পরিবর্তন হয়ে যাবে",
+              "title": "ভাষা নির্বাচন করুন"
+            },
+            "label": "ভাষা",
+            "submenu": {
+              "to-help-translate": "অনুবাদে সাহায্য করতে চান? এখানে চাপ দিন"
+            }
+          },
+          "resume-on-start": "অ্যাপ চালু হলে শেষ গানটি আবার চালু করুন",
+          "single-instance-lock": "একক ইনস্ট্যান্স লক",
+          "start-at-login": "লগইনের সময় চালু করুন",
+          "starting-page": {
+            "label": "শুরুর পেজ",
+            "unset": "নির্ধারণ করা হয়নি"
+          },
+          "tray": {
+            "label": "ট্রে",
+            "submenu": {
+              "disabled": "ট্রে বন্ধ",
+              "enabled-and-hide-app": "ট্রে চালু ও অ্যাপ লুকান",
+              "enabled-and-show-app": "ট্রে চালু ও অ্যাপ দেখান",
+              "play-pause-on-click": "ট্রে ক্লিক করলে প্লে/পজ"
+            }
+          },
+          "visual-tweaks": {
+            "label": "দৃষ্টিনন্দন পরিবর্তন",
+            "submenu": {
+              "custom-window-title": {
+                "label": "কাস্টম উইন্ডো টাইটেল",
+                "prompt": {
+                  "label": "নিজস্ব উইন্ডোর টাইটেল দিন (বন্ধ করতে ফাঁকা রাখুন)",
+                  "placeholder": "উদাহরণস্বরূপ: {{applicationName}}"
+                }
+              },
+              "like-buttons": {
+                "default": "ডিফল্ট লাইক বাটন",
+                "force-show": "সবসময় লাইক বাটন দেখান",
+                "hide": "লাইক বাটন লুকান",
+                "label": "লাইক বাটনের নিয়ন্ত্রণ",
+                "swap": "বাটনের ধারাবাহিকতা পাল্টাও"
+              },
+              "remove-upgrade-button": "আপগ্রেড বাটন সরান",
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "বাতিল",
+                    "remove": "থিম সরান"
+                  },
+                  "remove-theme": "থিম সরাতে চান?",
+                  "remove-theme-message": "এটি কাস্টম থিমটি বাদ দিয়ে দিবে"
+                },
+                "label": "থিম",
+                "submenu": {
+                  "import-css-file": "CSS ফাইল ইমপোর্ট করুন",
+                  "no-theme": "কোন থিম নেই"
+                }
+              }
+            }
+          }
+        }
+      },
+      "plugins": {
+        "enabled": "প্লাগইন চালু",
+        "label": "প্লাগইন",
+        "new": "নতুন প্লাগইন"
+      },
+      "view": {
+        "label": "দেখুন",
+        "submenu": {
+          "force-reload": "জোর করে রিফ্রেশ করুন",
+          "reload": "রিফ্রেশ করুন",
+          "reset-zoom": "জুম রিসেট করুন",
+          "toggle-fullscreen": "ফুলস্ক্রিন চালু/বন্ধ",
+          "zoom-in": "বড় করুন",
+          "zoom-out": "ছোট করুন"
+        }
+      }
+    },
+    "tray": {
+      "next": "নেক্সট",
+      "play-pause": "চালু/বন্ধ",
+      "previous": "পূর্ববর্তী",
+      "quit": "বন্ধ",
+      "restart": "অ্যাপ পুনরায় চালু করুন",
+      "show": "উইন্ডো দেখান",
+      "tooltip": {
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
+      }
+    }
+  },
+  "plugins": {
+    "ad-speedup": {
+      "description": "বিজ্ঞাপন চললে, এটি অডিও বন্ধ করে দেয় এবং প্লেব্যাক গতি ১৬ গুণ করে দেয়",
+      "name": "বিজ্ঞাপন দ্রুত করুন"
+    },
+    "album-actions": {
+      "description": "প্লেলিস্ট বা অ্যালবামের সব গানেই প্রয়োগ করতে আনডিসলাইক, ডিসলাইক, লাইক ও আনলাইক বাটন যোগ করে",
+      "name": "অ্যালবাম অ্যাকশনসমূহ"
+    },
+    "album-color-theme": {
+      "description": "অ্যালবামের রঙের উপর ভিত্তি করে ডাইনামিক থিম ও ভিজ্যুয়াল ইফেক্ট প্রয়োগ করুন",
+      "menu": {
+        "color-mix-ratio": {
+          "label": "কালার মিক্স রেশিও",
+          "submenu": {
+            "percent": "{{ratio}}%"
+          }
+        },
+        "enable-seekbar": "সিকবার এর রঙ সক্রিয় করো"
+      },
+      "name": "এলবাম এর কালার থিম"
+    },
+    "ambient-mode": {
+      "description": "ভিডিও থেকে নরম আলো ছড়িয়ে আপনার স্ক্রিনের ব্যাকগ্রাউন্ডে লাইটিং ইফেক্ট প্রয়োগ করে",
+      "menu": {
+        "blur-amount": {
+          "label": "ব্লার এর পরিমাণ",
+          "submenu": {
+            "pixels": "{{blurAmount}} পিক্সেল"
+          }
+        },
+        "buffer": {
+          "label": "বাফার",
+          "submenu": {
+            "buffer": "{{buffer}}"
+          }
+        },
+        "opacity": {
+          "label": "স্বচ্ছতা",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "quality": {
+          "label": "কোয়ালিটি",
+          "submenu": {
+            "pixels": "{{quality}}পিক্সেল"
+          }
+        },
+        "size": {
+          "label": "আকার",
+          "submenu": {
+            "percent": "{{size}}শতাংশ"
+          }
+        },
+        "smoothness-transition": {
+          "label": "মসৃণ রূপান্তর",
+          "submenu": {
+            "during": "{{interpolationTime}} সেকেন্ড সময়কালে"
+          }
+        },
+        "use-fullscreen": {
+          "label": "পূর্ণপর্দা ব্যবহার করা"
+        }
+      },
+      "name": "পরিবেষ্টিত মোড"
+    },
+    "amuse": {
+      "description": "ইউটিউব মিউজিকে অ্যামিউজ সমর্থন যোগ করা হয়েছে যা এখন ৬কে ল্যাবস উইজেটে চলছে",
+      "name": "মনোরঞ্জন",
+      "response": {
+        "query": "অ্যামিউজ API সার্ভার চলছে। /query ব্যবহার করে গান সম্পর্কিত তথ্য পান।"
+      }
+    },
+    "api-server": {
+      "description": "প্লেয়ার নিয়ন্ত্রণের জন্য একটি API সার্ভার যোগ করা হয়েছে",
+      "dialog": {
+        "request": {
+          "buttons": {
+            "allow": "অনুমতি দিন",
+            "deny": "অস্বীকার করা"
+          },
+          "message": "{{ID}} ({{origin}}) কে API ব্যবহারের অনুমতি দিবেন?",
+          "title": "API অথোরাইজ এর অনুরোধ"
+        }
+      },
+      "menu": {
+        "auth-strategy": {
+          "label": "অথোরাইজেশন স্ট্র্যাটেজি",
+          "submenu": {
+            "auth-at-first": {
+              "label": "প্রথম অনুরোধে অথোরাইজ করুন"
+            },
+            "none": {
+              "label": "কোন অথোরাইজেশন নেই"
+            }
+          }
+        },
+        "hostname": {
+          "label": "হোস্টনেম"
+        },
+        "https": {
+          "label": "HTTPS ও অনুমতিপত্র",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "HTTPS অনুমতিপত্র ফাইল নির্বাচন করো",
+              "label": "অনুমতিপত্র ফাইল (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "HTTPS সক্রিয় করো"
+            },
+            "key": {
+              "dialogTitle": "HTTPS ব্যক্তিগত চাবির ফাইল নির্বাচন করো",
+              "label": "ব্যক্তিগত চাবির ফাইল (.key/.pem)"
+            }
+          }
+        },
+        "port": {
+          "label": "পোর্ট"
+        }
+      },
+      "name": "API সার্ভার [বেটা]",
+      "prompt": {
+        "hostname": {
+          "label": "API সার্ভারের জন্য হোস্টনেম (যেমন 0.0.0.0) লিখুন:",
+          "title": "হোস্টনেম"
+        },
+        "port": {
+          "label": "API সার্ভারের জন্য পোর্ট লিখুন:",
+          "title": "পোর্ট"
+        }
+      }
+    },
+    "audio-compressor": {
+      "description": "অডিওতে কম্প্রেশন প্রয়োগ করুন (উচ্চতর শব্দের অংশগুলোর ভলিউম কমিয়ে দেয় এবং নীরবতম অংশগুলোর ভলিউম বাড়িয়ে দেয়)",
+      "name": "অডিও কম্প্রেসর"
+    },
+    "auth-proxy-adapter": {
+      "description": "অথেনটিকেশন প্রক্সি সার্ভিস ব্যবহারের সাপোর্ট",
+      "menu": {
+        "disable": "প্রক্সি অ্যাডাপ্টার বন্ধ করুন",
+        "enable": "প্রক্সি অ্যাডাপ্টার চালু করুন",
+        "hostname": {
+          "label": "হোস্টনেম"
+        },
+        "port": {
+          "label": "পোর্ট"
+        }
+      },
+      "name": "অথেনটিকেশন প্রক্সি অ্যাডাপ্টার",
+      "prompt": {
+        "hostname": {
+          "label": "লোকাল প্রক্সি সার্ভারের জন্য হোস্টনেম লিখুন (পুনরায় চালু করতে হবে):",
+          "title": "প্রক্সি হোস্টনেম"
+        },
+        "port": {
+          "label": "লোকাল প্রক্সি সার্ভারের জন্য পোর্ট লিখুন (পুনরায় চালু করতে হবে):",
+          "title": "প্রক্সি পোর্ট"
+        }
+      }
+    },
+    "blur-nav-bar": {
+      "description": "নেভিগেশন বারকে স্বচ্ছ এবং ঝাপসা করে",
+      "name": "নেভিগেশন বার ঝাপসা করুন"
+    },
+    "bypass-age-restrictions": {
+      "description": "ইউটিউবের বয়স যাচাইকরণ এড়িয়ে যান",
+      "name": "বয়স সীমাবদ্ধতা এড়ান"
+    },
+    "captions-selector": {
+      "description": "ইউটিউব মিউজিক অডিও ট্র্যাকের জন্য ক্যাপশন নির্বাচক",
+      "menu": {
+        "autoload": "সর্বশেষ ব্যবহৃত ক্যাপশন স্বয়ংক্রিয়ভাবে নির্বাচন করুন",
+        "disable-captions": "ডিফল্টভাবে কোন ক্যাপশন নেই"
+      },
+      "name": "ক্যাপশন নির্বাচক",
+      "prompt": {
+        "selector": {
+          "label": "বর্তমান ক্যাপশন ভাষা: {{language}}",
+          "none": "কোনোটি নয়",
+          "title": "ক্যাপশন ভাষা নির্বাচন করুন"
+        }
+      },
+      "templates": {
+        "title": "ক্যাপশন নির্বাচক খুলুন"
+      },
+      "toast": {
+        "caption-changed": "ক্যাপশন {{language}} ভাষায় পরিবর্তিত হয়েছে",
+        "caption-disabled": "ক্যাপশন বন্ধ করা হয়েছে",
+        "no-captions": "এই গানটির জন্য কোনো ক্যাপশন উপলব্ধ নেই"
+      }
+    },
+    "clock": {
+      "description": "ন্যাভিগেশন বারে ঘড়ি যোগ করো",
+      "menu": {
+        "format": {
+          "24-hour-format": "২৪ ঘণ্টায় দেখাও",
+          "display-seconds": "সেকেন্ডে দেখাও",
+          "label": "গঠন"
+        }
+      },
+      "name": "ঘড়ি"
+    },
+    "compact-sidebar": {
+      "description": "সাইডবারকে সবসময় কম্প্যাক্ট মোডে সেট করুন",
+      "name": "কম্প্যাক্ট সাইডবার"
+    },
+    "crossfade": {
+      "description": "গানগুলির মধ্যে ক্রসফেড করুন",
+      "menu": {
+        "advanced": "এডভান্স"
+      },
+      "name": "ক্রসফেড [বেটা]",
+      "prompt": {
+        "options": {
+          "multi-input": {
+            "fade-in-duration": "ফেড-ইন সময়কাল (ms)",
+            "fade-out-duration": "ফেড-আউট সময়কাল (ms)",
+            "fade-scaling": {
+              "label": "ফেড স্কেলিং",
+              "linear": "রৈখিক",
+              "logarithmic": "লগারিদমিক"
+            },
+            "seconds-before-end": "শেষ হওয়ার N সেকেন্ড আগে ক্রসফেড করুন"
+          },
+          "title": "ক্রসফেড অপশনসমূহ"
+        }
+      }
+    },
+    "custom-output-device": {
+      "menu": {
+        "device-selector": "ডিভাইস নির্বাচন করো"
+      },
+      "name": "আউটপুট ডিভাইস নির্বাচন করো"
+    },
+    "disable-autoplay": {
+      "description": "গান \"পজ\" মোডে শুরু করে",
+      "menu": {
+        "apply-once": "শুধুমাত্র স্টার্টআপে প্রয়োগ হয়"
+      },
+      "name": "অটোপ্লে বন্ধ করুন"
+    },
+    "discord": {
+      "backend": {
+        "already-connected": "একটিভ সংযোগের সাথে সংযোগ করার চেষ্টা করা হয়েছে",
+        "connected": "ডিসকর্ডের সাথে সংযুক্ত",
+        "disconnected": "ডিসকর্ড থেকে সংযোগ বিচ্ছিন্ন"
+      },
+      "description": "রিচ প্রেজেন্স ব্যবহার করে আপনি কি শুনছেন তা আপনার বন্ধুদের দেখান",
+      "menu": {
+        "auto-reconnect": "স্বয়ংক্রিয় রিকানেক্ট",
+        "clear-activity": "কার্যকলাপ মুছুন",
+        "clear-activity-after-timeout": "সময়সীমা শেষ হওয়ার পরে কার্যকলাপ মুছুন",
+        "connected": "সংযুক্ত",
+        "disconnected": "সংযোগ বিচ্ছিন্ন",
+        "hide-duration-left": "অবশিষ্ট সময় লুকান",
+        "hide-github-button": "গিটহাব লিঙ্ক বাটন লুকান",
+        "play-on-application": "ইউটিউব মিউজিকে চালান",
+        "set-inactivity-timeout": "নিষ্ক্রিয়তার সময়সীমা সেট করুন"
+      },
+      "name": "ডিসকর্ড রিচ প্রেজেন্স",
+      "prompt": {
+        "set-inactivity-timeout": {
+          "label": "নিষ্ক্রিয়তার সময়সীমা সেকেন্ডে লিখুন:",
+          "title": "নিষ্ক্রিয়তার সময়সীমা সেট করুন"
+        }
+      }
+    },
+    "downloader": {
+      "backend": {
+        "dialog": {
+          "error": {
+            "buttons": {
+              "ok": "ঠিক আছে"
+            },
+            "message": "আহ! দুঃখিত, ডাউনলোড ব্যর্থ হয়েছে…",
+            "title": "ডাউনলোডে সমস্যা!"
+          },
+          "start-download-playlist": {
+            "buttons": {
+              "ok": "ঠিক আছে"
+            },
+            "detail": "({{playlistSize}} টি গান)",
+            "message": "প্লেলিস্ট {{playlistTitle}} ডাউনলোড করা হচ্ছে",
+            "title": "ডাউনলোড শুরু হয়েছে"
+          }
+        },
+        "feedback": {
+          "conversion-progress": "রূপান্তর: {{percent}}%",
+          "converting": "রূপান্তর করা হচ্ছে…",
+          "done": "সম্পন্ন: {{filePath}}",
+          "download-info": "ডাউনলোড হচ্ছে {{artist}} - {{title}} [{{videoId}}",
+          "download-progress": "ডাউনলোড: {{percent}}%",
+          "downloading": "ডাউনলোড হচ্ছে…",
+          "downloading-counter": "ডাউনলোড হচ্ছে {{current}}/{{total}}…",
+          "downloading-playlist": "প্লেলিস্ট \"{{playlistTitle}}\" - {{playlistSize}}টি গান ({{playlistId}}) ডাউনলোড হচ্ছে",
+          "error-while-downloading": "\"{{author}} - {{title}}\" ডাউনলোড করতে সমস্যা: {{error}}",
+          "folder-already-exists": "{{playlistFolder}} ফোল্ডারটি ইতিমধ্যে বিদ্যমান",
+          "getting-playlist-info": "প্লেলিস্ট তথ্য নেওয়া হচ্ছে…",
+          "loading": "লোড হচ্ছে…",
+          "playlist-has-only-one-song": "প্লেলিস্টে শুধুমাত্র একটি আইটেম আছে, সরাসরি ডাউনলোড করা হচ্ছে",
+          "playlist-id-not-found": "কোনো প্লেলিস্ট আইডি পাওয়া যায়নি",
+          "playlist-is-empty": "প্লেলিস্ট খালি",
+          "playlist-is-mix-or-private": "প্লেলিস্ট তথ্য পেতে সমস্যা: নিশ্চিত করুন এটি প্রাইভেট বা \"আপনার জন্য মিক্সড\" প্লেলিস্ট নয়\n\n{{error}}",
+          "preparing-file": "ফাইল প্রস্তুত করা হচ্ছে…",
+          "saving": "সংরক্ষণ করা হচ্ছে…",
+          "trying-to-get-playlist-id": "প্লেলিস্ট আইডি পাওয়ার চেষ্টা করা হচ্ছে: {{playlistId}}",
+          "video-id-not-found": "ভিডিও পাওয়া যায়নি",
+          "writing-id3": "ID3 ট্যাগ লেখা হচ্ছে…"
+        }
+      },
+      "description": "ইন্টারফেস থেকে সরাসরি MP3 / উৎস অডিও ডাউনলোড করে",
+      "menu": {
+        "choose-download-folder": "ডাউনলোড ফোল্ডার বেছে নিন",
+        "download-finish-settings": {
+          "label": "শেষ হলে ডাউনলোড করুন",
+          "prompt": {
+            "last-percent": "x শতাংশ পরে",
+            "last-seconds": "শেষ x সেকেন্ড",
+            "title": "কখন ডাউনলোড করবেন তা কনফিগার করুন"
+          },
+          "submenu": {
+            "advanced": "উন্নত",
+            "enabled": "সক্রিয়",
+            "mode": "টাইম মোড",
+            "percent": "শতাংশ",
+            "seconds": "সেকেন্ড"
+          }
+        },
+        "download-playlist": "প্লেলিস্ট ডাউনলোড করুন",
+        "presets": "প্রিসেট",
+        "skip-existing": "বিদ্যমান ফাইলগুলি এড়িয়ে যান"
+      },
+      "name": "ডাউনলোডার",
+      "renderer": {
+        "can-not-update-progress": "প্রগ্রেস আপডেট করা যাচ্ছে না"
+      },
+      "templates": {
+        "button": "ডাউনলোড"
+      }
+    },
+    "equalizer": {
+      "description": "প্লেয়ারে একটি ইকুয়ালাইজার যোগ করে",
+      "menu": {
+        "presets": {
+          "label": "প্রিসেট",
+          "list": {
+            "bass-booster": "বেস বুস্টার"
+          }
+        }
+      },
+      "name": "ইকুয়ালাইজার"
+    },
+    "exponential-volume": {
+      "description": "ভলিউম স্লাইডারকে এক্সপোটেনশিয়াল করে তোলে যাতে কম ভলিউম নির্বাচন করা সহজ হয়।",
+      "name": "এক্সপোটেনশিয়াল ভলিউম"
+    },
+    "in-app-menu": {
+      "description": "মেনু-বারগুলোকে আকর্ষণীয়, গাঢ় বা অ্যালবাম-রঙের চেহারা দেয়",
+      "menu": {
+        "hide-dom-window-controls": "DOM উইন্ডো কন্ট্রোলগুলো লুকান"
+      },
+      "name": "অ্যাপ-ভিতরের মেনু"
+    },
+    "lumiastream": {
+      "description": "লুমিয়া স্ট্রিম সমর্থন যোগ করে",
+      "name": "লুমিয়া স্ট্রিম [বেটা]"
+    },
+    "lyrics-genius": {
+      "description": "বেশিরভাগ গানের জন্য লিরিক্স সমর্থন যোগ করে",
+      "menu": {
+        "romanized-lyrics": "রোমানাইজড লিরিক্স"
+      },
+      "name": "লিরিক্স জিনিয়াস",
+      "renderer": {
+        "fetched-lyrics": "জিনিয়াসের জন্য লিরিক্স সংগ্রহ করা হয়েছে"
+      }
+    },
+    "music-together": {
+      "description": "অন্যদের সাথে প্লেলিস্ট শেয়ার করুন। যখন হোস্ট একটি গান বাজায়, অন্য সবাই একই গানটি শুনবে",
+      "dialog": {
+        "enter-host": "হোস্ট আইডি লিখুন"
+      },
+      "internal": {
+        "save": "সংরক্ষণ করুন",
+        "track-source": "ট্র্যাক উৎস",
+        "unknown-user": "অজানা ব্যবহারকারী"
+      },
+      "menu": {
+        "click-to-copy-id": "হোস্ট আইডি কপি করুন",
+        "close": "মিউজিক টুগেদার বন্ধ করুন",
+        "connected-users": "সংযুক্ত ব্যবহারকারীরা",
+        "disconnect": "মিউজিক টুগেদার সংযোগ বিচ্ছিন্ন করুন",
+        "empty-user": "কোন সংযুক্ত ব্যবহারকারী নেই",
+        "host": "মিউজিক টুগেদার হোস্ট",
+        "join": "মিউজিক টুগেদারে যোগ দিন",
+        "permission": {
+          "all": "অতিথিদের প্লেলিস্ট এবং প্লেয়ার নিয়ন্ত্রণ করতে দিন",
+          "host-only": "শুধুমাত্র হোস্ট প্লেলিস্ট এবং প্লেয়ার নিয়ন্ত্রণ করতে পারবেন",
+          "playlist": "অতিথিদের প্লেলিস্ট নিয়ন্ত্রণ করতে দিন"
+        },
+        "set-permission": "নিয়ন্ত্রণ অনুমতি পরিবর্তন করুন",
+        "status": {
+          "disconnected": "সংযোগ বিচ্ছিন্ন",
+          "guest": "অতিথি হিসাবে সংযুক্ত",
+          "host": "হোস্ট হিসাবে সংযুক্ত"
+        }
+      },
+      "name": "মিউজিক টুগেদার [বেটা]",
+      "toast": {
+        "add-song-failed": "গান যোগ করা ব্যর্থ হয়েছে",
+        "closed": "মিউজিক টুগেদার বন্ধ হয়েছে",
+        "disconnected": "মিউজিক টুগেদার সংযোগ বিচ্ছিন্ন হয়েছে",
+        "host-failed": "মিউজিক টুগেদার হোস্ট করা ব্যর্থ হয়েছে",
+        "id-copied": "হোস্ট আইডি ক্লিপবোর্ডে কপি করা হয়েছে",
+        "id-copy-failed": "হোস্ট আইডি ক্লিপবোর্ডে কপি করা ব্যর্থ হয়েছে",
+        "join-failed": "মিউজিক টুগেদারে যোগদান ব্যর্থ হয়েছে",
+        "joined": "মিউজিক টুগেদারে যোগ দেওয়া হয়েছে",
+        "permission-changed": "মিউজিক টুগেদার অনুমতি \"{{permission}}\" এ পরিবর্তন করা হয়েছে",
+        "remove-song-failed": "গান সরানো ব্যর্থ হয়েছে",
+        "user-connected": "{{name}} মিউজিক টুগেদারে যোগ দিয়েছেন",
+        "user-disconnected": "{{name}} মিউজিক টুগেদার ছেড়ে চলে গেছেন"
+      }
+    },
+    "navigation": {
+      "description": "পরবর্তী/পূর্ববর্তী নেভিগেশন তীরগুলি আপনার প্রিয় ব্রাউজারের মতো সরাসরি ইন্টারফেসে অন্তর্ভুক্ত করা হয়েছে",
+      "name": "নেভিগেশন",
+      "templates": {
+        "back": {
+          "title": "আগের পাতায় যান"
+        },
+        "forward": {
+          "title": "পরের পাতায় যান"
+        }
+      }
+    },
+    "no-google-login": {
+      "description": "ইন্টারফেস থেকে Google লগইন বাটন এবং লিঙ্কগুলি সরান",
+      "name": "গুগল লগইন নয়"
+    },
+    "notifications": {
+      "description": "একটি গান বাজতে শুরু হলে একটি বিজ্ঞপ্তি প্রদর্শন করে (উইন্ডোজে ইন্টারঅ্যাকটিভ বিজ্ঞপ্তিগুলি উপলব্ধ)",
+      "menu": {
+        "interactive": "ইন্টারঅ্যাকটিভ বিজ্ঞপ্তিসমূহ",
+        "interactive-settings": {
+          "label": "ইন্টারঅ্যাকটিভ সেটিংস",
+          "submenu": {
+            "hide-button-text": "বাটন টেক্সট লুকান",
+            "refresh-on-play-pause": "প্লে/পজে রিফ্রেশ করুন",
+            "tray-controls": "ট্রে ক্লিকে খুলুন/বন্ধ করুন"
+          }
+        },
+        "priority": "বিজ্ঞপ্তি অগ্রাধিকার",
+        "toast-style": "টোস্ট স্টাইল",
+        "unpause-notification": "বিরতি থেকে ফিরলে বিজ্ঞপ্তি দেখান"
+      },
+      "name": "বিজ্ঞপ্তিসমূহ"
+    },
+    "performance-improvement": {
+      "description": "পরীক্ষামূলক স্ক্রিপ্টগুলি সক্ষম করে পারফরম্যান্স উন্নত করুন",
+      "name": "পারফরম্যান্স উন্নতিকরণ [বেটা]"
+    },
+    "picture-in-picture": {
+      "description": "অ্যাপকে পিকচার-ইন-পিকচার মোডে স্যুইচ করতে অনুমতি দেয়",
+      "menu": {
+        "always-on-top": "সবসময় উপরে",
+        "hotkey": {
+          "label": "হটকি",
+          "prompt": {
+            "keybind-options": {
+              "hotkey": "হটকি"
+            },
+            "label": "পিকচার-ইন-পিকচার টগল করার জন্য একটি হটকি নির্বাচন করুন",
+            "title": "পিকচার-ইন-পিকচার হটকি"
+          }
+        },
+        "save-window-position": "উইন্ডো অবস্থান সংরক্ষণ করুন",
+        "save-window-size": "উইন্ডো আকার সংরক্ষণ করুন",
+        "use-native-pip": "ব্রাউজারের নেটিভ PiP ব্যবহার করুন"
+      },
+      "name": "পিকচার-ইন-পিকচার",
+      "templates": {
+        "button": "পিকচার-ইন-পিকচার"
+      }
+    },
+    "playback-speed": {
+      "description": "দ্রুত শুনুন, ধীরে শুনুন! গানের গতি নিয়ন্ত্রণ করার জন্য একটি স্লাইডার যোগ করে",
+      "name": "প্লেব্যাক স্পিড",
+      "templates": {
+        "button": "গতি"
+      }
+    },
+    "precise-volume": {
+      "description": "মাউসহুইল/হটকি ব্যবহার করে সঠিকভাবে ভলিউম নিয়ন্ত্রণ করুন, কাস্টম HUD এবং কাস্টমাইজযোগ্য ভলিউম স্টেপ সহ",
+      "menu": {
+        "arrows-shortcuts": "লোকাল অ্যারো-কি কন্ট্রোল",
+        "custom-volume-steps": "কাস্টম ভলিউম স্টেপ সেট করুন",
+        "global-shortcuts": "গ্লোবাল হটকি"
+      },
+      "name": "নির্ভুল ভলিউম",
+      "prompt": {
+        "global-shortcuts": {
+          "keybind-options": {
+            "decrease": "ভলিউম কমান",
+            "increase": "ভলিউম বাড়ান"
+          },
+          "label": "গ্লোবাল ভলিউম কিবাইন্ড নির্বাচন করুন:",
+          "title": "গ্লোবাল ভলিউম কিবাইন্ড"
+        },
+        "volume-steps": {
+          "label": "ভলিউম বৃদ্ধি/হ্রাস স্টেপ নির্বাচন করুন",
+          "title": "ভলিউম স্টেপস"
+        }
+      }
+    },
+    "quality-changer": {
+      "backend": {
+        "dialog": {
+          "quality-changer": {
+            "detail": "বর্তমান কোয়ালিটি: {{quality}}",
+            "message": "ভিডিও কোয়ালিটি নির্বাচন করুন:",
+            "title": "ভিডিও কোয়ালিটি নির্বাচন করুন"
+          }
+        }
+      },
+      "description": "ভিডিও ওভারলেতে একটি বাটনের মাধ্যমে ভিডিও কোয়ালিটি পরিবর্তন করতে দেয়",
+      "name": "ভিডিও কোয়ালিটি পরিবর্তক",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "প্লেয়ারের মান পরিবর্তনের অপশন খুলুন"
+        }
+      }
+    },
+    "scrobbler": {
+      "description": "স্ক্রবলিং সমর্থন যোগ করুন (যেমন last.fm, Listenbrainz)",
+      "dialog": {
+        "lastfm": {
+          "auth-failed": {
+            "message": "Last.fm এর সাথে প্রমাণীকরণ ব্যর্থ হয়েছে\nপরবর্তী পুনরায় চালু না হওয়া পর্যন্ত পপআপ লুকান।",
+            "title": "প্রমাণীকরণ ব্যর্থ হয়েছে"
+          }
+        }
+      },
+      "menu": {
+        "lastfm": {
+          "api-settings": "Last.fm API সেটিংস"
+        },
+        "listenbrainz": {
+          "token": "ListenBrainz ব্যবহারকারী টোকেন লিখুন"
+        },
+        "scrobble-alternative-title": "বিকল্প শিরোনাম ব্যবহার করুন",
+        "scrobble-other-media": "অন্যান্য মিডিয়া স্ক্রবল করুন"
+      },
+      "name": "স্ক্রবলার",
+      "prompt": {
+        "lastfm": {
+          "api-key": "Last.fm API কি",
+          "api-secret": "Last.fm API সিক্রেট"
+        },
+        "listenbrainz": {
+          "token": {
+            "label": "আপনার ListenBrainz ব্যবহারকারী টোকেন লিখুন:",
+            "title": "ListenBrainz টোকেন"
+          }
+        }
+      }
+    },
+    "shortcuts": {
+      "description": "প্লেব্যাকের জন্য গ্লোবাল হটকি (প্লে/পজ/পরবর্তী/পূর্ববর্তী) সেট করতে এবং মিডিয়া কী ওভাররাইড করে মিডিয়া OSD বন্ধ করতে, Ctrl/CMD + F চালু করে অনুসন্ধান করতে, মিডিয়া কীগুলির জন্য Linux MPRIS সমর্থন চালু করতে এবং অ্যাডভান্সড ব্যবহারকারীদের জন্য কাস্টম হটকি সেট করতে অনুমতি দেয়",
+      "menu": {
+        "override-media-keys": "মিডিয়া কী ওভাররাইড করুন",
+        "set-keybinds": "গ্লোবাল গান কন্ট্রোল সেট করুন"
+      },
+      "name": "শর্টকাট (এবং MPRIS)",
+      "prompt": {
+        "keybind": {
+          "keybind-options": {
+            "next": "পরবর্তী",
+            "play-pause": "চালান / বিরতি",
+            "previous": "পূর্ববর্তী"
+          },
+          "label": "গান নিয়ন্ত্রণের জন্য গ্লোবাল কিবাইন্ড নির্বাচন করুন:",
+          "title": "গ্লোবাল কিবাইন্ড"
+        }
+      }
+    },
+    "skip-disliked-songs": {
+      "description": "পছন্দ হয়নি এমন গানগুলো এড়িয়ে যায়",
+      "name": "অপছন্দ গান এড়ান"
+    },
+    "skip-silences": {
+      "description": "স্বয়ংক্রিয়ভাবে গানের নীরব অংশগুলো এড়িয়ে যান",
+      "name": "নীরবতা এড়িয়ে যান"
+    },
+    "sponsorblock": {
+      "description": "স্বয়ংক্রিয়ভাবে ইন্ট্রো/আউটট্রো বা মিউজিক ভিডিওর যেসব অংশে গান বাজছে না সেগুলি এড়িয়ে যায়",
+      "name": "স্পনসরব্লক"
+    },
+    "synced-lyrics": {
+      "description": "LRClib এর মত প্রোভাইডার ব্যবহার করে গানের সাথে সিঙ্ক করা লিরিক্স প্রদান করে।",
+      "errors": {
+        "fetch": "⚠️\tলিরিক্স আনার সময় একটি ত্রুটি ঘটেছে।\n\tঅনুগ্রহ করে পরে আবার চেষ্টা করুন।",
+        "not-found": "⚠️ এই গানের জন্য কোন লিরিক্স পাওয়া যায়নি।"
+      },
+      "menu": {
+        "convert-chinese-character": {
+          "submenu": {
+            "disabled": {
+              "label": "নিষ্ক্রিয়"
+            }
+          }
+        },
+        "default-text-string": {
+          "label": "লিরিক্সের মাঝে ডিফল্ট অক্ষর",
+          "tooltip": "লিরিক্সের মধ্যে ফাঁকের জন্য ব্যবহৃত ডিফল্ট অক্ষর নির্বাচন করুন"
+        },
+        "line-effect": {
+          "label": "লাইন ইফেক্ট",
+          "submenu": {
+            "fancy": {
+              "label": "ফ্যান্সি",
+              "tooltip": "বর্তমান লাইনে বড়, অ্যাপের মত ইফেক্ট ব্যবহার করুন"
+            },
+            "focus": {
+              "label": "ফোকাস",
+              "tooltip": "শুধুমাত্র বর্তমান লাইনটি সাদা করুন"
+            },
+            "offset": {
+              "label": "অফসেট",
+              "tooltip": "বর্তমান লাইনকে ডানদিকে অফসেট করুন"
+            },
+            "scale": {
+              "label": "স্কেল",
+              "tooltip": "বর্তমান লাইন স্কেল করুন"
+            }
+          },
+          "tooltip": "বর্তমান লাইনে প্রয়োগ করার জন্য ইফেক্ট নির্বাচন করুন"
+        },
+        "precise-timing": {
+          "label": "লিরিক্স পুরোপুরি সিঙ্ক করুন",
+          "tooltip": "পরবর্তী লাইন প্রদর্শনের মিলিসেকেন্ড পর্যন্ত গণনা করুন (পারফরম্যান্সে সামান্য প্রভাব পড়তে পারে)"
+        },
+        "preferred-provider": {
+          "label": "পছন্দের প্রোভাইডার",
+          "none": {
+            "label": "কোনটি নয়",
+            "tooltip": "কোন প্রোভাইডার নির্বাচন করা হয়নি"
+          },
+          "tooltip": "সহজাত প্রোভাইডার নির্বাচন করো"
+        },
+        "romanization": {
+          "label": "লিরিক্স রোমানাইজ করুন",
+          "tooltip": "যদি লিরিক্স ভিন্ন ভাষায় হয়, তাহলে একটি ল্যাটিন সংস্করণ প্রদর্শন করার চেষ্টা করুন।"
+        },
+        "show-lyrics-even-if-inexact": {
+          "label": "অনির্ভুল হলেও লিরিক্স দেখান",
+          "tooltip": "যদি গানটি না পাওয়া যায়, প্লাগইনটি একটি ভিন্ন অনুসন্ধান কোয়েরি দিয়ে আবার চেষ্টা করে।\nদ্বিতীয় প্রচেষ্টার ফলাফল সঠিক নাও হতে পারে।"
+        },
+        "show-time-codes": {
+          "label": "টাইম কোড দেখান",
+          "tooltip": "লিরিক্সের পাশে টাইম কোড দেখান"
+        }
+      },
+      "name": "সিঙ্ক করা লিরিক্স",
+      "refetch-btn": {
+        "fetching": "আনছে..।",
+        "normal": "লিরিক্স পুনরায় আনুন"
+      },
+      "warnings": {
+        "duration-mismatch": "⚠️ - সময়কাল মিলে না যাওয়ার কারণে লিরিক্স সিঙ্ক হতে নাও পারে।",
+        "inexact": "⚠️ - এই গানের লিরিক্স সঠিক নাও হতে পারে",
+        "instrumental": "⚠️ - এটি একটি ইনস্ট্রুমেন্টাল গান"
+      }
+    },
+    "taskbar-mediacontrol": {
+      "description": "উইন্ডোজ টাস্কবার থেকে প্লেব্যাক নিয়ন্ত্রণ করুন",
+      "name": "টাস্কবার মিডিয়া কন্ট্রোল"
+    },
+    "touchbar": {
+      "description": "macOS ব্যবহারকারীদের জন্য একটি টাচবার উইজেট যোগ করে",
+      "name": "টাচবার"
+    },
+    "transparent-player": {
+      "description": "অ্যাপ উইন্ডো স্বচ্ছ করে",
+      "menu": {
+        "opacity": {
+          "label": "স্বচ্ছতা"
+        },
+        "type": {
+          "label": "ধরণ",
+          "submenu": {
+            "acrylic": "অ্যাক্রিলিক",
+            "mica": "মিকা",
+            "none": "কোনটি নয়",
+            "tabbed": "ট্যাবকৃত"
+          }
+        }
+      },
+      "name": "স্বচ্ছ প্লেয়ার"
+    },
+    "tuna-obs": {
+      "description": "OBS এর প্লাগইন টুনার সাথে সংযোগ",
+      "name": "টুনা OBS"
+    },
+    "unobtrusive-player": {
+      "description": "গান চালানোর সময় প্লেয়ারকে পপ আপ হওয়া থেকে বিরত রাখে",
+      "name": "অনাড়ম্বর প্লেয়ার"
+    },
+    "video-toggle": {
+      "description": "ভিডিও/গান মোডের মধ্যে স্যুইচ করার জন্য একটি বাটন যোগ করে। ঐচ্ছিকভাবে সম্পূর্ণ ভিডিও ট্যাবও সরাতে পারে",
+      "menu": {
+        "align": {
+          "label": "সারিবদ্ধকরণ",
+          "submenu": {
+            "left": "বাম",
+            "middle": "মাঝখানে",
+            "right": "ডান"
+          }
+        },
+        "force-hide": "জোর করে ভিডিও ট্যাব সরান",
+        "mode": {
+          "label": "মোড",
+          "submenu": {
+            "custom": "কাস্টম টগল",
+            "disabled": "নিষ্ক্রিয়",
+            "native": "নেটিভ টগল"
+          }
+        }
+      },
+      "name": "ভিডিও টগল",
+      "templates": {
+        "button-song": "গান",
+        "button-video": "ভিডিও"
+      }
+    },
+    "visualizer": {
+      "description": "প্লেয়ারে একটি ভিজ্যুয়ালাইজার যোগ করে",
+      "menu": {
+        "visualizer-type": "ভিজ্যুয়ালাইজার প্রকার"
+      },
+      "name": "ভিজ্যুয়ালাইজার"
+    }
+  }
+}

@@ -21,9 +21,7 @@ export default createPlugin<
           this.observer = new MutationObserver(() => {
             if (dislikeBtn?.getAttribute('like-status') == 'DISLIKE') {
               document
-                .querySelector<HTMLButtonElement>(
-                  'tp-yt-paper-icon-button.next-button',
-                )
+                .querySelector<HTMLButtonElement>('yt-icon-button.next-button')
                 ?.click();
             }
           });

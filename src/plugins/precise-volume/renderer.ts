@@ -1,15 +1,14 @@
 import { type PreciseVolumePluginConfig } from './index';
-
 import { debounce } from '@/providers/decorators';
 
 import type { RendererContext } from '@/types/contexts';
-import type { YoutubePlayer } from '@/types/youtube-player';
+import type { MusicPlayer } from '@/types/music-player';
 
 function $<E extends Element = Element>(selector: string) {
   return document.querySelector<E>(selector);
 }
 
-let api: YoutubePlayer;
+let api: MusicPlayer;
 
 export const moveVolumeHud = debounce((showVideo: boolean) => {
   const volumeHud = $<HTMLElement>('#volumeHud');
@@ -25,7 +24,7 @@ export const moveVolumeHud = debounce((showVideo: boolean) => {
 let options: PreciseVolumePluginConfig;
 
 export const onPlayerApiReady = async (
-  playerApi: YoutubePlayer,
+  playerApi: MusicPlayer,
   context: RendererContext<PreciseVolumePluginConfig>,
 ) => {
   options = await context.getConfig();
@@ -45,7 +44,7 @@ export const onPlayerApiReady = async (
   }, 2500);
 
   /** Restore saved volume and setup tooltip */
-  function firstRun() {
+  async function firstRun() {
     if (typeof options.savedVolume === 'number') {
       // Set saved volume as tooltip
       setTooltip(options.savedVolume);
@@ -66,12 +65,12 @@ export const onPlayerApiReady = async (
     injectVolumeHud(noVid);
     if (!noVid) {
       setupVideoPlayerOnwheel();
-      if (!window.mainConfig.plugins.isEnabled('video-toggle')) {
+      if (!(await window.mainConfig.plugins.isEnabled('video-toggle'))) {
         // Video-toggle handles hud positioning on its own
         const videoMode = () =>
           api.getPlayerResponse().videoDetails?.musicVideoType !==
           'MUSIC_VIDEO_TYPE_ATV';
-        $('video')?.addEventListener('ytmd:src-changed', () =>
+        $('video')?.addEventListener('peard:src-changed', () =>
           moveVolumeHud(videoMode()),
         );
       }
@@ -155,9 +154,9 @@ export const onPlayerApiReady = async (
   function setupSliderObserver() {
     const sliderObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
-        if (mutation.target instanceof HTMLInputElement) {
+        if (mutation.target.nodeName === 'TP-YT-PAPER-SLIDER') {
           // This checks that volume-slider was manually set
-          const target = mutation.target;
+          const target = mutation.target as HTMLInputElement;
           const targetValueNumeric = Number(target.value);
           if (
             mutation.oldValue !== target.value &&
@@ -280,7 +279,7 @@ export const onPlayerApiReady = async (
   );
   context.ipc.on('setVolume', (value: number) => setVolume(value));
 
-  firstRun();
+  await firstRun();
 };
 
 export const onConfigChange = (config: PreciseVolumePluginConfig) => {

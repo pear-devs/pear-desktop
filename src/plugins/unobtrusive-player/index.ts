@@ -1,23 +1,43 @@
 import style from './style.css?inline';
-
-import { createPlugin } from '@/utils';
 import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 const handlePlay = (e: MouseEvent) => {
   if (!(e.target instanceof HTMLElement)) return;
 
-  if (
-    e.target.closest('ytmusic-play-button-renderer') &&
-    !e.target.closest('ytmusic-player-page')
-  ) {
-    document.body.classList.add('unobtrusive-player--did-play');
-  }
-
+  // Player bar handler
   if (
     e.target.closest('ytmusic-player-bar') &&
     !document.body.classList.contains('unobtrusive-player--auto-closing')
   ) {
     document.body.classList.remove('unobtrusive-player--did-play');
+    return;
+  }
+
+  // Song play button handler
+  if (
+    e.target.closest('ytmusic-play-button-renderer') &&
+    !e.target.closest('ytmusic-player-page')
+  ) {
+    document.body.classList.add('unobtrusive-player--did-play');
+    return;
+  }
+
+  // Shuffle play menu item handler
+  const shuffleIconPathData = (
+    document.querySelector('iron-iconset-svg[name="yt-sys-icons"] #shuffle')
+      ?.firstChild as SVGElement | null
+  )
+    ?.getAttribute('d')
+    ?.substring(0, 15);
+
+  if (
+    e.target.closest(
+      `ytmusic-menu-navigation-item-renderer:has(yt-icon path[d^="${shuffleIconPathData}"])`,
+    )
+  ) {
+    document.body.classList.add('unobtrusive-player--did-play');
+    return;
   }
 };
 

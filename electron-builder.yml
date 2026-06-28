@@ -1,0 +1,121 @@
+appId: "com.github.th-ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063"
+productName: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063"
+files:
+  - '!*'
+  - dist
+  - assets
+  - license
+  - '!node_modules'
+  - 'node_modules/custom-electron-prompt/**'
+  - 'node_modules/@ghostery/adblocker-electron-preload/**'
+  - 'node_modules/@ffmpeg.wasm/core-mt/**'
+  - '!node_modules/**/*.map'
+  - '!node_modules/**/*.ts'
+asarUnpack:
+  - assets
+mac:
+  identity: null
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  icon: assets/generated/icons/mac/icon.icon
+  compression: maximum
+win:
+  icon: assets/generated/icons/win/icon.ico
+  target:
+    - target: nsis-web
+      arch:
+        - x64
+        - ia32
+        - arm64
+    - target: portable
+      arch:
+        - x64
+        - ia32
+        - arm64
+  compression: maximum
+nsisWeb:
+  runAfterFinish: false
+linux:
+  icon: assets/generated/icons/png
+  category: AudioVideo
+  desktop:
+    entry:
+      StartupWMClass: "com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063"
+  target:
+    - target: AppImage
+      arch:
+        - x64
+        - arm64
+        - armv7l
+    - target: flatpak
+      arch:
+        - x64
+    - target: deb
+      arch:
+        - x64
+        - arm64
+        - armv7l
+    - target: rpm
+      arch:
+        - x64
+        - arm64
+    - target: snap
+      arch:
+        - x64
+    - target: freebsd
+      arch:
+        - x64
+        - arm64
+        - armv7l
+    - target: tar.gz
+      arch:
+        - x64
+        - arm64
+        - armv7l
+appImage:
+  description: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063 Desktop App bundled with custom plugins"
+  category: AudioVideo
+flatpak:
+  description: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063 Desktop App bundled with custom plugins"
+  category: AudioVideo
+  runtimeVersion: '24.08'
+  baseVersion: '24.08'
+  finishArgs:
+    - '--socket=wayland'
+    - '--socket=x11'
+    - '--share=ipc'
+    - '--device=dri'
+    - '--socket=pulseaudio'
+    - '--share=network'
+    - '--filesystem=xdg-music:rw'
+    - '--talk-name=org.freedesktop.Notifications'
+    - '--talk-name=org.gnome.SessionManager'
+    - '--talk-name=org.kde.StatusNotifierWatcher'
+    - "--own-name=org.mpris.MediaPlayer2.\u0059\u006f\u0075\u0074\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063.*"
+deb:
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    - libuuid1
+    - libasound2
+    - libgbm1
+rpm:
+  depends:
+    - libuuid
+  fpm:
+    - '--rpm-rpmbuild-define'
+    - _build_id_links none
+snap:
+  slots:
+    - mpris:
+        interface: mpris
+directories:
+  output: ./pack/

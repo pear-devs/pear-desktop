@@ -1,15 +1,13 @@
 import prompt from 'custom-electron-prompt';
+import { type BrowserWindow } from 'electron';
 
-import { BrowserWindow } from 'electron';
-
+import { type ScrobblerPluginConfig } from './index';
+import { type SetConfType, backend } from './main';
 import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 
-import { ScrobblerPluginConfig } from './index';
-import { SetConfType, backend } from './main';
-
-import type { MenuContext } from '@/types/contexts';
 import type { MenuTemplate } from '@/menu';
+import type { MenuContext } from '@/types/contexts';
 
 async function promptLastFmOptions(
   options: ScrobblerPluginConfig,
@@ -102,6 +100,15 @@ export const onMenu = async ({
       checked: Boolean(config.alternativeTitles),
       click(item) {
         config.alternativeTitles = item.checked;
+        setConfig(config);
+      },
+    },
+    {
+      label: t('plugins.scrobbler.menu.scrobble-alternative-artist'),
+      type: 'checkbox',
+      checked: Boolean(config.alternativeArtist),
+      click(item) {
+        config.alternativeArtist = item.checked;
         setConfig(config);
       },
     },

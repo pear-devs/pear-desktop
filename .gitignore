@@ -1,11 +1,11 @@
 node_modules
 /dist
 /pack
-electron-builder.yml
 .vscode/settings.json
 .idea
 
 .pnp.*
+.pnpm-store
 .yarn/*
 !.yarn/patches
 !.yarn/plugins
@@ -13,3 +13,5 @@ electron-builder.yml
 !.yarn/sdks
 !.yarn/versions
 .vite-inspect
+
+.DS_Store

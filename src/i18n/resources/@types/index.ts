@@ -2,9 +2,9 @@ export interface LanguageResources {
   [lang: string]: {
     translation: Record<string, unknown> & {
       language?: {
-        name: string;
+        'name': string;
         'local-name': string;
-        code: string;
+        'code': string;
       };
     };
   };

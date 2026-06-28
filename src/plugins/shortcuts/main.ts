@@ -1,12 +1,11 @@
-import { BrowserWindow, globalShortcut } from 'electron';
+import { type BrowserWindow, globalShortcut } from 'electron';
 import is from 'electron-is';
 import { register as registerElectronLocalShortcut } from 'electron-localshortcut';
 
-import registerMPRIS from './mpris';
-import getSongControls from '@/providers/song-controls';
+import { registerMPRIS } from './mpris';
+import { getSongControls } from '@/providers/song-controls';
 
 import type { ShortcutMappingType, ShortcutsPluginConfig } from './index';
-
 import type { BackendContext } from '@/types/contexts';
 
 function _registerGlobalShortcut(
@@ -36,16 +35,13 @@ export const onMainLoad = async ({
   const config = await getConfig();
 
   const songControls = getSongControls(window);
-  const { playPause, next, previous, search } = songControls;
+  const { playPause, next, previous } = songControls;
 
   if (config.overrideMediaKeys) {
     _registerGlobalShortcut(window.webContents, 'MediaPlayPause', playPause);
     _registerGlobalShortcut(window.webContents, 'MediaNextTrack', next);
     _registerGlobalShortcut(window.webContents, 'MediaPreviousTrack', previous);
   }
-
-  _registerLocalShortcut(window, 'CommandOrControl+F', search);
-  _registerLocalShortcut(window, 'CommandOrControl+L', search);
 
   if (is.linux()) {
     registerMPRIS(window);

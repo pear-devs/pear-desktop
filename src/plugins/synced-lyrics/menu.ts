@@ -1,8 +1,9 @@
+import { providerNames } from './providers';
 import { t } from '@/i18n';
 
-import type { MenuItemConstructorOptions } from 'electron';
-import type { MenuContext } from '@/types/contexts';
 import type { SyncedLyricsPluginConfig } from './types';
+import type { MenuContext } from '@/types/contexts';
+import type { MenuItemConstructorOptions } from 'electron';
 
 export const menu = async (
   ctx: MenuContext<SyncedLyricsPluginConfig>,
@@ -10,6 +11,35 @@ export const menu = async (
   const config = await ctx.getConfig();
 
   return [
+    {
+      label: t('plugins.synced-lyrics.menu.preferred-provider.label'),
+      toolTip: t('plugins.synced-lyrics.menu.preferred-provider.tooltip'),
+      type: 'submenu',
+      submenu: [
+        {
+          label: t('plugins.synced-lyrics.menu.preferred-provider.none.label'),
+          toolTip: t(
+            'plugins.synced-lyrics.menu.preferred-provider.none.tooltip',
+          ),
+          type: 'radio',
+          checked: config.preferredProvider === undefined,
+          click() {
+            ctx.setConfig({ preferredProvider: undefined });
+          },
+        },
+        ...providerNames.map(
+          (provider) =>
+            ({
+              label: provider,
+              type: 'radio',
+              checked: config.preferredProvider === provider,
+              click() {
+                ctx.setConfig({ preferredProvider: provider });
+              },
+            }) as const,
+        ),
+      ],
+    },
     {
       label: t('plugins.synced-lyrics.menu.precise-timing.label'),
       toolTip: t('plugins.synced-lyrics.menu.precise-timing.tooltip'),
@@ -93,47 +123,23 @@ export const menu = async (
       toolTip: t('plugins.synced-lyrics.menu.default-text-string.tooltip'),
       type: 'submenu',
       submenu: [
-        {
-          label: '♪',
-          type: 'radio',
-          checked: config.defaultTextString === '♪',
-          click() {
-            ctx.setConfig({
-              defaultTextString: '♪',
-            });
-          },
+        { label: '♪', value: '♪' },
+        { label: '" "', value: ' ' },
+        { label: '...', value: ['.', '..', '...'] },
+        { label: '•••', value: ['•', '••', '•••'] },
+        { label: '———', value: '———' },
+      ].map(({ label, value }) => ({
+        label,
+        type: 'radio',
+        checked:
+          typeof value === 'string'
+            ? config.defaultTextString === value
+            : JSON.stringify(config.defaultTextString) ===
+              JSON.stringify(value),
+        click() {
+          ctx.setConfig({ defaultTextString: value });
         },
-        {
-          label: '" "',
-          type: 'radio',
-          checked: config.defaultTextString === ' ',
-          click() {
-            ctx.setConfig({
-              defaultTextString: ' ',
-            });
-          },
-        },
-        {
-          label: '...',
-          type: 'radio',
-          checked: config.defaultTextString === '...',
-          click() {
-            ctx.setConfig({
-              defaultTextString: '...',
-            });
-          },
-        },
-        {
-          label: '———',
-          type: 'radio',
-          checked: config.defaultTextString === '———',
-          click() {
-            ctx.setConfig({
-              defaultTextString: '———',
-            });
-          },
-        },
-      ],
+      })),
     },
     {
       label: t('plugins.synced-lyrics.menu.romanization.label'),
@@ -145,6 +151,62 @@ export const menu = async (
           romanization: item.checked,
         });
       },
+    },
+    {
+      label: t('plugins.synced-lyrics.menu.convert-chinese-character.label'),
+      toolTip: t(
+        'plugins.synced-lyrics.menu.convert-chinese-character.tooltip',
+      ),
+      type: 'submenu',
+      submenu: [
+        {
+          label: t(
+            'plugins.synced-lyrics.menu.convert-chinese-character.submenu.disabled.label',
+          ),
+          toolTip: t(
+            'plugins.synced-lyrics.menu.convert-chinese-character.submenu.disabled.tooltip',
+          ),
+          type: 'radio',
+          checked:
+            config.convertChineseCharacter === 'disabled' ||
+            config.convertChineseCharacter === undefined,
+          click() {
+            ctx.setConfig({
+              convertChineseCharacter: 'disabled',
+            });
+          },
+        },
+        {
+          label: t(
+            'plugins.synced-lyrics.menu.convert-chinese-character.submenu.simplified-to-traditional.label',
+          ),
+          toolTip: t(
+            'plugins.synced-lyrics.menu.convert-chinese-character.submenu.simplified-to-traditional.tooltip',
+          ),
+          type: 'radio',
+          checked: config.convertChineseCharacter === 'simplifiedToTraditional',
+          click() {
+            ctx.setConfig({
+              convertChineseCharacter: 'simplifiedToTraditional',
+            });
+          },
+        },
+        {
+          label: t(
+            'plugins.synced-lyrics.menu.convert-chinese-character.submenu.traditional-to-simplified.label',
+          ),
+          toolTip: t(
+            'plugins.synced-lyrics.menu.convert-chinese-character.submenu.traditional-to-simplified.tooltip',
+          ),
+          type: 'radio',
+          checked: config.convertChineseCharacter === 'traditionalToSimplified',
+          click() {
+            ctx.setConfig({
+              convertChineseCharacter: 'traditionalToSimplified',
+            });
+          },
+        },
+      ],
     },
     {
       label: t('plugins.synced-lyrics.menu.show-time-codes.label'),

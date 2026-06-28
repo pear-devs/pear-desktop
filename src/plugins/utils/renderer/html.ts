@@ -1,4 +1,4 @@
-import { defaultTrustedTypePolicy } from '@/utils/trusted-types';
+const domParser = new DOMParser();
 
 /**
  * Creates a DOM element from an HTML string
@@ -6,13 +6,8 @@ import { defaultTrustedTypePolicy } from '@/utils/trusted-types';
  * @returns The DOM element
  */
 export const ElementFromHtml = (html: string): HTMLElement => {
-  const template = document.createElement('template');
-  html = html.trim(); // Never return a text node of whitespace as the result
-  (template.innerHTML as string | TrustedHTML) = defaultTrustedTypePolicy
-    ? defaultTrustedTypePolicy.createHTML(html)
-    : html;
-
-  return template.content.firstElementChild as HTMLElement;
+  return (domParser.parseFromString(html, 'text/html') as HTMLDocument).body
+    .firstElementChild as HTMLElement;
 };
 
 /**

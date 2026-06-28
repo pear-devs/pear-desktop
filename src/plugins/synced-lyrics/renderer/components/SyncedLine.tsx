@@ -1,136 +1,141 @@
-import { createEffect, createMemo, For, Show, createSignal } from 'solid-js';
+import { createEffect, For, Show, createSignal, createMemo } from 'solid-js';
+import { type VirtualizerHandle } from 'virtua/solid';
 
-import { currentTime } from './LyricsContainer';
+import { type LineLyrics } from '@/plugins/synced-lyrics/types';
 
-import { config } from '../renderer';
 import { _ytAPI } from '..';
-
+import { config, currentTime } from '../renderer';
 import {
   canonicalize,
-  romanizeChinese,
-  romanizeHangul,
-  romanizeJapanese,
-  romanizeJapaneseOrHangul,
+  convertChineseCharacter,
+  romanize,
   simplifyUnicode,
 } from '../utils';
 
-import type { LineLyrics } from '../../types';
-
 interface SyncedLineProps {
+  scroller: VirtualizerHandle;
+  index: number;
+
   line: LineLyrics;
-  hasJapanese: boolean;
-  hasKorean: boolean;
+  status: 'upcoming' | 'current' | 'previous';
 }
 
-export const SyncedLine = (props: SyncedLineProps) => {
-  const status = createMemo(() => {
-    const current = currentTime();
-
-    if (props.line.timeInMs >= current) return 'upcoming';
-    if (current - props.line.timeInMs >= props.line.duration) return 'previous';
-    return 'current';
+const EmptyLine = (props: SyncedLineProps) => {
+  const states = createMemo(() => {
+    const defaultText = config()?.defaultTextString ?? '';
+    return Array.isArray(defaultText) ? defaultText : [defaultText];
   });
 
-  let ref: HTMLDivElement | undefined;
-  createEffect(() => {
-    if (status() === 'current') {
-      ref?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+  const index = createMemo(() => {
+    const progress = currentTime() - props.line.timeInMs;
+    const total = props.line.duration;
+
+    const percentage = Math.min(1, progress / total);
+    return Math.max(0, Math.floor((states().length - 1) * percentage));
   });
-
-  const text = createMemo(() => {
-    if (!props.line.text.trim()) {
-      return config()?.defaultTextString ?? '';
-    }
-
-    return props.line.text;
-  });
-
-  const [romanization, setRomanization] = createSignal('');
-
-  createEffect(async () => {
-    if (!config()?.romanization) return;
-
-    const input = canonicalize(text());
-
-    let result: string;
-    if (props.hasJapanese) {
-      if (props.hasKorean) result = await romanizeJapaneseOrHangul(input);
-      else result = await romanizeJapanese(input);
-    } else if (props.hasKorean) result = romanizeHangul(input);
-    else result = romanizeChinese(input);
-
-    setRomanization(canonicalize(result));
-  });
-
-  if (!text()) {
-    return (
-      <yt-formatted-string
-        text={{
-          runs: [{ text: '' }],
-        }}
-      />
-    );
-  }
 
   return (
     <div
-      ref={ref}
-      class={`synced-line ${status()}`}
+      class={`synced-line ${props.status}`}
       onClick={() => {
-        _ytAPI?.seekTo(props.line.timeInMs / 1000);
+        _ytAPI?.seekTo((props.line.timeInMs + 10) / 1000);
       }}
     >
-      <div dir="auto" class="description ytmusic-description-shelf-renderer">
+      <div class="description ytmusic-description-shelf-renderer" dir="auto">
         <yt-formatted-string
           text={{
             runs: [
-              { text: config()?.showTimeCodes ? `[${props.line.time}] ` : '' },
+              {
+                text: config()?.showTimeCodes ? `[${props.line.time}] ` : '',
+              },
             ],
           }}
         />
 
-        <div
-          class="text-lyrics"
-          ref={(div: HTMLDivElement) => {
-            // TODO: Investigate the animation, even though the duration is properly set, all lines have the same animation duration
-            div.style.setProperty(
-              '--lyrics-duration',
-              `${props.line.duration / 1000}s`,
-              'important',
-            );
-          }}
-          style={{ 'display': 'flex', 'flex-direction': 'column' }}
-        >
+        <div class="text-lyrics">
           <span>
-            <For each={text().split(' ')}>
-              {(word, index) => {
-                return (
-                  <span
-                    style={{
-                      'transition-delay': `${index() * 0.05}s`,
-                      'animation-delay': `${index() * 0.05}s`,
-                    }}
-                  >
-                    <yt-formatted-string
-                      text={{
-                        runs: [{ text: `${word} ` }],
-                      }}
-                    />
-                  </span>
-                );
-              }}
-            </For>
+            <span>
+              <Show
+                fallback={
+                  <yt-formatted-string
+                    text={{ runs: [{ text: states()[0] }] }}
+                  />
+                }
+                when={states().length > 1}
+              >
+                <yt-formatted-string
+                  text={{
+                    runs: [
+                      {
+                        text: states().at(
+                          props.status === 'current' ? index() : -1,
+                        )!,
+                      },
+                    ],
+                  }}
+                />
+              </Show>
+            </span>
           </span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
-          <Show
-            when={
-              config()?.romanization &&
-              simplifyUnicode(text()) !== simplifyUnicode(romanization())
-            }
+export const SyncedLine = (props: SyncedLineProps) => {
+  const text = createMemo(() => {
+    let line = props.line.text;
+    const convertChineseText = config()?.convertChineseCharacter;
+    if (convertChineseText && convertChineseText !== 'disabled') {
+      line = convertChineseCharacter(line, convertChineseText);
+    }
+    return line.trim();
+  });
+
+  const [romanization, setRomanization] = createSignal('');
+  createEffect(() => {
+    const input = canonicalize(text());
+    if (!config()?.romanization) return;
+
+    romanize(input).then((result) => {
+      setRomanization(canonicalize(result));
+    });
+  });
+
+  return (
+    <Show fallback={<EmptyLine {...props} />} when={text()}>
+      <div
+        class={`synced-line ${props.status}`}
+        onClick={() => {
+          _ytAPI?.seekTo((props.line.timeInMs + 10) / 1000);
+        }}
+      >
+        <div class="description ytmusic-description-shelf-renderer" dir="auto">
+          <yt-formatted-string
+            text={{
+              runs: [
+                {
+                  text: config()?.showTimeCodes ? `[${props.line.time}] ` : '',
+                },
+              ],
+            }}
+          />
+
+          <div
+            class="text-lyrics"
+            ref={(div: HTMLDivElement) => {
+              // TODO: Investigate the animation, even though the duration is properly set, all lines have the same animation duration
+              div.style.setProperty(
+                '--lyrics-duration',
+                `${props.line.duration / 1000}s`,
+                'important',
+              );
+            }}
+            style={{ 'display': 'flex', 'flex-direction': 'column' }}
           >
-            <span class="romaji">
-              <For each={romanization().split(' ')}>
+            <span>
+              <For each={text().split(' ')}>
                 {(word, index) => {
                   return (
                     <span
@@ -149,9 +154,37 @@ export const SyncedLine = (props: SyncedLineProps) => {
                 }}
               </For>
             </span>
-          </Show>
+
+            <Show
+              when={
+                config()?.romanization &&
+                simplifyUnicode(text()) !== simplifyUnicode(romanization())
+              }
+            >
+              <span class="romaji">
+                <For each={romanization().split(' ')}>
+                  {(word, index) => {
+                    return (
+                      <span
+                        style={{
+                          'transition-delay': `${index() * 0.05}s`,
+                          'animation-delay': `${index() * 0.05}s`,
+                        }}
+                      >
+                        <yt-formatted-string
+                          text={{
+                            runs: [{ text: `${word} ` }],
+                          }}
+                        />
+                      </span>
+                    );
+                  }}
+                </For>
+              </span>
+            </Show>
+          </div>
         </div>
       </div>
-    </div>
+    </Show>
   );
 };

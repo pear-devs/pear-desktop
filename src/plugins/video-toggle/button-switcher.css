@@ -25,7 +25,7 @@
 }
 
 .video-toggle-custom-mode .video-switch-button:before {
-  content: 'Video';
+  content: attr(data-video-button-text);
   position: absolute;
   top: 0;
   bottom: 0;

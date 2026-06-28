@@ -12,9 +12,11 @@ permissions:
 
 jobs:
   dependency-review:
+    if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Repository"
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
       - name: "Dependency Review"
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@f5b971718edcbb31275a1db40004592335c0e031

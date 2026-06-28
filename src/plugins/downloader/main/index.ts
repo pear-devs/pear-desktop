@@ -1,17 +1,24 @@
+import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { randomBytes } from 'node:crypto';
 
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
-import { Innertube, UniversalCache, Utils, YTNodes } from 'youtubei.js';
+import { Mutex } from 'async-mutex';
+import { BG, type BgConfig } from 'bgutils-js';
+import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
 import is from 'electron-is';
 import filenamify from 'filenamify';
-import { Mutex } from 'async-mutex';
-import { createFFmpeg } from '@ffmpeg.wasm/main';
-import NodeID3, { TagConstants } from 'node-id3';
-
-import { Window } from 'happy-dom';
-import { BG, type BgConfig } from 'bgutils-js';
+import lazyVar from 'lazy-var';
+import NodeID3 from 'node-id3';
+import {
+  Innertube,
+  UniversalCache,
+  Utils,
+  YTNodes,
+  Platform,
+  type YT,
+  type YTMusic,
+  type Types,
+} from '\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js';
 
 import {
   cropMaxWidth,
@@ -19,43 +26,59 @@ import {
   sendFeedback as sendFeedback_,
   setBadge,
 } from './utils';
-import { fetchFromGenius } from '@/plugins/lyrics-genius/main';
-import { isEnabled } from '@/config/plugins';
-import registerCallback, {
+import { t } from '@/i18n';
+import { getNetFetchAsFetch } from '@/plugins/utils/main';
+import {
+  registerCallback,
   cleanupName,
   getImage,
   MediaType,
   type SongInfo,
   SongInfoEvent,
 } from '@/providers/song-info';
-import { getNetFetchAsFetch } from '@/plugins/utils/main';
-import { t } from '@/i18n';
 
-import { DefaultPresetList, type Preset, YoutubeFormatList } from '../types';
+import { DefaultPresetList, type Preset, VideoFormatList } from '../types';
 
 import type { DownloaderPluginConfig } from '../index';
 import type { BackendContext } from '@/types/contexts';
-import type { FormatOptions } from 'youtubei.js/dist/src/types/FormatUtils';
-import type PlayerErrorMessage from 'youtubei.js/dist/src/parser/classes/PlayerErrorMessage';
-import type { Playlist } from 'youtubei.js/dist/src/parser/ytmusic';
-import type { VideoInfo } from 'youtubei.js/dist/src/parser/youtube';
-import type TrackInfo from 'youtubei.js/dist/src/parser/ytmusic/TrackInfo';
 import type { GetPlayerResponse } from '@/types/get-player-response';
 
 type CustomSongInfo = SongInfo & { trackId?: string };
 
-const ffmpeg = createFFmpeg({
-  log: false,
-  logger() {}, // Console.log,
-  progress() {}, // Console.log,
-});
+const ffmpeg = lazyVar.lazy(async () =>
+  (await import('@ffmpeg.wasm/main')).createFFmpeg({
+    log: false,
+    logger() {}, // Console.log,
+    progress() {}, // Console.log,
+  }),
+);
 const ffmpegMutex = new Mutex();
+
+Platform.shim.eval = (
+  data: Types.BuildScriptResult,
+  env: Record<string, Types.VMPrimative>,
+) => {
+  const properties = [];
+
+  if (env.n) {
+    properties.push(`n: exportedVars.nFunction("${env.n}")`);
+  }
+
+  if (env.sig) {
+    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`);
+  }
+
+  const code = `${data.output}\nreturn { ${properties.join(', ')} }`;
+
+  // oxlint-disable-next-line typescript/no-unsafe-return,typescript/no-implied-eval,typescript/no-unsafe-call
+  return new Function(code)();
+};
 
 let yt: Innertube;
 let win: BrowserWindow;
 let playingUrl: string;
 
-const isYouTubeMusicPremium = async () => {
+const isPremium = async () => {
   // If signed out, it is understood as non-premium
   const isSignedIn = (await win.webContents.executeJavaScript(
     '!!yt.config_.LOGGED_IN',
@@ -65,7 +88,7 @@ const isYouTubeMusicPremium = async () => {
 
   // If signed in, check if the upgrade button is present
   const upgradeBtnIconPathData = (await win.webContents.executeJavaScript(
-    'document.querySelector(\'iron-iconset-svg[name="yt-sys-icons"] #youtube_music_monochrome\')?.firstChild?.getAttribute("d")?.substring(0, 15)',
+    'document.querySelector(\'iron-iconset-svg[name="yt-sys-icons"] #\u0079\u006f\u0075\u0074\u0075\u0062\u0065_music_monochrome\')?.firstChild?.getAttribute("d")?.substring(0, 15)',
   )) as string | null;
 
   // Fallback to non-premium if the icon is not found
@@ -86,7 +109,7 @@ const sendError = (error: Error, source?: string) => {
   const songNameMessage = source ? `\nin ${source}` : '';
   const cause = error.cause
     ? `\n\n${
-        // eslint-disable-next-line @typescript-eslint/no-base-to-string,@typescript-eslint/restrict-template-expressions
+        // oxlint-disable-next-line typescript/no-base-to-string,typescript/restrict-template-expressions
         error.cause instanceof Error ? error.cause.toString() : error.cause
       }`
     : '';
@@ -106,7 +129,7 @@ const sendError = (error: Error, source?: string) => {
 export const getCookieFromWindow = async (win: BrowserWindow) => {
   return (
     await win.webContents.session.cookies.get({
-      url: 'https://music.youtube.com',
+      url: 'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com',
     })
   )
     .map((it) => it.name + '=' + it.value)
@@ -142,7 +165,7 @@ export const onMainLoad = async ({
     try {
       const [width, height] = win.getSize();
       // emulate jsdom using linkedom
-      const window = new Window({
+      const window = new (await import('happy-dom')).Window({
         width,
         height,
         console,
@@ -169,7 +192,7 @@ export const onMainLoad = async ({
       if (interpreterJavascript) {
         // This is a workaround to run the interpreterJavascript code
         // Maybe there is a better way to do this (e.g. https://github.com/Siubaak/sval ?)
-        // eslint-disable-next-line @typescript-eslint/no-implied-eval,@typescript-eslint/no-unsafe-call
+        // oxlint-disable-next-line typescript/no-implied-eval,typescript/no-unsafe-call
         new Function(interpreterJavascript)();
 
         const poTokenResult = await BG.PoToken.generate({
@@ -190,7 +213,7 @@ export const onMainLoad = async ({
   }
 
   ipc.handle('download-song', (url: string) => downloadSong(url));
-  ipc.on('ytmd:video-src-changed', (data: GetPlayerResponse) => {
+  ipc.on('peard:video-src-changed', (data: GetPlayerResponse) => {
     playingUrl = data.microformat.microformatDataRenderer.urlCanonical;
   });
   ipc.handle('download-playlist-request', async (url: string) =>
@@ -206,8 +229,8 @@ export const onConfigChange = (newConfig: DownloaderPluginConfig) => {
 
 export async function downloadSong(
   url: string,
-  playlistFolder: string | undefined = undefined,
-  trackId: string | undefined = undefined,
+  playlistFolder?: string ,
+  trackId?: string ,
   increasePlaylistProgress: (value: number) => void = () => {},
 ) {
   let resolvedName;
@@ -227,8 +250,8 @@ export async function downloadSong(
 
 export async function downloadSongFromId(
   id: string,
-  playlistFolder: string | undefined = undefined,
-  trackId: string | undefined = undefined,
+  playlistFolder?: string ,
+  trackId?: string ,
   increasePlaylistProgress: (value: number) => void = () => {},
 ) {
   let resolvedName;
@@ -296,8 +319,8 @@ function downloadSongOnFinishSetup({
     }
   });
 
-  ipcMain.on('ytmd:player-api-loaded', () => {
-    ipc.send('ytmd:setup-time-changed-listener');
+  ipcMain.on('peard:player-api-loaded', () => {
+    ipc.send('peard:setup-time-changed-listener');
   });
 }
 
@@ -305,8 +328,8 @@ async function downloadSongUnsafe(
   isId: boolean,
   idOrUrl: string,
   setName: (name: string) => void,
-  playlistFolder: string | undefined = undefined,
-  trackId: string | undefined = undefined,
+  playlistFolder?: string ,
+  trackId?: string ,
   increasePlaylistProgress: (value: number) => void = () => {},
 ) {
   const sendFeedback = (message: unknown, progress?: number) => {
@@ -331,7 +354,7 @@ async function downloadSongUnsafe(
       );
   }
 
-  let info: TrackInfo | VideoInfo = await yt.music.getInfo(id);
+  let info: YTMusic.TrackInfo | YT.VideoInfo = await yt.music.getInfo(id);
 
   if (!info) {
     throw new Error(
@@ -354,7 +377,7 @@ async function downloadSongUnsafe(
   setName(name);
 
   let playabilityStatus = info.playability_status;
-  let bypassedResult = null;
+  let bypassedResult: YT.VideoInfo;
   if (playabilityStatus?.status === 'LOGIN_REQUIRED') {
     // Try to bypass the age restriction
     bypassedResult = await getAndroidTvInfo(id);
@@ -371,7 +394,7 @@ async function downloadSongUnsafe(
 
   if (playabilityStatus?.status === 'UNPLAYABLE') {
     const errorScreen =
-      playabilityStatus.error_screen as PlayerErrorMessage | null;
+      playabilityStatus.error_screen as YTNodes.PlayerErrorMessage | null;
     throw new Error(
       `[${playabilityStatus.status}] ${errorScreen?.reason.text}: ${errorScreen?.subreason.text}`,
     );
@@ -387,8 +410,8 @@ async function downloadSongUnsafe(
     presetSetting = DefaultPresetList['mp3 (256kbps)'];
   }
 
-  const downloadOptions: FormatOptions = {
-    type: (await isYouTubeMusicPremium()) ? 'audio' : 'video+audio', // Audio, video or video+audio
+  const downloadOptions: Types.FormatOptions = {
+    type: (await isPremium()) ? 'audio' : 'video+audio', // Audio, video or video+audio
     quality: 'best', // Best, bestefficiency, 144p, 240p, 480p, 720p and so on.
     format: 'any', // Media container format
   };
@@ -398,8 +421,7 @@ async function downloadSongUnsafe(
   let targetFileExtension: string;
   if (!presetSetting?.extension) {
     targetFileExtension =
-      YoutubeFormatList.find((it) => it.itag === format.itag)?.container ??
-      'mp3';
+      VideoFormatList.find((it) => it.itag === format.itag)?.container ?? 'mp3';
   } else {
     targetFileExtension = presetSetting?.extension ?? 'mp3';
   }
@@ -505,12 +527,13 @@ async function iterableStreamToProcessedUint8Array(
 
   return await ffmpegMutex.runExclusive(async () => {
     try {
-      if (!ffmpeg.isLoaded()) {
-        await ffmpeg.load();
+      const ffmpegInstance = await ffmpeg.get();
+      if (!ffmpegInstance.isLoaded()) {
+        await ffmpegInstance.load();
       }
 
       sendFeedback(t('plugins.downloader.backend.feedback.preparing-file'));
-      ffmpeg.FS(
+      ffmpegInstance.FS(
         'writeFile',
         safeVideoName,
         Buffer.concat(
@@ -525,19 +548,19 @@ async function iterableStreamToProcessedUint8Array(
 
       sendFeedback(t('plugins.downloader.backend.feedback.converting'));
 
-      ffmpeg.setProgress(({ ratio }) => {
+      ffmpegInstance.setProgress(({ ratio }) => {
         sendFeedback(
           t('plugins.downloader.backend.feedback.conversion-progress', {
             percent: Math.floor(ratio * 100),
           }),
           ratio,
         );
-        increasePlaylistProgress(0.15 + ratio * 0.85);
+        increasePlaylistProgress(0.15 + (ratio * 0.85));
       });
 
       const safeVideoNameWithExtension = `${safeVideoName}.${extension}`;
       try {
-        await ffmpeg.run(
+        await ffmpegInstance.run(
           '-i',
           safeVideoName,
           ...presetFfmpegArgs,
@@ -545,15 +568,15 @@ async function iterableStreamToProcessedUint8Array(
           safeVideoNameWithExtension,
         );
       } finally {
-        ffmpeg.FS('unlink', safeVideoName);
+        ffmpegInstance.FS('unlink', safeVideoName);
       }
 
       sendFeedback(t('plugins.downloader.backend.feedback.saving'));
 
       try {
-        return ffmpeg.FS('readFile', safeVideoNameWithExtension);
+        return ffmpegInstance.FS('readFile', safeVideoNameWithExtension);
       } finally {
-        ffmpeg.FS('unlink', safeVideoNameWithExtension);
+        ffmpegInstance.FS('unlink', safeVideoNameWithExtension);
       }
     } catch (error: unknown) {
       sendError(error as Error, safeVideoName);
@@ -589,21 +612,11 @@ async function writeID3(
       tags.image = {
         mime: 'image/png',
         type: {
-          id: TagConstants.AttachedPicture.PictureType.FRONT_COVER,
+          id: NodeID3.TagConstants.AttachedPicture.PictureType.FRONT_COVER,
         },
         description: 'thumbnail',
         imageBuffer: coverBuffer,
       };
-    }
-
-    if (isEnabled('lyrics-genius')) {
-      const lyrics = await fetchFromGenius(metadata);
-      if (lyrics) {
-        tags.unsynchronisedLyrics = {
-          language: '',
-          text: lyrics,
-        };
-      }
     }
 
     if (metadata.trackId) {
@@ -642,7 +655,7 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
     }),
   );
   sendFeedback(t('plugins.downloader.backend.feedback.getting-playlist-info'));
-  let playlist: Playlist;
+  let playlist: YTMusic.Playlist;
   const items: YTNodes.MusicResponsiveListItem[] = [];
   try {
     playlist = await yt.music.getPlaylist(playlistId);
@@ -766,7 +779,7 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
 
   const increaseProgress = (itemPercentage: number) => {
     const currentProgress = (counter - 1) / (items.length ?? 1);
-    const newProgress = currentProgress + progressStep * itemPercentage;
+    const newProgress = currentProgress + (progressStep * itemPercentage);
     win.setProgressBar(newProgress);
   };
 
@@ -836,10 +849,12 @@ const getPlaylistID = (aURL?: URL): string | null | undefined => {
 };
 
 const getVideoId = (url: URL | string): string | null => {
-  return new URL(url).searchParams.get('v');
+  const parsedUrl = URL.parse(url);
+  if (!parsedUrl) return null;
+  return parsedUrl.searchParams.get('v');
 };
 
-const getMetadata = (info: TrackInfo): CustomSongInfo => ({
+const getMetadata = (info: YTMusic.TrackInfo): CustomSongInfo => ({
   videoId: info.basic_info.id!,
   title: cleanupName(info.basic_info.title!),
   artist: cleanupName(info.basic_info.author!),
@@ -854,8 +869,10 @@ const getMetadata = (info: TrackInfo): CustomSongInfo => ({
 });
 
 // This is used to bypass age restrictions
-const getAndroidTvInfo = async (id: string): Promise<VideoInfo> => {
+const getAndroidTvInfo = async (id: string): Promise<YT.VideoInfo> => {
   // GetInfo 404s with the bypass, so we use getBasicInfo instead
   // that's fine as we only need the streaming data
-  return await yt.getBasicInfo(id, 'TV_EMBEDDED');
+  return await yt.getBasicInfo(id, {
+    client: 'TV_EMBEDDED',
+  });
 };

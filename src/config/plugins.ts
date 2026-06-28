@@ -1,8 +1,7 @@
 import { deepmerge } from 'deepmerge-ts';
 import { allPlugins } from 'virtual:plugins';
 
-import store from './store';
-
+import { store } from './store';
 import { restart } from '@/providers/app-controls';
 
 import type { PluginConfig } from '@/types/plugins';
@@ -11,9 +10,9 @@ export function getPlugins() {
   return store.get('plugins') as Record<string, PluginConfig>;
 }
 
-export function isEnabled(plugin: string) {
+export async function isEnabled(plugin: string) {
   const pluginConfig = deepmerge(
-    allPlugins[plugin].config ?? { enabled: false },
+    (await allPlugins())[plugin]?.config ?? { enabled: false },
     (store.get('plugins') as Record<string, PluginConfig>)[plugin] ?? {},
   );
   return pluginConfig !== undefined && pluginConfig.enabled;
@@ -68,13 +67,3 @@ export function enable(plugin: string) {
 export function disable(plugin: string) {
   setMenuOptions(plugin, { enabled: false }, []);
 }
-
-export default {
-  isEnabled,
-  getPlugins,
-  enable,
-  disable,
-  setOptions,
-  setMenuOptions,
-  getOptions,
-};

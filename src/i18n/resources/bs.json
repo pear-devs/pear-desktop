@@ -28,6 +28,243 @@
       },
       "second-instance": {
         "receive-command": "Comanda primljena preko protokola \"{{command}}\""
+      },
+      "theme": {
+        "css-file-not-found": "CSS datoteka \"{{cssFile}}\" ne postoji, ignorišem"
+      },
+      "unresponsive": {
+        "details": "Greška u aplikaciji!\n{{error}}"
+      },
+      "when-ready": {
+        "clearing-cache-after-20s": "Čistim predmemoriju aplikacije"
+      },
+      "window": {
+        "tried-to-render-offscreen": "Prozor se pokušao prikazati van okvira ekrana, windowSize={{windowSize}}, displaySize={{displaySize}}, position={{position}}"
+      }
+    },
+    "dialog": {
+      "hide-menu-enabled": {
+        "detail": "Meni je sakriven, koristite 'Alt' da ga prikazete (ili 'ESC' ako koristite meni u aplikaciji)",
+        "message": "Sakrivanje menija je uključeno",
+        "title": "Meni sakriven"
+      },
+      "need-to-restart": {
+        "buttons": {
+          "later": "Kasnije",
+          "restart-now": "Pokreni ponovo odmah"
+        },
+        "detail": "\"{{pluginName}}\" dodatak zahtjeva ponovno pokretanje kako bi se uključio",
+        "message": "\"{{pluginName}}\" potrebno je resetovat",
+        "title": "Restart je potreban"
+      },
+      "unresponsive": {
+        "buttons": {
+          "quit": "Napusti",
+          "relaunch": "Ponovo otvori",
+          "wait": "Pricekajte"
+        },
+        "detail": "Izvinjavamo se zbog zabune! molimo vas da odaberete sta zelite uciniti",
+        "message": "Aplikacija ne reagira",
+        "title": "Prozor ne reagira"
+      },
+      "update-available": {
+        "buttons": {
+          "disable": "Ugasite Nadogradnje",
+          "download": "Skinuti",
+          "ok": "OK"
+        },
+        "detail": "Nova verzija je dostupna i može biti skinuta na {{downloadLink}}",
+        "message": "Nova verzija je dostupna",
+        "title": "Azuriranje dostupno"
+      }
+    },
+    "menu": {
+      "about": "O nama",
+      "navigation": {
+        "label": "Plejer",
+        "submenu": {
+          "copy-current-url": "Kopirajte trenutni link",
+          "go-back": "Idi Nazad",
+          "go-forward": "Idi Naprijed",
+          "quit": "Izadji",
+          "restart": "Restartujte Aplikaciju"
+        }
+      },
+      "options": {
+        "label": "Opcije",
+        "submenu": {
+          "advanced-options": {
+            "label": "Napredne opcije",
+            "submenu": {
+              "auto-reset-app-cache": "Resetuje kes memoriju kad se aplikacija pokrene",
+              "disable-hardware-acceleration": "Ugasite hardversko ubrzanje",
+              "edit-config-json": "Uredite config.json",
+              "override-user-agent": "Nadjacaj User-Agent",
+              "restart-on-config-changes": "Ponovno pokretanje nakon promjena konfiguracije",
+              "set-proxy": {
+                "label": "Postavi proxy",
+                "prompt": {
+                  "label": "Unesite adresu proxyja: (ostavite prazno za onemogućavanje)",
+                  "placeholder": "Primjer: SOCKS5://127.0.0.1:9999",
+                  "title": "Postavi proxy"
+                }
+              },
+              "toggle-dev-tools": "Uključi/isključi DevTools"
+            }
+          },
+          "always-on-top": "Uvijek na vrhu",
+          "auto-update": "Automatski Update",
+          "hide-menu": {
+            "dialog": {
+              "message": "Meni će biti skriven pri sljedećem pokretanju, koristite [Alt] da ga prikažete (ili upotrijebite [`] ako koristite meni u aplikaciji)",
+              "title": "Sakrij meni omogućen"
+            },
+            "label": "Sakrij meni"
+          },
+          "language": {
+            "dialog": {
+              "message": "Jezik će se promijeniti nakon ponovnog pokretanja",
+              "title": "Jezik je uspješno promjenjen"
+            },
+            "label": "Jezik",
+            "submenu": {
+              "to-help-translate": "Želite da pomognete s prijevodom? Kliknite ovdje"
+            }
+          },
+          "resume-on-start": "Nastavi posljednju pjesmu pri sljedećem pokretaju",
+          "single-instance-lock": "Sprječavanje višestrukog pokretanja",
+          "start-at-login": "Pokreni čim se prijavite",
+          "starting-page": {
+            "label": "Početna stranica",
+            "unset": "Ukinite postavu"
+          },
+          "tray": {
+            "label": "Tacna",
+            "submenu": {
+              "disabled": "Onemogućeno",
+              "enabled-and-hide-app": "Tacna je uključena, i prozor aplikacije skrijte",
+              "enabled-and-show-app": "Tacna je uključena, i prozor aplikacije prikažite",
+              "play-pause-on-click": "Pokreni/Zaustavi na klik"
+            }
+          },
+          "visual-tweaks": {
+            "label": "Vizualne postavke",
+            "submenu": {
+              "custom-window-title": {
+                "label": "Prilagođeni naslov prozora",
+                "prompt": {
+                  "label": "Unesite vlastiti naslov prozora: (ostavite prazno za isključenje)",
+                  "placeholder": "Primjer: {{applicationName}}"
+                }
+              },
+              "like-buttons": {
+                "default": "Zadano",
+                "force-show": "Prinudno prikaži",
+                "hide": "Sakrij",
+                "label": "'Sviđa mi se' dugmadi"
+              },
+              "remove-upgrade-button": "Ukloni dugme za nadogradnju",
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "Otkaži",
+                    "remove": "Ukloni"
+                  },
+                  "remove-theme": "Jeste li sigurni da želite ukloniti prilagođenu temu?",
+                  "remove-theme-message": "Ovo će ukloniti prilagođenu temu"
+                },
+                "label": "Tema",
+                "submenu": {
+                  "import-css-file": "Uvoz prilagođene CSS datoteke",
+                  "no-theme": "Bez teme"
+                }
+              }
+            }
+          }
+        }
+      },
+      "plugins": {
+        "enabled": "Omogućeno",
+        "label": "Dodaci",
+        "new": "Novo"
+      },
+      "view": {
+        "label": "Pogled",
+        "submenu": {
+          "force-reload": "Silom Ponovo Učitaj",
+          "reload": "Ponovo Učitaj",
+          "reset-zoom": "Stvarna Veličina",
+          "toggle-fullscreen": "Uključi/Isključi Prikaz Cijelog Ekrana",
+          "zoom-in": "Uvećaj",
+          "zoom-out": "Umanji"
+        }
+      }
+    },
+    "tray": {
+      "next": "Slijedeće",
+      "play-pause": "Plej/Pauza",
+      "previous": "Prethodno",
+      "quit": "Izlaz",
+      "restart": "Ponovo Pokreni Aplikaciju",
+      "show": "Pokaži prozor",
+      "tooltip": {
+        "default": "{{applicationName}}"
+      }
+    }
+  },
+  "plugins": {
+    "ambient-mode": {
+      "menu": {
+        "quality": {
+          "label": "Kvalitet"
+        }
+      }
+    },
+    "discord": {
+      "menu": {
+        "set-status-display-type": {
+          "submenu": {
+            "application": "Slušate {{applicationName}}",
+            "artist": "Slušate {muzičar}",
+            "title": "Slušate {naziv pesme}"
+          }
+        }
+      },
+      "name": "Diskord Rich Presence",
+      "prompt": {
+        "set-inactivity-timeout": {
+          "label": "Unesi ograničenje neaktivnosti u sekundama:",
+          "title": "Postavi ograničenje neaktivnosti"
+        }
+      }
+    },
+    "downloader": {
+      "backend": {
+        "dialog": {
+          "error": {
+            "buttons": {
+              "ok": "OK"
+            },
+            "message": "Ufff! Izvinite, preuzimanje nije uspelo…",
+            "title": "Greška u preuzimanju!"
+          },
+          "start-download-playlist": {
+            "buttons": {
+              "ok": "OK"
+            },
+            "detail": "({{Playlist Size}} pjesme)",
+            "message": "Preuzimanje Plejliste {{playlist Title}}",
+            "title": "Preuzimanje počelo"
+          }
+        },
+        "feedback": {
+          "conversion-progress": "Pretvaranje: {{percent}}%",
+          "converting": "Pretvaranje…",
+          "done": "Gotovo: {{file Path}}",
+          "download-info": "Preuzimanje {{artist}} - {{title}} [{{videoId}}",
+          "download-progress": "Preuzimanje: {{percent}}%",
+          "downloading": "Preuzimanje…"
+        }
       }
     }
   }

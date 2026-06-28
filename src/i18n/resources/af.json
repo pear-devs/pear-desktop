@@ -1,0 +1,12 @@
+{
+  "common": {
+    "console": {
+      "plugins": {
+        "execute-failed": "Kon nie inprop {{pluginName}}::{{contextName}} uitvoer nie",
+        "executed-at-ms": "Inprop {{pluginName}}::{{contextName}} uitgevoer teen {{ms}}ms",
+        "initialize-failed": "Kon nie invoegtoepassing \"{{pluginName}}\" inisialiseer nie",
+        "load-all": "Laai tans alle inproppe"
+      }
+    }
+  }
+}

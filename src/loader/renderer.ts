@@ -1,10 +1,8 @@
 import { deepmerge } from 'deepmerge-ts';
-
 import { rendererPlugins } from 'virtual:plugins';
 
-import { LoggerPrefix, startPlugin, stopPlugin } from '@/utils';
-
 import { t } from '@/i18n';
+import { LoggerPrefix, startPlugin, stopPlugin } from '@/utils';
 
 import type { RendererContext } from '@/types/contexts';
 import type { PluginConfig, PluginDef } from '@/types/plugins';
@@ -18,10 +16,10 @@ const loadedPluginMap: Record<
 export const createContext = <Config extends PluginConfig>(
   id: string,
 ): RendererContext<Config> => ({
-  getConfig: async () =>
-    window.ipcRenderer.invoke('ytmd:get-config', id) as Promise<Config>,
+  getConfig: () =>
+    window.ipcRenderer.invoke('peard:get-config', id) as Promise<Config>,
   setConfig: async (newConfig) => {
-    await window.ipcRenderer.invoke('ytmd:set-config', id, newConfig);
+    await window.ipcRenderer.invoke('peard:set-config', id, newConfig);
   },
   ipc: {
     send: (event: string, ...args: unknown[]) => {
@@ -31,7 +29,7 @@ export const createContext = <Config extends PluginConfig>(
       window.ipcRenderer.invoke(event, ...args),
     on: (event: string, listener: CallableFunction) => {
       window.ipcRenderer.on(event, (_, ...args: unknown[]) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        // oxlint-disable-next-line typescript/no-unsafe-call
         listener(...args);
       });
     },
@@ -47,7 +45,7 @@ export const forceUnloadRendererPlugin = async (id: string) => {
   delete unregisterStyleMap[id];
   delete loadedPluginMap[id];
 
-  const plugin = rendererPlugins[id];
+  const plugin = (await rendererPlugins())[id];
   if (!plugin) return;
 
   const hasStopped = await stopPlugin(id, plugin, {
@@ -71,7 +69,7 @@ export const forceUnloadRendererPlugin = async (id: string) => {
 };
 
 export const forceLoadRendererPlugin = async (id: string) => {
-  const plugin = rendererPlugins[id];
+  const plugin = (await rendererPlugins())[id];
   if (!plugin) return;
 
   const hasEvaled = await startPlugin(id, plugin, {
@@ -117,7 +115,7 @@ export const forceLoadRendererPlugin = async (id: string) => {
 export const loadAllRendererPlugins = async () => {
   const pluginConfigs = window.mainConfig.plugins.getPlugins();
 
-  for (const [pluginId, pluginDef] of Object.entries(rendererPlugins)) {
+  for (const [pluginId, pluginDef] of Object.entries(await rendererPlugins())) {
     const config = deepmerge(pluginDef.config, pluginConfigs[pluginId] ?? {});
 
     if (config.enabled) {

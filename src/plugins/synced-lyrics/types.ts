@@ -1,13 +1,19 @@
+import type { ProviderName } from './providers';
 import type { SongInfo } from '@/providers/song-info';
 
 export type SyncedLyricsPluginConfig = {
   enabled: boolean;
+  preferredProvider?: ProviderName;
   preciseTiming: boolean;
   showTimeCodes: boolean;
-  defaultTextString: string;
+  defaultTextString: string | string[];
   showLyricsEvenIfInexact: boolean;
   lineEffect: LineEffect;
   romanization: boolean;
+  convertChineseCharacter?:
+    | 'simplifiedToTraditional'
+    | 'traditionalToSimplified'
+    | 'disabled';
 };
 
 export type LineLyricsStatus = 'previous' | 'current' | 'upcoming';
@@ -32,7 +38,7 @@ export interface LyricResult {
 }
 
 // prettier-ignore
-export type SearchSongInfo = Pick<SongInfo, 'title' | 'artist' | 'album' | 'songDuration' | 'videoId'>;
+export type SearchSongInfo = Pick<SongInfo, 'title' | 'alternativeTitle' | 'artist' | 'album' | 'songDuration' | 'videoId' | 'tags'>;
 
 export interface LyricProvider {
   name: string;

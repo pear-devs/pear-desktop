@@ -46,14 +46,14 @@ export class LyricsGenius implements LyricProvider {
     );
 
     const closestHit = hits.at(0);
-    if (!closestHit) {
+    if (!closestHit || closestHit.result.primary_artist.url === 'https://genius.com/artists/Deleted-artist') {
       return null;
     }
 
     const { result: { path } } = closestHit;
 
     const html = await fetch(`${this.baseUrl}${path}`).then((res) =>
-      res.text()
+      res.text(),
     );
     const doc = this.domParser.parseFromString(html, 'text/html');
 

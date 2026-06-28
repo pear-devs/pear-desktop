@@ -36,7 +36,7 @@
         "details": "Yanıt verilmedi!\n{{error}}"
       },
       "when-ready": {
-        "clearing-cache-after-20s": "Uygulama ön belleği temizleme"
+        "clearing-cache-after-20s": "Uygulama ön belleği temizleniyor"
       },
       "window": {
         "tried-to-render-offscreen": "Pencere ekranın dışında oluşturulmaya çalışıldı, windowSize={{windowSize}}, displaySize={{displaySize}}, position={{position}}"
@@ -53,9 +53,9 @@
           "later": "Daha Sonra",
           "restart-now": "Şimdi yeniden başlat"
         },
-        "detail": "\"{{pluginName}}\" eklentisinin çalışabilmesi için yeniden başlatman gerekiyor",
-        "message": "\"{{pluginName}}\" için yeniden başlatman gerekiyor",
-        "title": "Uygulamayı yeniden başlatman gerekiyor"
+        "detail": "\"{{pluginName}}\" eklentisinin çalışması için uygulamanın yeniden başlatılması gerekiyor",
+        "message": "\"{{pluginName}}\" eklentisi için uygulamanın yeniden başlatılması gerekiyor",
+        "title": "Uygulamanın yeniden başlatılması gerekiyor"
       },
       "unresponsive": {
         "buttons": {
@@ -150,11 +150,19 @@
           "visual-tweaks": {
             "label": "Görsel İnce Ayarlar",
             "submenu": {
+              "custom-window-title": {
+                "label": "Özel pencere başlığı",
+                "prompt": {
+                  "label": "Özel pencere başlığı girin: (devre dışı bırakmak için boş bırakın)",
+                  "placeholder": "Örnek: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "Varsayılan",
                 "force-show": "Zorla göster",
                 "hide": "Gizle",
-                "label": "Beğenme düğmeleri"
+                "label": "Beğenme düğmeleri",
+                "swap": "Beğenme butonlarının sıralamasını değiştir"
               },
               "remove-upgrade-button": "Yükseltme düğmesini kaldır",
               "theme": {
@@ -201,22 +209,15 @@
       "restart": "Yeniden başlat",
       "show": "Pencereyi görüntüle",
       "tooltip": {
-        "default": "YouTube Müzik",
-        "with-song-info": "YouTube Müzik: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
   "plugins": {
     "ad-speedup": {
       "description": "Bir reklam oynatılırsa sesi kapatır ve oynatma hızını 16x olarak ayarlar",
-      "name": "Hızlandırma"
-    },
-    "adblocker": {
-      "description": "Tüm reklamları ve izleyicileri engelle",
-      "menu": {
-        "blocker": "Engelleyici"
-      },
-      "name": "Reklam Engelleyici"
+      "name": "Reklam Hızlandırma"
     },
     "album-actions": {
       "description": "Çalma listesindeki veya albümdeki tüm şarkılara Beğendim ve Beğenmedim düğmeleri ekler",
@@ -230,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Arama çubuğu temalarını etkinleştir"
       },
       "name": "Albüm Renk Teması"
     },
@@ -280,14 +282,14 @@
       "name": "Ambiyans Modu"
     },
     "amuse": {
-      "description": "6K Labs'ın Amuse oynatma widget'ı için YouTube Music desteği ekler",
+      "description": "6K Labs'ın Amuse oynatma widget'ı için {{applicationName}} desteği ekler",
       "name": "Amuse",
       "response": {
         "query": "Amuse API sunucusu çalışıyor. Şarkı bilgilerini almak için GET /query kullanabilirsiniz."
       }
     },
     "api-server": {
-      "description": "APİ ekle ve oynatıcıyı kontrol et",
+      "description": "Oynatıcıyı kontrol etmek için API sunucusu ekler",
       "dialog": {
         "request": {
           "buttons": {
@@ -313,15 +315,31 @@
         "hostname": {
           "label": "Ana bilgisayar adı"
         },
+        "https": {
+          "label": "HTTPS & Sertifikalar",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "HTTPS sertifika dosyası seç",
+              "label": "Sertifika dosyası (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "HTTPS'i aktifleştir"
+            },
+            "key": {
+              "dialogTitle": "HTTPS özel anahtar dosyası seç",
+              "label": "Özel anahtar dosyası (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
       },
-      "name": "API sunucusu [Beta]",
+      "name": "API Sunucusu [Beta]",
       "prompt": {
         "hostname": {
-          "label": "API sunucusu için hostname (örneğin 0.0.0.0) girin:",
-          "title": "Hostname"
+          "label": "API sunucusu için sunucu ismini (örneğin 0.0.0.0) girin:",
+          "title": "Sunucu ismi"
         },
         "port": {
           "label": "API sunucusu için port girin:",
@@ -333,16 +351,40 @@
       "description": "Ses sıkıştırma (dalganın en gürültülü bölümlerinin ses düzeyini azaltır ve daha yumuşak bölümlerin ses düzeyini artırır)",
       "name": "Ses Sıkıştırma"
     },
+    "auth-proxy-adapter": {
+      "description": "Kimlik doğrulama proxy hizmetlerinin kullanımına destek",
+      "menu": {
+        "disable": "Proxy Bağdaştırıcısını Devre Dışı Bırak",
+        "enable": "Proxy Bağdaştırıcısını Etkinleştir",
+        "hostname": {
+          "label": "Ana makine adı"
+        },
+        "port": {
+          "label": "Port"
+        }
+      },
+      "name": "Ara Sunucu Doğrulama Bağdaştırıcısı",
+      "prompt": {
+        "hostname": {
+          "label": "Yerel proxy sunucusu için ana makine adını girin (yeniden başlatma gerektirir):",
+          "title": "Proxy Ana Makine Adı"
+        },
+        "port": {
+          "label": "Yerel proxy sunucusu için bağlantı noktasını girin (yeniden başlatma gerektirir):",
+          "title": "Proxy Bağlantı Noktası"
+        }
+      }
+    },
     "blur-nav-bar": {
       "description": "Gezinme çubuğunu şeffaf ve bulanık yapar",
       "name": "Navigasyon barını bulanıklaştır"
     },
     "bypass-age-restrictions": {
-      "description": "YouTube yaş doğrulamasını atla",
+      "description": "Music Player yaş doğrulamasını atla",
       "name": "Yaş doğrulamasını atla"
     },
     "captions-selector": {
-      "description": "YouTube Music için altyazı seçici",
+      "description": "{{applicationName}} için altyazı seçici",
       "menu": {
         "autoload": "Son kullanılan altyazıyı otomatik olarak seç",
         "disable-captions": "Varsayılan olarak altyazı yok"
@@ -357,7 +399,23 @@
       },
       "templates": {
         "title": "Altyazı seçiciyi aç"
+      },
+      "toast": {
+        "caption-changed": "Başlık {{language}} olarak değiştirildi",
+        "caption-disabled": "Altyazılar devre dışı",
+        "no-captions": "Bu şarkı için altyazı mevcut değil"
       }
+    },
+    "clock": {
+      "description": "Navigasyon barına bir saat ekle",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-Saat Formatı",
+          "display-seconds": "Saniyeleri Göster",
+          "label": "Format"
+        }
+      },
+      "name": "Saat"
     },
     "compact-sidebar": {
       "description": "Her zaman kompakt kenar çubugu",
@@ -385,6 +443,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Şarkılar için özel bir medya çıkış aygıtı ayarlayın",
+      "menu": {
+        "device-selector": "Aygıt Seçin"
+      },
+      "name": "Özel Çıkış Aygıtı",
+      "prompt": {
+        "device-selector": {
+          "label": "Kullanılacak medya çıkış aygıtını seçin",
+          "title": "Çıkış Aygıtını Seçin"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Şarkıların otomatik olarak duraklatılmasını sağlar",
       "menu": {
@@ -407,8 +478,16 @@
         "disconnected": "Bağlantı kesildi",
         "hide-duration-left": "Kalan süreyi gizle",
         "hide-github-button": "GitHub bağlantısını gizle",
-        "play-on-youtube-music": "YouTube Music de oynat",
-        "set-inactivity-timeout": "Hareketsizlik zaman aşımını ayarla"
+        "play-on-application": "{{applicationName}} de oynat",
+        "set-inactivity-timeout": "Hareketsizlik zaman aşımını ayarla",
+        "set-status-display-type": {
+          "label": "Durum metni",
+          "submenu": {
+            "application": "{{applicationName}} Dinleniyor",
+            "artist": "{artist} Dinleniyor",
+            "title": "{song title} Dinleniyor"
+          }
+        }
       },
       "name": "Discord Etkinlik Durumu",
       "prompt": {
@@ -473,7 +552,7 @@
           },
           "submenu": {
             "advanced": "Gelişmiş",
-            "enabled": "Etkin",
+            "enabled": "Etkinleştirildi",
             "mode": "Zaman türü",
             "percent": "Yüzde",
             "seconds": "Saniye"
@@ -576,7 +655,15 @@
     },
     "navigation": {
       "description": "Favori tarayıcınızdaki gibi doğrudan arayüze entegre edilmiş İleri/Geri gezinme okları",
-      "name": "Navigasyon"
+      "name": "Navigasyon",
+      "templates": {
+        "back": {
+          "title": "Önceki sayfaya git"
+        },
+        "forward": {
+          "title": "Sonraki sayfaya geç"
+        }
+      }
     },
     "no-google-login": {
       "description": "Google giriş düğmelerini ve bağlantılarını arayüzden kaldır",
@@ -599,6 +686,10 @@
         "unpause-notification": "Şarkı tekrar oynatılınca bildirim göster"
       },
       "name": "Bildirimler"
+    },
+    "performance-improvement": {
+      "description": "Deneysel komut dosyalarını etkinleştirerek performansı artırın",
+      "name": "Performans iyileştirmesi [Beta]"
     },
     "picture-in-picture": {
       "description": "Uygulamayı resim-içinde-resim moduna geçirmeye izin verir",
@@ -664,7 +755,12 @@
         }
       },
       "description": "Video katmanı üzerindeki bir düğme ile video kalitesinin değiştirilmesine izin verir",
-      "name": "Video Kalitesi Değiştirici"
+      "name": "Video Kalitesi Değiştirici",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "Açık oynatıcı kalite değiştirici"
+        }
+      }
     },
     "scrobbler": {
       "description": "Listeleme desteği ekler (lastfm, listenbrainz ve benzeri)",
@@ -683,6 +779,7 @@
         "listenbrainz": {
           "token": "ListenBrainz kullanıcı kimliğinizi girin"
         },
+        "scrobble-alternative-artist": "Alternatif sanatçıları kullan",
         "scrobble-alternative-title": "Alternatif başlıklar kullan",
         "scrobble-other-media": "Diğer medya ortamlarında listele"
       },
@@ -738,6 +835,24 @@
         "not-found": "⚠️ Bu şarkı için şarkı sözleri bulunamadı."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Çince karakterleri çevir",
+          "submenu": {
+            "disabled": {
+              "label": "Devre dışı bırak",
+              "tooltip": "Çince karakterleri çevirmeyi devre dışı bırak"
+            },
+            "simplified-to-traditional": {
+              "label": "Basitleştirilmişten Geleneksele",
+              "tooltip": "Basitleştirilmiş Ç*nceyi Geleneksel Ç*nceye Çevir"
+            },
+            "traditional-to-simplified": {
+              "label": "Gelenekselden Basitleştirilmişe",
+              "tooltip": "Geleneksel Çince'yi Basitleştirilmiş Çince'ye dönüştür"
+            }
+          },
+          "tooltip": "Çince karakterleri Geleneksel veya Basitleştirilmiş Çinceye dönüştür"
+        },
         "default-text-string": {
           "label": "Şarkı sözleri arasında varsayılan karakter",
           "tooltip": "Şarkı sözleri arasındaki boşluk için kullanılacak varsayılan karakteri seçin"
@@ -767,6 +882,14 @@
         "precise-timing": {
           "label": "Şarkı sözlerini mükemmel şekilde senkronize edin",
           "tooltip": "Bir sonraki satırın görüntülenmesini milisaniyesine kadar hesaplayın (performans üzerinde küçük bir etkisi olabilir)"
+        },
+        "preferred-provider": {
+          "label": "Tercih edilen Sağlayıcı",
+          "none": {
+            "label": "Hiçbiri",
+            "tooltip": "Varsayılan sağlayıcı yok"
+          },
+          "tooltip": "Kullanmak İçin varsayılan sağlayıcıyı seçin"
         },
         "romanization": {
           "label": "Sözleri Romanize Et",
@@ -800,12 +923,34 @@
       "description": "macOS kullanıcıları için bir TouchBar widget'ı ekler",
       "name": "TouchBar"
     },
+    "transparent-player": {
+      "description": "Uygulama penceresini şeffaf yapar",
+      "menu": {
+        "opacity": {
+          "label": "Opaklık",
+          "submenu": {
+            "percent": "%{{opacity}}"
+          }
+        },
+        "type": {
+          "label": "Tür",
+          "submenu": {
+            "acrylic": "Akrilik",
+            "mica": "Mika",
+            "none": "Hiçbiri",
+            "tabbed": "Sekmeli"
+          }
+        }
+      },
+      "name": "Şeffaf Oynatıcı"
+    },
     "tuna-obs": {
       "description": "OBS eklentisi Tuna ile entegrasyon sağlar",
       "name": "Tuna OBS"
     },
     "unobtrusive-player": {
-      "description": "Müzik oynatıcının şarkı çalarken saçmalamasını engeller"
+      "description": "Müzik oynatıcının şarkı çalarken saçmalamasını engeller",
+      "name": "Göze Batmayan Çalar"
     },
     "video-toggle": {
       "description": "Video/Şarkı modu arasında geçiş yapmak için bir düğme ekler. ayrıca isteğe bağlı olarak tüm video sekmesini kaldırabilir",
@@ -830,7 +975,8 @@
       },
       "name": "Video Geçiş",
       "templates": {
-        "button": "Şarkı"
+        "button-song": "Şarkı",
+        "button-video": "Video"
       }
     },
     "visualizer": {

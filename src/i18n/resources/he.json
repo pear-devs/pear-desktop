@@ -150,11 +150,19 @@
           "visual-tweaks": {
             "label": "תיקונים חזותיים",
             "submenu": {
+              "custom-window-title": {
+                "label": "כותרת מותאמת אישית",
+                "prompt": {
+                  "label": "בחר כותרת מותאמת אישית: (השאר ריק כדי לכבות)",
+                  "placeholder": "לדוגמה: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "ברירת מחדל",
                 "force-show": "הפעל בכוח",
                 "hide": "הסתר",
-                "label": "כפתורי לייק"
+                "label": "כפתורי לייק",
+                "swap": "החלפת סדר כפתורי לייק"
               },
               "remove-upgrade-button": "הסר לחצן שדרוג",
               "theme": {
@@ -182,10 +190,10 @@
         "new": "חדש"
       },
       "view": {
-        "label": "מראה",
+        "label": "צפה",
         "submenu": {
           "force-reload": "התחל מחדש בכוח",
-          "reload": "טען מחדש",
+          "reload": "רענון",
           "reset-zoom": "גודל אמיתי",
           "toggle-fullscreen": "מסך מלא",
           "zoom-in": "התקרב",
@@ -199,13 +207,280 @@
       "previous": "הקודם",
       "quit": "יציאה",
       "restart": "הפעל מחדש",
-      "show": "הראה חלון"
+      "show": "הראה חלון",
+      "tooltip": {
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
+      }
     }
   },
   "plugins": {
     "ad-speedup": {
-      "description": "במקרה של פרסומת, הסאונד מושתק ומהירות  הוידרו מוכפלת ב-16",
+      "description": "במקרה של פרסומת, הסאונד מושתק ומהירות הוידאו מוכפלת ב-16",
       "name": "הגבר מהירות פרסומת"
+    },
+    "album-actions": {
+      "description": "מוסיף לחצני ביטול אהבתי, דיסלייק, 'אהבתי' ו'לא אהבתי' כדי להחיל זאת על כל השירים ברשימת השמעה או אלבום",
+      "name": "פעולות אלבום"
+    },
+    "album-color-theme": {
+      "description": "מחיל נושא דינמי ואפקטים חזותיים המבוססים על לוח הצבעים של האלבום",
+      "menu": {
+        "color-mix-ratio": {
+          "label": "יחס ערבוב צבעים",
+          "submenu": {
+            "percent": "{{ratio}}%"
+          }
+        }
+      },
+      "name": "ערכת נושא צבע אלבום"
+    },
+    "ambient-mode": {
+      "description": "מחיל אפקט תאורה על ידי הטלת צבעים עדינים מהסרטון, אל הרקע של המסך",
+      "menu": {
+        "blur-amount": {
+          "label": "כמות טשטוש",
+          "submenu": {
+            "pixels": "{{blurAmount}} פיקסלים"
+          }
+        },
+        "buffer": {
+          "label": "חוצץ",
+          "submenu": {
+            "buffer": "{{buffer}}"
+          }
+        },
+        "opacity": {
+          "label": "אֲטִימוּת",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "quality": {
+          "label": "אֵיכוּת",
+          "submenu": {
+            "pixels": "{{quality}} פיקסלים"
+          }
+        },
+        "size": {
+          "label": "גוֹדֶל",
+          "submenu": {
+            "percent": "{{size}}%"
+          }
+        },
+        "smoothness-transition": {
+          "label": "מעבר חלק",
+          "submenu": {
+            "during": "במהלך {{interpolationTime}} שניות"
+          }
+        },
+        "use-fullscreen": {
+          "label": "שימוש במסך מלא"
+        }
+      },
+      "name": "מצב אווירה"
+    },
+    "amuse": {
+      "description": "מוסיף תמיכה ב-{{applicationName}} עבור הווידג'ט של Amuse המתנגן כעת על ידי 6K Labs",
+      "name": "משעשע",
+      "response": {
+        "query": "שרת ה-API של Amuse פועל. קבל מידע על השיר באמצעות GET /query."
+      }
+    },
+    "api-server": {
+      "description": "הוסף כתובת שירות כדי לשלוט בנגן",
+      "dialog": {
+        "request": {
+          "buttons": {
+            "allow": "מותר",
+            "deny": "לדחות"
+          },
+          "message": "אפשר ל {{ID}}{{origin}} לגשת לשירות?",
+          "title": "בקשת לאימות השירות"
+        }
+      },
+      "menu": {
+        "auth-strategy": {
+          "label": "שיטת אימות",
+          "submenu": {
+            "auth-at-first": {
+              "label": "לאמת בבקשה הראשונה"
+            },
+            "none": {
+              "label": "ללא אימות"
+            }
+          }
+        },
+        "hostname": {
+          "label": "שם שרת אחסון"
+        },
+        "port": {
+          "label": "פורט"
+        }
+      },
+      "name": "כתובת שירות (בטא)",
+      "prompt": {
+        "hostname": {
+          "label": "הכנסת את כתובת IP של השרת (לדוגמה 0.0.0.0) לשירות:",
+          "title": "שם שרת אחסון"
+        },
+        "port": {
+          "label": "הכנסת מספר פורט של השירות:",
+          "title": "פורט"
+        }
+      }
+    },
+    "audio-compressor": {
+      "description": "החל דחיסה על אודיו (מורידה את עוצמת הקול של החלקים הרועשים ביותר של האות ומעלה את עוצמת הקול של החלקים החלשים ביותר)",
+      "name": "דוחס ומצפין קול"
+    },
+    "auth-proxy-adapter": {
+      "description": "תמיכה בשימוש בשירותי פרוקסי אימות",
+      "menu": {
+        "disable": "השבת מתאם פרוקסי",
+        "enable": "הפעל מתאם פרוקסי",
+        "hostname": {
+          "label": "שם שרת מאחסן"
+        },
+        "port": {
+          "label": "פורט"
+        }
+      },
+      "name": "מתאם זיהוי פרוקסי",
+      "prompt": {
+        "hostname": {
+          "label": "הזן שם מארח עבור שרת הפרוקסי המקומי (דורש הפעלה מחדש):",
+          "title": "שם פרוקסי של שרת מאחסן"
+        },
+        "port": {
+          "label": "הזן פורט עבור שרת הפרוקסי המקומי (דורש הפעלה מחדש):",
+          "title": "יציאת פרוקסי"
+        }
+      }
+    },
+    "blur-nav-bar": {
+      "description": "הפוך את סרגל הניווט לשקוף ומטושטש",
+      "name": "טשטש את סרגל הניווט"
+    },
+    "bypass-age-restrictions": {
+      "description": "עקוף את אימות גיל המשתמש של יוטיוב",
+      "name": "עקוף את ההחמרות של הגיל"
+    },
+    "captions-selector": {
+      "description": "בורר כתוביות עבור רצועות אודיו של {{applicationName}}",
+      "menu": {
+        "autoload": "בחר אוטומטי את הכתובית האחרונה שנבחרה",
+        "disable-captions": "ברירת מחד ללא כתוביות"
+      },
+      "name": "בוחר כתוביות",
+      "prompt": {
+        "selector": {
+          "label": "שפת כתוביות נוכחית: {{language}}",
+          "none": "ללא",
+          "title": "בחר שפת כתוביות"
+        }
+      },
+      "templates": {
+        "title": "פתח בחירת כתוביות"
+      },
+      "toast": {
+        "caption-changed": "תרגום שונה ל {{שפה}}",
+        "caption-disabled": "תרגום בוטל",
+        "no-captions": "אין תרגום זמין לשיר הזה"
+      }
+    },
+    "compact-sidebar": {
+      "description": "הגדר תמיד את סרגל הצד למצב קומפקטי",
+      "name": "סרגל צד קומפקטי"
+    },
+    "crossfade": {
+      "description": "עמעם בין השירים",
+      "menu": {
+        "advanced": "מתקדם"
+      },
+      "name": "התפיידות צלב[בית]",
+      "prompt": {
+        "options": {
+          "multi-input": {
+            "fade-in-duration": "תתפייד בזמן[מילישניות]",
+            "fade-scaling": {
+              "linear": "לינארי",
+              "logarithmic": "לוגריתמי"
+            }
+          }
+        }
+      }
+    },
+    "disable-autoplay": {
+      "menu": {
+        "apply-once": "חל רק בהפעלה"
+      },
+      "name": "השבתת הפעלה אוטומטית"
+    },
+    "discord": {
+      "backend": {
+        "connected": "התחבר לדיסקורד",
+        "disconnected": "התנתק לדיסקורד"
+      },
+      "menu": {
+        "auto-reconnect": "חיבור מחדש אוטומטי",
+        "clear-activity": "נקה פעילות",
+        "connected": "מחובר",
+        "disconnected": "מנותק",
+        "hide-github-button": "הסתר את לחצן הקישור של GitHub",
+        "play-on-application": "הפעל ביוטיוב מיוזיק",
+        "set-inactivity-timeout": "הגדר פסק זמן לחוסר פעילות"
+      }
+    },
+    "downloader": {
+      "backend": {
+        "dialog": {
+          "error": {
+            "buttons": {
+              "ok": "אוקיי"
+            },
+            "message": "אה ! מתנצלים, הורדה נכשלה",
+            "title": "שגיאה בהורדה!"
+          },
+          "start-download-playlist": {
+            "buttons": {
+              "ok": "אוקיי"
+            },
+            "message": "מוריד פלייליסט {{playlistTitle}}",
+            "title": "הורדה התחילה"
+          }
+        },
+        "feedback": {
+          "downloading": "מוריד…",
+          "loading": "בטְעִינָה…",
+          "playlist-has-only-one-song": "לפלייליסט יש רק פריט אחד, מוריד אותו ישירות",
+          "playlist-id-not-found": "לא נמצא מזהה ID פלייליסט",
+          "preparing-file": "מכין קובץ…",
+          "saving": "שומר…",
+          "trying-to-get-playlist-id": "מנסה להשיג מזהה פלייליסט: {{playlistId}}",
+          "video-id-not-found": "הסרטון לא נמצא"
+        }
+      },
+      "description": "מוריד MP3 / אודיו מקור ישירות מהממשק",
+      "menu": {
+        "choose-download-folder": "בחר תיקיית הורדה",
+        "download-finish-settings": {
+          "label": "הורדה בסיום",
+          "prompt": {
+            "last-percent": "אחרי x אחוזים",
+            "last-seconds": "נשארו x שניות",
+            "title": "הגדר מתי להוריד"
+          },
+          "submenu": {
+            "advanced": "מִתקַדֵם",
+            "enabled": "מופעל",
+            "percent": "אָחוּז",
+            "seconds": "שניות"
+          }
+        },
+        "presets": "הגדרות קבועות מראש",
+        "skip-existing": "דלג על קבצים קיימים"
+      }
     }
   }
 }

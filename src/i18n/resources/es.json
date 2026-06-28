@@ -2,14 +2,14 @@
   "common": {
     "console": {
       "plugins": {
-        "execute-failed": "Error al ejecutar el plugin {{pluginName}}::{{contextName}}",
-        "executed-at-ms": "Plugin {{pluginName}}::{{contextName}} Ejecutó en {{ms}}ms",
-        "initialize-failed": "Error al inicializar el plugin \"{{pluginName}}\"",
-        "load-all": "Cargando todos los plugins",
-        "load-failed": "Error al cargar el plugin \"{{pluginName}}\"",
-        "loaded": "Plugin \"{{pluginName}}\" cargado",
-        "unload-failed": "No se ha podido descargar el plugin \"{{pluginName}}\"",
-        "unloaded": "Plugin \"{{pluginName}}\" descargado"
+        "execute-failed": "Error al ejecutar el complemento {{pluginName}}::{{contextName}}",
+        "executed-at-ms": "Complemento {{pluginName}}::{{contextName}} se ejecutó en {{ms}}ms",
+        "initialize-failed": "Error al inicializar el complemento \"{{pluginName}}\"",
+        "load-all": "Cargando todos los complementos",
+        "load-failed": "Error al cargar el complemento \"{{pluginName}}\"",
+        "loaded": "Complementos \"{{pluginName}}\" cargados",
+        "unload-failed": "No se ha podido descargar el complemento \"{{pluginName}}\"",
+        "unloaded": "Complemento \"{{pluginName}}\" descargado"
       }
     }
   },
@@ -45,15 +45,15 @@
     "dialog": {
       "hide-menu-enabled": {
         "detail": "El menú está oculto, utiliza \"Alt\" para mostrarlo (o \"Escape\" si utilizas el menú integrado en la aplicación)",
-        "message": "Menú Oculto está habilitado",
-        "title": "Menú oculto habilitado"
+        "message": "El \"Menú Oculto\" está habilitado",
+        "title": "\"Menú oculto\" habilitado"
       },
       "need-to-restart": {
         "buttons": {
           "later": "Más tarde",
           "restart-now": "Reiniciar ahora"
         },
-        "detail": "El plugin \"{{pluginName}}\" requiere reiniciar para tomar efecto",
+        "detail": "El complemento \"{{pluginName}}\" requiere reiniciar para tomar efecto",
         "message": "\"{{pluginName}}\" necesita reiniciar",
         "title": "Se requiere reinicio"
       },
@@ -150,11 +150,19 @@
           "visual-tweaks": {
             "label": "Ajustes visuales",
             "submenu": {
+              "custom-window-title": {
+                "label": "Título de ventana personalizado",
+                "prompt": {
+                  "label": "Ingresa un título de ventana personalizado: (déjalo vacío para desactivar)",
+                  "placeholder": "Ejemplo: {{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "Predeterminado",
                 "force-show": "Forzar la visualización",
                 "hide": "Ocultar",
-                "label": "Botones de \"Me Gusta\""
+                "label": "Botones de \"Me Gusta\"",
+                "swap": "Intercambiar el orden de los botones de \"Me Gusta\""
               },
               "remove-upgrade-button": "Eliminar el botón de Actualización",
               "theme": {
@@ -178,7 +186,7 @@
       },
       "plugins": {
         "enabled": "Habilitado",
-        "label": "Plugins",
+        "label": "Complementos",
         "new": "NUEVO"
       },
       "view": {
@@ -201,8 +209,8 @@
       "restart": "Reiniciar la aplicación",
       "show": "Mostrar ventana",
       "tooltip": {
-        "default": "YouTube Music",
-        "with-song-info": "YouTube Music: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -210,13 +218,6 @@
     "ad-speedup": {
       "description": "Si se reproduce un anuncio, silencia el audio y fija la velocidad de reproducción en 16x",
       "name": "Aumento de la velocidad de anuncios"
-    },
-    "adblocker": {
-      "description": "Bloquear todos los anuncios y el rastreo por defecto",
-      "menu": {
-        "blocker": "Bloqueador"
-      },
-      "name": "Bloqueador de anuncios"
     },
     "album-actions": {
       "description": "Añade los botones \"Quitar no me gusta\", \"No me gusta\", \"Me gusta\" y \"Quitar me gusta\" para aplicarlos a todas las canciones de una lista de reproducción o un álbum",
@@ -230,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Habilitar temas a la barra de búsqueda"
       },
       "name": "Tema de color del álbum"
     },
@@ -280,7 +282,7 @@
       "name": "Modo ambiente"
     },
     "amuse": {
-      "description": "Agrega soporte a YouTube Music para el widget \"reproduciendo\" de Amuse por 6K Labs",
+      "description": "Agrega soporte a {{applicationName}} para el widget \"reproduciendo\" de Amuse por 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "El servidor API de Amuse se está ejecutando. Usa GET /query para obtener información de la canción."
@@ -313,6 +315,22 @@
         "hostname": {
           "label": "Nombre del host"
         },
+        "https": {
+          "label": "HTTPS y Certificados",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Seleccione el archivo de certificado HTTPS",
+              "label": "Archivo de certificado (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Habilitar HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Selecciona el archivo de clave privada HTTPS",
+              "label": "Archivo de clave privada (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Puerto"
         }
@@ -333,16 +351,40 @@
       "description": "Aplicar compresión al audio (reduce la diferencia entre las partes más fuertes y más suaves de una pista para que tenga un nivel más consistente)",
       "name": "Compresor de audio"
     },
+    "auth-proxy-adapter": {
+      "description": "Soporte para el uso de servicios de proxy de autenticación",
+      "menu": {
+        "disable": "Deshabilitar el adaptador proxy",
+        "enable": "Habilitar el adaptador proxy",
+        "hostname": {
+          "label": "Nombre de host"
+        },
+        "port": {
+          "label": "Puerto"
+        }
+      },
+      "name": "Adaptador de proxy de autenticación",
+      "prompt": {
+        "hostname": {
+          "label": "Ingrese el nombre de host del servidor proxy local (requiere reinicio):",
+          "title": "Nombre de host del proxy"
+        },
+        "port": {
+          "label": "Ingrese el puerto para el servidor de proxy local (requiere reinicio):",
+          "title": "Puerto de proxy"
+        }
+      }
+    },
     "blur-nav-bar": {
       "description": "Hace que la barra de navegación se vea transparente y borrosa",
       "name": "Desenfocar barra de navegación"
     },
     "bypass-age-restrictions": {
-      "description": "Saltarse la verificación de edad de YouTube",
+      "description": "Saltarse la verificación de edad de Music Player",
       "name": "Saltarse las restricciones de edad"
     },
     "captions-selector": {
-      "description": "Selector de subtítulos para pistas de audio de YouTube Music",
+      "description": "Selector de subtítulos para pistas de audio de {{applicationName}}",
       "menu": {
         "autoload": "Seleccionar automáticamente el último subtítulo utilizado",
         "disable-captions": "Sin subtítulos por defecto"
@@ -357,7 +399,23 @@
       },
       "templates": {
         "title": "Abrir el selector de subtítulos"
+      },
+      "toast": {
+        "caption-changed": "Subtítulos cambiados a {{language}}",
+        "caption-disabled": "Subtítulos desactivados",
+        "no-captions": "Sin subtítulos para ésta canción"
       }
+    },
+    "clock": {
+      "description": "Añade un reloj a la barra de navegación",
+      "menu": {
+        "format": {
+          "24-hour-format": "Formato 24 horas",
+          "display-seconds": "Mostrar segundos",
+          "label": "Formato"
+        }
+      },
+      "name": "Reloj"
     },
     "compact-sidebar": {
       "description": "Establecer siempre la barra lateral en modo compacto",
@@ -385,6 +443,19 @@
         }
       }
     },
+    "custom-output-device": {
+      "description": "Configura un dispositivo de salida de audio personalizado para las canciones",
+      "menu": {
+        "device-selector": "Seleccionar un dispositivo"
+      },
+      "name": "Dispositivo de audio personalizado",
+      "prompt": {
+        "device-selector": {
+          "label": "Escoge el dispositivo de salida de audio que se va a usar",
+          "title": "Seleccionar un dispositivo de audio"
+        }
+      }
+    },
     "disable-autoplay": {
       "description": "Hace que la canción comience en modo \"pausado\"",
       "menu": {
@@ -407,8 +478,16 @@
         "disconnected": "Desconectado",
         "hide-duration-left": "Ocultar la duración restante",
         "hide-github-button": "Ocultar el botón de enlace a GitHub",
-        "play-on-youtube-music": "Reproducir en YouTube Music",
-        "set-inactivity-timeout": "Establecer tiempo de inactividad"
+        "play-on-application": "Reproducir en {{applicationName}}",
+        "set-inactivity-timeout": "Establecer tiempo de inactividad",
+        "set-status-display-type": {
+          "label": "Texto de estado",
+          "submenu": {
+            "application": "Escuchando {{applicationName}}",
+            "artist": "Escuchando a {artist}",
+            "title": "Escuchando {song title}"
+          }
+        }
       },
       "name": "Discord Rich Presence",
       "prompt": {
@@ -433,7 +512,7 @@
               "ok": "OK"
             },
             "detail": "({{playlistSize}} canciones)",
-            "message": "Descargando Playlist {{playlistTitle}}",
+            "message": "Descargando lista de reproducción {{playlistTitle}}",
             "title": "Descarga iniciada"
           }
         },
@@ -576,7 +655,15 @@
     },
     "navigation": {
       "description": "Flechas de navegación Siguiente/Atrás directamente integradas en la interfaz, como en tu navegador favorito",
-      "name": "Navegación"
+      "name": "Navegación",
+      "templates": {
+        "back": {
+          "title": "Volver a la página anterior"
+        },
+        "forward": {
+          "title": "Ir a la siguiente página"
+        }
+      }
     },
     "no-google-login": {
       "description": "Eliminar los botones y enlaces de inicio de sesión de Google de la interfaz",
@@ -599,6 +686,10 @@
         "unpause-notification": "Mostrar notificación al reanudar"
       },
       "name": "Notificaciones"
+    },
+    "performance-improvement": {
+      "description": "Mejore el rendimiento habilitando scripts experimentales",
+      "name": "Mejora del rendimiento [Beta]"
     },
     "picture-in-picture": {
       "description": "Permite cambiar la aplicación al modo picture-in-picture",
@@ -664,7 +755,12 @@
         }
       },
       "description": "Permite cambiar la calidad del vídeo con un botón sobre puesto en el vídeo",
-      "name": "Ajustador de calidad de vídeo"
+      "name": "Ajustador de calidad de vídeo",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "Abrir selector de calidad del reproductor"
+        }
+      }
     },
     "scrobbler": {
       "description": "Añadir soporte para scrobbling (last.fm, Listenbrainz, etc.)",
@@ -683,8 +779,9 @@
         "listenbrainz": {
           "token": "Introduzca el token de usuario de ListenBrainz"
         },
+        "scrobble-alternative-artist": "Usar artistas alternativos",
         "scrobble-alternative-title": "Usar títulos alternativos",
-        "scrobble-other-media": "Scrobble en otros medios"
+        "scrobble-other-media": "Hacer Scrobble sobre otros medios"
       },
       "name": "Scrobbler",
       "prompt": {
@@ -734,10 +831,28 @@
     "synced-lyrics": {
       "description": "Proporciona letras de canciones sincronizadas, utilizando proveedores como LRClib.",
       "errors": {
-        "fetch": "⚠️\tHa ocurrido un error al obtener la letra.\n\tPor favor, inténtalo de nuevo más tarde.",
-        "not-found": "⚠️ No se ha encontrado ninguna letra para esta canción."
+        "fetch": "⚠️\tSe produjo un error al obtener la letra.\n\tPor favor, inténtelo de nuevo más tarde.",
+        "not-found": "⚠️ No se han encontrado letras para esta canción."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Convertir carácter Chino",
+          "submenu": {
+            "disabled": {
+              "label": "Deshabilitado",
+              "tooltip": "Deshabilitar conversión de caracteres Chinos"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplificar a Tradicional",
+              "tooltip": "Convertir Chino Simplifcado en Chino Tradicional"
+            },
+            "traditional-to-simplified": {
+              "label": "Tradicional a Simplificado",
+              "tooltip": "Convertir Chino Tradicional a Chino Simplificado"
+            }
+          },
+          "tooltip": "Convertir carácter Chino a Tradicional o Simplificado"
+        },
         "default-text-string": {
           "label": "Carácter predeterminado entre letras",
           "tooltip": "Elige el carácter predeterminado que se utilizará para el espacio entre letras"
@@ -768,6 +883,14 @@
           "label": "Haz que la letra esté perfectamente sincronizada",
           "tooltip": "Calcular al milisegundo la visualización de la siguiente línea (puede tener un pequeño impacto en el rendimiento)"
         },
+        "preferred-provider": {
+          "label": "Proveedor preferido",
+          "none": {
+            "label": "Ninguno",
+            "tooltip": "Ningún proveedor preferido"
+          },
+          "tooltip": "Elige el proveedor predeterminado que deseas usar"
+        },
         "romanization": {
           "label": "Romanizar letras",
           "tooltip": "Si la letra está en un idioma diferente, intenta mostrar una versión en latín."
@@ -789,7 +912,7 @@
       "warnings": {
         "duration-mismatch": "⚠️ - La letra puede estar desincronizada debido a un desajuste en la duración.",
         "inexact": "⚠️ - La letra de esta canción puede no ser exacta",
-        "instrumental": "⚠️ - Se trata de una canción instrumental"
+        "instrumental": "⚠️ - Esta es una canción instrumental"
       }
     },
     "taskbar-mediacontrol": {
@@ -800,13 +923,34 @@
       "description": "Añade un widget TouchBar para los usuarios de macOS",
       "name": "TouchBar"
     },
+    "transparent-player": {
+      "description": "Hace que la ventana de la aplicación sea transparente",
+      "menu": {
+        "opacity": {
+          "label": "Opacidad",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Tipo",
+          "submenu": {
+            "acrylic": "Acrílico",
+            "mica": "Mica",
+            "none": "Ninguno",
+            "tabbed": "Con pestañas"
+          }
+        }
+      },
+      "name": "Reproductor transparente"
+    },
     "tuna-obs": {
-      "description": "Integración con el plugin Tuna de OBS",
+      "description": "Integración con el complemento Tuna de OBS",
       "name": "Tuna OBS"
     },
     "unobtrusive-player": {
       "description": "Evita que el reproductor aparezca al reproducir una canción",
-      "name": "Jugador discreto"
+      "name": "Reproductor discreto"
     },
     "video-toggle": {
       "description": "Añade un botón para cambiar entre el modo Vídeo/Canción. También puede eliminar opcionalmente toda la pestaña de vídeo",
@@ -831,7 +975,8 @@
       },
       "name": "Alternador de vídeo",
       "templates": {
-        "button": "Canción"
+        "button-song": "Canción",
+        "button-video": "Vídeo"
       }
     },
     "visualizer": {

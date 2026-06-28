@@ -12,8 +12,8 @@ export interface DefaultConfig {
   'window-size': WindowSizeConfig;
   'window-maximized': boolean;
   'window-position': WindowPositionConfig;
-  url: string;
-  options: {
+  'url': string;
+  'options': {
     language?: string;
     tray: boolean;
     appVisible: boolean;
@@ -29,16 +29,18 @@ export interface DefaultConfig {
     autoResetAppCache: boolean;
     resumeOnStart: boolean;
     likeButtons: string;
+    swapLikeButtonsOrder: boolean;
     proxy: string;
     startingPage: string;
     overrideUserAgent: boolean;
     usePodcastParticipantAsArtist: boolean;
     themes: string[];
+    customWindowTitle?: string;
   };
-  plugins: Record<string, unknown>;
+  'plugins': Record<string, unknown>;
 }
 
-const defaultConfig: DefaultConfig = {
+export const defaultConfig: DefaultConfig = {
   'window-size': {
     width: 1100,
     height: 550,
@@ -48,7 +50,7 @@ const defaultConfig: DefaultConfig = {
     x: -1,
     y: -1,
   },
-  'url': 'https://music.youtube.com',
+  'url': 'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com',
   'options': {
     tray: false,
     appVisible: true,
@@ -64,6 +66,7 @@ const defaultConfig: DefaultConfig = {
     autoResetAppCache: false,
     resumeOnStart: true,
     likeButtons: '',
+    swapLikeButtonsOrder: false,
     proxy: '',
     startingPage: '',
     overrideUserAgent: false,
@@ -72,5 +75,3 @@ const defaultConfig: DefaultConfig = {
   },
   'plugins': {},
 };
-
-export default defaultConfig;

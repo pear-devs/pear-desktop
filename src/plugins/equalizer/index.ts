@@ -1,8 +1,14 @@
-import { createPlugin } from '@/utils';
+import {
+  defaultPresets,
+  presetConfigs,
+  type Preset,
+  type FilterConfig,
+} from './presets';
 import { t } from '@/i18n';
-import { MenuContext } from '@/types/contexts';
-import { MenuTemplate } from '@/menu';
-import { defaultPresets, presetConfigs, Preset, FilterConfig } from './presets';
+import { createPlugin } from '@/utils';
+
+import type { MenuTemplate } from '@/menu';
+import type { MenuContext } from '@/types/contexts';
 
 export type EqualizerPluginConfig = {
   enabled: boolean;
@@ -50,7 +56,7 @@ export default createPlugin({
       const config = await getConfig();
 
       document.addEventListener(
-        'ytmd:audio-can-play',
+        'peard:audio-can-play',
         ({ detail: { audioSource, audioContext } }) => {
           const filtersToApply = config.filters.concat(
             defaultPresets

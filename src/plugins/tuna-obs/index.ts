@@ -1,10 +1,9 @@
 import { net } from 'electron';
-
 import is from 'electron-is';
 
-import { createPlugin } from '@/utils';
-import registerCallback from '@/providers/song-info';
 import { t } from '@/i18n';
+import { registerCallback } from '@/providers/song-info';
+import { createPlugin } from '@/utils';
 
 interface Data {
   album: string | null | undefined;
@@ -16,7 +15,9 @@ interface Data {
   progress: number;
   status: string;
   title: string;
+  alternativeTitle: string;
   url: string;
+  tags: string[];
 }
 
 export default createPlugin({
@@ -70,8 +71,8 @@ export default createPlugin({
           });
       };
 
-      ipc.on('ytmd:player-api-loaded', () =>
-        ipc.send('ytmd:setup-time-changed-listener'),
+      ipc.on('peard:player-api-loaded', () =>
+        ipc.send('peard:setup-time-changed-listener'),
       );
 
       registerCallback((songInfo) => {
@@ -86,10 +87,12 @@ export default createPlugin({
           cover_url: songInfo.imageSrc ?? '',
           album_url: songInfo.imageSrc ?? '',
           title: songInfo.title,
+          alternativeTitle: songInfo.alternativeTitle ?? '',
           artists: [songInfo.artist],
           status: songInfo.isPaused ? 'stopped' : 'playing',
           album: songInfo.album,
           url: songInfo.url ?? '',
+          tags: songInfo.tags ?? [],
         });
       });
     },
