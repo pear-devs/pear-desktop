@@ -687,10 +687,6 @@
       },
       "name": "Notificações"
     },
-    "performance-improvement": {
-      "description": "Melhore o desempenho ativando scripts experimentais",
-      "name": "Melhoria de desempenho [Beta]"
-    },
     "picture-in-picture": {
       "description": "Permite mudar a aplicação para o modo 'picture-in-picture'",
       "menu": {

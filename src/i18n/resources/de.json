@@ -687,10 +687,6 @@
       },
       "name": "Benachrichtigungen"
     },
-    "performance-improvement": {
-      "description": "Leistung durch Aktivieren experimenteller Skripte verbessern",
-      "name": "Leistungs Verbesserung [Beta]"
-    },
     "picture-in-picture": {
       "description": "Erlaubt die App in den Bild-im-Bild-Modus zu wechseln",
       "menu": {

@@ -658,10 +658,6 @@
       },
       "name": "การแจ้งเตือน"
     },
-    "performance-improvement": {
-      "description": "ปรับปรุงประสิทธิภาพโดยเปิดใช้งานสคริปต์ทดลอง",
-      "name": "ปรับปรุงประสิทธิภาพ [Beta]"
-    },
     "picture-in-picture": {
       "description": "อนุญาตให้สลับแอปเป็นโหมดภาพในภาพ",
       "menu": {

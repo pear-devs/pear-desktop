@@ -637,10 +637,6 @@
       },
       "name": "Ilmoitukset"
     },
-    "performance-improvement": {
-      "description": "Paranna suorituskykyä käyttämällä kokeellisia skriptejä",
-      "name": "Suorituskykyparannus [Beta]"
-    },
     "picture-in-picture": {
       "description": "Sallii sovelluksen vaihtamisen \"kuva kuvassa\" tilaan",
       "menu": {

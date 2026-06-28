@@ -687,10 +687,6 @@
       },
       "name": "Bildirimler"
     },
-    "performance-improvement": {
-      "description": "Deneysel komut dosyalarını etkinleştirerek performansı artırın",
-      "name": "Performans iyileştirmesi [Beta]"
-    },
     "picture-in-picture": {
       "description": "Uygulamayı resim-içinde-resim moduna geçirmeye izin verir",
       "menu": {

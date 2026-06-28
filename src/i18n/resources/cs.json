@@ -658,10 +658,6 @@
       },
       "name": "Oznámení"
     },
-    "performance-improvement": {
-      "description": "Zlepšit výkon povolením experimentálních skriptů",
-      "name": "Zlepšení výkonu [Beta]"
-    },
     "picture-in-picture": {
       "description": "Povoluje switch aplikaci do režimu obrázek v obrázku",
       "menu": {

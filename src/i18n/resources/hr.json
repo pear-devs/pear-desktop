@@ -675,10 +675,6 @@
       },
       "name": "Obavijesti"
     },
-    "performance-improvement": {
-      "description": "Poboljšati performanse uključivanjem eksperimentalnih skripti",
-      "name": "Poboljšanje performansa (Beta)"
-    },
     "picture-in-picture": {
       "description": "Dozvoljava aplikaciji da se prebaci u režim slike-u-slici",
       "menu": {

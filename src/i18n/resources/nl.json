@@ -684,10 +684,6 @@
       },
       "name": "Meldingen"
     },
-    "performance-improvement": {
-      "description": "Verbeter prestaties door experimentale scripts aan te zetten",
-      "name": "Prestatie-verbetering"
-    },
     "picture-in-picture": {
       "description": "Laat de app toe om naar picture-in-picture modus om te schakelen",
       "menu": {

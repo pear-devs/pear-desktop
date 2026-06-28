@@ -687,10 +687,6 @@
       },
       "name": "Notificacions"
     },
-    "performance-improvement": {
-      "description": "Millora el rendiment habilitant scripts experimentals",
-      "name": "Millora del rendiment [Beta]"
-    },
     "picture-in-picture": {
       "description": "Permet commutar el mode d'imatge en imatge (PiP)",
       "menu": {

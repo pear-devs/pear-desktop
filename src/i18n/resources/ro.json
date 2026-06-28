@@ -679,10 +679,6 @@
       },
       "name": "Notificări"
     },
-    "performance-improvement": {
-      "description": "Îmbunătățește performanța activând scripturile experimentale",
-      "name": "Îmbunătățirea performanței [Beta]"
-    },
     "picture-in-picture": {
       "description": "Permite să schimbi aplicația la modul picture-in-picture",
       "menu": {

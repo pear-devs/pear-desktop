@@ -687,10 +687,6 @@
       },
       "name": "Powiadomienia"
     },
-    "performance-improvement": {
-      "description": "Popraw wydajność przez włączenie skryptów eksperymentalnych",
-      "name": "Poprawienie wydajności [Beta]"
-    },
     "picture-in-picture": {
       "description": "Umożliwia przełączenie aplikacji w tryb obrazu w obrazie",
       "menu": {

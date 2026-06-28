@@ -687,10 +687,6 @@
       },
       "name": "Pranešimai"
     },
-    "performance-improvement": {
-      "description": "Pagerinkite našumą įjungdami eksperimentinius scenarijus",
-      "name": "Našumo patobulinimas [Beta]"
-    },
     "picture-in-picture": {
       "description": "Leidžia pakeisti programą į „nuotrauka-nuotraukoje“ rėžimą",
       "menu": {

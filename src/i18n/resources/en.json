@@ -694,10 +694,6 @@
       },
       "name": "Notifications"
     },
-    "performance-improvement": {
-      "description": "Improve performance by enabling experimental scripts",
-      "name": "Performance improvement [Beta]"
-    },
     "picture-in-picture": {
       "description": "Allows to switch the app to picture-in-picture mode",
       "menu": {

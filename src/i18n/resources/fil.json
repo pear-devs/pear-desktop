@@ -643,10 +643,6 @@
       },
       "name": "Mga Abiso"
     },
-    "performance-improvement": {
-      "description": "Pagbutihin ang performance sa pamamagitan ng pagpapagana ng mga mapanganib na script",
-      "name": "Pagpapabuti ng performance [Beta]"
-    },
     "picture-in-picture": {
       "description": "Payagan ang pag-palit ng app sa picture-in-picture mode",
       "menu": {

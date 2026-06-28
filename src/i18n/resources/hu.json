@@ -655,10 +655,6 @@
       },
       "name": "Értesítések"
     },
-    "performance-improvement": {
-      "description": "Teljesítmény fejlesztése kísérleti kódok engedélyezésével",
-      "name": "Teljesítmény fejlesztése [Béta]"
-    },
     "picture-in-picture": {
       "description": "Lehetővé teszi az alkalmazás kép a képben módra váltását",
       "menu": {

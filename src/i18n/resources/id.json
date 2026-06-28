@@ -687,10 +687,6 @@
       },
       "name": "Pemberitahuan"
     },
-    "performance-improvement": {
-      "description": "Tingkatkan kinerja dengan mengaktifkan skrip eksperimental",
-      "name": "Peningkatan kinerja [Beta]"
-    },
     "picture-in-picture": {
       "description": "Izinkan untuk memindahkan aplikasi ke mode gambar-dalam-gambar",
       "menu": {
