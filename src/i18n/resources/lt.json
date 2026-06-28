@@ -219,13 +219,6 @@
       "description": "Jeigu gros reklama, įrašo garsas bus išjungtas ir pagreitintas 16x",
       "name": "Reklamos Pagreitinimas"
     },
-    "adblocker": {
-      "description": "Blokuoti visas reklamas ir seklius",
-      "menu": {
-        "blocker": "Blokuotojas"
-      },
-      "name": "Reklamų blokuotojas"
-    },
     "album-actions": {
       "description": "Prideda mygtukus pažymėti „Nepatinka“, „Patinka“, „Atžymėti Nepatinka“ bei „Atžymėti Patinka“ visas dainas grojaraštyje arba albume",
       "name": "Albumo Veiksmai"

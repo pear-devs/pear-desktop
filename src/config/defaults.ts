@@ -32,7 +32,6 @@ export interface DefaultConfig {
     swapLikeButtonsOrder: boolean;
     proxy: string;
     startingPage: string;
-    backgroundMaterial?: 'none' | 'mica' | 'acrylic' | 'tabbed';
     overrideUserAgent: boolean;
     usePodcastParticipantAsArtist: boolean;
     themes: string[];

@@ -211,13 +211,6 @@
       "description": "Ef auglýsing spilar slökknar hún á hljóðinu og stillir spilunarhraðann á 16x",
       "name": "Auglýsingahraða"
     },
-    "adblocker": {
-      "description": "Lokaðu fyrir allar auglýsingar og rakningar úr kassanum",
-      "menu": {
-        "blocker": "Blokkari"
-      },
-      "name": "Auglýsingablokkari"
-    },
     "album-actions": {
       "description": "Bætir Ódíslika, Mislíkt, Líkt, og Ólíkt til að nota þetta á öll lög á spilunarlista eða albúm",
       "name": "Albúmsaðgerðir"

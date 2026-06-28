@@ -1,22 +1,24 @@
-import { createRoute } from '@hono/zod-openapi';
-
-import { type NodeWebSocket } from '@hono/node-ws';
+import { createRoute, z } from '@hono/zod-openapi';
+import { app as electronApp } from 'electron';
+import { verify } from 'hono/jwt';
 
 import {
   registerCallback,
   type SongInfo,
   SongInfoEvent,
 } from '@/providers/song-info';
+import { LoggerPrefix } from '@/utils';
 
+import { AuthStrategy, type APIServerConfig } from '../../config';
 import { API_VERSION } from '../api-version';
+import { JWTPayloadSchema } from '../scheme';
 
-import type { WebSocket as NodeWS } from 'ws';
-import type { WSContext } from 'hono/ws';
-import type { Context, Next } from 'hono';
-import type { RepeatMode, VolumeState } from '@/types/datahost-get-state';
 import type { HonoApp } from '../types';
 import type { BackendContext } from '@/types/contexts';
-import type { APIServerConfig } from '@/plugins/api-server/config';
+import type { RepeatMode, VolumeState } from '@/types/datahost-get-state';
+import type { WebSocketLike, upgradeWebSocket } from '@hono/node-server';
+import type { Context, Next } from 'hono';
+import type { WSContext } from 'hono/ws';
 
 enum DataTypes {
   PlayerInfo = 'PLAYER_INFO',
@@ -40,15 +42,15 @@ type PlayerState = {
 
 export const register = (
   app: HonoApp,
-  { ipc }: BackendContext<APIServerConfig>,
-  { upgradeWebSocket }: NodeWebSocket,
+  { getConfig, ipc }: BackendContext<APIServerConfig>,
+  uws: typeof upgradeWebSocket,
 ) => {
   let volumeState: VolumeState | undefined = undefined;
   let repeat: RepeatMode = 'NONE';
   let shuffle = false;
   let lastSongInfo: SongInfo | undefined = undefined;
 
-  const sockets = new Set<WSContext<NodeWS>>();
+  const sockets = new Set<WSContext<WebSocketLike>>();
 
   const send = (type: DataTypes, state: Partial<PlayerState>) => {
     sockets.forEach((socket) =>
@@ -74,6 +76,13 @@ export const register = (
     volume: volumeState?.state ?? 100,
     repeat,
     shuffle,
+  });
+
+  electronApp.once('before-quit', () => {
+    send(DataTypes.PlayerStateChanged, {
+      isPlaying: false,
+      position: lastSongInfo?.elapsedSeconds ?? 0,
+    });
   });
 
   registerCallback((songInfo, event) => {
@@ -123,14 +132,50 @@ export const register = (
       path: `/api/${API_VERSION}/ws`,
       summary: 'websocket endpoint',
       description: 'WebSocket endpoint for real-time updates',
+      request: {
+        query: z.object({
+          token: z
+            .string()
+            .openapi({
+              description:
+                'Authentication token. Required when the API server authStrategy is not NONE; optional otherwise.',
+            })
+            .optional(),
+        }),
+      },
       responses: {
         101: {
           description: 'Switching Protocols',
         },
       },
     }),
-    upgradeWebSocket(() => ({
-      onOpen(_, ws) {
+    uws((ctx) => ({
+      async onOpen(_, ws) {
+        const config = await getConfig();
+
+        if (config.authStrategy !== AuthStrategy.NONE) {
+          const token = ctx.req.query('token');
+
+          if (!token) {
+            ws.close(1008, 'Unauthorized');
+            return;
+          }
+
+          try {
+            const payload = await verify(token, config.secret, 'HS256');
+            const parsedPayload = await JWTPayloadSchema.safeParseAsync(payload);
+
+            if (!parsedPayload.success || !config.authorizedClients.includes(parsedPayload.data.id)) {
+              ws.close(1008, 'Unauthorized');
+              return;
+            }
+          } catch (err) {
+            console.error(LoggerPrefix, 'WebSocket authentication failed:', err);
+            ws.close(1008, 'Unauthorized');
+            return;
+          }
+        }
+
         sockets.add(ws);
 
         ws.send(

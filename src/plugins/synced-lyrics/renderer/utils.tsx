@@ -1,16 +1,17 @@
-import { render } from 'solid-js/web';
-import KuromojiAnalyzer from 'kuroshiro-analyzer-kuromoji';
-import Kuroshiro from 'kuroshiro';
+import { romanize as romanizeThaiFrag } from '@dehoist/romanize-thai';
+import Sanscript from '@indic-transliteration/sanscript';
+import { sify, tify } from 'chinese-conv';
 import { romanize as esHangulRomanize } from 'es-hangul';
 import hanja from 'hanja';
-import { pinyin } from 'pinyin-pro';
-import { romanize as romanizeThaiFrag } from '@dehoist/romanize-thai';
+import Kuroshiro from 'kuroshiro';
+import KuromojiAnalyzer from 'kuroshiro-analyzer-kuromoji';
 import lazyVar from 'lazy-var';
+import { pinyin } from 'pinyin-pro';
+import { render } from 'solid-js/web';
 import { detect } from 'tinyld';
-import { sify, tify } from 'chinese-conv';
-import Sanscript from '@indic-transliteration/sanscript';
 
 import { waitForElement } from '@/utils/wait-for-element';
+
 import { LyricsRenderer, setIsVisible } from './renderer';
 
 export const selectors = {

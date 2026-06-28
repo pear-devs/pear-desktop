@@ -2,9 +2,9 @@ import { t } from '@/i18n';
 
 import { providerNames } from './providers';
 
-import type { MenuItemConstructorOptions } from 'electron';
-import type { MenuContext } from '@/types/contexts';
 import type { SyncedLyricsPluginConfig } from './types';
+import type { MenuContext } from '@/types/contexts';
+import type { MenuItemConstructorOptions } from 'electron';
 
 export const menu = async (
   ctx: MenuContext<SyncedLyricsPluginConfig>,

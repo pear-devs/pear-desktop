@@ -219,13 +219,6 @@
       "description": "使用静音以及 16 倍速播放跳过广告片段",
       "name": "广告加速跳过"
     },
-    "adblocker": {
-      "description": "屏蔽所有广告与跟踪器",
-      "menu": {
-        "blocker": "屏蔽器"
-      },
-      "name": "广告屏蔽器"
-    },
     "album-actions": {
       "description": "添加作用于播放列表或专辑中所有歌曲的全局“点赞/取消点赞”与“喜欢/取消喜欢”按钮",
       "name": "专辑操作"
@@ -503,6 +496,13 @@
           "title": "设置非活跃超时"
         }
       }
+    },
+    "do-not-track": {
+      "description": "默认拦截所有跟踪",
+      "menu": {
+        "blocker": "拦截器"
+      },
+      "name": "Do Not Track"
     },
     "downloader": {
       "backend": {
@@ -943,9 +943,14 @@
           "label": "类型",
           "submenu": {
             "acrylic": "亚克力",
+            "content": "内容",
+            "fullscreen-ui": "全屏用户界面",
             "mica": "云母",
             "none": "无",
-            "tabbed": "标签"
+            "tabbed": "标签",
+            "under-page": "页面下",
+            "under-window": "窗口下",
+            "window": "窗口"
           }
         }
       },

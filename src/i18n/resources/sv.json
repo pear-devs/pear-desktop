@@ -219,13 +219,6 @@
       "description": "Om en annons spelas, tystas ljudet och uppspelningshastigheten sätts till 16×",
       "name": "Snabba upp annonser"
     },
-    "adblocker": {
-      "description": "Blockerar annonser och spårning automatiskt",
-      "menu": {
-        "blocker": "Blockerare"
-      },
-      "name": "Annonsblockerare"
-    },
     "album-actions": {
       "description": "Lägger till knappar för Undislike, Dislike, Like och Unlike för att använda detta på alla spår i en spellista eller ett album",
       "name": "Albumåtgärder"

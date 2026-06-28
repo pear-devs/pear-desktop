@@ -219,13 +219,6 @@
       "description": "Se viene riprodotto un annuncio, l'audio viene disattivato e viene impostata la velocità di riproduzione su 16x",
       "name": "Accelerazione ad"
     },
-    "adblocker": {
-      "description": "Blocca tutti gli annunci e i tracker",
-      "menu": {
-        "blocker": "Blocco"
-      },
-      "name": "Ad blocker"
-    },
     "album-actions": {
       "description": "Aggiunge i pulsanti Undislike, Dislike, Like e Unlike a tutti i brani di una playlist o di un album",
       "name": "Azioni album"

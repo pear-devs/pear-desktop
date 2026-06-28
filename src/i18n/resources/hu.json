@@ -218,13 +218,6 @@
       "description": "Ha egy hirdetés elindul, elnémítja a hangot, és a lejátszási sebességet 16x-ra állítja",
       "name": "Hirdetésgyorsítás"
     },
-    "adblocker": {
-      "description": "Alapértelmezetten minden hirdetés és nyomkövetés blokkolása",
-      "menu": {
-        "blocker": "Blokkolási módszer"
-      },
-      "name": "Reklámblokkoló"
-    },
     "album-actions": {
       "description": "Hozzáadja a Tetszik, Nem tetszik és ezek visszavonására szolgáló gombokat, hogy ezeket az összes dalra alkalmazhasd egy lejátszási listán vagy albumban",
       "name": "Album műveletek"

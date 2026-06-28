@@ -1,5 +1,5 @@
-import { createPlugin } from '@/utils';
 import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 import type { MusicPlayer } from '@/types/music-player';
 

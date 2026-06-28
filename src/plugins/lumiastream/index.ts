@@ -1,8 +1,8 @@
 import { net } from 'electron';
 
-import { createPlugin } from '@/utils';
-import { registerCallback } from '@/providers/song-info';
 import { t } from '@/i18n';
+import { registerCallback } from '@/providers/song-info';
+import { createPlugin } from '@/utils';
 
 type LumiaData = {
   origin: string;

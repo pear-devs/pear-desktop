@@ -211,13 +211,6 @@
       "description": "Če se predvaja oglas se zvok utišja. Prav tako se hitrost predvajanja nastavi na 16 krat",
       "name": "Pospeševanje oglasov"
     },
-    "adblocker": {
-      "description": "Izklopi vse oglase in sledenje",
-      "menu": {
-        "blocker": "Blokator"
-      },
-      "name": "Blokator reklam"
-    },
     "album-actions": {
       "description": "Doda Undislike, Dislike, Like, in Unlike gumbe vsem glasbam v seznamu predvajanja ali albumu",
       "name": "Nastavitve albuma"

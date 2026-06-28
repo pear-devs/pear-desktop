@@ -219,13 +219,6 @@
       "description": "Se um anúncio for reproduzido, ele silencia o áudio e define a velocidade de reprodução para 16x",
       "name": "Acelerador de Anúncios"
     },
-    "adblocker": {
-      "description": "Bloqueio de todos os anúncios e rastreamentos imediatamente",
-      "menu": {
-        "blocker": "Bloqueador"
-      },
-      "name": "Bloqueador de Anúncios"
-    },
     "album-actions": {
       "description": "Adiciona botões Remover Não curtir, Não curtir, Curtir e Remover Curtir para aplicar em todas as músicas em uma lista ou álbum",
       "name": "Ações do álbum"
