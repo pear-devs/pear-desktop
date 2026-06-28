@@ -1,9 +1,8 @@
+import { menu } from './menu';
 import style from './style.css?inline';
-
+import { type AmbientModePluginConfig } from './types';
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
-import { menu } from './menu';
-import { type AmbientModePluginConfig } from './types';
 import { waitForElement } from '@/utils/wait-for-element';
 
 const defaultConfig: AmbientModePluginConfig = {
@@ -128,7 +127,7 @@ export default createPlugin({
             if (lastImageData) {
               const frameOffset =
                 (1 / this.buffer) * (1000 / this.interpolationTime);
-              context.globalAlpha = 1 - frameOffset * 2; // because of alpha value must be < 1
+              context.globalAlpha = 1 - (frameOffset * 2); // because of alpha value must be < 1
               context.putImageData(lastImageData, 0, 0);
               context.globalAlpha = frameOffset;
             }

@@ -1,11 +1,10 @@
-import { createPlugin } from '@/utils';
-import { t } from '@/i18n';
-
 import backend from './back';
 import renderer, {
   type CaptionsSelectorConfig,
   type LanguageOptions,
 } from './renderer';
+import { APPLICATION_NAME, t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 import type { MusicPlayer } from '@/types/music-player';
 
@@ -22,7 +21,10 @@ export default createPlugin<
   CaptionsSelectorConfig
 >({
   name: () => t('plugins.captions-selector.name'),
-  description: () => t('plugins.captions-selector.description'),
+  description: () =>
+    t('plugins.captions-selector.description', {
+      applicationName: APPLICATION_NAME,
+    }),
   config: {
     enabled: false,
     disableCaptions: false,

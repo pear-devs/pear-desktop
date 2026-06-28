@@ -1,19 +1,20 @@
+import nextIcon from '@assets/media-icons-black/next.png?asset&asarUnpack';
+import pauseIcon from '@assets/media-icons-black/pause.png?asset&asarUnpack';
+import playIcon from '@assets/media-icons-black/play.png?asset&asarUnpack';
+import previousIcon from '@assets/media-icons-black/previous.png?asset&asarUnpack';
 import { app, type BrowserWindow, Notification } from 'electron';
 
-import playIcon from '@assets/media-icons-black/play.png?asset&asarUnpack';
-import pauseIcon from '@assets/media-icons-black/pause.png?asset&asarUnpack';
-import nextIcon from '@assets/media-icons-black/next.png?asset&asarUnpack';
-import previousIcon from '@assets/media-icons-black/previous.png?asset&asarUnpack';
-
 import { notificationImage, secondsToMinutes, ToastStyles } from './utils';
-
+import {
+  APP_PROTOCOL,
+  changeProtocolHandler,
+} from '@/providers/protocol-handler';
 import { getSongControls } from '@/providers/song-controls';
 import {
   registerCallback,
   type SongInfo,
   SongInfoEvent,
 } from '@/providers/song-info';
-import { changeProtocolHandler } from '@/providers/protocol-handler';
 import { setTrayOnClick, setTrayOnDoubleClick } from '@/tray';
 import { mediaIcons } from '@/types/media-icons';
 
@@ -127,7 +128,7 @@ export default (
   const getButton = (kind: keyof typeof mediaIcons) =>
     `<action ${display(
       kind,
-    )} activationType="protocol" arguments="peardesktop://${kind}"/>`;
+    )} activationType="protocol" arguments="${APP_PROTOCOL}://${kind}"/>`;
 
   const getButtons = (isPaused: boolean) => `\
     <actions>
@@ -260,7 +261,9 @@ export default (
   songControls = getSongControls(win);
 
   let currentSeconds = 0;
-  on('peard:player-api-loaded', () => send('peard:setup-time-changed-listener'));
+  on('peard:player-api-loaded', () =>
+    send('peard:setup-time-changed-listener'),
+  );
 
   let savedSongInfo: SongInfo;
   let lastUrl: string | undefined;

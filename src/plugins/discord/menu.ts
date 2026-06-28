@@ -1,16 +1,15 @@
 import prompt from 'custom-electron-prompt';
-
 import { StatusDisplayType } from 'discord-api-types/v10';
 
 import { discordService } from './main';
+import { setMenuOptions } from '@/config/plugins';
+import { APPLICATION_NAME, t } from '@/i18n';
 import { singleton } from '@/providers/decorators';
 import promptOptions from '@/providers/prompt-options';
-import { setMenuOptions } from '@/config/plugins';
-import { t } from '@/i18n';
 
-import type { MenuContext } from '@/types/contexts';
 import type { DiscordPluginConfig } from './index';
 import type { MenuTemplate } from '@/menu';
+import type { MenuContext } from '@/types/contexts';
 
 const registerRefreshOnce = singleton((refreshMenu: () => void) => {
   discordService?.registerRefreshCallback(refreshMenu);
@@ -18,7 +17,7 @@ const registerRefreshOnce = singleton((refreshMenu: () => void) => {
 
 const DiscordStatusDisplayTypeLabels: Record<StatusDisplayType, string> = {
   [StatusDisplayType.Name]:
-    'plugins.discord.menu.set-status-display-type.submenu.pear-desktop',
+    'plugins.discord.menu.set-status-display-type.submenu.application',
   [StatusDisplayType.State]:
     'plugins.discord.menu.set-status-display-type.submenu.artist',
   [StatusDisplayType.Details]:
@@ -67,12 +66,16 @@ export const onMenu = async ({
       },
     },
     {
-      label: t('plugins.discord.menu.play-on-pear-desktop'),
+      label: t('plugins.discord.menu.play-on-application'),
       type: 'checkbox',
-      checked: config.playOnPearDesktop,
+      checked:
+        config[
+          'playOn\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063'
+        ],
       click(item: Electron.MenuItem) {
         setConfig({
-          playOnPearDesktop: item.checked,
+          'playOn\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063':
+            item.checked,
         });
       },
     },
@@ -111,6 +114,9 @@ export const onMenu = async ({
             DiscordStatusDisplayTypeLabels[
               statusDisplayType as StatusDisplayType
             ],
+            {
+              applicationName: APPLICATION_NAME,
+            },
           ),
           type: 'radio',
           checked: config.statusDisplayType === statusDisplayType,

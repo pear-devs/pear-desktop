@@ -1,12 +1,10 @@
-import is from 'electron-is';
 import { type MenuItem } from 'electron';
+import is from 'electron-is';
 
 import { snakeToCamel, ToastStyles, urgencyLevels } from './utils';
-
 import { t } from '@/i18n';
 
 import type { NotificationsPluginConfig } from './index';
-
 import type { MenuTemplate } from '@/menu';
 import type { MenuContext } from '@/types/contexts';
 

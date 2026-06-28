@@ -27,9 +27,9 @@
   --lyrics-padding: 0;
 
   /* Typography */
-  --lyrics-font-family: Satoshi, Avenir, -apple-system, BlinkMacSystemFont,
-    Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Open Sans, Helvetica Neue,
-    sans-serif;
+  --lyrics-font-family:
+    Satoshi, Avenir, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
+    Oxygen, Ubuntu, Cantarell, Open Sans, Helvetica Neue, sans-serif;
   --lyrics-font-size: clamp(1.4rem, 1.1vmax, 3rem);
   --lyrics-line-height: var(--ytmusic-body-line-height);
   --lyrics-width: 100%;
@@ -49,7 +49,8 @@
   --lyrics-duration: 2s;
 
   /* Animations */
-  --lyrics-animations: lyrics-glow var(--lyrics-glow-duration) forwards,
+  --lyrics-animations:
+    lyrics-glow var(--lyrics-glow-duration) forwards,
     lyrics-wobble var(--lyrics-wobble-duration) forwards;
   --lyrics-scale-duration: 0.166s;
   --lyrics-opacity-transition: 0.33s;
@@ -108,7 +109,9 @@
   padding-bottom: var(--lyrics-padding);
   scale: var(--lyrics-inactive-scale);
   translate: var(--lyrics-inactive-offset);
-  transition: scale var(--lyrics-scale-duration), translate 0.3s ease-in-out;
+  transition:
+    scale var(--lyrics-scale-duration),
+    translate 0.3s ease-in-out;
 
   display: block;
   text-align: left;
