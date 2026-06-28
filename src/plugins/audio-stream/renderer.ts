@@ -39,6 +39,7 @@ type RendererProperties = {
     ipc: RendererContext<{ enabled: boolean }>['ipc'],
     audioContext: AudioContext,
     audioSource: AudioNode,
+    bufferSize?: number,
   ) => void;
   stop: () => void;
 };
@@ -67,6 +68,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
           context.ipc,
           e.detail.audioContext,
           e.detail.audioSource,
+          this.config?.bufferSize,
         );
       },
       { once: true, passive: true },
@@ -175,10 +177,11 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
         console.log('[Audio Stream] Started Opus streaming');
       })
       .catch((err) => {
-        console.error('[Audio Stream] Failed to add audio worklet module:', err);
+        console.error(
+          '[Audio Stream] Failed to add audio worklet module:',
+          err,
+        );
       });
-
-    this.isStreaming = true;
   },
 
   stop() {
@@ -226,6 +229,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
           this.context!.ipc,
           this.audioContext,
           this.audioSource,
+          this.config?.bufferSize,
         );
       } else if (!this.isStreaming) {
         // Wait for audio to be ready
@@ -236,6 +240,7 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
               this.context!.ipc,
               e.detail.audioContext,
               e.detail.audioSource,
+              this.config?.bufferSize,
             );
           },
           { once: true, passive: true },
@@ -268,7 +273,12 @@ export const renderer = createRenderer<RendererProperties, AudioStreamConfig>({
             this.context
           ) {
             // Restart with new settings - this will send new config to backend
-            this.startStreaming(this.context.ipc, audioContext, audioSource);
+            this.startStreaming(
+              this.context.ipc,
+              audioContext,
+              audioSource,
+              this.config?.bufferSize,
+            );
           }
         });
       }

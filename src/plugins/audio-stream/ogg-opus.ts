@@ -118,7 +118,9 @@ export class OggDechainer {
     }
 
     // Audio page (or the first stream's OpusTags): clear BOS+EOS, keep continued.
-    return [this.rewrite(page, headerType & ~(HEADER_TYPE_BOS | HEADER_TYPE_EOS))];
+    return [
+      this.rewrite(page, headerType & ~(HEADER_TYPE_BOS | HEADER_TYPE_EOS)),
+    ];
   }
 
   private rewrite(page: Uint8Array, headerType: number): Uint8Array {

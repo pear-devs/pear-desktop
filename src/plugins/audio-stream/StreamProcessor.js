@@ -23,10 +23,11 @@ class RecorderProcessor extends AudioWorkletProcessor {
         }
       }
     }
-    // Optionally pass the audio through unchanged
+    // Optionally pass the audio through unchanged. outputs[0] can be an empty
+    // array (no channels connected), so guard each channel before .set().
     if (outputs[0] && inputs[0]) {
-      outputs[0][0].set(inputs[0][0]);
-      if (inputs[0][1]) outputs[0][1].set(inputs[0][1]);
+      if (outputs[0][0] && inputs[0][0]) outputs[0][0].set(inputs[0][0]);
+      if (outputs[0][1] && inputs[0][1]) outputs[0][1].set(inputs[0][1]);
     }
     return true;
   }

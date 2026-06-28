@@ -3,13 +3,10 @@ import prompt from 'custom-electron-prompt';
 import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 
+import { type AudioStreamConfig, defaultAudioStreamConfig } from './config';
+
 import type { MenuContext } from '@/types/contexts';
 import type { MenuTemplate } from '@/menu';
-
-import {
-  type AudioStreamConfig,
-  defaultAudioStreamConfig,
-} from './config';
 
 // Quality and latency presets
 const SAMPLE_RATES = [44100, 48000, 96000];
@@ -53,7 +50,7 @@ export const onMenu = async ({
           defaultAudioStreamConfig.port;
 
         if (newPort !== config.port) {
-          await setConfig({ ...config, port: newPort });
+          await setConfig({ port: newPort });
         }
       },
     },
@@ -62,7 +59,9 @@ export const onMenu = async ({
       type: 'submenu',
       submenu: [
         {
-          label: t('plugins.audio-stream.menu.quality-latency.submenu.sample-rate.label'),
+          label: t(
+            'plugins.audio-stream.menu.quality-latency.submenu.sample-rate.label',
+          ),
           type: 'submenu',
           submenu: SAMPLE_RATES.map((sampleRate) => ({
             label: `${sampleRate} Hz`,
@@ -71,13 +70,15 @@ export const onMenu = async ({
             async click() {
               const currentConfig = await getConfig();
               if (currentConfig.sampleRate !== sampleRate) {
-                await setConfig({ ...currentConfig, sampleRate });
+                await setConfig({ sampleRate });
               }
             },
           })),
         },
         {
-          label: t('plugins.audio-stream.menu.quality-latency.submenu.bitrate.label'),
+          label: t(
+            'plugins.audio-stream.menu.quality-latency.submenu.bitrate.label',
+          ),
           type: 'submenu',
           submenu: BITRATES.map((bitrate) => ({
             label: `${bitrate / 1000} kbps`,
@@ -86,28 +87,39 @@ export const onMenu = async ({
             async click() {
               const currentConfig = await getConfig();
               if (currentConfig.bitrate !== bitrate) {
-                await setConfig({ ...currentConfig, bitrate });
+                await setConfig({ bitrate });
               }
             },
           })),
         },
         {
-          label: t('plugins.audio-stream.menu.quality-latency.submenu.channels.label'),
+          label: t(
+            'plugins.audio-stream.menu.quality-latency.submenu.channels.label',
+          ),
           type: 'submenu',
           submenu: CHANNELS.map((channels) => ({
-            label: channels === 1 ? t('plugins.audio-stream.menu.quality-latency.submenu.channels.mono') : t('plugins.audio-stream.menu.quality-latency.submenu.channels.stereo'),
+            label:
+              channels === 1
+                ? t(
+                    'plugins.audio-stream.menu.quality-latency.submenu.channels.mono',
+                  )
+                : t(
+                    'plugins.audio-stream.menu.quality-latency.submenu.channels.stereo',
+                  ),
             type: 'radio' as const,
             checked: config.channels === channels,
             async click() {
               const currentConfig = await getConfig();
               if (currentConfig.channels !== channels) {
-                await setConfig({ ...currentConfig, channels });
+                await setConfig({ channels });
               }
             },
           })),
         },
         {
-          label: t('plugins.audio-stream.menu.quality-latency.submenu.buffer-size.label'),
+          label: t(
+            'plugins.audio-stream.menu.quality-latency.submenu.buffer-size.label',
+          ),
           type: 'submenu',
           submenu: BUFFER_SIZES.map((bufferSize) => ({
             label: `${bufferSize} samples`,
@@ -116,7 +128,7 @@ export const onMenu = async ({
             async click() {
               const currentConfig = await getConfig();
               if (currentConfig.bufferSize !== bufferSize) {
-                await setConfig({ ...currentConfig, bufferSize });
+                await setConfig({ bufferSize });
               }
             },
           })),

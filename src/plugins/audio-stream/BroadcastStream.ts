@@ -25,6 +25,12 @@ export class BroadcastStream {
   // Write data to all readers.
   write(chunk: Uint8Array) {
     for (const controller of this.subscribers) {
+      // Drop slow clients whose queue has backed up rather than buffering
+      // chunks for them unboundedly.
+      if ((controller.desiredSize ?? 0) <= 0) {
+        this.subscribers.delete(controller);
+        continue;
+      }
       try {
         controller.enqueue(chunk);
       } catch {

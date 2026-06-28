@@ -37,51 +37,51 @@ export const backend = createBackend<
   },
   AudioStreamConfig
 >({
-  app: new Hono()
-    .get('/stream', (ctx) => {
-      // Per-song TEXT metadata is carried in-band via chained Ogg logical streams
-      // (OpusTags per track). Some clients can't follow chains - browsers
-      // (<audio>/MSE) reload on a new BOS, and VLC's clock chokes on it - so they
-      // get a de-chained single logical stream instead.
-      const ua = ctx.req.header('User-Agent') ?? '';
-      const needsDechain = /Mozilla|VLC/i.test(ua);
+  app: new Hono().get('/stream', (ctx) => {
+    // Per-song TEXT metadata is carried in-band via chained Ogg logical streams
+    // (OpusTags per track). Some clients can't follow chains - browsers
+    // (<audio>/MSE) reload on a new BOS, and VLC's clock chokes on it - so they
+    // get a de-chained single logical stream instead.
+    const ua = ctx.req.header('User-Agent') ?? '';
+    const needsDechain = /Mozilla|VLC/i.test(ua);
 
-      ctx.header('Content-Type', 'audio/ogg');
-      ctx.header('Transfer-Encoding', 'chunked');
+    ctx.header('Content-Type', 'audio/ogg');
+    ctx.header('Transfer-Encoding', 'chunked');
+    ctx.header('Access-Control-Allow-Origin', '*');
 
-      if (!needsDechain) {
-        ctx.header('icy-name', 'Pear Desktop');
-        ctx.header('icy-url', 'https://github.com/pear-devs/pear-desktop');
-        ctx.header(
-          'icy-audio-info',
-          `ice-channels=2;ice-samplerate=48000;ice-bitrate=${Math.round(
-            config.bitrate / 1000,
-          )}`,
+    if (!needsDechain) {
+      ctx.header('icy-name', 'Pear Desktop');
+      ctx.header('icy-url', 'https://github.com/pear-devs/pear-desktop');
+      ctx.header(
+        'icy-audio-info',
+        `ice-channels=${config.channels};ice-samplerate=48000;ice-bitrate=${Math.round(
+          config.bitrate / 1000,
+        )}`,
+      );
+      ctx.header('icy-pub', '1');
+    }
+
+    ctx.header('Server', 'Pear Desktop');
+
+    return stream(ctx, async (stream) => {
+      // New subscriber gets the cached OpusHead + OpusTags pages first, so the
+      // decoder can initialise before any audio page arrives.
+      let readable = broadcast.subscribe(muxer.headerPages);
+
+      if (needsDechain) {
+        const dechainer = new OggDechainer();
+        readable = readable.pipeThrough(
+          new TransformStream<Uint8Array, Uint8Array>({
+            transform(page, controller) {
+              for (const out of dechainer.push(page)) controller.enqueue(out);
+            },
+          }),
         );
-        ctx.header('icy-pub', '1');
       }
 
-      ctx.header('Server', 'Pear Desktop');
-
-      return stream(ctx, async (stream) => {
-        // New subscriber gets the cached OpusHead + OpusTags pages first, so the
-        // decoder can initialise before any audio page arrives.
-        let readable = broadcast.subscribe(muxer.headerPages);
-
-        if (needsDechain) {
-          const dechainer = new OggDechainer();
-          readable = readable.pipeThrough(
-            new TransformStream<Uint8Array, Uint8Array>({
-              transform(page, controller) {
-                for (const out of dechainer.push(page)) controller.enqueue(out);
-              },
-            }),
-          );
-        }
-
-        return await stream.pipe(readable);
-      });
-    }),
+      return await stream.pipe(readable);
+    });
+  }),
 
   async start({ getConfig, ipc }) {
     config = await getConfig();
@@ -124,12 +124,9 @@ export const backend = createBackend<
     );
   },
   async stop() {
-    let resolve: (value?: unknown) => void;
+    if (!this.server) return;
 
-    const promise = new Promise((r) => (resolve = r));
-    this.server?.close(resolve!);
-
-    await promise;
+    await new Promise<void>((resolve) => this.server!.close(() => resolve()));
   },
   onConfigChange(newConfig) {
     config = newConfig;
