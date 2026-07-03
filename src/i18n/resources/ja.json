@@ -668,10 +668,6 @@
       },
       "name": "通知"
     },
-    "performance-improvement": {
-      "description": "実験的スクリプトを有効にすることによってパフォーマンス改善します",
-      "name": "パフォーマンス改善 [ベータ]"
-    },
     "picture-in-picture": {
       "description": "アプリでピクチャ・イン・ピクチャを切り替えられるようになります",
       "menu": {

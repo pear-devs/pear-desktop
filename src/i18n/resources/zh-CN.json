@@ -694,10 +694,6 @@
       },
       "name": "通知"
     },
-    "performance-improvement": {
-      "description": "通过开启实验性脚本改进性能",
-      "name": "性能改进 [公测]"
-    },
     "picture-in-picture": {
       "description": "允许应用切换到画中画模式",
       "menu": {

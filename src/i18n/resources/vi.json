@@ -687,10 +687,6 @@
       },
       "name": "Thông báo"
     },
-    "performance-improvement": {
-      "description": "Cải thiện hiệu suất thông qua kích hoạt scripts thử nghiệm",
-      "name": "Cải thiện hiệu năng [Thử nghiệm]"
-    },
     "picture-in-picture": {
       "description": "Cho phép chuyển ứng dụng sang chế độ ảnh trong ảnh",
       "menu": {

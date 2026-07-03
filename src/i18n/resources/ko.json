@@ -694,10 +694,6 @@
       },
       "name": "알림"
     },
-    "performance-improvement": {
-      "description": "실험적인 스크립트를 활성화하여 성능을 개선합니다",
-      "name": "성능 개선 [베타]"
-    },
     "picture-in-picture": {
       "description": "앱을 PiP 모드로 전환할 수 있게 허용합니다",
       "menu": {
