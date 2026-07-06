@@ -44,6 +44,42 @@ export type ConnectionListener = (
 ) => void;
 export type ConnectionMode = 'host' | 'guest' | 'disconnected';
 
+/**
+ * ICE servers used to negotiate the WebRTC peer connection.
+ *
+ * Exported so the diagnostics run against byte-identical configuration to a
+ * real Music Together session. Keep this in sync with any change to the Peer
+ * options below.
+ *
+ * Only hosts that actually resolve belong here: the former
+ * `eu-0`/`us-0.turn.peerjs.com` relays were decommissioned (their DNS no longer
+ * resolves), so every ICE attempt spammed the console with
+ * `ERR_NAME_NOT_RESOLVED` while providing no relay at all.
+ */
+export const ICE_SERVERS: RTCIceServer[] = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  {
+    urls: 'stun:freestun.net:3478',
+  },
+  {
+    urls: 'turn:freestun.net:3478',
+    username: 'free',
+    credential: 'free',
+  },
+  // Open Relay Project (Metered) — free public TURN. The `443?transport=tcp`
+  // entry tunnels the relay over TCP/443, which slips through the strict,
+  // HTTPS-only firewalls that block UDP relaying entirely.
+  {
+    urls: [
+      'turn:openrelay.metered.ca:80',
+      'turn:openrelay.metered.ca:443',
+      'turn:openrelay.metered.ca:443?transport=tcp',
+    ],
+    username: 'openrelayproject',
+    credential: 'openrelayproject',
+  },
+];
+
 const RECOVERABLE_PEER_ERRORS = new Set([
   PeerErrorType.Network,
   PeerErrorType.ServerError,
@@ -67,25 +103,7 @@ export class Connection {
     this.peer = new Peer({
       debug: 0,
       config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          {
-            urls: [
-              'turn:eu-0.turn.peerjs.com:3478',
-              'turn:us-0.turn.peerjs.com:3478',
-            ],
-            username: 'peerjs',
-            credential: 'peerjsp',
-          },
-          {
-            urls: 'stun:freestun.net:3478',
-          },
-          {
-            urls: 'turn:freestun.net:3478',
-            username: 'free',
-            credential: 'free',
-          },
-        ],
+        iceServers: ICE_SERVERS,
         sdpSemantics: 'unified-plan',
       },
     });
