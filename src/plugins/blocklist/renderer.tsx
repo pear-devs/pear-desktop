@@ -54,19 +54,23 @@ const recentSkipAttempts = new Map<string, number>();
 
 const shouldSkip = (author?: string | null, videoId?: string | null) => {
   if (!isBlocked(author)) return false;
-  if (!videoId) return true;
+
+  // Fall back to the author name when a videoId is missing so the cooldown
+  // still guards against a runaway skip loop.
+  const key = videoId || author;
+  if (!key) return true;
 
   const now = Date.now();
   for (const [id, at] of recentSkipAttempts) {
     if (now - at > SKIP_COOLDOWN_MS) recentSkipAttempts.delete(id);
   }
 
-  const lastAttempt = recentSkipAttempts.get(videoId);
+  const lastAttempt = recentSkipAttempts.get(key);
   if (lastAttempt !== undefined && now - lastAttempt < SKIP_COOLDOWN_MS) {
     return false;
   }
 
-  recentSkipAttempts.set(videoId, now);
+  recentSkipAttempts.set(key, now);
   return true;
 };
 
