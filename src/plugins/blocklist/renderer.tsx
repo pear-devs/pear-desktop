@@ -78,11 +78,28 @@ const skipIfBlocked = (author?: string | null, videoId?: string | null) => {
   return false;
 };
 
+// Tracks queue position so forward playback can be told apart from a deliberate
+// backward navigation (e.g. the user pressing Previous).
+let lastPlaylistIndex = -1;
+
 const onVideoDataChange = (
   name: 'dataloaded' | 'dataupdated',
   data: VideoDataChangeValue,
 ) => {
   if (name !== 'dataloaded') return;
+
+  const index = api?.getPlaylistIndex();
+  const wentBackward =
+    typeof index === 'number' &&
+    lastPlaylistIndex >= 0 &&
+    index < lastPlaylistIndex;
+  if (typeof index === 'number') lastPlaylistIndex = index;
+
+  // Respect a deliberate back-navigation: if the user moved backward onto this
+  // track (e.g. pressed Previous), let it play even if the artist is blocked.
+  // One-time only — a later forward play of the same artist still gets skipped.
+  if (wentBackward) return;
+
   skipIfBlocked(data?.author, data?.videoId);
 };
 
@@ -234,6 +251,7 @@ export const onPlayerApiReady = (
 export const stop = () => {
   menuObserver.disconnect();
   recentSkipAttempts.clear();
+  lastPlaylistIndex = -1;
   api?.removeEventListener('videodatachange', onVideoDataChange);
   getSongMenu()
     ?.querySelectorAll('.blocklist-injected')
