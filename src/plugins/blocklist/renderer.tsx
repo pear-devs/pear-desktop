@@ -1,6 +1,5 @@
 import { t } from '@/i18n';
 import {
-  isAlbumOrPlaylist,
   isMusicOrVideoTrack,
   isPlayerMenu,
 } from '@/plugins/utils/renderer/check';
@@ -130,18 +129,6 @@ const getPlayerBarArtists = (): BlockedArtist[] => {
   return artists;
 };
 
-// The artist whose page is currently open (for the artist-page header menu).
-const getPageArtist = (): BlockedArtist | null => {
-  const channelId = parseChannelId(location.pathname);
-  if (!channelId) return null;
-  const name = document
-    .querySelector<HTMLElement>(
-      'ytmusic-immersive-header-renderer .title, ytmusic-visual-header-renderer .title',
-    )
-    ?.textContent?.trim();
-  return name ? { name, channelId } : null;
-};
-
 const getMenuArtists = (menu: HTMLElement): BlockedArtist[] => {
   // The now-playing bar menu exposes the full artist list via the byline.
   if (isPlayerMenu(menu)) {
@@ -159,12 +146,6 @@ const getMenuArtists = (menu: HTMLElement): BlockedArtist[] => {
     if (info?.artist) {
       return [{ name: info.artist, channelId: parseChannelId(info.artistUrl) }];
     }
-  }
-
-  // The artist-page header menu (which otherwise only offers "Share").
-  if (location.pathname.startsWith('/channel/') && !isAlbumOrPlaylist()) {
-    const page = getPageArtist();
-    if (page) return [page];
   }
 
   return [];
