@@ -2,23 +2,21 @@ import { createRenderer } from '@/utils';
 
 import type { CustomOutputPluginConfig } from './index';
 import type { RendererContext } from '@/types/contexts';
-import type { MusicPlayer } from '@/types/music-player';
 
 const updateDeviceList = async (
   context: RendererContext<CustomOutputPluginConfig>,
 ) => {
   const newDevices: Record<string, string> = {};
-  const devices = await navigator.mediaDevices
-    .enumerateDevices()
-    .then((devices) =>
-      devices.filter((device) => device.kind === 'audiooutput'),
-    );
+  const devices = await navigator.mediaDevices.enumerateDevices();
   for (const device of devices) {
+    if (device.kind !== 'audiooutput') continue;
+
     newDevices[device.deviceId] = device.label;
   }
-  const options = await context.getConfig();
-  options.devices = newDevices;
-  context.setConfig(options);
+
+  // clear cause setConfig now does a merge
+  context.setConfig({ devices: undefined });
+  context.setConfig({ devices: newDevices });
 };
 
 const updateSinkId = async (
@@ -29,10 +27,9 @@ const updateSinkId = async (
 ) => {
   if (!audioContext || !sinkId) return;
   if (!('setSinkId' in audioContext)) return;
+  if (typeof audioContext.setSinkId !== 'function') return;
 
-  if (typeof audioContext.setSinkId === 'function') {
-    await audioContext.setSinkId(sinkId);
-  }
+  await audioContext.setSinkId(sinkId);
 };
 
 export const renderer = createRenderer<
@@ -48,7 +45,7 @@ export const renderer = createRenderer<
     await updateSinkId(audioContext, this.options!.output);
   },
 
-  async onPlayerApiReady(_: MusicPlayer, context) {
+  async start(context) {
     this.options = await context.getConfig();
     await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
     navigator.mediaDevices.ondevicechange = async () =>
