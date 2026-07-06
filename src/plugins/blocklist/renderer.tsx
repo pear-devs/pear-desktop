@@ -1,12 +1,13 @@
-import { createSignal } from 'solid-js';
-import { render } from 'solid-js/web';
-
 import { t } from '@/i18n';
-import { isMusicOrVideoTrack } from '@/plugins/utils/renderer/check';
+import {
+  isAlbumOrPlaylist,
+  isMusicOrVideoTrack,
+  isPlayerMenu,
+} from '@/plugins/utils/renderer/check';
 import { getSongMenu } from '@/providers/dom-elements';
 import { getSongInfo } from '@/providers/song-info-front';
 
-import { BlockArtistButton } from './templates/block-button';
+import { createBlockButton } from './templates/block-button';
 
 import type { BlockedArtist, BlocklistPluginConfig } from './index';
 import type { RendererContext } from '@/types/contexts';
@@ -17,10 +18,10 @@ let config: BlocklistPluginConfig = { enabled: true, blockedArtists: [] };
 let setConfig: RendererContext<BlocklistPluginConfig>['setConfig'] = () => {};
 let api: MusicPlayer | null = null;
 
-let buttonContainer: HTMLDivElement | null = null;
-let disposeButton: (() => void) | null = null;
-
-const [buttonText, setButtonText] = createSignal('');
+// Artist channel ids start with "UC" (albums/playlists use MPRE/VL/PL instead),
+// so this only matches links that point at an artist.
+const ARTIST_ID = /(?:channel|browse)\/(UC[0-9A-Za-z_-]+)/;
+const parseChannelId = (href?: string | null) => href?.match(ARTIST_ID)?.[1];
 
 /** Normalize an artist name for matching (drop the " - Topic" suffix, casefold). */
 const normalize = (name: string) =>
@@ -63,8 +64,6 @@ const shouldSkip = (author?: string | null, videoId?: string | null) => {
 
   const lastAttempt = recentSkipAttempts.get(videoId);
   if (lastAttempt !== undefined && now - lastAttempt < SKIP_COOLDOWN_MS) {
-    // We already tried to skip this exact track and it came back — something
-    // else controls playback (e.g. a Music Together session). Stop fighting it.
     return false;
   }
 
@@ -88,52 +87,99 @@ const onVideoDataChange = (
   skipIfBlocked(data?.author, data?.videoId);
 };
 
-/**
- * Resolve the artist for the song the currently-open context menu targets.
- * Prefers the menu's "Go to artist" navigation item (works for any song row),
- * and falls back to the currently-playing song (the player-bar menu).
- */
-const getMenuArtist = (): BlockedArtist | null => {
-  const menu = getSongMenu();
-  if (menu) {
-    for (const item of menu.querySelectorAll<HTMLElement>(
-      'ytmusic-menu-navigation-item-renderer',
-    )) {
-      const href = item
-        .querySelector('#navigation-endpoint')
-        ?.getAttribute('href');
-      // Artist pages look like "channel/UC..."; albums use "browse/..." instead.
-      if (href?.startsWith('channel/')) {
-        const name = item
-          .querySelector<HTMLElement>('.text')
-          ?.textContent?.trim();
-        if (name) return { name, channelId: href.slice('channel/'.length) };
-      }
+/* ---- resolving which artist(s) a menu targets ---- */
+
+const dedupeArtists = (artists: BlockedArtist[]): BlockedArtist[] => {
+  const seen = new Set<string>();
+  const result: BlockedArtist[] = [];
+  for (const artist of artists) {
+    const key = (artist.channelId ?? artist.name).toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(artist);
+  }
+  return result;
+};
+
+// "Go to artist" links inside the open popup menu (works for song rows).
+const getMenuLinkedArtists = (menu: HTMLElement): BlockedArtist[] => {
+  const artists: BlockedArtist[] = [];
+  for (const item of menu.querySelectorAll<HTMLElement>(
+    'ytmusic-menu-navigation-item-renderer',
+  )) {
+    const channelId = parseChannelId(
+      item.querySelector('#navigation-endpoint')?.getAttribute('href'),
+    );
+    if (!channelId) continue;
+    const name = item.querySelector<HTMLElement>('.text')?.textContent?.trim();
+    if (name) artists.push({ name, channelId });
+  }
+  return artists;
+};
+
+// Every artist listed in the now-playing bar byline (full multi-artist list).
+const getPlayerBarArtists = (): BlockedArtist[] => {
+  const artists: BlockedArtist[] = [];
+  for (const link of document.querySelectorAll<HTMLAnchorElement>(
+    'ytmusic-player-bar a.yt-simple-endpoint[href]',
+  )) {
+    const channelId = parseChannelId(link.getAttribute('href'));
+    const name = link.textContent?.trim();
+    if (channelId && name) artists.push({ name, channelId });
+  }
+  return artists;
+};
+
+// The artist whose page is currently open (for the artist-page header menu).
+const getPageArtist = (): BlockedArtist | null => {
+  const channelId = parseChannelId(location.pathname);
+  if (!channelId) return null;
+  const name = document
+    .querySelector<HTMLElement>(
+      'ytmusic-immersive-header-renderer .title, ytmusic-visual-header-renderer .title',
+    )
+    ?.textContent?.trim();
+  return name ? { name, channelId } : null;
+};
+
+const getMenuArtists = (menu: HTMLElement): BlockedArtist[] => {
+  // The now-playing bar menu exposes the full artist list via the byline.
+  if (isPlayerMenu(menu)) {
+    const byline = getPlayerBarArtists();
+    if (byline.length) return dedupeArtists(byline);
+  }
+
+  // Any menu with "Go to artist" links (song rows, player bar, …).
+  const linked = getMenuLinkedArtists(menu);
+  if (linked.length) return dedupeArtists(linked);
+
+  // A track menu with no artist link — fall back to the current song's artist.
+  if (isMusicOrVideoTrack() || isPlayerMenu(menu)) {
+    const info = getSongInfo();
+    if (info?.artist) {
+      return [{ name: info.artist, channelId: parseChannelId(info.artistUrl) }];
     }
   }
 
-  const info = getSongInfo();
-  if (info?.artist) {
-    return {
-      name: info.artist,
-      channelId: info.artistUrl?.split('/channel/')[1],
-    };
+  // The artist-page header menu (which otherwise only offers "Share").
+  if (location.pathname.startsWith('/channel/') && !isAlbumOrPlaylist()) {
+    const page = getPageArtist();
+    if (page) return [page];
   }
 
-  return null;
+  return [];
 };
 
-const blockFromMenu = () => {
-  const artist = getMenuArtist();
-  if (!artist) return;
+/* ---- blocking + menu injection ---- */
 
+const blockArtist = (artist: BlockedArtist) => {
   if (!isBlocked(artist.name)) {
     const blockedArtists = [...config.blockedArtists, artist];
     config = { ...config, blockedArtists };
     setConfig({ blockedArtists });
   }
 
-  // Close the popup menu, then skip the current song if it is now blocked.
+  // Close the popup, then skip the current song if it is now blocked.
   document
     .querySelector<HTMLElement & { close?: () => void }>(
       'ytmusic-popup-container tp-yt-iron-dropdown',
@@ -144,19 +190,37 @@ const blockFromMenu = () => {
   skipIfBlocked(current?.artist, current?.videoId);
 };
 
-const menuObserver = new MutationObserver(() => {
+const injectBlockButtons = () => {
   const menu = getSongMenu();
-  if (
-    !menu ||
-    !buttonContainer ||
-    menu.contains(buttonContainer) ||
-    !isMusicOrVideoTrack()
-  ) {
+  if (!menu) return;
+
+  const artists = getMenuArtists(menu);
+  const key = artists.map((artist) => artist.channelId ?? artist.name).join('|');
+  const existing = menu.querySelector<HTMLElement>('.blocklist-injected');
+
+  if (!artists.length) {
+    if (existing) {
+      menu.querySelectorAll('.blocklist-injected').forEach((el) => el.remove());
+    }
     return;
   }
 
-  menu.prepend(buttonContainer);
-});
+  if (existing?.dataset.blocklistKey === key) return;
+  menu.querySelectorAll('.blocklist-injected').forEach((el) => el.remove());
+
+  const fragment = document.createDocumentFragment();
+  for (const artist of artists) {
+    const button = createBlockButton(
+      t('plugins.blocklist.templates.button', { name: artist.name }),
+      () => blockArtist(artist),
+    );
+    button.dataset.blocklistKey = key;
+    fragment.append(button);
+  }
+  menu.prepend(fragment);
+};
+
+const menuObserver = new MutationObserver(injectBlockButtons);
 
 export const onRendererLoad = async (
   context: RendererContext<BlocklistPluginConfig>,
@@ -174,41 +238,24 @@ export const onPlayerApiReady = (
   _context: RendererContext<BlocklistPluginConfig>,
 ) => {
   api = playerApi;
-  setButtonText(t('plugins.blocklist.templates.button'));
-
-  buttonContainer = document.createElement('div');
-  buttonContainer.classList.add(
-    'blocklist-menu-item',
-    'style-scope',
-    'menu-item',
-    'ytmusic-menu-popup-renderer',
-  );
-  buttonContainer.setAttribute('role', 'option');
-  buttonContainer.setAttribute('tabindex', '-1');
-
-  disposeButton = render(
-    () => <BlockArtistButton onClick={blockFromMenu} text={buttonText()} />,
-    buttonContainer,
-  );
-
-  const popupContainer = document.querySelector('ytmusic-popup-container');
-  if (popupContainer) {
-    menuObserver.observe(popupContainer, { childList: true, subtree: true });
-  }
 
   // A blocked song might already be loaded when the plugin starts.
   const current = getSongInfo();
   skipIfBlocked(current?.artist, current?.videoId);
   playerApi.addEventListener('videodatachange', onVideoDataChange);
+
+  const popupContainer = document.querySelector('ytmusic-popup-container');
+  if (popupContainer) {
+    menuObserver.observe(popupContainer, { childList: true, subtree: true });
+  }
 };
 
 export const stop = () => {
   menuObserver.disconnect();
   recentSkipAttempts.clear();
   api?.removeEventListener('videodatachange', onVideoDataChange);
-  disposeButton?.();
-  disposeButton = null;
-  buttonContainer?.remove();
-  buttonContainer = null;
+  getSongMenu()
+    ?.querySelectorAll('.blocklist-injected')
+    .forEach((el) => el.remove());
   api = null;
 };
