@@ -57,7 +57,16 @@ export type ConnectionMode = 'host' | 'guest' | 'disconnected';
  * `ERR_NAME_NOT_RESOLVED` while providing no relay at all.
  */
 export const ICE_SERVERS: RTCIceServer[] = [
+  // Several independent STUN servers. The diagnostics NAT check only reports an
+  // open/cone NAT once it has server-reflexive candidates from two *different*
+  // STUN servers (see `classifyNat` in diagnostics.ts). Relying on Google plus
+  // the free — and often slow or unreachable — freestun.net meant that a single
+  // freestun timeout left just one response, degrading the result to
+  // "Undetermined". Cloudflare and a second Google endpoint add reliable,
+  // independent mappings from distinct operators.
   { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+  { urls: 'stun:stun.cloudflare.com:3478' },
   {
     urls: 'stun:freestun.net:3478',
   },
