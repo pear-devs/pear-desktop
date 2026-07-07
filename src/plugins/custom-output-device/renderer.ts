@@ -1,22 +1,32 @@
+import { Mutex } from 'async-mutex';
+
 import { createRenderer } from '@/utils';
 
 import type { CustomOutputPluginConfig } from './index';
 import type { RendererContext } from '@/types/contexts';
 
+const DEVICES_MUTEX = new Mutex();
+
 const updateDeviceList = async (
   context: RendererContext<CustomOutputPluginConfig>,
 ) => {
-  const newDevices: Record<string, string> = {};
-  const devices = await navigator.mediaDevices.enumerateDevices();
-  for (const device of devices) {
-    if (device.kind !== 'audiooutput') continue;
+  const release = await DEVICES_MUTEX.acquire();
 
-    newDevices[device.deviceId] = device.label;
+  try {
+    const newDevices: Record<string, string> = {};
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    for (const device of devices) {
+      if (device.kind !== 'audiooutput') continue;
+
+      newDevices[device.deviceId] = device.label;
+    }
+
+    // clear because setConfig now does a merge
+    context.setConfig({ devices: undefined });
+    context.setConfig({ devices: newDevices });
+  } finally {
+    release();
   }
-
-  // clear cause setConfig now does a merge
-  context.setConfig({ devices: undefined });
-  context.setConfig({ devices: newDevices });
 };
 
 const updateSinkId = async (
