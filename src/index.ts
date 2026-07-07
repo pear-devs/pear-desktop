@@ -52,6 +52,7 @@ import { setUpTray } from '@/tray';
 import { LoggerPrefix } from '@/utils';
 import { isTesting } from '@/utils/testing';
 
+import type { ShortcutsPluginConfig } from '@/plugins/shortcuts';
 import type { PluginConfig } from '@/types/plugins';
 
 // Catch errors and log them
@@ -138,6 +139,18 @@ if (is.linux()) {
     'class',
     'com.github.th-ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063',
   );
+}
+
+// Windows/macOS: Chromium's HardwareMediaKeyHandling intercepts the hardware
+// media keys before Electron's globalShortcut can receive them, so the shortcuts
+// plugin's "Override media keys" option has no effect. Release the keys to
+// globalShortcut when that option is enabled (Linux uses MPRIS instead).
+if (!is.linux() && (await config.plugins.isEnabled('shortcuts'))) {
+  const shortcutsConfig =
+    config.plugins.getOptions<ShortcutsPluginConfig>('shortcuts');
+  if (shortcutsConfig?.overrideMediaKeys) {
+    disabledFeatures.push('HardwareMediaKeyHandling');
+  }
 }
 
 if (disableHardwareAcceleration) {
