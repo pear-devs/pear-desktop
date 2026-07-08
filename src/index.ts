@@ -145,10 +145,15 @@ if (is.linux()) {
 // media keys before Electron's globalShortcut can receive them, so the shortcuts
 // plugin's "Override media keys" option has no effect. Release the keys to
 // globalShortcut when that option is enabled (Linux uses MPRIS instead).
-if (!is.linux() && (await config.plugins.isEnabled('shortcuts'))) {
+//
+// This must stay synchronous: the ESM entry point is loaded asynchronously, so
+// a top-level `await` here would let the `ready` event fire before the
+// `disable-features` switch below is applied, and Chromium would silently
+// ignore it. Read the stored config directly instead of `await isEnabled(...)`.
+if (!is.linux()) {
   const shortcutsConfig =
     config.plugins.getOptions<ShortcutsPluginConfig>('shortcuts');
-  if (shortcutsConfig?.overrideMediaKeys) {
+  if (shortcutsConfig?.enabled && shortcutsConfig?.overrideMediaKeys) {
     disabledFeatures.push('HardwareMediaKeyHandling');
   }
 }
