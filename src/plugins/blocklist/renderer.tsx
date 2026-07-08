@@ -121,6 +121,22 @@ const dedupeArtists = (artists: BlockedArtist[]): BlockedArtist[] => {
   return result;
 };
 
+// Resolve an artist's display name from its channel id. A menu item's own
+// text is the action label ("Go to artist"), never the artist name, so read
+// the name from a link to that same channel on the underlying page (the song
+// row or artist card that opened the menu). Links inside the popup are skipped
+// so we don't read the "Go to artist" label back as the name.
+const resolveArtistName = (channelId: string): string | undefined => {
+  for (const link of document.querySelectorAll<HTMLAnchorElement>(
+    `a[href*="${channelId}"]`,
+  )) {
+    if (link.closest('ytmusic-popup-container')) continue;
+    const name = link.textContent?.trim();
+    if (name) return name;
+  }
+  return undefined;
+};
+
 // "Go to artist" links inside the open popup menu (works for song rows).
 const getMenuLinkedArtists = (menu: HTMLElement): BlockedArtist[] => {
   const artists: BlockedArtist[] = [];
@@ -131,7 +147,7 @@ const getMenuLinkedArtists = (menu: HTMLElement): BlockedArtist[] => {
       item.querySelector('#navigation-endpoint')?.getAttribute('href'),
     );
     if (!channelId) continue;
-    const name = item.querySelector<HTMLElement>('.text')?.textContent?.trim();
+    const name = resolveArtistName(channelId);
     if (name) artists.push({ name, channelId });
   }
   return artists;
