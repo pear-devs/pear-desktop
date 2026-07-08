@@ -131,11 +131,11 @@ async function onApiLoaded() {
     }
   });
   window.ipcRenderer.on('peard:update-volume', (_, volume: number) => {
-    document
-      .querySelector<HTMLElement & { updateVolume: (volume: number) => void }>(
-        'ytmusic-player-bar',
-      )
-      ?.updateVolume(volume);
+    api?.setVolume(volume);
+    for (const selector of ['#volume-slider', '#expand-volume-slider']) {
+      const slider = document.querySelector<HTMLInputElement>(selector);
+      if (slider) slider.value = String(volume);
+    }
   });
 
   const isFullscreen = () => {
