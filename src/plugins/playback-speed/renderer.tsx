@@ -131,11 +131,14 @@ export const onPlayerApiReady = (
   observeVideo();
 };
 
-export const onUnload = () => {
+export const onUnload = (
+  context: RendererContext<PlaybackSpeedPluginConfig>,
+) => {
   const video = document.querySelector<HTMLVideoElement>('video');
   if (video) {
     video.removeEventListener('ratechange', forcePlaybackRate);
     video.removeEventListener('peard:src-changed', forcePlaybackRate);
   }
+  context.ipc.removeAllListeners('changePlaybackSpeed');
   getSongMenu()?.removeChild(sliderContainer);
 };
