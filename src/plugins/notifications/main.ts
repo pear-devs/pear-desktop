@@ -1,6 +1,7 @@
 import { Notification } from 'electron';
 import is from 'electron-is';
 
+import { t } from '@/i18n';
 import {
   registerCallback,
   type SongInfo,
@@ -32,9 +33,9 @@ const notify = (info: SongInfo) => {
 };
 
 const likeStatusLabel: Record<LikeType, string> = {
-  [LikeType.Like]: 'Liked',
-  [LikeType.Dislike]: 'Disliked',
-  [LikeType.Indifferent]: 'Removed rating',
+  [LikeType.Like]: t('plugins.notifications.like-status.liked'),
+  [LikeType.Dislike]: t('plugins.notifications.like-status.disliked'),
+  [LikeType.Indifferent]: t('plugins.notifications.like-status.indifferent'),
 };
 
 const setupLikeChangeNotification = (

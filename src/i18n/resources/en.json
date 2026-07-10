@@ -678,6 +678,11 @@
     },
     "notifications": {
       "description": "Display a notification when a song starts playing (interactive notifications are available on Windows)",
+      "like-status": {
+        "disliked": "Disliked",
+        "indifferent": "Removed rating",
+        "liked": "Liked"
+      },
       "menu": {
         "interactive": "Interactive Notifications",
         "interactive-settings": {
