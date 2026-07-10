@@ -97,9 +97,14 @@ export default createPlugin({
 
     const register = (shortcut: string, delta: number) => {
       try {
-        globalShortcut.register(shortcut, () =>
+        const registered = globalShortcut.register(shortcut, () =>
           ipc.send('changePlaybackSpeed', delta),
         );
+        if (!registered) {
+          console.warn(
+            `Global shortcut "${shortcut}" is already in use by another app or the system, could not register it`,
+          );
+        }
       } catch (error) {
         console.warn(`Failed to register global shortcut "${shortcut}"`, error);
       }
