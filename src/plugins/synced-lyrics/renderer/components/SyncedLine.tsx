@@ -9,7 +9,7 @@ import {
   canonicalize,
   convertChineseCharacter,
   romanize,
-  simplifyUnicode,
+  createShowRomanization,
 } from '../utils';
 
 interface SyncedLineProps {
@@ -103,11 +103,7 @@ export const SyncedLine = (props: SyncedLineProps) => {
     });
   });
 
-  const showRomanization = createMemo(
-    () =>
-      !!config()?.romanization &&
-      simplifyUnicode(text()) !== simplifyUnicode(romanization()),
-  );
+  const showRomanization = createShowRomanization(text, romanization);
 
   return (
     <Show fallback={<EmptyLine {...props} />} when={text()}>
@@ -142,7 +138,7 @@ export const SyncedLine = (props: SyncedLineProps) => {
               'display': 'flex',
               'flex-direction': 'column',
               '--lyrics-original-scale':
-                showRomanization() && config()?.big_romanization ? '0.7' : '1',
+                showRomanization() && config()?.bigRomanization ? '0.7' : '1',
             }}
           >
             <span class="original">

@@ -154,13 +154,13 @@ export const menu = async (
       },
     },
     {
-      label: t('plugins.synced-lyrics.menu.big_romanization.label'),
-      toolTip: t('plugins.synced-lyrics.menu.big_romanization.tooltip'),
+      label: t('plugins.synced-lyrics.menu.big-romanization.label'),
+      toolTip: t('plugins.synced-lyrics.menu.big-romanization.tooltip'),
       type: 'checkbox',
-      checked: config.big_romanization,
+      checked: config.bigRomanization,
       click(item) {
         ctx.setConfig({
-          big_romanization: item.checked,
+          bigRomanization: item.checked,
         });
       },
     },

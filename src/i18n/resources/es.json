@@ -902,7 +902,7 @@
           "label": "Romanizar letras",
           "tooltip": "Si la letra está en un idioma diferente, intenta mostrar una versión en latín."
         },
-        "big_romanization": {
+        "big-romanization": {
           "label": "Letras romanizadas grandes",
           "tooltip": "Las letras romanizadas se ven en grande y los kanjis, hangul, etc. en pequeño."
         },

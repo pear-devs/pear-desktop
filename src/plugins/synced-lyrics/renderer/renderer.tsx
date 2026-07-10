@@ -126,7 +126,7 @@ runWithOwner(reactiveOwner, () => {
     }
     root.style.setProperty(
       '--lyrics-romaji-scale',
-      config()?.big_romanization ? '1' : '0.7',
+      config()?.bigRomanization ? '1' : '0.7',
     );
   });
 });

@@ -5,7 +5,7 @@ import {
   canonicalize,
   convertChineseCharacter,
   romanize,
-  simplifyUnicode,
+  createShowRomanization,
 } from '../utils';
 
 interface PlainLyricsProps {
@@ -32,11 +32,7 @@ export const PlainLyrics = (props: PlainLyricsProps) => {
     });
   });
 
-  const showRomanization = createMemo(
-    () =>
-      !!config()?.romanization &&
-      simplifyUnicode(text()) !== simplifyUnicode(romanization()),
-  );
+  const showRomanization = createShowRomanization(text, romanization);
 
   return (
     <div
@@ -47,7 +43,7 @@ export const PlainLyrics = (props: PlainLyricsProps) => {
         'display': 'flex',
         'flex-direction': 'column',
         '--lyrics-original-scale':
-          showRomanization() && config()?.big_romanization ? '0.7' : '1',
+          showRomanization() && config()?.bigRomanization ? '0.7' : '1',
       }}
     >
       <yt-formatted-string
