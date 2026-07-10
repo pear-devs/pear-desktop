@@ -10,6 +10,10 @@ import { getSongMenu } from '@/providers/dom-elements';
 
 import { PlaybackSpeedSlider } from './components/slider';
 
+import type { PlaybackSpeedPluginConfig } from './index';
+import type { RendererContext } from '@/types/contexts';
+import type { MusicPlayer } from '@/types/music-player';
+
 const MIN_PLAYBACK_SPEED = 0.07;
 const MAX_PLAYBACK_SPEED = 16;
 
@@ -27,17 +31,29 @@ const roundToTwo = (n: number) => Math.round(n * 1e2) / 1e2;
 const [speed, setSpeed] = createSignal(1);
 const sliderContainer = document.createElement('div');
 
-export const onPlayerApiReady = () => {
+const updatePlayBackSpeed = () => {
+  const videoElement = document.querySelector<HTMLVideoElement>('video');
+  if (videoElement) {
+    videoElement.playbackRate = speed();
+  }
+
+  setSpeed(speed());
+};
+
+export const onPlayerApiReady = (
+  _playerApi: MusicPlayer,
+  context: RendererContext<PlaybackSpeedPluginConfig>,
+) => {
+  context.ipc.on('changePlaybackSpeed', (delta: number) => {
+    const targetSpeed = Math.min(
+      Math.max(MIN_PLAYBACK_SPEED, roundToTwo(speed() + delta)),
+      MAX_PLAYBACK_SPEED,
+    );
+    setSpeed(targetSpeed);
+    updatePlayBackSpeed();
+  });
+
   const observePopupContainer = () => {
-    const updatePlayBackSpeed = () => {
-      const videoElement = document.querySelector<HTMLVideoElement>('video');
-      if (videoElement) {
-        videoElement.playbackRate = speed();
-      }
-
-      setSpeed(speed());
-    };
-
     render(
       () => (
         <PlaybackSpeedSlider
