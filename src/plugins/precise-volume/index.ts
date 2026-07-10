@@ -171,16 +171,22 @@ export default createPlugin({
   async backend({ getConfig, ipc }) {
     const config = await getConfig();
 
+    const register = (shortcut: string, toIncrease: boolean) => {
+      try {
+        globalShortcut.register(shortcut, () =>
+          ipc.send('changeVolume', toIncrease),
+        );
+      } catch (error) {
+        console.warn(`Failed to register global shortcut "${shortcut}"`, error);
+      }
+    };
+
     if (config.globalShortcuts?.volumeUp) {
-      globalShortcut.register(config.globalShortcuts.volumeUp, () =>
-        ipc.send('changeVolume', true),
-      );
+      register(config.globalShortcuts.volumeUp, true);
     }
 
     if (config.globalShortcuts?.volumeDown) {
-      globalShortcut.register(config.globalShortcuts.volumeDown, () =>
-        ipc.send('changeVolume', false),
-      );
+      register(config.globalShortcuts.volumeDown, false);
     }
   },
 
