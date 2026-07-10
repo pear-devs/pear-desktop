@@ -902,6 +902,10 @@
           "label": "Romanizar letras",
           "tooltip": "Si la letra está en un idioma diferente, intenta mostrar una versión en latín."
         },
+        "big_romanization": {
+          "label": "Letras romanizadas grandes",
+          "tooltip": "Las letras romanizadas se ven en grande y los kanjis, hangul, etc. en pequeño."
+        },
         "show-lyrics-even-if-inexact": {
           "label": "Mostrar la letra aunque sea inexacta",
           "tooltip": "Si no se encuentra la canción, el plugin vuelve a intentarlo con una búsqueda diferente.\nEl resultado del segundo intento puede no ser exacto."

@@ -154,6 +154,18 @@ export const menu = async (
       },
     },
     {
+      label: t('plugins.synced-lyrics.menu.big_romanization.label'),
+      toolTip: t('plugins.synced-lyrics.menu.big_romanization.tooltip'),
+      type: 'checkbox',
+      checked: config.big_romanization,
+      click(item) {
+        ctx.setConfig({
+          big_romanization: item.checked,
+        });
+      },
+    },
+
+    {
       label: t('plugins.synced-lyrics.menu.convert-chinese-character.label'),
       toolTip: t(
         'plugins.synced-lyrics.menu.convert-chinese-character.tooltip',

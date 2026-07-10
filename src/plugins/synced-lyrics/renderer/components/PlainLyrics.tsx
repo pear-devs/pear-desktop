@@ -32,6 +32,12 @@ export const PlainLyrics = (props: PlainLyricsProps) => {
     });
   });
 
+  const showRomanization = createMemo(
+    () =>
+      !!config()?.romanization &&
+      simplifyUnicode(text()) !== simplifyUnicode(romanization()),
+  );
+
   return (
     <div
       class={`${
@@ -40,19 +46,17 @@ export const PlainLyrics = (props: PlainLyricsProps) => {
       style={{
         'display': 'flex',
         'flex-direction': 'column',
+        '--lyrics-original-scale':
+          showRomanization() && config()?.big_romanization ? '0.7' : '1',
       }}
     >
       <yt-formatted-string
+        class="original"
         text={{
           runs: [{ text: text() }],
         }}
       />
-      <Show
-        when={
-          config()?.romanization &&
-          simplifyUnicode(text()) !== simplifyUnicode(romanization())
-        }
-      >
+      <Show when={showRomanization()}>
         <yt-formatted-string
           class="romaji"
           text={{
