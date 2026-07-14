@@ -86,7 +86,7 @@
           "copy-current-url": "Kopiera nuvarande länk",
           "go-back": "Gå tillbaka",
           "go-forward": "Gå framåt",
-          "quit": "Avsluta",
+          "quit": "Stäng",
           "restart": "Starta om appen"
         }
       },
@@ -131,7 +131,7 @@
               "to-help-translate": "Vill du hjälpa till att översätta? Klicka här"
             }
           },
-          "resume-on-start": "Fortsätt spela när appen öppnas",
+          "resume-on-start": "Återuppta sista låten när appen startas",
           "single-instance-lock": "Lås enskild instans",
           "start-at-login": "Starta vid inloggning",
           "starting-page": {
@@ -154,14 +154,15 @@
                 "label": "Anpassad titel på fönstret",
                 "prompt": {
                   "label": "Ange anpassad fönstertitel: (lämna tomt för att inaktivera)",
-                  "placeholder": "Exempelvis: Pear Desktop"
+                  "placeholder": "Exempelvis: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "Standard",
                 "force-show": "Tvinga fram visning",
                 "hide": "Dölj",
-                "label": "Gilla-knappar"
+                "label": "Gilla-knappar",
+                "swap": "Byt ordning på Gilla-knappar"
               },
               "remove-upgrade-button": "Ta bort knappen för uppgradering",
               "theme": {
@@ -208,8 +209,8 @@
       "restart": "Starta om appen",
       "show": "Visa fönster",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} – {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -217,13 +218,6 @@
     "ad-speedup": {
       "description": "Om en annons spelas, tystas ljudet och uppspelningshastigheten sätts till 16×",
       "name": "Snabba upp annonser"
-    },
-    "adblocker": {
-      "description": "Blockerar annonser och spårning automatiskt",
-      "menu": {
-        "blocker": "Blockerare"
-      },
-      "name": "Annonsblockerare"
     },
     "album-actions": {
       "description": "Lägger till knappar för Undislike, Dislike, Like och Unlike för att använda detta på alla spår i en spellista eller ett album",
@@ -237,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}} %"
           }
-        }
+        },
+        "enable-seekbar": "Aktivera temaanpassning av uppspelningsreglaget"
       },
       "name": "Albumfärgtema"
     },
@@ -287,7 +282,7 @@
       "name": "Ambiensläge"
     },
     "amuse": {
-      "description": "Lägger till stöd för Pear Desktop i Amuse ‘Now Playing’-widgeten av 6K Labs",
+      "description": "Lägger till stöd för {{applicationName}} i Amuse ‘Now Playing’-widgeten av 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API-servern körs. Använd GET /query för att hämta information om låt."
@@ -319,6 +314,22 @@
         },
         "hostname": {
           "label": "Värdnamn"
+        },
+        "https": {
+          "label": "HTTPS och certifikat",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Välj HTTPS-certifikatfil",
+              "label": "Certifikatfil (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Aktivera HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Välj privat nyckelfil (.key/.pem)",
+              "label": "Privat nyckelfil (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -373,7 +384,7 @@
       "name": "Hoppa Över Åldersbegränsningar"
     },
     "captions-selector": {
-      "description": "Välj textning för Pear Desktop-ljudspår",
+      "description": "Välj textning för {{applicationName}}-ljudspår",
       "menu": {
         "autoload": "Välj automatiskt senast använda textning",
         "disable-captions": "Ingen textning som standard"
@@ -394,6 +405,17 @@
         "caption-disabled": "Textning inaktiverad",
         "no-captions": "Inga undertexter tillgängliga för denna låt"
       }
+    },
+    "clock": {
+      "description": "Lägg till en klocka till navigationsfältet",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-timmars format",
+          "display-seconds": "Visa sekunder",
+          "label": "Format"
+        }
+      },
+      "name": "Klocka"
     },
     "compact-sidebar": {
       "description": "Sätt alltid sidomenyn i kompakt läge",
@@ -456,14 +478,14 @@
         "disconnected": "Frånkopplad",
         "hide-duration-left": "Dölj återstående tid",
         "hide-github-button": "Dölj knapp för GitHub-länk",
-        "play-on-pear-desktop": "Spela på Pear Desktop",
+        "play-on-application": "Spela på {{applicationName}}",
         "set-inactivity-timeout": "Ställ in inaktivitetstid",
         "set-status-display-type": {
           "label": "Statusmeddelande",
           "submenu": {
+            "application": "Lyssnar på {{applicationName}}",
             "artist": "Lyssnar på {artist}",
-            "title": "Lyssnar på {song title}",
-            "pear-desktop": "Lyssnar på Pear Desktop"
+            "title": "Lyssnar på {song title}"
           }
         }
       },
@@ -474,6 +496,13 @@
           "title": "Ställ in inaktivitetstid"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Blockera all spårning direkt",
+      "menu": {
+        "blocker": "Blockerare"
+      },
+      "name": "Spåra Inte"
     },
     "downloader": {
       "backend": {
@@ -813,6 +842,24 @@
         "not-found": "⚠️ Inga texter hittades för denna låt."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Konvertera kinesiska tecken",
+          "submenu": {
+            "disabled": {
+              "label": "Inaktiverad",
+              "tooltip": "Inaktivera konvertering av kinesiska tecken"
+            },
+            "simplified-to-traditional": {
+              "label": "Förenklad till Traditionell",
+              "tooltip": "Konvertera förenklad kinesiska till traditionell kinesiska"
+            },
+            "traditional-to-simplified": {
+              "label": "Traditionell till förenklad",
+              "tooltip": "Konvertera traditionell kinesiska till förenklad kinesiska"
+            }
+          },
+          "tooltip": "Konvertera kinesiska tecken till traditionell eller förenklad"
+        },
         "default-text-string": {
           "label": "Standardtecken mellan låttexter",
           "tooltip": "Välj standardtecken att använda för mellanrummet mellan låttexter"
@@ -896,9 +943,14 @@
           "label": "Typ",
           "submenu": {
             "acrylic": "Akryl",
+            "content": "Innehåll",
+            "fullscreen-ui": "Helskärmsgränssnitt",
             "mica": "Mica",
             "none": "Ingen",
-            "tabbed": "Flikad"
+            "tabbed": "Flikad",
+            "under-page": "Under Sida",
+            "under-window": "Under Fönster",
+            "window": "Fönster"
           }
         }
       },

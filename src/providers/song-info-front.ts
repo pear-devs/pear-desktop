@@ -1,15 +1,14 @@
-import { singleton } from './decorators';
-
 import { LikeType, type GetState } from '@/types/datahost-get-state';
 
+import { singleton } from './decorators';
+
+import type { SongInfo } from './song-info';
 import type { MusicPlayer } from '@/types/music-player';
 import type {
   AlbumDetails,
   PlayerOverlays,
   VideoDataChangeValue,
 } from '@/types/player-api-events';
-
-import type { SongInfo } from './song-info';
 import type { VideoDataChanged } from '@/types/video-data-changed';
 
 const DATAUPDATED_FALLBACK_TIMEOUT_MS = 1500;
@@ -24,7 +23,7 @@ window.ipcRenderer.on(
   },
 );
 
-// Used because 'loadeddata' or 'loadedmetadata' weren't firing on song start for some users (https://github.com/pear-devs/pear-music/issues/473)
+// Used because 'loadeddata' or 'loadedmetadata' weren't firing on song start for some users (https://github.com/pear-devs/pear-desktop/issues/473)
 const srcChangedEvent = new CustomEvent('peard:src-changed');
 
 export const setupSeekedListener = singleton(() => {
@@ -52,7 +51,7 @@ export const setupTimeChangedListener = singleton(() => {
 
 export const setupRepeatChangedListener = singleton(() => {
   const repeatObserver = new MutationObserver((mutations) => {
-    // provided by Pear Desktop
+    // provided by App
     window.ipcRenderer.send(
       'peard:repeat-changed',
       (
@@ -69,7 +68,7 @@ export const setupRepeatChangedListener = singleton(() => {
   });
 
   // Emit the initial value as well; as it's persistent between launches.
-  // provided by Pear Desktop
+  // provided by App
   window.ipcRenderer.send(
     'peard:repeat-changed',
     document
@@ -246,7 +245,7 @@ export const setupSongInfo = (api: MusicPlayer) => {
   const videoEventDispatcher = async (
     name: string,
     videoData: VideoDataChangeValue,
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // oxlint-disable-next-line typescript/require-await
   ) =>
     document.dispatchEvent(
       new CustomEvent<VideoDataChanged>('videodatachange', {

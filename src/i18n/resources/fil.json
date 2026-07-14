@@ -154,14 +154,15 @@
                 "label": "Custom na window title",
                 "prompt": {
                   "label": "I-enter ang custom na window tile: (iwanang blanko para di-mapagana)",
-                  "placeholder": "Halimbawa: Pear Desktop"
+                  "placeholder": "Halimbawa: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "Default",
                 "force-show": "Pilitang ipakita",
                 "hide": "Itago",
-                "label": "Mga Like na button"
+                "label": "Mga Like na button",
+                "swap": "Ipagpalit ang pagkakasunud-sunod ng mga like button"
               },
               "remove-upgrade-button": "Tanggalin ang upgrade na button",
               "theme": {
@@ -208,8 +209,8 @@
       "restart": "I-restart ang App",
       "show": "Ipakita ang window",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -217,13 +218,6 @@
     "ad-speedup": {
       "description": "Pag mag-play ng ad, I-mute ang audio at i-set ang bilis ng playback ng 16x",
       "name": "Pagbilis ng Ad"
-    },
-    "adblocker": {
-      "description": "I-block ang lahat ng ad at tracking",
-      "menu": {
-        "blocker": "Blocker"
-      },
-      "name": "Pag-block ng Ad"
     },
     "album-actions": {
       "description": "Idadagdag ang Undislike, Dislike, Like, at Unlike na button para ilapat ito sa lahat ng kanta sa isang playlist o album",
@@ -237,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Paganahin ang seekbar theming"
       },
       "name": "Tema ng Kulay ng Album"
     },
@@ -287,7 +282,7 @@
       "name": "Ambient Mode"
     },
     "amuse": {
-      "description": "Nagdaragdag ng suporta sa Pear Desktop para sa Amuse now playing widget ng 6K Labs",
+      "description": "Nagdaragdag ng suporta sa {{applicationName}} para sa Amuse now playing widget ng 6K Labs",
       "response": {
         "query": "Tumatakbo ang Amuse API server. Gamitin ang GET /query para makuha ang impo ng kanta."
       }
@@ -318,6 +313,22 @@
         },
         "hostname": {
           "label": "Hostname"
+        },
+        "https": {
+          "label": "HTTPS at Mga Certificate",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Pumili ng HTTPS certificate file",
+              "label": "Certificate file (.crt o .pem)"
+            },
+            "enable-https": {
+              "label": "Paganahin ang HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Pumili ng HTTPS private key file",
+              "label": "Private key file (.key o .pem)"
+            }
+          }
         },
         "port": {
           "label": "Port"
@@ -369,7 +380,7 @@
       "name": "I-bypass ang Restriksyon sa Edad"
     },
     "captions-selector": {
-      "description": "Tagapili ng caption para sa mga audio track ng Pear Desktop",
+      "description": "Tagapili ng caption para sa mga audio track ng {{applicationName}}",
       "menu": {
         "autoload": "Awtomatikong piliin ang huling ginamit na caption",
         "disable-captions": "Walang mga caption bilang default"
@@ -390,6 +401,17 @@
         "caption-disabled": "Di-napagana ang mga caption",
         "no-captions": "Walang captions ay available para sa kantang ito"
       }
+    },
+    "clock": {
+      "description": "Magdagdag ng orasan sa bar ng nabigasyon",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-Oras na Format",
+          "display-seconds": "Ipakita ang Segundo",
+          "label": "Pormat"
+        }
+      },
+      "name": "Orasan"
     },
     "compact-sidebar": {
       "description": "Laging i-set ang sidebar sa compact mode",
@@ -446,13 +468,13 @@
         "disconnected": "Nadiskonekta",
         "hide-duration-left": "Itago ang natitirang oras",
         "hide-github-button": "Itago ang button na GitHub link",
-        "play-on-pear-desktop": "Patugtugin sa Pear Desktop",
+        "play-on-application": "Patugtugin sa {{applicationName}}",
         "set-inactivity-timeout": "I-set ang inactivity timeout",
         "set-status-display-type": {
           "submenu": {
+            "application": "Kumikinig sa {{applicationName}}",
             "artist": "Nakikinig sa {artist}",
-            "title": "Nakikinig sa {song title}",
-            "pear-desktop": "Kumikinig sa Pear Desktop"
+            "title": "Nakikinig sa {song title}"
           }
         }
       },
@@ -463,6 +485,13 @@
           "title": "I-set ang inactivity timeout"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Harangan ang lahat ng pagsubaybay (tracking) nang tuluyan",
+      "menu": {
+        "blocker": "Tagaharang"
+      },
+      "name": "Huwag Subaybayan"
     },
     "downloader": {
       "backend": {
@@ -565,6 +594,9 @@
     },
     "lyrics-genius": {
       "description": "Nagdaragdag ng suporta sa lyrics para sa karamihan ng kanta",
+      "menu": {
+        "romanized-lyrics": "Romanized na mga Lyrics"
+      },
       "name": "Lyrics Genius",
       "renderer": {
         "fetched-lyrics": "Kinuha ang lyrics para sa Genius"
@@ -790,6 +822,24 @@
         "not-found": "⚠️ Walang nakitang lyrics para sa kantang ito."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "I-convert ang karakter na Chinese",
+          "submenu": {
+            "disabled": {
+              "label": "Di-napagana",
+              "tooltip": "Huwag paganahin ang conversion ng karakter na Chinese"
+            },
+            "simplified-to-traditional": {
+              "label": "Pinasimple sa Tradisyonal",
+              "tooltip": "I-convert ang Pinasimpleng Chinese patungong Tradisyunal na Chinese"
+            },
+            "traditional-to-simplified": {
+              "label": "Tradisyonal patungong Pinasimple",
+              "tooltip": "I-convert ang Tradisyunal na Chinese sa Pinasimpleng Chinese"
+            }
+          },
+          "tooltip": "I-convert ang karakter na Chinese sa Tradisyonal o Pinasimple"
+        },
         "default-text-string": {
           "label": "Default na character sa pagitan ng lyrics",
           "tooltip": "Pumili ng default na character na gagamitin sa pagitan ng lyrics"
@@ -864,6 +914,7 @@
         "type": {
           "label": "Uri",
           "submenu": {
+            "fullscreen-ui": "Fullscreen na UI",
             "none": "Wala",
             "tabbed": "Naka-tab"
           }

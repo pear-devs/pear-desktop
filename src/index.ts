@@ -1,7 +1,13 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import url from 'node:url';
-import fs from 'node:fs';
 
+import ErrorHtmlAsset from '@assets/error.html?asset';
+import {
+  enhanceWebRequest,
+  type BetterSession,
+} from '@jellybrick/electron-better-web-request';
+import { deepmerge } from 'deepmerge-ts';
 import {
   BrowserWindow,
   app,
@@ -14,50 +20,37 @@ import {
   protocol,
   type BrowserWindowConstructorOptions,
 } from 'electron';
-import enhanceWebRequest, {
-  type BetterSession,
-} from '@jellybrick/electron-better-web-request';
+import electronDebug from 'electron-debug';
 import is from 'electron-is';
 import unhandled from 'electron-unhandled';
-import { autoUpdater } from 'electron-updater';
-import electronDebug from 'electron-debug';
-import { parse } from 'node-html-parser';
-import { deepmerge } from 'deepmerge-ts';
+import electronUpdater from 'electron-updater';
 import { deepEqual } from 'fast-equals';
-
+import { parse } from 'node-html-parser';
+import { languageResources } from 'virtual:i18n';
 import { allPlugins, mainPlugins } from 'virtual:plugins';
 
-import { languageResources } from 'virtual:i18n';
-
 import * as config from '@/config';
-
-import { refreshMenu, setApplicationMenu } from '@/menu';
-import { fileExists, injectCSS, injectCSSAsFile } from '@/plugins/utils/main';
-import { isTesting } from '@/utils/testing';
-import { setUpTray } from '@/tray';
-import { setupSongInfo } from '@/providers/song-info';
-import { restart, setupAppControls } from '@/providers/app-controls';
-import {
-  APP_PROTOCOL,
-  handleProtocol,
-  setupProtocolHandler,
-} from '@/providers/protocol-handler';
-
-import musicPlayerCss from '@/music-player.css?inline';
-
+import { APPLICATION_NAME, loadI18n, setLanguage, t } from '@/i18n';
 import {
   forceLoadMainPlugin,
   forceUnloadMainPlugin,
   getAllLoadedMainPlugins,
   loadAllMainPlugins,
 } from '@/loader/main';
-
-import { LoggerPrefix } from '@/utils';
-import { loadI18n, setLanguage, t } from '@/i18n';
-
-import ErrorHtmlAsset from '@assets/error.html?asset';
-
+import { refreshMenu, setApplicationMenu } from '@/menu';
+import musicPlayerCss from '@/music-player.css?inline';
 import { defaultAuthProxyConfig } from '@/plugins/auth-proxy-adapter/config';
+import { fileExists, injectCSS, injectCSSAsFile } from '@/plugins/utils/main';
+import { restart, setupAppControls } from '@/providers/app-controls';
+import {
+  APP_PROTOCOL,
+  handleProtocol,
+  setupProtocolHandler,
+} from '@/providers/protocol-handler';
+import { setupSongInfo } from '@/providers/song-info';
+import { setUpTray } from '@/tray';
+import { LoggerPrefix } from '@/utils';
+import { isTesting } from '@/utils/testing';
 
 import type { PluginConfig } from '@/types/plugins';
 
@@ -69,7 +62,7 @@ unhandled({
 
 // Prevent window being garbage collected
 let mainWindow: Electron.BrowserWindow | null;
-autoUpdater.autoDownload = false;
+electronUpdater.autoUpdater.autoDownload = false;
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -104,13 +97,9 @@ protocol.registerSchemesAsPrivileged([
   { scheme: 'mailto', privileges: { standard: true } },
 ]);
 
-// https://github.com/electron/electron/issues/46538#issuecomment-2808806722
-if (is.linux()) {
-  app.commandLine.appendSwitch('gtk-version', '3');
-}
-
 // Ozone platform hint: Required for Wayland support
 app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
+
 // SharedArrayBuffer: Required for downloader (@ffmpeg/core-mt)
 // OverlayScrollbar: Required for overlay scrollbars
 // UseOzonePlatform: Required for Wayland support
@@ -119,25 +108,45 @@ app.commandLine.appendSwitch(
   'enable-features',
   'OverlayScrollbar,SharedArrayBuffer,UseOzonePlatform,WaylandWindowDecorations',
 );
+
 // Disable Fluent Scrollbar (for OverlayScrollbar)
-app.commandLine.appendSwitch('disable-features', 'FluentScrollbar');
-if (config.get('options.disableHardwareAcceleration')) {
-  if (is.dev()) {
-    console.log('Disabling hardware acceleration');
+const disabledFeatures = ['FluentScrollbar'];
+let disableHardwareAcceleration = config.get(
+  'options.disableHardwareAcceleration',
+);
+
+// Linux specific fixes
+if (is.linux()) {
+  // Stops chromium from launching its own MPRIS service
+  if (await config.plugins.isEnabled('shortcuts')) {
+    disabledFeatures.push('MediaSessionService');
   }
 
+  // https://github.com/electron/electron/issues/15947
+  if (await config.plugins.isEnabled('transparent-player')) {
+    disableHardwareAcceleration = true;
+    app.commandLine.appendSwitch('enable-transparent-visuals');
+    app.commandLine.appendSwitch('enable-unsafe-swiftshader');
+  }
+
+  // Overrides WM_CLASS for X11 to correspond to icon filename
+  app.setName(
+    'com.github.th-ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063',
+  );
+  // for wayland
+  app.commandLine.appendSwitch(
+    'class',
+    'com.github.th-ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063',
+  );
+}
+
+if (disableHardwareAcceleration) {
+  if (is.dev()) console.log('Disabling hardware acceleration');
   app.disableHardwareAcceleration();
 }
 
-if (is.linux()) {
-  // Overrides WM_CLASS for X11 to correspond to icon filename
-  app.setName('com.github.th_ch.pear_music');
-
-  // Stops chromium from launching its own MPRIS service
-  if (await config.plugins.isEnabled('shortcuts')) {
-    app.commandLine.appendSwitch('disable-features', 'MediaSessionService');
-  }
-}
+// Apply disabled features
+app.commandLine.appendSwitch('disable-features', disabledFeatures.join(','));
 
 if (config.get('options.proxy')) {
   const authProxyEnabled = await config.plugins.isEnabled('auth-proxy-adapter');
@@ -167,9 +176,9 @@ electronDebug({
 
 let icon = 'assets/icon.png';
 if (process.platform === 'win32') {
-  icon = 'assets/generated/icon.ico';
+  icon = 'assets/generated/icons/win/icon.ico';
 } else if (process.platform === 'darwin') {
-  icon = 'assets/generated/icon.icns';
+  icon = 'assets/generated/icons/mac/icon.icns';
 }
 
 function onClosed() {
@@ -394,10 +403,10 @@ async function createMainWindow() {
     const scaledY = windowY;
 
     if (
-      scaledX + scaledWidth / 2 < display.bounds.x - 8 || // Left
-      scaledX + scaledWidth / 2 > display.bounds.x + display.bounds.width || // Right
+      scaledX + (scaledWidth / 2) < display.bounds.x - 8 || // Left
+      scaledX + (scaledWidth / 2) > display.bounds.x + display.bounds.width || // Right
       scaledY < display.bounds.y - 8 || // Top
-      scaledY + scaledHeight / 2 > display.bounds.y + display.bounds.height // Bottom
+      scaledY + (scaledHeight / 2) > display.bounds.y + display.bounds.height // Bottom
     ) {
       // Window is offscreen
       if (is.dev()) {
@@ -500,10 +509,11 @@ async function createMainWindow() {
     }
   });
   win.webContents.on('will-redirect', (event) => {
-    const url = new URL(event.url);
+    const url = URL.parse(event.url);
 
     // Workarounds for regions where YTM is restricted
     if (
+      url &&
       url.hostname.endsWith('\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com') &&
       url.pathname === '/premium'
     ) {
@@ -588,7 +598,7 @@ app.once('browser-window-created', (_event, win) => {
       if (
         errorCode !== -3 &&
         // Workaround for #2435
-        !new URL(validatedURL).hostname.includes('doubleclick.net')
+        !URL.parse(validatedURL)?.hostname?.includes('doubleclick.net')
       ) {
         // -3 is a false positive
         win.webContents.send('log', log);
@@ -663,7 +673,8 @@ app.whenReady().then(async () => {
 
   // Register appID on windows
   if (is.windows()) {
-    const appID = 'com.github.th-ch.pear-music';
+    const appID =
+      'com.github.th-ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063';
     app.setAppUserModelId(appID);
     const appLocation = process.execPath;
     const appData = app.getPath('appData');
@@ -678,7 +689,7 @@ app.whenReady().then(async () => {
         'Windows',
         'Start Menu',
         'Programs',
-        'Pear Desktop.lnk',
+        `${APPLICATION_NAME}.lnk`,
       );
       try {
         // Check if shortcut is registered and valid
@@ -687,7 +698,7 @@ app.whenReady().then(async () => {
           shortcutDetails.target !== appLocation ||
           shortcutDetails.appUserModelId !== appID
         ) {
-          // eslint-disable-next-line @typescript-eslint/only-throw-error
+          // oxlint-disable-next-line typescript/only-throw-error
           throw 'needUpdate';
         }
       } catch (error) {
@@ -698,7 +709,7 @@ app.whenReady().then(async () => {
           {
             target: appLocation,
             cwd: path.dirname(appLocation),
-            description: 'Pear Desktop App - including custom plugins',
+            description: `${APPLICATION_NAME} Desktop App - including custom plugins`,
             appUserModelId: appID,
           },
         );
@@ -802,10 +813,10 @@ app.whenReady().then(async () => {
 
   if (!is.dev() && config.get('options.autoUpdates')) {
     const updateTimeout = setTimeout(() => {
-      autoUpdater.checkForUpdatesAndNotify();
+      electronUpdater.autoUpdater.checkForUpdatesAndNotify();
       clearTimeout(updateTimeout);
     }, 2000);
-    autoUpdater.on('update-available', () => {
+    electronUpdater.autoUpdater.on('update-available', () => {
       const downloadLink =
         'https://github.com/pear-devs/pear-desktop/releases/latest';
       const dialogOptions: Electron.MessageBoxOptions = {
@@ -935,7 +946,7 @@ function removeContentSecurityPolicy(
     details.responseHeaders ??= {};
 
     // prettier-ignore
-    if (new URL(details.url).protocol === 'https:') {
+    if (URL.parse(details.url)?.protocol === 'https:') {
       // Remove the content security policy
       delete details.responseHeaders['content-security-policy-report-only'];
       delete details.responseHeaders['Content-Security-Policy-Report-Only'];
@@ -965,7 +976,7 @@ function removeContentSecurityPolicy(
           }
 
           const result = await listener.apply();
-          return { ...accumulator, ...result };
+          return { ...acc, ...result };
         },
         Promise.resolve({ cancel: false }),
       );

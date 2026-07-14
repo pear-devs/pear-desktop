@@ -1,10 +1,12 @@
 import { net } from 'electron';
 
+import { APPLICATION_NAME } from '@/i18n';
+
 import { ScrobblerBase } from './base';
 
+import type { ScrobblerPluginConfig } from '../index';
 import type { SetConfType } from '../main';
 import type { SongInfo } from '@/providers/song-info';
-import type { ScrobblerPluginConfig } from '../index';
 
 interface ListenbrainzRequestBody {
   listen_type?: string;
@@ -91,8 +93,8 @@ function createRequestBody(
     track_name: title,
     release_name: songInfo.album ?? undefined,
     additional_info: {
-      media_player: 'Pear Desktop App',
-      submission_client: 'Pear Desktop App - Scrobbler Plugin',
+      media_player: `${APPLICATION_NAME} Desktop App`,
+      submission_client: `${APPLICATION_NAME} Desktop App - Scrobbler Plugin`,
       origin_url: songInfo.url,
       duration: songInfo.songDuration,
     },

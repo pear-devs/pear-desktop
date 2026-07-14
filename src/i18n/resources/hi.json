@@ -154,14 +154,15 @@
                 "label": "कस्टम विंडो टाइटल",
                 "prompt": {
                   "label": "कस्टम विंडो टाइटल डालें: (डिसएबल करने के लिए खाली छोड़ें)",
-                  "placeholder": "उदाहरण: पियर डेस्कटॉप"
+                  "placeholder": "उदाहरण: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "डिफॉल्ट",
                 "force-show": "बल पूर्वक दिखाएं",
                 "hide": "छुपाएं",
-                "label": "लाइक बटंस"
+                "label": "लाइक बटंस",
+                "swap": "लाइक बटन का क्रम बदलें"
               },
               "remove-upgrade-button": "अपग्रेड बटन हटाएं",
               "theme": {
@@ -208,8 +209,8 @@
       "restart": "ऐप पुनः प्रारंभ करें",
       "show": "ऐप दिखाए",
       "tooltip": {
-        "default": "पियर डेस्कटॉप",
-        "with-song-info": "पियर डेस्कटॉप: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -217,13 +218,6 @@
     "ad-speedup": {
       "description": "यदि कोई विज्ञापन चलता है तो यह ऑडियो को म्यूट कर देता है और प्लेबैक गति 16x पर सेट कर देता है",
       "name": "विज्ञापन की गति बढ़ाना"
-    },
-    "adblocker": {
-      "description": "डिफ़ॉल्ट रूप से सभी विज्ञापनों और ट्रैकिंग को ब्लॉक करें",
-      "menu": {
-        "blocker": "ब्लॉकर"
-      },
-      "name": "विज्ञापन अवरोधक"
     },
     "album-actions": {
       "description": "प्लेलिस्ट या एल्बम के सभी गानों पर लागू करने के लिए \"अंडिसलाइक,\" \"डिसलाइक,\" \"लाइक,\" और \"अनलाइक\" बटन जोड़ता है",
@@ -237,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "सीकबार थीमिंग सक्षम करें"
       },
       "name": "एल्बम रंग थीम"
     },
@@ -287,7 +282,7 @@
       "name": "अम्बिएन्ट मोड्"
     },
     "amuse": {
-      "description": "6K लैब्स द्वारा Amuse now playing विजेट के लिए Music Player म्यूजिक समर्थन जोड़ा गया",
+      "description": "{{applicationName}}6K लैब्स द्वारा Amuse now playing विजेट के लिए Music Player म्यूजिक समर्थन जोड़ा गया",
       "name": "मन बहलाना",
       "response": {
         "query": "अमयूस ए.पि.ऐ. चल रहा है। गाने की जान्कारि होने के लिये GET /query कीजिये।"
@@ -319,6 +314,22 @@
         },
         "hostname": {
           "label": "होस्टनेम"
+        },
+        "https": {
+          "label": "HTTPS और प्रमाणपत्र",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "HTTPS प्रमाणपत्र फ़ाइल चुनें",
+              "label": "प्रमाणपत्र फ़ाइल (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "HTTPS सक्षम करें"
+            },
+            "key": {
+              "dialogTitle": "HTTPS निजी कुंजी फ़ाइल चुनें",
+              "label": "निजी कुंजी फ़ाइल (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "पोर्ट"
@@ -373,7 +384,7 @@
       "name": "आयु प्रतिबंध को बायपास करें"
     },
     "captions-selector": {
-      "description": "Pear Desktop म्यूज़िक ऑडियो ट्रैक के लिए कैप्शन चयनकर्ता",
+      "description": "{{applicationName}} म्यूज़िक ऑडियो ट्रैक के लिए कैप्शन चयनकर्ता",
       "menu": {
         "autoload": "अंतिम बार उपयोग किए गए कैप्शन का ऑटोमैटिक रूप से चयन करें",
         "disable-captions": "डिफ़ॉल्ट रूप में कोई कैप्शन नहीं"
@@ -394,6 +405,17 @@
         "caption-disabled": "कैप्शन बंद कर दिए गए हैं",
         "no-captions": "इस गाने के लिए कोई कैप्शन उपलब्ध नहीं हैं"
       }
+    },
+    "clock": {
+      "description": "नेविगेशन बार में घड़ी जोड़ें",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-घंटे का प्रारूप",
+          "display-seconds": "सेकंड दिखाएं",
+          "label": "प्रारूप"
+        }
+      },
+      "name": "घड़ी"
     },
     "compact-sidebar": {
       "description": "साइडबार को हमेशा कॉम्पैक्ट मोड में सेट करें",
@@ -456,13 +478,13 @@
         "disconnected": "डिस्कनेक्ट किया गया",
         "hide-duration-left": "शेष अवधि छिपाएँ",
         "hide-github-button": "GitHub लिंक के बटन को छिपाएँ",
-        "play-on-pear-desktop": "Pear Desktop म्यूज़िक पर चलाएँ",
+        "play-on-application": "{{applicationName}} म्यूज़िक पर चलाएँ",
         "set-inactivity-timeout": "निष्क्रियता समय समाप्ति सेट करें",
         "set-status-display-type": {
           "label": "स्टेटस टेक्स्ट",
           "submenu": {
+            "application": "{{applicationName}} सुन रहे है",
             "artist": "{artist} को सुन रहे है",
-            "pear-desktop": "Pear Desktop सुन रहे है",
             "title": "{song title} सुन रहे है"
           }
         }
@@ -474,6 +496,13 @@
           "title": "निष्क्रियता समय समाप्ति सेट करें"
         }
       }
+    },
+    "do-not-track": {
+      "description": "डिफ़ॉल्ट रूप से सभी ट्रैकिंग को ब्लॉक करें",
+      "menu": {
+        "blocker": "ब्लॉकर"
+      },
+      "name": "मुझे ट्रैक न करें"
     },
     "downloader": {
       "backend": {
@@ -807,11 +836,74 @@
       "name": "SponsorBlock"
     },
     "synced-lyrics": {
-      "description": "LRClib जैसे सोर्सेज के उपयोग से, गानों के लिए सिंक किए गए लिरिक्स देता है।"
+      "description": "LRClib जैसे सोर्सेज के उपयोग से, गानों के लिए सिंक किए गए लिरिक्स देता है।",
+      "errors": {
+        "not-found": "⚠️ इस गाने के लिए कोई गीत नहीं मिले।"
+      },
+      "menu": {
+        "default-text-string": {
+          "label": "गीत पंक्तियों के बीच डिफ़ॉल्ट वर्ण",
+          "tooltip": "लिरिक्स के बीच अंतर दिखाने के लिए डिफ़ॉल्ट वर्ण चुनें"
+        },
+        "line-effect": {
+          "label": "लाइन इफ़ेक्ट",
+          "submenu": {
+            "fancy": {
+              "label": "आकर्षक",
+              "tooltip": "मौजूदा लाइन पर बड़े, ऐप-जैसे इफ़ेक्ट लगाएँ"
+            },
+            "focus": {
+              "tooltip": "केवल वर्तमान लाइन सफेद बनाओ"
+            },
+            "offset": {
+              "label": "ऑफसेट",
+              "tooltip": "सही वर्तमान लाइन पर ऑफसेट"
+            },
+            "scale": {
+              "label": "स्केल"
+            }
+          },
+          "tooltip": "वर्तमान लाइन पर लागू करने के लिए प्रभाव चुनें"
+        },
+        "precise-timing": {
+          "label": "पूरी तरह से सिंक किए गए गीत बनाएं"
+        },
+        "preferred-provider": {
+          "label": "पसंदीदा प्रदाता",
+          "none": {
+            "label": "कोई नहीं",
+            "tooltip": "कोई पसंदीदा प्रदाता नहीं"
+          },
+          "tooltip": "उपयोग करने के लिए डिफ़ॉल्ट प्रदाता चुनें"
+        },
+        "show-time-codes": {
+          "label": "समय कोड दिखाएं",
+          "tooltip": "गीत के बगल में टाइम कोड दिखाएं"
+        }
+      }
+    },
+    "taskbar-mediacontrol": {
+      "name": "कार्यबार मीडिया नियंत्रण"
+    },
+    "transparent-player": {
+      "menu": {
+        "type": {
+          "submenu": {
+            "content": "सामग्री",
+            "none": "कुछ नहीं",
+            "window": "विंडो"
+          }
+        }
+      }
+    },
+    "tuna-obs": {
+      "description": "OBS के प्लगइन Tuna के साथ एकीकरण",
+      "name": "Tuna OBS"
     },
     "video-toggle": {
       "menu": {
         "align": {
+          "label": "संरेखण",
           "submenu": {
             "left": "बाएं",
             "middle": "मध्य",

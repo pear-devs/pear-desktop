@@ -154,14 +154,15 @@
                 "label": "Título da janela customizado",
                 "prompt": {
                   "label": "Insira título customizado para a janela: (deixe em branco para desabilitar)",
-                  "placeholder": "Exemplo: Pear Desktop"
+                  "placeholder": "Exemplo: {{applicationName}}"
                 }
               },
               "like-buttons": {
                 "default": "Padrão",
                 "force-show": "Forçar exibir",
                 "hide": "Ocultar",
-                "label": "Botões de 'Curtir'"
+                "label": "Botões de 'Curtir'",
+                "swap": "Inverter ordem dos botões de curtir"
               },
               "remove-upgrade-button": "Remover botão de atualização",
               "theme": {
@@ -208,8 +209,8 @@
       "restart": "Reiniciar aplicativo",
       "show": "Mostrar janela",
       "tooltip": {
-        "default": "Pear Desktop",
-        "with-song-info": "Pear Desktop: {{artist}} - {{title}}"
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
       }
     }
   },
@@ -217,13 +218,6 @@
     "ad-speedup": {
       "description": "Se um anúncio for reproduzido, ele silencia o áudio e define a velocidade de reprodução para 16x",
       "name": "Acelerador de Anúncios"
-    },
-    "adblocker": {
-      "description": "Bloqueio de todos os anúncios e rastreamentos imediatamente",
-      "menu": {
-        "blocker": "Bloqueador"
-      },
-      "name": "Bloqueador de Anúncios"
     },
     "album-actions": {
       "description": "Adiciona botões Remover Não curtir, Não curtir, Curtir e Remover Curtir para aplicar em todas as músicas em uma lista ou álbum",
@@ -288,7 +282,7 @@
       "name": "Modo ambiente"
     },
     "amuse": {
-      "description": "Adiciona suporte ao Pear Desktop ao widget 'Reproduzindo agora' do Amuse da 6K Labs",
+      "description": "Adiciona suporte ao {{applicationName}} ao widget 'Reproduzindo agora' do Amuse da 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Servidor API do Amuse em execução. GET /query para obter informações da música."
@@ -320,6 +314,22 @@
         },
         "hostname": {
           "label": "Nome do anfitrião"
+        },
+        "https": {
+          "label": "HTTPS & Certificados",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Selecione o certificado do HTTPS",
+              "label": "Arquivo de certificado (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Habilitar HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Selecione a chave privada do HTTPS",
+              "label": "Arquivo de chave privada (.key/.pem)"
+            }
+          }
         },
         "port": {
           "label": "Porta"
@@ -374,7 +384,7 @@
       "name": "Ignorar restrições de idade"
     },
     "captions-selector": {
-      "description": "Seletor de legendas para faixas de áudio do Pear Desktop",
+      "description": "Seletor de legendas para faixas de áudio do {{applicationName}}",
       "menu": {
         "autoload": "Selecionar automaticamente a última legenda usada",
         "disable-captions": "Sem legendas por padrão"
@@ -395,6 +405,17 @@
         "caption-disabled": "Legendas desativadas",
         "no-captions": "Sem legendas disponíveis para essa música"
       }
+    },
+    "clock": {
+      "description": "Adicionar relógio na barra de navegação",
+      "menu": {
+        "format": {
+          "24-hour-format": "Formato 24 horas",
+          "display-seconds": "Mostrar segundos",
+          "label": "Formato"
+        }
+      },
+      "name": "Relógio"
     },
     "compact-sidebar": {
       "description": "Sempre definir a barra lateral no modo compacto",
@@ -457,24 +478,31 @@
         "disconnected": "Desconectado",
         "hide-duration-left": "Ocultar duração restante",
         "hide-github-button": "Ocultar botão do GitHub",
-        "play-on-pear-desktop": "Reproduzir no Pear Desktop",
+        "play-on-application": "Reproduzir no {{applicationName}}",
         "set-inactivity-timeout": "Definir tempo limite de inatividade",
         "set-status-display-type": {
           "label": "Texto de status",
           "submenu": {
+            "application": "Ouvindo {{applicationName}}",
             "artist": "Ouvindo {artist}",
-            "pear-desktop": "Ouvindo Pear Desktop",
             "title": "Ouvindo {song title}"
           }
         }
       },
-      "name": "Rich Presence do Discord",
+      "name": "Presença Marcante no Discord",
       "prompt": {
         "set-inactivity-timeout": {
-          "label": "Digite o tempo de inatividade em segundos:",
+          "label": "Insira o tempo limite de inatividade em segundos:",
           "title": "Definir tempo limite de inatividade"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Bloqueia todo o rastreamento imediatamente",
+      "menu": {
+        "blocker": "Bloqueador"
+      },
+      "name": "Não rastrear"
     },
     "downloader": {
       "backend": {
@@ -814,6 +842,24 @@
         "not-found": "⚠️ Nenhuma letra encontrada para esta música."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Converter caracteres Chineses",
+          "submenu": {
+            "disabled": {
+              "label": "Desativado",
+              "tooltip": "Desativar conversão de caracteres Chineses"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplificado para Tradicional",
+              "tooltip": "Converter Chinês Simplificado para Chinês Tradicional"
+            },
+            "traditional-to-simplified": {
+              "label": "Tradicional para Simplificado",
+              "tooltip": "Converter Chinês Tradicional para Chinês Simplificado"
+            }
+          },
+          "tooltip": "Converter caractere Chinês para Tradicional ou Simplificado"
+        },
         "default-text-string": {
           "label": "Caractere padrão entre letras",
           "tooltip": "Escolha o caractere padrão a ser usado para o intervalo entre as letras"
@@ -897,9 +943,14 @@
           "label": "Tipo",
           "submenu": {
             "acrylic": "Acrílico",
+            "content": "Conteúdo",
+            "fullscreen-ui": "Interface em tela cheia",
             "mica": "Mica",
             "none": "Nenhum",
-            "tabbed": "Em abas"
+            "tabbed": "Em abas",
+            "under-page": "Abaixo da página",
+            "under-window": "Abaixo da janela",
+            "window": "Janela"
           }
         }
       },
