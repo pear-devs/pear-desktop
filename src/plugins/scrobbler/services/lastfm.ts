@@ -100,15 +100,12 @@ export class LastFmScrobbler extends ScrobblerBase {
     config: ScrobblerPluginConfig,
     setConfig: SetConfType,
   ): void {
-    if (!config.scrobblers.lastfm.sessionKey) {
-      return;
-    }
-
-    // This sets the now playing status in last.fm
-    const data = {
-      method: 'track.updateNowPlaying',
-    };
-    this.postSongDataToAPI(songInfo, config, data, setConfig);
+    this.postSongDataToAPI(
+      songInfo,
+      config,
+      { method: 'track.updateNowPlaying' },
+      setConfig,
+    );
   }
 
   override addScrobble(
@@ -117,75 +114,54 @@ export class LastFmScrobbler extends ScrobblerBase {
     setConfig: SetConfType,
     startedAtSeconds: number,
   ): void {
-    if (!config.scrobblers.lastfm.sessionKey) {
-      return;
-    }
-
-    // This adds one scrobbled song to last.fm
-    const data = {
-      method: 'track.scrobble',
-      timestamp: Math.trunc(startedAtSeconds),
-    };
-    this.postSongDataToAPI(songInfo, config, data, setConfig);
+    this.postSongDataToAPI(
+      songInfo,
+      config,
+      { method: 'track.scrobble', timestamp: Math.trunc(startedAtSeconds) },
+      setConfig,
+    );
   }
 
   override love(
     songInfo: SongInfo,
     config: ScrobblerPluginConfig,
-    _setConfig: SetConfType,
+    setConfig: SetConfType,
   ): void {
-    this.postLoveToAPI('track.love', songInfo, config);
+    this.postLoveToAPI('track.love', songInfo, config, setConfig);
   }
 
   override unlove(
     songInfo: SongInfo,
     config: ScrobblerPluginConfig,
-    _setConfig: SetConfType,
+    setConfig: SetConfType,
   ): void {
-    this.postLoveToAPI('track.unlove', songInfo, config);
+    this.postLoveToAPI('track.unlove', songInfo, config, setConfig);
   }
 
-  private postLoveToAPI(
+  private async postLoveToAPI(
     method: string,
     songInfo: SongInfo,
     config: ScrobblerPluginConfig,
-  ): void {
-    const sessionKey = config.scrobblers.lastfm.sessionKey;
-    if (!sessionKey) {
-      return;
+    setConfig: SetConfType,
+  ): Promise<void> {
+    if (!config.scrobblers.lastfm.sessionKey) {
+      await this.createSession(config, setConfig);
     }
-
-    const track =
-      config.alternativeTitles && songInfo.alternativeTitle !== undefined
-        ? songInfo.alternativeTitle
-        : songInfo.title;
-
-    const artist =
-      config.alternativeArtist && songInfo.tags?.at(0) !== undefined
-        ? songInfo.tags?.at(0)
-        : songInfo.artist;
-
-    if (!track || !artist) {
-      return;
-    }
+    if (!config.scrobblers.lastfm.sessionKey) return;
 
     const postData: LastFmLoveData = {
-      track,
-      artist,
+      track: songInfo.title,
+      artist: songInfo.artist,
       api_key: config.scrobblers.lastfm.apiKey,
-      sk: sessionKey,
+      sk: config.scrobblers.lastfm.sessionKey,
       format: 'json',
       method,
     };
-    postData.api_sig = createApiSig(postData, config.scrobblers.lastfm.secret);
 
-    scrobblerDebug(`[lastfm] ${method}: "${track}" - "${artist}"`);
-    net
-      .fetch('https://ws.audioscrobbler.com/2.0/', {
-        method: 'POST',
-        body: createFormData(postData),
-      })
-      .catch(console.error);
+    scrobblerDebug(
+      `[lastfm] ${method}: "${songInfo.title}" - "${songInfo.artist}"`,
+    );
+    await this.postSigned(postData, config, setConfig);
   }
 
   private async postSongDataToAPI(
@@ -194,25 +170,15 @@ export class LastFmScrobbler extends ScrobblerBase {
     data: LastFmData,
     setConfig: SetConfType,
   ): Promise<void> {
-    // This sends a post request to the api, and adds the common data
     if (!config.scrobblers.lastfm.sessionKey) {
       await this.createSession(config, setConfig);
     }
-
-    const title =
-      config.alternativeTitles && songInfo.alternativeTitle !== undefined
-        ? songInfo.alternativeTitle
-        : songInfo.title;
-
-    const artist =
-      config.alternativeArtist && songInfo.tags?.at(0) !== undefined
-        ? songInfo.tags?.at(0)
-        : songInfo.artist;
+    if (!config.scrobblers.lastfm.sessionKey) return;
 
     const postData: LastFmSongData = {
-      track: title,
+      track: songInfo.title,
       duration: songInfo.songDuration,
-      artist: artist,
+      artist: songInfo.artist,
       ...(songInfo.album ? { album: songInfo.album } : undefined), // Will be undefined if current song is a video
       api_key: config.scrobblers.lastfm.apiKey,
       sk: config.scrobblers.lastfm.sessionKey,
@@ -220,39 +186,40 @@ export class LastFmScrobbler extends ScrobblerBase {
       ...data,
     };
 
+    scrobblerDebug(
+      `[lastfm] ${data.method}: "${songInfo.title}" - "${songInfo.artist}"`,
+    );
+    await this.postSigned(postData, config, setConfig);
+  }
+
+  private async postSigned(
+    postData: Record<string, unknown>,
+    config: ScrobblerPluginConfig,
+    setConfig: SetConfType,
+  ): Promise<void> {
     postData.api_sig = createApiSig(postData, config.scrobblers.lastfm.secret);
-    const formData = createFormData(postData);
-    scrobblerDebug(`[lastfm] ${data.method}: "${title}" - "${artist}"`);
-    net
-      .fetch('https://ws.audioscrobbler.com/2.0/', {
+
+    try {
+      await net.fetch('https://ws.audioscrobbler.com/2.0/', {
         method: 'POST',
-        body: formData,
-      })
-      .catch(
-        async (error: {
-          response?: {
-            data?: {
-              error: number;
-            };
-          };
-        }) => {
-          if (error?.response?.data?.error === 9) {
-            // Session key is invalid, so remove it from the config and reauthenticate
-            config.scrobblers.lastfm.sessionKey = undefined;
-            config.scrobblers.lastfm.token = await createToken(config);
-            authenticate(config, this.mainWindow).then((it) => {
-              if (it) {
-                this.createSession(config, setConfig);
-              } else {
-                // failed
-                setConfig(config);
-              }
-            });
-          } else {
-            console.error(error);
-          }
-        },
-      );
+        body: createFormData(postData),
+      });
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { error: number } } };
+      if (err?.response?.data?.error === 9) {
+        // Session key is invalid, so remove it from the config and reauthenticate
+        config.scrobblers.lastfm.sessionKey = undefined;
+        config.scrobblers.lastfm.token = await createToken(config);
+        const ok = await authenticate(config, this.mainWindow);
+        if (ok) {
+          await this.createSession(config, setConfig);
+        } else {
+          setConfig(config);
+        }
+      } else {
+        console.error(error);
+      }
+    }
   }
 }
 

@@ -311,23 +311,7 @@ export class ScrobbleManager {
   love(): void {
     if (!this.currentSongInfo) return;
     this.eachService((name, scrobbler) => {
-      const cfg = this.config.scrobblers[name];
-      if (!cfg.loveOnLike) return;
-
-      const forceScrobble =
-        name === 'listenbrainz' ||
-        this.config.scrobblers.lastfm.forceScrobbleOnLike;
-      const state = this.timerFor(name);
-      if (
-        forceScrobble &&
-        this.songStarted &&
-        !state.scrobbled &&
-        this.currentSongInfo!.songDuration > cfg.minSongDuration
-      ) {
-        scrobblerDebug(`[${name}] forcing scrobble on like`);
-        this.scrobble(name);
-      }
-
+      if (!this.config.scrobblers[name].loveOnLike) return;
       scrobblerDebug(`[${name}] love "${this.currentSongInfo!.title}"`);
       scrobbler.love(this.currentSongInfo!, this.config, this.setConfig);
     });
@@ -348,8 +332,15 @@ export class ScrobbleManager {
   }
 
   private resolveSongInfo(songInfo: SongInfo): SongInfo {
-    let title = songInfo.title;
-    let artist = songInfo.artist;
+    let title =
+      this.config.alternativeTitles && songInfo.alternativeTitle !== undefined
+        ? songInfo.alternativeTitle
+        : songInfo.title;
+    const firstTag = songInfo.tags?.at(0);
+    let artist =
+      this.config.alternativeArtist && firstTag !== undefined
+        ? firstTag
+        : songInfo.artist;
     let album = songInfo.album ?? undefined;
 
     if (this.config.parseTitle) {
@@ -375,6 +366,13 @@ export class ScrobbleManager {
       }
     }
 
-    return { ...songInfo, title, artist, album };
+    return {
+      ...songInfo,
+      title,
+      artist,
+      album,
+      alternativeTitle: undefined,
+      tags: undefined,
+    };
   }
 }

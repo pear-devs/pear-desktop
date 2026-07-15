@@ -52,8 +52,13 @@ export class ListenbrainzScrobbler extends ScrobblerBase {
       return;
     }
 
-    const body = createRequestBody('playing_now', songInfo, config);
-    submitListen(body, config);
+    const body = createRequestBody('playing_now', songInfo);
+    submitListen(body, config, true).then((msid) => {
+      if (msid) {
+        rememberMsid(songKey(songInfo), msid);
+        scrobblerDebug(`[listenbrainz] now playing, cached msid ${msid}`);
+      }
+    });
   }
 
   override addScrobble(
@@ -69,15 +74,13 @@ export class ListenbrainzScrobbler extends ScrobblerBase {
       return;
     }
 
-    const body = createRequestBody('single', songInfo, config);
+    const body = createRequestBody('single', songInfo);
     body.payload[0].listened_at = Math.trunc(startedAtSeconds);
 
-    submitListen(body, config).then((msid) => {
-      if (msid) {
-        rememberMsid(songKey(songInfo), msid);
-        scrobblerDebug(`[listenbrainz] listen submitted, cached msid ${msid}`);
-      }
-    });
+    // return_msid is only honored by ListenBrainz for listen_type=playing_now,
+    // so a 'single' submission never returns a recording_msid; the msid cache
+    // is instead populated by setNowPlaying, which fires earlier anyway.
+    submitListen(body, config, false);
   }
 
   override love(
@@ -146,21 +149,10 @@ function submitFeedback(
 function createRequestBody(
   listenType: string,
   songInfo: SongInfo,
-  config: ScrobblerPluginConfig,
 ): ListenbrainzRequestBody {
-  const title =
-    config.alternativeTitles && songInfo.alternativeTitle !== undefined
-      ? songInfo.alternativeTitle
-      : songInfo.title;
-
-  const artist =
-    config.alternativeArtist && songInfo.tags?.at(0) !== undefined
-      ? songInfo.tags?.at(0)
-      : songInfo.artist;
-
   const trackMetadata = {
-    artist_name: artist,
-    track_name: title,
+    artist_name: songInfo.artist,
+    track_name: songInfo.title,
     release_name: songInfo.album ?? undefined,
     additional_info: {
       media_player: `${APPLICATION_NAME} Desktop App`,
@@ -183,23 +175,29 @@ function createRequestBody(
 async function submitListen(
   body: ListenbrainzRequestBody,
   config: ScrobblerPluginConfig,
+  requestMsid: boolean,
 ): Promise<string | undefined> {
   try {
-    const response = await net.fetch(
-      config.scrobblers.listenbrainz.apiRoot + 'submit-listens',
-      {
-        method: 'POST',
-        body: JSON.stringify(body),
-        headers: {
-          'Authorization': 'Token ' + config.scrobblers.listenbrainz.token,
-          'Content-Type': 'application/json',
-        },
+    const url =
+      config.scrobblers.listenbrainz.apiRoot +
+      'submit-listens' +
+      (requestMsid ? '?return_msid=true' : '');
+    const response = await net.fetch(url, {
+      method: 'POST',
+      body: JSON.stringify(body),
+      headers: {
+        'Authorization': 'Token ' + config.scrobblers.listenbrainz.token,
+        'Content-Type': 'application/json',
       },
-    );
-    const json = (await response.json()) as {
-      payload?: { latest_listen_recording_msid?: string }[];
-    };
-    return json?.payload?.[0]?.latest_listen_recording_msid;
+    });
+    if (!response.ok) {
+      console.error(
+        `[listenbrainz] submit-listens failed: ${response.status} ${await response.text()}`,
+      );
+      return undefined;
+    }
+    const json = (await response.json()) as { recording_msid?: string };
+    return json.recording_msid;
   } catch (error) {
     console.error(error);
     return undefined;
