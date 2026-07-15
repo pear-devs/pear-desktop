@@ -8,7 +8,7 @@ import type { ScrobblerBase } from './services/base';
 
 type ScrobblerName = keyof ScrobblerPluginConfig['scrobblers'];
 
-// Debug logging is only emitted in development (`pnpm dev`).
+// Dev-only debug logging.
 export const scrobblerDebug = (...args: unknown[]): void => {
   if (is.dev()) console.log('[YTMusic] [Scrobbler]', ...args);
 };
@@ -20,11 +20,7 @@ interface ServiceTimer {
   timer?: NodeJS.Timeout;
 }
 
-/**
- * Stateful, per-service scrobble scheduler. Tracks separate timers and
- * "already scrobbled" flags for each service so seeking, looping and
- * pause/resume never cause duplicate or lost scrobbles.
- */
+// Per-service scrobble scheduler with independent timers and scrobbled flags.
 export class ScrobbleManager {
   private readonly timers = new Map<ScrobblerName, ServiceTimer>();
 
@@ -33,6 +29,8 @@ export class ScrobbleManager {
   private songStartedAtSeconds = 0;
   private songStarted = false;
   private isPlaying = false;
+  private lastElapsedSeconds = 0;
+  private endedReached = false;
 
   constructor(
     private readonly scrobblers: Map<string, ScrobblerBase>,
@@ -45,13 +43,39 @@ export class ScrobbleManager {
   }
 
   onSongInfo(songInfo: SongInfo, event: SongInfoEvent): void {
-    if (event === SongInfoEvent.TimeChanged) return;
+    const elapsed = songInfo.elapsedSeconds ?? 0;
 
-    if (event === SongInfoEvent.VideoSrcChanged) {
+    if (event === SongInfoEvent.Ended) {
+      scrobblerDebug('video ended event received');
+      if (this.songStarted) this.endedReached = true;
+      return;
+    }
+
+    if (event === SongInfoEvent.TimeChanged) {
+      this.replayCheck(elapsed);
+    } else if (event === SongInfoEvent.VideoSrcChanged) {
       this.handleMetadata(songInfo);
     } else if (event === SongInfoEvent.PlayOrPaused) {
       this.handlePlayState(songInfo);
     }
+
+    this.lastElapsedSeconds = elapsed;
+  }
+
+  // A finished track ('ended') whose position then moves backward is a replay.
+  private replayCheck(elapsed: number): boolean {
+    if (!this.songStarted || !this.currentSongInfo) return false;
+    if (!this.endedReached || elapsed >= this.lastElapsedSeconds) return false;
+
+    scrobblerDebug(
+      `replay detected (${Math.trunc(this.lastElapsedSeconds)}s -> ${elapsed}s), re-arming`,
+    );
+    this.endedReached = false;
+    this.eachService((name) => {
+      this.timerFor(name).scrobbled = false;
+    });
+    this.onSongStart(elapsed);
+    return true;
   }
 
   private timerFor(name: ScrobblerName): ServiceTimer {
@@ -85,9 +109,9 @@ export class ScrobbleManager {
 
       this.currentKey = key;
       this.songStarted = false;
+      this.endedReached = false;
 
-      // Skipped media clears the current song so later play/pause events
-      // never act on the previously playing track.
+      // Clear current song for skipped media so later events don't act on it.
       this.currentSongInfo = skip ? undefined : resolved;
 
       if (skip) {
@@ -106,6 +130,7 @@ export class ScrobbleManager {
     }
 
     if (skip || !this.currentSongInfo) return;
+    if (this.replayCheck(songInfo.elapsedSeconds ?? 0)) return;
 
     // Same song, metadata may have improved (e.g. duration was 0 initially).
     const improved = resolved.songDuration > this.currentSongInfo.songDuration;
@@ -140,17 +165,17 @@ export class ScrobbleManager {
     this.isPlaying = !songInfo.isPaused;
     if (!this.currentSongInfo) return;
 
+    const elapsed = songInfo.elapsedSeconds ?? 0;
     if (this.isPlaying) {
-      if (!this.songStarted) this.onSongStart(songInfo.elapsedSeconds ?? 0);
+      if (this.replayCheck(elapsed)) return;
+      if (!this.songStarted) this.onSongStart(elapsed);
       else this.onSongResume();
     } else {
       this.onSongPause();
     }
   }
 
-  // Anchor the play start to when playback actually begins (minus any elapsed
-  // time already played), so the scrobble threshold is measured correctly even
-  // if the song was loaded paused or play was delayed.
+  // Anchor start to actual playback moment (minus elapsed), not metadata load.
   private onSongStart(elapsedSeconds: number): void {
     this.songStarted = true;
     const nowSeconds = Date.now() / 1000;

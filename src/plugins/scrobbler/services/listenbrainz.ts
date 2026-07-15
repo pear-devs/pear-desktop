@@ -97,8 +97,9 @@ export class ListenbrainzScrobbler extends ScrobblerBase {
   }
 }
 
-// ListenBrainz feedback needs a recording_msid, only known after a listen is
-// submitted. Cache it per song, bounded so it can't grow forever.
+// Feedback (love/unlove) needs a recording_msid, which is only returned when a
+// listen is submitted. Cache it per song so feedback can reference it later,
+// bounded so it can't grow forever.
 const MAX_MSID_ENTRIES = 200;
 const msidCache = new Map<string, string>();
 

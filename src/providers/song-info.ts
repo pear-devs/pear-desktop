@@ -175,6 +175,7 @@ export enum SongInfoEvent {
   VideoSrcChanged = 'peard:video-src-changed',
   PlayOrPaused = 'peard:play-or-paused',
   TimeChanged = 'peard:time-changed',
+  Ended = 'peard:video-ended',
 }
 
 // This variable will be filled with the callbacks once they register
@@ -251,6 +252,13 @@ const registerProvider = (win: BrowserWindow) => {
       for (const c of callbacks) {
         c(tempSongInfo, SongInfoEvent.TimeChanged);
       }
+    }
+  });
+
+  ipcMain.on('peard:video-ended', () => {
+    if (!songInfo) return;
+    for (const c of callbacks) {
+      c(songInfo, SongInfoEvent.Ended);
     }
   });
 };

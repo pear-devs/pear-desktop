@@ -242,6 +242,12 @@ export const setupSongInfo = (api: MusicPlayer) => {
     pause: (e: Event) => playPausedHandler(e, 'pause'),
   };
 
+  api.addEventListener('onStateChange', () => {
+    if (api.getPlayerState() === 0) {
+      window.ipcRenderer.send('peard:video-ended');
+    }
+  });
+
   const videoEventDispatcher = async (
     name: string,
     videoData: VideoDataChangeValue,
