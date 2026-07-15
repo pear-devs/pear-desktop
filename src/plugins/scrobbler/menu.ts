@@ -235,6 +235,15 @@ export const onMenu = async ({
           },
         },
         {
+          label: t('plugins.scrobbler.menu.lastfm.force-scrobble-on-like'),
+          type: 'checkbox',
+          checked: Boolean(config.scrobblers.lastfm?.forceScrobbleOnLike),
+          click(item) {
+            config.scrobblers.lastfm.forceScrobbleOnLike = item.checked;
+            setConfig(config);
+          },
+        },
+        {
           label: t('plugins.scrobbler.menu.lastfm.timing'),
           click() {
             promptTimingOptions('lastfm', config, setConfig, window);

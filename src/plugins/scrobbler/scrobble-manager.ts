@@ -311,10 +311,25 @@ export class ScrobbleManager {
   love(): void {
     if (!this.currentSongInfo) return;
     this.eachService((name, scrobbler) => {
-      if (this.config.scrobblers[name].loveOnLike) {
-        scrobblerDebug(`[${name}] love "${this.currentSongInfo!.title}"`);
-        scrobbler.love(this.currentSongInfo!, this.config, this.setConfig);
+      const cfg = this.config.scrobblers[name];
+      if (!cfg.loveOnLike) return;
+
+      const forceScrobble =
+        name === 'listenbrainz' ||
+        this.config.scrobblers.lastfm.forceScrobbleOnLike;
+      const state = this.timerFor(name);
+      if (
+        forceScrobble &&
+        this.songStarted &&
+        !state.scrobbled &&
+        this.currentSongInfo!.songDuration > cfg.minSongDuration
+      ) {
+        scrobblerDebug(`[${name}] forcing scrobble on like`);
+        this.scrobble(name);
       }
+
+      scrobblerDebug(`[${name}] love "${this.currentSongInfo!.title}"`);
+      scrobbler.love(this.currentSongInfo!, this.config, this.setConfig);
     });
   }
 

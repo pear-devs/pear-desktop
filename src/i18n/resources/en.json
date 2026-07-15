@@ -784,6 +784,7 @@
           "api-settings": "Last.fm API Settings",
           "now-playing": "Send now playing",
           "love-on-like": "Love on like",
+          "force-scrobble-on-like": "Force scrobble on like",
           "timing": "Scrobble timing"
         },
         "listenbrainz": {

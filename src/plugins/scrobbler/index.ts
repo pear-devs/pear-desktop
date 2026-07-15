@@ -107,6 +107,14 @@ export interface ScrobblerPluginConfig {
        * @default false
        */
       loveOnLike: boolean;
+      /**
+       * Immediately scrobble a track (bypassing the delay) when it is liked,
+       * instead of waiting for the usual threshold. Only applies if
+       * loveOnLike is enabled.
+       *
+       * @default false
+       */
+      forceScrobbleOnLike: boolean;
     };
     listenbrainz: {
       /**
@@ -150,7 +158,9 @@ export interface ScrobblerPluginConfig {
        */
       delaySeconds: number;
       /**
-       * Submit positive feedback to ListenBrainz when a track is liked in the player
+       * Submit positive feedback to ListenBrainz when a track is liked in the
+       * player. Liking a track this way always forces an immediate scrobble,
+       * since feedback requires the track to have already been scrobbled.
        *
        * @default false
        */
@@ -180,6 +190,7 @@ export const defaultConfig: ScrobblerPluginConfig = {
       delayPercent: 50,
       delaySeconds: 240,
       loveOnLike: false,
+      forceScrobbleOnLike: false,
     },
     listenbrainz: {
       enabled: false,
