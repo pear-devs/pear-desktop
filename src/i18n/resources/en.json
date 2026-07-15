@@ -133,6 +133,7 @@
           },
           "resume-on-start": "Resume last song when app starts",
           "single-instance-lock": "Single Instance Lock",
+          "strip-music-from-shared-links": "Strip 'music.' from shared links",
           "start-at-login": "Start at login",
           "starting-page": {
             "label": "Starting page",
