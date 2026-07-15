@@ -1,6 +1,13 @@
 import is from 'electron-is';
 
-import { MediaType, SongInfoEvent, type SongInfo } from '@/providers/song-info';
+import {
+  MediaType,
+  SongInfoEvent,
+  cleanupAlbum,
+  cleanupArtist,
+  cleanupTitle,
+  type SongInfo,
+} from '@/providers/song-info';
 
 import type { ScrobblerPluginConfig } from './index';
 import type { SetConfType } from './main';
@@ -355,14 +362,20 @@ export class ScrobbleManager {
       }
     }
 
-    if (this.config.metadataCleanup && this.config.customRegex.trim()) {
-      try {
-        const re = new RegExp(this.config.customRegex, 'gi');
-        title = title.replace(re, '').trim();
-        artist = artist.replace(re, '').trim();
-        if (album) album = album.replace(re, '').trim() || undefined;
-      } catch {
-        // Invalid user regex; leave metadata untouched.
+    if (this.config.metadataCleanup) {
+      title = cleanupTitle(title);
+      artist = cleanupArtist(artist);
+      if (album) album = cleanupAlbum(album) || undefined;
+
+      if (this.config.customRegex.trim()) {
+        try {
+          const re = new RegExp(this.config.customRegex, 'gi');
+          title = title.replace(re, '').trim();
+          artist = artist.replace(re, '').trim();
+          if (album) album = album.replace(re, '').trim() || undefined;
+        } catch {
+          // Invalid user regex; leave metadata untouched.
+        }
       }
     }
 

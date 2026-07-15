@@ -200,13 +200,17 @@ export class LastFmScrobbler extends ScrobblerBase {
     postData.api_sig = createApiSig(postData, config.scrobblers.lastfm.secret);
 
     try {
-      await net.fetch('https://ws.audioscrobbler.com/2.0/', {
+      const response = await net.fetch(config.scrobblers.lastfm.apiRoot, {
         method: 'POST',
         body: createFormData(postData),
       });
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { error: number } } };
-      if (err?.response?.data?.error === 9) {
+      const json = (await response.json().catch(() => undefined)) as
+        | { error?: number; message?: string }
+        | undefined;
+
+      if (response.ok && !json?.error) return;
+
+      if (json?.error === 9) {
         // Session key is invalid, so remove it from the config and reauthenticate
         config.scrobblers.lastfm.sessionKey = undefined;
         config.scrobblers.lastfm.token = await createToken(config);
@@ -217,8 +221,12 @@ export class LastFmScrobbler extends ScrobblerBase {
           setConfig(config);
         }
       } else {
-        console.error(error);
+        console.error(
+          `[lastfm] request failed: ${response.status} ${json?.message ?? ''}`,
+        );
       }
+    } catch (error) {
+      console.error(error);
     }
   }
 }
