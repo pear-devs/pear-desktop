@@ -6,6 +6,8 @@ import { t } from '@/i18n';
 
 import { ScrobblerBase } from './base';
 
+import { scrobblerDebug } from '../scrobble-manager';
+
 import type { ScrobblerPluginConfig } from '../index';
 import type { SetConfType } from '../main';
 import type { SongInfo } from '@/providers/song-info';
@@ -177,6 +179,7 @@ export class LastFmScrobbler extends ScrobblerBase {
     };
     postData.api_sig = createApiSig(postData, config.scrobblers.lastfm.secret);
 
+    scrobblerDebug(`[lastfm] ${method}: "${track}" - "${artist}"`);
     net
       .fetch('https://ws.audioscrobbler.com/2.0/', {
         method: 'POST',
@@ -219,6 +222,7 @@ export class LastFmScrobbler extends ScrobblerBase {
 
     postData.api_sig = createApiSig(postData, config.scrobblers.lastfm.secret);
     const formData = createFormData(postData);
+    scrobblerDebug(`[lastfm] ${data.method}: "${title}" - "${artist}"`);
     net
       .fetch('https://ws.audioscrobbler.com/2.0/', {
         method: 'POST',

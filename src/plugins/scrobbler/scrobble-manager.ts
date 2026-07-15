@@ -1,3 +1,5 @@
+import is from 'electron-is';
+
 import { MediaType, SongInfoEvent, type SongInfo } from '@/providers/song-info';
 
 import type { ScrobblerPluginConfig } from './index';
@@ -5,6 +7,11 @@ import type { SetConfType } from './main';
 import type { ScrobblerBase } from './services/base';
 
 type ScrobblerName = keyof ScrobblerPluginConfig['scrobblers'];
+
+// Debug logging is only emitted in development (`pnpm dev`).
+export const scrobblerDebug = (...args: unknown[]): void => {
+  if (is.dev()) console.log('[YTMusic] [Scrobbler]', ...args);
+};
 
 interface ServiceTimer {
   scrobbled: boolean;
@@ -82,9 +89,19 @@ export class ScrobbleManager {
       // Skipped media clears the current song so later play/pause events
       // never act on the previously playing track.
       this.currentSongInfo = skip ? undefined : resolved;
-      if (!skip && this.isPlaying) {
-        this.onSongStart(songInfo.elapsedSeconds ?? 0);
+
+      if (skip) {
+        scrobblerDebug(
+          `skipped media (mediaType=${songInfo.mediaType}), not scrobbling`,
+        );
+        return;
       }
+
+      scrobblerDebug(
+        `new song: "${resolved.title}" - "${resolved.artist}" ` +
+          `(duration=${resolved.songDuration}s, playing=${this.isPlaying})`,
+      );
+      if (this.isPlaying) this.onSongStart(songInfo.elapsedSeconds ?? 0);
       return;
     }
 
@@ -95,6 +112,10 @@ export class ScrobbleManager {
     this.currentSongInfo = resolved;
 
     if (improved && this.songStarted && this.isPlaying) {
+      scrobblerDebug(
+        `metadata improved for "${resolved.title}": ` +
+          `duration now ${resolved.songDuration}s, (re)starting timers`,
+      );
       this.eachService((name, scrobbler) => {
         const state = this.timerFor(name);
         if (!state.scrobbled && !state.timer && state.timerStartedAt === 0) {
@@ -134,9 +155,14 @@ export class ScrobbleManager {
     this.songStarted = true;
     const nowSeconds = Date.now() / 1000;
     this.songStartedAtSeconds = nowSeconds - elapsedSeconds;
+    scrobblerDebug(
+      `song started (elapsed=${elapsedSeconds}s, ` +
+        `startedAt=${Math.trunc(this.songStartedAtSeconds)})`,
+    );
     this.eachService((name, scrobbler) => {
       this.startTimer(name);
       if (this.config.scrobblers[name].nowPlaying) {
+        scrobblerDebug(`[${name}] sending now playing`);
         scrobbler.setNowPlaying(
           this.currentSongInfo!,
           this.config,
@@ -152,6 +178,9 @@ export class ScrobbleManager {
       if (!state.scrobbled && state.remainingMs > 0) {
         this.cancelTimer(name);
         state.timerStartedAt = Date.now();
+        scrobblerDebug(
+          `[${name}] resumed, ${Math.trunc(state.remainingMs)}ms remaining`,
+        );
         this.schedule(name, state.remainingMs);
       }
     });
@@ -159,6 +188,7 @@ export class ScrobbleManager {
 
   private onSongPause(): void {
     if (!this.songStarted) return;
+    scrobblerDebug('paused');
     this.pauseTimers();
   }
 
@@ -168,7 +198,13 @@ export class ScrobbleManager {
     const cfg = this.config.scrobblers[name];
     const duration = this.currentSongInfo?.songDuration ?? 0;
 
-    if (duration <= cfg.minSongDuration) return;
+    if (duration <= cfg.minSongDuration) {
+      scrobblerDebug(
+        `[${name}] duration ${duration}s <= min ${cfg.minSongDuration}s, ` +
+          'skipping scrobble',
+      );
+      return;
+    }
 
     const thresholdMs = Math.min(
       duration * 1000 * (cfg.delayPercent / 100),
@@ -179,12 +215,17 @@ export class ScrobbleManager {
     state.remainingMs = thresholdMs - elapsedMs;
 
     if (state.remainingMs <= 0) {
+      scrobblerDebug(`[${name}] threshold already passed, scrobbling now`);
       this.scrobble(name);
       return;
     }
 
     if (this.isPlaying) {
       state.timerStartedAt = Date.now();
+      scrobblerDebug(
+        `[${name}] scrobble in ${Math.trunc(state.remainingMs)}ms ` +
+          `(threshold=${Math.trunc(thresholdMs)}ms, elapsed=${Math.trunc(elapsedMs)}ms)`,
+      );
       this.schedule(name, state.remainingMs);
     } else {
       state.timerStartedAt = 0;
@@ -199,6 +240,9 @@ export class ScrobbleManager {
         state.remainingMs -= Date.now() - state.timerStartedAt;
         if (state.remainingMs < 0) state.remainingMs = 0;
         state.timerStartedAt = 0;
+        scrobblerDebug(
+          `[${name}] timer paused, ${Math.trunc(state.remainingMs)}ms remaining`,
+        );
       }
     });
   }
@@ -230,9 +274,13 @@ export class ScrobbleManager {
 
   private scrobble(name: ScrobblerName): void {
     const state = this.timerFor(name);
-    if (state.scrobbled) return;
+    if (state.scrobbled) {
+      scrobblerDebug(`[${name}] already scrobbled, skipping duplicate`);
+      return;
+    }
     const scrobbler = this.scrobblers.get(name);
     if (!scrobbler || !this.currentSongInfo) return;
+    scrobblerDebug(`[${name}] scrobbling "${this.currentSongInfo.title}"`);
     scrobbler.addScrobble(
       this.currentSongInfo,
       this.config,
@@ -246,6 +294,7 @@ export class ScrobbleManager {
     if (!this.currentSongInfo) return;
     this.eachService((name, scrobbler) => {
       if (this.config.scrobblers[name].loveOnLike) {
+        scrobblerDebug(`[${name}] love "${this.currentSongInfo!.title}"`);
         scrobbler.love(this.currentSongInfo!, this.config, this.setConfig);
       }
     });
@@ -255,6 +304,7 @@ export class ScrobbleManager {
     if (!this.currentSongInfo) return;
     this.eachService((name, scrobbler) => {
       if (this.config.scrobblers[name].loveOnLike) {
+        scrobblerDebug(`[${name}] unlove "${this.currentSongInfo!.title}"`);
         scrobbler.unlove(this.currentSongInfo!, this.config, this.setConfig);
       }
     });

@@ -4,6 +4,8 @@ import { APPLICATION_NAME } from '@/i18n';
 
 import { ScrobblerBase } from './base';
 
+import { scrobblerDebug } from '../scrobble-manager';
+
 import type { ScrobblerPluginConfig } from '../index';
 import type { SetConfType } from '../main';
 import type { SongInfo } from '@/providers/song-info';
@@ -71,7 +73,10 @@ export class ListenbrainzScrobbler extends ScrobblerBase {
     body.payload[0].listened_at = Math.trunc(startedAtSeconds);
 
     submitListen(body, config).then((msid) => {
-      if (msid) rememberMsid(songKey(songInfo), msid);
+      if (msid) {
+        rememberMsid(songKey(songInfo), msid);
+        scrobblerDebug(`[listenbrainz] listen submitted, cached msid ${msid}`);
+      }
     });
   }
 
@@ -117,8 +122,14 @@ function submitFeedback(
   if (!apiRoot || !token) return;
 
   const msid = msidCache.get(songKey(songInfo));
-  if (!msid) return; // No recording id known yet; skip silently.
+  if (!msid) {
+    scrobblerDebug(
+      `[listenbrainz] no cached msid for "${songInfo.title}", skipping feedback`,
+    );
+    return;
+  }
 
+  scrobblerDebug(`[listenbrainz] feedback score=${score} for msid ${msid}`);
   net
     .fetch(apiRoot + 'feedback/recording-feedback', {
       method: 'POST',
