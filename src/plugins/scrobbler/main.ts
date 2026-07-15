@@ -92,8 +92,9 @@ export const backend = createBackend<
       lastLikeVideoId = videoId;
       lastLikeStatus = status;
 
+      if (firstForSong) return;
       if (status === LikeType.Like) manager.love();
-      else if (!firstForSong) manager.unlove();
+      else manager.unlove();
     });
   },
 
