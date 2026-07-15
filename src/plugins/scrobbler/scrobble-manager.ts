@@ -31,7 +31,6 @@ export class ScrobbleManager {
   private songStartedAtSeconds = 0;
   private songStarted = false;
   private isPlaying = false;
-  private lastElapsedSeconds = 0;
   private endedReached = false;
 
   constructor(
@@ -45,38 +44,15 @@ export class ScrobbleManager {
   }
 
   onSongInfo(songInfo: SongInfo, event: SongInfoEvent): void {
-    const elapsed = songInfo.elapsedSeconds ?? 0;
-
-    if (event === SongInfoEvent.TimeChanged) {
-      this.replayCheck(elapsed);
-    } else if (event === SongInfoEvent.VideoSrcChanged) {
+    if (event === SongInfoEvent.VideoSrcChanged) {
       this.handleMetadata(songInfo);
     } else if (event === SongInfoEvent.PlayOrPaused) {
       this.handlePlayState(songInfo);
     }
-
-    this.lastElapsedSeconds = elapsed;
   }
 
   onEnded(): void {
-    scrobblerDebug('video ended event received');
     if (this.songStarted) this.endedReached = true;
-  }
-
-  // A finished track ('ended') whose position then moves backward is a replay.
-  private replayCheck(elapsed: number): boolean {
-    if (!this.songStarted || !this.currentSongInfo) return false;
-    if (!this.endedReached || elapsed >= this.lastElapsedSeconds) return false;
-
-    scrobblerDebug(
-      `replay detected (${Math.trunc(this.lastElapsedSeconds)}s -> ${elapsed}s), re-arming`,
-    );
-    this.endedReached = false;
-    this.eachService((name) => {
-      this.timerFor(name).scrobbled = false;
-    });
-    this.onSongStart(elapsed);
-    return true;
   }
 
   private timerFor(name: ScrobblerName): ServiceTimer {
@@ -131,7 +107,19 @@ export class ScrobbleManager {
     }
 
     if (skip || !this.currentSongInfo) return;
-    if (this.replayCheck(songInfo.elapsedSeconds ?? 0)) return;
+
+    // Same videoId re-firing after the track ended is a repeat-one loop.
+    if (this.endedReached) {
+      this.endedReached = false;
+      scrobblerDebug(`replay detected (loop), re-arming "${resolved.title}"`);
+      this.currentSongInfo = resolved;
+      this.eachService((name) => {
+        this.timerFor(name).scrobbled = false;
+      });
+      if (this.isPlaying) this.onSongStart(songInfo.elapsedSeconds ?? 0);
+      else this.songStarted = false;
+      return;
+    }
 
     // Same song, metadata may have improved (e.g. duration was 0 initially).
     const improved = resolved.songDuration > this.currentSongInfo.songDuration;
@@ -168,7 +156,6 @@ export class ScrobbleManager {
 
     const elapsed = songInfo.elapsedSeconds ?? 0;
     if (this.isPlaying) {
-      if (this.replayCheck(elapsed)) return;
       if (!this.songStarted) this.onSongStart(elapsed);
       else this.onSongResume();
     } else {
