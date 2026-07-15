@@ -78,6 +78,8 @@ export const backend = createBackend<
       manager.onSongInfo(songInfo, event);
     });
 
+    ipc.on('peard:video-ended', () => manager.onEnded());
+
     // The renderer emits an initial like-status per song plus one on every
     // toggle. Dedupe by video + status and skip the spurious unlove on first
     // load, so only genuine like/unlike actions reach the scrobblers.

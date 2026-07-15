@@ -13,6 +13,8 @@ export const scrobblerDebug = (...args: unknown[]): void => {
   if (is.dev()) console.log('[YTMusic] [Scrobbler]', ...args);
 };
 
+const secs = (ms: number): string => `${Math.round(ms / 1000)}s`;
+
 interface ServiceTimer {
   scrobbled: boolean;
   remainingMs: number;
@@ -45,12 +47,6 @@ export class ScrobbleManager {
   onSongInfo(songInfo: SongInfo, event: SongInfoEvent): void {
     const elapsed = songInfo.elapsedSeconds ?? 0;
 
-    if (event === SongInfoEvent.Ended) {
-      scrobblerDebug('video ended event received');
-      if (this.songStarted) this.endedReached = true;
-      return;
-    }
-
     if (event === SongInfoEvent.TimeChanged) {
       this.replayCheck(elapsed);
     } else if (event === SongInfoEvent.VideoSrcChanged) {
@@ -60,6 +56,11 @@ export class ScrobbleManager {
     }
 
     this.lastElapsedSeconds = elapsed;
+  }
+
+  onEnded(): void {
+    scrobblerDebug('video ended event received');
+    if (this.songStarted) this.endedReached = true;
   }
 
   // A finished track ('ended') whose position then moves backward is a replay.
@@ -99,7 +100,7 @@ export class ScrobbleManager {
     const resolved = this.resolveSongInfo(songInfo);
     const key = resolved.videoId || `${resolved.artist}|${resolved.title}`;
     const skip = this.shouldSkipMedia(songInfo);
-    this.isPlaying = !songInfo.isPaused;
+    this.isPlaying = !(songInfo.isPaused ?? true);
 
     if (key !== this.currentKey) {
       this.stopTimers();
@@ -162,7 +163,7 @@ export class ScrobbleManager {
   }
 
   private handlePlayState(songInfo: SongInfo): void {
-    this.isPlaying = !songInfo.isPaused;
+    this.isPlaying = !(songInfo.isPaused ?? true);
     if (!this.currentSongInfo) return;
 
     const elapsed = songInfo.elapsedSeconds ?? 0;
@@ -204,7 +205,7 @@ export class ScrobbleManager {
         this.cancelTimer(name);
         state.timerStartedAt = Date.now();
         scrobblerDebug(
-          `[${name}] resumed, ${Math.trunc(state.remainingMs)}ms remaining`,
+          `[${name}] resumed, ${secs(state.remainingMs)} remaining`,
         );
         this.schedule(name, state.remainingMs);
       }
@@ -248,8 +249,8 @@ export class ScrobbleManager {
     if (this.isPlaying) {
       state.timerStartedAt = Date.now();
       scrobblerDebug(
-        `[${name}] scrobble in ${Math.trunc(state.remainingMs)}ms ` +
-          `(threshold=${Math.trunc(thresholdMs)}ms, elapsed=${Math.trunc(elapsedMs)}ms)`,
+        `[${name}] scrobble in ${secs(state.remainingMs)} ` +
+          `(threshold=${secs(thresholdMs)}, elapsed=${secs(elapsedMs)})`,
       );
       this.schedule(name, state.remainingMs);
     } else {
@@ -260,13 +261,14 @@ export class ScrobbleManager {
   private pauseTimers(): void {
     this.eachService((name) => {
       const state = this.timerFor(name);
+      if (state.scrobbled) return;
       this.cancelTimer(name);
       if (state.timerStartedAt !== 0) {
         state.remainingMs -= Date.now() - state.timerStartedAt;
         if (state.remainingMs < 0) state.remainingMs = 0;
         state.timerStartedAt = 0;
         scrobblerDebug(
-          `[${name}] timer paused, ${Math.trunc(state.remainingMs)}ms remaining`,
+          `[${name}] paused, ${secs(state.remainingMs)} remaining`,
         );
       }
     });
@@ -312,7 +314,11 @@ export class ScrobbleManager {
       this.setConfig,
       this.songStartedAtSeconds,
     );
+    // Done for this play: stop tracking so pause/resume no longer touch it.
+    this.cancelTimer(name);
     state.scrobbled = true;
+    state.remainingMs = 0;
+    state.timerStartedAt = 0;
   }
 
   love(): void {

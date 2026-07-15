@@ -4,6 +4,7 @@ import { type BrowserWindow, ipcMain, nativeImage, net } from 'electron';
 import * as config from '@/config';
 
 import type { GetPlayerResponse } from '@/types/get-player-response';
+import type { PlayerState } from '@/types/player-state';
 
 export enum MediaType {
   /**
@@ -35,6 +36,7 @@ export interface SongInfo {
   imageSrc?: string | null;
   image?: Electron.NativeImage | null;
   isPaused?: boolean;
+  playerState?: PlayerState;
   songDuration: number;
   elapsedSeconds?: number;
   url?: string;
@@ -78,6 +80,7 @@ const handleData = async (
     imageSrc: '',
     image: null,
     isPaused: undefined,
+    playerState: undefined,
     songDuration: 0,
     elapsedSeconds: 0,
     url: '',
@@ -113,6 +116,7 @@ const handleData = async (
     songInfo.songDuration = Number(videoDetails.lengthSeconds);
     songInfo.elapsedSeconds = videoDetails.elapsedSeconds;
     songInfo.isPaused = videoDetails.isPaused;
+    songInfo.playerState = videoDetails.playerState;
     songInfo.videoId = videoDetails.videoId;
     songInfo.album = videoDetails.album
       ? cleanupAlbum(videoDetails.album)
@@ -175,7 +179,6 @@ export enum SongInfoEvent {
   VideoSrcChanged = 'peard:video-src-changed',
   PlayOrPaused = 'peard:play-or-paused',
   TimeChanged = 'peard:time-changed',
-  Ended = 'peard:video-ended',
 }
 
 // This variable will be filled with the callbacks once they register
@@ -216,7 +219,12 @@ const registerProvider = (win: BrowserWindow) => {
       {
         isPaused,
         elapsedSeconds,
-      }: { isPaused: boolean; elapsedSeconds: number },
+        playerState,
+      }: {
+        isPaused: boolean;
+        elapsedSeconds: number;
+        playerState?: PlayerState;
+      },
     ) => {
       const tempSongInfo = await dataMutex.runExclusive<SongInfo | null>(() => {
         if (!songInfo) {
@@ -225,6 +233,7 @@ const registerProvider = (win: BrowserWindow) => {
 
         songInfo.isPaused = isPaused;
         songInfo.elapsedSeconds = elapsedSeconds;
+        songInfo.playerState = playerState;
 
         return songInfo;
       });
@@ -252,13 +261,6 @@ const registerProvider = (win: BrowserWindow) => {
       for (const c of callbacks) {
         c(tempSongInfo, SongInfoEvent.TimeChanged);
       }
-    }
-  });
-
-  ipcMain.on('peard:video-ended', () => {
-    if (!songInfo) return;
-    for (const c of callbacks) {
-      c(songInfo, SongInfoEvent.Ended);
     }
   });
 };
