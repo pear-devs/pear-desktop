@@ -259,11 +259,17 @@ export class ScrobbleManager {
       this.cancelTimer(name);
       if (state.timerStartedAt !== 0) {
         state.remainingMs -= Date.now() - state.timerStartedAt;
-        if (state.remainingMs < 0) state.remainingMs = 0;
         state.timerStartedAt = 0;
-        scrobblerDebug(
-          `[${name}] paused, ${secs(state.remainingMs)} remaining`,
-        );
+        if (state.remainingMs <= 0) {
+          scrobblerDebug(
+            `[${name}] threshold reached at pause, scrobbling now`,
+          );
+          this.scrobble(name);
+        } else {
+          scrobblerDebug(
+            `[${name}] paused, ${secs(state.remainingMs)} remaining`,
+          );
+        }
       }
     });
   }
