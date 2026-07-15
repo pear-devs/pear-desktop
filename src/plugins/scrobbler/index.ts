@@ -24,6 +24,25 @@ export interface ScrobblerPluginConfig {
    * @default true
    */
   alternativeArtist: boolean;
+  /**
+   * Apply metadata cleanup (strip suffixes, custom regex) before scrobbling
+   *
+   * @default true
+   */
+  metadataCleanup: boolean;
+  /**
+   * Parse "Artist - Title" out of the title field when the artist is unreliable.
+   * Off by default: it rewrites the artist for any title containing " - ".
+   *
+   * @default false
+   */
+  parseTitle: boolean;
+  /**
+   * Extra user-defined regex removed from title/artist/album (empty = disabled)
+   *
+   * @default ''
+   */
+  customRegex: string;
   scrobblers: {
     lastfm: {
       /**
@@ -58,6 +77,36 @@ export interface ScrobblerPluginConfig {
        * @default 'a5d2a36fdf64819290f6982481eaffa2'
        */
       secret: string;
+      /**
+       * Send "now playing" updates to Last.fm
+       *
+       * @default true
+       */
+      nowPlaying: boolean;
+      /**
+       * Skip scrobbling tracks shorter than this many seconds
+       *
+       * @default 30
+       */
+      minSongDuration: number;
+      /**
+       * Scrobble once this percentage of the track has played
+       *
+       * @default 50
+       */
+      delayPercent: number;
+      /**
+       * Scrobble at the latest after this many seconds
+       *
+       * @default 240
+       */
+      delaySeconds: number;
+      /**
+       * Love a track on Last.fm when it is liked in the player
+       *
+       * @default false
+       */
+      loveOnLike: boolean;
     };
     listenbrainz: {
       /**
@@ -76,6 +125,36 @@ export interface ScrobblerPluginConfig {
        * @default 'https://api.listenbrainz.org/1/'
        */
       apiRoot: string;
+      /**
+       * Send "playing now" updates to ListenBrainz
+       *
+       * @default true
+       */
+      nowPlaying: boolean;
+      /**
+       * Skip scrobbling tracks shorter than this many seconds
+       *
+       * @default 30
+       */
+      minSongDuration: number;
+      /**
+       * Scrobble once this percentage of the track has played
+       *
+       * @default 50
+       */
+      delayPercent: number;
+      /**
+       * Scrobble at the latest after this many seconds
+       *
+       * @default 240
+       */
+      delaySeconds: number;
+      /**
+       * Submit positive feedback to ListenBrainz when a track is liked in the player
+       *
+       * @default false
+       */
+      loveOnLike: boolean;
     };
   };
 }
@@ -85,6 +164,9 @@ export const defaultConfig: ScrobblerPluginConfig = {
   scrobbleOtherMedia: true,
   alternativeTitles: true,
   alternativeArtist: true,
+  metadataCleanup: true,
+  parseTitle: false,
+  customRegex: '',
   scrobblers: {
     lastfm: {
       enabled: false,
@@ -93,11 +175,21 @@ export const defaultConfig: ScrobblerPluginConfig = {
       apiRoot: 'https://ws.audioscrobbler.com/2.0/',
       apiKey: '04d76faaac8726e60988e14c105d421a',
       secret: 'a5d2a36fdf64819290f6982481eaffa2',
+      nowPlaying: true,
+      minSongDuration: 30,
+      delayPercent: 50,
+      delaySeconds: 240,
+      loveOnLike: false,
     },
     listenbrainz: {
       enabled: false,
       token: undefined,
       apiRoot: 'https://api.listenbrainz.org/1/',
+      nowPlaying: true,
+      minSongDuration: 30,
+      delayPercent: 50,
+      delaySeconds: 240,
+      loveOnLike: false,
     },
   },
 };

@@ -58,6 +58,7 @@ export class ListenbrainzScrobbler extends ScrobblerBase {
     songInfo: SongInfo,
     config: ScrobblerPluginConfig,
     _setConfig: SetConfType,
+    startedAtSeconds: number,
   ): void {
     if (
       !config.scrobblers.listenbrainz.apiRoot ||
@@ -67,10 +68,67 @@ export class ListenbrainzScrobbler extends ScrobblerBase {
     }
 
     const body = createRequestBody('single', songInfo, config);
-    body.payload[0].listened_at = Math.trunc(Date.now() / 1000);
+    body.payload[0].listened_at = Math.trunc(startedAtSeconds);
 
-    submitListen(body, config);
+    submitListen(body, config).then((msid) => {
+      if (msid) rememberMsid(songKey(songInfo), msid);
+    });
   }
+
+  override love(
+    songInfo: SongInfo,
+    config: ScrobblerPluginConfig,
+    _setConfig: SetConfType,
+  ): void {
+    submitFeedback(songInfo, config, 1);
+  }
+
+  override unlove(
+    songInfo: SongInfo,
+    config: ScrobblerPluginConfig,
+    _setConfig: SetConfType,
+  ): void {
+    submitFeedback(songInfo, config, 0);
+  }
+}
+
+// ListenBrainz feedback needs a recording_msid, only known after a listen is
+// submitted. Cache it per song, bounded so it can't grow forever.
+const MAX_MSID_ENTRIES = 200;
+const msidCache = new Map<string, string>();
+
+const songKey = (songInfo: SongInfo): string =>
+  songInfo.videoId || `${songInfo.artist}|${songInfo.title}`;
+
+function rememberMsid(key: string, msid: string): void {
+  if (msidCache.has(key)) msidCache.delete(key);
+  msidCache.set(key, msid);
+  while (msidCache.size > MAX_MSID_ENTRIES) {
+    msidCache.delete(msidCache.keys().next().value!);
+  }
+}
+
+function submitFeedback(
+  songInfo: SongInfo,
+  config: ScrobblerPluginConfig,
+  score: number,
+): void {
+  const { apiRoot, token } = config.scrobblers.listenbrainz;
+  if (!apiRoot || !token) return;
+
+  const msid = msidCache.get(songKey(songInfo));
+  if (!msid) return; // No recording id known yet; skip silently.
+
+  net
+    .fetch(apiRoot + 'feedback/recording-feedback', {
+      method: 'POST',
+      body: JSON.stringify({ recording_msid: msid, score }),
+      headers: {
+        'Authorization': 'Token ' + token,
+        'Content-Type': 'application/json',
+      },
+    })
+    .catch(console.error);
 }
 
 function createRequestBody(
@@ -110,18 +168,28 @@ function createRequestBody(
   };
 }
 
-function submitListen(
+async function submitListen(
   body: ListenbrainzRequestBody,
   config: ScrobblerPluginConfig,
-) {
-  net
-    .fetch(config.scrobblers.listenbrainz.apiRoot + 'submit-listens', {
-      method: 'POST',
-      body: JSON.stringify(body),
-      headers: {
-        'Authorization': 'Token ' + config.scrobblers.listenbrainz.token,
-        'Content-Type': 'application/json',
+): Promise<string | undefined> {
+  try {
+    const response = await net.fetch(
+      config.scrobblers.listenbrainz.apiRoot + 'submit-listens',
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: {
+          'Authorization': 'Token ' + config.scrobblers.listenbrainz.token,
+          'Content-Type': 'application/json',
+        },
       },
-    })
-    .catch(console.error);
+    );
+    const json = (await response.json()) as {
+      payload?: { latest_listen_recording_msid?: string }[];
+    };
+    return json?.payload?.[0]?.latest_listen_recording_msid;
+  } catch (error) {
+    console.error(error);
+    return undefined;
+  }
 }

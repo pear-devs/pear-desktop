@@ -16,6 +16,7 @@ interface LastFmData {
 }
 
 interface LastFmSongData {
+  [key: string]: unknown;
   track?: string;
   duration?: number;
   artist?: string;
@@ -25,6 +26,17 @@ interface LastFmSongData {
   format: string;
   method: string;
   timestamp?: number;
+  api_sig?: string;
+}
+
+interface LastFmLoveData {
+  [key: string]: unknown;
+  track: string;
+  artist: string;
+  api_key: string;
+  sk: string;
+  format: string;
+  method: string;
   api_sig?: string;
 }
 
@@ -101,6 +113,7 @@ export class LastFmScrobbler extends ScrobblerBase {
     songInfo: SongInfo,
     config: ScrobblerPluginConfig,
     setConfig: SetConfType,
+    startedAtSeconds: number,
   ): void {
     if (!config.scrobblers.lastfm.sessionKey) {
       return;
@@ -109,11 +122,67 @@ export class LastFmScrobbler extends ScrobblerBase {
     // This adds one scrobbled song to last.fm
     const data = {
       method: 'track.scrobble',
-      timestamp: Math.trunc(
-        (Date.now() - (songInfo.elapsedSeconds ?? 0)) / 1000,
-      ),
+      timestamp: Math.trunc(startedAtSeconds),
     };
     this.postSongDataToAPI(songInfo, config, data, setConfig);
+  }
+
+  override love(
+    songInfo: SongInfo,
+    config: ScrobblerPluginConfig,
+    _setConfig: SetConfType,
+  ): void {
+    this.postLoveToAPI('track.love', songInfo, config);
+  }
+
+  override unlove(
+    songInfo: SongInfo,
+    config: ScrobblerPluginConfig,
+    _setConfig: SetConfType,
+  ): void {
+    this.postLoveToAPI('track.unlove', songInfo, config);
+  }
+
+  private postLoveToAPI(
+    method: string,
+    songInfo: SongInfo,
+    config: ScrobblerPluginConfig,
+  ): void {
+    const sessionKey = config.scrobblers.lastfm.sessionKey;
+    if (!sessionKey) {
+      return;
+    }
+
+    const track =
+      config.alternativeTitles && songInfo.alternativeTitle !== undefined
+        ? songInfo.alternativeTitle
+        : songInfo.title;
+
+    const artist =
+      config.alternativeArtist && songInfo.tags?.at(0) !== undefined
+        ? songInfo.tags?.at(0)
+        : songInfo.artist;
+
+    if (!track || !artist) {
+      return;
+    }
+
+    const postData: LastFmLoveData = {
+      track,
+      artist,
+      api_key: config.scrobblers.lastfm.apiKey,
+      sk: sessionKey,
+      format: 'json',
+      method,
+    };
+    postData.api_sig = createApiSig(postData, config.scrobblers.lastfm.secret);
+
+    net
+      .fetch('https://ws.audioscrobbler.com/2.0/', {
+        method: 'POST',
+        body: createFormData(postData),
+      })
+      .catch(console.error);
   }
 
   private async postSongDataToAPI(
@@ -183,11 +252,11 @@ export class LastFmScrobbler extends ScrobblerBase {
   }
 }
 
-const createFormData = (parameters: LastFmSongData) => {
+const createFormData = (parameters: Record<string, unknown>) => {
   // Creates the body for in the post request
   const formData = new URLSearchParams();
   for (const key in parameters) {
-    formData.append(key, String(parameters[key as keyof LastFmSongData]));
+    formData.append(key, String(parameters[key]));
   }
 
   return formData;
@@ -211,7 +280,7 @@ const createQueryString = (
   return '?' + queryData.join('&');
 };
 
-const createApiSig = (parameters: LastFmSongData, secret: string) => {
+const createApiSig = (parameters: Record<string, unknown>, secret: string) => {
   // This function creates the api signature, see: https://www.last.fm/api/authspec
   let sig = '';
 
@@ -221,7 +290,7 @@ const createApiSig = (parameters: LastFmSongData, secret: string) => {
       if (key === 'format') {
         return;
       }
-      sig += key + value;
+      sig += key + String(value);
     });
 
   sig += secret;

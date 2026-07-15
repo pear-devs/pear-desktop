@@ -1,13 +1,10 @@
 import { type BrowserWindow } from 'electron';
 
-import {
-  registerCallback,
-  MediaType,
-  type SongInfo,
-  SongInfoEvent,
-} from '@/providers/song-info';
+import { registerCallback, type SongInfo } from '@/providers/song-info';
+import { LikeType } from '@/types/datahost-get-state';
 import { createBackend } from '@/utils';
 
+import { ScrobbleManager } from './scrobble-manager';
 import { LastFmScrobbler } from './services/lastfm';
 import { ListenbrainzScrobbler } from './services/listenbrainz';
 
@@ -32,6 +29,7 @@ export const backend = createBackend<
       setConfig: SetConfType,
     ): Promise<void>;
     setConfig?: SetConfType;
+    manager?: ScrobbleManager;
   },
   ScrobblerPluginConfig
 >({
@@ -62,56 +60,38 @@ export const backend = createBackend<
     }
   },
 
-  async start({ getConfig, setConfig, window }) {
+  async start({ getConfig, setConfig, window, ipc }) {
     const config = (this.config = await getConfig());
-    // This will store the timeout that will trigger addScrobble
-    let scrobbleTimer: NodeJS.Timeout | undefined;
 
     this.window = window;
     this.toggleScrobblers(config, window);
     await this.createSessions(config, setConfig);
     this.setConfig = setConfig;
 
+    const manager = (this.manager = new ScrobbleManager(
+      this.enabledScrobblers,
+      config,
+      setConfig,
+    ));
+
     registerCallback((songInfo: SongInfo, event) => {
-      if (event === SongInfoEvent.TimeChanged) return;
-      // Set remove the old scrobble timer
-      clearTimeout(scrobbleTimer);
-      if (!songInfo.isPaused) {
-        const configNonnull = this.config!;
-        // Scrobblers normally have no trouble working with official music videos
-        if (
-          !configNonnull.scrobbleOtherMedia &&
-          songInfo.mediaType !== MediaType.Audio &&
-          songInfo.mediaType !== MediaType.OriginalMusicVideo
-        ) {
-          return;
-        }
+      manager.onSongInfo(songInfo, event);
+    });
 
-        // Scrobble when the song is halfway through, or has passed the 4-minute mark
-        const scrobbleTime = Math.min(
-          Math.ceil(songInfo.songDuration / 2),
-          4 * 60,
-        );
-        if (scrobbleTime > (songInfo.elapsedSeconds ?? 0)) {
-          // Scrobble still needs to happen
-          const timeToWait =
-            (scrobbleTime - (songInfo.elapsedSeconds ?? 0)) * 1000;
-          scrobbleTimer = setTimeout(
-            (info, config) => {
-              this.enabledScrobblers.forEach((scrobbler) =>
-                scrobbler.addScrobble(info, config, setConfig),
-              );
-            },
-            timeToWait,
-            songInfo,
-            configNonnull,
-          );
-        }
+    // The renderer emits an initial like-status per song plus one on every
+    // toggle. Dedupe by video + status and skip the spurious unlove on first
+    // load, so only genuine like/unlike actions reach the scrobblers.
+    let lastLikeVideoId: string | undefined;
+    let lastLikeStatus: LikeType | undefined;
+    ipc.on('peard:like-changed', (status: LikeType) => {
+      const videoId = manager.currentVideoId;
+      if (videoId === lastLikeVideoId && status === lastLikeStatus) return;
+      const firstForSong = videoId !== lastLikeVideoId;
+      lastLikeVideoId = videoId;
+      lastLikeStatus = status;
 
-        this.enabledScrobblers.forEach((scrobbler) =>
-          scrobbler.setNowPlaying(songInfo, configNonnull, setConfig),
-        );
-      }
+      if (status === LikeType.Like) manager.love();
+      else if (!firstForSong) manager.unlove();
     });
   },
 
@@ -138,5 +118,6 @@ export const backend = createBackend<
     }
 
     this.config = newConfig;
+    this.manager?.updateConfig(newConfig);
   },
 });
