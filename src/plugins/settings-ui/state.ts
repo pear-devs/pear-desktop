@@ -44,6 +44,8 @@ export const bridge = {
   restartSessionOpen: () => ipc!.invoke('ytmd-sui:restart-session-open'),
   restartSessionClose: (changes: RestartRequirement[]) =>
     ipc!.invoke('ytmd-sui:restart-session-close', changes),
+  pickPath: (options: object) =>
+    ipc!.invoke('ytmd-sui:pick-path', options) as Promise<string | undefined>,
   configEdit: () => ipc!.invoke('ytmd-sui:config-edit'),
   toggleDevTools: () => ipc!.invoke('ytmd-sui:toggle-devtools'),
   restart: () => ipc!.invoke('ytmd-sui:restart'),
@@ -201,6 +203,16 @@ export const setPluginSliderValue = (
     write,
   });
 };
+
+// ---- native dialog helpers (for `action` fields) ----
+
+export const pickDirectory = (): Promise<string | undefined> =>
+  bridge.pickPath({ properties: ['openDirectory', 'createDirectory'] });
+
+export const pickFile = (
+  filters?: { name: string; extensions: string[] }[],
+): Promise<string | undefined> =>
+  bridge.pickPath({ properties: ['openFile'], filters });
 
 /** Persist slider values that are still waiting for their debounce timer. */
 export const flushPendingPluginSliderWrites = async () => {

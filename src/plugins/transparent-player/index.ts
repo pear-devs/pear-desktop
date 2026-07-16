@@ -4,7 +4,12 @@ import { createPlugin } from '@/utils';
 import { backend } from './backend';
 import { onMenu } from './menu';
 import style from './style.css?inline';
-import { MaterialType, type TransparentPlayerConfig } from './types';
+import {
+  MACOS_MATERIALS,
+  MaterialType,
+  WINDOWS_MATERIALS,
+  type TransparentPlayerConfig,
+} from './types';
 
 const defaultConfig: TransparentPlayerConfig = {
   enabled: false,
@@ -29,6 +34,25 @@ export default createPlugin({
       step: 10,
       unit: '%',
       scale: 0.01,
+    },
+    {
+      type: 'select',
+      variant: 'dropdown',
+      key: 'type',
+      label: () => t('plugins.transparent-player.menu.type.label'),
+      restartNeeded: true,
+      options: () => {
+        const materials = window.electronIs.windows()
+          ? [MaterialType.NONE, ...WINDOWS_MATERIALS]
+          : window.electronIs.macOS()
+            ? [MaterialType.NONE, ...MACOS_MATERIALS]
+            : [MaterialType.NONE];
+        return materials.map((material) => ({
+          value: material,
+          label: () =>
+            t(`plugins.transparent-player.menu.type.submenu.${material}`),
+        }));
+      },
     },
   ],
   menu: onMenu,

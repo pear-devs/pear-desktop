@@ -7,7 +7,7 @@ import {
   onMount,
   Show,
 } from 'solid-js';
-import { allPlugins } from 'virtual:plugins';
+import { allPlugins, rendererPlugins } from 'virtual:plugins';
 
 import { t } from '@/i18n';
 import { toSettingsGroups, type SettingsGroup } from '@/types/settings';
@@ -70,6 +70,18 @@ export const SettingsModal = (props: {
     })),
   );
   const [appMeta] = createResource(() => bridge.appMeta());
+
+  const [rendererDefs] = createResource(() => rendererPlugins());
+  const resolveComponent = (id: string) => {
+    const dot = id.indexOf('.');
+    if (dot < 0) return undefined;
+    const pluginId = id.slice(0, dot);
+    const name = id.slice(dot + 1);
+    const def = rendererDefs()?.[pluginId];
+    const renderer = def?.renderer;
+    if (!renderer || typeof renderer === 'function') return undefined;
+    return renderer.components?.[name];
+  };
   const [plugins] = createResource<PluginMeta[]>(async () => {
     const stubs = await allPlugins();
     return Object.entries(stubs)
@@ -251,10 +263,16 @@ export const SettingsModal = (props: {
         <For each={p.group.fields}>
           {(field) => (
             <SettingsField
+              accessors={{
+                getValue: (key) => appVal(key),
+                setValue: (key, v) => setAppValue(key, v),
+                setSliderValue: (key, v) => setAppValue(key, v),
+              }}
               field={field}
               onChange={(v) =>
                 appSet(field.key, v, field.label(), field.restartNeeded)
               }
+              resolveComponent={resolveComponent}
               value={appVal(field.key)}
             />
           )}
@@ -409,6 +427,7 @@ export const SettingsModal = (props: {
                       name={block.meta.name}
                       onExpand={() => {}}
                       onToggle={(v) => togglePlugin(block.meta, v)}
+                      resolveComponent={resolveComponent}
                       restartNeeded={block.meta.restartNeeded}
                       setSliderValue={(key, v) => {
                         setPluginSliderValue(block.meta.id, key, v);
@@ -448,6 +467,7 @@ export const SettingsModal = (props: {
                           )
                         }
                         onToggle={(v) => togglePlugin(meta, v)}
+                        resolveComponent={resolveComponent}
                         restartNeeded={meta.restartNeeded}
                         setSliderValue={(key, v) => {
                           setPluginSliderValue(meta.id, key, v);

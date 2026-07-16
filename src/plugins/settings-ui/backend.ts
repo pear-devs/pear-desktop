@@ -1,4 +1,4 @@
-import { app } from 'electron';
+import { app, dialog, type OpenDialogOptions } from 'electron';
 
 import * as config from '@/config';
 import { restart } from '@/providers/app-controls';
@@ -26,6 +26,14 @@ export const backend = createBackend<
       else config.plugins.disable(id);
     });
 
+    ipc.handle(
+      'ytmd-sui:pick-path',
+      async (options: OpenDialogOptions): Promise<string | undefined> => {
+        const result = await dialog.showOpenDialog(window, options);
+        return result.canceled ? undefined : result.filePaths[0];
+      },
+    );
+
     ipc.handle('ytmd-sui:config-edit', () => config.edit());
     ipc.handle('ytmd-sui:toggle-devtools', () =>
       window.webContents.toggleDevTools(),
@@ -49,6 +57,7 @@ export const backend = createBackend<
       'ytmd-sui:load-store',
       'ytmd-sui:option-set',
       'ytmd-sui:plugin-toggle',
+      'ytmd-sui:pick-path',
       'ytmd-sui:config-edit',
       'ytmd-sui:toggle-devtools',
       'ytmd-sui:restart',

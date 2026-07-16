@@ -1,4 +1,8 @@
-import { For } from 'solid-js';
+import { For, Show } from 'solid-js';
+
+import type { SettingOption } from '@/types/settings';
+
+type OptionValue = string | number;
 
 export const Switch = (props: {
   checked: boolean;
@@ -17,9 +21,9 @@ export const Switch = (props: {
 );
 
 export const RadioGroup = (props: {
-  value: string;
-  options: { value: string; label: () => string }[];
-  onChange: (value: string) => void;
+  value: OptionValue;
+  options: SettingOption[];
+  onChange: (value: OptionValue) => void;
 }) => (
   <div class="sui-chips">
     <For each={props.options}>
@@ -38,20 +42,26 @@ export const RadioGroup = (props: {
 );
 
 export const Dropdown = (props: {
-  value: string;
-  options: { value: string; label: () => string }[];
-  onChange: (value: string) => void;
-}) => (
-  <select
-    class="sui-select"
-    onChange={(e) => props.onChange(e.currentTarget.value)}
-    value={props.value}
-  >
-    <For each={props.options}>
-      {(opt) => <option value={opt.value}>{opt.label()}</option>}
-    </For>
-  </select>
-);
+  value: OptionValue;
+  options: SettingOption[];
+  onChange: (value: OptionValue) => void;
+}) => {
+  const emit = (raw: string) => {
+    const opt = props.options.find((o) => String(o.value) === raw);
+    props.onChange(opt ? opt.value : raw);
+  };
+  return (
+    <select
+      class="sui-select"
+      onChange={(e) => emit(e.currentTarget.value)}
+      value={String(props.value)}
+    >
+      <For each={props.options}>
+        {(opt) => <option value={String(opt.value)}>{opt.label()}</option>}
+      </For>
+    </select>
+  );
+};
 
 export const Slider = (props: {
   value: number;
@@ -100,12 +110,65 @@ export const TextInput = (props: {
   />
 );
 
-export const CheckGroup = (props: {
-  values: string[];
-  options: { value: string; label: () => string }[];
-  onChange: (values: string[]) => void;
+export const NumberStepper = (props: {
+  value: number;
+  min?: number;
+  max?: number;
+  step?: number;
+  unit?: string;
+  onChange: (value: number) => void;
 }) => {
-  const toggle = (value: string) => {
+  const step = () => props.step ?? 1;
+  const clamp = (v: number) => {
+    let next = v;
+    if (props.min !== undefined) next = Math.max(props.min, next);
+    if (props.max !== undefined) next = Math.min(props.max, next);
+    return next;
+  };
+  const set = (v: number) => {
+    if (Number.isFinite(v)) props.onChange(clamp(v));
+  };
+
+  return (
+    <div class="sui-stepper">
+      <button
+        aria-label="decrement"
+        class="sui-stepper__btn"
+        onClick={() => set(props.value - step())}
+        type="button"
+      >
+        −
+      </button>
+      <input
+        class="sui-stepper__input"
+        max={props.max}
+        min={props.min}
+        onChange={(e) => set(Number(e.currentTarget.value))}
+        step={step()}
+        type="number"
+        value={props.value}
+      />
+      <Show when={props.unit}>
+        <span class="sui-stepper__unit">{props.unit}</span>
+      </Show>
+      <button
+        aria-label="increment"
+        class="sui-stepper__btn"
+        onClick={() => set(props.value + step())}
+        type="button"
+      >
+        +
+      </button>
+    </div>
+  );
+};
+
+export const CheckGroup = (props: {
+  values: OptionValue[];
+  options: SettingOption[];
+  onChange: (values: OptionValue[]) => void;
+}) => {
+  const toggle = (value: OptionValue) => {
     const set = new Set(props.values);
     if (set.has(value)) set.delete(value);
     else set.add(value);

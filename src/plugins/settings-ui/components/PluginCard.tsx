@@ -1,4 +1,4 @@
-import { For, Show } from 'solid-js';
+import { For, Show, type Component } from 'solid-js';
 
 import { t } from '@/i18n';
 
@@ -6,7 +6,7 @@ import { Switch } from './Controls';
 import { Icon } from './Icon';
 import { SettingsField } from './SettingsField';
 
-import type { SettingsGroup } from '@/types/settings';
+import type { CustomFieldContext, SettingsGroup } from '@/types/settings';
 
 export interface PluginCardProps {
   name: string;
@@ -21,6 +21,9 @@ export interface PluginCardProps {
   getValue: (key: string) => unknown;
   setValue: (key: string, value: unknown) => void;
   setSliderValue: (key: string, value: unknown) => void;
+  resolveComponent?: (
+    id: string,
+  ) => Component<{ ctx: CustomFieldContext }> | undefined;
 }
 
 export const PluginCard = (props: PluginCardProps) => (
@@ -65,9 +68,15 @@ export const PluginCard = (props: PluginCardProps) => (
             <For each={group.fields}>
               {(field) => (
                 <SettingsField
+                  accessors={{
+                    getValue: props.getValue,
+                    setValue: props.setValue,
+                    setSliderValue: props.setSliderValue,
+                  }}
                   field={field}
                   onChange={(v) => props.setValue(field.key, v)}
                   onSliderChange={(v) => props.setSliderValue(field.key, v)}
+                  resolveComponent={props.resolveComponent}
                   value={props.getValue(field.key)}
                 />
               )}

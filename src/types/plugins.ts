@@ -3,9 +3,10 @@ import type {
   MenuContext,
   PreloadContext,
   RendererContext,
-} from "./contexts";
-import type { MusicPlayer } from "@/types/music-player";
-import type { SettingsSchema } from "@/types/settings";
+} from './contexts';
+import type { MusicPlayer } from '@/types/music-player';
+import type { CustomFieldContext, SettingsSchema } from '@/types/settings';
+import type { Component } from 'solid-js';
 
 type Author = string;
 
@@ -29,6 +30,7 @@ export type RendererPluginLifecycleExtra<Config, Context, This> = This &
       playerApi: MusicPlayer,
       context: Context,
     ) => void | Promise<void>;
+    components?: Record<string, Component<{ ctx: CustomFieldContext }>>;
   };
 
 export type PluginLifecycle<Config, Context, This> =

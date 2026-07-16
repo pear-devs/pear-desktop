@@ -1,6 +1,6 @@
 /** Declarative settings schema for the in-app Settings modal. */
 
-import type { Platform } from "@/types/plugins";
+import type { Platform } from '@/types/plugins';
 
 export interface SettingFieldBase {
   key: string;
@@ -12,18 +12,27 @@ export interface SettingFieldBase {
 }
 
 export interface SwitchField extends SettingFieldBase {
-  type: "switch";
+  type: 'switch';
 }
 
+export interface SettingOption {
+  value: string | number;
+  label: () => string;
+}
+
+export type SettingOptions =
+  | SettingOption[]
+  | (() => SettingOption[] | Promise<SettingOption[]>);
+
 export interface SelectField extends SettingFieldBase {
-  type: "select";
+  type: 'select';
   /** `radio` renders inline chips (default), `dropdown` a native select. */
-  variant?: "radio" | "dropdown";
-  options: { value: string; label: () => string }[];
+  variant?: 'radio' | 'dropdown';
+  options: SettingOptions;
 }
 
 export interface SliderField extends SettingFieldBase {
-  type: "slider";
+  type: 'slider';
   min: number;
   max: number;
   step?: number;
@@ -34,13 +43,49 @@ export interface SliderField extends SettingFieldBase {
 }
 
 export interface TextField extends SettingFieldBase {
-  type: "text";
+  type: 'text';
   placeholder?: () => string;
 }
 
 export interface MultiSelectField extends SettingFieldBase {
-  type: "multiselect";
-  options: { value: string; label: () => string }[];
+  type: 'multiselect';
+  options: SettingOptions;
+}
+
+export interface NumberField extends SettingFieldBase {
+  type: 'number';
+  min?: number;
+  max?: number;
+  step?: number;
+  /** Suffix shown next to the value, e.g. `ms`, `px`. */
+  unit?: string;
+  placeholder?: () => string;
+}
+
+export interface FieldAccessors {
+  getValue: (key: string) => unknown;
+  setValue: (key: string, value: unknown) => void;
+  setSliderValue: (key: string, value: unknown) => void;
+}
+
+export interface ActionHelpers extends FieldAccessors {
+  pickDirectory: () => Promise<string | undefined>;
+  pickFile: (
+    filters?: { name: string; extensions: string[] }[],
+  ) => Promise<string | undefined>;
+}
+
+export interface ActionField extends SettingFieldBase {
+  type: 'action';
+  buttonLabel: () => string;
+  onClick: (helpers: ActionHelpers) => void | Promise<void>;
+}
+
+export type CustomFieldContext = FieldAccessors;
+
+export interface CustomField extends SettingFieldBase {
+  type: 'custom';
+  component: string;
 }
 
 export type SettingField =
@@ -48,7 +93,10 @@ export type SettingField =
   | SelectField
   | SliderField
   | TextField
-  | MultiSelectField;
+  | MultiSelectField
+  | NumberField
+  | ActionField
+  | CustomField;
 
 export interface SettingsGroup {
   title?: () => string;
@@ -64,7 +112,7 @@ export type SettingsSchema = SettingField[] | SettingsGroup[];
 export const isSettingsGroups = (
   schema: SettingsSchema,
 ): schema is SettingsGroup[] =>
-  schema.length > 0 && "fields" in (schema[0] as SettingsGroup);
+  schema.length > 0 && 'fields' in (schema[0] as SettingsGroup);
 
 /** Normalize a schema to a list of groups. */
 export const toSettingsGroups = (schema: SettingsSchema): SettingsGroup[] =>

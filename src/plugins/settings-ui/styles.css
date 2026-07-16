@@ -575,6 +575,102 @@
   border-color: var(--sui-primary);
 }
 
+/* ---- number stepper ---- */
+.sui-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.sui-stepper__btn {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border: 1px solid var(--sui-outline);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--sui-on-surface);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.sui-stepper__btn:hover {
+  background: var(--sui-surface-highest);
+}
+.sui-stepper__input {
+  width: 76px;
+  height: 40px;
+  text-align: center;
+  border-radius: 8px;
+  background: var(--sui-surface-high);
+  color: var(--sui-on-surface);
+  border: 1px solid var(--sui-outline);
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+}
+.sui-stepper__input:focus {
+  border-color: var(--sui-primary);
+}
+.sui-stepper__unit {
+  font-size: 13px;
+  color: var(--sui-on-surface-variant);
+}
+
+/* ---- control row with a refresh button (dynamic options) ---- */
+.sui-control-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.sui-control-row > .sui-select,
+.sui-control-row > .sui-chips {
+  flex: 1;
+  min-width: 0;
+}
+.sui-refreshbtn {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: 1px solid var(--sui-outline);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--sui-on-surface);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.sui-refreshbtn:hover {
+  background: var(--sui-surface-highest);
+}
+.sui-refreshbtn--spin svg {
+  animation: sui-spin 0.8s linear infinite;
+}
+@keyframes sui-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- inline field action button (for `action` fields) ---- */
+.sui-fieldbtn {
+  border: 1px solid var(--sui-outline);
+  background: transparent;
+  color: var(--sui-primary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+.sui-fieldbtn:hover {
+  background: var(--sui-surface-highest);
+}
+
 /* ---- action buttons ---- */
 .sui-actions {
   display: flex;
