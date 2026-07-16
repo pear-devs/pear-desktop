@@ -19,6 +19,18 @@ export default createPlugin({
   restartNeeded: true,
   config: defaultConfig,
   stylesheets: [style],
+  settings: [
+    {
+      type: 'slider',
+      key: 'opacity',
+      label: () => t('plugins.transparent-player.menu.opacity.label'),
+      min: 10,
+      max: 100,
+      step: 10,
+      unit: '%',
+      scale: 0.01,
+    },
+  ],
   menu: onMenu,
   backend,
   renderer: {

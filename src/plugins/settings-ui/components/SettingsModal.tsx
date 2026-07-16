@@ -16,6 +16,7 @@ import { Icon } from './Icon';
 import { PluginCard } from './PluginCard';
 import { SettingsField } from './SettingsField';
 
+import { filterGroupsByPlatform } from '../platform';
 import { buildAppSections } from '../schema/app-settings';
 import {
   bridge,
@@ -62,14 +63,21 @@ export const SettingsModal = (props: {
   >([]);
   let isClosing = false;
 
-  const [appSections] = createResource(buildAppSections);
+  const [appSections] = createResource(async () =>
+    (await buildAppSections()).map((section) => ({
+      ...section,
+      groups: filterGroupsByPlatform(section.groups),
+    })),
+  );
   const [appMeta] = createResource(() => bridge.appMeta());
   const [plugins] = createResource<PluginMeta[]>(async () => {
     const stubs = await allPlugins();
     return Object.entries(stubs)
       .filter(([id]) => id !== 'settings-ui')
       .map(([id, def]) => {
-        const groups = def.settings ? toSettingsGroups(def.settings) : [];
+        const groups = def.settings
+          ? filterGroupsByPlatform(toSettingsGroups(def.settings))
+          : [];
         return {
           id,
           name: def.name?.() ?? id,
@@ -256,7 +264,10 @@ export const SettingsModal = (props: {
   );
 
   return (
-    <div class="sui-root" classList={{ 'sui-root--standalone': props.standalone }}>
+    <div
+      class="sui-root"
+      classList={{ 'sui-root--standalone': props.standalone }}
+    >
       <Show when={!props.standalone}>
         <div class="sui-scrim" onClick={close} />
       </Show>

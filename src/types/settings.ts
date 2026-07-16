@@ -1,26 +1,29 @@
 /** Declarative settings schema for the in-app Settings modal. */
 
+import type { Platform } from "@/types/plugins";
+
 export interface SettingFieldBase {
   key: string;
   label: () => string;
   description?: () => string;
   /** Show a "restart" pill and flag the modal's restart banner when changed. */
   restartNeeded?: boolean;
+  platform?: Platform;
 }
 
 export interface SwitchField extends SettingFieldBase {
-  type: 'switch';
+  type: "switch";
 }
 
 export interface SelectField extends SettingFieldBase {
-  type: 'select';
+  type: "select";
   /** `radio` renders inline chips (default), `dropdown` a native select. */
-  variant?: 'radio' | 'dropdown';
+  variant?: "radio" | "dropdown";
   options: { value: string; label: () => string }[];
 }
 
 export interface SliderField extends SettingFieldBase {
-  type: 'slider';
+  type: "slider";
   min: number;
   max: number;
   step?: number;
@@ -31,12 +34,12 @@ export interface SliderField extends SettingFieldBase {
 }
 
 export interface TextField extends SettingFieldBase {
-  type: 'text';
+  type: "text";
   placeholder?: () => string;
 }
 
 export interface MultiSelectField extends SettingFieldBase {
-  type: 'multiselect';
+  type: "multiselect";
   options: { value: string; label: () => string }[];
 }
 
@@ -61,7 +64,7 @@ export type SettingsSchema = SettingField[] | SettingsGroup[];
 export const isSettingsGroups = (
   schema: SettingsSchema,
 ): schema is SettingsGroup[] =>
-  schema.length > 0 && 'fields' in (schema[0] as SettingsGroup);
+  schema.length > 0 && "fields" in (schema[0] as SettingsGroup);
 
 /** Normalize a schema to a list of groups. */
 export const toSettingsGroups = (schema: SettingsSchema): SettingsGroup[] =>
