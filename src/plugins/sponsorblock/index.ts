@@ -39,6 +39,27 @@ export default createPlugin({
       'music_offtopic',
     ],
   } as SponsorBlockPluginConfig,
+  settings: [
+    {
+      type: 'multiselect',
+      key: 'categories',
+      label: () => t('plugins.sponsorblock.settings.categories'),
+      options: [
+        { value: 'sponsor', label: () => t('plugins.sponsorblock.settings.category.sponsor') },
+        { value: 'intro', label: () => t('plugins.sponsorblock.settings.category.intro') },
+        { value: 'outro', label: () => t('plugins.sponsorblock.settings.category.outro') },
+        { value: 'interaction', label: () => t('plugins.sponsorblock.settings.category.interaction') },
+        { value: 'selfpromo', label: () => t('plugins.sponsorblock.settings.category.selfpromo') },
+        { value: 'music_offtopic', label: () => t('plugins.sponsorblock.settings.category.music_offtopic') },
+      ],
+    },
+    {
+      type: 'text',
+      key: 'apiURL',
+      label: () => t('plugins.sponsorblock.settings.api-url'),
+      placeholder: () => 'https://sponsor.ajay.app',
+    },
+  ],
   async backend({ getConfig, ipc }) {
     const fetchSegments = async (
       apiURL: string,

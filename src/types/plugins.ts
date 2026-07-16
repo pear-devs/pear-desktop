@@ -3,8 +3,9 @@ import type {
   MenuContext,
   PreloadContext,
   RendererContext,
-} from './contexts';
-import type { MusicPlayer } from '@/types/music-player';
+} from "./contexts";
+import type { MusicPlayer } from "@/types/music-player";
+import type { SettingsSchema } from "@/types/settings";
 
 type Author = string;
 
@@ -64,6 +65,9 @@ export interface PluginDef<
     | Electron.MenuItemConstructorOptions[];
   stylesheets?: string[];
   restartNeeded?: boolean;
+
+  /** Declarative settings rendered by the in-app Settings modal (dotted paths allowed). */
+  settings?: SettingsSchema;
 
   backend?: {
     [Key in keyof BackendProperties]: BackendProperties[Key];
