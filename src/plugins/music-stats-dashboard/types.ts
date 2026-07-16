@@ -1,6 +1,8 @@
 export interface StatsConfig {
   enabled: boolean;
-  trackingStartDate: string;
+  remoteSyncEnabled?: boolean;
+  remoteSyncLastTime?: string;
+  remoteSyncLastError?: string;
   cloudSyncEnabled: boolean;
   cloudSyncClientId?: string;
   cloudSyncClientSecret?: string;
@@ -14,7 +16,6 @@ export interface StatsConfig {
 }
 
 export interface PlayRecord {
-  id?: number;
   songId: string;
   songTitle: string;
   artistId: string;
@@ -27,51 +28,47 @@ export interface PlayRecord {
   totalDuration: number; // in seconds
   skipped: boolean;
   completed: boolean;
+  mediaType?: string;
+  /** Where this play was observed. Absent = tracked locally on this PC. */
+  source?: 'local' | 'history' | 'takeout';
+  /**
+   * True when only the day is known (account history without a live
+   * detection). These plays are excluded from hour-of-day stats.
+   */
+  approximateTime?: boolean;
 }
 
-export interface DailyAggregate {
-  date: string; // YYYY-MM-DD
-  totalMinutes: number;
-  songsPlayed: number;
-  uniqueSongs: number;
-  uniqueArtists: number;
-  topSongs: Array<{ id: string; title: string; plays: number }>;
-  topArtists: Array<{ id: string; name: string; plays: number }>;
-  genreBreakdown: Record<string, number>; // genre -> minutes
-  hourlyBreakdown: number[]; // 24 hours
-  skipCount: number;
+export type StatsRange = 'week' | 'month' | 'year' | 'all';
+
+export interface RankedSong {
+  id: string;
+  title: string;
+  artist: string;
+  plays: number;
+  minutes: number;
+  imageUrl?: string;
 }
 
-export interface MonthlyAggregate {
-  yearMonth: string; // YYYY-MM
-  totalMinutes: number;
-  topSongs: Array<{ id: string; title: string; artist: string; plays: number }>;
-  topArtists: Array<{ id: string; name: string; minutes: number }>;
-  genreBreakdown: Record<string, number>;
-  daysActive: number;
+export interface RankedArtist {
+  id: string;
+  name: string;
+  plays: number;
+  minutes: number;
+  imageUrl?: string;
 }
 
 export interface StatsData {
+  range: StatsRange;
   totalMinutes: number;
-  totalSongs: number;
-  topSongs: Array<{
-    id: string;
-    title: string;
-    artist: string;
-    plays: number;
-    minutes: number;
-    imageUrl?: string;
-  }>;
-  topArtists: Array<{
-    id: string;
-    name: string;
-    plays: number;
-    minutes: number;
-    imageUrl?: string;
-  }>;
+  totalPlays: number;
+  uniqueSongs: number;
+  uniqueArtists: number;
+  topSongs: RankedSong[];
+  topArtists: RankedArtist[];
   anthem?: { id: string; title: string; artist: string; plays: number };
   peakListeningDay?: { date: string; minutes: number };
-  listeningClock: number[]; // 24 hours
+  listeningClock: number[]; // 24 hours, minutes per hour
+  dailyTrend: Array<{ date: string; minutes: number }>; // last 30 days
   currentStreak: number;
   firstSongEver?: { title: string; artist: string; date: string };
   firstSongThisYear?: { title: string; artist: string; date: string };
@@ -90,18 +87,4 @@ export interface StatsData {
     imageUrl?: string;
   }>;
   skipRate: number;
-}
-
-export interface CurrentPlayback {
-  songId: string;
-  songTitle: string;
-  artistId: string;
-  artistName: string;
-  artistImageUrl?: string;
-  albumName?: string;
-  thumbnailUrl?: string;
-  totalDuration: number;
-  startTime: number;
-  lastUpdateTime: number;
-  accumulatedTime: number;
 }

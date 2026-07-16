@@ -15,6 +15,12 @@ export default async (ctx: MenuContext<StatsConfig>): Promise<MenuTemplate> => {
   const lastErrorLabel = config.cloudSyncLastError
     ? `Last error: ${config.cloudSyncLastError}`
     : 'Last error: none';
+  const lastDeviceSyncLabel = config.remoteSyncLastTime
+    ? `Last sync: ${new Date(config.remoteSyncLastTime).toLocaleString()}`
+    : 'Last sync: never';
+  const lastDeviceErrorLabel = config.remoteSyncLastError
+    ? `Last error: ${config.remoteSyncLastError}`
+    : 'Last error: none';
 
   return [
     {
@@ -22,9 +28,6 @@ export default async (ctx: MenuContext<StatsConfig>): Promise<MenuTemplate> => {
         'plugins.music-stats-dashboard.menu.title',
         'Music Stats Dashboard',
       ),
-      click: () => {
-        ctx.window.webContents.send('music-stats:show-dashboard');
-      },
       submenu: [
         {
           label: t(
@@ -48,10 +51,56 @@ export default async (ctx: MenuContext<StatsConfig>): Promise<MenuTemplate> => {
           type: 'separator',
         },
         {
-          label: 'Google Drive Sync',
+          label: t(
+            'plugins.music-stats-dashboard.menu.other-devices',
+            'Phone & Other Devices',
+          ),
           submenu: [
             {
-              label: 'Enable Sync',
+              label: t(
+                'plugins.music-stats-dashboard.menu.remote-sync-toggle',
+                'Include plays from other devices',
+              ),
+              type: 'checkbox',
+              checked: !!config.remoteSyncEnabled,
+              click: async () => {
+                await ctx.setConfig({
+                  remoteSyncEnabled: !config.remoteSyncEnabled,
+                });
+                ctx.refresh?.();
+              },
+            },
+            {
+              label: t(
+                'plugins.music-stats-dashboard.menu.remote-sync-now',
+                'Sync Device Plays Now',
+              ),
+              enabled: !!config.remoteSyncEnabled,
+              click: () => {
+                ctx.window.webContents.send('music-stats:history-sync');
+              },
+            },
+            {
+              label: lastDeviceSyncLabel,
+              enabled: false,
+            },
+            {
+              label: lastDeviceErrorLabel,
+              enabled: false,
+            },
+          ],
+        },
+        {
+          label: t(
+            'plugins.music-stats-dashboard.menu.drive-sync',
+            'Google Drive Sync',
+          ),
+          submenu: [
+            {
+              label: t(
+                'plugins.music-stats-dashboard.menu.enable-sync',
+                'Enable Sync',
+              ),
               type: 'checkbox',
               checked: !!config.cloudSyncEnabled,
               click: async () => {
@@ -104,13 +153,19 @@ export default async (ctx: MenuContext<StatsConfig>): Promise<MenuTemplate> => {
               },
             },
             {
-              label: 'Connect Google Drive…',
+              label: t(
+                'plugins.music-stats-dashboard.menu.drive-connect',
+                'Connect Google Drive…',
+              ),
               click: () => {
                 ctx.window.webContents.send('music-stats:drive-connect');
               },
             },
             {
-              label: 'Sync Now',
+              label: t(
+                'plugins.music-stats-dashboard.menu.drive-sync-now',
+                'Sync Now',
+              ),
               enabled: !!config.cloudSyncEnabled,
               click: () => {
                 ctx.window.webContents.send('music-stats:drive-sync');
@@ -125,7 +180,10 @@ export default async (ctx: MenuContext<StatsConfig>): Promise<MenuTemplate> => {
               enabled: false,
             },
             {
-              label: 'Disconnect Google Drive',
+              label: t(
+                'plugins.music-stats-dashboard.menu.drive-disconnect',
+                'Disconnect Google Drive',
+              ),
               enabled: !!config.cloudSyncEnabled,
               click: () => {
                 ctx.window.webContents.send('music-stats:drive-disconnect');
@@ -146,6 +204,15 @@ export default async (ctx: MenuContext<StatsConfig>): Promise<MenuTemplate> => {
           label: t('plugins.music-stats-dashboard.menu.import', 'Import Stats'),
           click: async () => {
             ctx.window.webContents.send('music-stats:import');
+          },
+        },
+        {
+          label: t(
+            'plugins.music-stats-dashboard.menu.import-takeout',
+            'Import Google Takeout…',
+          ),
+          click: () => {
+            ctx.window.webContents.send('music-stats:import-takeout');
           },
         },
       ],

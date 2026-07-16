@@ -3,19 +3,23 @@ import { t } from '@/i18n';
 
 import style from './ui/styles.css?inline';
 
-let backend: any = null;
+import type { StatsBackend } from './backend';
+
+let backend: StatsBackend | null = null;
 
 export default createPlugin({
   name: () => t('plugins.music-stats-dashboard.name', 'Music Stats Dashboard'),
   description: () =>
     t(
       'plugins.music-stats-dashboard.description',
-      'Track your listening habits with detailed stats, wrapped-style summaries, and a comprehensive dashboard'
+      'Track your listening habits with detailed stats, wrapped-style summaries, and a comprehensive dashboard',
     ),
   restartNeeded: false,
   config: {
     enabled: false,
-    trackingStartDate: new Date().toISOString().split('T')[0],
+    remoteSyncEnabled: false,
+    remoteSyncLastTime: '',
+    remoteSyncLastError: '',
     cloudSyncEnabled: false,
     cloudSyncClientId: '',
     cloudSyncClientSecret: '',
@@ -33,7 +37,7 @@ export default createPlugin({
     if (!config.enabled) return [];
 
     const menuFn = (await import('./menu')).default;
-    return menuFn({ getConfig, setConfig, window, refresh, t });
+    return menuFn({ getConfig, setConfig, window, refresh });
   },
   backend: {
     start: async (context) => {
@@ -45,9 +49,7 @@ export default createPlugin({
       console.log('[Music Stats Dashboard] Backend initialized');
     },
     onConfigChange: async (newConfig) => {
-      if (backend?.onConfigChange) {
-        await backend.onConfigChange(newConfig);
-      }
+      await backend?.onConfigChange(newConfig);
     },
     stop: async () => {
       if (backend) {
