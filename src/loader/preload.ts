@@ -89,7 +89,7 @@ export const loadAllPreloadPlugins = async () => {
       pluginConfigs[pluginId] ?? {},
     );
 
-    if (config.enabled) {
+    if (pluginDef.essential || config.enabled) {
       forceLoadPreloadPlugin(pluginId);
     } else {
       if (loadedPluginMap[pluginId]) {

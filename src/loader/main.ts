@@ -137,7 +137,7 @@ export const loadAllMainPlugins = async (win: BrowserWindow) => {
 
   for (const [plugin, pluginDef] of Object.entries(await mainPlugins())) {
     const config = deepmerge(pluginDef.config, pluginConfigs[plugin] ?? {});
-    if (config.enabled) {
+    if (pluginDef.essential || config.enabled) {
       queue.push(forceLoadMainPlugin(plugin, win));
     } else if (loadedPluginMap[plugin]) {
       queue.push(forceUnloadMainPlugin(plugin, win));

@@ -13,6 +13,7 @@ export default createPlugin({
   name: () => t('settings-ui.name'),
   description: () => t('settings-ui.description'),
   restartNeeded: false,
+  essential: true,
   config: {
     enabled: true,
   } as SettingsUIConfig,

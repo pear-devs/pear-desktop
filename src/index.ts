@@ -258,6 +258,9 @@ const initHook = async (win: BrowserWindow) => {
           newPluginConfig ?? {},
         ) as PluginConfig;
 
+        // Essential plugins can never be disabled.
+        if (allPluginStubs[id]?.essential) config.enabled = true;
+
         if (config.enabled !== oldConfig?.enabled) {
           if (config.enabled) {
             win.webContents.send('plugin:enable', id);
