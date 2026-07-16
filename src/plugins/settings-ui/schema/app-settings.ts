@@ -1,11 +1,11 @@
-import { languageResources } from "virtual:i18n";
+import { languageResources } from 'virtual:i18n';
 
-import { t } from "@/i18n";
-import { startingPages } from "@/providers/extracted-data";
+import { t } from '@/i18n';
+import { startingPages } from '@/providers/extracted-data';
 
-import type { SettingsGroup } from "@/types/settings";
+import type { SettingsGroup } from '@/types/settings';
 
-export type AppSectionId = "general" | "appearance" | "window" | "advanced";
+export type AppSectionId = 'general' | 'appearance' | 'window' | 'advanced';
 
 export interface AppSection {
   id: AppSectionId;
@@ -22,14 +22,14 @@ export const buildAppSections = async (): Promise<AppSection[]> => {
     const meta = langResources[lang].translation.language;
     return {
       value: lang,
-      label: () => `${meta?.name ?? lang} (${meta?.["local-name"] ?? lang})`,
+      label: () => `${meta?.name ?? lang} (${meta?.['local-name'] ?? lang})`,
     };
   });
 
   const startingPageOptions = [
     {
-      value: "",
-      label: () => t("main.menu.options.submenu.starting-page.unset"),
+      value: '',
+      label: () => t('main.menu.options.submenu.starting-page.unset'),
     },
     ...Object.keys(startingPages).map((name) => ({
       value: name,
@@ -39,40 +39,40 @@ export const buildAppSections = async (): Promise<AppSection[]> => {
 
   return [
     {
-      id: "general",
-      icon: "settings",
-      label: () => t("settings-ui.sections.general.label"),
-      sub: () => t("settings-ui.sections.general.sub"),
+      id: 'general',
+      icon: 'settings',
+      label: () => t('settings-ui.sections.general.label'),
+      sub: () => t('settings-ui.sections.general.sub'),
       groups: [
         {
-          title: () => t("settings-ui.groups.updates-session"),
+          title: () => t('settings-ui.groups.updates-session'),
           fields: [
             {
-              type: "switch",
-              key: "options.autoUpdates",
-              label: () => t("main.menu.options.submenu.auto-update"),
+              type: 'switch',
+              key: 'options.autoUpdates',
+              label: () => t('main.menu.options.submenu.auto-update'),
             },
             {
-              type: "switch",
-              key: "options.resumeOnStart",
-              label: () => t("main.menu.options.submenu.resume-on-start"),
+              type: 'switch',
+              key: 'options.resumeOnStart',
+              label: () => t('main.menu.options.submenu.resume-on-start'),
             },
           ],
         },
         {
-          title: () => t("settings-ui.groups.startup-language"),
+          title: () => t('settings-ui.groups.startup-language'),
           fields: [
             {
-              type: "select",
-              key: "options.startingPage",
-              label: () => t("main.menu.options.submenu.starting-page.label"),
+              type: 'select',
+              key: 'options.startingPage',
+              label: () => t('main.menu.options.submenu.starting-page.label'),
               options: startingPageOptions,
             },
             {
-              type: "select",
-              variant: "dropdown",
-              key: "options.language",
-              label: () => t("main.menu.options.submenu.language.label"),
+              type: 'select',
+              variant: 'dropdown',
+              key: 'options.language',
+              label: () => t('main.menu.options.submenu.language.label'),
               restartNeeded: true,
               options: languageOptions,
             },
@@ -81,72 +81,72 @@ export const buildAppSections = async (): Promise<AppSection[]> => {
       ],
     },
     {
-      id: "appearance",
-      icon: "palette",
-      label: () => t("settings-ui.sections.appearance.label"),
-      sub: () => t("settings-ui.sections.appearance.sub"),
+      id: 'appearance',
+      icon: 'palette',
+      label: () => t('settings-ui.sections.appearance.label'),
+      sub: () => t('settings-ui.sections.appearance.sub'),
       groups: [
         {
-          title: () => t("settings-ui.groups.interface"),
+          title: () => t('settings-ui.groups.interface'),
           fields: [
             {
-              type: "switch",
-              key: "options.removeUpgradeButton",
+              type: 'switch',
+              key: 'options.removeUpgradeButton',
               label: () =>
                 t(
-                  "main.menu.options.submenu.visual-tweaks.submenu.remove-upgrade-button",
+                  'main.menu.options.submenu.visual-tweaks.submenu.remove-upgrade-button',
                 ),
             },
             {
-              type: "select",
-              key: "options.likeButtons",
+              type: 'select',
+              key: 'options.likeButtons',
               label: () =>
                 t(
-                  "main.menu.options.submenu.visual-tweaks.submenu.like-buttons.label",
+                  'main.menu.options.submenu.visual-tweaks.submenu.like-buttons.label',
                 ),
               options: [
                 {
-                  value: "",
+                  value: '',
                   label: () =>
                     t(
-                      "main.menu.options.submenu.visual-tweaks.submenu.like-buttons.default",
+                      'main.menu.options.submenu.visual-tweaks.submenu.like-buttons.default',
                     ),
                 },
                 {
-                  value: "force",
+                  value: 'force',
                   label: () =>
                     t(
-                      "main.menu.options.submenu.visual-tweaks.submenu.like-buttons.force-show",
+                      'main.menu.options.submenu.visual-tweaks.submenu.like-buttons.force-show',
                     ),
                 },
                 {
-                  value: "hide",
+                  value: 'hide',
                   label: () =>
                     t(
-                      "main.menu.options.submenu.visual-tweaks.submenu.like-buttons.hide",
+                      'main.menu.options.submenu.visual-tweaks.submenu.like-buttons.hide',
                     ),
                 },
               ],
             },
             {
-              type: "switch",
-              key: "options.swapLikeButtonsOrder",
+              type: 'switch',
+              key: 'options.swapLikeButtonsOrder',
               label: () =>
                 t(
-                  "main.menu.options.submenu.visual-tweaks.submenu.like-buttons.swap",
+                  'main.menu.options.submenu.visual-tweaks.submenu.like-buttons.swap',
                 ),
             },
           ],
         },
         {
-          title: () => t("settings-ui.groups.window-title"),
+          title: () => t('settings-ui.groups.window-title'),
           fields: [
             {
-              type: "text",
-              key: "options.customWindowTitle",
+              type: 'text',
+              key: 'options.customWindowTitle',
               label: () =>
                 t(
-                  "main.menu.options.submenu.visual-tweaks.submenu.custom-window-title.label",
+                  'main.menu.options.submenu.visual-tweaks.submenu.custom-window-title.label',
                 ),
             },
           ],
@@ -154,140 +154,140 @@ export const buildAppSections = async (): Promise<AppSection[]> => {
       ],
     },
     {
-      id: "window",
-      icon: "window",
-      label: () => t("settings-ui.sections.window.label"),
-      sub: () => t("settings-ui.sections.window.sub"),
+      id: 'window',
+      icon: 'window',
+      label: () => t('settings-ui.sections.window.label'),
+      sub: () => t('settings-ui.sections.window.sub'),
       groups: [
         {
-          title: () => t("settings-ui.groups.window"),
+          title: () => t('settings-ui.groups.window'),
           fields: [
             {
-              type: "switch",
-              key: "options.alwaysOnTop",
-              label: () => t("main.menu.options.submenu.always-on-top"),
+              type: 'switch',
+              key: 'options.alwaysOnTop',
+              label: () => t('main.menu.options.submenu.always-on-top'),
             },
             {
-              type: "switch",
-              key: "options.hideMenu",
-              label: () => t("main.menu.options.submenu.hide-menu.label"),
+              type: 'switch',
+              key: 'options.hideMenu',
+              label: () => t('main.menu.options.submenu.hide-menu.label'),
               restartNeeded: true,
             },
           ],
         },
         {
-          title: () => t("settings-ui.groups.system"),
+          title: () => t('settings-ui.groups.system'),
           fields: [
             {
-              type: "switch",
-              key: "options.startAtLogin",
-              label: () => t("main.menu.options.submenu.start-at-login"),
+              type: 'switch',
+              key: 'options.startAtLogin',
+              label: () => t('main.menu.options.submenu.start-at-login'),
             },
           ],
         },
         {
-          title: () => t("main.menu.options.submenu.tray.label"),
+          title: () => t('main.menu.options.submenu.tray.label'),
           fields: [
             {
-              type: "select",
-              key: "options.__trayMode",
-              label: () => t("main.menu.options.submenu.tray.label"),
+              type: 'select',
+              key: 'options.__trayMode',
+              label: () => t('main.menu.options.submenu.tray.label'),
               options: [
                 {
-                  value: "off",
+                  value: 'off',
                   label: () =>
-                    t("main.menu.options.submenu.tray.submenu.disabled"),
+                    t('main.menu.options.submenu.tray.submenu.disabled'),
                 },
                 {
-                  value: "show",
+                  value: 'show',
                   label: () =>
                     t(
-                      "main.menu.options.submenu.tray.submenu.enabled-and-show-app",
+                      'main.menu.options.submenu.tray.submenu.enabled-and-show-app',
                     ),
                 },
                 {
-                  value: "hide",
+                  value: 'hide',
                   label: () =>
                     t(
-                      "main.menu.options.submenu.tray.submenu.enabled-and-hide-app",
+                      'main.menu.options.submenu.tray.submenu.enabled-and-hide-app',
                     ),
                 },
               ],
             },
             {
-              type: "switch",
-              key: "options.trayClickPlayPause",
+              type: 'switch',
+              key: 'options.trayClickPlayPause',
               label: () =>
-                t("main.menu.options.submenu.tray.submenu.play-pause-on-click"),
+                t('main.menu.options.submenu.tray.submenu.play-pause-on-click'),
             },
           ],
         },
       ],
     },
     {
-      id: "advanced",
-      icon: "tune",
-      label: () => t("settings-ui.sections.advanced.label"),
-      sub: () => t("settings-ui.sections.advanced.sub"),
+      id: 'advanced',
+      icon: 'tune',
+      label: () => t('settings-ui.sections.advanced.label'),
+      sub: () => t('settings-ui.sections.advanced.sub'),
       groups: [
         {
-          title: () => t("settings-ui.groups.network"),
+          title: () => t('settings-ui.groups.network'),
           fields: [
             {
-              type: "text",
-              key: "options.proxy",
+              type: 'text',
+              key: 'options.proxy',
               label: () =>
                 t(
-                  "main.menu.options.submenu.advanced-options.submenu.set-proxy.label",
+                  'main.menu.options.submenu.advanced-options.submenu.set-proxy.label',
                 ),
               placeholder: () =>
                 t(
-                  "main.menu.options.submenu.advanced-options.submenu.set-proxy.prompt.placeholder",
+                  'main.menu.options.submenu.advanced-options.submenu.set-proxy.prompt.placeholder',
                 ),
               restartNeeded: true,
             },
             {
-              type: "switch",
-              key: "options.overrideUserAgent",
+              type: 'switch',
+              key: 'options.overrideUserAgent',
               label: () =>
                 t(
-                  "main.menu.options.submenu.advanced-options.submenu.override-user-agent",
+                  'main.menu.options.submenu.advanced-options.submenu.override-user-agent',
                 ),
               restartNeeded: true,
             },
           ],
         },
         {
-          title: () => t("settings-ui.groups.performance"),
+          title: () => t('settings-ui.groups.performance'),
           fields: [
             {
-              type: "switch",
-              key: "options.disableHardwareAcceleration",
+              type: 'switch',
+              key: 'options.disableHardwareAcceleration',
               label: () =>
                 t(
-                  "main.menu.options.submenu.advanced-options.submenu.disable-hardware-acceleration",
+                  'main.menu.options.submenu.advanced-options.submenu.disable-hardware-acceleration',
                 ),
               restartNeeded: true,
             },
             {
-              type: "switch",
-              key: "options.autoResetAppCache",
+              type: 'switch',
+              key: 'options.autoResetAppCache',
               label: () =>
                 t(
-                  "main.menu.options.submenu.advanced-options.submenu.auto-reset-app-cache",
+                  'main.menu.options.submenu.advanced-options.submenu.auto-reset-app-cache',
                 ),
             },
           ],
         },
         {
-          title: () => t("settings-ui.groups.configuration"),
+          title: () => t('settings-ui.groups.configuration'),
           fields: [
             {
-              type: "switch",
-              key: "options.restartOnConfigChanges",
+              type: 'switch',
+              key: 'options.restartOnConfigChanges',
               label: () =>
                 t(
-                  "main.menu.options.submenu.advanced-options.submenu.restart-on-config-changes",
+                  'main.menu.options.submenu.advanced-options.submenu.restart-on-config-changes',
                 ),
             },
           ],
