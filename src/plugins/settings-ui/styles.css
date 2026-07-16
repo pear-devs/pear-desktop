@@ -102,6 +102,22 @@
   animation: sui-pop-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* ---- standalone window (tray fallback) ---- */
+.sui-root--standalone {
+  position: fixed;
+  inset: 0;
+  background: var(--sui-surface-low);
+}
+.sui-root--standalone .sui-modal {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  box-shadow: none;
+  animation: none;
+}
+
 /* ---- sidebar ---- */
 .sui-sidebar {
   width: 244px;

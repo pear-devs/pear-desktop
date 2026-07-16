@@ -49,7 +49,10 @@ const restartRequirementKey = (requirement: RestartRequirement) =>
     ? `plugin:${requirement.id}`
     : `setting:${requirement.label}`;
 
-export const SettingsModal = (props: { onClose: () => void }) => {
+export const SettingsModal = (props: {
+  onClose: () => void;
+  standalone?: boolean;
+}) => {
   const [active, setActive] = createSignal<string>('general');
   const [query, setQuery] = createSignal('');
   const [expanded, setExpanded] = createSignal<string | null>(null);
@@ -253,8 +256,10 @@ export const SettingsModal = (props: { onClose: () => void }) => {
   );
 
   return (
-    <div class="sui-root">
-      <div class="sui-scrim" onClick={close} />
+    <div class="sui-root" classList={{ 'sui-root--standalone': props.standalone }}>
+      <Show when={!props.standalone}>
+        <div class="sui-scrim" onClick={close} />
+      </Show>
 
       <div aria-modal="true" class="sui-modal" role="dialog">
         {/* sidebar */}
