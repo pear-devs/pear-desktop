@@ -1,18 +1,16 @@
+import PausedTrayIconWhite from '@assets/tray-paused-white.png?asset&asarUnpack';
+import PausedTrayIcon from '@assets/tray-paused.png?asset&asarUnpack';
+import TrayIconWhite from '@assets/tray-white.png?asset&asarUnpack';
+import TrayIcon from '@assets/tray.png?asset&asarUnpack';
 import { Menu, nativeImage, screen, Tray } from 'electron';
 import is from 'electron-is';
 
-import TrayIcon from '@assets/tray.png?asset&asarUnpack';
-import PausedTrayIcon from '@assets/tray-paused.png?asset&asarUnpack';
-import TrayIconWhite from '@assets/tray-white.png?asset&asarUnpack';
-import PausedTrayIconWhite from '@assets/tray-paused-white.png?asset&asarUnpack';
+import { APPLICATION_NAME, t } from '@/i18n';
 
 import * as config from './config';
-
 import { restart } from './providers/app-controls';
-import { registerCallback, SongInfoEvent } from './providers/song-info';
 import { getSongControls } from './providers/song-controls';
-
-import { APPLICATION_NAME, t } from '@/i18n';
+import { registerCallback, SongInfoEvent } from './providers/song-info';
 
 import type { MenuTemplate } from './menu';
 

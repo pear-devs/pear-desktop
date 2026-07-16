@@ -6,14 +6,14 @@ import {
 } from 'electron';
 import is from 'electron-is';
 
-import * as config from './config';
+import { loadI18n, setLanguage } from '@/i18n';
 
+import * as config from './config';
 import {
   forceLoadPreloadPlugin,
   forceUnloadPreloadPlugin,
   loadAllPreloadPlugins,
 } from './loader/preload';
-import { loadI18n, setLanguage } from '@/i18n';
 
 // @ts-expect-error dummy
 globalThis.customElements = { define() {} };

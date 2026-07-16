@@ -1,5 +1,5 @@
-import { createPlugin } from '@/utils';
 import { APPLICATION_NAME, t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 import backend from './back';
 import renderer, {

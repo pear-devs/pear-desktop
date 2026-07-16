@@ -161,7 +161,8 @@
                 "default": "Predeterminado",
                 "force-show": "Forzar la visualización",
                 "hide": "Ocultar",
-                "label": "Botones de \"Me Gusta\""
+                "label": "Botones de \"Me Gusta\"",
+                "swap": "Intercambiar el orden de los botones de \"Me Gusta\""
               },
               "remove-upgrade-button": "Eliminar el botón de Actualización",
               "theme": {
@@ -217,13 +218,6 @@
     "ad-speedup": {
       "description": "Si se reproduce un anuncio, silencia el audio y fija la velocidad de reproducción en 16x",
       "name": "Aumento de la velocidad de anuncios"
-    },
-    "adblocker": {
-      "description": "Bloquear todos los anuncios y el rastreo por defecto",
-      "menu": {
-        "blocker": "Bloqueador"
-      },
-      "name": "Bloqueador de anuncios"
     },
     "album-actions": {
       "description": "Añade los botones \"Quitar no me gusta\", \"No me gusta\", \"Me gusta\" y \"Quitar me gusta\" para aplicarlos a todas las canciones de una lista de reproducción o un álbum",
@@ -322,10 +316,10 @@
           "label": "Nombre del host"
         },
         "https": {
-          "label": "HTTPS & Certificados",
+          "label": "HTTPS y Certificados",
           "submenu": {
             "cert": {
-              "dialogTitle": "Selecciona el archivo de certificado HTTPS",
+              "dialogTitle": "Seleccione el archivo de certificado HTTPS",
               "label": "Archivo de certificado (.crt/.pem)"
             },
             "enable-https": {
@@ -412,6 +406,17 @@
         "no-captions": "Sin subtítulos para ésta canción"
       }
     },
+    "clock": {
+      "description": "Añade un reloj a la barra de navegación",
+      "menu": {
+        "format": {
+          "24-hour-format": "Formato 24 horas",
+          "display-seconds": "Mostrar segundos",
+          "label": "Formato"
+        }
+      },
+      "name": "Reloj"
+    },
     "compact-sidebar": {
       "description": "Establecer siempre la barra lateral en modo compacto",
       "name": "Barra lateral compacta"
@@ -491,6 +496,13 @@
           "title": "Establecer tiempo de inactividad"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Bloquea todo el rastreo de forma predeterminada",
+      "menu": {
+        "blocker": "Bloqueador"
+      },
+      "name": "No rastrear"
     },
     "downloader": {
       "backend": {
@@ -830,6 +842,24 @@
         "not-found": "⚠️ No se han encontrado letras para esta canción."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Convertir carácter Chino",
+          "submenu": {
+            "disabled": {
+              "label": "Deshabilitado",
+              "tooltip": "Deshabilitar conversión de caracteres Chinos"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplificar a Tradicional",
+              "tooltip": "Convertir Chino Simplifcado en Chino Tradicional"
+            },
+            "traditional-to-simplified": {
+              "label": "Tradicional a Simplificado",
+              "tooltip": "Convertir Chino Tradicional a Chino Simplificado"
+            }
+          },
+          "tooltip": "Convertir carácter Chino a Tradicional o Simplificado"
+        },
         "default-text-string": {
           "label": "Carácter predeterminado entre letras",
           "tooltip": "Elige el carácter predeterminado que se utilizará para el espacio entre letras"
@@ -913,9 +943,14 @@
           "label": "Tipo",
           "submenu": {
             "acrylic": "Acrílico",
+            "content": "Contenido",
+            "fullscreen-ui": "Interfaz en pantalla completa",
             "mica": "Mica",
             "none": "Ninguno",
-            "tabbed": "Con pestañas"
+            "tabbed": "Con pestañas",
+            "under-page": "Pié de pagina",
+            "under-window": "Debajo de ventana",
+            "window": "Ventana"
           }
         }
       },

@@ -1,7 +1,29 @@
 {
+  "common": {
+    "console": {
+      "plugins": {
+        "execute-failed": "Ezin izan da {{pluginName}}{{contextName}} plugina exekutatu",
+        "executed-at-ms": "Plugina {{pluginName}}{{contextName}} {{ms}} m-tan exekutatu da",
+        "initialize-failed": "Ezin izan da {{pluginName}} plugina abiaraztea",
+        "load-all": "Plugin guztiak kargatzen",
+        "loaded": "{{pluginName}} plugina kargatuta",
+        "unloaded": "{{pluginName}} plugina deskargatuta"
+      }
+    }
+  },
   "language": {
     "code": "eu",
     "local-name": "Euskara",
     "name": "Basque"
+  },
+  "main": {
+    "console": {
+      "did-finish-load": {
+        "dev-tools": "Karga bukaeraztatua. DevTool'ak irekita"
+      },
+      "i18n": {
+        "loaded": "i18n'a kargatuta"
+      }
+    }
   }
 }

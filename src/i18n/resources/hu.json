@@ -161,7 +161,8 @@
                 "default": "Alapértelmezett",
                 "force-show": "Megjelenítés kényszerítése",
                 "hide": "Elrejtése",
-                "label": "Reakció gombok"
+                "label": "Reakció gombok",
+                "swap": "A reakció gombok sorrendjének megcserélése"
               },
               "remove-upgrade-button": "Előfizetés gombjának eltávolítása",
               "theme": {
@@ -217,13 +218,6 @@
     "ad-speedup": {
       "description": "Ha egy hirdetés elindul, elnémítja a hangot, és a lejátszási sebességet 16x-ra állítja",
       "name": "Hirdetésgyorsítás"
-    },
-    "adblocker": {
-      "description": "Alapértelmezetten minden hirdetés és nyomkövetés blokkolása",
-      "menu": {
-        "blocker": "Blokkolási módszer"
-      },
-      "name": "Reklámblokkoló"
     },
     "album-actions": {
       "description": "Hozzáadja a Tetszik, Nem tetszik és ezek visszavonására szolgáló gombokat, hogy ezeket az összes dalra alkalmazhasd egy lejátszási listán vagy albumban",
@@ -458,8 +452,8 @@
         "set-status-display-type": {
           "label": "Tevékenység szöveg",
           "submenu": {
-            "artist": "Hallgatja: {artist}",
             "application": "Hallgatja: {{applicationName}}",
+            "artist": "Hallgatja: {artist}",
             "title": "Hallgatja: {song title}"
           }
         }

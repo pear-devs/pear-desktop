@@ -154,6 +154,7 @@
                 "default": "Default",
                 "force-show": "Force show",
                 "hide": "Hide",
+                "swap": "Swap like buttons order",
                 "label": "Like buttons"
               },
               "custom-window-title": {
@@ -217,13 +218,6 @@
     "ad-speedup": {
       "description": "If an ad play it mutes the audio and sets playback speed to 16x",
       "name": "Ad Speedup"
-    },
-    "adblocker": {
-      "description": "Block all ads and tracking out of the box",
-      "menu": {
-        "blocker": "Blocker"
-      },
-      "name": "Ad Blocker"
     },
     "album-actions": {
       "description": "Adds Undislike, Dislike, Like, and Unlike buttons to apply this to all songs in a playlist or album",
@@ -412,6 +406,17 @@
         "no-captions": "No captions available for this song"
       }
     },
+    "clock": {
+      "description": "Add a clock to the navigation bar",
+      "name": "Clock",
+      "menu": {
+        "format": {
+          "label": "Format",
+          "display-seconds": "Display Seconds",
+          "24-hour-format": "24-Hour Format"
+        }
+      }
+    },
     "compact-sidebar": {
       "description": "Always set the sidebar in compact mode",
       "name": "Compact Sidebar"
@@ -491,6 +496,13 @@
           "title": "Set inactivity timeout"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Block all tracking out of the box",
+      "menu": {
+        "blocker": "Blocker"
+      },
+      "name": "Do Not Track"
     },
     "downloader": {
       "backend": {
@@ -879,6 +891,24 @@
         "show-time-codes": {
           "label": "Show time codes",
           "tooltip": "Show the time codes next to the lyrics"
+        },
+        "convert-chinese-character": {
+          "label": "Convert Chinese character",
+          "submenu": {
+            "disabled": {
+              "label": "Disabled",
+              "tooltip": "Disable Chinese character conversion"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplified to Traditional",
+              "tooltip": "Convert Simplified Chinese to Traditional Chinese"
+            },
+            "traditional-to-simplified": {
+              "label": "Traditional to Simplified",
+              "tooltip": "Convert Traditional Chinese to Simplified Chinese"
+            }
+          },
+          "tooltip": "Convert Chinese character to Traditional or Simplified"
         }
       },
       "name": "Synced Lyrics",
@@ -914,8 +944,13 @@
           "label": "Type",
           "submenu": {
             "acrylic": "Acrylic",
+            "content": "Content",
+            "fullscreen-ui": "Fullscreen UI",
             "mica": "Mica",
             "tabbed": "Tabbed",
+            "under-page": "Under Page",
+            "under-window": "Under Window",
+            "window": "Window",
             "none": "None"
           }
         }

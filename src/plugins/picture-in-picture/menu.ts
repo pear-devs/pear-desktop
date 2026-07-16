@@ -1,13 +1,11 @@
 import prompt from 'custom-electron-prompt';
 
+import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 
-import { t } from '@/i18n';
-
 import type { PictureInPicturePluginConfig } from './index';
-
-import type { MenuContext } from '@/types/contexts';
 import type { MenuTemplate } from '@/menu';
+import type { MenuContext } from '@/types/contexts';
 
 export const onMenu = async ({
   window,

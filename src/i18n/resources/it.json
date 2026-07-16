@@ -161,7 +161,8 @@
                 "default": "Predefinito",
                 "force-show": "Forza la visualizzazione",
                 "hide": "Nascondi",
-                "label": "Pulsanti Like"
+                "label": "Pulsanti Like",
+                "swap": "Scambia l'ordine dei pulsanti like"
               },
               "remove-upgrade-button": "Rimuovi il pulsante aggiorna",
               "theme": {
@@ -218,13 +219,6 @@
       "description": "Se viene riprodotto un annuncio, l'audio viene disattivato e viene impostata la velocità di riproduzione su 16x",
       "name": "Accelerazione ad"
     },
-    "adblocker": {
-      "description": "Blocca tutti gli annunci e i tracker",
-      "menu": {
-        "blocker": "Blocco"
-      },
-      "name": "Ad blocker"
-    },
     "album-actions": {
       "description": "Aggiunge i pulsanti Undislike, Dislike, Like e Unlike a tutti i brani di una playlist o di un album",
       "name": "Azioni album"
@@ -238,7 +232,7 @@
             "percent": "{{ratio}}%"
           }
         },
-        "enable-seekbar": "Abilita tematizzazione della seekbar"
+        "enable-seekbar": "Abilita tematizzazione della barra di regolazione"
       },
       "name": "Tema abbinato a colore album"
     },
@@ -411,6 +405,17 @@
         "caption-disabled": "Sottotitoli disattivati",
         "no-captions": "Nessun sottotitolo disponibile per questa canzone"
       }
+    },
+    "clock": {
+      "description": "Aggiungi un orologio alla barra di navigazione",
+      "menu": {
+        "format": {
+          "24-hour-format": "Formato in 24 ore",
+          "display-seconds": "Mostra Secondi",
+          "label": "Formato"
+        }
+      },
+      "name": "Orologio"
     },
     "compact-sidebar": {
       "description": "Imposta sempre la barra laterale in modalità compatta",
@@ -830,6 +835,24 @@
         "not-found": "⚠️ Nessun testo trovato per questa canzone."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Convertire i caratteri Cinesi",
+          "submenu": {
+            "disabled": {
+              "label": "Disabilitato",
+              "tooltip": "Disabilita conversione caretteri Cinesi"
+            },
+            "simplified-to-traditional": {
+              "label": "Semplificato al Tradizionale",
+              "tooltip": "Converti Cinese Semplificato in Cinese Tradizionale"
+            },
+            "traditional-to-simplified": {
+              "label": "Da Tradizionale a Semplificato",
+              "tooltip": "Converti Cinese Tradizionale a Cinese Semplificato"
+            }
+          },
+          "tooltip": "Converti carettere Cinese da Tradizionale a Semplificato"
+        },
         "default-text-string": {
           "label": "Carattere predefinito tra i testi",
           "tooltip": "Scegliere il carattere predefinito da utilizzare per l'intervallo tra i testi"
