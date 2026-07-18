@@ -5,7 +5,13 @@ import { startingPages } from '@/providers/extracted-data';
 
 import type { SettingsGroup } from '@/types/settings';
 
-export type AppSectionId = 'general' | 'appearance' | 'window' | 'advanced';
+export type AppSectionId =
+  | 'general'
+  | 'appearance'
+  | 'window'
+  | 'advanced'
+  | 'plugins'
+  | 'about';
 
 export interface AppSection {
   id: AppSectionId;
@@ -293,6 +299,20 @@ export const buildAppSections = async (): Promise<AppSection[]> => {
           ],
         },
       ],
+    },
+    {
+      id: 'plugins',
+      icon: 'puzzle',
+      label: () => t('settings-ui.sections.plugins.label'),
+      sub: () => t('settings-ui.sections.plugins.sub'),
+      groups: [],
+    },
+    {
+      id: 'about',
+      icon: 'info',
+      label: () => t('settings-ui.sections.about.label'),
+      sub: () => t('settings-ui.sections.about.sub'),
+      groups: [],
     },
   ];
 };

@@ -693,6 +693,88 @@
   background: var(--sui-surface-highest);
 }
 
+/* ---- about section ---- */
+.sui-about {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sui-about__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  padding: 8px 0 12px;
+}
+.sui-about__logo {
+  width: 88px;
+  height: 88px;
+  margin-bottom: 8px;
+  display: block;
+}
+.sui-about__name {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--sui-on-surface);
+}
+.sui-about__version {
+  font-size: 13px;
+  color: var(--sui-on-surface-variant);
+}
+.sui-about__tagline {
+  font-size: 13px;
+  color: var(--sui-on-surface-variant);
+  max-width: 420px;
+}
+.sui-about__card {
+  padding: 16px 18px;
+}
+.sui-about__section-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--sui-on-surface-variant);
+  margin-bottom: 12px;
+}
+.sui-about__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+}
+.sui-about__grid-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+}
+.sui-about__grid-row dt {
+  color: var(--sui-on-surface-variant);
+}
+.sui-about__grid-row dd {
+  margin: 0;
+  color: var(--sui-on-surface);
+  font-variant-numeric: tabular-nums;
+}
+.sui-about__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.sui-about__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.sui-about__credits {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--sui-on-surface-variant);
+}
+
 /* ---- scrollbars inside the modal ---- */
 .sui-nav::-webkit-scrollbar,
 .sui-body::-webkit-scrollbar {

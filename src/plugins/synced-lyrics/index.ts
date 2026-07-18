@@ -55,10 +55,22 @@ export default createPlugin<
       key: 'lineEffect',
       label: () => t('plugins.synced-lyrics.settings.line-effect'),
       options: [
-        { value: 'fancy', label: () => t('plugins.synced-lyrics.settings.effect.fancy') },
-        { value: 'scale', label: () => t('plugins.synced-lyrics.settings.effect.scale') },
-        { value: 'offset', label: () => t('plugins.synced-lyrics.settings.effect.offset') },
-        { value: 'focus', label: () => t('plugins.synced-lyrics.settings.effect.focus') },
+        {
+          value: 'fancy',
+          label: () => t('plugins.synced-lyrics.settings.effect.fancy'),
+        },
+        {
+          value: 'scale',
+          label: () => t('plugins.synced-lyrics.settings.effect.scale'),
+        },
+        {
+          value: 'offset',
+          label: () => t('plugins.synced-lyrics.settings.effect.offset'),
+        },
+        {
+          value: 'focus',
+          label: () => t('plugins.synced-lyrics.settings.effect.focus'),
+        },
       ],
     },
   ],

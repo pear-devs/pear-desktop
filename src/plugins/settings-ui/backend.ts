@@ -1,4 +1,7 @@
-import { app, dialog, type OpenDialogOptions } from 'electron';
+import os from 'node:os';
+
+import { app, dialog, shell, type OpenDialogOptions } from 'electron';
+import electronUpdater from 'electron-updater';
 
 import * as config from '@/config';
 import { restart } from '@/providers/app-controls';
@@ -40,9 +43,30 @@ export const backend = createBackend<
     );
     ipc.handle('ytmd-sui:restart', () => restart());
     ipc.handle('ytmd-sui:app-meta', () => ({
+      name: app.getName(),
       version: app.getVersion(),
       platform: process.platform,
+      arch: process.arch,
+      osVersion: `${os.type()} ${os.release()}`,
+      versions: {
+        electron: process.versions.electron,
+        chrome: process.versions.chrome,
+        node: process.versions.node,
+      },
     }));
+
+    ipc.handle('ytmd-sui:open-external', async (url: string) => {
+      try {
+        const { protocol } = new URL(url);
+        if (protocol === 'https:' || protocol === 'http:') {
+          await shell.openExternal(url);
+        }
+      } catch {}
+    });
+
+    ipc.handle('ytmd-sui:check-updates', () =>
+      electronUpdater.autoUpdater.checkForUpdatesAndNotify(),
+    );
 
     this.unwatch = config.watch(() => {
       window.webContents.send('ytmd-sui:store-changed', config.getStore());
@@ -62,6 +86,8 @@ export const backend = createBackend<
       'ytmd-sui:toggle-devtools',
       'ytmd-sui:restart',
       'ytmd-sui:app-meta',
+      'ytmd-sui:open-external',
+      'ytmd-sui:check-updates',
     ]) {
       ctx.ipc.removeHandler(channel);
     }

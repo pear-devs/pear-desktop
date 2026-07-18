@@ -1069,6 +1069,24 @@
     "restart-pill": "restart",
     "restart-pill-hint": "Requires restart",
     "refresh-options": "Refresh options",
+    "about": {
+      "tagline": "A feature-rich desktop app for YouTube Music",
+      "versions": "Versions",
+      "version-app": "App",
+      "version-electron": "Electron",
+      "version-chromium": "Chromium",
+      "version-node": "Node.js",
+      "version-platform": "Platform",
+      "links": "Links",
+      "link-repo": "Repository",
+      "link-issue": "Report an issue",
+      "link-releases": "Releases",
+      "link-license": "License",
+      "actions": "Actions",
+      "check-updates": "Check for updates",
+      "copy-debug": "Copy debug info",
+      "copied": "Copied!"
+    },
     "sections": {
       "general": {
         "label": "General",
@@ -1089,6 +1107,10 @@
       "plugins": {
         "label": "Plugins",
         "sub": "Enable plugins and configure them"
+      },
+      "about": {
+        "label": "About",
+        "sub": "Version, Check for updates, App info"
       }
     },
     "groups": {

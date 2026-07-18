@@ -12,6 +12,7 @@ import { allPlugins, rendererPlugins } from 'virtual:plugins';
 import { t } from '@/i18n';
 import { toSettingsGroups, type SettingsGroup } from '@/types/settings';
 
+import { AboutSection } from './AboutSection';
 import { Icon } from './Icon';
 import { PluginCard } from './PluginCard';
 import { SettingsField } from './SettingsField';
@@ -113,16 +114,20 @@ export const SettingsModal = (props: {
     onCleanup(() => window.removeEventListener('keydown', onKey));
   });
 
-  const enabledCount = createMemo(() => {
+  const enabledPluginList = createMemo(() => {
     const list = plugins() ?? [];
     const snap = store();
-    if (!snap) return 0;
+    if (!snap) return [] as PluginMeta[];
     return list.filter(
       (p) =>
         (snap.plugins as Record<string, { enabled?: boolean }>)[p.id]
           ?.enabled ?? (p.config.enabled as boolean),
-    ).length;
+    );
   });
+  const enabledCount = createMemo(() => enabledPluginList().length);
+  const enabledPluginNames = createMemo(() =>
+    enabledPluginList().map((p) => p.name),
+  );
 
   const flagIfRestart = (
     requirement: RestartRequirement,
@@ -326,28 +331,14 @@ export const SettingsModal = (props: {
                 >
                   <Icon name={section.icon} size={20} />
                   <span>{section.label()}</span>
+                  <Show when={section.id === 'plugins'}>
+                    <span class="sui-nav__count">
+                      {enabledCount()}/{(plugins() ?? []).length}
+                    </span>
+                  </Show>
                 </button>
               )}
             </For>
-            <button
-              class="sui-nav__item"
-              classList={{
-                'sui-nav__item--active':
-                  !isSearching() && active() === 'plugins',
-              }}
-              onClick={() => {
-                setActive('plugins');
-                setQuery('');
-                setExpanded(null);
-              }}
-              type="button"
-            >
-              <Icon name="puzzle" size={20} />
-              <span>{t('settings-ui.sections.plugins.label')}</span>
-              <span class="sui-nav__count">
-                {enabledCount()}/{(plugins() ?? []).length}
-              </span>
-            </button>
           </nav>
 
           <div class="sui-sidebar__foot">
@@ -450,6 +441,12 @@ export const SettingsModal = (props: {
 
               {/* section mode */}
               <Show when={!isSearching()}>
+                <For each={currentSection()?.groups ?? []}>
+                  {(group) => (
+                    <AppGroupView group={group} title={group.title?.()} />
+                  )}
+                </For>
+
                 <Show when={active() === 'plugins'}>
                   <For each={plugins()}>
                     {(meta) => (
@@ -488,32 +485,32 @@ export const SettingsModal = (props: {
                   </For>
                 </Show>
 
-                <Show when={active() !== 'plugins'}>
-                  <For each={currentSection()?.groups ?? []}>
-                    {(group) => (
-                      <AppGroupView group={group} title={group.title?.()} />
-                    )}
-                  </For>
-                  <Show when={active() === 'advanced'}>
-                    <div class="sui-actions">
-                      <button
-                        class="sui-outlinedbtn"
-                        onClick={() => bridge.toggleDevTools()}
-                        type="button"
-                      >
-                        {t(
-                          'main.menu.options.submenu.advanced-options.submenu.toggle-dev-tools',
-                        )}
-                      </button>
-                      <button
-                        class="sui-outlinedbtn"
-                        onClick={() => bridge.configEdit()}
-                        type="button"
-                      >
-                        {t('settings-ui.edit-config')}
-                      </button>
-                    </div>
-                  </Show>
+                <Show when={active() === 'advanced'}>
+                  <div class="sui-actions">
+                    <button
+                      class="sui-outlinedbtn"
+                      onClick={() => bridge.toggleDevTools()}
+                      type="button"
+                    >
+                      {t(
+                        'main.menu.options.submenu.advanced-options.submenu.toggle-dev-tools',
+                      )}
+                    </button>
+                    <button
+                      class="sui-outlinedbtn"
+                      onClick={() => bridge.configEdit()}
+                      type="button"
+                    >
+                      {t('settings-ui.edit-config')}
+                    </button>
+                  </div>
+                </Show>
+
+                <Show when={active() === 'about'}>
+                  <AboutSection
+                    enabledPlugins={enabledPluginNames()}
+                    meta={appMeta()}
+                  />
                 </Show>
               </Show>
             </Show>

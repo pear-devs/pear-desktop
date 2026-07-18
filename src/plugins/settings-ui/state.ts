@@ -11,8 +11,16 @@ export type PluginConfigMap = Record<
 >;
 
 export interface AppMeta {
+  name: string;
   version: string;
   platform: string;
+  arch: string;
+  osVersion: string;
+  versions: {
+    electron: string;
+    chrome: string;
+    node: string;
+  };
 }
 
 // ---- reactive config snapshot (seeded + pushed from the backend) ----
@@ -50,6 +58,8 @@ export const bridge = {
   toggleDevTools: () => ipc!.invoke('ytmd-sui:toggle-devtools'),
   restart: () => ipc!.invoke('ytmd-sui:restart'),
   appMeta: () => ipc!.invoke('ytmd-sui:app-meta') as Promise<AppMeta>,
+  openExternal: (url: string) => ipc!.invoke('ytmd-sui:open-external', url),
+  checkUpdates: () => ipc!.invoke('ytmd-sui:check-updates'),
 };
 
 export const refreshStore = async () => {
