@@ -29,9 +29,18 @@ export interface PluginCardProps {
 export const PluginCard = (props: PluginCardProps) => (
   <div class="sui-card">
     <div
+      aria-expanded={props.hasSettings ? props.expanded : undefined}
       class="sui-card__head"
       classList={{ 'sui-card__head--clickable': props.hasSettings }}
       onClick={() => props.hasSettings && props.onExpand()}
+      onKeyDown={(e) => {
+        if (props.hasSettings && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          props.onExpand();
+        }
+      }}
+      role={props.hasSettings ? 'button' : undefined}
+      tabindex={props.hasSettings ? 0 : undefined}
     >
       <div class="sui-field__text">
         <div class="sui-field__label-line">
@@ -57,7 +66,11 @@ export const PluginCard = (props: PluginCardProps) => (
         onClick={(e) => e.stopPropagation()}
         style={{ display: 'inline-flex' }}
       >
-        <Switch checked={props.enabled} onChange={(v) => props.onToggle(v)} />
+        <Switch
+          checked={props.enabled}
+          label={props.name}
+          onChange={(v) => props.onToggle(v)}
+        />
       </div>
     </div>
 

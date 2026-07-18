@@ -63,7 +63,7 @@ unhandled({
 
 // Prevent window being garbage collected
 let mainWindow: Electron.BrowserWindow | null;
-let settingsRestartSessionOpen = false;
+const settingsRestartSessions = new Set<number>();
 const pendingSettingsRestartRequirements = new Map<
   string,
   RestartRequirement
@@ -210,15 +210,21 @@ const initHook = async (win: BrowserWindow) => {
     pendingSettingsRestartRequirements.set(key, requirement);
   };
 
-  ipcMain.handle('ytmd-sui:restart-session-open', () => {
-    settingsRestartSessionOpen = true;
-    pendingSettingsRestartRequirements.clear();
+  ipcMain.handle('ytmd-sui:restart-session-open', (event) => {
+    // First active session starts a fresh batch; later ones join it.
+    if (settingsRestartSessions.size === 0) {
+      pendingSettingsRestartRequirements.clear();
+    }
+    settingsRestartSessions.add(event.sender.id);
   });
   ipcMain.handle(
     'ytmd-sui:restart-session-close',
-    async (_, requirements: RestartRequirement[]) => {
-      settingsRestartSessionOpen = false;
+    async (event, requirements: RestartRequirement[]) => {
+      settingsRestartSessions.delete(event.sender.id);
       requirements.forEach(addPendingSettingsRestartRequirement);
+
+      // Keep batching while any settings window remains active.
+      if (settingsRestartSessions.size > 0) return;
 
       const pending = [...pendingSettingsRestartRequirements.values()];
       pendingSettingsRestartRequirements.clear();
@@ -274,7 +280,7 @@ const initHook = async (win: BrowserWindow) => {
 
           if (allPluginStubs[id]?.restartNeeded) {
             const requirement: RestartRequirement = { type: 'plugin', id };
-            if (settingsRestartSessionOpen) {
+            if (settingsRestartSessions.size > 0) {
               addPendingSettingsRestartRequirement(requirement);
             } else {
               showNeedToRestartDialog([requirement]);

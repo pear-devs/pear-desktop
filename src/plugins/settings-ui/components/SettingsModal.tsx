@@ -63,6 +63,8 @@ export const SettingsModal = (props: {
     RestartRequirement[]
   >([]);
   let isClosing = false;
+  let searchInputRef: HTMLInputElement | undefined;
+  let previousFocus: HTMLElement | null = null;
 
   const [appSections] = createResource(async () =>
     (await buildAppSections()).map((section) => ({
@@ -107,11 +109,18 @@ export const SettingsModal = (props: {
   onMount(() => {
     bridge.restartSessionOpen();
 
+    // Move focus into the dialog, restoring it to the trigger on close.
+    previousFocus = document.activeElement as HTMLElement | null;
+    searchInputRef?.focus();
+
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') close();
     };
     window.addEventListener('keydown', onKey);
-    onCleanup(() => window.removeEventListener('keydown', onKey));
+    onCleanup(() => {
+      window.removeEventListener('keydown', onKey);
+      previousFocus?.focus?.();
+    });
   });
 
   const enabledPluginList = createMemo(() => {
@@ -151,10 +160,12 @@ export const SettingsModal = (props: {
     isClosing = true;
 
     const requirements = restartRequirements();
-    props.onClose();
-    flushPendingPluginSliderWrites().finally(() =>
-      bridge.restartSessionClose(requirements),
-    );
+    // Flush debounced slider writes before the window closes so recent
+    // changes aren't lost.
+    flushPendingPluginSliderWrites().finally(() => {
+      props.onClose();
+      bridge.restartSessionClose(requirements);
+    });
   };
 
   // ---- app-option value plumbing ----
@@ -308,6 +319,7 @@ export const SettingsModal = (props: {
             <input
               onInput={(e) => setQuery(e.currentTarget.value)}
               placeholder={t('settings-ui.search-placeholder')}
+              ref={(el) => (searchInputRef = el)}
               type="text"
               value={query()}
             />
@@ -384,7 +396,11 @@ export const SettingsModal = (props: {
               </button>
               <button
                 class="sui-restart__now"
-                onClick={() => bridge.restart()}
+                onClick={() =>
+                  flushPendingPluginSliderWrites().finally(() =>
+                    bridge.restart(),
+                  )
+                }
                 type="button"
               >
                 {t('settings-ui.restart-now')}

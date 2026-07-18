@@ -21,10 +21,12 @@ export const backend = createBackend<
     ipc.handle('ytmd-sui:load-store', () => config.getStore());
 
     ipc.handle('ytmd-sui:option-set', (key: string, value: unknown) => {
+      if (typeof key !== 'string' || !key) return;
       config.set(key, value);
     });
 
     ipc.handle('ytmd-sui:plugin-toggle', (id: string, enabled: boolean) => {
+      if (typeof id !== 'string' || !id || typeof enabled !== 'boolean') return;
       if (enabled) config.plugins.enable(id);
       else config.plugins.disable(id);
     });

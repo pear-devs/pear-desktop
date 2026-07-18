@@ -6,10 +6,12 @@ type OptionValue = string | number;
 
 export const Switch = (props: {
   checked: boolean;
+  label?: string;
   onChange: (value: boolean) => void;
 }) => (
   <button
     aria-checked={props.checked}
+    aria-label={props.label}
     class="sui-switch"
     classList={{ 'sui-switch--on': props.checked }}
     onClick={() => props.onChange(!props.checked)}
@@ -29,6 +31,7 @@ export const RadioGroup = (props: {
     <For each={props.options}>
       {(opt) => (
         <button
+          aria-pressed={props.value === opt.value}
           class="sui-chip"
           classList={{ 'sui-chip--selected': props.value === opt.value }}
           onClick={() => props.onChange(opt.value)}
@@ -179,6 +182,7 @@ export const CheckGroup = (props: {
       <For each={props.options}>
         {(opt) => (
           <button
+            aria-pressed={props.values.includes(opt.value)}
             class="sui-chip"
             classList={{
               'sui-chip--selected': props.values.includes(opt.value),

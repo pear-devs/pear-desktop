@@ -145,6 +145,7 @@ export const SettingsField = (props: SettingsFieldProps) => {
         <Show when={field().type === 'switch'}>
           <Switch
             checked={Boolean(props.value)}
+            label={field().label()}
             onChange={(v) => props.onChange(v)}
           />
         </Show>
