@@ -1,6 +1,12 @@
 import os from 'node:os';
 
-import { app, dialog, shell, type OpenDialogOptions } from 'electron';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  shell,
+  type OpenDialogOptions,
+} from 'electron';
 import electronUpdater from 'electron-updater';
 
 import * as config from '@/config';
@@ -71,7 +77,15 @@ export const backend = createBackend<
     );
 
     this.unwatch = config.watch(() => {
-      window.webContents.send('ytmd-sui:store-changed', config.getStore());
+      const store = config.getStore();
+      // Broadcast to every window: the injected modal lives in the main
+      // window, but the standalone tray settings window is a separate
+      // BrowserWindow that must also stay in sync.
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (!win.isDestroyed()) {
+          win.webContents.send('ytmd-sui:store-changed', store);
+        }
+      }
     });
   },
 
