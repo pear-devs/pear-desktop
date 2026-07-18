@@ -78,22 +78,27 @@ export const PluginCard = (props: PluginCardProps) => (
       <div class="sui-card__body">
         <For each={props.groups}>
           {(group) => (
-            <For each={group.fields}>
-              {(field) => (
-                <SettingsField
-                  accessors={{
-                    getValue: props.getValue,
-                    setValue: props.setValue,
-                    setSliderValue: props.setSliderValue,
-                  }}
-                  field={field}
-                  onChange={(v) => props.setValue(field.key, v)}
-                  onSliderChange={(v) => props.setSliderValue(field.key, v)}
-                  resolveComponent={props.resolveComponent}
-                  value={props.getValue(field.key)}
-                />
-              )}
-            </For>
+            <>
+              <Show when={group.title}>
+                <div class="sui-card__group-title">{group.title!()}</div>
+              </Show>
+              <For each={group.fields}>
+                {(field) => (
+                  <SettingsField
+                    accessors={{
+                      getValue: props.getValue,
+                      setValue: props.setValue,
+                      setSliderValue: props.setSliderValue,
+                    }}
+                    field={field}
+                    onChange={(v) => props.setValue(field.key, v)}
+                    onSliderChange={(v) => props.setSliderValue(field.key, v)}
+                    resolveComponent={props.resolveComponent}
+                    value={props.getValue(field.key)}
+                  />
+                )}
+              </For>
+            </>
           )}
         </For>
       </div>
