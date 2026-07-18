@@ -1,4 +1,6 @@
 // This is used for to control the songs
+import { randomUUID } from 'node:crypto';
+
 import { type BrowserWindow, ipcMain } from 'electron';
 
 import { LikeType } from '@/types/datahost-get-state';
@@ -115,6 +117,30 @@ export const getSongControls = (win: BrowserWindow) => {
         queueInsertPosition,
       );
     },
+    addSongsToPlaylist: (playlistId: string, videoIds: string[]) =>
+      new Promise<void>((resolve, reject) => {
+        const responseChannel = `peard:add-songs-to-playlist-response:${randomUUID()}`;
+        const timeout = setTimeout(() => {
+          ipcMain.removeAllListeners(responseChannel);
+          reject(new Error('Adding songs to playlist timed out'));
+        }, 10_000);
+
+        ipcMain.once(responseChannel, (_, error?: string) => {
+          clearTimeout(timeout);
+          if (error) {
+            reject(new Error(error));
+          } else {
+            resolve();
+          }
+        });
+
+        win.webContents.send(
+          'peard:add-songs-to-playlist',
+          responseChannel,
+          playlistId,
+          videoIds,
+        );
+      }),
     moveSongInQueue: (
       fromIndex: ArgsType<number>,
       toIndex: ArgsType<number>,
