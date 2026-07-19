@@ -101,6 +101,16 @@ export const onMenu = async ({
       },
     },
     {
+      label: t('plugins.discord.menu.hide-artist-image'),
+      type: 'checkbox',
+      checked: config.hideArtistImage,
+      click(item: Electron.MenuItem) {
+        setConfig({
+          hideArtistImage: item.checked,
+        });
+      },
+    },
+    {
       label: t('plugins.discord.menu.set-inactivity-timeout'),
       click: () => setInactivityTimeout(window, config),
     },
