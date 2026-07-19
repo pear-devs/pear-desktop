@@ -39,45 +39,33 @@ export class LRCLib implements LyricProvider {
       throw new Error(`Expected an array, instead got ${typeof data}`);
     }
 
+    // Flag to skip strict artist matching if we fall back to global search
+    let isFallback = false;
+
     if (data.length === 0) {
       if (!config()?.showLyricsEvenIfInexact) {
         return null;
       }
-
       // Try to search with the alternative title (original language)
+      isFallback = true;
       const trackName = alternativeTitle || title;
-      query = new URLSearchParams({ q: `${trackName}` });
+      query = new URLSearchParams({ q: trackName });
       url = `${this.baseUrl}/api/search?${query.toString()}`;
 
       response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`bad HTTPStatus(${response.statusText})`);
-      }
-
-      data = (await response.json()) as LRCLIBSearchResponse;
-      if (!Array.isArray(data)) {
-        throw new Error(`Expected an array, instead got ${typeof data}`);
-      }
-
-      // If still no results, try with the original title as fallback
-      if (data.length === 0 && alternativeTitle) {
-        query = new URLSearchParams({ q: title });
-        url = `${this.baseUrl}/api/search?${query.toString()}`;
-
-        response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`bad HTTPStatus(${response.statusText})`);
-        }
-
+      if (response.ok) {
         data = (await response.json()) as LRCLIBSearchResponse;
-        if (!Array.isArray(data)) {
-          throw new Error(`Expected an array, instead got ${typeof data}`);
-        }
       }
     }
 
     const filteredResults = [];
     for (const item of data) {
+      // If we found lyrics via fallback query, skip strict artist matching
+      if (isFallback) {
+        filteredResults.push(item);
+        continue;
+      }
+
       const { artistName } = item;
 
       const artists = artist.split(/[&,]/g).map((i) => i.trim());
@@ -113,9 +101,8 @@ export class LRCLib implements LyricProvider {
             tagPermutations.push([tag.toLowerCase(), itemArtist.toLowerCase()]);
           }
         }
-
-        // Compare each item artist with each tag
-        for (const itemArtist of itemArtists) {
+        
+          // Compare each item artist with each tag
           for (const tag of filteredTags) {
             tagPermutations.push([itemArtist.toLowerCase(), tag.toLowerCase()]);
           }
@@ -125,8 +112,6 @@ export class LRCLib implements LyricProvider {
           const tagRatio = Math.max(
             ...tagPermutations.map(([x, y]) => jaroWinkler(x, y)),
           );
-
-          // Use the best match ratio between direct artist match and tag match
           ratio = Math.max(ratio, tagRatio);
         }
       }
