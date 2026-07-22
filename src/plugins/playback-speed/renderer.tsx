@@ -52,6 +52,7 @@ export const onPlayerApiReady = async (
 ) => {
   const config = await context.getConfig();
   setVarispeed(config.varispeed);
+  linkPitch();
 
   context.ipc.on('config-changed', (id: string, newConfig: PlaybackSpeedConfig) => {
     if (id === 'playback-speed') {
