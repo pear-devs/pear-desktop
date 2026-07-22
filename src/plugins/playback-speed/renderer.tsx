@@ -2,6 +2,9 @@ import { createSignal } from 'solid-js';
 import { render } from 'solid-js/web';
 
 import { t } from '@/i18n';
+import type { RendererContext } from '@/types/contexts';
+import type { MusicPlayer } from '@/types/music-player';
+import type { PluginConfig } from '@/types/plugins';
 import {
   isMusicOrVideoTrack,
   isPlayerMenu,
@@ -9,6 +12,10 @@ import {
 import { getSongMenu } from '@/providers/dom-elements';
 
 import { PlaybackSpeedSlider } from './components/slider';
+
+interface PlaybackSpeedConfig extends PluginConfig {
+  varispeed: boolean;
+}
 
 const MIN_PLAYBACK_SPEED = 0.07;
 const MAX_PLAYBACK_SPEED = 16;
@@ -25,19 +32,44 @@ const forcePlaybackRate = (e: Event) => {
 const roundToTwo = (n: number) => Math.round(n * 1e2) / 1e2;
 
 const [speed, setSpeed] = createSignal(1);
+const [varispeed, setVarispeed] = createSignal(false);
 const sliderContainer = document.createElement('div');
 
-export const onPlayerApiReady = () => {
+export const linkPitch = () => {
+      const videoElement = document.querySelector<HTMLVideoElement>('video');
+      if (videoElement) {
+        if(varispeed()){
+          videoElement.preservesPitch = false;
+        }else{
+          videoElement.preservesPitch = true;
+        }
+      }
+}
+
+export const onPlayerApiReady = async (
+  playerApi: MusicPlayer,
+  context: RendererContext<PlaybackSpeedConfig>,
+) => {
+  const config = await context.getConfig();
+  setVarispeed(config.varispeed);
+
+  context.ipc.on('config-changed', (id: string, newConfig: PlaybackSpeedConfig) => {
+    if (id === 'playback-speed') {
+      setVarispeed(newConfig.varispeed);
+      linkPitch();
+    }
+  });
+
   const observePopupContainer = () => {
     const updatePlayBackSpeed = () => {
       const videoElement = document.querySelector<HTMLVideoElement>('video');
       if (videoElement) {
         videoElement.playbackRate = speed();
+        linkPitch();
       }
 
       setSpeed(speed());
     };
-
     render(
       () => (
         <PlaybackSpeedSlider
