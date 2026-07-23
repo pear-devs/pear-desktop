@@ -85,6 +85,13 @@
     font-size: calc(var(--lyrics-font-size) * 0.7) !important;
     font-style: italic !important;
   }
+
+   & .text-lyrics > .translation {
+    color: #e28ba0 !important;
+    font-size: calc(var(--lyrics-font-size) * 0.7) !important;
+    font-style: italic !important;
+    opacity: 0.9;
+  }
 }
 
 .synced-lyrics {
@@ -130,6 +137,13 @@
     color: var(--ytmusic-text-secondary) !important;
     font-size: calc(var(--lyrics-font-size) * 0.7) !important;
     font-style: italic !important;
+  }
+
+      & > .translation {
+    color: #e28ba0 !important;
+    font-size: calc(var(--lyrics-font-size) * 0.7) !important;
+    font-style: italic !important;
+    opacity: 0.9;
   }
 }
 

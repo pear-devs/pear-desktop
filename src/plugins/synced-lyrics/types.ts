@@ -14,6 +14,9 @@ export type SyncedLyricsPluginConfig = {
     | 'simplifiedToTraditional'
     | 'traditionalToSimplified'
     | 'disabled';
+    //nuevo
+  translationEnabled: boolean;
+  translationTargetLang: string;
 };
 
 export type LineLyricsStatus = 'previous' | 'current' | 'upcoming';

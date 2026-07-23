@@ -10,6 +10,7 @@ import {
   convertChineseCharacter,
   romanize,
   simplifyUnicode,
+    translate, //nuevo
 } from '../utils';
 
 interface SyncedLineProps {
@@ -103,6 +104,18 @@ export const SyncedLine = (props: SyncedLineProps) => {
     });
   });
 
+  // ↓↓↓ CÓDIGO NUEVO — pégalo aquí ↓↓↓
+  const [translation, setTranslation] = createSignal('');
+  createEffect(() => {
+    if (!config()?.translationEnabled) {
+      setTranslation('');
+      return;
+    }
+    const targetLang = config()?.translationTargetLang ?? 'es';
+    translate(text(), targetLang).then(setTranslation);
+  });
+  // ↑↑↑ CÓDIGO NUEVO ↑↑↑
+
   return (
     <Show fallback={<EmptyLine {...props} />} when={text()}>
       <div
@@ -176,6 +189,31 @@ export const SyncedLine = (props: SyncedLineProps) => {
                             runs: [{ text: `${word} ` }],
                           }}
                         />
+                      </span>
+                    );
+                  }}
+                </For>
+              </span>
+            </Show>
+
+            <Show
+              when={
+                config()?.translationEnabled &&
+                translation() &&
+                simplifyUnicode(text()) !== simplifyUnicode(translation())
+              }
+            >
+              <span class="translation">
+                <For each={translation().split(' ')}>
+                  {(word, index) => {
+                    return (
+                      <span
+                        style={{
+                          'transition-delay': `${index() * 0.05}s`,
+                          'animation-delay': `${index() * 0.05}s`,
+                        }}
+                      >
+                        <yt-formatted-string text={{ runs: [{ text: `${word} ` }] }} />
                       </span>
                     );
                   }}

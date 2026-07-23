@@ -262,3 +262,36 @@ export const romanize = async (line: string) => {
 
   return line;
 };
+
+const translationCache = new Map<string, string>(); // key: `${targetLang}:${line}`
+
+export const translate = async (
+  line: string,
+  targetLang: string,
+): Promise<string> => {
+  if (!line.trim()) return '';
+
+  const cacheKey = `${targetLang}:${line}`;
+  const cached = translationCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  try {
+    const url = new URL('https://translate.googleapis.com/translate_a/single');
+    url.searchParams.set('client', 'gtx');
+    url.searchParams.set('sl', 'auto');
+    url.searchParams.set('tl', targetLang);
+    url.searchParams.set('dt', 't');
+    url.searchParams.set('q', line);
+
+    const res = await fetch(url.toString());
+    if (!res.ok) return line;
+
+    const data = (await res.json()) as [Array<[string]>, ...unknown[]];
+    const result = data[0].map((chunk: unknown[]) => chunk[0]).join('');
+
+    translationCache.set(cacheKey, result);
+    return result;
+  } catch {
+    return line; // si falla, no rompemos el render, solo no se muestra traducción
+  }
+};
