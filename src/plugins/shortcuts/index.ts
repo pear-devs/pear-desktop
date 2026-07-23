@@ -21,7 +21,7 @@ export default createPlugin({
   description: () => t('plugins.shortcuts.description'),
   restartNeeded: true,
   config: {
-    enabled: false,
+    enabled: true,
     overrideMediaKeys: false,
     global: {
       previous: '',
