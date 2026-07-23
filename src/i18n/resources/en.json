@@ -892,6 +892,14 @@
           "label": "Show time codes",
           "tooltip": "Show the time codes next to the lyrics"
         },
+        "show-translation": {
+          "label": "Show translation",
+          "tooltip": "Show a translated version of the lyrics"
+        },
+        "translation-language": {
+          "label": "Translation language",
+          "tooltip": "Language to translate the lyrics into"
+      },
         "convert-chinese-character": {
           "label": "Convert Chinese character",
           "submenu": {

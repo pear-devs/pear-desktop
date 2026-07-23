@@ -234,26 +234,28 @@ export const menu = async (
       },
     },
 {
-  label: 'Mostrar traducción',
-  type: 'checkbox',
-  checked: config.translationEnabled,
-  click(item) {
-    ctx.setConfig({
-      translationEnabled: item.checked,
-    });
-  },
-},
-{
-  label: 'Idioma de traducción',
-  type: 'submenu',
-  submenu: ['es', 'en', 'fr', 'de', 'ja', 'ko'].map((lang) => ({
-    label: lang,
-    type: 'radio',
-    checked: config.translationTargetLang === lang,
-    click() {
-      ctx.setConfig({ translationTargetLang: lang });
+      label: t('plugins.synced-lyrics.menu.show-translation.label'),
+      toolTip: t('plugins.synced-lyrics.menu.show-translation.tooltip'),
+      type: 'checkbox',
+      checked: config.translationEnabled,
+      click(item) {
+        ctx.setConfig({
+          translationEnabled: item.checked,
+        });
+      },
     },
-  })),
-},
+    {
+      label: t('plugins.synced-lyrics.menu.translation-language.label'),
+      toolTip: t('plugins.synced-lyrics.menu.translation-language.tooltip'),
+      type: 'submenu',
+      submenu: ['es', 'en', 'fr', 'de', 'ja', 'ko'].map((lang) => ({
+        label: lang,
+        type: 'radio',
+        checked: config.translationTargetLang === lang,
+        click() {
+          ctx.setConfig({ translationTargetLang: lang });
+        },
+      })),
+    },
 ];
 };
