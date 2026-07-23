@@ -1,3 +1,5 @@
+import type { PlayerState } from './player-state';
+
 export interface GetPlayerResponse {
   responseContext: ResponseContext;
   playabilityStatus: PlayabilityStatus;
@@ -469,6 +471,7 @@ export interface GetPlayerResponseVideoDetails {
   isLiveContent: boolean;
   elapsedSeconds: number;
   isPaused: boolean;
+  playerState?: PlayerState;
 
   // music only
   album?: string | null;

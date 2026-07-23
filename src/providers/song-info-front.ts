@@ -1,4 +1,5 @@
 import { LikeType, type GetState } from '@/types/datahost-get-state';
+import { PlayerState } from '@/types/player-state';
 
 import { singleton } from './decorators';
 
@@ -12,6 +13,14 @@ import type {
 import type { VideoDataChanged } from '@/types/video-data-changed';
 
 const DATAUPDATED_FALLBACK_TIMEOUT_MS = 1500;
+
+/**
+ * A track is considered "paused" for everything except active playback and
+ * buffering. Buffering is transient and resumes on its own, so it is treated as
+ * playing; paused, cued, unstarted and ended all count as paused.
+ */
+const isPausedState = (state: PlayerState): boolean =>
+  state !== PlayerState.Playing && state !== PlayerState.Buffering;
 
 let songInfo: SongInfo = {} as SongInfo;
 export const getSongInfo = () => songInfo;
@@ -225,22 +234,18 @@ export const setupSongInfo = (api: MusicPlayer) => {
     setupSeekedListener();
   });
 
-  const playPausedHandler = (e: Event, status: string) => {
-    if (
-      e.target instanceof HTMLVideoElement &&
-      Math.round(e.target.currentTime) > 0
-    ) {
-      window.ipcRenderer.send('peard:play-or-paused', {
-        isPaused: status === 'pause',
-        elapsedSeconds: Math.floor(e.target.currentTime),
-      });
+  api.addEventListener('onStateChange', () => {
+    const state = api.getPlayerState() as PlayerState;
+    if (state === PlayerState.Ended) {
+      window.ipcRenderer.send('peard:video-ended');
+      return;
     }
-  };
-
-  const playPausedHandlers = {
-    playing: (e: Event) => playPausedHandler(e, 'playing'),
-    pause: (e: Event) => playPausedHandler(e, 'pause'),
-  };
+    window.ipcRenderer.send('peard:play-or-paused', {
+      isPaused: isPausedState(state),
+      elapsedSeconds: Math.floor(api.getCurrentTime()),
+      playerState: state,
+    });
+  });
 
   const videoEventDispatcher = async (
     name: string,
@@ -278,11 +283,6 @@ export const setupSongInfo = (api: MusicPlayer) => {
       const video = document.querySelector<HTMLVideoElement>('video');
       video?.dispatchEvent(srcChangedEvent);
 
-      for (const status of ['playing', 'pause'] as const) {
-        // for fix issue that pause event not fired
-        video?.addEventListener(status, playPausedHandlers[status]);
-      }
-
       clearVideoTimeout(videoData.videoId);
       waitingEvent.add(videoData.videoId);
 
@@ -301,10 +301,6 @@ export const setupSongInfo = (api: MusicPlayer) => {
   const video = document.querySelector('video');
 
   if (video) {
-    for (const status of ['playing', 'pause'] as const) {
-      video.addEventListener(status, playPausedHandlers[status]);
-    }
-
     if (!isNaN(video.duration)) {
       const {
         title,
@@ -349,8 +345,10 @@ export const setupSongInfo = (api: MusicPlayer) => {
       playerOverlay?.playerOverlayRenderer?.browserMediaSession?.browserMediaSessionRenderer?.album?.runs?.at(
         0,
       )?.text;
-    data.videoDetails.elapsedSeconds = 0;
-    data.videoDetails.isPaused = false;
+    const playerState = api.getPlayerState() as PlayerState;
+    data.videoDetails.elapsedSeconds = Math.floor(api.getCurrentTime());
+    data.videoDetails.isPaused = isPausedState(playerState);
+    data.videoDetails.playerState = playerState;
 
     window.ipcRenderer.send('peard:video-src-changed', data);
   }
