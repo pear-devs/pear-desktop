@@ -9,11 +9,12 @@ import lazyVar from 'lazy-var';
 import { pinyin } from 'pinyin-pro';
 import { render } from 'solid-js/web';
 import { detect } from 'tinyld';
-import type { TranslationProvider } from '../types';
 
 import { waitForElement } from '@/utils/wait-for-element';
 
 import { LyricsRenderer, setIsVisible } from './renderer';
+
+import type { TranslationProvider } from '../types';
 
 export const selectors = {
   head: '#tabsContent > .tab-header:nth-of-type(2)',

@@ -1,5 +1,5 @@
-import { BrowserWindow, ipcMain } from 'electron';
- 
+import { BrowserWindow, ipcMain, type MenuItemConstructorOptions } from 'electron';
+
 import { t } from '@/i18n';
  
 import { providerNames } from './providers';
@@ -9,7 +9,6 @@ import type {
   TranslationProvider,
 } from './types';
 import type { MenuContext } from '@/types/contexts';
-import type { MenuItemConstructorOptions } from 'electron';
  
 const promptForApiKey = (
   ctx: MenuContext<SyncedLyricsPluginConfig>,
