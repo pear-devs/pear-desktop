@@ -10,7 +10,7 @@ import {
   convertChineseCharacter,
   romanize,
   simplifyUnicode,
-    translate, //nuevo
+  translate,
 } from '../utils';
 
 interface SyncedLineProps {
@@ -104,17 +104,30 @@ export const SyncedLine = (props: SyncedLineProps) => {
     });
   });
 
-  // ↓↓↓ CÓDIGO NUEVO — pégalo aquí ↓↓↓
   const [translation, setTranslation] = createSignal('');
+  let translationRequestId = 0;
   createEffect(() => {
     if (!config()?.translationEnabled) {
       setTranslation('');
       return;
     }
     const targetLang = config()?.translationTargetLang ?? 'es';
-    translate(text(), targetLang).then(setTranslation);
+    const requestId = ++translationRequestId;
+
+    translate(
+      text(),
+      targetLang,
+      config()?.translationProvider,
+      {
+        googleCloudApiKey: config()?.googleCloudApiKey,
+        libretranslateApiKey: config()?.libretranslateApiKey,
+      },
+    ).then((result) => {
+      if (requestId === translationRequestId) {
+        setTranslation(result);
+      }
+    });
   });
-  // ↑↑↑ CÓDIGO NUEVO ↑↑↑
 
   return (
     <Show fallback={<EmptyLine {...props} />} when={text()}>
@@ -138,7 +151,6 @@ export const SyncedLine = (props: SyncedLineProps) => {
           <div
             class="text-lyrics"
             ref={(div: HTMLDivElement) => {
-              // TODO: Investigate the animation, even though the duration is properly set, all lines have the same animation duration
               div.style.setProperty(
                 '--lyrics-duration',
                 `${props.line.duration / 1000}s`,

@@ -896,10 +896,21 @@
           "label": "Show translation",
           "tooltip": "Show a translated version of the lyrics"
         },
+        "api-key-prompt": {
+          "title": "API Key",
+          "label": "Enter your API key:"
+        },
+        "translation-provider": {
+          "label": "Translation provider",
+          "tooltip": "Choose which service to use for translating lyrics",
+          "google-gtx": "Google Translate (unofficial, no key needed)",
+          "google-cloud": "Google Cloud Translation (requires API key)",
+          "libretranslate": "LibreTranslate (requires API key)"
+        },
         "translation-language": {
           "label": "Translation language",
           "tooltip": "Language to translate the lyrics into"
-      },
+        },
         "convert-chinese-character": {
           "label": "Convert Chinese character",
           "submenu": {
