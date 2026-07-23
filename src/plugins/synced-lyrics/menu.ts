@@ -1,16 +1,131 @@
+import { BrowserWindow, ipcMain, type MenuItemConstructorOptions } from 'electron';
+
 import { t } from '@/i18n';
-
+ 
 import { providerNames } from './providers';
-
-import type { SyncedLyricsPluginConfig } from './types';
+ 
+import type {
+  SyncedLyricsPluginConfig,
+  TranslationProvider,
+} from './types';
 import type { MenuContext } from '@/types/contexts';
-import type { MenuItemConstructorOptions } from 'electron';
-
+ 
+const promptForApiKey = (
+  ctx: MenuContext<SyncedLyricsPluginConfig>,
+  currentValue: string | undefined,
+): Promise<string | null> => {
+  return new Promise((resolve) => {
+    const promptWindow = new BrowserWindow({
+      width: 420,
+      height: 160,
+      parent: ctx.window,
+      modal: true,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      autoHideMenuBar: true,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+      },
+    });
+ 
+    const title = t('plugins.synced-lyrics.menu.api-key-prompt.title');
+    const label = t('plugins.synced-lyrics.menu.api-key-prompt.label');
+    const safeValue = (currentValue ?? '').replace(/"/g, '&quot;');
+ 
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>${title}</title>
+          <style>
+            body {
+              font-family: system-ui, sans-serif;
+              background: #1e1e1e;
+              color: #eee;
+              margin: 0;
+              padding: 16px;
+            }
+            label { display: block; margin-bottom: 8px; font-size: 13px; }
+            input {
+              width: 100%;
+              box-sizing: border-box;
+              padding: 8px;
+              font-size: 14px;
+              margin-bottom: 16px;
+              border-radius: 4px;
+              border: 1px solid #444;
+              background: #2a2a2a;
+              color: #eee;
+            }
+            .buttons { display: flex; justify-content: flex-end; gap: 8px; }
+            button {
+              padding: 6px 14px;
+              border-radius: 4px;
+              border: none;
+              cursor: pointer;
+              font-size: 13px;
+            }
+            .ok { background: #3ea6ff; color: #000; }
+            .cancel { background: #333; color: #eee; }
+          </style>
+        </head>
+        <body>
+          <label for="apiKeyInput">${label}</label>
+          <input id="apiKeyInput" type="text" value="${safeValue}" autofocus />
+          <div class="buttons">
+            <button class="cancel" id="cancelBtn">Cancel</button>
+            <button class="ok" id="okBtn">OK</button>
+          </div>
+          <script>
+            const { ipcRenderer } = require('electron');
+            const input = document.getElementById('apiKeyInput');
+            input.focus();
+            input.select();
+ 
+            document.getElementById('okBtn').addEventListener('click', () => {
+              ipcRenderer.send('synced-lyrics:api-key-result', input.value);
+            });
+            document.getElementById('cancelBtn').addEventListener('click', () => {
+              ipcRenderer.send('synced-lyrics:api-key-result', null);
+            });
+            input.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter') {
+                ipcRenderer.send('synced-lyrics:api-key-result', input.value);
+              }
+              if (e.key === 'Escape') {
+                ipcRenderer.send('synced-lyrics:api-key-result', null);
+              }
+            });
+          </script>
+        </body>
+      </html>
+    `;
+ 
+    promptWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+ 
+    const handleResult = (_event: Electron.IpcMainEvent, value: string | null) => {
+      ipcMain.removeListener('synced-lyrics:api-key-result', handleResult);
+      resolve(value && value.trim() ? value.trim() : null);
+      if (!promptWindow.isDestroyed()) promptWindow.close();
+    };
+ 
+    ipcMain.on('synced-lyrics:api-key-result', handleResult);
+ 
+    promptWindow.on('closed', () => {
+      ipcMain.removeListener('synced-lyrics:api-key-result', handleResult);
+      resolve(null);
+    });
+  });
+};
+ 
 export const menu = async (
   ctx: MenuContext<SyncedLyricsPluginConfig>,
 ): Promise<MenuItemConstructorOptions[]> => {
   const config = await ctx.getConfig();
-
+ 
   return [
     {
       label: t('plugins.synced-lyrics.menu.preferred-provider.label'),
@@ -232,6 +347,81 @@ export const menu = async (
           showLyricsEvenIfInexact: item.checked,
         });
       },
+    },
+    {
+      label: t('plugins.synced-lyrics.menu.show-translation.label'),
+      toolTip: t('plugins.synced-lyrics.menu.show-translation.tooltip'),
+      type: 'checkbox',
+      checked: config.translationEnabled,
+      click(item) {
+        ctx.setConfig({
+          translationEnabled: item.checked,
+        });
+      },
+    },
+    {
+      label: t('plugins.synced-lyrics.menu.translation-language.label'),
+      toolTip: t('plugins.synced-lyrics.menu.translation-language.tooltip'),
+      type: 'submenu',
+      submenu: ['es', 'en', 'fr', 'de', 'ja', 'ko'].map((lang) => ({
+        label: lang,
+        type: 'radio',
+        checked: config.translationTargetLang === lang,
+        click() {
+          ctx.setConfig({ translationTargetLang: lang });
+        },
+      })),
+    },
+    {
+      label: t('plugins.synced-lyrics.menu.translation-provider.label'),
+      toolTip: t('plugins.synced-lyrics.menu.translation-provider.tooltip'),
+      type: 'submenu',
+      submenu: [
+        {
+          label: t(
+            'plugins.synced-lyrics.menu.translation-provider.google-gtx',
+          ),
+          type: 'radio',
+          checked:
+            (config.translationProvider ?? 'google-gtx') === 'google-gtx',
+          click() {
+            ctx.setConfig({ translationProvider: 'google-gtx' });
+          },
+        },
+        {
+          label: t(
+            'plugins.synced-lyrics.menu.translation-provider.google-cloud',
+          ),
+          type: 'radio',
+          checked: config.translationProvider === 'google-cloud',
+          async click() {
+            const key = await promptForApiKey(ctx, config.googleCloudApiKey);
+            if (!key) return;
+            ctx.setConfig({
+              translationProvider: 'google-cloud' as TranslationProvider,
+              googleCloudApiKey: key,
+            });
+          },
+        },
+        {
+          label: t(
+            'plugins.synced-lyrics.menu.translation-provider.libretranslate',
+          ),
+          type: 'radio',
+          checked: config.translationProvider === 'libretranslate',
+          async click() {
+            const key = await promptForApiKey(
+              ctx,
+              config.libretranslateApiKey,
+            );
+            if (!key) return;
+            ctx.setConfig({
+              translationProvider: 'libretranslate' as TranslationProvider,
+              libretranslateApiKey: key,
+            });
+          },
+        },
+      ],
     },
   ];
 };
