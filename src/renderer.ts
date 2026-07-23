@@ -310,6 +310,16 @@ async function onApiLoaded() {
   );
 
   const video = document.querySelector('video')!;
+  // Podcast audio loads as a cross-origin <video> src; without CORS mode the
+  // MediaElementAudioSourceNode below outputs zeroes ("CORS access restrictions").
+  // Paired with the Access-Control-Allow-Origin header added for media responses
+  // in the main process, this lets that audio through. Songs stream via MSE from a
+  // same-origin blob URL, so crossOrigin has no effect on them.
+  video.crossOrigin = 'anonymous';
+  // A track already loading when this runs (e.g. session restore) started in
+  // no-CORS mode; re-fetch direct-URL media so its audio isn't left silenced.
+  // Songs use an MSE blob src and are skipped.
+  if (video.src && !video.src.startsWith('blob:')) video.load();
   const audioContext = new AudioContext();
   const audioSource = audioContext.createMediaElementSource(video);
   audioSource.connect(audioContext.destination);
