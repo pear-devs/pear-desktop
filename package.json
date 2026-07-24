@@ -145,7 +145,7 @@
     "eslint-plugin-perfectionist": "5.9.1",
     "eslint-plugin-solid": "0.14.5",
     "glob": "13.0.6",
-    "node-gyp": "13.0.0",
+    "node-gyp": "13.0.1",
     "oxfmt": "0.56.0",
     "oxlint": "1.71.0",
     "oxlint-tsgolint": "0.23.0",
