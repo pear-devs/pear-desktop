@@ -219,6 +219,14 @@
       "description": "If an ad play it mutes the audio and sets playback speed to 16x",
       "name": "Ad Speedup"
     },
+    "adblock": {
+      "description": "Block video and audio ads on YouTube Music",
+      "menu": {
+        "additional-lists": "Additional filter lists",
+        "lists-placeholder": "Comma-separated list of filter list URLs"
+      },
+      "name": "AdBlock"
+    },
     "album-actions": {
       "description": "Adds Undislike, Dislike, Like, and Unlike buttons to apply this to all songs in a playlist or album",
       "name": "Album Actions"
