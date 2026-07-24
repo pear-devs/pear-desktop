@@ -8,7 +8,7 @@ allowBuilds:
   utf-8-validate: true
 overrides:
   vite: 8.1.0
-  node-gyp: 13.0.0
+  node-gyp: 13.0.1
   xml2js: 0.6.2
   node-fetch: 3.3.2
   '@electron/universal': 3.0.4
