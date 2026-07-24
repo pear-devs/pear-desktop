@@ -2,6 +2,7 @@ import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import { net } from 'electron';
 
 let blocker: ElectronBlocker | undefined;
+let generation = 0;
 
 export const DEFAULT_LISTS = [
   'https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt',
@@ -15,8 +16,9 @@ export const loadAdblockerEngine = async (
   session: Electron.Session,
   additionalBlockLists: string[] = [],
 ) => {
+  const gen = ++generation;
   try {
-    blocker = await ElectronBlocker.fromLists(
+    const b = await ElectronBlocker.fromLists(
       (url: string) => net.fetch(url),
       [...DEFAULT_LISTS, ...additionalBlockLists],
       {
@@ -25,13 +27,23 @@ export const loadAdblockerEngine = async (
       },
       undefined,
     );
+    if (gen !== generation) {
+      b.disableBlockingInSession(session);
+      return;
+    }
+    const prev = blocker;
+    blocker = b;
     blocker.enableBlockingInSession(session);
+    if (prev) prev.disableBlockingInSession(session);
   } catch (error) {
-    console.error('[AdBlock] Error loading blocker engine', error);
+    if (gen === generation) {
+      console.error('[AdBlock] Error loading blocker engine', error);
+    }
   }
 };
 
 export const unloadAdblockerEngine = (session: Electron.Session) => {
+  generation++;
   if (blocker) {
     blocker.disableBlockingInSession(session);
     blocker = undefined;

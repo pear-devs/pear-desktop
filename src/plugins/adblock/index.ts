@@ -72,7 +72,6 @@ export default createPlugin<
     },
     async onConfigChange(newConfig) {
       if (this.mainWindow) {
-        unloadAdblockerEngine(this.mainWindow.webContents.session);
         await loadAdblockerEngine(
           this.mainWindow.webContents.session,
           newConfig.additionalBlockLists,
@@ -95,21 +94,23 @@ export default createPlugin<
       },
     }); 0`;
 
-      contextBridge.exposeInMainWorld('_pruner', (o: Record<string, unknown>) => {
-        delete o.playerAds;
-        delete o.adPlacements;
-        delete o.adSlots;
-        if (o.playerResponse as Record<string, unknown> | undefined) {
-          delete (o.playerResponse as Record<string, unknown>).playerAds;
-          delete (o.playerResponse as Record<string, unknown>).adPlacements;
-          delete (o.playerResponse as Record<string, unknown>).adSlots;
+      contextBridge.exposeInMainWorld('_pruner', (o: unknown) => {
+        if (o === null || typeof o !== 'object') return o;
+        const payload = o as Record<string, unknown>;
+        delete payload.playerAds;
+        delete payload.adPlacements;
+        delete payload.adSlots;
+        if (payload.playerResponse as Record<string, unknown> | undefined) {
+          delete (payload.playerResponse as Record<string, unknown>).playerAds;
+          delete (payload.playerResponse as Record<string, unknown>).adPlacements;
+          delete (payload.playerResponse as Record<string, unknown>).adSlots;
         }
-        if (o.ytInitialPlayerResponse as Record<string, unknown> | undefined) {
-          delete (o.ytInitialPlayerResponse as Record<string, unknown>).playerAds;
-          delete (o.ytInitialPlayerResponse as Record<string, unknown>).adPlacements;
-          delete (o.ytInitialPlayerResponse as Record<string, unknown>).adSlots;
+        if (payload.ytInitialPlayerResponse as Record<string, unknown> | undefined) {
+          delete (payload.ytInitialPlayerResponse as Record<string, unknown>).playerAds;
+          delete (payload.ytInitialPlayerResponse as Record<string, unknown>).adPlacements;
+          delete (payload.ytInitialPlayerResponse as Record<string, unknown>).adSlots;
         }
-        return o;
+        return payload;
       });
 
       webFrame.executeJavaScript(script);
