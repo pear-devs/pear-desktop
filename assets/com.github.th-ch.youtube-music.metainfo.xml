@@ -1,0 +1,423 @@
+<?xml version='1.0' encoding='utf-8'?>
+<component type="desktop-application">
+  <id>com.github.th_ch.youtube_music</id>
+  <name>YouTube Music</name>
+  <summary>YouTube Music Desktop App - including custom plugins</summary>
+  <developer_name>th-ch</developer_name>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>Electron wrapper around YouTube Music featuring:</p>
+    <ul>
+      <li>Native look &amp; feel, aims at keeping the original interface</li>
+      <li>Framework for custom plugins: change YouTube Music to your needs (style, content,
+        features), enable/disable plugins in one click</li>
+    </ul>
+  </description>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Preview</caption>
+      <image type="source" width="16" height="9">
+        https://github.com/th-ch/youtube-music/assets/16558115/53efdf73-b8fa-4d7b-a235-b96b91ea77fc</image>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="v3.3.6" date="2024-04-13" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.3.6</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v336) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+          (Note for Windows: `YouTube-Music-Web-Setup-v3.3.6.exe` is an installer, and
+          `YouTube-Music-v3.3.6.exe` is a portable version)</p>
+      </description>
+    </release>
+    <release version="v3.3.5" date="2024-03-26" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.3.5</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v335) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+          (Note for Windows: `YouTube-Music-Web-Setup-v3.3.5.exe` is an installer, and
+          `YouTube-Music-v3.3.5.exe` is a portable version)
+
+        </p>
+      </description>
+    </release>
+    <release version="v3.3.4" date="2024-03-23" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.3.4</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v334) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+          (Note for Windows: `YouTube-Music-Web-Setup-v3.3.4.exe` is an installer, and
+          `YouTube-Music-v3.3.4.exe` is a portable version)
+
+        </p>
+      </description>
+    </release>
+    <release version="v3.3.3" date="2024-03-23" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.3.3</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v333) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+          (Note for Windows: `YouTube-Music-Web-Setup-v3.3.3.exe` is an installer, and
+          `YouTube-Music-v3.3.3.exe` is a portable version)
+
+        </p>
+      </description>
+    </release>
+    <release version="v3.3.2" date="2024-02-20" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.3.2</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v332) for
+          the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅&#13;
+          &#13;
+          (Note for Windows: `YouTube-Music-Web-Setup-3.3.2.exe` is an installer, and
+          `YouTube-Music-3.3.2.exe` is a portable version)&#13;
+          &#13;
+</p>
+      </description>
+    </release>
+    <release version="v3.3.1" date="2024-02-18" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.3.1</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v331) for
+          the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅&#13;
+          &#13;
+          (Note for Windows: `YouTube-Music-Web-Setup-3.3.1.exe` is an installer, and
+          `YouTube-Music-3.3.1.exe` is a portable version)&#13;
+          &#13;
+</p>
+      </description>
+    </release>
+    <release version="v3.3.0" date="2024-02-18" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.3.0</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v330) for
+          the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅&#13;
+          &#13;
+          (Note for Windows: `YouTube-Music-Web-Setup-3.3.0.exe` is an installer, and
+          `YouTube-Music-3.3.0.exe` is a portable version)&#13;
+          &#13;
+</p>
+      </description>
+    </release>
+    <release version="v3.2.2" date="2024-01-05" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.2.2</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v322) for
+          the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅&#13;
+          &#13;
+          (Note for Windows: `YouTube-Music-Web-Setup-3.2.2.exe` is an installer, and
+          `YouTube-Music-3.2.2.exe` is a portable version)&#13;
+          &#13;
+</p>
+      </description>
+    </release>
+    <release version="v3.2.1" date="2024-01-01" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.2.1</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v321) for
+          the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅&#13;
+          and Happy New Year!&#13;
+          &#13;
+          (Note for Windows: `YouTube-Music-Web-Setup-3.2.1.exe` is an installer, and
+          `YouTube-Music-3.2.1.exe` is a portable version)&#13;
+          &#13;
+</p>
+      </description>
+    </release>
+    <release version="v3.2.0" date="2023-12-31" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.2.0</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v320) for
+          the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅&#13;
+          &#13;
+          Happy New Year!&#13;
+          &#13;
+          (Note for Windows: `YouTube-Music-Web-Setup-3.2.0.exe` is an installer, and
+          `YouTube-Music-3.2.0.exe` is a portable version)&#13;
+          &#13;
+</p>
+      </description>
+    </release>
+    <release version="v3.1.1" date="2023-12-18" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.1.1</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v311) for
+          the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅&#13;
+          &#13;
+          (Note for Windows: `YouTube-Music-Web-Setup-3.1.1.exe` is an installer, and
+          `YouTube-Music-3.1.1.exe` is a portable version)&#13;
+          &#13;
+</p>
+      </description>
+    </release>
+    <release version="v3.1.0" date="2023-12-10" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.1.0</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v310) for
+          the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅&#13;
+          &#13;
+          (Note for Windows: `YouTube-Music-Web-Setup-3.1.0.exe` is an installer, and
+          `YouTube-Music-3.1.0.exe` is a portable version)&#13;
+          &#13;
+</p>
+      </description>
+    </release>
+    <release version="v3.0.2" date="2023-12-02" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.0.2</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v302) for
+          the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅&#13;
+          &#13;
+          (Note for Windows: `YouTube-Music-Web-Setup-3.0.2.exe` is an installer, and
+          `YouTube-Music-3.0.2.exe` is a portable version)&#13;
+          &#13;
+</p>
+      </description>
+    </release>
+    <release version="v3.0.1" date="2023-12-02" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.0.1</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v301) for
+          the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅&#13;
+          &#13;
+          (Note for Windows: `YouTube-Music-Web-Setup-3.0.1.exe` is an installer, and
+          `YouTube-Music-3.0.1.exe` is a portable version)&#13;
+          &#13;
+</p>
+      </description>
+    </release>
+    <release version="v3.0.0" date="2023-12-02" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v3.0.0</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v300) for
+          the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅&#13;
+          &#13;
+          (Note for Windows: `YouTube-Music-Web-Setup-3.0.0.exe` is an installer, and
+          `YouTube-Music-3.0.0.exe` is a portable version)&#13;
+          &#13;
+</p>
+      </description>
+    </release>
+    <release version="v2.2.0" date="2023-10-26" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v2.2.0</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v220) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+        </p>
+      </description>
+    </release>
+    <release version="v2.1.3" date="2023-10-22" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v2.1.3</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v213) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+        </p>
+      </description>
+    </release>
+    <release version="v2.1.2" date="2023-10-19" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v2.1.2</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v212) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+        </p>
+      </description>
+    </release>
+    <release version="v2.1.1" date="2023-10-14" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v2.1.1</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v211) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+        </p>
+      </description>
+    </release>
+    <release version="v2.1.0" date="2023-10-13" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v2.1.0</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v210) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+        </p>
+      </description>
+    </release>
+    <release version="v2.0.4" date="2023-10-11" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v2.0.4</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v204) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+        </p>
+      </description>
+    </release>
+    <release version="v2.0.3" date="2023-10-09" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v2.0.3</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v203) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+        </p>
+      </description>
+    </release>
+    <release version="v2.0.2" date="2023-10-08" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v2.0.2</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v202) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+        </p>
+      </description>
+    </release>
+    <release version="v2.0.1" date="2023-10-07" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v2.0.1</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v201) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+        </p>
+      </description>
+    </release>
+    <release version="v2.0.0" date="2023-10-07" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v2.0.0</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v200) for
+          the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+        </p>
+      </description>
+    </release>
+    <release version="v1.20.0" date="2023-05-18" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v1.20.0</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v1200)
+          for the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+        </p>
+      </description>
+    </release>
+    <release version="v1.19.0" date="2022-12-31" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v1.19.0</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v1190)
+          for the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+        </p>
+      </description>
+    </release>
+    <release version="v1.18.0" date="2022-09-12" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v1.18.0</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v1180)
+          for the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅</p>
+      </description>
+    </release>
+    <release version="v1.17.0" date="2022-05-20" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v1.17.0</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v1170)
+          for the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅</p>
+      </description>
+    </release>
+    <release version="v1.16.0" date="2022-02-20" type="stable">
+      <url>https://github.com/th-ch/youtube-music/releases/tag/v1.16.0</url>
+      <description>
+        <p>See [changelog](https://github.com/th-ch/youtube-music/blob/master/changelog.md#v1160)
+          for the list of updates and the full diff.&#13;
+          &#13;
+          Thanks to all contributors! 🏅 </p>
+      </description>
+    </release>
+  </releases>
+  <url type="homepage">https://th-ch.github.io/youtube-music/</url>
+  <url type="bugtracker">https://github.com/th-ch/youtube-music/issues</url>
+  <url type="faq">https://github.com/th-ch/youtube-music#faq</url>
+  <url type="translate">https://hosted.weblate.org/projects/youtube-music/</url>
+  <url type="vcs-browser">https://github.com/th-ch/youtube-music</url>
+  <categories>
+    <category>AudioVideo</category>
+  </categories>
+  <recommends>
+    <control>keyboard</control>
+  </recommends>
+  <content_rating type="oars-1.1">
+    <content_attribute id="drugs-alcohol">mild</content_attribute>
+    <content_attribute id="drugs-narcotics">mild</content_attribute>
+    <content_attribute id="drugs-tobacco">mild</content_attribute>
+    <content_attribute id="sex-nudity">mild</content_attribute>
+    <content_attribute id="sex-themes">mild</content_attribute>
+    <content_attribute id="language-profanity">moderate</content_attribute>
+    <content_attribute id="social-info">intense</content_attribute>
+    <content_attribute id="money-purchasing">intense</content_attribute>
+    <content_attribute id="money-advertising">intense</content_attribute>
+  </content_rating>
+  <launchable type="desktop-id">com.github.th_ch.youtube_music.desktop</launchable>
+  <keywords>
+    <keyword>youtube</keyword>
+    <keyword>music</keyword>
+  </keywords>
+</component>
