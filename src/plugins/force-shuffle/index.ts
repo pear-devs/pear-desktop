@@ -68,7 +68,7 @@ export default createPlugin<
   },
   renderer: {
     config: null,
-    wasShuffled: true,
+    wasShuffled: false,
     lastHandledVideoId: null,
     cooldownUntil: 0,
     isStopped: false,
@@ -163,7 +163,7 @@ export default createPlugin<
 
     async start({ getConfig }) {
       this.config = await getConfig();
-      this.wasShuffled = true;
+      this.wasShuffled = false;
       this.lastHandledVideoId = null;
       this.cooldownUntil = 0;
       this.isStopped = false;
@@ -188,15 +188,11 @@ export default createPlugin<
       waitForElement<HTMLElement>('ytmusic-player-bar').then((playerBar) => {
         if (this.isStopped) return;
 
-        if (playerBar.hasAttribute('shuffle-on')) {
-          this.wasShuffled = true;
-        }
+        // Initialize state accurately
+        this.wasShuffled = playerBar.hasAttribute('shuffle-on');
 
         this.observer = new MutationObserver(() => {
-          const isShuffled = playerBar.hasAttribute('shuffle-on');
-          if (isShuffled) {
-            this.wasShuffled = true;
-          }
+          this.wasShuffled = playerBar.hasAttribute('shuffle-on');
         });
 
         this.observer.observe(playerBar, {
