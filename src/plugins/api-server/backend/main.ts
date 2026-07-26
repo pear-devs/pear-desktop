@@ -19,6 +19,7 @@ import { JWTPayloadSchema } from './scheme';
 
 import { type APIServerConfig, AuthStrategy } from '../config';
 
+import type { SpectrumData } from './routes/websocket';
 import type { BackendType } from './types';
 import type {
   LikeType,
@@ -30,6 +31,7 @@ import type { MiddlewareHandler } from 'hono';
 export const backend = createBackend<BackendType, APIServerConfig>({
   async start(ctx) {
     const config = await ctx.getConfig();
+    this.backendCtx = ctx;
 
     this.init(ctx);
     registerCallback((songInfo) => {
@@ -55,31 +57,60 @@ export const backend = createBackend<BackendType, APIServerConfig>({
       (newVolumeState: VolumeState) => (this.volumeState = newVolumeState),
     );
 
+    ctx.ipc.on(
+      'peard:audio-spectrum',
+      (spectrum: SpectrumData) => (this.spectrum = spectrum),
+    );
+
     this.run(config);
+    this.startSpectrumPolling(config);
   },
   stop() {
+    this.stopSpectrumPolling();
     this.end();
   },
   onConfigChange(config) {
     const old = this.oldConfig;
-    if (
-      old?.hostname === config.hostname &&
-      old?.port === config.port &&
-      old?.useHttps === config.useHttps &&
-      old?.certPath === config.certPath &&
-      old?.keyPath === config.keyPath
-    ) {
-      this.oldConfig = config;
-      return;
+    const serverChanged =
+      old?.hostname != config.hostname ||
+      old?.port != config.port ||
+      old?.useHttps != config.useHttps ||
+      old?.certPath != config.certPath ||
+      old?.keyPath != config.keyPath;
+
+    if (serverChanged) {
+      this.end();
+      this.run(config);
     }
 
-    this.end();
-    this.run(config);
+    this.startSpectrumPolling(config);
     this.oldConfig = config;
+  },
+
+  startSpectrumPolling(config) {
+    this.stopSpectrumPolling();
+    if (!config.spectrumEnabled || !this.backendCtx) return;
+
+    const fps = Math.min(60, Math.max(5, Math.round(config.spectrumFps ?? 20)));
+    this.spectrumTimer = setInterval(
+      () => {
+        if (!this.backendCtx || this.backendCtx.window.isDestroyed()) return;
+        this.backendCtx.ipc.send('peard:request-spectrum');
+      },
+      Math.round(1000 / fps),
+    );
+  },
+
+  stopSpectrumPolling() {
+    if (this.spectrumTimer) {
+      clearInterval(this.spectrumTimer);
+      this.spectrumTimer = undefined;
+    }
   },
 
   // Custom
   init(backendCtx) {
+    this.backendCtx = backendCtx;
     this.app = new Hono();
 
     this.app.use('*', cors());
@@ -137,6 +168,7 @@ export const backend = createBackend<BackendType, APIServerConfig>({
           'document.querySelector("#like-button-renderer")?.likeStatus',
         ) as Promise<LikeType>,
       () => this.volumeState,
+      () => this.spectrum,
     );
     registerAuth(this.app, backendCtx);
     registerWebsocket(this.app, backendCtx, upgradeWebSocket);
@@ -200,6 +232,7 @@ export const backend = createBackend<BackendType, APIServerConfig>({
     }
   },
   end() {
+    this.stopSpectrumPolling();
     this.server?.close();
     this.server = undefined;
   },
