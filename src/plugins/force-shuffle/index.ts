@@ -26,6 +26,7 @@ export default createPlugin<
     lastHandledVideoId: string | null;
     timeoutId?: NodeJS.Timeout;
     cooldownUntil: number;
+    isStopped: boolean;
     observer?: MutationObserver;
     eventListener?: (event: Event) => void;
 
@@ -70,6 +71,7 @@ export default createPlugin<
     wasShuffled: true,
     lastHandledVideoId: null,
     cooldownUntil: 0,
+    isStopped: false,
 
     reEnableShuffle() {
       const playerBar = document.querySelector<
@@ -164,6 +166,7 @@ export default createPlugin<
       this.wasShuffled = true;
       this.lastHandledVideoId = null;
       this.cooldownUntil = 0;
+      this.isStopped = false;
 
       console.log(
         `[ForceShuffle] Plugin started. Mode: ${this.config?.mode ?? 'always'}`,
@@ -183,6 +186,8 @@ export default createPlugin<
 
       // Track shuffle-on state changes on player bar
       waitForElement<HTMLElement>('ytmusic-player-bar').then((playerBar) => {
+        if (this.isStopped) return;
+
         if (playerBar.hasAttribute('shuffle-on')) {
           this.wasShuffled = true;
         }
@@ -205,6 +210,7 @@ export default createPlugin<
 
     stop() {
       console.log('[ForceShuffle] Plugin stopped.');
+      this.isStopped = true;
       if (this.timeoutId) {
         clearTimeout(this.timeoutId);
       }
