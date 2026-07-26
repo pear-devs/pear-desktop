@@ -32,12 +32,18 @@ const computeBands = (bandCount: number): number[] => {
   const binCount = freqData.length;
   const hzPerBin = analyser.context.sampleRate / analyser.fftSize;
   const minHz = 40;
-  const maxHz = Math.min(14_000, analyser.context.sampleRate / 2);
+  // Rightmost bars should track presence that exists in typical streaming
+  // audio — the final log band is wide in Hz, so keep maxHz modest.
+  const maxHz = Math.min(4_200, analyser.context.sampleRate / 2);
   const frequencyRatio = maxHz / minHz;
-  // Soften the extreme low end a bit so kicks don't dominate every bar.
-  const shelf = Array.from({ length: bandCount }, (_, i) =>
-    i < 3 ? 0.72 + i * 0.08 : 1,
-  );
+  // Soften kicks; lift highs — music energy falls with Hz, and wide
+  // log HF bands dilute RMS so the right side otherwise stays dark.
+  const shelf = Array.from({ length: bandCount }, (_, i) => {
+    const t = i / Math.max(1, bandCount - 1);
+    const bass = i < 3 ? 0.72 + i * 0.08 : 1;
+    const treble = 1 + 1.4 * t * t + (t > 0.6 ? 0.7 * ((t - 0.6) / 0.4) : 0);
+    return bass * treble;
+  });
 
   const bands = Array.from({ length: bandCount }, () => 0);
   let framePeak = 1;
@@ -53,14 +59,30 @@ const computeBands = (bandCount: number): number[] => {
     );
 
     let energy = 0;
+    let binPeak = 0;
+    let topSum = 0;
+    let topCount = 0;
+    const mix = i / Math.max(1, bandCount - 1);
+    // For upper bands, only the louder bins count toward "upper" energy.
+    const loudFloor = mix > 0.55 ? 8 : 0;
     for (let bin = start; bin < end; bin++) {
       const v = freqData[bin];
       energy += v * v;
+      if (v > binPeak) binPeak = v;
+      if (v >= loudFloor) {
+        topSum += v;
+        topCount += 1;
+      }
     }
 
-    const rms = Math.sqrt(energy / (end - start)) * shelf[i];
-    bands[i] = rms;
-    if (rms > framePeak) framePeak = rms;
+    const rms = Math.sqrt(energy / (end - start));
+    const upper = topCount > 0 ? topSum / topCount : binPeak;
+    // Prefer peak-ish measure on the right so sparse HF isn't RMS-diluted.
+    const peakW = 0.2 + 0.75 * mix * mix;
+    const level =
+      (rms * (1 - peakW) + Math.max(binPeak * 0.85, upper) * peakW) * shelf[i];
+    bands[i] = level;
+    if (level > framePeak) framePeak = level;
   }
 
   // Slow AGC — track loudness, keep clear headroom above recent peaks.
@@ -110,7 +132,8 @@ const audioCanPlayListener = (e: CustomEvent<Compressor>) => {
     analyser = ctx.createAnalyser();
     analyser.fftSize = 2048;
     analyser.smoothingTimeConstant = 0.55;
-    analyser.minDecibels = -80;
+    // Slightly deeper floor so quiet HF registers in byte data.
+    analyser.minDecibels = -90;
     analyser.maxDecibels = -25;
     freqData = new Uint8Array(analyser.frequencyBinCount);
     connectedSource = null;
