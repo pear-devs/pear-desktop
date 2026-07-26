@@ -127,6 +127,10 @@ const audioCanPlayListener = (e: CustomEvent<Compressor>) => {
   }
 };
 
+const onRequestSpectrum = () => {
+  sampleAndSend();
+};
+
 export const onRendererLoad = async ({
   getConfig,
   ipc,
@@ -135,9 +139,7 @@ export const onRendererLoad = async ({
   rendererIpc = ipc;
 
   // Main process drives the sample rate so background throttling doesn't apply.
-  ipc.on('peard:request-spectrum', () => {
-    sampleAndSend();
-  });
+  ipc.on('peard:request-spectrum', onRequestSpectrum);
 
   document.addEventListener('peard:audio-can-play', audioCanPlayListener, {
     passive: true,
@@ -150,6 +152,7 @@ export const onRendererConfigChange = (newConfig: APIServerConfig) => {
 
 export const onRendererUnload = () => {
   document.removeEventListener('peard:audio-can-play', audioCanPlayListener);
+  rendererIpc?.removeAllListeners('peard:request-spectrum');
 
   if (connectedSource && analyser) {
     try {

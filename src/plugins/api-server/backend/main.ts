@@ -89,7 +89,11 @@ export const backend = createBackend<BackendType, APIServerConfig>({
 
   startSpectrumPolling(config) {
     this.stopSpectrumPolling();
-    if (!config.spectrumEnabled || !this.backendCtx) return;
+    if (!config.spectrumEnabled || !this.backendCtx) {
+      // Drop cached frames so GET /spectrum returns 204 while disabled.
+      this.spectrum = undefined;
+      return;
+    }
 
     const fps = Math.min(60, Math.max(5, Math.round(config.spectrumFps ?? 20)));
     this.spectrumTimer = setInterval(
@@ -233,6 +237,7 @@ export const backend = createBackend<BackendType, APIServerConfig>({
   },
   end() {
     this.stopSpectrumPolling();
+    this.spectrum = undefined;
     this.server?.close();
     this.server = undefined;
   },
