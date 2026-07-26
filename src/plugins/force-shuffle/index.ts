@@ -14,6 +14,8 @@ export type ForceShufflePluginConfig = {
 const SHUFFLE_COOLDOWN_MS = 3000;
 // Delay before checking shuffle state after track change (ms)
 const TRACK_CHANGE_DELAY_MS = 1500;
+// Max number of upcoming tracks to shuffle per track change (keeps MOVE_ITEM dispatches minimal)
+const SHUFFLE_WINDOW = 8;
 
 export default createPlugin<
   unknown,
@@ -70,8 +72,9 @@ export default createPlugin<
     cooldownUntil: 0,
 
     reEnableShuffle() {
-      const playerBar =
-        document.querySelector<HTMLElement>('ytmusic-player-bar');
+      const playerBar = document.querySelector<
+        HTMLElement & { queue: { shuffle: () => void } }
+      >('ytmusic-player-bar');
 
       if (!playerBar) {
         console.warn('[ForceShuffle] playerBar not found!');
@@ -84,64 +87,27 @@ export default createPlugin<
         return;
       }
 
-      const queueElem = document.querySelector<QueueElement>('#queue');
-      const store = queueElem?.queue?.store?.store;
-      if (!store) {
-        console.warn('[ForceShuffle] Queue store not found!');
-        return;
-      }
-
-      const state = store.getState();
-      if (!state?.queue) {
-        console.warn('[ForceShuffle] Queue state not found!');
-        return;
-      }
-
       console.log(
-        '[ForceShuffle] Shuffle was lost after track change, re-enabling...',
+        '[ForceShuffle] Shuffle was lost after track change, re-enabling via native YTM player-bar API...',
       );
 
-      // 1. Set the UI attribute so the shuffle button shows as active
-      playerBar.setAttribute('shuffle-on', '');
-
-      // 2. Set the shuffleEnabled flag in the store
-      state.queue.shuffleEnabled = true;
-
-      // 3. Shuffle remaining queue items AFTER the currently playing track
-      //    using MOVE_ITEM dispatches — these are proper state transitions
-      //    that the queue store handles without causing track skips
-      const items = state.queue.items;
-      const currentIndex = state.queue.selectedItemIndex ?? 0;
-      const startIdx = currentIndex + 1;
-
-      if (Array.isArray(items) && startIdx < items.length - 1) {
-        // Fisher-Yates shuffle via MOVE_ITEM dispatches
-        // We iterate from the end of the sub-array to startIdx+1
-        for (let i = items.length - 1; i > startIdx; i--) {
-          const j = startIdx + Math.floor(Math.random() * (i - startIdx + 1));
-          if (i !== j) {
-            // Swap items[i] and items[j] using two MOVE_ITEM dispatches
-            // Move i → j first, then adjust indices since the array shifted
-            queueElem.dispatch({
-              type: 'MOVE_ITEM',
-              payload: { fromIndex: i, toIndex: j },
-            });
-            // After moving i→j, item that was at j is now at j+1 (or i, depending on direction)
-            // Since i > j, moving fromIndex=i to toIndex=j shifts everything between j..i-1 up by 1
-            // The element originally at j is now at j+1, and we need it at position i
-            if (i > j + 1) {
-              queueElem.dispatch({
-                type: 'MOVE_ITEM',
-                payload: { fromIndex: j + 1, toIndex: i },
-              });
-            }
-          }
-        }
-        console.log(
-          `[ForceShuffle] Shuffled ${items.length - startIdx} items after index ${currentIndex} via MOVE_ITEM dispatches.`,
-        );
+      if (typeof playerBar.queue?.shuffle === 'function') {
+        // Use the exact native shuffle method that YTM's player bar uses
+        // This is the same method triggered by MPRIS/media keys in renderer.ts
+        // It performs a full shuffle efficiently without causing track skips.
+        playerBar.queue.shuffle();
+        console.log('[ForceShuffle] Native playerBar.queue.shuffle() called.');
       } else {
-        console.log('[ForceShuffle] Not enough items to shuffle.');
+        // Fallback to clicking the actual UI button if the API is unavailable
+        const shuffleBtn = playerBar.querySelector<HTMLElement>(
+          'tp-yt-paper-icon-button.shuffle, .shuffle',
+        );
+        if (shuffleBtn) {
+          shuffleBtn.click();
+          console.log('[ForceShuffle] Clicked native UI shuffle button.');
+        } else {
+          console.warn('[ForceShuffle] Native shuffle API and UI button not found!');
+        }
       }
 
       this.cooldownUntil = Date.now() + SHUFFLE_COOLDOWN_MS;
