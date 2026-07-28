@@ -253,6 +253,154 @@ const parsePlaylistInfo = (playlistId: string, data: unknown) => {
   };
 };
 
+const normalizePlaylistId = (browseId: string): string | null => {
+  if (!browseId) return null;
+  if (browseId === 'FEmusic_liked_playlists') return null;
+  if (browseId.startsWith('VL')) return browseId.slice(2);
+  // Library playlists / liked music use VL… or LM / PL…
+  if (
+    browseId.startsWith('PL') ||
+    browseId.startsWith('OLAK5uy') ||
+    browseId === 'LM' ||
+    browseId.startsWith('RD')
+  ) {
+    return browseId;
+  }
+  return null;
+};
+
+const parseTrackCountFromSubtitle = (subtitle: string | null): number | null => {
+  if (!subtitle) return null;
+  const match = subtitle.match(
+    /(\d[\d.,]*)\s+(songs?|canciones?|titres?|titoli|liederen|musiques?)/i,
+  );
+  if (!match?.[1]) return null;
+  const count = Number(match[1].replaceAll(/[.,](?=\d{3}\b)/g, '').replace(',', '.'));
+  // Prefer integer song counts; if decimal parsing looks wrong, strip non-digits.
+  if (Number.isFinite(count) && Number.isInteger(count)) return count;
+  const digits = Number(match[1].replaceAll(/\D/g, ''));
+  return Number.isFinite(digits) ? digits : null;
+};
+
+const parseUserPlaylists = (data: unknown) => {
+  const playlists: Array<{
+    id: string;
+    name: string | null;
+    trackCount?: number | null;
+    author?: string | null;
+  }> = [];
+  const seen = new Set<string>();
+
+  const visit = (value: unknown, depth = 0) => {
+    if (!value || typeof value !== 'object' || depth > 16) return;
+    const record = value as Record<string, unknown>;
+
+    const twoRow = record.musicTwoRowItemRenderer as
+      | Record<string, unknown>
+      | undefined;
+    const listItem = record.musicResponsiveListItemRenderer as
+      | Record<string, unknown>
+      | undefined;
+
+    const extractFromRenderer = (renderer: Record<string, unknown>) => {
+      const browseId =
+        (
+          renderer.navigationEndpoint as
+            | { browseEndpoint?: { browseId?: string } }
+            | undefined
+        )?.browseEndpoint?.browseId ??
+        (
+          (
+            renderer.menu as
+              | {
+                  menuRenderer?: {
+                    items?: Array<{
+                      menuNavigationItemRenderer?: {
+                        navigationEndpoint?: {
+                          browseEndpoint?: { browseId?: string };
+                        };
+                      };
+                    }>;
+                  };
+                }
+              | undefined
+          )?.menuRenderer?.items ?? []
+        )
+          .map(
+            (item) =>
+              item.menuNavigationItemRenderer?.navigationEndpoint
+                ?.browseEndpoint?.browseId,
+          )
+          .find((id): id is string => Boolean(id));
+
+      if (!browseId) return;
+      const id = normalizePlaylistId(browseId);
+      if (!id || seen.has(id)) return;
+
+      const name =
+        getTextRuns(renderer.title) ??
+        getTextRuns(
+          (
+            (renderer.flexColumns as
+              | Array<{
+                  musicResponsiveListItemFlexColumnRenderer?: {
+                    text?: unknown;
+                  };
+                }>
+              | undefined)?.[0]?.musicResponsiveListItemFlexColumnRenderer
+          )?.text,
+        );
+
+      const subtitle =
+        getTextRuns(renderer.subtitle) ??
+        getTextRuns(
+          (
+            (renderer.flexColumns as
+              | Array<{
+                  musicResponsiveListItemFlexColumnRenderer?: {
+                    text?: unknown;
+                  };
+                }>
+              | undefined)?.[1]?.musicResponsiveListItemFlexColumnRenderer
+          )?.text,
+        );
+
+      const subtitleParts = subtitle
+        ? subtitle
+            .split('•')
+            .map((part) => part.trim())
+            .filter(Boolean)
+        : [];
+      const trackCount = parseTrackCountFromSubtitle(subtitle);
+      const author =
+        subtitleParts.find(
+          (part) =>
+            !/\d[\d.,]*\s+(songs?|canciones?|titres?|titoli|liederen|musiques?)/i.test(
+              part,
+            ),
+        ) ?? null;
+
+      seen.add(id);
+      playlists.push({
+        id,
+        name,
+        trackCount,
+        author,
+      });
+    };
+
+    if (twoRow) extractFromRenderer(twoRow);
+    if (listItem) extractFromRenderer(listItem);
+
+    for (const child of Object.values(record)) {
+      visit(child, depth + 1);
+    }
+  };
+
+  visit(data);
+  return { playlists };
+};
+
 async function listenForApiLoad() {
   if (!isApiLoaded) {
     api = document.querySelector('#movie_player');
@@ -541,6 +689,35 @@ async function onApiLoaded() {
           error instanceof Error
             ? error.message
             : 'Failed to get playlist info',
+        );
+      }
+    },
+  );
+  window.ipcRenderer.on(
+    'peard:get-user-playlists',
+    async (_, responseChannel: string) => {
+      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+      if (!app) {
+        window.ipcRenderer.send(responseChannel, 'YouTube Music is not ready');
+        return;
+      }
+
+      try {
+        const data = await app.networkManager.fetch<
+          unknown,
+          { browseId: string }
+        >('/browse', { browseId: 'FEmusic_liked_playlists' });
+        window.ipcRenderer.send(
+          responseChannel,
+          undefined,
+          parseUserPlaylists(data),
+        );
+      } catch (error) {
+        window.ipcRenderer.send(
+          responseChannel,
+          error instanceof Error
+            ? error.message
+            : 'Failed to get user playlists',
         );
       }
     },

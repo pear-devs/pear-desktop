@@ -52,3 +52,14 @@ export const PlaylistInfoSchema = z.object({
   trackCount: z.number().int().nonnegative(),
   tracks: z.array(PlaylistTrackSchema),
 });
+
+export const UserPlaylistSchema = z.object({
+  id: z.string(),
+  name: z.string().nullable(),
+  trackCount: z.number().int().nonnegative().nullable().optional(),
+  author: z.string().nullable().optional(),
+});
+
+export const UserPlaylistsSchema = z.object({
+  playlists: z.array(UserPlaylistSchema),
+});

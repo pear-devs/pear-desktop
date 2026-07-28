@@ -23,6 +23,7 @@ import {
   PlaylistInfoSchema,
   PlaylistParamsSchema,
   PlayPlaylistSchema,
+  UserPlaylistsSchema,
   QueueParamsSchema,
   ReorderQueueSchema,
   SearchSchema,
@@ -752,6 +753,33 @@ const routes = {
       },
     },
   }),
+  userPlaylists: createRoute({
+    method: 'get',
+    path: `/api/${API_VERSION}/playlists`,
+    summary: 'get user playlists',
+    description:
+      'List playlists from the signed-in YouTube Music library (FEmusic_liked_playlists)',
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: UserPlaylistsSchema,
+          },
+        },
+      },
+      500: {
+        description: 'Failed to get user playlists',
+        content: {
+          'application/json': {
+            schema: z.object({
+              error: z.string(),
+            }),
+          },
+        },
+      },
+    },
+  }),
   search: createRoute({
     method: 'post',
     path: `/api/${API_VERSION}/search`,
@@ -1199,6 +1227,22 @@ export const register = (
             error instanceof Error
               ? error.message
               : 'Failed to get playlist info',
+        },
+        500,
+      );
+    }
+  });
+  app.openapi(routes.userPlaylists, async (ctx) => {
+    try {
+      const data = await controller.getUserPlaylists();
+      return ctx.json(data as z.infer<typeof UserPlaylistsSchema>, 200);
+    } catch (error) {
+      return ctx.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to get user playlists',
         },
         500,
       );

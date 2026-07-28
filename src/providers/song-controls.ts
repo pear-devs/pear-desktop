@@ -172,6 +172,25 @@ export const getSongControls = (win: BrowserWindow) => {
           playlistId,
         );
       }),
+    getUserPlaylists: () =>
+      new Promise<unknown>((resolve, reject) => {
+        const responseChannel = `peard:get-user-playlists-response:${randomUUID()}`;
+        const timeout = setTimeout(() => {
+          ipcMain.removeAllListeners(responseChannel);
+          reject(new Error('Getting user playlists timed out'));
+        }, 15_000);
+
+        ipcMain.once(responseChannel, (_, error?: string, data?: unknown) => {
+          clearTimeout(timeout);
+          if (error) {
+            reject(new Error(error));
+          } else {
+            resolve(data);
+          }
+        });
+
+        win.webContents.send('peard:get-user-playlists', responseChannel);
+      }),
     moveSongInQueue: (
       fromIndex: ArgsType<number>,
       toIndex: ArgsType<number>,
