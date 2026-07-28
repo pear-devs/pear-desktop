@@ -9,3 +9,4 @@ export * from './set-fullscreen';
 export * from './queue';
 export * from './search';
 export * from './playlist';
+export * from './player-state';
