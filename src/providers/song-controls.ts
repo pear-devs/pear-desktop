@@ -212,14 +212,10 @@ export const getSongControls = (win: BrowserWindow) => {
       videoId?: ArgsType<string>,
     ) => {
       const pid = parseStringFromArgsType(playlistId);
+      if (!pid) return;
+
       const vid = videoId ? parseStringFromArgsType(videoId) : null;
-      if (pid) {
-        let url = `https://music.youtube.com/playlist?list=${pid}`;
-        if (vid) {
-          url += `&v=${vid}`;
-        }
-        win.webContents.loadURL(url);
-      }
+      win.webContents.send('peard:play-playlist', pid, vid ?? undefined);
     },
     playArtist: (channelId: ArgsType<string>) => {
       const id = parseStringFromArgsType(channelId);
@@ -231,12 +227,10 @@ export const getSongControls = (win: BrowserWindow) => {
       const id = parseStringFromArgsType(albumId);
       if (!id) return;
 
-      // Album audio playlists can be started like regular playlists.
+      // Album audio playlists / playlist IDs play via the same watch URL flow.
       if (id.startsWith('OLAK5uy') || id.startsWith('PL')) {
         const playlistId = id.startsWith('VL') ? id.slice(2) : id;
-        win.webContents.loadURL(
-          `https://music.youtube.com/playlist?list=${playlistId}`,
-        );
+        win.webContents.send('peard:play-playlist', playlistId);
         return;
       }
 

@@ -41,11 +41,12 @@ type PlayableEndpoint = {
   playlistId?: string;
 };
 
-const findPlayableEndpoint = (
+const collectPlayableEndpoints = (
   value: unknown,
   depth = 0,
-): PlayableEndpoint | null => {
-  if (!value || typeof value !== 'object' || depth > 12) return null;
+  out: PlayableEndpoint[] = [],
+): PlayableEndpoint[] => {
+  if (!value || typeof value !== 'object' || depth > 14) return out;
 
   const record = value as Record<string, unknown>;
 
@@ -53,25 +54,66 @@ const findPlayableEndpoint = (
     | { videoId?: string; playlistId?: string }
     | undefined;
   if (watchEndpoint?.videoId || watchEndpoint?.playlistId) {
-    return {
+    out.push({
       videoId: watchEndpoint.videoId,
       playlistId: watchEndpoint.playlistId,
-    };
+    });
   }
 
   const watchPlaylistEndpoint = record.watchPlaylistEndpoint as
     | { playlistId?: string }
     | undefined;
   if (watchPlaylistEndpoint?.playlistId) {
-    return { playlistId: watchPlaylistEndpoint.playlistId };
+    out.push({ playlistId: watchPlaylistEndpoint.playlistId });
   }
 
   for (const child of Object.values(record)) {
-    const found = findPlayableEndpoint(child, depth + 1);
-    if (found) return found;
+    collectPlayableEndpoints(child, depth + 1, out);
   }
 
-  return null;
+  return out;
+};
+
+const scorePlayableEndpoint = (
+  endpoint: PlayableEndpoint,
+  preferAlbum = false,
+): number => {
+  let score = 0;
+  const playlistId = endpoint.playlistId ?? '';
+
+  if (playlistId.startsWith('OLAK5uy') || playlistId.startsWith('VLOLAK5uy')) {
+    score += 100;
+  }
+  if (preferAlbum && playlistId.includes('OLAK')) {
+    score += 40;
+  }
+  if (endpoint.videoId && playlistId) {
+    score += 20;
+  }
+  if (playlistId.startsWith('RD')) {
+    score -= 50;
+  } else if (playlistId) {
+    score += 10;
+  }
+  if (endpoint.videoId) {
+    score += 5;
+  }
+
+  return score;
+};
+
+const findPlayableEndpoint = (
+  value: unknown,
+  preferAlbum = false,
+): PlayableEndpoint | null => {
+  const endpoints = collectPlayableEndpoints(value);
+  if (endpoints.length === 0) return null;
+
+  return [...endpoints].sort(
+    (a, b) =>
+      scorePlayableEndpoint(b, preferAlbum) -
+      scorePlayableEndpoint(a, preferAlbum),
+  )[0]!;
 };
 
 const getTextRuns = (value: unknown): string | null => {
@@ -108,9 +150,16 @@ const parsePlaylistInfo = (playlistId: string, data: unknown) => {
           record.musicEditablePlaylistDetailHeaderRenderer as
             | { header?: { musicDetailHeaderRenderer?: Record<string, unknown> } }
             | undefined
-        )?.header?.musicDetailHeaderRenderer;
+        )?.header?.musicDetailHeaderRenderer ??
+        (record.musicResponsiveHeaderRenderer as
+          | Record<string, unknown>
+          | undefined);
       if (header) {
-        name = getTextRuns(header.title);
+        name =
+          getTextRuns(header.title) ??
+          getTextRuns(
+            (header as { header?: { title?: unknown } }).header?.title,
+          );
       }
     }
 
@@ -356,114 +405,79 @@ async function onApiLoaded() {
     } satisfies QueueResponse);
   });
 
+  const addVideosToQueue = (
+    videoIds: string[],
+    queueInsertPosition: string,
+  ) => {
+    const queue = document.querySelector<QueueElement>('#queue');
+    const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+    if (!app || !Array.isArray(videoIds) || videoIds.length === 0) return;
+
+    const store = queue?.queue.store.store;
+    if (!store) return;
+
+    const payload: {
+      queueInsertPosition: string;
+      videoIds: string[];
+    } = {
+      queueInsertPosition,
+      videoIds,
+    };
+
+    app.networkManager
+      .fetch('/music/get_queue', payload)
+      .then((result) => {
+        if (
+          result &&
+          typeof result === 'object' &&
+          'queueDatas' in result &&
+          Array.isArray(result.queueDatas)
+        ) {
+          const queueItems = store.getState().queue.items;
+          const queueItemsLength = queueItems.length ?? 0;
+          queue?.dispatch({
+            type: 'ADD_ITEMS',
+            payload: {
+              nextQueueItemId: store.getState().queue.nextQueueItemId,
+              index:
+                queueInsertPosition === 'INSERT_AFTER_CURRENT_VIDEO'
+                  ? queueItems.findIndex(
+                      (it) =>
+                        (
+                          it.playlistPanelVideoRenderer ||
+                          it.playlistPanelVideoWrapperRenderer
+                            ?.primaryRenderer.playlistPanelVideoRenderer
+                        )?.selected,
+                    ) + 1 || queueItemsLength
+                  : queueItemsLength,
+              items: result.queueDatas
+                .map((it) =>
+                  typeof it === 'object' && it && 'content' in it
+                    ? it.content
+                    : null,
+                )
+                .filter(Boolean),
+              shuffleEnabled: false,
+              shouldAssignIds: true,
+            },
+          });
+        }
+      })
+      .catch(() => {
+        // ignore get_queue failures
+      });
+  };
+
   window.ipcRenderer.on(
     'peard:add-to-queue',
     (_, videoId: string, queueInsertPosition: string) => {
-      const queue = document.querySelector<QueueElement>('#queue');
-      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
-      if (!app) return;
-
-      const store = queue?.queue.store.store;
-      if (!store) return;
-
-      app.networkManager
-        .fetch('/music/get_queue', {
-          queueContextParams: store.getState().queue.queueContextParams,
-          queueInsertPosition,
-          videoIds: [videoId],
-        })
-        .then((result) => {
-          if (
-            result &&
-            typeof result === 'object' &&
-            'queueDatas' in result &&
-            Array.isArray(result.queueDatas)
-          ) {
-            const queueItems = store.getState().queue.items;
-            const queueItemsLength = queueItems.length ?? 0;
-            queue?.dispatch({
-              type: 'ADD_ITEMS',
-              payload: {
-                nextQueueItemId: store.getState().queue.nextQueueItemId,
-                index:
-                  queueInsertPosition === 'INSERT_AFTER_CURRENT_VIDEO'
-                    ? queueItems.findIndex(
-                        (it) =>
-                          (
-                            it.playlistPanelVideoRenderer ||
-                            it.playlistPanelVideoWrapperRenderer
-                              ?.primaryRenderer.playlistPanelVideoRenderer
-                          )?.selected,
-                      ) + 1 || queueItemsLength
-                    : queueItemsLength,
-                items: result.queueDatas
-                  .map((it) =>
-                    typeof it === 'object' && it && 'content' in it
-                      ? it.content
-                      : null,
-                  )
-                  .filter(Boolean),
-                shuffleEnabled: false,
-                shouldAssignIds: true,
-              },
-            });
-          }
-        });
+      addVideosToQueue([videoId], queueInsertPosition);
     },
   );
   window.ipcRenderer.on(
     'peard:add-many-to-queue',
     (_, videoIds: string[], queueInsertPosition: string) => {
-      const queue = document.querySelector<QueueElement>('#queue');
-      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
-      if (!app || !Array.isArray(videoIds) || videoIds.length === 0) return;
-
-      const store = queue?.queue.store.store;
-      if (!store) return;
-
-      app.networkManager
-        .fetch('/music/get_queue', {
-          queueContextParams: store.getState().queue.queueContextParams,
-          queueInsertPosition,
-          videoIds,
-        })
-        .then((result) => {
-          if (
-            result &&
-            typeof result === 'object' &&
-            'queueDatas' in result &&
-            Array.isArray(result.queueDatas)
-          ) {
-            const queueItems = store.getState().queue.items;
-            const queueItemsLength = queueItems.length ?? 0;
-            queue?.dispatch({
-              type: 'ADD_ITEMS',
-              payload: {
-                nextQueueItemId: store.getState().queue.nextQueueItemId,
-                index:
-                  queueInsertPosition === 'INSERT_AFTER_CURRENT_VIDEO'
-                    ? queueItems.findIndex(
-                        (it) =>
-                          (
-                            it.playlistPanelVideoRenderer ||
-                            it.playlistPanelVideoWrapperRenderer
-                              ?.primaryRenderer.playlistPanelVideoRenderer
-                          )?.selected,
-                      ) + 1 || queueItemsLength
-                    : queueItemsLength,
-                items: result.queueDatas
-                  .map((it) =>
-                    typeof it === 'object' && it && 'content' in it
-                      ? it.content
-                      : null,
-                  )
-                  .filter(Boolean),
-                shuffleEnabled: false,
-                shouldAssignIds: true,
-              },
-            });
-          }
-        });
+      addVideosToQueue(videoIds, queueInsertPosition);
     },
   );
   window.ipcRenderer.on(
@@ -531,6 +545,70 @@ async function onApiLoaded() {
       }
     },
   );
+  const navigateToWatch = (videoId: string, playlistId?: string) => {
+    const list = playlistId ? `&list=${playlistId}` : '';
+    window.location.href = `https://music.youtube.com/watch?v=${videoId}${list}`;
+  };
+
+  const playPlaylistById = async (playlistId: string, videoId?: string) => {
+    const listId = playlistId.startsWith('VL')
+      ? playlistId.slice(2)
+      : playlistId;
+
+    if (videoId) {
+      navigateToWatch(videoId, listId);
+      return;
+    }
+
+    const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+    if (!app) return;
+
+    try {
+      const browseId = playlistId.startsWith('VL')
+        ? playlistId
+        : `VL${playlistId}`;
+      const data = await app.networkManager.fetch<
+        unknown,
+        { browseId: string }
+      >('/browse', { browseId });
+
+      const endpoint = findPlayableEndpoint(data);
+      if (endpoint?.videoId) {
+        navigateToWatch(
+          endpoint.videoId,
+          endpoint.playlistId?.startsWith('VL')
+            ? endpoint.playlistId.slice(2)
+            : (endpoint.playlistId ?? listId),
+        );
+        return;
+      }
+
+      if (endpoint?.playlistId) {
+        const pid = endpoint.playlistId.startsWith('VL')
+          ? endpoint.playlistId.slice(2)
+          : endpoint.playlistId;
+        if (pid !== listId) {
+          await playPlaylistById(pid);
+          return;
+        }
+      }
+
+      const info = parsePlaylistInfo(playlistId, data);
+      const firstVideoId = info.tracks.find((track) => track.videoId)?.videoId;
+      if (firstVideoId) {
+        navigateToWatch(firstVideoId, listId);
+      }
+    } catch {
+      // ignore browse failures
+    }
+  };
+
+  window.ipcRenderer.on(
+    'peard:play-playlist',
+    async (_, playlistId: string, videoId?: string) => {
+      await playPlaylistById(playlistId, videoId);
+    },
+  );
   window.ipcRenderer.on('peard:play-artist', async (_, channelId: string) => {
     const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
     if (!app) return;
@@ -543,16 +621,13 @@ async function onApiLoaded() {
       const endpoint = findPlayableEndpoint(data);
       if (!endpoint) return;
 
-      if ('videoId' in endpoint && endpoint.videoId) {
-        const list = endpoint.playlistId
-          ? `&list=${endpoint.playlistId}`
-          : '';
-        window.location.href = `https://music.youtube.com/watch?v=${endpoint.videoId}${list}`;
+      if (endpoint.videoId) {
+        navigateToWatch(endpoint.videoId, endpoint.playlistId);
         return;
       }
 
       if (endpoint.playlistId) {
-        window.location.href = `https://music.youtube.com/playlist?list=${endpoint.playlistId}`;
+        await playPlaylistById(endpoint.playlistId);
       }
     } catch {
       // ignore browse failures
@@ -567,18 +642,29 @@ async function onApiLoaded() {
         '/browse',
         { browseId: albumId },
       );
-      const endpoint = findPlayableEndpoint(data);
-      if (!endpoint?.playlistId && !endpoint?.videoId) return;
+      const endpoint = findPlayableEndpoint(data, true);
 
-      if (endpoint.videoId) {
-        const list = endpoint.playlistId
-          ? `&list=${endpoint.playlistId}`
-          : '';
-        window.location.href = `https://music.youtube.com/watch?v=${endpoint.videoId}${list}`;
+      if (endpoint?.playlistId?.includes('OLAK') || endpoint?.playlistId?.startsWith('PL')) {
+        await playPlaylistById(endpoint.playlistId);
         return;
       }
 
-      window.location.href = `https://music.youtube.com/playlist?list=${endpoint.playlistId}`;
+      if (endpoint?.videoId) {
+        navigateToWatch(endpoint.videoId, endpoint.playlistId);
+        return;
+      }
+
+      if (endpoint?.playlistId) {
+        await playPlaylistById(endpoint.playlistId);
+        return;
+      }
+
+      // Album browse pages often expose tracks without a direct watch endpoint.
+      const info = parsePlaylistInfo(albumId, data);
+      const firstVideoId = info.tracks.find((track) => track.videoId)?.videoId;
+      if (firstVideoId) {
+        navigateToWatch(firstVideoId);
+      }
     } catch {
       // ignore browse failures
     }
