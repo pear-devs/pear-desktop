@@ -59,12 +59,13 @@ export default createPlugin<
   {
     observer: MutationObserver | null;
     cancelShuffle: (() => void) | null;
+    stopped: boolean;
   },
   ResumeShufflePluginConfig
 >({
   name: () => t('plugins.resume-shuffle.name'),
   description: () => t('plugins.resume-shuffle.description'),
-  addedVersion: '3.12.X',
+  addedVersion: '3.13.X',
   restartNeeded: false,
   config: {
     enabled: false,
@@ -73,7 +74,13 @@ export default createPlugin<
   renderer: {
     observer: null,
     cancelShuffle: null,
+    stopped: false,
     async onPlayerApiReady(_api, { getConfig, setConfig }) {
+      // Defensive: this can run again on plugin re-enable
+      this.observer?.disconnect();
+      this.cancelShuffle?.();
+      this.stopped = false;
+
       const saveShuffleState = () => setConfig({ shuffled: isShuffled() });
 
       const playerBar = document.querySelector('ytmusic-player-bar');
@@ -83,6 +90,9 @@ export default createPlugin<
       }
 
       const { shuffled } = await getConfig();
+      // The plugin may have been disabled while awaiting the config
+      if (this.stopped) return;
+
       const shouldRestore =
         location.pathname === '/watch' &&
         shuffled &&
@@ -99,6 +109,7 @@ export default createPlugin<
       }
     },
     stop() {
+      this.stopped = true;
       this.observer?.disconnect();
       this.observer = null;
       this.cancelShuffle?.();
