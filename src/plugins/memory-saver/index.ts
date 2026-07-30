@@ -64,8 +64,7 @@ export default createPlugin<
       if (this.interval) clearInterval(this.interval);
       this.interval = setInterval(async () => {
         if (window.isDestroyed()) return;
-        // A reload navigates to the song page, so never ask for one while the user is at the keyboard;
-        // the renderer then picks a gap in playback
+        // A reload navigates to the song page, so never ask for one while the user is at the keyboard; the renderer then picks a gap in playback
         if (powerMonitor.getSystemIdleTime() < SYSTEM_IDLE_S) return;
         if (Date.now() - this.lastRequestAt < COOLDOWN_MS) return;
 
@@ -90,13 +89,11 @@ export default createPlugin<
     pending: false,
     keepPausedUntil: 0,
     canReloadNow() {
-      // The reload rebuilds the queue from the URL, which only works for playlist and radio queues;
-      // hold off on hand-built ones
+      // The reload rebuilds the queue from the URL, which only works for playlist and radio queues; hold off on hand-built ones
       const { video_id: videoId, list } = this.api?.getVideoData() ?? {};
       if (!videoId || !list) return false;
 
-      // The rebuilt queue always comes back unshuffled,
-      // so only reload when the resume-shuffle plugin is set up to re-apply the shuffle
+      // The rebuilt queue always comes back unshuffled, so only reload when the resume-shuffle plugin is set up to re-apply the shuffle
       if (isShuffled()) {
         return (
           !!window.mainConfig.plugins.getPlugins()['resume-shuffle']?.enabled &&
@@ -110,8 +107,7 @@ export default createPlugin<
       if (this.pending && this.canReloadNow()) this.reload();
     },
     reload() {
-      // Built from the player rather than `options.resumeOnStart`'s saved url,
-      // which still points at the previous song during a track change
+      // Built from the player rather than `options.resumeOnStart`'s saved url, which still points at the previous song during a track change
       const { video_id: videoId, list } = this.api?.getVideoData() ?? {};
       if (!videoId) return;
 
@@ -121,14 +117,12 @@ export default createPlugin<
       target.searchParams.set('v', videoId);
       if (list) target.searchParams.set('list', list);
 
-      // Carry the playback position over; the player honours `t` and then drops it from the address bar,
-      // so it cannot pile up across reloads.
+      // Carry the playback position over; the player honours `t` and then drops it from the address bar, so it cannot pile up across reloads.
       const video = document.querySelector('video');
       const elapsed = Math.floor(video?.currentTime ?? 0);
       if (elapsed > 0) target.searchParams.set('t', `${elapsed}s`);
 
-      // The page always autoplays after loading, so remember a paused player and put it back afterwards;
-      // pausing must not restart the music.
+      // The page always autoplays after loading, so remember a paused player and put it back afterwards; pausing must not restart the music.
       if (video?.paused) sessionStorage.setItem(WAS_PAUSED_KEY, '1');
       sessionStorage.setItem(LAST_RELOAD_KEY, `${Date.now()}`);
 
@@ -137,8 +131,7 @@ export default createPlugin<
     keepPaused() {
       const video = document.querySelector('video');
       this.api?.pauseVideo();
-      // Autoplay can win the race, so pause again on the first frame it plays,
-      // but only briefly, so a deliberate play later isn't cancelled
+      // Autoplay can win the race, so pause again on the first frame it plays, but only briefly, so a deliberate play later isn't cancelled
       this.keepPausedUntil = Date.now() + 5_000;
       video?.addEventListener('timeupdate', this.onTimeUpdate, { once: true });
     },
@@ -147,8 +140,7 @@ export default createPlugin<
       if (event.target instanceof HTMLVideoElement) event.target.pause();
     },
     onPause(event) {
-      // A track ending naturally also fires 'pause' (with `ended` set) just before the next one loads;
-      // let the track change do the reload instead
+      // A track ending naturally also fires 'pause' (with `ended` set) just before the next one loads; let the track change do the reload instead
       if (event.target instanceof HTMLVideoElement && event.target.ended) {
         return;
       }
@@ -169,8 +161,7 @@ export default createPlugin<
       }
 
       ipc.on(RELOAD_CHANNEL, () => {
-        // Anchor the cooldown to the previous actual reload, not the request;
-        // a reload deferred for a long time still counts from when it happened
+        // Anchor the cooldown to the previous actual reload, not the request; a reload deferred for a long time still counts from when it happened
         const lastReloadAt = Number(sessionStorage.getItem(LAST_RELOAD_KEY));
         if (Date.now() - lastReloadAt < COOLDOWN_MS) return;
 
@@ -190,8 +181,7 @@ export default createPlugin<
       // A disabled plugin should never leave a pending restore behind
       sessionStorage.removeItem(WAS_PAUSED_KEY);
 
-      // The channel is exclusively this plugin's,
-      // so removing all listeners is safe and is the only cleanup the wrapped `ipc.on` allows
+      // The channel is exclusively this plugin's, so removing all listeners is safe and is the only cleanup the wrapped `ipc.on` allows
       ipc.removeAllListeners(RELOAD_CHANNEL);
       const video = document.querySelector('video');
       video?.removeEventListener('pause', this.onPause);
