@@ -103,8 +103,7 @@ export default createPlugin<
         this.cancelShuffle = shuffleWhenReady(queue);
       } else if (!shouldRestore) {
         // The observer above only reacts to changes, so record the initial state too.
-        // Skipped when a restore was wanted but the queue was missing,
-        // so that a saved `shuffled: true` survives instead of being overwritten with false.
+        // Skipped when a restore was wanted but the queue was missing, so that a saved `shuffled: true` survives instead of being overwritten with false.
         saveShuffleState();
       }
     },
