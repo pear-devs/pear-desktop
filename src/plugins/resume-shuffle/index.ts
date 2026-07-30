@@ -5,7 +5,7 @@ const RESTORE_TIMEOUT_MS = 10_000;
 
 export type ResumeShufflePluginConfig = {
   enabled: boolean;
-  /** Whether the queue was shuffled when the app was last closed. */
+  /** Whether the queue was shuffled when the app was last closed */
   shuffled: boolean;
 };
 
@@ -29,8 +29,8 @@ const isShuffled = () =>
     .querySelector<HTMLElement>('ytmusic-player-bar')
     ?.attributes.getNamedItem('shuffle-on') ?? null) !== null;
 
-// The queue is filled asynchronously, so wait for it before shuffling.
-// Returns a canceller, so a pending shuffle can't outlive the plugin.
+// The queue is filled asynchronously, so wait for it before shuffling
+// Returns a canceller, so a pending shuffle can't outlive the plugin
 const shuffleWhenReady = (queue: ShuffleQueue) => {
   const store = queue.store.store;
   let unsubscribe: (() => void) | undefined;
@@ -102,8 +102,8 @@ export default createPlugin<
       if (queue?.store.store) {
         this.cancelShuffle = shuffleWhenReady(queue);
       } else if (!shouldRestore) {
-        // The observer above only reacts to changes, so record the initial state too.
-        // Skipped when a restore was wanted but the queue was missing, so that a saved `shuffled: true` survives instead of being overwritten with false.
+        // The observer above only reacts to changes, so record the initial state too
+        // Skipped when a restore was wanted but the queue was missing, so that a saved `shuffled: true` survives instead of being overwritten with false
         saveShuffleState();
       }
     },
