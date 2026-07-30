@@ -37,7 +37,6 @@ export default createPlugin<
   {
     api: MusicPlayer | null;
     pending: boolean;
-    resumeShuffleEnabled: boolean;
     keepPausedUntil: number;
     canReloadNow: () => boolean;
     tryReload: () => void;
@@ -88,22 +87,14 @@ export default createPlugin<
   renderer: {
     api: null,
     pending: false,
-    resumeShuffleEnabled: false,
     keepPausedUntil: 0,
     canReloadNow() {
       // The reload rebuilds the queue from the URL, which only works for playlist and radio queues; hold off on hand-built ones
       const { video_id: videoId, list } = this.api?.getVideoData() ?? {};
       if (!videoId || !list) return false;
 
-      // The rebuilt queue always comes back unshuffled, so only reload when the resume-shuffle plugin is set up to re-apply the shuffle
-      if (isShuffled()) {
-        return (
-          this.resumeShuffleEnabled &&
-          window.mainConfig.get('options.resumeOnStart')
-        );
-      }
-
-      return true;
+      // The rebuilt queue always comes back unshuffled, so never reload while shuffle is on
+      return !isShuffled();
     },
     tryReload() {
       if (this.pending && this.canReloadNow()) this.reload();
@@ -162,14 +153,10 @@ export default createPlugin<
         this.keepPaused();
       }
 
-      ipc.on(RELOAD_CHANNEL, async () => {
+      ipc.on(RELOAD_CHANNEL, () => {
         // Anchor the cooldown to the previous actual reload, not the request; a reload deferred for a long time still counts from when it happened
         const lastReloadAt = Number(sessionStorage.getItem(LAST_RELOAD_KEY));
         if (Date.now() - lastReloadAt < COOLDOWN_MS) return;
-
-        // Resolved here rather than per attempt, so the reload gate stays synchronous
-        this.resumeShuffleEnabled =
-          await window.mainConfig.plugins.isEnabled('resume-shuffle');
 
         this.pending = true;
         // Paused is already a safe moment; otherwise wait for the next pause or track change
@@ -183,7 +170,6 @@ export default createPlugin<
     },
     stop({ ipc }) {
       this.pending = false;
-      this.resumeShuffleEnabled = false;
       this.api = null;
       // A disabled plugin should never leave a pending restore behind
       sessionStorage.removeItem(WAS_PAUSED_KEY);
