@@ -7,19 +7,19 @@ import type { MusicPlayer } from '@/types/music-player';
 import type { VideoDataChanged } from '@/types/video-data-changed';
 
 const CHECK_INTERVAL_MS = 60_000;
-/** Minimum spacing between reloads, anchored to the previous actual reload. */
+/** Minimum spacing between reloads, anchored to the previous actual reload */
 const COOLDOWN_MS = 60 * 60_000;
-/** Only ask for a reload while the user has been away from the keyboard this long. */
+/** Only ask for a reload while the user has been away from the keyboard this long */
 const SYSTEM_IDLE_S = 120;
 
 const RELOAD_CHANNEL = 'memory-saver:reload-when-idle';
-/** These survive the reload but not an app restart, which is exactly the lifetime needed. */
+/** These survive the reload but not an app restart, which is exactly the lifetime needed */
 const WAS_PAUSED_KEY = 'peard:memory-saver-was-paused';
 const LAST_RELOAD_KEY = 'peard:memory-saver-last-reload';
 
 export type MemorySaverPluginConfig = {
   enabled: boolean;
-  /** Reload once the renderer process is above this many MB. */
+  /** Reload once the renderer process is above this many MB */
   thresholdMB: number;
 };
 
@@ -37,6 +37,7 @@ export default createPlugin<
   {
     api: MusicPlayer | null;
     pending: boolean;
+    resumeShuffleEnabled: boolean;
     keepPausedUntil: number;
     canReloadNow: () => boolean;
     tryReload: () => void;
@@ -87,6 +88,7 @@ export default createPlugin<
   renderer: {
     api: null,
     pending: false,
+    resumeShuffleEnabled: false,
     keepPausedUntil: 0,
     canReloadNow() {
       // The reload rebuilds the queue from the URL, which only works for playlist and radio queues; hold off on hand-built ones
@@ -96,7 +98,7 @@ export default createPlugin<
       // The rebuilt queue always comes back unshuffled, so only reload when the resume-shuffle plugin is set up to re-apply the shuffle
       if (isShuffled()) {
         return (
-          !!window.mainConfig.plugins.getPlugins()['resume-shuffle']?.enabled &&
+          this.resumeShuffleEnabled &&
           window.mainConfig.get('options.resumeOnStart')
         );
       }
@@ -117,12 +119,12 @@ export default createPlugin<
       target.searchParams.set('v', videoId);
       if (list) target.searchParams.set('list', list);
 
-      // Carry the playback position over; the player honours `t` and then drops it from the address bar, so it cannot pile up across reloads.
+      // Carry the playback position over; the player honours `t` and then drops it from the address bar, so it cannot pile up across reloads
       const video = document.querySelector('video');
       const elapsed = Math.floor(video?.currentTime ?? 0);
       if (elapsed > 0) target.searchParams.set('t', `${elapsed}s`);
 
-      // The page always autoplays after loading, so remember a paused player and put it back afterwards; pausing must not restart the music.
+      // The page always autoplays after loading, so remember a paused player and put it back afterwards; pausing must not restart the music
       if (video?.paused) sessionStorage.setItem(WAS_PAUSED_KEY, '1');
       sessionStorage.setItem(LAST_RELOAD_KEY, `${Date.now()}`);
 
@@ -160,10 +162,14 @@ export default createPlugin<
         this.keepPaused();
       }
 
-      ipc.on(RELOAD_CHANNEL, () => {
+      ipc.on(RELOAD_CHANNEL, async () => {
         // Anchor the cooldown to the previous actual reload, not the request; a reload deferred for a long time still counts from when it happened
         const lastReloadAt = Number(sessionStorage.getItem(LAST_RELOAD_KEY));
         if (Date.now() - lastReloadAt < COOLDOWN_MS) return;
+
+        // Resolved here rather than per attempt, so the reload gate stays synchronous
+        this.resumeShuffleEnabled =
+          await window.mainConfig.plugins.isEnabled('resume-shuffle');
 
         this.pending = true;
         // Paused is already a safe moment; otherwise wait for the next pause or track change
@@ -177,6 +183,7 @@ export default createPlugin<
     },
     stop({ ipc }) {
       this.pending = false;
+      this.resumeShuffleEnabled = false;
       this.api = null;
       // A disabled plugin should never leave a pending restore behind
       sessionStorage.removeItem(WAS_PAUSED_KEY);
