@@ -5,6 +5,23 @@ import type { StatusbarLyricsPluginConfig } from './index';
 let activeLineText = '';
 let activeLineStartedAt = 0;
 let activeLineElement: HTMLElement | null = null;
+let timer: number | undefined;
+let observer: MutationObserver | undefined;
+let sendLyrics: (() => void) | undefined;
+
+const onPlayOrPaused = () => {
+  void sendLyrics?.();
+};
+
+const onTimeChanged = () => {
+  void sendLyrics?.();
+};
+
+const resetLineState = () => {
+  activeLineText = '';
+  activeLineStartedAt = 0;
+  activeLineElement = null;
+};
 
 // Collapse whitespace so lyric fragments remain stable when DOM nodes split a
 // line into multiple pieces.
@@ -133,24 +150,6 @@ export const renderer = createRenderer({
   // Observe lyric DOM changes and push the current line to the backend whenever
   // playback state or lyric content changes.
   async start(ctx) {
-    const onPlayOrPaused = () => {
-      void send();
-    };
-
-    const onTimeChanged = () => {
-      void send();
-    };
-
-    const stop = () => {
-      if (timer) {
-        window.clearInterval(timer);
-      }
-      observer?.disconnect();
-      window.ipcRenderer.removeListener('peard:play-or-paused', onPlayOrPaused);
-      window.ipcRenderer.removeListener('peard:time-changed', onTimeChanged);
-      void ctx.ipc.invoke('statusbar-lyrics:clear');
-    };
-
     const send = async () => {
       const config = (await ctx.getConfig()) as StatusbarLyricsPluginConfig;
       const text = pollLyrics(config.includePronunciation);
@@ -163,8 +162,17 @@ export const renderer = createRenderer({
       await ctx.ipc.invoke('statusbar-lyrics:set-text', text, config.maxLength);
     };
 
-    let timer: number | undefined;
-    let observer: MutationObserver | undefined;
+    sendLyrics = () => {
+      void send();
+    };
+
+    if (timer) {
+      window.clearInterval(timer);
+      timer = undefined;
+    }
+    observer?.disconnect();
+    observer = undefined;
+    resetLineState();
 
     observer = new MutationObserver(() => {
       void send();
@@ -185,13 +193,28 @@ export const renderer = createRenderer({
       void send();
     }, 250);
 
+    window.ipcRenderer.removeListener('peard:play-or-paused', onPlayOrPaused);
+    window.ipcRenderer.removeListener('peard:time-changed', onTimeChanged);
+
     window.ipcRenderer.on('peard:play-or-paused', onPlayOrPaused);
     window.ipcRenderer.on('peard:time-changed', onTimeChanged);
 
-    (this as { stop?: () => void }).stop = stop;
   },
-  // Delegate to the stop handler registered during startup.
   stop() {
-    (this as { stop?: () => void }).stop?.();
+    if (timer) {
+      window.clearInterval(timer);
+      timer = undefined;
+    }
+
+    observer?.disconnect();
+    observer = undefined;
+
+    window.ipcRenderer.removeListener('peard:play-or-paused', onPlayOrPaused);
+    window.ipcRenderer.removeListener('peard:time-changed', onTimeChanged);
+
+    sendLyrics = undefined;
+    resetLineState();
+
+    void window.ipcRenderer.invoke('statusbar-lyrics:clear');
   },
 });
