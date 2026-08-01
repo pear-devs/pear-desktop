@@ -8,6 +8,51 @@ let activeLineElement: HTMLElement | null = null;
 
 const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
 
+const isLikelyPronunciation = (element: HTMLElement | null) => {
+  if (!element) return false;
+
+  const className = element.className?.toString() ?? '';
+  if (/(translation|translated|subtitle|pronunciation|romaji|romanization)/i.test(className)) return true;
+
+  return Boolean(
+    element.closest('.translation, .translated, .lyrics-translation, .pronunciation, .romaji, [data-translation], [data-romanization], [aria-label*="translation" i], [aria-label*="pronunciation" i], [aria-label*="romaji" i]'),
+  );
+};
+
+const isLikelyRomaji = (element: HTMLElement | null) => {
+  if (!element) return false;
+
+  const className = element.className?.toString() ?? '';
+  if (/(romaji|romanization|pronunciation)/i.test(className)) return true;
+
+  return Boolean(element.closest('.romaji, [data-romanization], [aria-label*="romaji" i]'));
+};
+
+const getPrimaryText = (element: HTMLElement | null) => {
+  if (!element) return '';
+
+  const primaryChildren = Array.from(element.children).filter(
+    (child): child is HTMLElement => child instanceof HTMLElement && !isLikelyPronunciation(child) && !isLikelyRomaji(child),
+  );
+
+  const directText = primaryChildren
+    .map((child) => normalizeText(child.textContent ?? ''))
+    .find(Boolean);
+
+  if (directText) return directText;
+
+  return normalizeText(element.textContent ?? '');
+};
+
+const getPrimaryTextElement = (lineElement: HTMLElement | null) => {
+  if (!lineElement) return null;
+
+  const candidates = Array.from(lineElement.querySelectorAll<HTMLElement>('.text-lyrics'));
+  const visibleCandidate = candidates.find((candidate) => !isLikelyPronunciation(candidate));
+
+  return visibleCandidate ?? candidates[0] ?? null;
+};
+
 const parseDurationMs = (element: HTMLElement) => {
   const rawDuration = getComputedStyle(element).getPropertyValue(
     '--lyrics-duration',
@@ -19,23 +64,34 @@ const parseDurationMs = (element: HTMLElement) => {
   return parsedDuration * 1000;
 };
 
-const getLineText = (element: HTMLElement | null) => {
+const getLineText = (element: HTMLElement | null, includePronunciation: boolean) => {
   if (!element) return '';
 
-  const textElement = element.querySelector<HTMLElement>('.text-lyrics');
+  const textElement = getPrimaryTextElement(element);
   if (!textElement) return '';
 
-  return normalizeText(textElement.textContent ?? '');
+  const text = includePronunciation
+    ? normalizeText(textElement.textContent ?? '')
+    : getPrimaryText(textElement);
+
+  if (!text) return '';
+
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => normalizeText(line))
+    .filter(Boolean);
+
+  return lines[0] ?? text;
 };
 
-const pollLyrics = () => {
-  const currentTextElement = document.querySelector<HTMLElement>(
-    '.synced-line.current .text-lyrics',
-  );
+const pollLyrics = (includePronunciation: boolean) => {
+  const currentLine = document.querySelector<HTMLElement>('.synced-line.current');
+  if (!currentLine) return '';
+
+  const currentTextElement = getPrimaryTextElement(currentLine);
   if (!currentTextElement) return '';
 
-  const currentLine = currentTextElement.closest<HTMLElement>('.synced-line');
-  const currentText = normalizeText(currentTextElement.textContent ?? '');
+  const currentText = getLineText(currentLine, includePronunciation);
   const now = performance.now();
 
   if (activeLineElement !== currentLine || currentText !== activeLineText) {
@@ -49,7 +105,10 @@ const pollLyrics = () => {
   const switchAtMs = Math.max(0, durationMs - leadMs);
 
   if (now - activeLineStartedAt >= switchAtMs) {
-    const nextLineText = getLineText(currentLine?.nextElementSibling as HTMLElement | null);
+    const nextLineText = getLineText(
+      currentLine?.nextElementSibling as HTMLElement | null,
+      includePronunciation,
+    );
     if (nextLineText) return nextLineText;
   }
 
@@ -69,8 +128,8 @@ export const renderer = createRenderer({
     };
 
     const send = async () => {
-      const text = pollLyrics();
       const config = (await ctx.getConfig()) as StatusbarLyricsPluginConfig;
+      const text = pollLyrics(config.includePronunciation);
 
       if (!config.enabled || !text) {
         await ctx.ipc.invoke('statusbar-lyrics:clear');

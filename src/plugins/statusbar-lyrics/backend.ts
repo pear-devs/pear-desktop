@@ -14,6 +14,7 @@ const getTray = () => {
 
 const normalizeText = (text: string, maxLength: number) => {
   const cleaned = text.replace(/\s+/g, ' ').trim();
+  if (maxLength <= 0) return '';
   if (cleaned.length <= maxLength) return cleaned;
   return `${cleaned.slice(0, maxLength - 1).trimEnd()}…`;
 };
