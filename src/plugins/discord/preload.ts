@@ -10,7 +10,7 @@ export const onRendererLoad = async ({
   ipc,
 }: RendererContext<DiscordPluginConfig>) => {
   const config = await getConfig();
-  if (!config.showApplicationUser) {
+  if (!config.enabled || !config.showApplicationUser) {
     return;
   }
 
@@ -35,9 +35,7 @@ export const onRendererLoad = async ({
         document.querySelector<HTMLImageElement>(
           'ytmusic-settings-button yt-img-shadow img',
         ) ||
-        document.querySelector<HTMLImageElement>(
-          'ytmusic-settings-button img',
-        );
+        document.querySelector<HTMLImageElement>('ytmusic-settings-button img');
 
       if (accountButton) {
         avatar = accountButton.src || accountButton.getAttribute('src');
@@ -96,17 +94,21 @@ export const onRendererLoad = async ({
   };
 
   const observer = new MutationObserver(() => {
+    if (lookupInFlight || sent) {
+      return;
+    }
+
     if (checkCount >= maxChecks) {
       observer.disconnect();
       return;
     }
 
+    checkCount++;
     findUserInfo().then((found) => {
       if (found) {
         observer.disconnect();
       }
     });
-    checkCount++;
   });
 
   const startObserver = () => {
