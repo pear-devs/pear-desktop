@@ -8,6 +8,9 @@ let activeLineElement: HTMLElement | null = null;
 let timer: number | undefined;
 let observer: MutationObserver | undefined;
 let sendLyrics: (() => void) | undefined;
+let sendInFlight = false;
+let sendRequested = false;
+let lastPayload: string | undefined;
 
 const onPlayOrPaused = () => {
   void sendLyrics?.();
@@ -21,6 +24,12 @@ const resetLineState = () => {
   activeLineText = '';
   activeLineStartedAt = 0;
   activeLineElement = null;
+};
+
+const resetSendState = () => {
+  sendInFlight = false;
+  sendRequested = false;
+  lastPayload = undefined;
 };
 
 // Collapse whitespace so lyric fragments remain stable when DOM nodes split a
@@ -153,8 +162,15 @@ export const renderer = createRenderer({
     const send = async () => {
       const config = (await ctx.getConfig()) as StatusbarLyricsPluginConfig;
       const text = pollLyrics(config.includePronunciation);
+      const payload = config.enabled && text ? `${config.maxLength}\u0000${text}` : '';
 
-      if (!config.enabled || !text) {
+      if (payload === lastPayload) {
+        return;
+      }
+
+      lastPayload = payload;
+
+      if (!payload) {
         await ctx.ipc.invoke('statusbar-lyrics:clear');
         return;
       }
@@ -162,8 +178,27 @@ export const renderer = createRenderer({
       await ctx.ipc.invoke('statusbar-lyrics:set-text', text, config.maxLength);
     };
 
+    const flushSend = async () => {
+      if (sendInFlight) {
+        sendRequested = true;
+        return;
+      }
+
+      sendInFlight = true;
+
+      try {
+        do {
+          sendRequested = false;
+          await send();
+        } while (sendRequested);
+      } finally {
+        sendInFlight = false;
+      }
+    };
+
     sendLyrics = () => {
-      void send();
+      sendRequested = true;
+      void flushSend();
     };
 
     if (timer) {
@@ -175,7 +210,7 @@ export const renderer = createRenderer({
     resetLineState();
 
     observer = new MutationObserver(() => {
-      void send();
+      sendLyrics?.();
     });
 
     const target = document.querySelector('ytmusic-player-page');
@@ -190,7 +225,7 @@ export const renderer = createRenderer({
     }
 
     timer = window.setInterval(() => {
-      void send();
+      sendLyrics?.();
     }, 250);
 
     window.ipcRenderer.removeListener('peard:play-or-paused', onPlayOrPaused);
@@ -214,6 +249,7 @@ export const renderer = createRenderer({
 
     sendLyrics = undefined;
     resetLineState();
+    resetSendState();
 
     void window.ipcRenderer.invoke('statusbar-lyrics:clear');
   },
