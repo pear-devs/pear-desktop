@@ -13,7 +13,7 @@ export interface StatusbarLyricsPluginConfig {
 
 export const defaultConfig: StatusbarLyricsPluginConfig = {
   enabled: false,
-  maxLength: 32,
+  maxLength: 55,
   includePronunciation: false,
 };
 
