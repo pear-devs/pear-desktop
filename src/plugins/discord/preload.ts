@@ -105,7 +105,7 @@ export const onRendererLoad = async ({
 
     checkCount++;
     findUserInfo().then((found) => {
-      if (found) {
+      if (found || checkCount >= maxChecks) {
         observer.disconnect();
       }
     });
