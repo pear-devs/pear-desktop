@@ -44,6 +44,10 @@ export const backend = createBackend({
   stop(ctx) {
     ctx.ipc.removeHandler('statusbar-lyrics:set-text');
     ctx.ipc.removeHandler('statusbar-lyrics:clear');
-    tray?.setTitle('');
+    if (tray && !tray.isDestroyed()) {
+      tray.setTitle('');
+      tray.destroy();
+    }
+    tray = undefined;
   },
 });
