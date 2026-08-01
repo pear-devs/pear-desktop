@@ -11,8 +11,15 @@ let sendLyrics: (() => void) | undefined;
 let sendInFlight = false;
 let sendRequested = false;
 let lastPayload: string | undefined;
+let isPlaying = false;
+let resetLineBaseline = true;
 
-const onPlayOrPaused = () => {
+const onPlayOrPaused = (
+  _event: unknown,
+  payload: { isPaused: boolean; elapsedSeconds: number },
+) => {
+  isPlaying = !payload.isPaused;
+  resetLineBaseline = true;
   void sendLyrics?.();
 };
 
@@ -24,6 +31,11 @@ const resetLineState = () => {
   activeLineText = '';
   activeLineStartedAt = 0;
   activeLineElement = null;
+};
+
+const resetPlaybackState = () => {
+  isPlaying = false;
+  resetLineBaseline = true;
 };
 
 const resetSendState = () => {
@@ -87,6 +99,16 @@ const getPrimaryTextElement = (lineElement: HTMLElement | null) => {
   return visibleCandidate ?? candidates[0] ?? null;
 };
 
+const getNextLyricRow = (lineElement: HTMLElement | null) => {
+  let nextElement = lineElement?.nextElementSibling as HTMLElement | null;
+
+  while (nextElement && !nextElement.querySelector('.text-lyrics')) {
+    nextElement = nextElement.nextElementSibling as HTMLElement | null;
+  }
+
+  return nextElement;
+};
+
 // Read the CSS duration that synced lyrics expose so the plugin can predict
 // when the current line is about to switch.
 const parseDurationMs = (element: HTMLElement) => {
@@ -134,10 +156,21 @@ const pollLyrics = (includePronunciation: boolean) => {
   const currentText = getLineText(currentLine, includePronunciation);
   const now = performance.now();
 
+  if (resetLineBaseline) {
+    activeLineElement = currentLine;
+    activeLineText = currentText;
+    activeLineStartedAt = now;
+    resetLineBaseline = false;
+  }
+
   if (activeLineElement !== currentLine || currentText !== activeLineText) {
     activeLineElement = currentLine;
     activeLineText = currentText;
     activeLineStartedAt = now;
+  }
+
+  if (!isPlaying) {
+    return currentText;
   }
 
   const durationMs = parseDurationMs(currentTextElement) ?? 0;
@@ -145,10 +178,7 @@ const pollLyrics = (includePronunciation: boolean) => {
   const switchAtMs = Math.max(0, durationMs - leadMs);
 
   if (now - activeLineStartedAt >= switchAtMs) {
-    const nextLineText = getLineText(
-      currentLine?.nextElementSibling as HTMLElement | null,
-      includePronunciation,
-    );
+    const nextLineText = getLineText(getNextLyricRow(currentLine), includePronunciation);
     if (nextLineText) return nextLineText;
   }
 
@@ -208,6 +238,7 @@ export const renderer = createRenderer({
     observer?.disconnect();
     observer = undefined;
     resetLineState();
+    resetPlaybackState();
 
     observer = new MutationObserver(() => {
       sendLyrics?.();
@@ -249,6 +280,7 @@ export const renderer = createRenderer({
 
     sendLyrics = undefined;
     resetLineState();
+    resetPlaybackState();
     resetSendState();
 
     void window.ipcRenderer.invoke('statusbar-lyrics:clear');
