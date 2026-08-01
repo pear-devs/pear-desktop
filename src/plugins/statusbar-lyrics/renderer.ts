@@ -133,13 +133,21 @@ export const renderer = createRenderer({
   // Observe lyric DOM changes and push the current line to the backend whenever
   // playback state or lyric content changes.
   async start(ctx) {
+    const onPlayOrPaused = () => {
+      void send();
+    };
+
+    const onTimeChanged = () => {
+      void send();
+    };
+
     const stop = () => {
       if (timer) {
         window.clearInterval(timer);
       }
       observer?.disconnect();
-      ctx.ipc.removeAllListeners('peard:play-or-paused');
-      ctx.ipc.removeAllListeners('peard:time-changed');
+      window.ipcRenderer.removeListener('peard:play-or-paused', onPlayOrPaused);
+      window.ipcRenderer.removeListener('peard:time-changed', onTimeChanged);
       void ctx.ipc.invoke('statusbar-lyrics:clear');
     };
 
@@ -177,12 +185,8 @@ export const renderer = createRenderer({
       void send();
     }, 250);
 
-    ctx.ipc.on('peard:play-or-paused', () => {
-      void send();
-    });
-    ctx.ipc.on('peard:time-changed', () => {
-      void send();
-    });
+    window.ipcRenderer.on('peard:play-or-paused', onPlayOrPaused);
+    window.ipcRenderer.on('peard:time-changed', onTimeChanged);
 
     (this as { stop?: () => void }).stop = stop;
   },
