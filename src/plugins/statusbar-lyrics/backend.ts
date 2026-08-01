@@ -30,7 +30,8 @@ export const backend = createBackend({
       if (!is.macOS()) return;
 
       const trayInstance = getTray();
-      trayInstance.setTitle(normalizeText(text, maxLength));
+      // trayInstance.setTitle(normalizeText(text, maxLength));
+      trayInstance.setTitle(text);
     });
 
     ctx.ipc.handle('statusbar-lyrics:clear', () => {
