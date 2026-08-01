@@ -6,8 +6,12 @@ let activeLineText = '';
 let activeLineStartedAt = 0;
 let activeLineElement: HTMLElement | null = null;
 
+// Collapse whitespace so lyric fragments remain stable when DOM nodes split a
+// line into multiple pieces.
 const normalizeText = (text: string) => text.replace(/\s+/g, ' ').trim();
 
+// Detect translation or pronunciation nodes so the plugin can prefer the main
+// lyric line when both primary and auxiliary text are present.
 const isLikelyPronunciation = (element: HTMLElement | null) => {
   if (!element) return false;
 
@@ -19,6 +23,8 @@ const isLikelyPronunciation = (element: HTMLElement | null) => {
   );
 };
 
+// Detect romanization-only nodes as auxiliary text so the plugin can prefer
+// the main lyric line when both are rendered.
 const isLikelyRomaji = (element: HTMLElement | null) => {
   if (!element) return false;
 
@@ -44,6 +50,8 @@ const getPrimaryText = (element: HTMLElement | null) => {
   return normalizeText(element.textContent ?? '');
 };
 
+// Find the text container inside a lyric row that actually holds the primary
+// line content.
 const getPrimaryTextElement = (lineElement: HTMLElement | null) => {
   if (!lineElement) return null;
 
@@ -53,6 +61,8 @@ const getPrimaryTextElement = (lineElement: HTMLElement | null) => {
   return visibleCandidate ?? candidates[0] ?? null;
 };
 
+// Read the CSS duration that synced lyrics expose so the plugin can predict
+// when the current line is about to switch.
 const parseDurationMs = (element: HTMLElement) => {
   const rawDuration = getComputedStyle(element).getPropertyValue(
     '--lyrics-duration',
@@ -64,6 +74,8 @@ const parseDurationMs = (element: HTMLElement) => {
   return parsedDuration * 1000;
 };
 
+// Choose the best text for a line, optionally keeping pronunciation text when
+// the user has enabled it in the plugin settings.
 const getLineText = (element: HTMLElement | null, includePronunciation: boolean) => {
   if (!element) return '';
 
@@ -84,6 +96,8 @@ const getLineText = (element: HTMLElement | null, includePronunciation: boolean)
   return lines[0] ?? text;
 };
 
+// Poll the current synced lyrics row and switch to the next line slightly
+// before the animation ends so the tray title stays in sync with playback.
 const pollLyrics = (includePronunciation: boolean) => {
   const currentLine = document.querySelector<HTMLElement>('.synced-line.current');
   if (!currentLine) return '';
@@ -116,6 +130,8 @@ const pollLyrics = (includePronunciation: boolean) => {
 };
 
 export const renderer = createRenderer({
+  // Observe lyric DOM changes and push the current line to the backend whenever
+  // playback state or lyric content changes.
   async start(ctx) {
     const stop = () => {
       if (timer) {
@@ -159,7 +175,7 @@ export const renderer = createRenderer({
 
     timer = window.setInterval(() => {
       void send();
-      }, 250);
+    }, 250);
 
     ctx.ipc.on('peard:play-or-paused', () => {
       void send();
@@ -170,6 +186,7 @@ export const renderer = createRenderer({
 
     (this as { stop?: () => void }).stop = stop;
   },
+  // Delegate to the stop handler registered during startup.
   stop() {
     (this as { stop?: () => void }).stop?.();
   },
