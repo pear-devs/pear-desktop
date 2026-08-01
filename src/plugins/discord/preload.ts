@@ -65,11 +65,15 @@ export const onRendererLoad = async ({
             ) || document.querySelector('yt-formatted-string#account-name');
 
           if (accountNameElement) {
-            name =
+            const candidate =
               accountNameElement.textContent?.trim() ||
-              accountNameElement.getAttribute('title') ||
+              accountNameElement.getAttribute('title')?.trim() ||
               null;
-            break;
+
+            if (candidate) {
+              name = candidate;
+              break;
+            }
           }
         }
 
