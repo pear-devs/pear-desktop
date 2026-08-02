@@ -1,11 +1,10 @@
 import * as net from 'node:net';
 
-import { SocksClient, type SocksClientOptions } from 'socks';
 import is from 'electron-is';
-
-import { createBackend, LoggerPrefix } from '@/utils';
+import { SocksClient, type SocksClientOptions } from 'socks';
 
 import * as config from '@/config';
+import { createBackend, LoggerPrefix } from '@/utils';
 
 import { type AuthProxyConfig, defaultAuthProxyConfig } from '../config';
 
@@ -16,7 +15,8 @@ import type { BackendContext } from '@/types/contexts';
 const parseSocksUrl = (socksUrl: string) => {
   // Format: socks5://username:password@your_server_ip:port
 
-  const url = new URL(socksUrl);
+  const url = URL.parse(socksUrl);
+  if (!url) return null;
   return {
     host: url.hostname,
     port: parseInt(url.port, 10),

@@ -310,8 +310,7 @@ export class VolumeFader {
 
         // Compute current level on internal scale
         const level =
-          progress * (this.fade.volume.end - this.fade.volume.start) +
-          this.fade.volume.start;
+          (progress * (this.fade.volume.end - this.fade.volume.start)) + this.fade.volume.start;
 
         // Map fade level to volume level and apply it to media element
         this.media.volume = this.scale.internalToVolume(level);
@@ -378,7 +377,7 @@ export class VolumeFader {
     input = Math.log10(input);
 
     // Scale minus something × 10 dB to 0…1 (clipping at 0)
-    return Math.max(1 + input / dynamicRange, 0);
+    return Math.max(1 + (input / dynamicRange), 0);
   }
 }
 

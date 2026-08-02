@@ -1,16 +1,14 @@
+import { createSignal } from 'solid-js';
 import { render } from 'solid-js/web';
 
-import { createSignal } from 'solid-js';
-
-import { getSongMenu } from '@/providers/dom-elements';
-
-import { PlaybackSpeedSlider } from './components/slider';
 import { t } from '@/i18n';
-
 import {
   isMusicOrVideoTrack,
   isPlayerMenu,
 } from '@/plugins/utils/renderer/check';
+import { getSongMenu } from '@/providers/dom-elements';
+
+import { PlaybackSpeedSlider } from './components/slider';
 
 const MIN_PLAYBACK_SPEED = 0.07;
 const MAX_PLAYBACK_SPEED = 16;

@@ -1,9 +1,8 @@
-import path from 'node:path';
 import fs from 'node:fs';
-
-import { app, type NativeImage } from 'electron';
+import path from 'node:path';
 
 import musicPlayerIcon from '@assets/icon.png?asset&asarUnpack';
+import { app, type NativeImage } from 'electron';
 
 import { type SongInfo } from '@/providers/song-info';
 

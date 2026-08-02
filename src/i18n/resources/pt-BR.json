@@ -219,13 +219,6 @@
       "description": "Se um anúncio for reproduzido, ele silencia o áudio e define a velocidade de reprodução para 16x",
       "name": "Acelerador de Anúncios"
     },
-    "adblocker": {
-      "description": "Bloqueio de todos os anúncios e rastreamentos imediatamente",
-      "menu": {
-        "blocker": "Bloqueador"
-      },
-      "name": "Bloqueador de Anúncios"
-    },
     "album-actions": {
       "description": "Adiciona botões Remover Não curtir, Não curtir, Curtir e Remover Curtir para aplicar em todas as músicas em uma lista ou álbum",
       "name": "Ações do álbum"
@@ -496,13 +489,20 @@
           }
         }
       },
-      "name": "Rich Presence do Discord",
+      "name": "Presença Marcante no Discord",
       "prompt": {
         "set-inactivity-timeout": {
-          "label": "Digite o tempo de inatividade em segundos:",
+          "label": "Insira o tempo limite de inatividade em segundos:",
           "title": "Definir tempo limite de inatividade"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Bloqueia todo o rastreamento imediatamente",
+      "menu": {
+        "blocker": "Bloqueador"
+      },
+      "name": "Não rastrear"
     },
     "downloader": {
       "backend": {
@@ -943,9 +943,14 @@
           "label": "Tipo",
           "submenu": {
             "acrylic": "Acrílico",
+            "content": "Conteúdo",
+            "fullscreen-ui": "Interface em tela cheia",
             "mica": "Mica",
             "none": "Nenhum",
-            "tabbed": "Em abas"
+            "tabbed": "Em abas",
+            "under-page": "Abaixo da página",
+            "under-window": "Abaixo da janela",
+            "window": "Janela"
           }
         }
       },

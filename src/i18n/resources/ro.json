@@ -219,13 +219,6 @@
       "description": "Reclamele au sunetul dezactivat si viteza de redare este x16",
       "name": "Accelerare reclame"
     },
-    "adblocker": {
-      "description": "Blocheaza toate reclamele si trackers",
-      "menu": {
-        "blocker": "Blocator"
-      },
-      "name": "Blocator de reclame"
-    },
     "album-actions": {
       "description": "Adauga butoane pentru Undislike, Like si Unlike pentru toate piesele dintr-un playlist sau album",
       "name": "Actiuni pentru album"

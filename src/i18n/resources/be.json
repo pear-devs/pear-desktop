@@ -1,1 +1,54 @@
-{}
+{
+  "common": {
+    "console": {
+      "plugins": {
+        "execute-failed": "Памылка падчас выканання дадатку {{pluginName}}::{{contextName}}",
+        "executed-at-ms": "Дадатак {{pluginName}}::{{contextName}} быў выкананы за {{ms}}мс",
+        "initialize-failed": "Памылка падчас ініцыялізацыі дадатку \"{{pluginName}}\""
+      }
+    }
+  },
+  "language": {
+    "code": "by",
+    "local-name": "Беларуская",
+    "name": "Belarusian"
+  },
+  "main": {
+    "console": {
+      "when-ready": {
+        "clearing-cache-after-20s": "Ачысціць кэш праграмы"
+      }
+    },
+    "dialog": {
+      "need-to-restart": {
+        "buttons": {
+          "later": "Пазней",
+          "restart-now": "Перазапусціць зараз"
+        },
+        "detail": "\"{{pluginName}}\" патрабуе перазапуску, каб змены ўступілі ў сілу",
+        "message": "\"{{pluginName}}\" патрабуе перазапуску",
+        "title": "Патрабуецца перазапуск"
+      },
+      "unresponsive": {
+        "buttons": {
+          "quit": "Выйсці",
+          "relaunch": "Перазапусціць",
+          "wait": "Чакаць"
+        }
+      },
+      "update-available": {
+        "buttons": {
+          "download": "Запампаваць",
+          "ok": "Так"
+        }
+      }
+    },
+    "menu": {
+      "navigation": {
+        "submenu": {
+          "copy-current-url": "Скапіяваць бягучы URL"
+        }
+      }
+    }
+  }
+}

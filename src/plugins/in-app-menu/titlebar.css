@@ -18,10 +18,10 @@ ytmusic-app-layout > #content {
   padding-top: var(--menu-bar-height, 36px);
 }
 
-ytmusic-app-layout::-webkit-scrollbar{
+ytmusic-app-layout::-webkit-scrollbar {
   width: var(--ytmusic-scrollbar-width);
 }
-ytmusic-app-layout::-webkit-scrollbar-thumb{
+ytmusic-app-layout::-webkit-scrollbar-thumb {
   background-color: rgb(126, 126, 126);
 }
 
@@ -43,9 +43,7 @@ ytmusic-app[is-bauhaus-sidenav-enabled] #mini-guide-spacer.ytmusic-app {
 
 @media (max-width: 935px) {
   ytmusic-app[is-bauhaus-sidenav-enabled] #guide-spacer.ytmusic-app {
-    margin-top: calc(
-      var(--menu-bar-height, 36px)
-    ) !important;
+    margin-top: calc(var(--menu-bar-height, 36px)) !important;
   }
   ytmusic-app[is-bauhaus-sidenav-enabled] #mini-guide-spacer.ytmusic-app {
     margin-top: calc(
@@ -69,8 +67,18 @@ ytmusic-guide-renderer {
 }
 
 /* fix mini player behavior */
-ytmusic-app-layout ytmusic-player-page[is-mweb-modernization-enabled] .side-panel.ytmusic-player-page {
-  transform: translate(0, calc(var(--ytmusic-player-page-inner-height) - var(--ytmusic-player-page-tabs-header-height) - var(--ytmusic-player-page-player-bar-height) - var(--menu-bar-height, 32px) ));
+ytmusic-app-layout
+  ytmusic-player-page[is-mweb-modernization-enabled]
+  .side-panel.ytmusic-player-page {
+  transform: translate(
+    0,
+    calc(
+      var(--ytmusic-player-page-inner-height) -
+        var(--ytmusic-player-page-tabs-header-height) -
+        var(--ytmusic-player-page-player-bar-height) -
+        var(--menu-bar-height, 32px)
+    )
+  );
 }
 
 /* ytm-bugs: see https://github.com/pear-devs/pear-desktop/issues/1737 */

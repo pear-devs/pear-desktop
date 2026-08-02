@@ -219,13 +219,6 @@
       "description": "Nếu một quảng cáo được phát thì sẽ bị tắt tiếng và tăng tốc độ phát lên 16x",
       "name": "Tăng tốc quảng cáo"
     },
-    "adblocker": {
-      "description": "Chặn toàn bộ quảng cáo và trình theo dõi",
-      "menu": {
-        "blocker": "Trình chặn"
-      },
-      "name": "Chặn quảng cáo"
-    },
     "album-actions": {
       "description": "Thêm nút Hủy không thích, Không thích, Thích và Hủy thích để áp dụng cho tất cả bài hát trong danh sách phát hoặc album",
       "name": "Tác vụ với album"

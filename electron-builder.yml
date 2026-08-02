@@ -41,9 +41,10 @@ nsisWeb:
 linux:
   icon: assets/generated/icons/png
   category: AudioVideo
+  syncDesktopName: true
   desktop:
     entry:
-      StartupWMClass: "com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063"
+      StartupWMClass: "com.github.th-ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063"
   target:
     - target: AppImage
       arch:

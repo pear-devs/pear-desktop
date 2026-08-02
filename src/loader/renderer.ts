@@ -1,10 +1,8 @@
 import { deepmerge } from 'deepmerge-ts';
-
 import { rendererPlugins } from 'virtual:plugins';
 
-import { LoggerPrefix, startPlugin, stopPlugin } from '@/utils';
-
 import { t } from '@/i18n';
+import { LoggerPrefix, startPlugin, stopPlugin } from '@/utils';
 
 import type { RendererContext } from '@/types/contexts';
 import type { PluginConfig, PluginDef } from '@/types/plugins';
@@ -31,7 +29,7 @@ export const createContext = <Config extends PluginConfig>(
       window.ipcRenderer.invoke(event, ...args),
     on: (event: string, listener: CallableFunction) => {
       window.ipcRenderer.on(event, (_, ...args: unknown[]) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        // oxlint-disable-next-line typescript/no-unsafe-call
         listener(...args);
       });
     },

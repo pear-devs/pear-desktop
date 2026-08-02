@@ -2,6 +2,7 @@ import { type MenuItemConstructorOptions } from 'electron';
 
 import { t } from '@/i18n';
 import { type MenuContext } from '@/types/contexts';
+
 import { type AmbientModePluginConfig } from './types';
 
 export interface menuParameters {

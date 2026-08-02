@@ -1,12 +1,10 @@
 import { createEffect, For, Show, createSignal, createMemo } from 'solid-js';
-
 import { type VirtualizerHandle } from 'virtua/solid';
 
 import { type LineLyrics } from '@/plugins/synced-lyrics/types';
 
-import { config, currentTime } from '../renderer';
 import { _ytAPI } from '..';
-
+import { config, currentTime } from '../renderer';
 import {
   canonicalize,
   convertChineseCharacter,

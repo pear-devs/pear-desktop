@@ -1,6 +1,7 @@
-import { createPlugin } from '@/utils';
-import { onRendererLoad, onRendererUnload } from './renderer';
 import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
+
+import { onRendererLoad, onRendererUnload } from './renderer';
 
 export type SkipSilencesPluginConfig = {
   enabled: boolean;

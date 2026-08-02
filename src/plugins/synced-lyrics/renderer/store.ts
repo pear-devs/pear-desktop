@@ -1,7 +1,9 @@
+import { createMemo, runWithOwner } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { createMemo } from 'solid-js';
 
 import { getSongInfo } from '@/providers/song-info-front';
+
+import { reactiveOwner } from './reactive-root';
 
 import {
   type ProviderName,
@@ -36,10 +38,12 @@ export const [lyricsStore, setLyricsStore] = createStore<LyricsStore>({
   },
 });
 
-export const currentLyrics = createMemo(() => {
-  const provider = lyricsStore.provider;
-  return lyricsStore.lyrics[provider];
-});
+export const currentLyrics = runWithOwner(reactiveOwner, () =>
+  createMemo(() => {
+    const provider = lyricsStore.provider;
+    return lyricsStore.lyrics[provider];
+  }),
+)!;
 
 type VideoId = string;
 

@@ -1,6 +1,5 @@
-import { createPlugin } from '@/utils';
-
 import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
 import style from './style.css?inline';
 

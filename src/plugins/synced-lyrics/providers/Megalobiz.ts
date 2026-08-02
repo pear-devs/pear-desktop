@@ -64,9 +64,9 @@ export class Megalobiz implements LyricProvider {
             artists,
             href: anchor.getAttribute('href')!,
             duration:
-              parseInt(minutes) * 60 +
+              (parseInt(minutes) * 60) +
               parseInt(seconds) +
-              parseInt(millis) / 1000,
+              (parseInt(millis) / 1000),
           };
         },
       )

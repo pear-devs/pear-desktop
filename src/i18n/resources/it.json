@@ -219,13 +219,6 @@
       "description": "Se viene riprodotto un annuncio, l'audio viene disattivato e viene impostata la velocità di riproduzione su 16x",
       "name": "Accelerazione ad"
     },
-    "adblocker": {
-      "description": "Blocca tutti gli annunci e i tracker",
-      "menu": {
-        "blocker": "Blocco"
-      },
-      "name": "Ad blocker"
-    },
     "album-actions": {
       "description": "Aggiunge i pulsanti Undislike, Dislike, Like e Unlike a tutti i brani di una playlist o di un album",
       "name": "Azioni album"
@@ -239,7 +232,7 @@
             "percent": "{{ratio}}%"
           }
         },
-        "enable-seekbar": "Abilita tematizzazione della seekbar"
+        "enable-seekbar": "Abilita tematizzazione della barra di regolazione"
       },
       "name": "Tema abbinato a colore album"
     },
@@ -843,14 +836,14 @@
       },
       "menu": {
         "convert-chinese-character": {
-          "label": "Converti carattere Cinese",
+          "label": "Convertire i caratteri Cinesi",
           "submenu": {
             "disabled": {
               "label": "Disabilitato",
-              "tooltip": "Disabilita conversione carettere Cinese"
+              "tooltip": "Disabilita conversione caretteri Cinesi"
             },
             "simplified-to-traditional": {
-              "label": "Da Semplificato a Tradizionale",
+              "label": "Semplificato al Tradizionale",
               "tooltip": "Converti Cinese Semplificato in Cinese Tradizionale"
             },
             "traditional-to-simplified": {

@@ -1,15 +1,13 @@
-import { type BrowserWindow, ipcMain } from 'electron';
-
 import { deepmerge } from 'deepmerge-ts';
+import { type BrowserWindow, ipcMain } from 'electron';
 import { allPlugins, mainPlugins } from 'virtual:plugins';
 
 import * as config from '@/config';
+import { t } from '@/i18n';
 import { LoggerPrefix, startPlugin, stopPlugin } from '@/utils';
 
-import { t } from '@/i18n';
-
-import type { PluginConfig, PluginDef } from '@/types/plugins';
 import type { BackendContext } from '@/types/contexts';
+import type { PluginConfig, PluginDef } from '@/types/plugins';
 
 const loadedPluginMap: Record<
   string,
@@ -38,12 +36,12 @@ const createContext = (
       win.webContents.send(event, ...args);
     },
     handle: (event: string, listener: CallableFunction) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return,@typescript-eslint/no-unsafe-call
+      // oxlint-disable-next-line typescript/no-unsafe-return,typescript/no-unsafe-call
       ipcMain.handle(event, (_, ...args: unknown[]) => listener(...args));
     },
     on: (event: string, listener: CallableFunction) => {
       ipcMain.on(event, (_, ...args: unknown[]) => {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+        // oxlint-disable-next-line typescript/no-unsafe-call
         listener(...args);
       });
     },

@@ -1,9 +1,9 @@
-import { createPlugin } from '@/utils';
 import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
 
+import { backend } from './backend';
 import { defaultAuthProxyConfig } from './config';
 import { onMenu } from './menu';
-import { backend } from './backend';
 
 export default createPlugin({
   name: () => t('plugins.auth-proxy-adapter.name'),

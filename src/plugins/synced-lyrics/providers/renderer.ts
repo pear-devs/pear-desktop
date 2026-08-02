@@ -1,8 +1,8 @@
 import { ProviderNames } from './index';
-import { YTMusic } from './YTMusic';
 import { LRCLib } from './LRCLib';
-import { MusixMatch } from './MusixMatch';
 import { LyricsGenius } from './LyricsGenius';
+import { MusixMatch } from './MusixMatch';
+import { YTMusic } from './YTMusic';
 
 export const providers = {
   [ProviderNames.YTMusic]: new YTMusic(),

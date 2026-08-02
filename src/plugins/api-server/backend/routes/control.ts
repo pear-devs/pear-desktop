@@ -8,6 +8,7 @@ import {
   type VolumeState,
 } from '@/types/datahost-get-state';
 
+import { API_VERSION } from '../api-version';
 import {
   AddSongToQueueSchema,
   GoBackSchema,
@@ -23,12 +24,11 @@ import {
   SwitchRepeatSchema,
   type ResponseSongInfo,
 } from '../scheme';
-import { API_VERSION } from '../api-version';
 
-import type { SongInfo } from '@/providers/song-info';
-import type { BackendContext } from '@/types/contexts';
 import type { APIServerConfig } from '../../config';
 import type { HonoApp } from '../types';
+import type { SongInfo } from '@/providers/song-info';
+import type { BackendContext } from '@/types/contexts';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';
 import type { Context } from 'hono';
 

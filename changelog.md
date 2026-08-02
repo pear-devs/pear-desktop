@@ -2,7 +2,189 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [v3.12.0](https://github.com/pear-devs/pear-desktop/compare/v3.12.0...v3.12.0)
+
+#### [v3.12.0](https://github.com/pear-devs/pear-desktop/compare/v3.11.4...v3.12.0)
+
+> 28 June 2026
+
+- fix(deps): update dependency pinyin-pro to v3.28.1 [`#4504`](https://github.com/pear-devs/pear-desktop/pull/4504)
+- Remove compact sidebar plugin [`#4123`](https://github.com/pear-devs/pear-desktop/pull/4123)
+- feat(transparent-player): Added Linux and macOS support [`#4199`](https://github.com/pear-devs/pear-desktop/pull/4199)
+- feat(api-server): add websocket authorization [`#3854`](https://github.com/pear-devs/pear-desktop/pull/3854)
+- fix(deps): update dependency youtubei.js to v17.2.0 [`#4503`](https://github.com/pear-devs/pear-desktop/pull/4503)
+- fixed download Type error [`#4472`](https://github.com/pear-devs/pear-desktop/pull/4472)
+- chore(deps): update babel monorepo (major) [`#4499`](https://github.com/pear-devs/pear-desktop/pull/4499)
+- chore(deps): update dependency youtubei.js to v17.1.0 [`#4500`](https://github.com/pear-devs/pear-desktop/pull/4500)
+- fix(deps): update dependency youtubei.js to v17.1.0 [`#4498`](https://github.com/pear-devs/pear-desktop/pull/4498)
+- chore(deps): update oxlint monorepo [`#4497`](https://github.com/pear-devs/pear-desktop/pull/4497)
+- chore(deps): update babel monorepo [`#4487`](https://github.com/pear-devs/pear-desktop/pull/4487)
+- chore(deps): update dependency @electron/universal to v3.0.4 [`#4488`](https://github.com/pear-devs/pear-desktop/pull/4488)
+- chore(deps): update dependency electron to v42.5.0 [`#4495`](https://github.com/pear-devs/pear-desktop/pull/4495)
+- chore(deps): update dependency oxfmt to v0.56.0 [`#4496`](https://github.com/pear-devs/pear-desktop/pull/4496)
+- chore(deps): update dependency @typescript/native-preview to v7.0.0-dev.20260623.1 [`#4489`](https://github.com/pear-devs/pear-desktop/pull/4489)
+- chore(deps): update playwright monorepo [`#4492`](https://github.com/pear-devs/pear-desktop/pull/4492)
+- fix(deps): update dependency hono to v4.12.27 [`#4490`](https://github.com/pear-devs/pear-desktop/pull/4490)
+- fix(deps): update dependency node-html-parser to v8.0.3 [`#4493`](https://github.com/pear-devs/pear-desktop/pull/4493)
+- chore(deps): update dependency @xmldom/xmldom@&lt;0.8.12 to v0.8.13 [security] [`#4434`](https://github.com/pear-devs/pear-desktop/pull/4434)
+- chore(deps): update dependency ts-morph to v28 [`#4423`](https://github.com/pear-devs/pear-desktop/pull/4423)
+- fix(deps): update dependency virtua to v0.49.1 [`#4340`](https://github.com/pear-devs/pear-desktop/pull/4340)
+- chore(deps): update dependency builtin-modules to v5.1.0 [`#4421`](https://github.com/pear-devs/pear-desktop/pull/4421)
+- chore(deps): update dependency pinyin-pro to v3.28.1 [`#4414`](https://github.com/pear-devs/pear-desktop/pull/4414)
+- chore(deps): update dependency @babel/runtime to v7.29.2 [`#4415`](https://github.com/pear-devs/pear-desktop/pull/4415)
+- chore(deps): update actions/dependency-review-action digest to f5b9717 [`#4395`](https://github.com/pear-devs/pear-desktop/pull/4395)
+- refactor(taskbar-mediacontrol): Removed jimp dependency [`#4202`](https://github.com/pear-devs/pear-desktop/pull/4202)
+- chore(deps): update dependency electron to v40.8.5 [`#4342`](https://github.com/pear-devs/pear-desktop/pull/4342)
+- fix(api-server): add required 'alg' option to JWT middleware [`#4368`](https://github.com/pear-devs/pear-desktop/pull/4368)
+- fix: enhance connection error handling and reconnection logic [`#3688`](https://github.com/pear-devs/pear-desktop/issues/3688)
+- fix: update WM_CLASS for improved compatibility [`#2647`](https://github.com/pear-devs/pear-desktop/issues/2647) [`#3312`](https://github.com/pear-devs/pear-desktop/issues/3312) [`#3725`](https://github.com/pear-devs/pear-desktop/issues/3725) [`#4439`](https://github.com/pear-devs/pear-desktop/issues/4439)
+- fix(rolldown): fix bundling [`#4462`](https://github.com/pear-devs/pear-desktop/issues/4462)
+- feat(websocket): handle player state on app quit [`#4381`](https://github.com/pear-devs/pear-desktop/issues/4381)
+- fix: migrate custom element from ES5 to ES6 [`#4416`](https://github.com/pear-devs/pear-desktop/issues/4416)
+- feat: migrate from eslint to oxlint [`de90bbc`](https://github.com/pear-devs/pear-desktop/commit/de90bbc79211ee6de8278e28830976c4884480bb)
+- chore: update dependencies and remove unused code [`220b105`](https://github.com/pear-devs/pear-desktop/commit/220b10520ed4c094db62242aa7136fb2ff804558)
+- chore: bump dependencies [`48d1fdf`](https://github.com/pear-devs/pear-desktop/commit/48d1fdf6554b0ee9bbaffea6333d8eaf9bc29d26)
+
+#### [v3.11.4](https://github.com/pear-devs/pear-desktop/compare/v3.11.3...v3.11.4)
+
+> 21 March 2026
+
+- Fixed downloader by updating Youtubei.js dependency. [`#9`](https://github.com/pear-devs/pear-desktop/pull/9)
+- doc: installation instructions for Solus [`#4352`](https://github.com/pear-devs/pear-desktop/pull/4352)
+- chore(deps): update eslint monorepo to v9.39.3 [`#4337`](https://github.com/pear-devs/pear-desktop/pull/4337)
+- fix(deps): update dependency @hono/zod-openapi to v1.2.2 [`#4338`](https://github.com/pear-devs/pear-desktop/pull/4338)
+- chore(deps): update actions/checkout action to v6 [`#4293`](https://github.com/pear-devs/pear-desktop/pull/4293)
+- chore(deps): update actions/upload-artifact action to v6 [`#4294`](https://github.com/pear-devs/pear-desktop/pull/4294)
+- chore(deps): update dependency @playwright/test to v1.58.2 [`#4335`](https://github.com/pear-devs/pear-desktop/pull/4335)
+- chore(deps): update dependency glob to v13.0.6 [`#4298`](https://github.com/pear-devs/pear-desktop/pull/4298)
+- chore(deps): update dependency discord-api-types to v0.38.40 [`#4336`](https://github.com/pear-devs/pear-desktop/pull/4336)
+- chore(deps): update stefanzweifel/git-auto-commit-action action to v7 [`#4302`](https://github.com/pear-devs/pear-desktop/pull/4302)
+- fix(deps): update dependency conf to v15.1.0 [`#4303`](https://github.com/pear-devs/pear-desktop/pull/4303)
+- fix(deps): update dependency semver to v7.7.4 [`#4306`](https://github.com/pear-devs/pear-desktop/pull/4306)
+- chore(deps): update dependency @electron-toolkit/tsconfig to v2 [`#4301`](https://github.com/pear-devs/pear-desktop/pull/4301)
+- fix(deps): update dependency i18next to v25.8.13 [`#4290`](https://github.com/pear-devs/pear-desktop/pull/4290)
+- fix(deps): update dependency hono to v4.11.10 [security] [`#4331`](https://github.com/pear-devs/pear-desktop/pull/4331)
+- chore: bump version [`3c78e6f`](https://github.com/pear-devs/pear-desktop/commit/3c78e6faccbf4d171842bd31f56f4a7c03813667)
+- Merge pull request #3 from ArjixWasTaken/upstream [`e0ffb8f`](https://github.com/pear-devs/pear-desktop/commit/e0ffb8f48b9eff125303756e31820c92899092c0)
+- chore(i18n): Translated using Weblate (Lithuanian) [`4e6d9ba`](https://github.com/pear-devs/pear-desktop/commit/4e6d9ba017cd866dc0e6d77d0b2f7e01a8ab6501)
+
+#### [v3.11.3](https://github.com/pear-devs/pear-desktop/compare/v3.11.2...v3.11.3)
+
+> 19 February 2026
+
+- [chore]: sync with upstream [`#2`](https://github.com/pear-devs/pear-desktop/pull/2)
+- feat(synced-lyrics): Add Simplified/Traditional Chinese converter and improve Romanization to display tone [`#4111`](https://github.com/pear-devs/pear-desktop/pull/4111)
+- feat(synced-lyrics): Added Hindi & Bengali romanization support for lyrics [`#3933`](https://github.com/pear-devs/pear-desktop/pull/3933)
+- Update changelog for v3.11.2 [`af0daa0`](https://github.com/pear-devs/pear-desktop/commit/af0daa0805c7fe92a9f086e431ba0eb5efc34985)
+- chore(i18n): Translated using Weblate (Korean) [`faddaea`](https://github.com/pear-devs/pear-desktop/commit/faddaea40308592c9e01301218cc7bb5b1ce9609)
+- chore: overwrite .github with master configuration [`89ab102`](https://github.com/pear-devs/pear-desktop/commit/89ab102e050f00107663012de8bf8c339b56ad31)
+
+#### [v3.11.2](https://github.com/pear-devs/pear-desktop/compare/v3.11.1...v3.11.2)
+
+> 7 February 2026
+
+- feat(plugins): restore and fix adblocker plugin (https://github.com/pear-devs/pear-desktop/pull/4212) [`91b983e`](https://github.com/pear-devs/pear-desktop/commit/91b983eb125d84357bf8a32de09e23cd72c0ec7b)
+- release 3.11.2 [`a1102b3`](https://github.com/pear-devs/pear-desktop/commit/a1102b3160544170384ddd6fbebe3485fa1b8f44)
+
+#### [v3.11.1](https://github.com/pear-devs/pear-desktop/compare/v3.11.0...v3.11.1)
+
+> 5 February 2026
+
+- refactor(music-together): Removed delay dependency [`#4201`](https://github.com/pear-devs/pear-desktop/pull/4201)
+- chore(deps): update dependency electron to v40 [`#4297`](https://github.com/pear-devs/pear-desktop/pull/4297)
+- fix(deps): update dependency happy-dom to v20.4.0 [`#4287`](https://github.com/pear-devs/pear-desktop/pull/4287)
+- Fix: discord activity sanitizer [`#4119`](https://github.com/pear-devs/pear-desktop/pull/4119)
+- plugin: clock widget [`#4161`](https://github.com/pear-devs/pear-desktop/pull/4161)
+- dep: update libuuid for rpm builds [`#4139`](https://github.com/pear-devs/pear-desktop/pull/4139)
+- Add devcontainer setup [`#4143`](https://github.com/pear-devs/pear-desktop/pull/4143)
+- feat: Add toggle to swap the order of like/dislike buttons [`#4221`](https://github.com/pear-devs/pear-desktop/pull/4221)
+- Update Homebrew installation command [`#4228`](https://github.com/pear-devs/pear-desktop/pull/4228)
+- refactor(visualizer): Removed restart requirement and refactored impls [`#4200`](https://github.com/pear-devs/pear-desktop/pull/4200)
+- chore(deps): update dependency @playwright/test to v1.58.0 [`#4284`](https://github.com/pear-devs/pear-desktop/pull/4284)
+- fix(deps): update dependency solid-js to v1.9.11 [`#4282`](https://github.com/pear-devs/pear-desktop/pull/4282)
+- chore(deps): update dependency electron to v38.8.0 [`#4285`](https://github.com/pear-devs/pear-desktop/pull/4285)
+- chore: Updated electron-vite to 5.0.0 [`#4203`](https://github.com/pear-devs/pear-desktop/pull/4203)
+- fix(deps): update dependency virtua to v0.48.5 [`#4283`](https://github.com/pear-devs/pear-desktop/pull/4283)
+- fix(discord): Fixed memory leak by repeated RPC failures [`#4197`](https://github.com/pear-devs/pear-desktop/pull/4197)
+- fix(deps): update dependency custom-electron-prompt to v1.6.1 [`#4259`](https://github.com/pear-devs/pear-desktop/pull/4259)
+- fix(deps): update dependency electron-updater to v6.7.3 [`#4260`](https://github.com/pear-devs/pear-desktop/pull/4260)
+- fix(deps): update dependency fast-equals to v5.4.0 [`#4261`](https://github.com/pear-devs/pear-desktop/pull/4261)
+- chore(deps): update actions/github-script action to v8 [`#4263`](https://github.com/pear-devs/pear-desktop/pull/4263)
+- chore(deps): update actions/setup-node action to v6 [`#4264`](https://github.com/pear-devs/pear-desktop/pull/4264)
+- chore(deps): update dependency @stylistic/eslint-plugin to v5.7.1 [`#4274`](https://github.com/pear-devs/pear-desktop/pull/4274)
+- fix(deps): update dependency @floating-ui/dom to v1.7.5 [`#4275`](https://github.com/pear-devs/pear-desktop/pull/4275)
+- fix(deps): update dependency @hono/node-ws to v1.3.0 [`#4258`](https://github.com/pear-devs/pear-desktop/pull/4258)
+- fix(deps): update dependency @ghostery/adblocker-electron-preload to v2.13.4 [`#4257`](https://github.com/pear-devs/pear-desktop/pull/4257)
+- fix(deps): update dependency hono to v4.11.7 [security] [`#4273`](https://github.com/pear-devs/pear-desktop/pull/4273)
+- feat(synced-lyrics): Improve LRC parsing [`#4269`](https://github.com/pear-devs/pear-desktop/pull/4269)
+- chore(deps): update dependency cross-env to v10.1.0 [`#4187`](https://github.com/pear-devs/pear-desktop/pull/4187)
+- chore(deps): update dependency ws to v8.19.0 [`#4254`](https://github.com/pear-devs/pear-desktop/pull/4254)
+- fix(deps): update dependency @ghostery/adblocker-electron to v2.13.4 [`#4255`](https://github.com/pear-devs/pear-desktop/pull/4255)
+- fix(deps): update dependency @hono/node-server to v1.19.9 [`#4249`](https://github.com/pear-devs/pear-desktop/pull/4249)
+- fix(deps): update dependency virtua to v0.48.3 [`#4252`](https://github.com/pear-devs/pear-desktop/pull/4252)
+- chore(deps): update dependency electron-builder-squirrel-windows to v26.4.0 [`#4253`](https://github.com/pear-devs/pear-desktop/pull/4253)
+- chore(deps): update dependency node-gyp to v11.5.0 [`#4189`](https://github.com/pear-devs/pear-desktop/pull/4189)
+- chore(deps): update dependency @stylistic/eslint-plugin to v5.7.0 [`#4185`](https://github.com/pear-devs/pear-desktop/pull/4185)
+- fix(deps): update dependency @hono/swagger-ui to v0.5.3 [`#4250`](https://github.com/pear-devs/pear-desktop/pull/4250)
+- fix(deps): update dependency node-html-parser to v7.0.2 [`#4251`](https://github.com/pear-devs/pear-desktop/pull/4251)
+- chore(deps): update eslint monorepo to v9.39.2 [`#4191`](https://github.com/pear-devs/pear-desktop/pull/4191)
+- chore(deps): update dependency vite to v7.3.1 [`#4248`](https://github.com/pear-devs/pear-desktop/pull/4248)
+- chore(deps): update dependency bufferutil to v4.1.0 [`#4186`](https://github.com/pear-devs/pear-desktop/pull/4186)
+- chore(deps): update dependency typescript-eslint to v8.53.1 [`#4190`](https://github.com/pear-devs/pear-desktop/pull/4190)
+- chore(deps): update dependency eslint-plugin-prettier to v5.5.5 [`#4247`](https://github.com/pear-devs/pear-desktop/pull/4247)
+- chore(deps): update dependency @babel/runtime to v7.28.6 [`#4246`](https://github.com/pear-devs/pear-desktop/pull/4246)
+- chore(deps): update dependency @playwright/test to v1.57.0 [`#4192`](https://github.com/pear-devs/pear-desktop/pull/4192)
+- fix(deps): update dependency solid-js to v1.9.10 [`#4184`](https://github.com/pear-devs/pear-desktop/pull/4184)
+- fix(deps): update dependency hono to v4.11.4 [security] [`#4239`](https://github.com/pear-devs/pear-desktop/pull/4239)
+- Fix weblate link [`#4204`](https://github.com/pear-devs/pear-desktop/pull/4204)
+- feat: apply new icon [`#4215`](https://github.com/pear-devs/pear-desktop/pull/4215)
+- fix(deps): update dependency semver to v7.7.3 [`#4183`](https://github.com/pear-devs/pear-desktop/pull/4183)
+- fix(deps): update dependency happy-dom to v20.0.11 [`#4182`](https://github.com/pear-devs/pear-desktop/pull/4182)
+- fix(deps): update dependency @hono/zod-validator to v0.7.6 [`#4178`](https://github.com/pear-devs/pear-desktop/pull/4178)
+- fix(deps): update dependency color to v5.0.3 [`#4179`](https://github.com/pear-devs/pear-desktop/pull/4179)
+- fix(deps): update dependency es-hangul to v2.3.8 [`#4180`](https://github.com/pear-devs/pear-desktop/pull/4180)
+- chore(deps): update dependency vite-plugin-solid to v2.11.10 [`#4174`](https://github.com/pear-devs/pear-desktop/pull/4174)
+- chore(deps): update dependency utf-8-validate to v6.0.6 [`#4173`](https://github.com/pear-devs/pear-desktop/pull/4173)
+- chore(deps): update dependency typescript to v5.9.3 [`#4171`](https://github.com/pear-devs/pear-desktop/pull/4171)
+- chore(deps): update dependency electron-vite to v4.0.1 [`#4170`](https://github.com/pear-devs/pear-desktop/pull/4170)
+- fix(deps): update dependency @hono/zod-openapi to v1.2.0 [`#4177`](https://github.com/pear-devs/pear-desktop/pull/4177)
+- chore: extend startingPages with Mixed for you entry [`#3994`](https://github.com/pear-devs/pear-desktop/pull/3994)
+- chore(deps): update dependency vite to v7.3.0 [`#3869`](https://github.com/pear-devs/pear-desktop/pull/3869)
+- "feat(api-server): add /api/v1/queue/next endpoint [`#4117`](https://github.com/pear-devs/pear-desktop/pull/4117)
+- fix(deps): update dependency happy-dom to v20.0.2 [security] [`#4168`](https://github.com/pear-devs/pear-desktop/pull/4168)
+- Fixes 2 sync and UI bugs in music-together plugin [`#4071`](https://github.com/pear-devs/pear-desktop/pull/4071)
+- feat(api-server): Add HTTPS support and custom certificate configuration [`#3874`](https://github.com/pear-devs/pear-desktop/pull/3874)
+- fix(deps): update dependency zod to v4.2.1 [`#3870`](https://github.com/pear-devs/pear-desktop/pull/3870)
+- fix(deps): update dependency @hono/node-server to v1.19.7 [`#3862`](https://github.com/pear-devs/pear-desktop/pull/3862)
+- chore(deps): update dependency ts-morph to v27.0.2 [`#4167`](https://github.com/pear-devs/pear-desktop/pull/4167)
+- chore(deps): update dependency discord-api-types to v0.38.37 [`#3866`](https://github.com/pear-devs/pear-desktop/pull/3866)
+- chore(deps): update dependency @electron/universal to v3.0.2 [`#4166`](https://github.com/pear-devs/pear-desktop/pull/4166)
+- fix(deps): update dependency happy-dom to v20 [security] [`#4021`](https://github.com/pear-devs/pear-desktop/pull/4021)
+- chore(deps): update dependency playwright to v1.55.1 [security] [`#4026`](https://github.com/pear-devs/pear-desktop/pull/4026)
+- chore(deps-dev): bump glob from 11.0.3 to 11.1.0 [`#4092`](https://github.com/pear-devs/pear-desktop/pull/4092)
+- fix(deps): update dependency virtua to v0.48.2 [`#3871`](https://github.com/pear-devs/pear-desktop/pull/3871)
+- chore(deps): update dependency electron to v38.7.2 [`#3867`](https://github.com/pear-devs/pear-desktop/pull/3867)
+- chore(deps): update dependency glob to v11.1.0 [security] [`#4091`](https://github.com/pear-devs/pear-desktop/pull/4091)
+- fix(deps): update dependency hono to v4.10.3 [security] [`#3880`](https://github.com/pear-devs/pear-desktop/pull/3880)
+- fix(album-color-theme): improve theming consistency across UI elements [`#4109`](https://github.com/pear-devs/pear-desktop/pull/4109)
+- fix(downloader): update youtubei.js and remove player_id [`#4069`](https://github.com/pear-devs/pear-desktop/pull/4069)
+- Add Material UI 3 component library [`#3606`](https://github.com/pear-devs/pear-desktop/pull/3606)
+- Fix workflow skipping build jobs due to incorrect output reference [`#3982`](https://github.com/pear-devs/pear-desktop/pull/3982)
+- Add automated build workflow for pull requests from repository members [`#3981`](https://github.com/pear-devs/pear-desktop/pull/3981)
+- Revert "fix(deps): update dependency color to v5.0.1 (#3846)" [`#3855`](https://github.com/pear-devs/pear-desktop/pull/3855)
+- fix(deps): update dependency virtua to v0.42.3 [`#3847`](https://github.com/pear-devs/pear-desktop/pull/3847)
+- chore(deps): update dependency typescript-eslint to v8.43.0 [`#3848`](https://github.com/pear-devs/pear-desktop/pull/3848)
+- fix(deps): update dependency color to v5.0.1 [`#3846`](https://github.com/pear-devs/pear-desktop/pull/3846)
+- chore(deps): update dependency vite to v7.1.8 [`#3844`](https://github.com/pear-devs/pear-desktop/pull/3844)
+- chore(deps): update dependency ts-morph to v27 [`#3841`](https://github.com/pear-devs/pear-desktop/pull/3841)
+- fix: maybe fix #3613 [`#3613`](https://github.com/pear-devs/pear-desktop/issues/3613)
+- chore(deps): update deps [`3b4a144`](https://github.com/pear-devs/pear-desktop/commit/3b4a1444f1ba007e051e8ad6fdeb4529adeed6a3)
+- Improved compatibility [`696ff0f`](https://github.com/pear-devs/pear-desktop/commit/696ff0fc7a4aaba1a19dd522354c14da19bae82e)
+- chore(i18n): Translated using Weblate (Slovak) [`db4be4a`](https://github.com/pear-devs/pear-desktop/commit/db4be4ae258e5ccbe23db394d80146ac659377a1)
+
 #### [v3.11.0](https://github.com/pear-devs/pear-desktop/compare/v3.10.0...v3.11.0)
+
+> 7 September 2025
 
 - Fixed missing videochange dataupdated event when using shuffle [`#3659`](https://github.com/pear-devs/pear-desktop/pull/3659)
 - feat(synced-lyrics): preferred provider (global/per-song) [`#3741`](https://github.com/pear-devs/pear-desktop/pull/3741)
@@ -256,7 +438,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - fix(deps): update dependency @hono/zod-openapi to v0.19.6 [`#3294`](https://github.com/pear-devs/pear-desktop/pull/3294)
 - fix(deps): update dependency es-hangul to v2.3.3 [`#3293`](https://github.com/pear-devs/pear-desktop/pull/3293)
 - fix(api-server): fix #3572 [`#3572`](https://github.com/pear-devs/pear-desktop/issues/3572)
-- fix(music-player): fix #3296, and macOS traffic lights [`#3296`](https://github.com/pear-devs/pear-desktop/issues/3296)
+- fix(youtube-music): fix #3296, and macOS traffic lights [`#3296`](https://github.com/pear-devs/pear-desktop/issues/3296)
 - fix: kuromoji zlib and apply rolldown-vite [`f047dd2`](https://github.com/pear-devs/pear-desktop/commit/f047dd2d2df189b55b60188392c451aad65b7a1b)
 - fix: apply fix from eslint [`1da83ff`](https://github.com/pear-devs/pear-desktop/commit/1da83ff27c2ccfcdf48c0b0b125033b1a1c194d2)
 - feat: refactor [`51b3f53`](https://github.com/pear-devs/pear-desktop/commit/51b3f535695c0f19cd252049985578d11a853ccb)
@@ -515,7 +697,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - fix(deps): update dependency fast-equals to v5.2.2 [`#2842`](https://github.com/pear-devs/pear-desktop/pull/2842)
 - chore: Update README.md [`#2845`](https://github.com/pear-devs/pear-desktop/pull/2845)
 - chore: Fixing the Content section in the README-ru.md file. [`#2847`](https://github.com/pear-devs/pear-desktop/pull/2847)
-- chore: Create music-player-hu.svg [`#2844`](https://github.com/pear-devs/pear-desktop/pull/2844)
+- chore: Create youtube-music-hu.svg [`#2844`](https://github.com/pear-devs/pear-desktop/pull/2844)
 - chore: Create Transalated README-hu.md [`#2843`](https://github.com/pear-devs/pear-desktop/pull/2843)
 - chore(deps): update dependency vite to v6.0.7 [`#2819`](https://github.com/pear-devs/pear-desktop/pull/2819)
 - chore(deps): update dependency discord-api-types to v0.37.115 [`#2818`](https://github.com/pear-devs/pear-desktop/pull/2818)
@@ -615,7 +797,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - fix(deps): update dependency @hono/zod-openapi to v0.18.3 [`#2654`](https://github.com/pear-devs/pear-desktop/pull/2654)
 - chore(deps): update eslint monorepo to v9.16.0 [`#2656`](https://github.com/pear-devs/pear-desktop/pull/2656)
 - chore(deps): update dependency vite-plugin-inspect to v0.10.2 [`#2657`](https://github.com/pear-devs/pear-desktop/pull/2657)
-- fix(music-player.css): Fixed #2514 [`#2659`](https://github.com/pear-devs/pear-desktop/pull/2659)
+- fix(youtube-music.css): Fixed #2514 [`#2659`](https://github.com/pear-devs/pear-desktop/pull/2659)
 - fix: Fixed Skip Disliked Song not working [`#2651`](https://github.com/pear-devs/pear-desktop/pull/2651)
 - fix(deps): update dependency @hono/zod-openapi to v0.18.2 [`#2650`](https://github.com/pear-devs/pear-desktop/pull/2650)
 - chore(deps): update dependency vite-plugin-inspect to v0.10.1 [`#2652`](https://github.com/pear-devs/pear-desktop/pull/2652)
@@ -701,7 +883,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - fix: use HEAD instead of GET in songInfo.imageSrc validation step [`#2766`](https://github.com/pear-devs/pear-desktop/issues/2766)
 - fix: Fixed #1796 (#2736) [`#1796`](https://github.com/pear-devs/pear-desktop/issues/1796)
 - fix(album-actions): Fixed #2312 (#2676) [`#2312`](https://github.com/pear-devs/pear-desktop/issues/2312) [`#2312`](https://github.com/pear-devs/pear-desktop/issues/2312)
-- fix(music-player.css): Fixed #2514 (#2659) [`#2514`](https://github.com/pear-devs/pear-desktop/issues/2514)
+- fix(youtube-music.css): Fixed #2514 (#2659) [`#2514`](https://github.com/pear-devs/pear-desktop/issues/2514)
 - chore(docs): Specify full path to xattr for macOS, fixes #2583 (#2586) [`#2583`](https://github.com/pear-devs/pear-desktop/issues/2583)
 - fix: fix pnpm-lock.yaml [`3208bf4`](https://github.com/pear-devs/pear-desktop/commit/3208bf4a6d47d824875b06bd031299694482f02d)
 - Revert "feat: use swc and lightningcss" [`3b50cbc`](https://github.com/pear-devs/pear-desktop/commit/3b50cbcb6e3163115d52f05075af5d6f25b80660)
@@ -741,7 +923,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.6.0](https://github.com/pear-devs/pear-desktop/compare/v3.5.3...v3.6.0)
 
-> 13 October 2024
+> 4 February 2026
 
 - feat(api-server): remote control api [`#1909`](https://github.com/pear-devs/pear-desktop/pull/1909)
 - chore(deps): update playwright monorepo to v1.48.0 [`#2489`](https://github.com/pear-devs/pear-desktop/pull/2489)
@@ -839,7 +1021,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.5.1](https://github.com/pear-devs/pear-desktop/compare/v3.5.0...v3.5.1)
 
-> 1 August 2024
+> 4 February 2026
 
 - fix(deps): update dependency youtubei.js to v10.3.0 [`#2306`](https://github.com/pear-devs/pear-desktop/pull/2306)
 - fix: Window gets stuck offscreen in some instances [`#2303`](https://github.com/pear-devs/pear-desktop/pull/2303)
@@ -849,15 +1031,60 @@ All notable changes to this project will be documented in this file. Dates are d
 - fix(ambient-mode): fix ambient-mode not working for videos after restart [`#2294`](https://github.com/pear-devs/pear-desktop/pull/2294)
 - fix(deps): update dependency @xhayper/discord-rpc to v1.2.0 [`#2291`](https://github.com/pear-devs/pear-desktop/pull/2291)
 - fix(synced-lyrics): fix lyric load [`#2295`](https://github.com/pear-devs/pear-desktop/issues/2295)
-- fix(ambient-mode): fix ambient-mode not working for videos after restart (#2294) [`#1641`](https://github.com/pear-devs/pear-desktop/issues/1641)
+- fix(ambient-mode): fix ambient-mode not working for videos after restart (#2294) [`#1641`](https://github.com/th-ch/youtube-music/issues/1641)
 - fix(synced-lyrics): fix i18n [`8750b54`](https://github.com/pear-devs/pear-desktop/commit/8750b54f766c735ff039c6be454427f17d4737e2)
 - ts-fix: disambiguate ElectronStore typings [`8775735`](https://github.com/pear-devs/pear-desktop/commit/877573532c1b68af861a3fdc44d093f3097d36ab)
 - chore(i18n): Translated using Weblate (Hungarian) [`3537dc1`](https://github.com/pear-devs/pear-desktop/commit/3537dc19eecce7f7deb2478942f70d3c7b72148d)
 
-#### [v3.5.0](https://github.com/pear-devs/pear-desktop/compare/v3.4.1...v3.5.0)
+#### [v3.5.0](https://github.com/pear-devs/pear-desktop/compare/v3.5.0-1...v3.5.0)
 
 > 31 July 2024
 
+#### [v3.5.0-1](https://github.com/pear-devs/pear-desktop/compare/v3.4.2-but-its-actually-3.5.0...v3.5.0-1)
+
+> 13 September 2024
+
+#### [v3.4.2-but-its-actually-3.5.0](https://github.com/pear-devs/pear-desktop/compare/v3.4.1...v3.4.2-but-its-actually-3.5.0)
+
+> 13 September 2024
+
+- chore(deps): update typescript-eslint monorepo to v8.4.0 [`#2401`](https://github.com/pear-devs/pear-desktop/pull/2401)
+- chore(deps): update dependency @total-typescript/ts-reset to v0.6.1 [`#2396`](https://github.com/pear-devs/pear-desktop/pull/2396)
+- chore(deps): update dependency electron to v31.5.0 [`#2397`](https://github.com/pear-devs/pear-desktop/pull/2397)
+- chore(deps): update dependency eslint-import-resolver-typescript to v3.6.3 [`#2376`](https://github.com/pear-devs/pear-desktop/pull/2376)
+- chore(deps): update dependency discord-api-types to v0.37.100 [`#2394`](https://github.com/pear-devs/pear-desktop/pull/2394)
+- fix(deps): update dependency electron-updater to v6.3.4 [`#2395`](https://github.com/pear-devs/pear-desktop/pull/2395)
+- chore(deps): update dependency @babel/runtime to v7.25.6 [`#2388`](https://github.com/pear-devs/pear-desktop/pull/2388)
+- chore(deps): update dependency vite-plugin-inspect to v0.8.7 [`#2389`](https://github.com/pear-devs/pear-desktop/pull/2389)
+- chore(deps): update dependency discord-api-types to v0.37.99 [`#2374`](https://github.com/pear-devs/pear-desktop/pull/2374)
+- chore(deps): update dependency vite to v5.4.3 [`#2377`](https://github.com/pear-devs/pear-desktop/pull/2377)
+- fix: incorrect regex when splitting artistName [`#2378`](https://github.com/pear-devs/pear-desktop/pull/2378)
+- chore(deps): update dependency @babel/runtime to v7.25.4 [`#2373`](https://github.com/pear-devs/pear-desktop/pull/2373)
+- synced-lyrics: make the lyrics search more reliable [`#2343`](https://github.com/pear-devs/pear-desktop/pull/2343)
+- fix(deps): update dependency solid-js to v1.8.22 [`#2354`](https://github.com/pear-devs/pear-desktop/pull/2354)
+- chore(deps): update typescript-eslint monorepo to v8.3.0 [`#2350`](https://github.com/pear-devs/pear-desktop/pull/2350)
+- fix(deps): update dependency electron-debug to v4.0.1 [`#2349`](https://github.com/pear-devs/pear-desktop/pull/2349)
+- chore(deps): update dependency electron to v31.4.0 [`#2356`](https://github.com/pear-devs/pear-desktop/pull/2356)
+- fix: hide native-controls on linux when in-app-menu is used [`#2366`](https://github.com/pear-devs/pear-desktop/pull/2366)
+- fix: detect the upgrade btn using the icon [`#2364`](https://github.com/pear-devs/pear-desktop/pull/2364)
+- fix: exclude build-id files from rpm [`#2361`](https://github.com/pear-devs/pear-desktop/pull/2361)
+- fix(deps): update dependency i18next to v23.12.3 [`#2352`](https://github.com/pear-devs/pear-desktop/pull/2352)
+- fix(deps): update dependency @floating-ui/dom to v1.6.10 [`#2340`](https://github.com/pear-devs/pear-desktop/pull/2340)
+- fix(deps): update dependency electron-updater to v6.3.3 [`#2347`](https://github.com/pear-devs/pear-desktop/pull/2347)
+- fix(deps): update dependency solid-js to v1.8.20 [`#2345`](https://github.com/pear-devs/pear-desktop/pull/2345)
+- chore(deps): update dependency vite to v5.4.0 [`#2342`](https://github.com/pear-devs/pear-desktop/pull/2342)
+- chore(deps): update typescript-eslint monorepo to v8.0.1 [`#2335`](https://github.com/pear-devs/pear-desktop/pull/2335)
+- fix(deps): update dependency @floating-ui/dom to v1.6.9 [`#2337`](https://github.com/pear-devs/pear-desktop/pull/2337)
+- chore(deps): update playwright monorepo to v1.46.0 [`#2336`](https://github.com/pear-devs/pear-desktop/pull/2336)
+- chore(README): Translation README to Russian and adding Synced Lyrics to main README [`#2338`](https://github.com/pear-devs/pear-desktop/pull/2338)
+- chore(deps): update dependency rollup to v4.20.0 [`#2326`](https://github.com/pear-devs/pear-desktop/pull/2326)
+- fix(deps): update dependency youtubei.js to v10.3.0 [`#2306`](https://github.com/pear-devs/pear-desktop/pull/2306)
+- fix: Window gets stuck offscreen in some instances [`#2303`](https://github.com/pear-devs/pear-desktop/pull/2303)
+- fix: Incorrect window size on multi-monitor scaled displays [`#2302`](https://github.com/pear-devs/pear-desktop/pull/2302)
+- chore(deps): update dependency rollup to v4.19.2 [`#2304`](https://github.com/pear-devs/pear-desktop/pull/2304)
+- chore(deps): update typescript-eslint monorepo to v8 (major) [`#2297`](https://github.com/pear-devs/pear-desktop/pull/2297)
+- fix(ambient-mode): fix ambient-mode not working for videos after restart [`#2294`](https://github.com/pear-devs/pear-desktop/pull/2294)
+- fix(deps): update dependency @xhayper/discord-rpc to v1.2.0 [`#2291`](https://github.com/pear-devs/pear-desktop/pull/2291)
 - plugin: Synced Lyrics [`#2207`](https://github.com/pear-devs/pear-desktop/pull/2207)
 - chore(deps): update dependency electron to v31.3.1 [`#2290`](https://github.com/pear-devs/pear-desktop/pull/2290)
 - chore(deps): update typescript-eslint monorepo to v7.18.0 [`#2292`](https://github.com/pear-devs/pear-desktop/pull/2292)
@@ -887,9 +1114,14 @@ All notable changes to this project will be documented in this file. Dates are d
 - chore(deps): update dependency vite-plugin-inspect to v0.8.5 [`#2252`](https://github.com/pear-devs/pear-desktop/pull/2252)
 - fix(deps): update dependency semver to v7.6.3 [`#2250`](https://github.com/pear-devs/pear-desktop/pull/2250)
 - chore(deps): update dependency electron to v31.2.1 [`#2241`](https://github.com/pear-devs/pear-desktop/pull/2241)
+- fix(synced-lyric): fix timestamp [`#2323`](https://github.com/pear-devs/pear-desktop/issues/2323) [`#2379`](https://github.com/pear-devs/pear-desktop/issues/2379)
+- Revert "fix(MPRIS): Prevents player to start with invalid MPRIS interface (#1996)" [`#2225`](https://github.com/pear-devs/pear-desktop/issues/2225)
+- fix(adblocker/inplayer): fix Response.prototype.json [`#2310`](https://github.com/pear-devs/pear-desktop/issues/2310)
+- fix(synced-lyrics): fix lyric load [`#2295`](https://github.com/pear-devs/pear-desktop/issues/2295)
+- fix(ambient-mode): fix ambient-mode not working for videos after restart (#2294) [`#1641`](https://github.com/th-ch/youtube-music/issues/1641)
 - chore(i18n): Translated using Weblate (Catalan) [`4a8440c`](https://github.com/pear-devs/pear-desktop/commit/4a8440c281c341977ab3687982cec8cbc5af6cf7)
-- Update changelog for v3.4.1 [`18e0b1b`](https://github.com/pear-devs/pear-desktop/commit/18e0b1b86341b13f1cbc713bfbd7b5d7a45ee392)
-- fix(synced-lyrics): fix type error [`9357a15`](https://github.com/pear-devs/pear-desktop/commit/9357a15116a8526d22ba6142c0a02f31688743f2)
+- chore(deps): update dependency eslint-plugin-import to v2.30.0 [`f48e46d`](https://github.com/pear-devs/pear-desktop/commit/f48e46d29cf09c76c5172fd56d2d0f705616e4e3)
+- Revert "chore(deps): update dependency electron-builder to v25" [`089eff3`](https://github.com/pear-devs/pear-desktop/commit/089eff3152903c8b55ad3e5571b944062a647e27)
 
 #### [v3.4.1](https://github.com/pear-devs/pear-desktop/compare/v3.4.0...v3.4.1)
 
@@ -906,7 +1138,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.4.0](https://github.com/pear-devs/pear-desktop/compare/v3.3.12...v3.4.0)
 
-> 14 July 2024
+> 4 February 2026
 
 - fix(deps): update dependency i18next to v23.12.1 [`#2230`](https://github.com/pear-devs/pear-desktop/pull/2230)
 - feat(downloader): New option to download on finish [`#1964`](https://github.com/pear-devs/pear-desktop/pull/1964)
@@ -970,7 +1202,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.3.11](https://github.com/pear-devs/pear-desktop/compare/v3.3.10...v3.3.11)
 
-> 8 June 2024
+> 4 February 2026
 
 - Revert "fix(deps): update dependency @cliqz/adblocker-electron to v1.27.10" [`#2129`](https://github.com/pear-devs/pear-desktop/pull/2129)
 - chore(deps): update dependency vite to v5.2.13 [`#2127`](https://github.com/pear-devs/pear-desktop/pull/2127)
@@ -998,7 +1230,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.3.9](https://github.com/pear-devs/pear-desktop/compare/v3.3.8...v3.3.9)
 
-> 1 June 2024
+> 4 February 2026
 
 - chore(deps): update dependency eslint to v9.4.0 [`#2106`](https://github.com/pear-devs/pear-desktop/pull/2106)
 - fix(adblocker): fix In-Player adblocker [`#1817`](https://github.com/pear-devs/pear-desktop/issues/1817)
@@ -1008,7 +1240,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.3.8](https://github.com/pear-devs/pear-desktop/compare/v3.3.7...v3.3.8)
 
-> 1 June 2024
+> 4 February 2026
 
 - fix(adblocker): fix blank screen [`#1942`](https://github.com/pear-devs/pear-desktop/issues/1942) [`#2100`](https://github.com/pear-devs/pear-desktop/issues/2100) [`#2103`](https://github.com/pear-devs/pear-desktop/issues/2103)
 - Update changelog for v3.3.7 [`b572623`](https://github.com/pear-devs/pear-desktop/commit/b572623442fc8b45b593dc0c91623fbf814115b4)
@@ -1016,7 +1248,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.3.7](https://github.com/pear-devs/pear-desktop/compare/v3.3.6...v3.3.7)
 
-> 1 June 2024
+> 4 February 2026
 
 - chore(deps): update dependency electron to v30.0.9 [`#2098`](https://github.com/pear-devs/pear-desktop/pull/2098)
 - Revert "fix(deps): update dependency @cliqz/adblocker-electron to v1.27.6" [`#2101`](https://github.com/pear-devs/pear-desktop/pull/2101)
@@ -1131,9 +1363,9 @@ All notable changes to this project will be documented in this file. Dates are d
 - fix(style): fix fullscreen style and in-app-menu [`ed700c2`](https://github.com/pear-devs/pear-desktop/commit/ed700c2916cc7e6ccd2010d0c552364af116eb4f)
 - fix(style): fix miniplayer style [`a8bc539`](https://github.com/pear-devs/pear-desktop/commit/a8bc53912d1f4137008ecb2d9d5d9d9eb06ee2a8)
 
-#### [v3.3.3](https://github.com/pear-devs/pear-desktop/compare/v3.3.2...v3.3.3)
+#### [v3.3.3](https://github.com/pear-devs/pear-desktop/compare/v3.3.3-widget...v3.3.3)
 
-> 24 March 2024
+> 4 February 2026
 
 - chore(deps): update dependency electron to v29.1.5 [`#1876`](https://github.com/pear-devs/pear-desktop/pull/1876)
 - chore(deps): update dependency typescript to v5.4.3 [`#1877`](https://github.com/pear-devs/pear-desktop/pull/1877)
@@ -1144,6 +1376,15 @@ All notable changes to this project will be documented in this file. Dates are d
 - fix(deps): update dependency solid-js to v1.8.16 [`#1873`](https://github.com/pear-devs/pear-desktop/pull/1873)
 - chore(deps): update dependency @typescript-eslint/eslint-plugin to v7.3.1 [`#1868`](https://github.com/pear-devs/pear-desktop/pull/1868)
 - chore(deps): update dependency discord-api-types to v0.37.75 [`#1867`](https://github.com/pear-devs/pear-desktop/pull/1867)
+- fix: add support for Wayland [`#1864`](https://github.com/pear-devs/pear-desktop/issues/1864)
+- chore(i18n): Translated using Weblate (Thai) [`a3a3fca`](https://github.com/pear-devs/pear-desktop/commit/a3a3fca694998ac56932f2e73f88a58800e4d59a)
+- chore(i18n): Translated using Weblate (Portuguese) [`7e8cbfc`](https://github.com/pear-devs/pear-desktop/commit/7e8cbfc4c03d6643d8e65b54639d55976dda2a7a)
+- Bump version to 3.3.3 [`85e5e18`](https://github.com/pear-devs/pear-desktop/commit/85e5e1814a12fa0e7a388ecf7804dccd7c48abe2)
+
+#### [v3.3.3-widget](https://github.com/pear-devs/pear-desktop/compare/v3.3.2...v3.3.3-widget)
+
+> 18 March 2024
+
 - chore(deps): update pnpm to v8.15.5 [`#1865`](https://github.com/pear-devs/pear-desktop/pull/1865)
 - fix: Fix Miniplayer image size [`#1863`](https://github.com/pear-devs/pear-desktop/pull/1863)
 - fix(style): fixed image/video alignment when toggle is active [`#1862`](https://github.com/pear-devs/pear-desktop/pull/1862)
@@ -1192,17 +1433,68 @@ All notable changes to this project will be documented in this file. Dates are d
 - chore(deps): update dependency electron to v29 [`#1773`](https://github.com/pear-devs/pear-desktop/pull/1773)
 - chore(deps): update dependency vite to v5.1.4 [`#1778`](https://github.com/pear-devs/pear-desktop/pull/1778)
 - chore(deps): bump ip from 2.0.0 to 2.0.1 [`#1777`](https://github.com/pear-devs/pear-desktop/pull/1777)
-- fix: add support for Wayland [`#1864`](https://github.com/pear-devs/pear-desktop/issues/1864)
 - fix(style): fix navigation bar items are not working [`#1381`](https://github.com/pear-devs/pear-desktop/issues/1381) [`#1396`](https://github.com/pear-devs/pear-desktop/issues/1396) [`#1649`](https://github.com/pear-devs/pear-desktop/issues/1649)
 - fix(ytm-bugs): fixed a `scrollbar-color` bug that affected Chromium 121 and later [`#1737`](https://github.com/pear-devs/pear-desktop/issues/1737)
 - chore(i18n): Translated using Weblate (Icelandic) [`82fa871`](https://github.com/pear-devs/pear-desktop/commit/82fa8719a96abdfaaa8548a0077f4db2164ec09b)
 - chore(i18n): Translated using Weblate (Romanian) [`c871506`](https://github.com/pear-devs/pear-desktop/commit/c871506a69180308ab4fc587b6e8a33f193087e8)
 - chore(i18n): Translated using Weblate (Thai) [`a7d0350`](https://github.com/pear-devs/pear-desktop/commit/a7d035022a229f0b245694d1fc7a484befe1c269)
 
-#### [v3.3.2](https://github.com/pear-devs/pear-desktop/compare/v3.3.1...v3.3.2)
+#### [v3.3.2](https://github.com/pear-devs/pear-desktop/compare/3.3.2-widget...v3.3.2)
 
-> 20 February 2024
+> 4 February 2026
 
+#### [3.3.2-widget](https://github.com/pear-devs/pear-desktop/compare/v3.3.1...3.3.2-widget)
+
+> 18 March 2024
+
+- chore(deps): update pnpm to v8.15.5 [`#1865`](https://github.com/pear-devs/pear-desktop/pull/1865)
+- fix: Fix Miniplayer image size [`#1863`](https://github.com/pear-devs/pear-desktop/pull/1863)
+- fix(style): fixed image/video alignment when toggle is active [`#1862`](https://github.com/pear-devs/pear-desktop/pull/1862)
+- chore: Update README-is.md [`#1858`](https://github.com/pear-devs/pear-desktop/pull/1858)
+- chore(deps): update dependency vite-plugin-solid to v2.10.2 [`#1859`](https://github.com/pear-devs/pear-desktop/pull/1859)
+- fix: Ambient Mode intialization improvement [`#1857`](https://github.com/pear-devs/pear-desktop/pull/1857)
+- chore(deps): bump follow-redirects from 1.15.5 to 1.15.6 [`#1856`](https://github.com/pear-devs/pear-desktop/pull/1856)
+- chore(README): Nicer Readme 2.0 [`#1833`](https://github.com/pear-devs/pear-desktop/pull/1833)
+- chore(deps): update dependency discord-api-types to v0.37.74 [`#1854`](https://github.com/pear-devs/pear-desktop/pull/1854)
+- chore(deps): update dependency esbuild to v0.20.2 [`#1855`](https://github.com/pear-devs/pear-desktop/pull/1855)
+- Improve ambient mode [`#1853`](https://github.com/pear-devs/pear-desktop/pull/1853)
+- chore(deps): update dependency electron to v29.1.4 [`#1852`](https://github.com/pear-devs/pear-desktop/pull/1852)
+- chore(deps): update dependency electron to v29.1.3 [`#1851`](https://github.com/pear-devs/pear-desktop/pull/1851)
+- chore(deps): update dependency rollup to v4.13.0 [`#1850`](https://github.com/pear-devs/pear-desktop/pull/1850)
+- fix(deps): update dependency electron-store to v8.2.0 [`#1843`](https://github.com/pear-devs/pear-desktop/pull/1843)
+- chore(deps): update dependency electron to v29.1.1 [`#1841`](https://github.com/pear-devs/pear-desktop/pull/1841)
+- fix(deps): update dependency i18next to v23.10.1 [`#1842`](https://github.com/pear-devs/pear-desktop/pull/1842)
+- chore(deps): update dependency @typescript-eslint/eslint-plugin to v7.2.0 [`#1848`](https://github.com/pear-devs/pear-desktop/pull/1848)
+- chore(deps): update dependency vite to v5.1.6 [`#1847`](https://github.com/pear-devs/pear-desktop/pull/1847)
+- fix(deps): update dependency async-mutex to v0.5.0 [`#1849`](https://github.com/pear-devs/pear-desktop/pull/1849)
+- fix(deps): update dependency ts-morph to v22 [`#1846`](https://github.com/pear-devs/pear-desktop/pull/1846)
+- chore(deps): update dependency discord-api-types to v0.37.73 [`#1840`](https://github.com/pear-devs/pear-desktop/pull/1840)
+- chore(deps): update dependency rollup to v4.12.1 [`#1837`](https://github.com/pear-devs/pear-desktop/pull/1837)
+- chore: Changed a single word (README-is.md) [`#1836`](https://github.com/pear-devs/pear-desktop/pull/1836)
+- chore(deps): update dependency typescript to v5.4.2 [`#1838`](https://github.com/pear-devs/pear-desktop/pull/1838)
+- chore(deps): update dependency electron-vite to v2.1.0 [`#1823`](https://github.com/pear-devs/pear-desktop/pull/1823)
+- chore(deps): update dependency @typescript-eslint/eslint-plugin to v7.1.1 [`#1829`](https://github.com/pear-devs/pear-desktop/pull/1829)
+- chore(deps): update dependency vite to v5.1.5 [`#1831`](https://github.com/pear-devs/pear-desktop/pull/1831)
+- Revert "chore(deps): update dependency electron-builder to v24.13.3" [`#1818`](https://github.com/pear-devs/pear-desktop/pull/1818)
+- chore(deps): update dependency electron-builder to v24.13.3 [`#1774`](https://github.com/pear-devs/pear-desktop/pull/1774)
+- chore(deps): update playwright monorepo to v1.42.1 [`#1816`](https://github.com/pear-devs/pear-desktop/pull/1816)
+- fix: Add scale ratio for tray icons [`#1811`](https://github.com/pear-devs/pear-desktop/pull/1811)
+- Icelandic translation of the readme file [`#1806`](https://github.com/pear-devs/pear-desktop/pull/1806)
+- chore(deps): update dependency electron to v29.1.0 [`#1808`](https://github.com/pear-devs/pear-desktop/pull/1808)
+- chore(deps): update playwright monorepo to v1.42.0 [`#1805`](https://github.com/pear-devs/pear-desktop/pull/1805)
+- chore(deps): update dependency eslint to v8.57.0 [`#1793`](https://github.com/pear-devs/pear-desktop/pull/1793)
+- chore(deps): update dependency @typescript-eslint/eslint-plugin to v7.1.0 [`#1800`](https://github.com/pear-devs/pear-desktop/pull/1800)
+- chore(deps): update dependency discord-api-types to v0.37.71 [`#1799`](https://github.com/pear-devs/pear-desktop/pull/1799)
+- chore(deps): update pnpm to v8.15.4 [`#1795`](https://github.com/pear-devs/pear-desktop/pull/1795)
+- chore(deps): update dependency @types/semver to v7.5.8 [`#1797`](https://github.com/pear-devs/pear-desktop/pull/1797)
+- fix: center the pause icon [`#1786`](https://github.com/pear-devs/pear-desktop/pull/1786)
+- fix(deps): update dependency @cliqz/adblocker-electron to v1.26.16 [`#1788`](https://github.com/pear-devs/pear-desktop/pull/1788)
+- fix(deps): update dependency @cliqz/adblocker-electron-preload to v1.26.16 [`#1789`](https://github.com/pear-devs/pear-desktop/pull/1789)
+- fix(deps): update dependency youtubei.js to v9.1.0 [`#1790`](https://github.com/pear-devs/pear-desktop/pull/1790)
+- fix(deps): update dependency i18next to v23.10.0 [`#1785`](https://github.com/pear-devs/pear-desktop/pull/1785)
+- chore(deps): update dependency electron to v29 [`#1773`](https://github.com/pear-devs/pear-desktop/pull/1773)
+- chore(deps): update dependency vite to v5.1.4 [`#1778`](https://github.com/pear-devs/pear-desktop/pull/1778)
+- chore(deps): bump ip from 2.0.0 to 2.0.1 [`#1777`](https://github.com/pear-devs/pear-desktop/pull/1777)
 - fix: fix bugs in MPRIS, and improve MPRIS [`#1760`](https://github.com/pear-devs/pear-desktop/pull/1760)
 - fix(deps): update dependency electron-updater to v6.1.8 [`#1770`](https://github.com/pear-devs/pear-desktop/pull/1770)
 - chore(deps): update dependency electron-builder to v24.12.0 [`#1771`](https://github.com/pear-devs/pear-desktop/pull/1771)
@@ -1210,14 +1502,16 @@ All notable changes to this project will be documented in this file. Dates are d
 - chore(deps): update dependency @typescript-eslint/eslint-plugin to v7.0.2 [`#1763`](https://github.com/pear-devs/pear-desktop/pull/1763)
 - chore(deps): update dependency esbuild to v0.20.1 [`#1759`](https://github.com/pear-devs/pear-desktop/pull/1759)
 - fix(deps): update dependency i18next to v23.9.0 [`#1754`](https://github.com/pear-devs/pear-desktop/pull/1754)
+- fix(style): fix navigation bar items are not working [`#1381`](https://github.com/pear-devs/pear-desktop/issues/1381) [`#1396`](https://github.com/pear-devs/pear-desktop/issues/1396) [`#1649`](https://github.com/pear-devs/pear-desktop/issues/1649)
+- fix(ytm-bugs): fixed a `scrollbar-color` bug that affected Chromium 121 and later [`#1737`](https://github.com/pear-devs/pear-desktop/issues/1737)
 - fix: fixed an issue that caused infinite loops when using Music Together [`#1752`](https://github.com/pear-devs/pear-desktop/issues/1752)
-- chore(deps): rollback dependency electron-builder to v24.9.1 [`8bd05f5`](https://github.com/pear-devs/pear-desktop/commit/8bd05f525df98671f0a516b159cccab302b7ae99)
-- chore(deps): update dependency electron-builder to v24.13.1 [`47b23b4`](https://github.com/pear-devs/pear-desktop/commit/47b23b414c8feb25c4d9a23d6adb7cbf1ac818fb)
-- chore(i18n): Translated using Weblate (German) [`47505e9`](https://github.com/pear-devs/pear-desktop/commit/47505e97482f9e953ee451b968d0950585616ffa)
+- chore(i18n): Translated using Weblate (Icelandic) [`82fa871`](https://github.com/pear-devs/pear-desktop/commit/82fa8719a96abdfaaa8548a0077f4db2164ec09b)
+- chore(i18n): Translated using Weblate (Romanian) [`c871506`](https://github.com/pear-devs/pear-desktop/commit/c871506a69180308ab4fc587b6e8a33f193087e8)
+- chore(i18n): Translated using Weblate (Thai) [`a7d0350`](https://github.com/pear-devs/pear-desktop/commit/a7d035022a229f0b245694d1fc7a484befe1c269)
 
 #### [v3.3.1](https://github.com/pear-devs/pear-desktop/compare/v3.3.0...v3.3.1)
 
-> 18 February 2024
+> 4 February 2026
 
 - Update changelog for v3.3.0 [`6d9bb8e`](https://github.com/pear-devs/pear-desktop/commit/6d9bb8eb1cc2d892a5552ffb1f7c20859aa80f67)
 - hotfix: in-app-menu position issue [`87acf4c`](https://github.com/pear-devs/pear-desktop/commit/87acf4cf042ba32a000a4aeaec5c17c93501d333)
@@ -1225,7 +1519,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.3.0](https://github.com/pear-devs/pear-desktop/compare/v3.2.2...v3.3.0)
 
-> 18 February 2024
+> 4 February 2026
 
 - fix(deps): update dependency i18next to v23.8.3 [`#1751`](https://github.com/pear-devs/pear-desktop/pull/1751)
 - import fixed ./constants [`#1748`](https://github.com/pear-devs/pear-desktop/pull/1748)
@@ -1323,7 +1617,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.2.2](https://github.com/pear-devs/pear-desktop/compare/v3.2.1...v3.2.2)
 
-> 5 January 2024
+> 4 February 2026
 
 - feat(tray): Add song info and paused icon [`#1592`](https://github.com/pear-devs/pear-desktop/pull/1592)
 - fix(skip-silences): fix audio distorted [`#1141`](https://github.com/pear-devs/pear-desktop/issues/1141)
@@ -1333,7 +1627,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.2.1](https://github.com/pear-devs/pear-desktop/compare/v3.2.0...v3.2.1)
 
-> 1 January 2024
+> 4 February 2026
 
 - fix: fix #1574 [`#1574`](https://github.com/pear-devs/pear-desktop/issues/1574)
 - fix: fix #1575 [`#1575`](https://github.com/pear-devs/pear-desktop/issues/1575)
@@ -1343,7 +1637,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.2.0](https://github.com/pear-devs/pear-desktop/compare/v3.1.1...v3.2.0)
 
-> 1 January 2024
+> 4 February 2026
 
 - feat(album-color-theme): improve `Album Color Theme` style [`#1571`](https://github.com/pear-devs/pear-desktop/pull/1571)
 - feat(menu): add more detail in Menu [`#1570`](https://github.com/pear-devs/pear-desktop/pull/1570)
@@ -1368,7 +1662,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.1.1](https://github.com/pear-devs/pear-desktop/compare/v3.1.0...v3.1.1)
 
-> 18 December 2023
+> 4 February 2026
 
 - fix: fix renderer plugin load timing [`#1522`](https://github.com/pear-devs/pear-desktop/issues/1522)
 - chore(i18n): Translated using Weblate (Lithuanian) [`fc1a7cd`](https://github.com/pear-devs/pear-desktop/commit/fc1a7cda62b6e33e5f5d57a5a6e0adef6a32bf9a)
@@ -1377,7 +1671,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.1.0](https://github.com/pear-devs/pear-desktop/compare/v3.0.2...v3.1.0)
 
-> 11 December 2023
+> 4 February 2026
 
 - chore(deps): update dependency electron to v28 [`#1498`](https://github.com/pear-devs/pear-desktop/pull/1498)
 - Enable/Disable Navigation without restart [`#1507`](https://github.com/pear-devs/pear-desktop/pull/1507)
@@ -1393,7 +1687,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.0.2](https://github.com/pear-devs/pear-desktop/compare/v3.0.1...v3.0.2)
 
-> 3 December 2023
+> 4 February 2026
 
 - fix(adblocker): fix In-Player adblocker [`#1478`](https://github.com/pear-devs/pear-desktop/issues/1478)
 - fix(menu): crash on linux [`#1477`](https://github.com/pear-devs/pear-desktop/issues/1477)
@@ -1403,7 +1697,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v3.0.1](https://github.com/pear-devs/pear-desktop/compare/v3.0.0...v3.0.1)
 
-> 2 December 2023
+> 4 February 2026
 
 - hotfix(adblocker): fix #1475 [`#1475`](https://github.com/pear-devs/pear-desktop/issues/1475)
 - Translated using Weblate (French) [`7f02afc`](https://github.com/pear-devs/pear-desktop/commit/7f02afc5a6839adfe8437d4e2cc8dee13a93b311)
@@ -1412,7 +1706,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 ### [v3.0.0](https://github.com/pear-devs/pear-desktop/compare/v2.2.0...v3.0.0)
 
-> 2 December 2023
+> 4 February 2026
 
 - Add text to Translation section [`#1470`](https://github.com/pear-devs/pear-desktop/pull/1470)
 - fix(deps): update dependency youtubei.js to v8 [`#1473`](https://github.com/pear-devs/pear-desktop/pull/1473)
@@ -1446,7 +1740,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v2.2.0](https://github.com/pear-devs/pear-desktop/compare/v2.1.3...v2.2.0)
 
-> 27 October 2023
+> 4 February 2026
 
 - feat(ambient-mode): add config for `ambient-mode` plugin [`#1349`](https://github.com/pear-devs/pear-desktop/pull/1349)
 - bump deps [`4248d20`](https://github.com/pear-devs/pear-desktop/commit/4248d20e8ef926ce7b1d07eb83743755a341d9f6)
@@ -1455,7 +1749,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v2.1.3](https://github.com/pear-devs/pear-desktop/compare/v2.1.2...v2.1.3)
 
-> 23 October 2023
+> 4 February 2026
 
 - fix: fixed bugs in downloader [`#1342`](https://github.com/pear-devs/pear-desktop/pull/1342)
 - feat(discord): rename `Listen Along` to `Play on YTM` [`#1341`](https://github.com/pear-devs/pear-desktop/issues/1341)
@@ -1465,7 +1759,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v2.1.2](https://github.com/pear-devs/pear-desktop/compare/v2.1.1...v2.1.2)
 
-> 19 October 2023
+> 4 February 2026
 
 - feat(in-app-menu): add an option to hide the window controls [`#1335`](https://github.com/pear-devs/pear-desktop/pull/1335)
 - fix: fixed an issue where the album name was missing [`#1334`](https://github.com/pear-devs/pear-desktop/pull/1334)
@@ -1483,7 +1777,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v2.1.1](https://github.com/pear-devs/pear-desktop/compare/v2.1.0...v2.1.1)
 
-> 14 October 2023
+> 4 February 2026
 
 - hotfix(downloader): can't get an album title (fix #1313) [`#1313`](https://github.com/pear-devs/pear-desktop/issues/1313)
 - Update changelog for v2.1.0 [`92cab89`](https://github.com/pear-devs/pear-desktop/commit/92cab89d17175741e60e65ea61633e23ebdc1f45)
@@ -1492,7 +1786,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v2.1.0](https://github.com/pear-devs/pear-desktop/compare/v2.0.4...v2.1.0)
 
-> 14 October 2023
+> 4 February 2026
 
 - feat(downloader): Added support for audio format auto-detection [`#1310`](https://github.com/pear-devs/pear-desktop/pull/1310)
 - feat(in-app-menu): enable in-app-menu by default (in Windows) [`#1311`](https://github.com/pear-devs/pear-desktop/pull/1311)
@@ -1504,7 +1798,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v2.0.4](https://github.com/pear-devs/pear-desktop/compare/v2.0.3...v2.0.4)
 
-> 12 October 2023
+> 4 February 2026
 
 - hotfix(adblocker): fix `ipcRenderer.sendSync() with ...` [`#1301`](https://github.com/pear-devs/pear-desktop/pull/1301)
 - fix(downloader): Korean filename is broken on non-macOS devices [`#1297`](https://github.com/pear-devs/pear-desktop/pull/1297)
@@ -1514,7 +1808,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v2.0.3](https://github.com/pear-devs/pear-desktop/compare/v2.0.2...v2.0.3)
 
-> 10 October 2023
+> 4 February 2026
 
 - feat(discord): add `Hide GitHub link Button` [`#1293`](https://github.com/pear-devs/pear-desktop/pull/1293)
 - feat(deps): bundle `youtubei.js` (temporary solution) [`#1292`](https://github.com/pear-devs/pear-desktop/pull/1292)
@@ -1529,7 +1823,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v2.0.2](https://github.com/pear-devs/pear-desktop/compare/v2.0.1...v2.0.2)
 
-> 8 October 2023
+> 4 February 2026
 
 - fix: discord-rpc [`#1278`](https://github.com/pear-devs/pear-desktop/pull/1278)
 - Bump version to 2.0.2 [`b5dbfaf`](https://github.com/pear-devs/pear-desktop/commit/b5dbfaf68691a546d72f5c1818fd3a44802eb0fa)
@@ -1538,31 +1832,21 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v2.0.1](https://github.com/pear-devs/pear-desktop/compare/v2.0.0...v2.0.1)
 
-> 8 October 2023
+> 4 February 2026
 
 - Update changelog for v2.0.0 [`2d69dfd`](https://github.com/pear-devs/pear-desktop/commit/2d69dfd333c3223ecc7de13a0abc98fd99aa3a2b)
 - hotfix: hotfix for #1267 [`c002263`](https://github.com/pear-devs/pear-desktop/commit/c002263c3bdd51890b8ffb431283afb60405d8fe)
 - Bump version to 2.0.1 [`a1f025e`](https://github.com/pear-devs/pear-desktop/commit/a1f025e23c599fe5eb63b32ea38ee81200d232d6)
 
-### [v2.0.0](https://github.com/pear-devs/pear-desktop/compare/v1.20.0...v2.0.0)
+### [v2.0.0](https://github.com/pear-devs/pear-desktop/compare/v1.20.4...v2.0.0)
 
-> 7 October 2023
+> 4 February 2026
 
 - Bump version to 2.0.0 [`#1257`](https://github.com/pear-devs/pear-desktop/pull/1257)
 - feat(GitHub): add issue template [`#1264`](https://github.com/pear-devs/pear-desktop/pull/1264)
 - feat: I guess it's TypeScript [`#1235`](https://github.com/pear-devs/pear-desktop/pull/1235)
 - chore(deps): update dependency rollup to v4 [`#44`](https://github.com/pear-devs/pear-desktop/pull/44)
 - feat: apply rollup 🚀 [`#20`](https://github.com/pear-devs/pear-desktop/pull/20)
-- fix: Fixes the video-toggle being displayed at the wrong position on fullscreen [`#1218`](https://github.com/pear-devs/pear-desktop/pull/1218)
-- Change Winget Releaser job to `ubuntu-latest` [`#1225`](https://github.com/pear-devs/pear-desktop/pull/1225)
-- Fixes the video-toggle being displayed at the wrong position on fullscreen [`#1218`](https://github.com/pear-devs/pear-desktop/pull/1218)
-- Fix Remove upgrade button [`#1206`](https://github.com/pear-devs/pear-desktop/pull/1206)
-- Fixed Age Restriction Bypass [`#1221`](https://github.com/pear-devs/pear-desktop/pull/1221)
-- fix(tuna): handle `playPaused` [`#1`](https://github.com/pear-devs/pear-desktop/pull/1)
-- Add plugin to always use the compact sidebar [`#1190`](https://github.com/pear-devs/pear-desktop/pull/1190)
-- Hide login elements [`#1189`](https://github.com/pear-devs/pear-desktop/pull/1189)
-- Fix navigation arrows [`#1191`](https://github.com/pear-devs/pear-desktop/pull/1191)
-- MacOS better copy paste in readme.md [`#1156`](https://github.com/pear-devs/pear-desktop/pull/1156)
 - feat(build-windows): Add support for IA32 (resolves #1110) [`#1110`](https://github.com/pear-devs/pear-desktop/issues/1110)
 - fix: fix the downloader to work in a proxy environment (resolve #46) [`#46`](https://github.com/pear-devs/pear-desktop/issues/46)
 - fix: fix #34 [`#34`](https://github.com/pear-devs/pear-desktop/issues/34)
@@ -1575,20 +1859,60 @@ All notable changes to this project will be documented in this file. Dates are d
 - fix: resolve #12 [`#12`](https://github.com/pear-devs/pear-desktop/issues/12)
 - fix(precise-volume): fix slider ui does not sync [`#15`](https://github.com/pear-devs/pear-desktop/issues/15)
 - fix(video-toggle): fix video config not load config [`#16`](https://github.com/pear-devs/pear-desktop/issues/16)
+- Merge pull request #1259 from organization/feat/fork-to-main [`457a8b5`](https://github.com/pear-devs/pear-desktop/commit/457a8b5018695d82b043cb7fa7264fbcf43f996c)
+- refactor: remove dynamic require (partial of #2) [`6e315b9`](https://github.com/pear-devs/pear-desktop/commit/6e315b9af2d10faac1f23b98a2b7eccf7af86ad6)
+- fix: rollback changelog [`9048da2`](https://github.com/pear-devs/pear-desktop/commit/9048da22f98b9091ab606464a6cbdaad8bc185ae)
+
+#### [v1.20.4](https://github.com/pear-devs/pear-desktop/compare/v1.20.3...v1.20.4)
+
+> 3 October 2023
+
 - refactor(in-app-menu): refactor in-app-menu plugin [`#13`](https://github.com/pear-devs/pear-desktop/issues/13)
 - feat(disable-autoplay): add `apply once`, resolve #9 [`#9`](https://github.com/pear-devs/pear-desktop/issues/9)
 - fix: fix #4 [`#4`](https://github.com/pear-devs/pear-desktop/issues/4)
 - fix: fix #7 [`#7`](https://github.com/pear-devs/pear-desktop/issues/7)
+- chore(deps): bump deps [`47bd015`](https://github.com/pear-devs/pear-desktop/commit/47bd01554944bd3ad2d39d4039afd0ad4584b182)
+- fix(lyrics-genius): fix th-ch/youtube-music#1253 [`aed1bbc`](https://github.com/pear-devs/pear-desktop/commit/aed1bbc6d724c9d71462843467ab51b77e1cf5a1)
+- fix(in-app-menu): overlay-scrollbar [`2cb05c9`](https://github.com/pear-devs/pear-desktop/commit/2cb05c9d86bd426da1ea73665a8a501788026f71)
+
+#### [v1.20.3](https://github.com/pear-devs/pear-desktop/compare/v1.20.2...v1.20.3)
+
+> 1 October 2023
+
+- release 1.20.3: fix updater download link [`5cd2e78`](https://github.com/pear-devs/pear-desktop/commit/5cd2e78e884c99b5d246c7cab8ff9b15be537cac)
+
+#### [v1.20.2](https://github.com/pear-devs/pear-desktop/compare/v1.20.1...v1.20.2)
+
+> 1 October 2023
+
+- Update changelog for v1.20.1 [`faaf54d`](https://github.com/pear-devs/pear-desktop/commit/faaf54d0b08c0e6a6e3c0417f7e2f9ca70721fdb)
+- fix: CVE-2023-4863, CVE-2023-5129 [`40fa1ba`](https://github.com/pear-devs/pear-desktop/commit/40fa1bac92829197fb128e1976407d175b0fbe72)
+- chore: update README [`10049d1`](https://github.com/pear-devs/pear-desktop/commit/10049d1ee9ae3c7e1293ea3a05e693f2876118b3)
+
+#### [v1.20.1](https://github.com/pear-devs/pear-desktop/compare/v1.20.0...v1.20.1)
+
+> 30 September 2023
+
+- fix: Fixes the video-toggle being displayed at the wrong position on fullscreen [`#1218`](https://github.com/pear-devs/pear-desktop/pull/1218)
+- Change Winget Releaser job to `ubuntu-latest` [`#1225`](https://github.com/pear-devs/pear-desktop/pull/1225)
+- Fixes the video-toggle being displayed at the wrong position on fullscreen [`#1218`](https://github.com/pear-devs/pear-desktop/pull/1218)
+- Fix Remove upgrade button [`#1206`](https://github.com/pear-devs/pear-desktop/pull/1206)
+- Fixed Age Restriction Bypass [`#1221`](https://github.com/pear-devs/pear-desktop/pull/1221)
+- fix(tuna): handle `playPaused` [`#1`](https://github.com/pear-devs/pear-desktop/pull/1)
+- Add plugin to always use the compact sidebar [`#1190`](https://github.com/pear-devs/pear-desktop/pull/1190)
+- Hide login elements [`#1189`](https://github.com/pear-devs/pear-desktop/pull/1189)
+- Fix navigation arrows [`#1191`](https://github.com/pear-devs/pear-desktop/pull/1191)
+- MacOS better copy paste in readme.md [`#1156`](https://github.com/pear-devs/pear-desktop/pull/1156)
 - fix: fix #1187 [`#1187`](https://github.com/pear-devs/pear-desktop/issues/1187)
 - fix: resolves #978 [`#978`](https://github.com/pear-devs/pear-desktop/issues/978)
 - fix: resolves #958 [`#958`](https://github.com/pear-devs/pear-desktop/issues/958)
-- Merge pull request #1259 from organization/feat/fork-to-main [`457a8b5`](https://github.com/pear-devs/pear-desktop/commit/457a8b5018695d82b043cb7fa7264fbcf43f996c)
 - fix: remove `xo`, migration to `eslint` [`c722896`](https://github.com/pear-devs/pear-desktop/commit/c722896a73cfbca3bbbab67bfcdfa639474e9030)
-- fix: rollback changelog [`9048da2`](https://github.com/pear-devs/pear-desktop/commit/9048da22f98b9091ab606464a6cbdaad8bc185ae)
+- bump deps version, remove yarn [`c837f10`](https://github.com/pear-devs/pear-desktop/commit/c837f104f75270ef29e01c68bed3f6ca8962f866)
+- feat: typescript part 1 [`82bcadc`](https://github.com/pear-devs/pear-desktop/commit/82bcadcd64ce203452ab2ab2fe7d36844854580a)
 
 #### [v1.20.0](https://github.com/pear-devs/pear-desktop/compare/v1.19.0...v1.20.0)
 
-> 18 May 2023
+> 4 February 2026
 
 - Bump version to 1.20.0 [`#1117`](https://github.com/pear-devs/pear-desktop/pull/1117)
 - Multiple implementations for the Adblocker plugin [`#1134`](https://github.com/pear-devs/pear-desktop/pull/1134)
@@ -1617,7 +1941,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - Add dynamic synced plugin config provider [`#1064`](https://github.com/pear-devs/pear-desktop/pull/1064)
 - [captions-selector] fix button showing when there aren't any captions available [`#1063`](https://github.com/pear-devs/pear-desktop/pull/1063)
 - [in-app-menu] fix items hidden by navbar in library [`#1067`](https://github.com/pear-devs/pear-desktop/pull/1067)
-- Fix Music Player logo is draggable [`#1061`](https://github.com/pear-devs/pear-desktop/pull/1061)
+- Fix Youtube Music logo is draggable [`#1061`](https://github.com/pear-devs/pear-desktop/pull/1061)
 - fix build action failing on forks, and run it on pull requests [`#1069`](https://github.com/pear-devs/pear-desktop/pull/1069)
 - try to fix songInfo time&album [`#1032`](https://github.com/pear-devs/pear-desktop/pull/1032)
 - [lyrics] Romanization toggle for Genius plugin [`#1039`](https://github.com/pear-devs/pear-desktop/pull/1039)
@@ -1670,7 +1994,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.19.0](https://github.com/pear-devs/pear-desktop/compare/v1.18.0...v1.19.0)
 
-> 31 December 2022
+> 4 February 2026
 
 - Automatic release by CI when version is updated [`#936`](https://github.com/pear-devs/pear-desktop/pull/936)
 - Center toggle of video-toggle [`#894`](https://github.com/pear-devs/pear-desktop/pull/894)
@@ -1699,7 +2023,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.18.0](https://github.com/pear-devs/pear-desktop/compare/v1.17.0...v1.18.0)
 
-> 5 September 2022
+> 4 February 2026
 
 - Bump ytdl-core (bug fix) [`#816`](https://github.com/pear-devs/pear-desktop/pull/816)
 - Bump electron and fix tests in CI [`#813`](https://github.com/pear-devs/pear-desktop/pull/813)
@@ -1723,7 +2047,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.17.0](https://github.com/pear-devs/pear-desktop/compare/v1.16.0...v1.17.0)
 
-> 16 May 2022
+> 4 February 2026
 
 - Bump ejs from 3.1.6 to 3.1.7 [`#712`](https://github.com/pear-devs/pear-desktop/pull/712)
 - fix injectCSS `did-finish-load` listener overload [`#693`](https://github.com/pear-devs/pear-desktop/pull/693)
@@ -1758,7 +2082,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.16.0](https://github.com/pear-devs/pear-desktop/compare/v1.15.0...v1.16.0)
 
-> 20 February 2022
+> 4 February 2026
 
 - update in-app-menu [`#596`](https://github.com/pear-devs/pear-desktop/pull/596)
 - Fix clientID [`#602`](https://github.com/pear-devs/pear-desktop/pull/602)
@@ -1788,14 +2112,14 @@ All notable changes to this project will be documented in this file. Dates are d
 - allow downloading playlists from popup menu [`#549`](https://github.com/pear-devs/pear-desktop/pull/549)
 - xesam:artist should be a list [`#539`](https://github.com/pear-devs/pear-desktop/pull/539)
 - fix notifications showing thumbnail of last song [`#537`](https://github.com/pear-devs/pear-desktop/pull/537)
-- Fix https://github.com/pear-devs/pear-desktop/pull/578#issuecomment-1035517531 [`#578`](https://github.com/pear-devs/pear-desktop/pull/578)
+- Fix https://github.com/th-ch/youtube-music/pull/578#issuecomment-1035517531 [`#578`](https://github.com/th-ch/youtube-music/pull/578)
 - Add automatic changelog [`1d9bfe8`](https://github.com/pear-devs/pear-desktop/commit/1d9bfe8ac8869cde648164979986964baa52c2f9)
 - update electron to v17.0.0 [`fef7115`](https://github.com/pear-devs/pear-desktop/commit/fef711549fa9862f8ea23301edde747c5802e352)
 - update dependencies [`8be07bc`](https://github.com/pear-devs/pear-desktop/commit/8be07bcb7ad8b727d97c36aa0760aed4e2fc481f)
 
 #### [v1.15.0](https://github.com/pear-devs/pear-desktop/compare/v1.14.0...v1.15.0)
 
-> 30 December 2021
+> 4 February 2026
 
 - Switch from spectron to playwright to fix tests [`#531`](https://github.com/pear-devs/pear-desktop/pull/531)
 - [Snyk] Upgrade @cliqz/adblocker-electron from 1.23.0 to 1.23.1 [`#529`](https://github.com/pear-devs/pear-desktop/pull/529)
@@ -1824,7 +2148,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.14.0](https://github.com/pear-devs/pear-desktop/compare/v1.13.0...v1.14.0)
 
-> 7 November 2021
+> 4 February 2026
 
 - [Snyk] Upgrade custom-electron-prompt from 1.1.0 to 1.2.0 [`#467`](https://github.com/pear-devs/pear-desktop/pull/467)
 - Video Toggle Plugin [`#448`](https://github.com/pear-devs/pear-desktop/pull/448)
@@ -1836,7 +2160,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - Blur plugin tweaks and integration with in-app-menu [`#451`](https://github.com/pear-devs/pear-desktop/pull/451)
 - set resume on start url to songInfo.url [`#449`](https://github.com/pear-devs/pear-desktop/pull/449)
 - quality-changer-plugin [`#446`](https://github.com/pear-devs/pear-desktop/pull/446)
-- get songInfo from original API [`#443`](https://github.com/pear-devs/pear-desktop/pull/443)
+- get songInfo from youtube API [`#443`](https://github.com/pear-devs/pear-desktop/pull/443)
 - New plugin: Blur navigation bar [`#442`](https://github.com/pear-devs/pear-desktop/pull/442)
 - Discord plugin: Clean Up Export (follow-up #380) [`#440`](https://github.com/pear-devs/pear-desktop/pull/440)
 - remove upgrade button + makes images unselectable [`#434`](https://github.com/pear-devs/pear-desktop/pull/434)
@@ -1857,7 +2181,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.13.0](https://github.com/pear-devs/pear-desktop/compare/v1.12.2...v1.13.0)
 
-> 19 September 2021
+> 4 February 2026
 
 - [Snyk] Upgrade @cliqz/adblocker-electron from 1.22.4 to 1.22.5 [`#406`](https://github.com/pear-devs/pear-desktop/pull/406)
 - Fix incorrect Google alert caused by changing user agent coresponding to current platform [`#384`](https://github.com/pear-devs/pear-desktop/pull/384)
@@ -1870,7 +2194,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - add tuna plugin for obs [`#397`](https://github.com/pear-devs/pear-desktop/pull/397)
 - Update menu buttons to new format [`#389`](https://github.com/pear-devs/pear-desktop/pull/389)
 - Plugin to fetch lyrics from Genius [`#387`](https://github.com/pear-devs/pear-desktop/pull/387)
-- Add mpris support with cherry picked commit from previous PR https://github.com/pear-devs/pear-desktop/pull/394 [`#395`](https://github.com/pear-devs/pear-desktop/pull/395)
+- Add mpris support with cherry picked commit from previous PR https://github.com/th-ch/youtube-music/pull/394 [`#395`](https://github.com/pear-devs/pear-desktop/pull/395)
 - Add "Listen Along" button, solve #353 [`#383`](https://github.com/pear-devs/pear-desktop/pull/383)
 - Bump node to v14 [`#386`](https://github.com/pear-devs/pear-desktop/pull/386)
 - [Snyk] Upgrade electron-updater from 4.3.9 to 4.3.10 [`#350`](https://github.com/pear-devs/pear-desktop/pull/350)
@@ -1881,7 +2205,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.12.2](https://github.com/pear-devs/pear-desktop/compare/v1.12.1...v1.12.2)
 
-> 1 July 2021
+> 4 February 2026
 
 - Fix downloader plugin [`#339`](https://github.com/pear-devs/pear-desktop/pull/339)
 - [Snyk] Upgrade @cliqz/adblocker-electron from 1.22.0 to 1.22.1 [`#337`](https://github.com/pear-devs/pear-desktop/pull/337)
@@ -1904,7 +2228,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.12.1](https://github.com/pear-devs/pear-desktop/compare/v1.12.0...v1.12.1)
 
-> 28 May 2021
+> 4 February 2026
 
 - Bump ws from 7.4.3 to 7.4.6 [`#303`](https://github.com/pear-devs/pear-desktop/pull/303)
 - Bump browserslist from 4.16.3 to 4.16.6 [`#301`](https://github.com/pear-devs/pear-desktop/pull/301)
@@ -1930,7 +2254,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.12.0](https://github.com/pear-devs/pear-desktop/compare/v1.11.0...v1.12.0)
 
-> 4 May 2021
+> 4 February 2026
 
 - Menu tweaks [`#224`](https://github.com/pear-devs/pear-desktop/pull/224)
 - Interactive notifications for windows [`#228`](https://github.com/pear-devs/pear-desktop/pull/228)
@@ -1965,7 +2289,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.11.0](https://github.com/pear-devs/pear-desktop/compare/v1.10.0...v1.11.0)
 
-> 9 March 2021
+> 4 February 2026
 
 - [Snyk] Upgrade electron-store from 7.0.1 to 7.0.2 [`#178`](https://github.com/pear-devs/pear-desktop/pull/178)
 - Added function to toggle resuming of last song when app starts [`#177`](https://github.com/pear-devs/pear-desktop/pull/177)
@@ -1977,19 +2301,19 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.10.0](https://github.com/pear-devs/pear-desktop/compare/v1.9.0...v1.10.0)
 
-> 7 February 2021
+> 4 February 2026
 
 - [Snyk] Upgrade @ffmpeg/ffmpeg from 0.9.6 to 0.9.7 [`#146`](https://github.com/pear-devs/pear-desktop/pull/146)
 - Reuse the same notification, instead of creating a new one each time the song changes. [`#144`](https://github.com/pear-devs/pear-desktop/pull/144)
 - [Snyk] Upgrade ytdl-core from 4.2.1 to 4.3.0 [`#136`](https://github.com/pear-devs/pear-desktop/pull/136)
 - bring the new commits to this fork [`#1`](https://github.com/pear-devs/pear-desktop/pull/1)
 - GH page [`3bcf409`](https://github.com/pear-devs/pear-desktop/commit/3bcf409f2b1629333714b187c606891cedb12512)
-- Add plugin to control playback speed like in Movie Player (from 0.25 to 2) [`f7f3185`](https://github.com/pear-devs/pear-desktop/commit/f7f31850d3d9879002dc47326e4f6ec9a52c25a1)
+- Add plugin to control playback speed like in YouTube (from 0.25 to 2) [`f7f3185`](https://github.com/pear-devs/pear-desktop/commit/f7f31850d3d9879002dc47326e4f6ec9a52c25a1)
 - Update back.js [`1fdf241`](https://github.com/pear-devs/pear-desktop/commit/1fdf2416ad414035104bfb51b8450d82e566cb13)
 
 #### [v1.9.0](https://github.com/pear-devs/pear-desktop/compare/v1.8.2...v1.9.0)
 
-> 15 January 2021
+> 4 February 2026
 
 - [Snyk] Upgrade electron-debug from 3.1.0 to 3.2.0 [`#121`](https://github.com/pear-devs/pear-desktop/pull/121)
 - Refactor providers [`#125`](https://github.com/pear-devs/pear-desktop/pull/125)
@@ -2002,7 +2326,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.8.2](https://github.com/pear-devs/pear-desktop/compare/v1.8.1...v1.8.2)
 
-> 12 January 2021
+> 4 February 2026
 
 - Downloader plugin - custom audio format [`#118`](https://github.com/pear-devs/pear-desktop/pull/118)
 - Globalized the song info and song controls, and updated Touch Bar for it. [`#102`](https://github.com/pear-devs/pear-desktop/pull/102)
@@ -2013,7 +2337,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.8.1](https://github.com/pear-devs/pear-desktop/compare/v1.8.0...v1.8.1)
 
-> 8 January 2021
+> 4 February 2026
 
 - [Snyk] Upgrade electron-updater from 4.3.5 to 4.3.6 [`#116`](https://github.com/pear-devs/pear-desktop/pull/116)
 - [Snyk] Upgrade @cliqz/adblocker-electron from 1.18.8 to 1.19.0 [`#117`](https://github.com/pear-devs/pear-desktop/pull/117)
@@ -2025,7 +2349,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.8.0](https://github.com/pear-devs/pear-desktop/compare/v1.7.5...v1.8.0)
 
-> 20 December 2020
+> 4 February 2026
 
 - Added Touch Bar plugin [`#101`](https://github.com/pear-devs/pear-desktop/pull/101)
 - [Snyk] Upgrade @ffmpeg/core from 0.8.4 to 0.8.5 [`#99`](https://github.com/pear-devs/pear-desktop/pull/99)
@@ -2038,7 +2362,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.7.5](https://github.com/pear-devs/pear-desktop/compare/v1.7.4...v1.7.5)
 
-> 12 December 2020
+> 4 February 2026
 
 - Bump ini from 1.3.5 to 1.3.7 [`#92`](https://github.com/pear-devs/pear-desktop/pull/92)
 - Fix adblocking [`#90`](https://github.com/pear-devs/pear-desktop/pull/90)
@@ -2048,33 +2372,33 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.7.4](https://github.com/pear-devs/pear-desktop/compare/v1.7.3...v1.7.4)
 
-> 8 December 2020
+> 4 February 2026
 
 #### [v1.7.3](https://github.com/pear-devs/pear-desktop/compare/v1.7.2...v1.7.3)
 
-> 8 December 2020
+> 4 February 2026
 
 - Adblocker: add option to disable default lists [`22c7f70`](https://github.com/pear-devs/pear-desktop/commit/22c7f70c938566a9db9c4d46a57224cfdee43df0)
 
 #### [v1.7.2](https://github.com/pear-devs/pear-desktop/compare/v1.7.1...v1.7.2)
 
-> 6 December 2020
+> 4 February 2026
 
 - Add AUR badge + beautify badges [`#82`](https://github.com/pear-devs/pear-desktop/pull/82)
 - Bugfix: only use cache with no additional blocklists [`467171a`](https://github.com/pear-devs/pear-desktop/commit/467171a17e648331d63f166c2da2f3134e95b37f)
 - Add AUR tag + beautify tags [`d212206`](https://github.com/pear-devs/pear-desktop/commit/d21220693b9ffa26e05fe1963376b636b40b9952)
-- Readme: add music-player logo to badges [`3022fac`](https://github.com/pear-devs/pear-desktop/commit/3022facbead40ccd81629c37b870ab33ce7fa106)
+- Readme: add youtube-music logo to badges [`3022fac`](https://github.com/pear-devs/pear-desktop/commit/3022facbead40ccd81629c37b870ab33ce7fa106)
 
 #### [v1.7.1](https://github.com/pear-devs/pear-desktop/compare/v1.7.0...v1.7.1)
 
-> 3 December 2020
+> 4 February 2026
 
 - Option to restart the app on config changes [`fd97576`](https://github.com/pear-devs/pear-desktop/commit/fd97576611ae80b959ffe7984e88ddc8d28a1ffc)
 - Bump version to 1.7.1 [`e07cac2`](https://github.com/pear-devs/pear-desktop/commit/e07cac240691b1c9d6909e457824616182374c3a)
 
 #### [v1.7.0](https://github.com/pear-devs/pear-desktop/compare/v1.6.5...v1.7.0)
 
-> 3 December 2020
+> 4 February 2026
 
 - Refactor config, custom plugin options [`#79`](https://github.com/pear-devs/pear-desktop/pull/79)
 - Refactor config for simpler use and advanced options in plugins [`8ab2da0`](https://github.com/pear-devs/pear-desktop/commit/8ab2da0482b6211b6b6d43423ec06daed48dac4f)
@@ -2083,7 +2407,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.6.5](https://github.com/pear-devs/pear-desktop/compare/v1.6.4...v1.6.5)
 
-> 2 December 2020
+> 4 February 2026
 
 - Add option to disable hardware acceleration [`#77`](https://github.com/pear-devs/pear-desktop/pull/77)
 - Downloader plugin - retry and upgrade dependencies [`#76`](https://github.com/pear-devs/pear-desktop/pull/76)
@@ -2096,11 +2420,11 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.6.4](https://github.com/pear-devs/pear-desktop/compare/v1.6.3...v1.6.4)
 
-> 24 November 2020
+> 4 February 2026
 
 #### [v1.6.3](https://github.com/pear-devs/pear-desktop/compare/v1.6.2...v1.6.3)
 
-> 24 November 2020
+> 4 February 2026
 
 - Improve CI [`#64`](https://github.com/pear-devs/pear-desktop/pull/64)
 - Ensure menu is visible on all platforms [`#63`](https://github.com/pear-devs/pear-desktop/pull/63)
@@ -2111,7 +2435,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.6.2](https://github.com/pear-devs/pear-desktop/compare/v1.6.0...v1.6.2)
 
-> 22 November 2020
+> 4 February 2026
 
 - Add github action to build/release [`#60`](https://github.com/pear-devs/pear-desktop/pull/60)
 - Bump to node 12 [`#59`](https://github.com/pear-devs/pear-desktop/pull/59)
@@ -2122,7 +2446,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.6.0](https://github.com/pear-devs/pear-desktop/compare/v1.5.0...v1.6.0)
 
-> 11 November 2020
+> 4 February 2026
 
 - [Snyk] Upgrade electron-store from 6.0.0 to 6.0.1 [`#54`](https://github.com/pear-devs/pear-desktop/pull/54)
 - Add notifications plugin (notify of song on play event) [`bcff6e5`](https://github.com/pear-devs/pear-desktop/commit/bcff6e51348645395549c206717225fb16a29cda)
@@ -2131,7 +2455,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.5.0](https://github.com/pear-devs/pear-desktop/compare/v1.4.0...v1.5.0)
 
-> 4 October 2020
+> 4 February 2026
 
 - Bump node-fetch from 2.6.0 to 2.6.1 [`#45`](https://github.com/pear-devs/pear-desktop/pull/45)
 - [Snyk] Upgrade @cliqz/adblocker-electron from 1.17.0 to 1.18.0 [`#47`](https://github.com/pear-devs/pear-desktop/pull/47)
@@ -2146,7 +2470,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.4.0](https://github.com/pear-devs/pear-desktop/compare/v1.3.3...v1.4.0)
 
-> 12 July 2020
+> 4 February 2026
 
 - Bump electron from 8.2.1 to 8.2.4 [`#31`](https://github.com/pear-devs/pear-desktop/pull/31)
 - [Snyk] Upgrade electron-store from 5.1.1 to 5.2.0 [`#30`](https://github.com/pear-devs/pear-desktop/pull/30)
@@ -2162,14 +2486,14 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.3.3](https://github.com/pear-devs/pear-desktop/compare/v1.3.2...v1.3.3)
 
-> 29 April 2020
+> 4 February 2026
 
 - Move tray click callback in setUpTray [`4824dda`](https://github.com/pear-devs/pear-desktop/commit/4824dda5d52565deb5cd6ef4b51d2d742677a154)
 - Bump version to 1.3.3 [`37cac19`](https://github.com/pear-devs/pear-desktop/commit/37cac19d9ccae59b89a68b995eaf7e08c7d24d11)
 
 #### [v1.3.2](https://github.com/pear-devs/pear-desktop/compare/v1.3.1...v1.3.2)
 
-> 26 April 2020
+> 4 February 2026
 
 - [Snyk] Upgrade electron-updater from 4.2.5 to 4.3.0 [`#22`](https://github.com/pear-devs/pear-desktop/pull/22)
 - fix: upgrade electron-updater from 4.2.5 to 4.3.0 [`9821300`](https://github.com/pear-devs/pear-desktop/commit/98213005d09d00bf013d2217809736bdc334ede6)
@@ -2178,7 +2502,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.3.1](https://github.com/pear-devs/pear-desktop/compare/v1.2.0...v1.3.1)
 
-> 12 April 2020
+> 4 February 2026
 
 - Add options and tray [`#21`](https://github.com/pear-devs/pear-desktop/pull/21)
 - Upgrade outdated dependencies [`#20`](https://github.com/pear-devs/pear-desktop/pull/20)
@@ -2189,7 +2513,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.2.0](https://github.com/pear-devs/pear-desktop/compare/v1.1.6...v1.2.0)
 
-> 15 March 2020
+> 4 February 2026
 
 - [Snyk] Upgrade electron-localshortcut from 3.1.0 to 3.2.1 [`#13`](https://github.com/pear-devs/pear-desktop/pull/13)
 - [Snyk] Upgrade electron-updater from 4.0.6 to 4.2.2 [`#12`](https://github.com/pear-devs/pear-desktop/pull/12)
@@ -2202,7 +2526,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.1.6](https://github.com/pear-devs/pear-desktop/compare/v1.1.5...v1.1.6)
 
-> 11 September 2019
+> 4 February 2026
 
 - Bump eslint-utils from 1.3.1 to 1.4.2 [`#7`](https://github.com/pear-devs/pear-desktop/pull/7)
 - Bump lodash.mergewith from 4.6.1 to 4.6.2 [`#4`](https://github.com/pear-devs/pear-desktop/pull/4)
@@ -2213,14 +2537,14 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.1.5](https://github.com/pear-devs/pear-desktop/compare/v1.1.4...v1.1.5)
 
-> 6 July 2019
+> 4 February 2026
 
 - Fix navigation plugin [`b10a1bb`](https://github.com/pear-devs/pear-desktop/commit/b10a1bb32dbea187422a43487527c379a9ddbb26)
 - Bump version to 1.1.5 [`07c4a42`](https://github.com/pear-devs/pear-desktop/commit/07c4a429c15f22b173629618518abb97d9ec0100)
 
 #### [v1.1.4](https://github.com/pear-devs/pear-desktop/compare/v1.1.3...v1.1.4)
 
-> 8 June 2019
+> 4 February 2026
 
 - isDev -&gt; is package [`a85325f`](https://github.com/pear-devs/pear-desktop/commit/a85325f33dbd40517b6029e500569fc1640af2ef)
 - Add titlebar/frame only on MacOS [`b1c4cc9`](https://github.com/pear-devs/pear-desktop/commit/b1c4cc9c45cc48413118aec8ce54767b1983a3e7)
@@ -2228,7 +2552,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.1.3](https://github.com/pear-devs/pear-desktop/compare/v1.1.2...v1.1.3)
 
-> 2 June 2019
+> 4 February 2026
 
 - Bump fstream from 1.0.11 to 1.0.12 [`#3`](https://github.com/pear-devs/pear-desktop/pull/3)
 - Version 1.1.3 + npm audit fix [`147ac48`](https://github.com/pear-devs/pear-desktop/commit/147ac48de6540c836e835fefe47e66e55dbdc9bc)
@@ -2237,14 +2561,14 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.1.2](https://github.com/pear-devs/pear-desktop/compare/v1.1.1...v1.1.2)
 
-> 1 May 2019
+> 4 February 2026
 
 - Display error/retry in case of failure [`5a1d7fb`](https://github.com/pear-devs/pear-desktop/commit/5a1d7fbf230fcd840a3ea654f31602fb5f504852)
 - Bump version to 1.1.2 [`eac2c5c`](https://github.com/pear-devs/pear-desktop/commit/eac2c5cf14d0a348704f7fbf0ff0bdce02758670)
 
 #### [v1.1.1](https://github.com/pear-devs/pear-desktop/compare/v1.1.0...v1.1.1)
 
-> 28 April 2019
+> 4 February 2026
 
 - Update package lock [`2d3f77d`](https://github.com/pear-devs/pear-desktop/commit/2d3f77d96211460bb81a73c8c62b9e5407a7cf30)
 - Add travis config [`5279a45`](https://github.com/pear-devs/pear-desktop/commit/5279a45f3537170006ba04cd5d59ac8b879d78a5)
@@ -2252,7 +2576,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v1.1.0](https://github.com/pear-devs/pear-desktop/compare/v1.0.0...v1.1.0)
 
-> 19 April 2019
+> 4 February 2026
 
 - Build script + check for updates [`b3c24a5`](https://github.com/pear-devs/pear-desktop/commit/b3c24a521281c352c37d649e8334b581b2a1de4f)
 - Add download section in readme [`828e8d4`](https://github.com/pear-devs/pear-desktop/commit/828e8d472ca3d76dea71d95a85f8fa726404b8e7)
@@ -2260,7 +2584,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### v1.0.0
 
-> 19 April 2019
+> 4 February 2026
 
 - Initial commit - app + 4 plugins [`8787b5c`](https://github.com/pear-devs/pear-desktop/commit/8787b5c175d02b52de65f2c559b411d999fa51e4)
 - Fix screenshot shadow + compress image [`c5c128f`](https://github.com/pear-devs/pear-desktop/commit/c5c128fa0f77c69e9bf12f6ca551315b37c51e84)

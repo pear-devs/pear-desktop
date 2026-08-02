@@ -219,13 +219,6 @@
       "description": "광고가 재생될 때 소리를 음소거하고 재생 속도를 16배로 설정합니다",
       "name": "광고 배속"
     },
-    "adblocker": {
-      "description": "모든 광고와 트래커를 즉시 차단합니다",
-      "menu": {
-        "blocker": "광고 차단 타입"
-      },
-      "name": "광고 차단기"
-    },
     "album-actions": {
       "description": "좋아요, 싫어요 버튼을 추가하고, 결과를 재생 목록 또는 앨범의 모든 노래에 적용합니다",
       "name": "앨범 액션"
@@ -503,6 +496,13 @@
           "title": "비활성 시간 제한 설정"
         }
       }
+    },
+    "do-not-track": {
+      "description": "트래커를 차단합니다",
+      "menu": {
+        "blocker": "차단기"
+      },
+      "name": "추적 금지"
     },
     "downloader": {
       "backend": {
@@ -943,9 +943,14 @@
           "label": "종류",
           "submenu": {
             "acrylic": "아크릴",
+            "content": "컨텐츠",
+            "fullscreen-ui": "전체화면 UI",
             "mica": "미카",
             "none": "없음",
-            "tabbed": "탭"
+            "tabbed": "탭",
+            "under-page": "페이지 밑",
+            "under-window": "창 밑",
+            "window": "창"
           }
         }
       },

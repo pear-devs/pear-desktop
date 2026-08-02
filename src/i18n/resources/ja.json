@@ -219,13 +219,6 @@
       "description": "広告が再生されると、自動的にミュートされ、再生速度が16倍に設定されます",
       "name": "広告のスピードを上げる"
     },
-    "adblocker": {
-      "description": "すべての広告とトラッカーをブロックj",
-      "menu": {
-        "blocker": "ブロッカー"
-      },
-      "name": "広告ブロッカー"
-    },
     "album-actions": {
       "description": "「Undislike（嫌いではない）」「Dislike（嫌い）」「Like（好き）」「Unlike（好きではない）」ボタンを追加し、プレイリストやアルバム内のすべての曲にこれらを適用します",
       "name": "アルバムアクション"
@@ -325,8 +318,16 @@
         "https": {
           "label": "HTTPSと証明書",
           "submenu": {
+            "cert": {
+              "dialogTitle": "HTTPS 証明書ファイルを選択",
+              "label": "証明書ファイル (.crt/.pem)"
+            },
             "enable-https": {
               "label": "HTTPSを有効化"
+            },
+            "key": {
+              "dialogTitle": "HTTPS 秘密鍵ファイルを選択",
+              "label": "秘密鍵ファイル (.key/.pem)"
             }
           }
         },
@@ -404,6 +405,17 @@
         "caption-disabled": "字幕を無効にしました",
         "no-captions": "この曲には字幕がありません"
       }
+    },
+    "clock": {
+      "description": "ナビゲーションバーに時計を追加",
+      "menu": {
+        "format": {
+          "24-hour-format": "24時間形式",
+          "display-seconds": "秒を表示",
+          "label": "形式"
+        }
+      },
+      "name": "時計"
     },
     "compact-sidebar": {
       "description": "サイドバーを常にコンパクトモードに設定します",
@@ -484,6 +496,13 @@
           "title": "非アクティブタイムアウト"
         }
       }
+    },
+    "do-not-track": {
+      "description": "すべてのトラッキングをデフォルトでブロック",
+      "menu": {
+        "blocker": "ブロッカー"
+      },
+      "name": "トラッキング拒否"
     },
     "downloader": {
       "backend": {
@@ -823,6 +842,24 @@
         "not-found": "⚠️ この曲の歌詞は見つかりませんでした。"
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "中国語の文字を変換",
+          "submenu": {
+            "disabled": {
+              "label": "無効",
+              "tooltip": "中国語の文字変換を無効化"
+            },
+            "simplified-to-traditional": {
+              "label": "簡体字から繁体字",
+              "tooltip": "簡体字中国語を繁体字中国語に変換"
+            },
+            "traditional-to-simplified": {
+              "label": "繁体字から簡体字",
+              "tooltip": "繁体字中国語を簡体字中国語に変換"
+            }
+          },
+          "tooltip": "中国語の文字を繁体字または簡体字に変換"
+        },
         "default-text-string": {
           "label": "デフォルトの歌詞間の文字",
           "tooltip": "歌詞と歌詞の間に使用するデフォルトの文字を選択してください"
@@ -906,9 +943,14 @@
           "label": "タイプ",
           "submenu": {
             "acrylic": "アクリル",
+            "content": "コンテンツ",
+            "fullscreen-ui": "全画面表示の UI",
             "mica": "マイカ(Mica)",
             "none": "なし",
-            "tabbed": "タブ付き"
+            "tabbed": "タブ付き",
+            "under-page": "ページ下部",
+            "under-window": "ウィンドウ下部",
+            "window": "ウィンドウ"
           }
         }
       },

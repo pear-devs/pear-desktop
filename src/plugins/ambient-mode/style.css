@@ -29,14 +29,17 @@
   height: 100%;
 }
 
-#player:not([video-mode]):not(.video-mode):not([player-ui-state='MINIPLAYER']):not([is-mweb-modernization-enabled])  {
+#player:not([video-mode]):not(.video-mode):not(
+    [player-ui-state='MINIPLAYER']
+  ):not([is-mweb-modernization-enabled]) {
   width: 100%;
   margin: 0 auto !important;
   overflow: visible;
 }
 
 /* Fix ambient mode overlapping other elements #2520 */
-.song-button.ytmusic-av-toggle, .video-button.ytmusic-av-toggle {
+.song-button.ytmusic-av-toggle,
+.video-button.ytmusic-av-toggle {
   z-index: 1;
   background-color: transparent;
 }

@@ -218,13 +218,6 @@
       "description": "Jos mainos toistuu, mykistä ääni ja aseta toistonopeus 16x:een",
       "name": "Mainoksen nopeutus"
     },
-    "adblocker": {
-      "description": "Estä kaikki mainokset ja seuranta",
-      "menu": {
-        "blocker": "Estäjät (blockerit)"
-      },
-      "name": "Mainos estäjä"
-    },
     "album-actions": {
       "description": "Lisää tykkäysnappulat, joilla voit lisätä tai poistaa tykkäyksiä kerralla kaikille soittolistan tai albumin kappaleille",
       "name": "Albumin Toiminnot"

@@ -218,13 +218,6 @@
       "description": "Ako se pokrene oglas, zvuk se isključi i brzina reprodukcije se postavi na 16x",
       "name": "Ubrzanje Oglasa"
     },
-    "adblocker": {
-      "description": "Blokiraj sve oglase i praćenje odmah po pokretanju",
-      "menu": {
-        "blocker": "Blokator"
-      },
-      "name": "Blokator Oglasa"
-    },
     "album-actions": {
       "description": "Dodaje tipke za 'Ne sviđa mi se', 'Sviđa mi se' i 'Dislike'/'Like' za primjenu na sve pjesme u playlisti ili albumu",
       "name": "Radnje Albuma"

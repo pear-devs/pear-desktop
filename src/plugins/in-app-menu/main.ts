@@ -1,5 +1,3 @@
-import { register } from 'electron-localshortcut';
-
 import {
   BrowserWindow,
   Menu,
@@ -8,9 +6,10 @@ import {
   nativeImage,
   type WebContents,
 } from 'electron';
+import { register } from 'electron-localshortcut';
 
-import type { BackendContext } from '@/types/contexts';
 import type { InAppMenuConfig } from './constants';
+import type { BackendContext } from '@/types/contexts';
 
 export const onMainLoad = ({
   window: win,
@@ -28,10 +27,8 @@ export const onMainLoad = ({
 
   handle('get-menu', () =>
     JSON.parse(
-      JSON.stringify(
-        Menu.getApplicationMenu(),
-        (key: string, value: unknown) =>
-          key !== 'commandsMap' && key !== 'menu' ? value : undefined,
+      JSON.stringify(Menu.getApplicationMenu(), (key: string, value: unknown) =>
+        key !== 'commandsMap' && key !== 'menu' ? value : undefined,
       ),
     ),
   );

@@ -219,13 +219,6 @@
       "description": "使用 16 倍速播放及靜音來跳過廣告片段",
       "name": "加速略過"
     },
-    "adblocker": {
-      "description": "阻擋所有廣告",
-      "menu": {
-        "blocker": "阻擋方式"
-      },
-      "name": "廣告攔截器"
-    },
     "album-actions": {
       "description": "新增支援對整個播放清單或專輯\"喜歡／不喜歡\"\"取消喜歡／取消不喜歡\"的按鈕",
       "name": "進階專輯操作"
@@ -503,6 +496,13 @@
           "title": "設定閒置狀態時長"
         }
       }
+    },
+    "do-not-track": {
+      "description": "啟動時阻擋所有追蹤",
+      "menu": {
+        "blocker": "內容阻擋器"
+      },
+      "name": "請勿追蹤"
     },
     "downloader": {
       "backend": {
@@ -943,9 +943,14 @@
           "label": "樣式",
           "submenu": {
             "acrylic": "壓克力(Acrylic)",
+            "content": "內容",
+            "fullscreen-ui": "全螢幕界面",
             "mica": "雲母(Mica)",
             "none": "無",
-            "tabbed": "分頁式(Tabbed)"
+            "tabbed": "分頁式(Tabbed)",
+            "under-page": "在頁面底下",
+            "under-window": "在視窗底下",
+            "window": "視窗"
           }
         }
       },

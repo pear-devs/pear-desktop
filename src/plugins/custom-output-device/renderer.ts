@@ -1,8 +1,8 @@
 import { createRenderer } from '@/utils';
 
-import type { MusicPlayer } from '@/types/music-player';
-import type { RendererContext } from '@/types/contexts';
 import type { CustomOutputPluginConfig } from './index';
+import type { RendererContext } from '@/types/contexts';
+import type { MusicPlayer } from '@/types/music-player';
 
 const updateDeviceList = async (
   context: RendererContext<CustomOutputPluginConfig>,

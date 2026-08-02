@@ -1,14 +1,15 @@
 import { createRenderer } from '@/utils';
 import { waitForElement } from '@/utils/wait-for-element';
 
-import { selectors, tabStates } from './utils';
+import { disposeReactiveRoot } from './reactive-root';
 import { setConfig, setCurrentTime } from './renderer';
 import { fetchLyrics } from './store';
+import { selectors, tabStates } from './utils';
 
+import type { SyncedLyricsPluginConfig } from '../types';
+import type { SongInfo } from '@/providers/song-info';
 import type { RendererContext } from '@/types/contexts';
 import type { MusicPlayer } from '@/types/music-player';
-import type { SongInfo } from '@/providers/song-info';
-import type { SyncedLyricsPluginConfig } from '../types';
 
 export let _ytAPI: MusicPlayer | null = null;
 export let netFetch: (
@@ -82,5 +83,9 @@ export const renderer = createRenderer<
     ctx.ipc.on('peard:update-song-info', (info: SongInfo) => {
       fetchLyrics(info);
     });
+  },
+
+  stop() {
+    disposeReactiveRoot();
   },
 });

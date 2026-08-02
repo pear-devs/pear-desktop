@@ -1,7 +1,7 @@
-import style from './style.css?inline';
-
-import { createPlugin } from '@/utils';
 import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
+
+import style from './style.css?inline';
 
 const handlePlay = (e: MouseEvent) => {
   if (!(e.target instanceof HTMLElement)) return;

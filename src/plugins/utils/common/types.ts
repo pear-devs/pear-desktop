@@ -10,23 +10,27 @@ export interface Plugin<ConfigType extends Config> {
   config: ConfigType;
 }
 
-export interface RendererPlugin<ConfigType extends Config>
-  extends Plugin<ConfigType> {
+export interface RendererPlugin<
+  ConfigType extends Config,
+> extends Plugin<ConfigType> {
   onEnable: (config: ConfigType) => void;
 }
 
-export interface MainPlugin<ConfigType extends Config>
-  extends Plugin<ConfigType> {
+export interface MainPlugin<
+  ConfigType extends Config,
+> extends Plugin<ConfigType> {
   onEnable: (window: BrowserWindow, config: ConfigType) => string;
 }
 
-export interface PreloadPlugin<ConfigType extends Config>
-  extends Plugin<ConfigType> {
+export interface PreloadPlugin<
+  ConfigType extends Config,
+> extends Plugin<ConfigType> {
   onEnable: (config: ConfigType) => void;
 }
 
-export interface MenuPlugin<ConfigType extends Config>
-  extends Plugin<ConfigType> {
+export interface MenuPlugin<
+  ConfigType extends Config,
+> extends Plugin<ConfigType> {
   onEnable: (config: ConfigType) => void;
 }
 

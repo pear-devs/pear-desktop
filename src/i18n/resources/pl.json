@@ -219,13 +219,6 @@
       "description": "Wycisza reklamę i przyśpiesza do 16x",
       "name": "Przyśpieszacz reklam"
     },
-    "adblocker": {
-      "description": "Blokuj wszystkie reklamy i śledzenie",
-      "menu": {
-        "blocker": "Metoda przechwytywania"
-      },
-      "name": "Blokowanie reklam"
-    },
     "album-actions": {
       "description": "Dodaje przyciski łapek w górę i dół do wszystkich piosenek podczas w albumach lub listach odtwarzania",
       "name": "Akcje albumu"

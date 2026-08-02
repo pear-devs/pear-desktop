@@ -1,12 +1,11 @@
+import { t } from '@/i18n';
 import { Popup } from '@/plugins/music-together/element';
 import { ElementFromHtml } from '@/plugins/utils/renderer';
 
 import { createStatus } from './status';
 
-import { t } from '@/i18n';
-
-import IconMusicCast from '../icons/music-cast.svg?raw';
 import IconConnect from '../icons/connect.svg?raw';
+import IconMusicCast from '../icons/music-cast.svg?raw';
 
 export type SettingPopupProps = {
   onItemClick: (id: string) => void;

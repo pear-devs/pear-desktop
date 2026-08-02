@@ -1,8 +1,8 @@
-import { render } from 'solid-js/web';
 import { createSignal, Show } from 'solid-js';
+import { render } from 'solid-js/web';
 
-import { createRenderer } from '@/utils';
 import { t } from '@/i18n';
+import { createRenderer } from '@/utils';
 
 import { CaptionsSettingButton } from './templates/captions-settings-template';
 

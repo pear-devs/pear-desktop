@@ -1,7 +1,7 @@
 import { jaroWinkler } from '@skyra/jaro-winkler';
 
-import { config } from '../renderer/renderer';
 import { LRC } from '../parsers/lrc';
+import { config } from '../renderer/renderer';
 
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
 

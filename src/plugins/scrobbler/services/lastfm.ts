@@ -2,9 +2,9 @@ import crypto from 'node:crypto';
 
 import { BrowserWindow, dialog, net } from 'electron';
 
-import { ScrobblerBase } from './base';
-
 import { t } from '@/i18n';
+
+import { ScrobblerBase } from './base';
 
 import type { ScrobblerPluginConfig } from '../index';
 import type { SetConfType } from '../main';
@@ -281,8 +281,8 @@ const authenticate = async (
       browserWindow.loadURL(url).then(() => {
         browserWindow.show();
         browserWindow.webContents.on('did-navigate', async (_, newUrl) => {
-          const url = new URL(newUrl);
-          if (url.hostname.endsWith('last.fm')) {
+          const url = URL.parse(newUrl);
+          if (url?.hostname.endsWith('last.fm')) {
             if (url.pathname === '/api/auth') {
               const isApproveScreen =
                 (await browserWindow.webContents.executeJavaScript(

@@ -1,26 +1,23 @@
+import { readFileSync } from 'node:fs';
 import { createServer as createHttpServer } from 'node:http';
 import { createServer as createHttpsServer } from 'node:https';
-import { readFileSync } from 'node:fs';
 
-import { jwt } from 'hono/jwt';
-
+import { serve, upgradeWebSocket } from '@hono/node-server';
+import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono as Hono } from '@hono/zod-openapi';
 import { cors } from 'hono/cors';
-import { swaggerUI } from '@hono/swagger-ui';
-import { serve } from '@hono/node-server';
-import { createNodeWebSocket } from '@hono/node-ws';
+import { jwt } from 'hono/jwt';
+import { WebSocketServer } from 'ws';
 
+import { APPLICATION_NAME } from '@/i18n';
 import { registerCallback } from '@/providers/song-info';
 import { createBackend } from '@/utils';
 
-import { JWTPayloadSchema } from './scheme';
+import { API_VERSION } from './api-version';
 import { registerAuth, registerControl, registerWebsocket } from './routes';
-
-import { APPLICATION_NAME } from '@/i18n';
+import { JWTPayloadSchema } from './scheme';
 
 import { type APIServerConfig, AuthStrategy } from '../config';
-
-import type { MiddlewareHandler } from 'hono';
 
 import type { BackendType } from './types';
 import type {
@@ -28,6 +25,7 @@ import type {
   RepeatMode,
   VolumeState,
 } from '@/types/datahost-get-state';
+import type { MiddlewareHandler } from 'hono';
 
 export const backend = createBackend<BackendType, APIServerConfig>({
   async start(ctx) {
@@ -84,20 +82,20 @@ export const backend = createBackend<BackendType, APIServerConfig>({
   init(backendCtx) {
     this.app = new Hono();
 
-    const ws = createNodeWebSocket({
-      app: this.app,
-    });
-
     this.app.use('*', cors());
 
     // for web remote control
     this.app.use('*', async (ctx, next) => {
-      ctx.header('Access-Control-Request-Private-Network', 'true');
+      ctx.header('Access-Control-Allow-Private-Network', 'true');
       await next();
     });
 
     // middlewares
     const jwtGuard: MiddlewareHandler = async (ctx, next) => {
+      if (ctx.req.path.endsWith(`${API_VERSION}/ws`)) {
+        return await next();
+      }
+
       const config = await backendCtx.getConfig();
 
       if (config.authStrategy !== AuthStrategy.NONE) {
@@ -110,6 +108,10 @@ export const backend = createBackend<BackendType, APIServerConfig>({
     };
     this.app.use('/api/*', jwtGuard);
     this.app.use('/api/*', async (ctx, next) => {
+      if (ctx.req.path.endsWith(`${API_VERSION}/ws`)) {
+        return await next();
+      }
+
       const result = await JWTPayloadSchema.spa(await ctx.get('jwtPayload'));
       const config = await backendCtx.getConfig();
 
@@ -137,7 +139,7 @@ export const backend = createBackend<BackendType, APIServerConfig>({
       () => this.volumeState,
     );
     registerAuth(this.app, backendCtx);
-    registerWebsocket(this.app, backendCtx, ws);
+    registerWebsocket(this.app, backendCtx, upgradeWebSocket);
 
     // swagger
     this.app.openAPIRegistry.registerComponent(
@@ -165,13 +167,12 @@ export const backend = createBackend<BackendType, APIServerConfig>({
     });
 
     this.app.get('/swagger', swaggerUI({ url: '/doc' }));
-
-    this.injectWebSocket = ws.injectWebSocket.bind(this);
   },
   run(config) {
     if (!this.app) return;
 
     try {
+      const wss = new WebSocketServer({ noServer: true });
       const serveOptions =
         config.useHttps && config.certPath && config.keyPath
           ? {
@@ -183,19 +184,17 @@ export const backend = createBackend<BackendType, APIServerConfig>({
                 key: readFileSync(config.keyPath),
                 cert: readFileSync(config.certPath),
               },
+              websocket: { server: wss },
             }
           : {
               fetch: this.app.fetch.bind(this.app),
               port: config.port,
               hostname: config.hostname,
               createServer: createHttpServer,
+              websocket: { server: wss },
             };
 
       this.server = serve(serveOptions);
-
-      if (this.injectWebSocket && this.server) {
-        this.injectWebSocket(this.server);
-      }
     } catch (err) {
       console.error(err);
     }

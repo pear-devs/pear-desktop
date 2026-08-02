@@ -219,13 +219,6 @@
       "description": "Se um anúncio for reproduzido, silencia o áudio e define a velocidade de reprodução para 16x",
       "name": "Acelerador de anúncios"
     },
-    "adblocker": {
-      "description": "Bloquear anúncios e monitorização",
-      "menu": {
-        "blocker": "Bloqueador"
-      },
-      "name": "Bloqueador de anúncios"
-    },
     "album-actions": {
       "description": "Adiciona os botões \"Anular Não gosto\", \"Não gosto\", \"Gosto\" e \"Não gosto\" para aplicar a todas as músicas de uma lista de reprodução ou álbum",
       "name": "Ações do álbum"

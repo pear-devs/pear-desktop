@@ -1,8 +1,8 @@
 import prompt from 'custom-electron-prompt';
 
+import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 import { createBackend } from '@/utils';
-import { t } from '@/i18n';
 
 export default createBackend({
   start({ ipc: { handle }, window }) {
@@ -28,6 +28,6 @@ export default createBackend({
     );
   },
   stop({ ipc: { removeHandler } }) {
-    removeHandler('captionsSelector');
+    removeHandler('peard:captions-selector');
   },
 });

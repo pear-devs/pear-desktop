@@ -216,13 +216,6 @@
       "description": "Hvis en reklame afspilles, slår den lyden fra og sætter hastigheden til 16x",
       "name": "Spol igennem reklamen"
     },
-    "adblocker": {
-      "description": "Bloker alle reklamer og sporing fra starten af",
-      "menu": {
-        "blocker": "Bloker"
-      },
-      "name": "Bloker reklamer"
-    },
     "album-color-theme": {
       "menu": {
         "color-mix-ratio": {

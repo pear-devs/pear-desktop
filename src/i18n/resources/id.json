@@ -219,13 +219,6 @@
       "description": "Jika iklan diputar, audio akan dimatikan dan kecepatan pemutaran akan diatur ke 16x",
       "name": "Percepatan Iklan"
     },
-    "adblocker": {
-      "description": "Blokir semua iklan dan pelacakan di luar kotak",
-      "menu": {
-        "blocker": "Pemblokir"
-      },
-      "name": "Pemblokir Iklan"
-    },
     "album-actions": {
       "description": "Tambah tombol Suka, Batal Suka, Tidak Suka dan Batal Tidak Suka untuk diterapkan ke semua lagu dalam daftar putar atau album",
       "name": "Tindakan Album"

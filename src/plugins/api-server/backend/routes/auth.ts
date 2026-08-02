@@ -1,8 +1,7 @@
+import { getConnInfo } from '@hono/node-server/conninfo';
 import { createRoute, z } from '@hono/zod-openapi';
 import { dialog } from 'electron';
 import { sign } from 'hono/jwt';
-
-import { getConnInfo } from '@hono/node-server/conninfo';
 
 import { t } from '@/i18n';
 

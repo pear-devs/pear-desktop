@@ -218,13 +218,6 @@
       "description": "Bij het afspelen van een advertentie wordt het geluid gedempt en wordt de afspeelsnelheid wordt verhoogd naar 16x",
       "name": "Advertenties versnellen"
     },
-    "adblocker": {
-      "description": "Blokkeer alle advertenties en trackers buiten het kader",
-      "menu": {
-        "blocker": "Blokkeerder"
-      },
-      "name": "Advertentieblokkeerder"
-    },
     "album-actions": {
       "description": "Voegt niet-Niet Leuk, Niet Leuk, Leuk, niet-Leuk knoppen toe om dit toe te passen op alle nummers in een afspeellijst of album",
       "name": "Albumacties"

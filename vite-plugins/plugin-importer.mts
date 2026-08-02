@@ -138,7 +138,9 @@ export const pluginVirtualModuleGenerator = (
 function supportsPlatform({ platform }: { platform: string }) {
   if (typeof platform !== 'number') return true;
 
-  const is = globalThis.electronIs;
+  const is = (globalThis as typeof globalThis & {
+    electronIs: typeof import('electron-is');
+  }).electronIs;
 
   if (is.windows()) return (platform & Platform.Windows) !== 0;
   if (is.macOS()) return (platform & Platform.macOS) !== 0;

@@ -2,19 +2,18 @@ import { toKeyEvent } from 'keyboardevent-from-electron-accelerator';
 import keyEventAreEqual from 'keyboardevents-areequal';
 import { render } from 'solid-js/web';
 
-import { getSongMenu } from '@/providers/dom-elements';
+import { t } from '@/i18n';
 import {
   isMusicOrVideoTrack,
   isPlayerMenu,
 } from '@/plugins/utils/renderer/check';
-
-import { t } from '@/i18n';
+import { getSongMenu } from '@/providers/dom-elements';
 
 import { PictureInPictureButton } from './templates/picture-in-picture-button';
 
-import type { MusicPlayer } from '@/types/music-player';
 import type { PictureInPicturePluginConfig } from './index';
 import type { RendererContext } from '@/types/contexts';
+import type { MusicPlayer } from '@/types/music-player';
 
 export const onPlayerApiReady = async (
   _: MusicPlayer,

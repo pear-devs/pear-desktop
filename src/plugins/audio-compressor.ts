@@ -1,6 +1,6 @@
-import { createPlugin } from '@/utils';
 import { t } from '@/i18n';
 import { type MusicPlayer } from '@/types/music-player';
+import { createPlugin } from '@/utils';
 
 const lazySafeTry = (...fns: (() => void)[]) => {
   for (const fn of fns) {

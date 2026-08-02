@@ -1,13 +1,12 @@
 import prompt, { type KeybindOptions } from 'custom-electron-prompt';
 
+import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 
-import { t } from '@/i18n';
-
 import type { ShortcutsPluginConfig } from './index';
-import type { BrowserWindow } from 'electron';
-import type { MenuContext } from '@/types/contexts';
 import type { MenuTemplate } from '@/menu';
+import type { MenuContext } from '@/types/contexts';
+import type { BrowserWindow } from 'electron';
 
 export const onMenu = async ({
   window,

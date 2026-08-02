@@ -218,13 +218,6 @@
       "description": "Reklaami esitamisel summutatakse heli ja keritakse edasi 16-kordse kiirusega",
       "name": "Reklaamikiirendaja"
     },
-    "adblocker": {
-      "description": "Blokeeri kõik reklaamid ja jälitajad",
-      "menu": {
-        "blocker": "Blokeerijad"
-      },
-      "name": "Reklaamiblokeerija"
-    },
     "album-actions": {
       "description": "Lisab Undislike, Ebameeldiv, Meeldiv ja Unlike nupud selle rakendamiseks kõikidele loendisse või albumisse kuuluvatele lauludele.",
       "name": "Albumi toimingud"

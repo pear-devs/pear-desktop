@@ -219,13 +219,6 @@
       "description": "Bir reklam oynatılırsa sesi kapatır ve oynatma hızını 16x olarak ayarlar",
       "name": "Reklam Hızlandırma"
     },
-    "adblocker": {
-      "description": "Tüm reklamları ve izleyicileri engelle",
-      "menu": {
-        "blocker": "Engelleyici"
-      },
-      "name": "Reklam Engelleyici"
-    },
     "album-actions": {
       "description": "Çalma listesindeki veya albümdeki tüm şarkılara Beğendim ve Beğenmedim düğmeleri ekler",
       "name": "Albüm Eylemleri"
@@ -503,6 +496,13 @@
           "title": "Hareketsizlik zaman aşımını ayarla"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Kurulumdan itibaren tüm izlemeyi engelle",
+      "menu": {
+        "blocker": "Engelleyici"
+      },
+      "name": "İzlemeyi Engelle"
     },
     "downloader": {
       "backend": {
@@ -943,9 +943,14 @@
           "label": "Tür",
           "submenu": {
             "acrylic": "Akrilik",
+            "content": "İçerik",
+            "fullscreen-ui": "Tam Ekran Kullanıcı Arayüzü",
             "mica": "Mika",
             "none": "Hiçbiri",
-            "tabbed": "Sekmeli"
+            "tabbed": "Sekmeli",
+            "under-page": "Sayfanın alt kısmı",
+            "under-window": "Pencerenin alt kısmı",
+            "window": "Pencere"
           }
         }
       },

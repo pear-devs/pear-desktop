@@ -53,7 +53,7 @@ export class LyricsGenius implements LyricProvider {
     const { result: { path } } = closestHit;
 
     const html = await fetch(`${this.baseUrl}${path}`).then((res) =>
-      res.text()
+      res.text(),
     );
     const doc = this.domParser.parseFromString(html, 'text/html');
 

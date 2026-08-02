@@ -218,13 +218,6 @@
       "description": "Ukoliko dođe do prikaza reklame, zvuk se prigušuje i podešava se brzina na 16x",
       "name": "Ubrzanje reklama"
     },
-    "adblocker": {
-      "description": "Podrazumevano blokiranje svih reklama i praćenja",
-      "menu": {
-        "blocker": "Bloker"
-      },
-      "name": "Bloker reklama"
-    },
     "album-actions": {
       "description": "Dodaje mogućnost primene opcija 'Sviđa mi se, ne sviđa mi se' kao i opciju njihovog poništenja na nivou plejliste ili albuma",
       "name": "Akcije albuma"

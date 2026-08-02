@@ -131,7 +131,7 @@
               "to-help-translate": "Vill du hjälpa till att översätta? Klicka här"
             }
           },
-          "resume-on-start": "Fortsätt spela när appen öppnas",
+          "resume-on-start": "Återuppta sista låten när appen startas",
           "single-instance-lock": "Lås enskild instans",
           "start-at-login": "Starta vid inloggning",
           "starting-page": {
@@ -162,7 +162,7 @@
                 "force-show": "Tvinga fram visning",
                 "hide": "Dölj",
                 "label": "Gilla-knappar",
-                "swap": "Byt ordning på liknande knappar"
+                "swap": "Byt ordning på Gilla-knappar"
               },
               "remove-upgrade-button": "Ta bort knappen för uppgradering",
               "theme": {
@@ -218,13 +218,6 @@
     "ad-speedup": {
       "description": "Om en annons spelas, tystas ljudet och uppspelningshastigheten sätts till 16×",
       "name": "Snabba upp annonser"
-    },
-    "adblocker": {
-      "description": "Blockerar annonser och spårning automatiskt",
-      "menu": {
-        "blocker": "Blockerare"
-      },
-      "name": "Annonsblockerare"
     },
     "album-actions": {
       "description": "Lägger till knappar för Undislike, Dislike, Like och Unlike för att använda detta på alla spår i en spellista eller ett album",
@@ -503,6 +496,13 @@
           "title": "Ställ in inaktivitetstid"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Blockera all spårning direkt",
+      "menu": {
+        "blocker": "Blockerare"
+      },
+      "name": "Spåra Inte"
     },
     "downloader": {
       "backend": {
@@ -850,7 +850,7 @@
               "tooltip": "Inaktivera konvertering av kinesiska tecken"
             },
             "simplified-to-traditional": {
-              "label": "Förenklad till traditionell",
+              "label": "Förenklad till Traditionell",
               "tooltip": "Konvertera förenklad kinesiska till traditionell kinesiska"
             },
             "traditional-to-simplified": {
@@ -943,9 +943,14 @@
           "label": "Typ",
           "submenu": {
             "acrylic": "Akryl",
+            "content": "Innehåll",
+            "fullscreen-ui": "Helskärmsgränssnitt",
             "mica": "Mica",
             "none": "Ingen",
-            "tabbed": "Flikad"
+            "tabbed": "Flikad",
+            "under-page": "Under Sida",
+            "under-window": "Under Fönster",
+            "window": "Fönster"
           }
         }
       },

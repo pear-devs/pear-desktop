@@ -218,13 +218,6 @@
       "description": "Jika iklan dimainkan, ia meredamkan audio dan menetapkan kelajuan main semula kepada 16x",
       "name": "Kelajuan Iklan"
     },
-    "adblocker": {
-      "description": "Sekat semua iklan dan penjejakan di luar kotak",
-      "menu": {
-        "blocker": "Penyekat"
-      },
-      "name": "Penyekat Iklan"
-    },
     "album-actions": {
       "description": "Menambah butang Suka dan Tidak Suka pada semua lagu dalam senarai main atau album",
       "name": "Tindakan Album"

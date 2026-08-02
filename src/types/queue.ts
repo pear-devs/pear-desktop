@@ -1,5 +1,5 @@
-import type { MusicPlayer } from '@/types/music-player';
 import type { GetState, QueueItem } from '@/types/datahost-get-state';
+import type { MusicPlayer } from '@/types/music-player';
 
 type StoreState = GetState;
 export type Store = {

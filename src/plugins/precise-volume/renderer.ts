@@ -1,6 +1,6 @@
-import { type PreciseVolumePluginConfig } from './index';
-
 import { debounce } from '@/providers/decorators';
+
+import { type PreciseVolumePluginConfig } from './index';
 
 import type { RendererContext } from '@/types/contexts';
 import type { MusicPlayer } from '@/types/music-player';

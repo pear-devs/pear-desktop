@@ -1,14 +1,14 @@
+import { autoUpdate, offset, size } from '@floating-ui/dom';
+import { useFloating } from 'solid-floating-ui';
 import { createSignal, Match, Show, Switch } from 'solid-js';
 import { type JSX } from 'solid-js/jsx-runtime';
-import { css } from 'solid-styled-components';
 import { Portal } from 'solid-js/web';
-
+import { css } from 'solid-styled-components';
 import { Transition } from 'solid-transition-group';
-import { useFloating } from 'solid-floating-ui';
-import { autoUpdate, offset, size } from '@floating-ui/dom';
+
+import { cacheNoArgs } from '@/providers/decorators';
 
 import { Panel } from './Panel';
-import { cacheNoArgs } from '@/providers/decorators';
 
 const itemStyle = cacheNoArgs(
   () => css`

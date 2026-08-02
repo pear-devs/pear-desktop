@@ -218,13 +218,6 @@
       "description": "Pokud se přehraje reklama tak ztlumí zvuk a nastaví rychlost přehrávání na 16x",
       "name": "Zrychlovač Reklam"
     },
-    "adblocker": {
-      "description": "Blokuje všechny reklamy a sledování ihned od začátku",
-      "menu": {
-        "blocker": "Blokátor"
-      },
-      "name": "Blokátor reklam"
-    },
     "album-actions": {
       "description": "Přidává Undislike, Dislike, Like, a Unlike tlačítka k aplikování tohoto ke všem písničkám v seznamu písniček nebo albumu",
       "name": "Možnosti Alba"

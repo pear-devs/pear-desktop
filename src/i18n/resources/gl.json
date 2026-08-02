@@ -215,9 +215,6 @@
     }
   },
   "plugins": {
-    "adblocker": {
-      "name": "Bloqueador de anuncios"
-    },
     "album-actions": {
       "name": "Accións do álbum"
     },
