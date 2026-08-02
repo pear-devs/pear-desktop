@@ -60,7 +60,7 @@ const setProgressBar = async (
             'progress': new dbus.Variant('d', progress),
             'progress-visible': new dbus.Variant(
               'b',
-              options.mode === 'normal' && progress > 0,
+              progress > 0,
             ),
           },
         ],
@@ -79,17 +79,10 @@ const updateProgressBar = (songInfo: SongInfo, window: BrowserWindow) => {
 
   const { title, elapsedSeconds, songDuration, isPaused } = validated.data;
 
-  if (
-    !lastSongInfo ||
-    title !== lastSongInfo.title ||
-    elapsedSeconds !== lastSongInfo.elapsedSeconds ||
-    isPaused !== lastSongInfo.isPaused
-  ) {
-    lastSongInfo = songInfo;
-  }
+  lastSongInfo = songInfo;
 
   const progress = songDuration > 0
-    ? (elapsedSeconds ?? 0) / songDuration
+    ? Math.max(0, Math.min((elapsedSeconds ?? 0) / songDuration, 1))
     : 0;
   const options: { mode: 'normal' | 'paused' } = {
     mode: isPaused ? 'paused' : 'normal',
