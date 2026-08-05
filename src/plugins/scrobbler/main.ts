@@ -10,6 +10,7 @@ import { createBackend } from '@/utils';
 
 import { LastFmScrobbler } from './services/lastfm';
 import { ListenbrainzScrobbler } from './services/listenbrainz';
+import { fetchMusicBrainzCorrection } from './services/musicbrainz';
 
 import type { ScrobblerPluginConfig } from './index';
 import type { ScrobblerBase } from './services/base';
@@ -72,7 +73,7 @@ export const backend = createBackend<
     await this.createSessions(config, setConfig);
     this.setConfig = setConfig;
 
-    registerCallback((songInfo: SongInfo, event) => {
+    registerCallback(async (songInfo: SongInfo, event) => {
       if (event === SongInfoEvent.TimeChanged) return;
       // Set remove the old scrobble timer
       clearTimeout(scrobbleTimer);
@@ -87,29 +88,51 @@ export const backend = createBackend<
           return;
         }
 
-        // Scrobble when the song is halfway through, or has passed the 4-minute mark
-        const scrobbleTime = Math.min(
-          Math.ceil(songInfo.songDuration / 2),
-          4 * 60,
-        );
-        if (scrobbleTime > (songInfo.elapsedSeconds ?? 0)) {
-          // Scrobble still needs to happen
-          const timeToWait =
-            (scrobbleTime - (songInfo.elapsedSeconds ?? 0)) * 1000;
+        let title = (configNonnull.alternativeTitles && songInfo.alternativeTitle) || songInfo.title;
+        let artist = (configNonnull.alternativeArtist && songInfo.tags?.[0]) || songInfo.artist;
+
+        if (configNonnull.customRegexFilters?.length) {
+          for (const filter of configNonnull.customRegexFilters) {
+            try {
+              const regex = new RegExp(filter, 'i');
+              title = title.replace(regex, '').trim();
+              artist = artist.replace(regex, '').trim();
+            } catch {}
+          }
+        }
+
+        if (configNonnull.useMusicBrainz && configNonnull.musicBrainzEmail) {
+          const corrected = await fetchMusicBrainzCorrection(title, artist, configNonnull.musicBrainzEmail);
+          if (corrected) {
+            title = corrected.title;
+            artist = corrected.artist;
+          }
+        }
+
+        const processedSongInfo = {
+          ...songInfo,
+          title,
+          artist,
+          alternativeTitle: undefined,
+          tags: undefined,
+        };
+  
+        const elapsed = processedSongInfo.elapsedSeconds || 0;
+        const scrobbleTime = Math.min(Math.ceil(processedSongInfo.songDuration / 2), 240);
+
+        if (scrobbleTime > elapsed) {
           scrobbleTimer = setTimeout(
             (info, config) => {
-              this.enabledScrobblers.forEach((scrobbler) =>
-                scrobbler.addScrobble(info, config, setConfig),
-              );
+              this.enabledScrobblers.forEach((s) => s.addScrobble(info, config, setConfig));
             },
-            timeToWait,
-            songInfo,
+            (scrobbleTime - elapsed) * 1000,
+            processedSongInfo,
             configNonnull,
           );
         }
 
-        this.enabledScrobblers.forEach((scrobbler) =>
-          scrobbler.setNowPlaying(songInfo, configNonnull, setConfig),
+        this.enabledScrobblers.forEach((s) =>
+          s.setNowPlaying(processedSongInfo, configNonnull, setConfig),
         );
       }
     });

@@ -788,7 +788,10 @@
         },
         "scrobble-alternative-title": "Use alternative titles",
         "scrobble-alternative-artist": "Use alternative artists",
-        "scrobble-other-media": "Scrobble other media"
+        "scrobble-other-media": "Scrobble other media",
+        "regex-filters": "Regular expressions filters",
+        "use-musicbrainz": "Use MusicBrainz to correct metadata",
+        "musicbrainz-email": "MusicBrainz contact email"
       },
       "name": "Scrobbler",
       "prompt": {
@@ -801,6 +804,13 @@
             "label": "Enter your ListenBrainz user token:",
             "title": "ListenBrainz token"
           }
+        },
+        "regex-filter-multi": {
+          "label": "Enter one regex per line:"
+        },
+        "musicbrainz-email": {
+          "title": "MusicBrainz Contact Email",
+          "label": "Enter an email for MusicBrainz API:"
         }
       }
     },
