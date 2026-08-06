@@ -20,6 +20,7 @@ import {
 import { startingPages } from './providers/extracted-data';
 import { setupSongInfo } from './providers/song-info-front';
 
+import type { SearchRequest, SearchResponse } from '@/providers/song-controls';
 import type { MusicPlayer } from '@/types/music-player';
 import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';
@@ -280,32 +281,60 @@ async function onApiLoaded() {
       type: 'CLEAR',
     });
   });
+  window.ipcRenderer.on('peard:play-video', (_, videoId: string) => {
+    const playerApi = document.querySelector<Element & MusicPlayer>(
+      '#movie_player',
+    );
+    if (!playerApi) return;
+
+    playerApi.loadVideoById(
+      videoId,
+      0,
+      playerApi.getUserPlaybackQualityPreference(),
+    );
+  });
 
   window.ipcRenderer.on(
     'peard:search',
-    async (_, query: string, params?: string, continuation?: string) => {
+    async (_, { requestId, query, params, continuation }: SearchRequest) => {
       const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
       const searchBox =
         document.querySelector<SearchBoxElement>('ytmusic-search-box');
 
-      if (!app || !searchBox) return;
+      if (!app || !searchBox) {
+        window.ipcRenderer.send('peard:search-results', {
+          requestId,
+          error: 'YouTube Music search is not ready yet.',
+        } satisfies SearchResponse);
+        return;
+      }
 
-      const result = await app.networkManager.fetch<
-        unknown,
-        {
-          query: string;
-          params?: string;
-          continuation?: string;
-          suggestStats?: unknown;
-        }
-      >('/search', {
-        query,
-        params,
-        continuation,
-        suggestStats: searchBox.getSearchboxStats(),
-      });
+      try {
+        const result = await app.networkManager.fetch<
+          unknown,
+          {
+            query: string;
+            params?: string;
+            continuation?: string;
+            suggestStats?: unknown;
+          }
+        >('/search', {
+          query,
+          params,
+          continuation,
+          suggestStats: searchBox.getSearchboxStats(),
+        });
 
-      window.ipcRenderer.send('peard:search-results', result);
+        window.ipcRenderer.send('peard:search-results', {
+          requestId,
+          result,
+        } satisfies SearchResponse);
+      } catch (error) {
+        window.ipcRenderer.send('peard:search-results', {
+          requestId,
+          error: error instanceof Error ? error.message : 'Search failed.',
+        } satisfies SearchResponse);
+      }
     },
   );
 

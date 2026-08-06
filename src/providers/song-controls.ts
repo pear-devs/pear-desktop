@@ -1,10 +1,26 @@
 // This is used for to control the songs
+import { randomUUID } from 'node:crypto';
+
 import { type BrowserWindow, ipcMain } from 'electron';
 
 import { LikeType } from '@/types/datahost-get-state';
 
 // see protocol-handler.ts
 type ArgsType<T> = T | string[] | undefined;
+const SEARCH_TIMEOUT_MS = 15_000;
+
+export interface SearchRequest {
+  requestId: string;
+  query: string;
+  params?: string;
+  continuation?: string;
+}
+
+export interface SearchResponse {
+  requestId: string;
+  result?: unknown;
+  error?: string;
+}
 
 const parseNumberFromArgsType = (args: ArgsType<number>) => {
   if (typeof args === 'number') {
@@ -98,6 +114,12 @@ export const getSongControls = (win: BrowserWindow) => {
       win.webContents.send('peard:get-queue');
     },
     muteUnmute: () => win.webContents.send('peard:toggle-mute'),
+    playVideo: (videoId: string) => {
+      const videoIdValue = parseStringFromArgsType(videoId);
+      if (videoIdValue === null) return;
+
+      win.webContents.send('peard:play-video', videoIdValue);
+    },
     openSearchBox: () => {
       win.webContents.sendInputEvent({
         type: 'keyDown',
@@ -140,11 +162,43 @@ export const getSongControls = (win: BrowserWindow) => {
     clearQueue: () => win.webContents.send('peard:clear-queue'),
 
     search: (query: string, params?: string, continuation?: string) =>
-      new Promise((resolve) => {
-        ipcMain.once('peard:search-results', (_, result) => {
-          resolve(result as string);
-        });
-        win.webContents.send('peard:search', query, params, continuation);
+      new Promise<unknown>((resolve, reject) => {
+        const requestId = randomUUID();
+        const event = 'peard:search-results';
+        let timeout: NodeJS.Timeout;
+        const listener = (
+          _: Electron.IpcMainEvent,
+          response: SearchResponse,
+        ) => {
+          if (response.requestId !== requestId) return;
+
+          clearTimeout(timeout);
+          ipcMain.removeListener(event, listener);
+
+          if (response.error) {
+            reject(new Error(response.error));
+            return;
+          }
+
+          resolve(response.result);
+        };
+
+        timeout = setTimeout(() => {
+          ipcMain.removeListener(event, listener);
+          reject(
+            new Error(
+              'YouTube Music search did not respond before the timeout expired.',
+            ),
+          );
+        }, SEARCH_TIMEOUT_MS);
+
+        ipcMain.on(event, listener);
+        win.webContents.send('peard:search', {
+          requestId,
+          query,
+          params,
+          continuation,
+        } satisfies SearchRequest);
       }),
   };
 };
