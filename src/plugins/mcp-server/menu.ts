@@ -22,20 +22,33 @@ export const onMenu = async ({
       label: 'Port',
       async click() {
         const currentConfig = await getConfig();
-        const port = await prompt(
+        const portInput = await prompt(
           {
             title: 'MCP Server',
-            label: 'Port (localhost only)',
-            value: currentConfig.port,
-            type: 'counter',
-            counterOptions: { minimum: 1024, maximum: 65535 },
+            label: 'Port (1–65535)',
+            value: String(currentConfig.port),
+            type: 'input',
+            inputAttrs: {
+              type: 'number',
+              min: '1',
+              max: '65535',
+              step: '1',
+              required: true,
+            },
             width: 380,
             ...promptOptions(),
           },
           window,
         );
+        const port = Number(portInput);
 
-        if (typeof port === 'number') {
+        if (
+          typeof portInput === 'string' &&
+          /^\d+$/.test(portInput) &&
+          Number.isInteger(port) &&
+          port >= 1 &&
+          port <= 65535
+        ) {
           setConfig({ port });
         }
       },
