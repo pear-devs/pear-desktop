@@ -2,14 +2,40 @@ import { app, net } from 'electron';
 
 const cache = new Map<string, { title: string; artist: string } | null>();
 
-async function fetchWithRetry(url: string, email: string) {
-  let res;
+let mbLock = Promise.resolve();
+
+async function fetchWithRetry(
+  url: string,
+  email: string,
+): Promise<Response | null> {
+  let response: Response | null = null;
   for (let i = 0; i < 3; i++) {
-    res = await net.fetch(url, { headers: { 'User-Agent': `PearDesktop/${app.getVersion()} ( ${email} )` } });
-    if (res.status < 500) break;
-    if (i < 2) await new Promise(r => setTimeout(r, 2000));
+    let release!: () => void;
+    const currentLock = mbLock;
+    mbLock = new Promise((r) => (release = r));
+    await currentLock;
+
+    try {
+      response = await net.fetch(url, {
+        headers: {
+          'User-Agent': `PearDesktop/${app.getVersion()} ( ${email} )`,
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+    } catch {
+      if (i === 2) {
+        setTimeout(release, 1050);
+        return null;
+      }
+    }
+
+    const isSuccess = response !== null && response.status < 500;
+    const delay = response?.status === 503 ? 5000 : isSuccess ? 1050 : 2000;
+
+    setTimeout(release, delay);
+    if (isSuccess) break;
   }
-  return res;
+  return response;
 }
 
 export async function fetchMusicBrainzCorrection(
@@ -35,17 +61,25 @@ export async function fetchMusicBrainzCorrection(
   };
 
   try {
-    const queryMB = async (q: string): Promise<any> => {
-      const res = await fetchWithRetry(`https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(q)}&fmt=json&limit=1`, email);
+    const queryMB = async (rec: string, art?: string): Promise<any> => {
+      const escape = (s: string) => s.replace(/[\\"]/g, '\\$&');
+      const q = art
+        ? `recording:"${escape(rec)}" AND artist:"${escape(art)}"`
+        : escape(rec);
+      const res = await fetchWithRetry(
+        `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(q)}&fmt=json&limit=1`,
+        email,
+      );
       return res?.ok ? await res.json() : null;
     };
 
-    let data: any = await queryMB(`recording:"${title}" AND artist:"${artist}"`);
-    const isBad = (d: any) => !d?.recordings?.length || d.recordings[0].score < 85;
+    let data: any = await queryMB(title, artist);
+    const isBad = (d: any) =>
+      !d?.recordings?.length || d.recordings[0].score < 85;
 
     // Fallback 1: Many YouTube videos have "Artist - Title" in the video title.
     if (isBad(data) && parsedArtist && parsedTitle) {
-      data = await queryMB(`recording:"${parsedTitle}" AND artist:"${parsedArtist}"`);
+      data = await queryMB(parsedTitle, parsedArtist);
     }
 
     // Fallback 2: Try a free-form search with just the video title.
@@ -56,14 +90,31 @@ export async function fetchMusicBrainzCorrection(
         const retArtist = (top['artist-credit']?.[0]?.name || '').toLowerCase();
 
         if (retArtist && title.toLowerCase().includes(retArtist)) {
-          const retClean = top.title.toLowerCase().replace(/[^\w\s]/g, '').trim();
-          const origClean = (parsedTitle || title).toLowerCase().replace(/[^\w\s]/g, '').trim();
-          const [rWord, oWord] = [retClean.split(/\s+/)[0], origClean.split(/\s+/)[0]];
+          const retClean = top.title
+            .toLowerCase()
+            .replace(/[^\w\s]/g, '')
+            .trim();
+          const origClean = (parsedTitle || title)
+            .toLowerCase()
+            .replace(/[^\w\s]/g, '')
+            .trim();
+          const [rWord, oWord] = [
+            retClean.split(/\s+/)[0],
+            origClean.split(/\s+/)[0],
+          ];
 
-          const remixRegex = /remix|mix|mashup|edit|bootleg|cover|flip|vip|slowed|reverb|sped\s*up/i;
-          if (!((rWord && oWord && !origClean.includes(rWord) && !retClean.includes(oWord)) || 
-                (remixRegex.test(origClean) && !remixRegex.test(retClean)))) {
-             data = fallback;
+          const remixRegex =
+            /remix|mix|mashup|edit|bootleg|cover|flip|vip|slowed|reverb|sped\s*up/i;
+          if (
+            !(
+              (rWord &&
+                oWord &&
+                !origClean.includes(rWord) &&
+                !retClean.includes(oWord)) ||
+              (remixRegex.test(origClean) && !remixRegex.test(retClean))
+            )
+          ) {
+            data = fallback;
           }
         }
       }
@@ -77,9 +128,15 @@ export async function fetchMusicBrainzCorrection(
     }
 
     // Fallback 3: Return raw "Artist - Title" parse if MusicBrainz completely fails
-    return setAndReturn(parsedArtist && parsedTitle ? { title: parsedTitle, artist: parsedArtist } : null);
+    return setAndReturn(
+      parsedArtist && parsedTitle
+        ? { title: parsedTitle, artist: parsedArtist }
+        : null,
+    );
   } catch (error) {
     console.error('Failed to fetch from MusicBrainz: ', error);
-    return parsedArtist && parsedTitle ? { title: parsedTitle, artist: parsedArtist } : null;
+    return parsedArtist && parsedTitle
+      ? { title: parsedTitle, artist: parsedArtist }
+      : null;
   }
 }

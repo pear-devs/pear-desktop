@@ -67,6 +67,7 @@ export const backend = createBackend<
     const config = (this.config = await getConfig());
     // This will store the timeout that will trigger addScrobble
     let scrobbleTimer: NodeJS.Timeout | undefined;
+    let generation = 0;
 
     this.window = window;
     this.toggleScrobblers(config, window);
@@ -75,6 +76,8 @@ export const backend = createBackend<
 
     registerCallback(async (songInfo: SongInfo, event) => {
       if (event === SongInfoEvent.TimeChanged) return;
+      const currentGeneration = ++generation;
+      
       // Set remove the old scrobble timer
       clearTimeout(scrobbleTimer);
       if (!songInfo.isPaused) {
@@ -103,6 +106,10 @@ export const backend = createBackend<
 
         if (configNonnull.useMusicBrainz && configNonnull.musicBrainzEmail) {
           const corrected = await fetchMusicBrainzCorrection(title, artist, configNonnull.musicBrainzEmail);
+          
+          // Abort if another event started during the await
+          if (currentGeneration !== generation) return;
+          
           if (corrected) {
             title = corrected.title;
             artist = corrected.artist;

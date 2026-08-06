@@ -1,5 +1,7 @@
 import prompt from 'custom-electron-prompt';
-import { type BrowserWindow } from 'electron';
+import { app, dialog, type BrowserWindow } from 'electron';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
@@ -95,7 +97,11 @@ async function promptMusicBrainzEmail(
   );
 
   if (output !== null) {
-    options.musicBrainzEmail = output;
+    const email = output.trim();
+    if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return;
+    }
+    options.musicBrainzEmail = email;
     setConfig(options);
   }
 }
@@ -164,23 +170,24 @@ export const onMenu = async ({
       async click() {
         // HACK: custom-electron-prompt does not support <textarea> natively.
         // Instead of building a complex custom BrowserWindow from scratch with IPC, we use its
-        // customScript option to inject a script that hides the default single-line <input> 
+        // customScript option to inject a script that hides the default single-line <input>
         // and renders a <textarea> over it, syncing the value back to the hidden input.
-        const os = require('node:os');
-        const path = require('node:path');
-        const fs = require('node:fs');
-        const customScriptPath = path.join(os.tmpdir(), 'pear-desktop-prompt-textarea.js');
-
-        if (!fs.existsSync(customScriptPath)) {
-          fs.writeFileSync(customScriptPath, `
+        const scriptDirectory = join(app.getPath('userData'), 'scrobbler');
+        mkdirSync(scriptDirectory, { recursive: true, mode: 0o700 });
+        const customScriptDirectory = mkdtempSync(
+          join(scriptDirectory, 'prompt-textarea-'),
+        );
+        const customScriptPath = join(customScriptDirectory, 'script.js');
+        writeFileSync(
+          customScriptPath,
+          `
             module.exports = () => {
               const input = document.getElementById('data');
               if (input && input.tagName === 'INPUT') {
                 input.style.display = 'none';
 
                 const textarea = document.createElement('textarea');
-                // Read the initial value passed via prompt options, restoring newlines
-                textarea.value = input.value.split('||||').join('\\n');
+                textarea.value = decodeURIComponent(input.value);
 
                 textarea.style.width = '100%';
                 textarea.style.height = '100%';
@@ -193,9 +200,8 @@ export const onMenu = async ({
                 textarea.style.border = '1px solid #444';
                 textarea.style.fontFamily = 'monospace';
 
-                // Sync back to hidden input using a delimiter so browser doesn't strip newlines
                 textarea.addEventListener('input', () => {
-                  input.value = textarea.value.split('\\n').join('||||');
+                  input.value = encodeURIComponent(textarea.value);
                 });
 
                 input.parentNode.insertBefore(textarea, input);
@@ -214,26 +220,68 @@ export const onMenu = async ({
                 }
               }
             };
-          `);
-        }
-
-        const output = await prompt(
-          {
-            title: t('plugins.scrobbler.menu.regex-filters'),
-            label: t('plugins.scrobbler.prompt.regex-filter-multi.label'),
-            type: 'input',
-            value: (config.customRegexFilters || []).join('||||'),
-            resizable: true,
-            height: 400,
-            width: 500,
-            customScript: customScriptPath,
-            ...promptOptions(),
-          },
-          window,
+          `,
+          { mode: 0o600 },
         );
 
+        let output: string | null;
+        try {
+          output = await prompt(
+            {
+              title: t('plugins.scrobbler.menu.regex-filters'),
+              label: t('plugins.scrobbler.prompt.regex-filter-multi.label'),
+              type: 'input',
+              value: encodeURIComponent(
+                (config.customRegexFilters || []).join('\n'),
+              ),
+              resizable: true,
+              height: 400,
+              width: 500,
+              customScript: customScriptPath,
+              ...promptOptions(),
+            },
+            window,
+          );
+        } finally {
+          rmSync(customScriptDirectory, { force: true, recursive: true });
+        }
+
         if (output !== null) {
-          config.customRegexFilters = output.split('||||').map((l: string) => l.trim()).filter(Boolean);
+          const filters = decodeURIComponent(output)
+            .split('\n')
+            .map((line: string) => line.trim())
+            .filter(Boolean);
+          const invalidFilterIndex = filters.findIndex((filter) => {
+            try {
+              new RegExp(filter, 'i');
+              return false;
+            } catch {
+              return true;
+            }
+          });
+
+          if (invalidFilterIndex !== -1) {
+            const filter = filters[invalidFilterIndex];
+            let errorMessage = '';
+            try {
+              new RegExp(filter, 'i');
+            } catch (error) {
+              errorMessage =
+                error instanceof Error ? error.message : String(error);
+            }
+
+            await dialog.showMessageBox(window, {
+              type: 'error',
+              title: t('plugins.scrobbler.dialog.invalid-regex.title'),
+              message: t('plugins.scrobbler.dialog.invalid-regex.message', {
+                line: invalidFilterIndex + 1,
+                error: errorMessage,
+              }),
+            });
+            return;
+          }
+
+          config.customRegexFilters = filters;
           setConfig(config);
         }
       },
