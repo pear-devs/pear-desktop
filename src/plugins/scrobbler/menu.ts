@@ -173,14 +173,18 @@ export const onMenu = async ({
         // customScript option to inject a script that hides the default single-line <input>
         // and renders a <textarea> over it, syncing the value back to the hidden input.
         const scriptDirectory = join(app.getPath('userData'), 'scrobbler');
-        mkdirSync(scriptDirectory, { recursive: true, mode: 0o700 });
-        const customScriptDirectory = mkdtempSync(
-          join(scriptDirectory, 'prompt-textarea-'),
-        );
-        const customScriptPath = join(customScriptDirectory, 'script.js');
-        writeFileSync(
-          customScriptPath,
-          `
+        let customScriptDirectory: string | undefined;
+        let output: string | null;
+
+        try {
+          mkdirSync(scriptDirectory, { recursive: true, mode: 0o700 });
+          customScriptDirectory = mkdtempSync(
+            join(scriptDirectory, 'prompt-textarea-'),
+          );
+          const customScriptPath = join(customScriptDirectory, 'script.js');
+          writeFileSync(
+            customScriptPath,
+            `
             module.exports = () => {
               const input = document.getElementById('data');
               if (input && input.tagName === 'INPUT') {
@@ -221,11 +225,9 @@ export const onMenu = async ({
               }
             };
           `,
-          { mode: 0o600 },
-        );
+            { mode: 0o600 },
+          );
 
-        let output: string | null;
-        try {
           output = await prompt(
             {
               title: t('plugins.scrobbler.menu.regex-filters'),
@@ -243,7 +245,11 @@ export const onMenu = async ({
             window,
           );
         } finally {
-          rmSync(customScriptDirectory, { force: true, recursive: true });
+          if (customScriptDirectory) {
+            try {
+              rmSync(customScriptDirectory, { force: true, recursive: true });
+            } catch {}
+          }
         }
 
         if (output !== null) {

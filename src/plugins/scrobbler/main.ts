@@ -104,7 +104,7 @@ export const backend = createBackend<
         if (configNonnull.customRegexFilters?.length) {
           for (const filter of configNonnull.customRegexFilters) {
             try {
-              const regex = new RegExp(filter, 'i');
+              const regex = new RegExp(filter, 'gi');
               if (title.length <= 256) {
                 title = title.replace(regex, '').trim();
               }
@@ -150,7 +150,9 @@ export const backend = createBackend<
 
         if (scrobbleTime > elapsed) {
           scrobbleTimer = setTimeout(
-            (info, config) => {
+            (info, config, configRevision) => {
+              if (configRevision !== this.configRevision) return;
+
               this.enabledScrobblers.forEach((s) =>
                 s.addScrobble(info, config, setConfig),
               );
@@ -158,6 +160,7 @@ export const backend = createBackend<
             (scrobbleTime - elapsed) * 1000,
             processedSongInfo,
             configNonnull,
+            currentConfigRevision,
           );
         }
 
