@@ -1,6 +1,6 @@
-type YouTubeMusicApp = Pick<EventTarget, 'dispatchEvent'>;
+type PearDesktopApp = Pick<EventTarget, 'dispatchEvent'>;
 
-type YouTubeNavigationDetail = {
+type PearDesktopNavigationDetail = {
   endpoint: {
     clickTrackingParams: string;
     commandMetadata: {
@@ -16,9 +16,9 @@ type YouTubeNavigationDetail = {
   };
 };
 
-export const playVideo = (app: YouTubeMusicApp | null, videoId: string) => {
+export const playVideo = (app: PearDesktopApp | null, videoId: string) => {
   app?.dispatchEvent(
-    new CustomEvent<YouTubeNavigationDetail>('yt-navigate', {
+    new CustomEvent<PearDesktopNavigationDetail>('yt-navigate', {
       bubbles: true,
       composed: true,
       detail: {
