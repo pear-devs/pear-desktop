@@ -7,13 +7,21 @@ let mbLock = Promise.resolve();
 async function fetchWithRetry(
   url: string,
   email: string,
+  isCancelled: () => boolean,
 ): Promise<Response | null> {
   let response: Response | null = null;
   for (let i = 0; i < 3; i++) {
+    if (isCancelled()) return null;
+
     let release!: () => void;
     const currentLock = mbLock;
     mbLock = new Promise((r) => (release = r));
     await currentLock;
+
+    if (isCancelled()) {
+      release();
+      return null;
+    }
 
     try {
       response = await net.fetch(url, {
@@ -42,8 +50,11 @@ export async function fetchMusicBrainzCorrection(
   title: string,
   artist: string,
   email: string,
+  isCancelled: () => boolean,
 ): Promise<{ title: string; artist: string } | null> {
-  const cacheKey = `${artist} - ${title}`;
+  if (isCancelled()) return null;
+
+  const cacheKey = JSON.stringify([artist, title]);
   if (cache.has(cacheKey)) return cache.get(cacheKey)!;
   if (cache.size >= 200) cache.clear();
 
@@ -62,6 +73,8 @@ export async function fetchMusicBrainzCorrection(
 
   try {
     const queryMB = async (rec: string, art?: string): Promise<any> => {
+      if (isCancelled()) return null;
+
       const escape = (s: string) => s.replace(/[\\"]/g, '\\$&');
       const q = art
         ? `recording:"${escape(rec)}" AND artist:"${escape(art)}"`
@@ -69,22 +82,28 @@ export async function fetchMusicBrainzCorrection(
       const res = await fetchWithRetry(
         `https://musicbrainz.org/ws/2/recording/?query=${encodeURIComponent(q)}&fmt=json&limit=1`,
         email,
+        isCancelled,
       );
-      return res?.ok ? await res.json() : null;
+      return !isCancelled() && res?.ok ? await res.json() : null;
     };
 
     let data: any = await queryMB(title, artist);
+    if (isCancelled()) return null;
+
     const isBad = (d: any) =>
       !d?.recordings?.length || d.recordings[0].score < 85;
 
     // Fallback 1: Many YouTube videos have "Artist - Title" in the video title.
     if (isBad(data) && parsedArtist && parsedTitle) {
       data = await queryMB(parsedTitle, parsedArtist);
+      if (isCancelled()) return null;
     }
 
     // Fallback 2: Try a free-form search with just the video title.
     if (isBad(data)) {
       const fallback = await queryMB(title);
+      if (isCancelled()) return null;
+
       if (!isBad(fallback)) {
         const top = fallback.recordings[0];
         const retArtist = (top['artist-credit']?.[0]?.name || '').toLowerCase();

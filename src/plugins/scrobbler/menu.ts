@@ -249,22 +249,21 @@ export const onMenu = async ({
         if (output !== null) {
           const filters = decodeURIComponent(output)
             .split('\n')
-            .map((line: string) => line.trim())
-            .filter(Boolean);
-          const invalidFilterIndex = filters.findIndex((filter) => {
+            .map((line, index) => ({ value: line.trim(), line: index + 1 }))
+            .filter(({ value }) => Boolean(value));
+          const invalidFilter = filters.find(({ value }) => {
             try {
-              new RegExp(filter, 'i');
+              new RegExp(value, 'i');
               return false;
             } catch {
               return true;
             }
           });
 
-          if (invalidFilterIndex !== -1) {
-            const filter = filters[invalidFilterIndex];
+          if (invalidFilter) {
             let errorMessage = '';
             try {
-              new RegExp(filter, 'i');
+              new RegExp(invalidFilter.value, 'i');
             } catch (error) {
               errorMessage =
                 error instanceof Error ? error.message : String(error);
@@ -274,14 +273,14 @@ export const onMenu = async ({
               type: 'error',
               title: t('plugins.scrobbler.dialog.invalid-regex.title'),
               message: t('plugins.scrobbler.dialog.invalid-regex.message', {
-                line: invalidFilterIndex + 1,
+                line: invalidFilter.line,
                 error: errorMessage,
               }),
             });
             return;
           }
 
-          config.customRegexFilters = filters;
+          config.customRegexFilters = filters.map(({ value }) => value);
           setConfig(config);
         }
       },
