@@ -8,6 +8,8 @@ import {
   type VolumeState,
 } from '@/types/datahost-get-state';
 
+import { getQueueItemRenderer, getSelectedQueueIndex } from './queue';
+
 import { API_VERSION } from '../api-version';
 import {
   AddSongToQueueSchema,
@@ -784,14 +786,7 @@ export const register = (
       return ctx.body(null);
     }
 
-    // Find the currently selected song
-    const currentIndex = queue.items.findIndex((item) => {
-      const renderer =
-        item.playlistPanelVideoRenderer ||
-        item.playlistPanelVideoWrapperRenderer?.primaryRenderer
-          ?.playlistPanelVideoRenderer;
-      return renderer?.selected === true;
-    });
+    const currentIndex = getSelectedQueueIndex(queue);
 
     // Get the next song (currentIndex + 1)
     const nextIndex = currentIndex + 1;
@@ -802,10 +797,7 @@ export const register = (
     }
 
     const nextItem = queue.items[nextIndex];
-    const nextRenderer =
-      nextItem.playlistPanelVideoRenderer ||
-      nextItem.playlistPanelVideoWrapperRenderer?.primaryRenderer
-        ?.playlistPanelVideoRenderer;
+    const nextRenderer = getQueueItemRenderer(nextItem);
 
     if (!nextRenderer) {
       ctx.status(204);

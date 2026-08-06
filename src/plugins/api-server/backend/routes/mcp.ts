@@ -1,13 +1,17 @@
 import { StreamableHTTPTransport } from '@hono/mcp';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { ipcMain } from 'electron';
 import { z } from 'zod';
 
 import { getSongControls } from '@/providers/song-controls';
+
+import { getSelectedQueueIndex } from './queue';
 
 import type { APIServerConfig } from '../../config';
 import type { HonoApp } from '../types';
 import type { SongInfo } from '@/providers/song-info';
 import type { BackendContext } from '@/types/contexts';
+import type { QueueResponse } from '@/types/music-player-desktop-internal';
 
 const textResult = (text: string) => ({
   content: [{ type: 'text' as const, text }],
@@ -26,6 +30,36 @@ const noSongResult = () => ({
   isError: true,
 });
 
+const errorResult = (text: string) => ({
+  content: [{ type: 'text' as const, text }],
+  isError: true,
+});
+
+const getPreviousQueueIndex = (controls: ReturnType<typeof getSongControls>) =>
+  new Promise<number>((resolve, reject) => {
+    const event = 'peard:get-queue-response';
+    let timeout: NodeJS.Timeout;
+    const listener = (_: Electron.IpcMainEvent, queue: QueueResponse) => {
+      clearTimeout(timeout);
+
+      const currentIndex = getSelectedQueueIndex(queue);
+
+      if (currentIndex <= 0) {
+        reject(new Error('There is no previous track in the playback queue.'));
+        return;
+      }
+
+      resolve(currentIndex - 1);
+    };
+    timeout = setTimeout(() => {
+      ipcMain.removeListener(event, listener);
+      reject(new Error('The playback queue did not respond in time.'));
+    }, 5_000);
+
+    ipcMain.once(event, listener);
+    controls.requestQueueInformation();
+  });
+
 const createMcpServer = (
   controls: ReturnType<typeof getSongControls>,
   songInfoGetter: () => SongInfo | undefined,
@@ -38,9 +72,17 @@ const createMcpServer = (
   server.registerTool(
     'music_previous',
     { description: 'Play the previous song in the YouTube Music queue.' },
-    () => {
-      controls.previous();
-      return textResult('Playing the previous song.');
+    async () => {
+      try {
+        controls.setQueueIndex(await getPreviousQueueIndex(controls));
+        return textResult('Playing the previous song.');
+      } catch (error) {
+        return errorResult(
+          error instanceof Error
+            ? error.message
+            : 'Unable to select the previous song.',
+        );
+      }
     },
   );
 
@@ -83,6 +125,30 @@ const createMcpServer = (
     () => {
       controls.playPause();
       return textResult('Playback toggled.');
+    },
+  );
+
+  server.registerTool(
+    'music_toggle_shuffle',
+    { description: 'Toggle shuffle playback for the current queue.' },
+    () => {
+      controls.shuffle();
+      return textResult('Shuffle mode toggled.');
+    },
+  );
+
+  server.registerTool(
+    'music_switch_repeat',
+    {
+      description:
+        'Advance the repeat mode. Use one iteration for the next mode or two to skip a mode.',
+      inputSchema: {
+        iterations: z.number().int().min(1).max(2).default(1),
+      },
+    },
+    ({ iterations }) => {
+      controls.switchRepeat(iterations);
+      return textResult('Repeat mode changed.');
     },
   );
 
@@ -143,18 +209,9 @@ const createMcpServer = (
         const result = await controls.search(query, params, continuation);
         return jsonResult(result);
       } catch (error) {
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text:
-                error instanceof Error
-                  ? error.message
-                  : 'YouTube Music search failed.',
-            },
-          ],
-          isError: true,
-        };
+        return errorResult(
+          error instanceof Error ? error.message : 'Music search failed.',
+        );
       }
     },
   );
