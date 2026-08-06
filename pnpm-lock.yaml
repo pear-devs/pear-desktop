@@ -51,6 +51,9 @@ importers:
       '@ghostery/adblocker-electron-preload':
         specifier: 2.18.0
         version: 2.18.0(electron@42.5.0(supports-color@7.2.0))
+      '@hono/mcp':
+        specifier: 0.3.1
+        version: 0.3.1(@modelcontextprotocol/sdk@1.30.0(supports-color@7.2.0)(zod@4.4.3))(hono-rate-limiter@0.5.3(hono@4.12.27))(hono@4.12.27)(zod@4.4.3)
       '@hono/node-server':
         specifier: 2.0.6
         version: 2.0.6(hono@4.12.27)
@@ -767,6 +770,14 @@ packages:
 
   '@ghostery/url-parser@1.3.1':
     resolution: {integrity: sha512-QKqGi+7aDQ4RcyHyCwgEk6B9vWnsBP4Q7htaN0zPJV3ATqTKEQDtSTb9c/AN586oJUDs24YXKcwFYwNweY/YjQ==}
+
+  '@hono/mcp@0.3.1':
+    resolution: {integrity: sha512-EB2rTyyl27qT8KtvEysgfcLK2jhp4KBb5+XyJ5/bcKNA64usp6qyuUWja9X4QB8Rx9U/yhZHGpfI96Xa/jem4Q==}
+    peerDependencies:
+      '@modelcontextprotocol/sdk': ^1.29.0
+      hono: '*'
+      hono-rate-limiter: ^0.5.3
+      zod: ^3.25.0 || ^4.0.0
 
   '@hono/node-server@2.0.6':
     resolution: {integrity: sha512-7DeRlKG57JDBNZ5Qj2jwVdgwQy4b0tLubRLl3zCf91/rCf9i7p1V5FtW/yWibm1uUHE493ts9ZXH/7g/LQWl+g==}
@@ -2721,6 +2732,15 @@ packages:
   hasown@2.0.4:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
+
+  hono-rate-limiter@0.5.3:
+    resolution: {integrity: sha512-M0DxbVMpPELEzLi0AJg1XyBHLGJXz7GySjsPoK+gc5YeeBsdGDGe+2RvVuCAv8ydINiwlbxqYMNxUEyYfRji/A==}
+    peerDependencies:
+      hono: ^4.10.8
+      unstorage: ^1.17.3
+    peerDependenciesMeta:
+      unstorage:
+        optional: true
 
   hono@4.12.27:
     resolution: {integrity: sha512-1yrb/+w6HWQJrUCLkJ2IF5jNIPvvFkblV5RNOYl6bV+OA6p9GLcMpHFFGTosSvHvcAUibuUukRqhlYI4z32C7Q==}
@@ -4814,6 +4834,14 @@ snapshots:
     dependencies:
       tldts-experimental: 7.4.3
 
+  '@hono/mcp@0.3.1(@modelcontextprotocol/sdk@1.30.0(supports-color@7.2.0)(zod@4.4.3))(hono-rate-limiter@0.5.3(hono@4.12.27))(hono@4.12.27)(zod@4.4.3)':
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.30.0(supports-color@7.2.0)(zod@4.4.3)
+      hono: 4.12.27
+      hono-rate-limiter: 0.5.3(hono@4.12.27)
+      pkce-challenge: 5.0.1
+      zod: 4.4.3
+
   '@hono/node-server@2.0.6(hono@4.12.27)':
     dependencies:
       hono: 4.12.27
@@ -6778,6 +6806,10 @@ snapshots:
   hasown@2.0.4:
     dependencies:
       function-bind: 1.1.2
+
+  hono-rate-limiter@0.5.3(hono@4.12.27):
+    dependencies:
+      hono: 4.12.27
 
   hono@4.12.27: {}
 

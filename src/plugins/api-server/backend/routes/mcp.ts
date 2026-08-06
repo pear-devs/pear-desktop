@@ -1,16 +1,13 @@
-import { serve } from '@hono/node-server';
+import { StreamableHTTPTransport } from '@hono/mcp';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
-import { Hono } from 'hono';
 import { z } from 'zod';
 
 import { getSongControls } from '@/providers/song-controls';
-import { registerCallback, type SongInfo } from '@/providers/song-info';
-import { createBackend, LoggerPrefix } from '@/utils';
 
-import type { McpServerConfig } from './config';
-
-const LOCAL_HOST = '127.0.0.1';
+import type { APIServerConfig } from '../../config';
+import type { HonoApp } from '../types';
+import type { SongInfo } from '@/providers/song-info';
+import type { BackendContext } from '@/types/contexts';
 
 const textResult = (text: string) => ({
   content: [{ type: 'text' as const, text }],
@@ -29,22 +26,12 @@ const noSongResult = () => ({
   isError: true,
 });
 
-const allowedHosts = (port: number) => [
-  LOCAL_HOST,
-  `${LOCAL_HOST}:${port}`,
-  'localhost',
-  `localhost:${port}`,
-  '[::1]',
-  `[::1]:${port}`,
-];
-
 const createMcpServer = (
-  window: Electron.BrowserWindow,
-  getSongInfo: () => SongInfo | undefined,
+  controls: ReturnType<typeof getSongControls>,
+  songInfoGetter: () => SongInfo | undefined,
 ) => {
-  const controls = getSongControls(window);
   const server = new McpServer({
-    name: 'youtube-music-desktop',
+    name: '\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063',
     version: '1.0.0',
   });
 
@@ -131,7 +118,7 @@ const createMcpServer = (
     'music_now_playing',
     { description: 'Get information about the currently playing song.' },
     () => {
-      const songInfo = getSongInfo();
+      const songInfo = songInfoGetter();
       if (!songInfo) return noSongResult();
 
       const response = { ...songInfo };
@@ -191,7 +178,9 @@ const createMcpServer = (
 
   server.registerTool(
     'music_clear_queue',
-    { description: 'Remove every song from the YouTube Music playback queue.' },
+    {
+      description: 'Remove every song from the YouTube Music playback queue.',
+    },
     () => {
       controls.clearQueue();
       return textResult('Playback queue cleared.');
@@ -201,70 +190,23 @@ const createMcpServer = (
   return server;
 };
 
-type McpServerBackend = {
-  server?: ReturnType<typeof serve>;
-  window?: Electron.BrowserWindow;
-  songInfo?: SongInfo;
-  songInfoCallbackRegistered: boolean;
+export const register = (
+  app: HonoApp,
+  backendCtx: BackendContext<APIServerConfig>,
+  songInfoGetter: () => SongInfo | undefined,
+) => {
+  const controls = getSongControls(backendCtx.window);
+  const server = createMcpServer(controls, songInfoGetter);
+  const transport = new StreamableHTTPTransport({
+    sessionIdGenerator: undefined,
+    enableJsonResponse: true,
+  });
 
-  run: (config: McpServerConfig) => void;
-  end: () => void;
+  app.all('/api/mcp', async (ctx) => {
+    const config = await backendCtx.getConfig();
+    if (!config.mcpEnabled) return ctx.notFound();
+
+    if (!server.isConnected()) await server.connect(transport);
+    return transport.handleRequest(ctx);
+  });
 };
-
-export const backend = createBackend<McpServerBackend, McpServerConfig>({
-  songInfoCallbackRegistered: false,
-  async start(ctx) {
-    this.window = ctx.window;
-
-    if (!this.songInfoCallbackRegistered) {
-      registerCallback((songInfo) => {
-        this.songInfo = songInfo;
-      });
-      this.songInfoCallbackRegistered = true;
-    }
-
-    this.run(await ctx.getConfig());
-  },
-  stop() {
-    this.end();
-  },
-  onConfigChange(config) {
-    this.end();
-    this.run(config);
-  },
-  run(config) {
-    if (!this.window) return;
-
-    const app = new Hono();
-    app.get('/health', (ctx) => ctx.json({ status: 'ok' }));
-    app.all('/mcp', async (ctx) => {
-      const transport = new WebStandardStreamableHTTPServerTransport({
-        sessionIdGenerator: undefined,
-        enableJsonResponse: true,
-        enableDnsRebindingProtection: true,
-        allowedHosts: allowedHosts(config.port),
-      });
-      const server = createMcpServer(this.window!, () => this.songInfo);
-
-      await server.connect(transport);
-      return transport.handleRequest(ctx.req.raw);
-    });
-
-    this.server = serve({
-      fetch: app.fetch,
-      hostname: LOCAL_HOST,
-      port: config.port,
-    });
-    this.server.once('error', (error) => {
-      console.error(LoggerPrefix, 'MCP server failed to start:', error);
-    });
-    console.log(
-      LoggerPrefix,
-      `MCP server listening at http://${LOCAL_HOST}:${config.port}/mcp`,
-    );
-  },
-  end() {
-    this.server?.close();
-    this.server = undefined;
-  },
-});
