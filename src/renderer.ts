@@ -18,6 +18,7 @@ import {
   loadAllRendererPlugins,
 } from './loader/renderer';
 import { startingPages } from './providers/extracted-data';
+import { playVideo } from './providers/play-video';
 import { setupSongInfo } from './providers/song-info-front';
 
 import type { SearchRequest, SearchResponse } from '@/providers/song-controls';
@@ -282,16 +283,7 @@ async function onApiLoaded() {
     });
   });
   window.ipcRenderer.on('peard:play-video', (_, videoId: string) => {
-    const playerApi = document.querySelector<Element & MusicPlayer>(
-      '#movie_player',
-    );
-    if (!playerApi) return;
-
-    playerApi.loadVideoById(
-      videoId,
-      0,
-      playerApi.getUserPlaybackQualityPreference(),
-    );
+    playVideo(document.querySelector('ytmusic-app'), videoId);
   });
 
   window.ipcRenderer.on(
