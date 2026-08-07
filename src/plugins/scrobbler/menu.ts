@@ -84,7 +84,7 @@ async function promptMusicBrainzEmail(
   options: ScrobblerPluginConfig,
   setConfig: SetConfType,
   window: BrowserWindow,
-) {
+): Promise<string | null> {
   const output = await prompt(
     {
       title: t('plugins.scrobbler.prompt.musicbrainz-email.title'),
@@ -96,20 +96,23 @@ async function promptMusicBrainzEmail(
     window,
   );
 
-  if (output !== null) {
-    const email = output.trim();
-    if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return;
-    }
-    options.musicBrainzEmail = email;
-    setConfig({ musicBrainzEmail: email });
+  if (output === null) return null;
+
+  const email = output.trim();
+  if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return null;
   }
+
+  options.musicBrainzEmail = email;
+  await setConfig({ musicBrainzEmail: email });
+  return email;
 }
 
 export const onMenu = async ({
   window,
   getConfig,
   setConfig,
+  refresh,
 }: MenuContext<ScrobblerPluginConfig>): Promise<MenuTemplate> => {
   const config = await getConfig();
 
@@ -146,17 +149,21 @@ export const onMenu = async ({
       type: 'checkbox',
       checked: Boolean(config.useMusicBrainz),
       async click(item) {
-        if (item.checked && !config.musicBrainzEmail) {
-          await promptMusicBrainzEmail(config, setConfig, window);
-          if (!config.musicBrainzEmail) {
-            // User cancelled or left it empty
+        const enabled = item.checked;
+        if (enabled && !config.musicBrainzEmail) {
+          const email = await promptMusicBrainzEmail(config, setConfig, window);
+          if (!email) {
             config.useMusicBrainz = false;
-            setConfig({ useMusicBrainz: false });
+            item.checked = false;
+            await setConfig({ useMusicBrainz: false });
+            await refresh();
             return;
           }
         }
-        config.useMusicBrainz = item.checked;
-        setConfig({ useMusicBrainz: item.checked });
+        config.useMusicBrainz = enabled;
+        item.checked = enabled;
+        await setConfig({ useMusicBrainz: enabled });
+        await refresh();
       },
     },
     {
