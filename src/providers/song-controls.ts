@@ -187,7 +187,7 @@ export const getSongControls = (win: BrowserWindow) => {
           ipcMain.removeListener(event, listener);
           reject(
             new Error(
-              'YouTube Music search did not respond before the timeout expired.',
+              'Pear Desktop search did not respond before the timeout expired.',
             ),
           );
         }, SEARCH_TIMEOUT_MS);

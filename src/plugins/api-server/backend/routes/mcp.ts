@@ -89,7 +89,7 @@ const createMcpServer = (
 
   server.registerTool(
     'music_previous',
-    { description: 'Play the previous song in the YouTube Music queue.' },
+    { description: 'Play the previous song in the playback queue.' },
     async () => {
       try {
         controls.setQueueIndex(await getPreviousQueueIndex(controls));
@@ -106,7 +106,7 @@ const createMcpServer = (
 
   server.registerTool(
     'music_next',
-    { description: 'Play the next song in the YouTube Music queue.' },
+    { description: 'Play the next song in the playback queue.' },
     () => {
       controls.next();
       return textResult('Playing the next song.');
@@ -121,7 +121,7 @@ const createMcpServer = (
   server.registerTool(
     'music_play_video',
     {
-      description: 'Immediately play a YouTube Music video ID.',
+      description: 'Immediately play a video ID.',
       inputSchema: {
         videoId: z.string().trim().min(1),
       },
@@ -215,7 +215,7 @@ const createMcpServer = (
     'music_search',
     {
       description:
-        'Search YouTube Music. The result includes video IDs for music_enqueue.',
+        'Search music. The result includes video IDs for music_enqueue.',
       inputSchema: {
         query: z.string().trim().min(1),
         params: z.string().optional(),
@@ -237,7 +237,7 @@ const createMcpServer = (
   server.registerTool(
     'music_enqueue',
     {
-      description: 'Add a YouTube Music video ID to the playback queue.',
+      description: 'Add a video ID to the playback queue.',
       inputSchema: {
         videoId: z.string().trim().min(1),
         insertPosition: z
@@ -288,7 +288,7 @@ const createMcpServer = (
   server.registerTool(
     'music_clear_queue',
     {
-      description: 'Remove every song from the YouTube Music playback queue.',
+      description: 'Remove every song from the playback queue.',
     },
     () => {
       controls.clearQueue();

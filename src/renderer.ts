@@ -296,7 +296,7 @@ async function onApiLoaded() {
       if (!app || !searchBox) {
         window.ipcRenderer.send('peard:search-results', {
           requestId,
-          error: 'YouTube Music search is not ready yet.',
+          error: 'Pear Desktop search is not ready yet.',
         } satisfies SearchResponse);
         return;
       }
