@@ -102,7 +102,7 @@ async function promptMusicBrainzEmail(
       return;
     }
     options.musicBrainzEmail = email;
-    setConfig(options);
+    setConfig({ musicBrainzEmail: email });
   }
 }
 
@@ -151,12 +151,12 @@ export const onMenu = async ({
           if (!config.musicBrainzEmail) {
             // User cancelled or left it empty
             config.useMusicBrainz = false;
-            setConfig(config);
+            setConfig({ useMusicBrainz: false });
             return;
           }
         }
         config.useMusicBrainz = item.checked;
-        setConfig(config);
+        setConfig({ useMusicBrainz: item.checked });
       },
     },
     {
@@ -287,7 +287,7 @@ export const onMenu = async ({
           }
 
           config.customRegexFilters = filters.map(({ value }) => value);
-          setConfig(config);
+          setConfig({ customRegexFilters: config.customRegexFilters });
         }
       },
     },
