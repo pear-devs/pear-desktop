@@ -110,8 +110,9 @@ export const getSongControls = (win: BrowserWindow) => {
     requestFullscreenInformation: () => {
       win.webContents.send('peard:get-fullscreen');
     },
-    requestQueueInformation: () => {
-      win.webContents.send('peard:get-queue');
+    requestQueueInformation: (requestId = randomUUID()) => {
+      win.webContents.send('peard:get-queue', requestId);
+      return requestId;
     },
     muteUnmute: () => win.webContents.send('peard:toggle-mute'),
     playVideo: (videoId: string) => {

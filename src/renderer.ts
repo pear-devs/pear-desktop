@@ -181,9 +181,10 @@ async function onApiLoaded() {
       ?.onVolumeClick();
   });
 
-  window.ipcRenderer.on('peard:get-queue', () => {
+  window.ipcRenderer.on('peard:get-queue', (_, requestId: string) => {
     const queue = document.querySelector<QueueElement>('#queue');
     window.ipcRenderer.send('peard:get-queue-response', {
+      requestId,
       items: queue?.queue.getItems(),
       autoPlaying: queue?.queue.autoPlaying,
       continuation: queue?.queue.continuation,

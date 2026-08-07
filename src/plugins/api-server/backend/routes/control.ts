@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { createRoute, z } from '@hono/zod-openapi';
 import { ipcMain } from 'electron';
 
@@ -580,6 +582,20 @@ export const register = (
   volumeStateGetter: () => PromiseOrValue<VolumeState | undefined>,
 ) => {
   const controller = getSongControls(window);
+  const getQueueResponse = () =>
+    new Promise<QueueResponse>((resolve) => {
+      const requestId = randomUUID();
+      const event = 'peard:get-queue-response';
+      const listener = (_: Electron.IpcMainEvent, queue: QueueResponse) => {
+        if (queue.requestId !== requestId) return;
+
+        ipcMain.removeListener(event, listener);
+        resolve(queue);
+      };
+
+      ipcMain.on(event, listener);
+      controller.requestQueueInformation(requestId);
+    });
 
   app.openapi(routes.previous, (ctx) => {
     controller.previous();
@@ -749,15 +765,7 @@ export const register = (
 
   // Queue
   const queueInfo = async (ctx: Context) => {
-    const queueResponsePromise = new Promise<QueueResponse>((resolve) => {
-      ipcMain.once('peard:get-queue-response', (_, queue: QueueResponse) => {
-        return resolve(queue);
-      });
-
-      controller.requestQueueInformation();
-    });
-
-    const info = await queueResponsePromise;
+    const info = await getQueueResponse();
 
     if (!info) {
       ctx.status(204);
@@ -765,21 +773,17 @@ export const register = (
     }
 
     ctx.status(200);
-    return ctx.json(info);
+    return ctx.json({
+      items: info.items,
+      autoPlaying: info.autoPlaying,
+      continuation: info.continuation,
+    });
   };
   app.openapi(routes.oldQueueInfo, queueInfo);
   app.openapi(routes.queueInfo, queueInfo);
 
   app.openapi(routes.nextSongInfo, async (ctx) => {
-    const queueResponsePromise = new Promise<QueueResponse>((resolve) => {
-      ipcMain.once('peard:get-queue-response', (_, queue: QueueResponse) => {
-        return resolve(queue);
-      });
-
-      controller.requestQueueInformation();
-    });
-
-    const queue = await queueResponsePromise;
+    const queue = await getQueueResponse();
 
     if (!queue?.items || queue.items.length === 0) {
       ctx.status(204);

@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { StreamableHTTPTransport } from '@hono/mcp';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { ipcMain } from 'electron';
@@ -37,10 +39,14 @@ const errorResult = (text: string) => ({
 
 const getQueue = (controls: ReturnType<typeof getSongControls>) =>
   new Promise<QueueResponse>((resolve, reject) => {
+    const requestId = randomUUID();
     const event = 'peard:get-queue-response';
     let timeout: NodeJS.Timeout;
     const listener = (_: Electron.IpcMainEvent, queue: QueueResponse) => {
+      if (queue.requestId !== requestId) return;
+
       clearTimeout(timeout);
+      ipcMain.removeListener(event, listener);
       resolve(queue);
     };
     timeout = setTimeout(() => {
@@ -48,8 +54,8 @@ const getQueue = (controls: ReturnType<typeof getSongControls>) =>
       reject(new Error('The playback queue did not respond in time.'));
     }, 5_000);
 
-    ipcMain.once(event, listener);
-    controls.requestQueueInformation();
+    ipcMain.on(event, listener);
+    controls.requestQueueInformation(requestId);
   });
 
 const getPreviousQueueIndex = async (
