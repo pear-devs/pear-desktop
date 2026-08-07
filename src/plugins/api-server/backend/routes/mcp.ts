@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import { getSongControls } from '@/providers/song-controls';
 
-import { getSelectedQueueIndex } from './queue';
+import { getQueueItemRenderer, getSelectedQueueIndex } from './queue';
 
 import type { APIServerConfig } from '../../config';
 import type { HonoApp } from '../types';
@@ -35,21 +35,13 @@ const errorResult = (text: string) => ({
   isError: true,
 });
 
-const getPreviousQueueIndex = (controls: ReturnType<typeof getSongControls>) =>
-  new Promise<number>((resolve, reject) => {
+const getQueue = (controls: ReturnType<typeof getSongControls>) =>
+  new Promise<QueueResponse>((resolve, reject) => {
     const event = 'peard:get-queue-response';
     let timeout: NodeJS.Timeout;
     const listener = (_: Electron.IpcMainEvent, queue: QueueResponse) => {
       clearTimeout(timeout);
-
-      const currentIndex = getSelectedQueueIndex(queue);
-
-      if (currentIndex <= 0) {
-        reject(new Error('There is no previous track in the playback queue.'));
-        return;
-      }
-
-      resolve(currentIndex - 1);
+      resolve(queue);
     };
     timeout = setTimeout(() => {
       ipcMain.removeListener(event, listener);
@@ -59,6 +51,32 @@ const getPreviousQueueIndex = (controls: ReturnType<typeof getSongControls>) =>
     ipcMain.once(event, listener);
     controls.requestQueueInformation();
   });
+
+const getPreviousQueueIndex = async (
+  controls: ReturnType<typeof getSongControls>,
+) => {
+  const currentIndex = getSelectedQueueIndex(await getQueue(controls));
+
+  if (currentIndex <= 0) {
+    throw new Error('There is no previous track in the playback queue.');
+  }
+
+  return currentIndex - 1;
+};
+
+const getQueueItems = (queue: QueueResponse) =>
+  queue.items?.map((item, index) => {
+    const renderer = getQueueItemRenderer(item);
+
+    return {
+      index,
+      selected: renderer?.selected ?? false,
+      videoId: renderer?.videoId,
+      title: renderer?.title.runs.map((run) => run.text).join(''),
+      artist: renderer?.shortBylineText.runs.map((run) => run.text).join(''),
+      duration: renderer?.lengthText.runs.map((run) => run.text).join(''),
+    };
+  }) ?? [];
 
 const createMcpServer = (
   controls: ReturnType<typeof getSongControls>,
@@ -230,6 +248,40 @@ const createMcpServer = (
     ({ videoId, insertPosition }) => {
       controls.addSongToQueue(videoId, insertPosition);
       return textResult('Song added to the queue.');
+    },
+  );
+
+  server.registerTool(
+    'music_get_queue',
+    {
+      description:
+        'Get the playback queue. Each item includes a zero-based index for music_remove_from_queue.',
+    },
+    async () => {
+      try {
+        return jsonResult({ items: getQueueItems(await getQueue(controls)) });
+      } catch (error) {
+        return errorResult(
+          error instanceof Error
+            ? error.message
+            : 'Unable to retrieve the playback queue.',
+        );
+      }
+    },
+  );
+
+  server.registerTool(
+    'music_remove_from_queue',
+    {
+      description:
+        'Remove an item from the playback queue by its zero-based index. Use music_get_queue first to find the index.',
+      inputSchema: {
+        index: z.number().int().nonnegative(),
+      },
+    },
+    ({ index }) => {
+      controls.removeSongFromQueue(index);
+      return textResult('Removed queue item at index ' + index + '.');
     },
   );
 
