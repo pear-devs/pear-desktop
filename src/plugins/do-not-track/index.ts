@@ -39,6 +39,11 @@ export interface TrackerBlockerConfig {
    * @default false
    */
   disableDefaultLists: boolean;
+  /**
+   * Whether to enable the Bypass Age Restriction.
+   * @default false
+   */
+  bypassAgeRestriction: boolean;
 }
 
 export default createPlugin({
@@ -51,6 +56,7 @@ export default createPlugin({
     blocker: blockers.InPlayer,
     additionalBlockLists: [],
     disableDefaultLists: false,
+    bypassAgeRestriction: false,
   } as TrackerBlockerConfig,
   menu: async ({ getConfig, setConfig }) => {
     const config = await getConfig();
@@ -67,6 +73,16 @@ export default createPlugin({
           },
         })),
       },
+      {
+        label: t('plugins.bypassAgeRestriction.name'),
+        type: "checkbox",
+        checked: config.bypassAgeRestriction,
+        click() {
+          setConfig({
+            bypassAgeRestriction: !config.bypassAgeRestriction
+          })
+        }
+      }
     ];
   },
   backend: {
@@ -136,4 +152,13 @@ export default createPlugin({
       }
     },
   },
+  renderer: {
+    async start({ getConfig }) {
+      const config = await getConfig();
+      if (config.bypassAgeRestriction) {
+        const { inject } = await import('simple-youtube-age-restriction-bypass');
+        inject();
+      }
+    }
+  }
 });
