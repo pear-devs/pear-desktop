@@ -7,6 +7,7 @@ import { sortSegments } from './segments';
 
 import type { Segment, SkipSegment } from './types';
 import type { GetPlayerResponse } from '@/types/get-player-response';
+import type { MusicPlayer } from '@/types/music-player';
 
 export type SponsorBlockPluginConfig = {
   enabled: boolean;
@@ -22,6 +23,18 @@ export type SponsorBlockPluginConfig = {
 };
 
 let currentSegments: Segment[] = [];
+
+const applySegments = (target: HTMLVideoElement) => {
+  for (const segment of currentSegments) {
+    if (target.currentTime >= segment[0] && target.currentTime < segment[1]) {
+      target.currentTime = segment[1];
+      if (window.electronIs.dev()) {
+        console.log('SponsorBlock: skipping segment', segment);
+      }
+      break;
+    }
+  }
+};
 
 export default createPlugin({
   name: () => t('plugins.sponsorblock.name'),
@@ -76,52 +89,50 @@ export default createPlugin({
     const { apiURL, categories } = config;
 
     ipc.on('peard:video-src-changed', async (data: GetPlayerResponse) => {
-      const segments = await fetchSegments(
-        apiURL,
-        categories,
-        data?.videoDetails?.videoId,
-      );
+      const videoId = data?.videoDetails?.videoId;
+      if (!videoId) {
+        return;
+      }
+
+      const segments = await fetchSegments(apiURL, categories, videoId);
       ipc.send('sponsorblock-skip', segments);
     });
   },
   renderer: {
     timeUpdateListener: (e: Event) => {
       if (e.target instanceof HTMLVideoElement) {
-        const target = e.target;
-
-        for (const segment of currentSegments) {
-          if (
-            target.currentTime >= segment[0] &&
-            target.currentTime < segment[1]
-          ) {
-            target.currentTime = segment[1];
-            if (window.electronIs.dev()) {
-              console.log('SponsorBlock: skipping segment', segment);
-            }
-          }
-        }
+        applySegments(e.target);
       }
     },
     resetSegments: () => (currentSegments = []),
     start({ ipc }) {
       ipc.on('sponsorblock-skip', (segments: Segment[]) => {
         currentSegments = segments;
+
+        const video = document.querySelector<HTMLVideoElement>('video');
+        if (video) {
+          applySegments(video);
+        }
       });
     },
-    onPlayerApiReady() {
+    onPlayerApiReady(playerApi, { ipc }) {
       const video = document.querySelector<HTMLVideoElement>('video');
       if (!video) return;
 
       video.addEventListener('timeupdate', this.timeUpdateListener);
       // Reset segments on song end
       video.addEventListener('emptied', this.resetSegments);
+
+      ipc.send('peard:video-src-changed', playerApi.getPlayerResponse());
+      applySegments(video);
     },
-    stop() {
+    stop({ ipc }) {
       const video = document.querySelector<HTMLVideoElement>('video');
       if (!video) return;
 
       video.removeEventListener('timeupdate', this.timeUpdateListener);
       video.removeEventListener('emptied', this.resetSegments);
+      ipc.removeAllListeners('sponsorblock-skip');
     },
   },
 });
