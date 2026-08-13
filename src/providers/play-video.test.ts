@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { playVideo } from './play-video';
+import { playPlaylist, playVideo } from './play-video';
 
 test('navigates the app to the selected video', () => {
   const app = new EventTarget();
@@ -26,6 +26,32 @@ test('navigates the app to the selected video', () => {
         },
       },
       watchEndpoint: { videoId: 'mcp-video-id' },
+    },
+  });
+});
+
+test('navigates the app to the first video in a playlist', () => {
+  const app = new EventTarget();
+  let event: CustomEvent | undefined;
+
+  app.addEventListener('yt-navigate', (receivedEvent) => {
+    event = receivedEvent as CustomEvent;
+  });
+
+  playPlaylist(app, 'mcp-playlist-id');
+
+  expect(event).toBeDefined();
+  expect(event?.detail).toEqual({
+    endpoint: {
+      clickTrackingParams: '',
+      commandMetadata: {
+        webCommandMetadata: {
+          rootVe: 3832,
+          url: '/watch?list=mcp-playlist-id',
+          webPageType: 'WEB_PAGE_TYPE_WATCH',
+        },
+      },
+      watchEndpoint: { playlistId: 'mcp-playlist-id' },
     },
   });
 });

@@ -9,6 +9,12 @@ import { LikeType } from '@/types/datahost-get-state';
 type ArgsType<T> = T | string[] | undefined;
 const SEARCH_TIMEOUT_MS = 15_000;
 
+type RendererResponse = {
+  requestId: string;
+  result?: unknown;
+  error?: string;
+};
+
 export interface SearchRequest {
   requestId: string;
   query: string;
@@ -16,11 +22,14 @@ export interface SearchRequest {
   continuation?: string;
 }
 
-export interface SearchResponse {
+export type SearchResponse = RendererResponse;
+
+export interface LibraryPlaylistsRequest {
   requestId: string;
-  result?: unknown;
-  error?: string;
+  continuation?: string;
 }
+
+export type LibraryPlaylistsResponse = RendererResponse;
 
 const parseNumberFromArgsType = (args: ArgsType<number>) => {
   if (typeof args === 'number') {
@@ -51,6 +60,42 @@ const parseStringFromArgsType = (args: ArgsType<string>) => {
     return null;
   }
 };
+
+const requestRendererData = <TRequest extends { requestId: string }>(
+  win: BrowserWindow,
+  requestEvent: string,
+  responseEvent: string,
+  request: Omit<TRequest, 'requestId'>,
+  timeoutMessage: string,
+) =>
+  new Promise<unknown>((resolve, reject) => {
+    const requestId = randomUUID();
+    let timeout: NodeJS.Timeout;
+    const listener = (_: Electron.IpcMainEvent, response: RendererResponse) => {
+      if (response.requestId !== requestId) return;
+
+      clearTimeout(timeout);
+      ipcMain.removeListener(responseEvent, listener);
+
+      if (response.error) {
+        reject(new Error(response.error));
+        return;
+      }
+
+      resolve(response.result);
+    };
+
+    timeout = setTimeout(() => {
+      ipcMain.removeListener(responseEvent, listener);
+      reject(new Error(timeoutMessage));
+    }, SEARCH_TIMEOUT_MS);
+
+    ipcMain.on(responseEvent, listener);
+    win.webContents.send(requestEvent, {
+      requestId,
+      ...request,
+    } as TRequest);
+  });
 
 export const getSongControls = (win: BrowserWindow) => {
   return {
@@ -121,6 +166,12 @@ export const getSongControls = (win: BrowserWindow) => {
 
       win.webContents.send('peard:play-video', videoIdValue);
     },
+    playPlaylist: (playlistId: string) => {
+      const playlistIdValue = parseStringFromArgsType(playlistId);
+      if (playlistIdValue === null) return;
+
+      win.webContents.send('peard:play-playlist', playlistIdValue);
+    },
     openSearchBox: () => {
       win.webContents.sendInputEvent({
         type: 'keyDown',
@@ -163,43 +214,20 @@ export const getSongControls = (win: BrowserWindow) => {
     clearQueue: () => win.webContents.send('peard:clear-queue'),
 
     search: (query: string, params?: string, continuation?: string) =>
-      new Promise<unknown>((resolve, reject) => {
-        const requestId = randomUUID();
-        const event = 'peard:search-results';
-        let timeout: NodeJS.Timeout;
-        const listener = (
-          _: Electron.IpcMainEvent,
-          response: SearchResponse,
-        ) => {
-          if (response.requestId !== requestId) return;
-
-          clearTimeout(timeout);
-          ipcMain.removeListener(event, listener);
-
-          if (response.error) {
-            reject(new Error(response.error));
-            return;
-          }
-
-          resolve(response.result);
-        };
-
-        timeout = setTimeout(() => {
-          ipcMain.removeListener(event, listener);
-          reject(
-            new Error(
-              'Pear Desktop search did not respond before the timeout expired.',
-            ),
-          );
-        }, SEARCH_TIMEOUT_MS);
-
-        ipcMain.on(event, listener);
-        win.webContents.send('peard:search', {
-          requestId,
-          query,
-          params,
-          continuation,
-        } satisfies SearchRequest);
-      }),
+      requestRendererData<SearchRequest>(
+        win,
+        'peard:search',
+        'peard:search-results',
+        { query, params, continuation },
+        'Pear Desktop search did not respond before the timeout expired.',
+      ),
+    getLibraryPlaylists: (continuation?: string) =>
+      requestRendererData<LibraryPlaylistsRequest>(
+        win,
+        'peard:get-library-playlists',
+        'peard:get-library-playlists-response',
+        { continuation },
+        'Pear Desktop playlist library did not respond before the timeout expired.',
+      ),
   };
 };

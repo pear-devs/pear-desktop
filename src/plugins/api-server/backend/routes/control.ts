@@ -572,6 +572,7 @@ const routes = {
 };
 
 type PromiseOrValue<T> = T | Promise<T>;
+const QUEUE_RESPONSE_TIMEOUT_MS = 5_000;
 
 export const register = (
   app: HonoApp,
@@ -583,17 +584,23 @@ export const register = (
 ) => {
   const controller = getSongControls(window);
   const getQueueResponse = () =>
-    new Promise<QueueResponse>((resolve) => {
+    new Promise<QueueResponse | undefined>((resolve) => {
       const requestId = randomUUID();
       const event = 'peard:get-queue-response';
+      let timeout: NodeJS.Timeout;
       const listener = (_: Electron.IpcMainEvent, queue: QueueResponse) => {
         if (queue.requestId !== requestId) return;
 
+        clearTimeout(timeout);
         ipcMain.removeListener(event, listener);
         resolve(queue);
       };
 
       ipcMain.on(event, listener);
+      timeout = setTimeout(() => {
+        ipcMain.removeListener(event, listener);
+        resolve(undefined);
+      }, QUEUE_RESPONSE_TIMEOUT_MS);
       controller.requestQueueInformation(requestId);
     });
 
@@ -767,7 +774,7 @@ export const register = (
   const queueInfo = async (ctx: Context) => {
     const info = await getQueueResponse();
 
-    if (!info) {
+    if (!info?.items) {
       ctx.status(204);
       return ctx.body(null);
     }

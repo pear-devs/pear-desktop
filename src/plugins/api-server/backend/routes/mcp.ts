@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import { getSongControls } from '@/providers/song-controls';
 
+import { parseLibraryPlaylists } from './playlists';
 import { getQueueItemRenderer, getSelectedQueueIndex } from './queue';
 
 import type { APIServerConfig } from '../../config';
@@ -70,6 +71,11 @@ const getPreviousQueueIndex = async (
   return currentIndex - 1;
 };
 
+const getQueueIndexForVideo = (queue: QueueResponse, videoId: string) =>
+  queue.items?.findIndex(
+    (item) => getQueueItemRenderer(item)?.videoId === videoId,
+  ) ?? -1;
+
 const getQueueItems = (queue: QueueResponse) =>
   queue.items?.map((item, index) => {
     const renderer = getQueueItemRenderer(item);
@@ -78,9 +84,9 @@ const getQueueItems = (queue: QueueResponse) =>
       index,
       selected: renderer?.selected ?? false,
       videoId: renderer?.videoId,
-      title: renderer?.title.runs.map((run) => run.text).join(''),
-      artist: renderer?.shortBylineText.runs.map((run) => run.text).join(''),
-      duration: renderer?.lengthText.runs.map((run) => run.text).join(''),
+      title: renderer?.title?.runs?.map((run) => run.text).join(''),
+      artist: renderer?.shortBylineText?.runs?.map((run) => run.text).join(''),
+      duration: renderer?.lengthText?.runs?.map((run) => run.text).join(''),
     };
   }) ?? [];
 
@@ -132,9 +138,62 @@ const createMcpServer = (
         videoId: z.string().trim().min(1),
       },
     },
-    ({ videoId }) => {
+    async ({ videoId }) => {
+      try {
+        const queueIndex = getQueueIndexForVideo(
+          await getQueue(controls),
+          videoId,
+        );
+        if (queueIndex >= 0) {
+          controls.setQueueIndex(queueIndex);
+          return textResult('Playing the video from the current queue.');
+        }
+      } catch {
+        // Fall back to direct playback when the current queue is unavailable.
+      }
+
       controls.playVideo(videoId);
       return textResult('Video playback started.');
+    },
+  );
+
+  server.registerTool(
+    'music_play_playlist',
+    {
+      description: 'Load a playlist ID and play its first song.',
+      inputSchema: {
+        playlistId: z.string().trim().min(1),
+      },
+    },
+    ({ playlistId }) => {
+      controls.playPlaylist(playlistId);
+      return textResult('Playlist playback started.');
+    },
+  );
+
+  server.registerTool(
+    'music_get_library_playlists',
+    {
+      description:
+        'List playlists in the signed-in library. Use a returned playlistId with music_play_playlist.',
+      inputSchema: {
+        continuation: z.string().optional(),
+      },
+    },
+    async ({ continuation }) => {
+      try {
+        return jsonResult(
+          parseLibraryPlaylists(
+            await controls.getLibraryPlaylists(continuation),
+          ),
+        );
+      } catch (error) {
+        return errorResult(
+          error instanceof Error
+            ? error.message
+            : 'Unable to retrieve library playlists.',
+        );
+      }
     },
   );
 
