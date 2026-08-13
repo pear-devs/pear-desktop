@@ -77,15 +77,14 @@ export default createPlugin({
       },
       {
         label: t('plugins.do-not-track.menu.bypass-age-restriction'),
-        sublabel: t('required manual restart'),
-        type: "checkbox",
+        type: 'checkbox',
         checked: config.bypassAgeRestriction,
         click() {
           setConfig({
-            bypassAgeRestriction: !config.bypassAgeRestriction
-          })
-        }
-      }
+            bypassAgeRestriction: !config.bypassAgeRestriction,
+          });
+        },
+      },
     ];
   },
   backend: {

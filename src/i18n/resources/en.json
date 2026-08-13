@@ -501,7 +501,7 @@
       "description": "Block all tracking out of the box",
       "menu": {
         "blocker": "Blocker",
-        "bypass-age-restriction": "Bypass Age Restriction"
+        "bypass-age-restriction": "Bypass Age Restriction (manual restart required)"
       },
       "name": "Do Not Track"
     },
