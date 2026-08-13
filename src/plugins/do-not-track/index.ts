@@ -1,5 +1,7 @@
 import { contextBridge, webFrame, type BrowserWindow } from 'electron';
 
+import bypassScript from 'simple-youtube-age-restriction-bypass/dist/Simple-YouTube-Age-Restriction-Bypass.user.js?raw';
+
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 
@@ -74,7 +76,8 @@ export default createPlugin({
         })),
       },
       {
-        label: t('plugins.bypassAgeRestriction.name'),
+        label: t('plugins.do-not-track.menu.bypass-age-restriction'),
+        sublabel: t('required manual restart'),
         type: "checkbox",
         checked: config.bypassAgeRestriction,
         click() {
@@ -144,6 +147,16 @@ export default createPlugin({
       } else if (config.blocker === blockers.WithBlocklists) {
         await injectCliqzPreload();
       }
+
+      if (config.bypassAgeRestriction) {
+        // Simple workaround to prevent userscript from creating 'default' TrustedType policy,
+        // causing TypeError "Policy with name 'default' already exist" at src/utils/trusted-types.ts.
+        const sanitizedScript = bypassScript.replace(
+          "trustedTypes.createPolicy('default'",
+          "trustedTypes.createPolicy('syarb-default'",
+        );
+        await webFrame.executeJavaScript(sanitizedScript);
+      }
     },
     async onConfigChange(newConfig) {
       if (newConfig.blocker === blockers.InPlayer && !isInjected()) {
@@ -152,13 +165,5 @@ export default createPlugin({
       }
     },
   },
-  renderer: {
-    async start({ getConfig }) {
-      const config = await getConfig();
-      if (config.bypassAgeRestriction) {
-        const { inject } = await import('simple-youtube-age-restriction-bypass');
-        inject();
-      }
-    }
-  }
 });
+

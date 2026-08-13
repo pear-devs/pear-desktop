@@ -500,7 +500,8 @@
     "do-not-track": {
       "description": "Block all tracking out of the box",
       "menu": {
-        "blocker": "Blocker"
+        "blocker": "Blocker",
+        "bypass-age-restriction": "Bypass Age Restriction"
       },
       "name": "Do Not Track"
     },
