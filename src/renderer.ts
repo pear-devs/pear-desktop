@@ -4,6 +4,7 @@ import 'mdui/mdui.css';
 import 'mdui';
 
 import { loadI18n, setLanguage, t as i18t } from '@/i18n';
+import { LoggerPrefix } from '@/utils';
 import {
   defaultTrustedTypePolicy,
   registerWindowDefaultTrustedTypePolicy,
@@ -316,11 +317,25 @@ async function onApiLoaded() {
 
   for (const [id, plugin] of Object.entries(getAllLoadedRendererPlugins())) {
     if (typeof plugin.renderer !== 'function') {
-      await plugin.renderer?.onPlayerApiReady?.call(
-        plugin.renderer,
-        api!,
-        createContext(id),
-      );
+      try {
+        await plugin.renderer?.onPlayerApiReady?.call(
+          plugin.renderer,
+          api!,
+          createContext(id),
+        );
+      } catch (err) {
+        // One plugin's onPlayerApiReady throwing (e.g. a network-dependent
+        // fetch failing while offline) must not stop every other plugin
+        // later in this list from ever being initialized.
+        console.error(
+          LoggerPrefix,
+          i18t('common.console.plugins.execute-failed', {
+            pluginName: id,
+            contextName: 'onPlayerApiReady',
+          }),
+        );
+        console.trace(err);
+      }
     }
   }
 
