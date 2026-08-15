@@ -2,6 +2,7 @@
 import { IconCheckCircle } from '@mdui/icons/check-circle.js';
 import { IconChevronLeft } from '@mdui/icons/chevron-left.js';
 import { IconChevronRight } from '@mdui/icons/chevron-right.js';
+import { IconDownload } from '@mdui/icons/download.js';
 import { IconError } from '@mdui/icons/error.js';
 import { IconStarBorder } from '@mdui/icons/star-border.js';
 import { IconStar } from '@mdui/icons/star.js';
@@ -35,6 +36,7 @@ import { _ytAPI } from '../index';
 import { reactiveOwner } from '../reactive-root';
 import { config } from '../renderer';
 import { currentLyrics, lyricsStore, setLyricsStore } from '../store';
+import { getSongInfo } from '@/providers/song-info-front';
 
 import type { PlayerAPIEvents } from '@/types/player-api-events';
 
@@ -188,6 +190,44 @@ export const LyricsPicker = (props: {
     });
   };
 
+  const showToast = (message: string) => {
+    const app = document.querySelector('ytmusic-app') as
+      | ({ toastService?: { show?: (msg: string) => void } } | null)
+      | null;
+
+    app?.toastService?.show?.(message);
+  };
+
+  const handleSave = async () => {
+    const lyrics = currentLyrics();
+    if (lyrics.state !== 'done' || !lyrics.data) return;
+
+    const songInfo = getSongInfo();
+    try {
+      const plainLyrics = JSON.parse(JSON.stringify(lyrics.data)) as typeof lyrics.data;
+      const result = await window.ipcRenderer.invoke('synced-lyrics:save', {
+        lyrics: plainLyrics,
+        videoId: String(songInfo.videoId ?? ''),
+        title: String(songInfo.title ?? ''),
+        artist: String(songInfo.artist ?? ''),
+      });
+
+      const filePath = String(result ?? '');
+      if (filePath) {
+        showToast(`Saved lyrics to ${filePath}`);
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unknown error';
+      console.error('Failed to save lyrics:', error);
+      showToast(
+        message.toLowerCase().includes('cancel')
+          ? 'Lyrics save cancelled.'
+          : `Failed to save lyrics: ${message}`,
+      );
+    }
+  };
+
   return (
     <div class="lyrics-picker" ref={props.setStickRef}>
       <div class="lyrics-picker-left">
@@ -293,7 +333,7 @@ export const LyricsPicker = (props: {
         </ul>
       </div>
 
-      <div class="lyrics-picker-left">
+      <div class="lyrics-picker-right">
         <mdui-button-icon>
           <LitElementWrapper
             elementClass={IconChevronRight}
@@ -304,6 +344,26 @@ export const LyricsPicker = (props: {
             }}
           />
         </mdui-button-icon>
+      </div>
+
+      <div class="lyrics-picker-save">
+        <Show
+          when={
+            currentLyrics().state === 'done' &&
+            (currentLyrics().data?.lines || currentLyrics().data?.lyrics)
+          }
+        >
+          <mdui-button-icon onClick={handleSave}>
+            <LitElementWrapper
+              elementClass={IconDownload}
+              props={{
+                role: 'button',
+                style: { padding: '5px' },
+                title: 'Save lyrics as .lrc file',
+              }}
+            />
+          </mdui-button-icon>
+        </Show>
       </div>
     </div>
   );
