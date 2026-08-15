@@ -349,6 +349,7 @@ export const LyricsPicker = (props: {
       <div class="lyrics-picker-save">
         <Show
           when={
+            config()?.enableDownload !== false &&
             currentLyrics().state === 'done' &&
             (currentLyrics().data?.lines || currentLyrics().data?.lyrics)
           }
