@@ -641,7 +641,10 @@
         "open-on-start": "Open on startup",
         "reset-position": "Reset position and size"
       },
-      "name": "Mini Player"
+      "name": "Mini Player",
+      "templates": {
+        "button": "Mini player"
+      }
     },
     "music-together": {
       "description": "Share a playlist with others. When the host plays a song, everyone else will hear the same song",

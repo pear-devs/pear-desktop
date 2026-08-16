@@ -3,6 +3,7 @@ import { createPlugin } from '@/utils';
 
 import { onConfigChange, onMainLoad, onUnload } from './main';
 import { onMenu } from './menu';
+import { onPlayerApiReady, onRendererUnload } from './renderer';
 
 export type MiniPlayerPluginConfig = {
   enabled: boolean;
@@ -43,5 +44,9 @@ export default createPlugin({
     start: onMainLoad,
     stop: onUnload,
     onConfigChange,
+  },
+  renderer: {
+    onPlayerApiReady,
+    stop: onRendererUnload,
   },
 });
