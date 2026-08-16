@@ -3,9 +3,9 @@ import prompt from 'custom-electron-prompt';
 import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 
+import { defaultConfig, type MiniPlayerPluginConfig } from './index';
 import { isMiniPlayerOpen, toggle } from './main';
 
-import type { MiniPlayerPluginConfig } from './index';
 import type { MenuTemplate } from '@/menu';
 import type { MenuContext } from '@/types/contexts';
 
@@ -108,7 +108,10 @@ export const onMenu = async ({
     {
       label: t('plugins.mini-player.menu.reset-position'),
       click() {
-        setConfig({ position: null, size: [480, 100] });
+        setConfig({
+          position: defaultConfig.position,
+          size: [...defaultConfig.size],
+        });
       },
     },
   ];

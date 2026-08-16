@@ -40,6 +40,10 @@ let saveConfig: BackendContext<MiniPlayerPluginConfig>['setConfig'] | null =
   null;
 let saveBoundsTimer: NodeJS.Timeout | null = null;
 let callbackRegistered = false;
+/** Whether this plugin is the one that hid the main window. */
+let didHideMainWindow = false;
+/** Set once the main window starts closing, so nothing tries to show it again. */
+let isQuitting = false;
 
 /** Cached so the artwork is only re-encoded when the song actually changes. */
 let artworkVideoId = '';
@@ -240,7 +244,7 @@ const openMiniPlayer = () => {
 
   miniWindow.on('closed', () => {
     miniWindow = null;
-    restoreMainWindow(false);
+    unhideMainWindow();
   });
 
   registerHotkey(miniWindow);
@@ -249,16 +253,10 @@ const openMiniPlayer = () => {
     // Media keeps playing in the hidden window; make sure it is not throttled.
     mainWindow.webContents.setBackgroundThrottling(false);
     mainWindow.hide();
+    didHideMainWindow = true;
   }
 
-  // Ask the renderer to start reporting player state changes.
-  mainWindow?.webContents.send('peard:setup-volume-changed-listener');
-  mainWindow?.webContents.send('peard:setup-like-changed-listener');
-  mainWindow?.webContents.send('peard:setup-repeat-changed-listener');
-  mainWindow?.webContents.send('peard:setup-shuffle-changed-listener');
-
-  // The shuffle observer only fires on change, so ask for the current value.
-  mainWindow?.webContents.send('peard:get-shuffle');
+  requestPlayerState();
 };
 
 const closeMiniPlayer = () => {
@@ -267,17 +265,62 @@ const closeMiniPlayer = () => {
   }
 };
 
-const restoreMainWindow = (focus: boolean) => {
+/**
+ * Ask the renderer to start reporting player state. The listeners on the other
+ * end are singletons, so this is safe to call again after every page load.
+ */
+const requestPlayerState = () => {
   if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+
+  mainWindow.webContents.send('peard:setup-volume-changed-listener');
+  mainWindow.webContents.send('peard:setup-like-changed-listener');
+  mainWindow.webContents.send('peard:setup-repeat-changed-listener');
+  mainWindow.webContents.send('peard:setup-shuffle-changed-listener');
+
+  // The shuffle observer only fires on change, so ask for the current value.
+  mainWindow.webContents.send('peard:get-shuffle');
+};
+
+/**
+ * Plugins load before the main window navigates, so a mini player opened via
+ * `openOnStart` sends its setup messages into a page that does not exist yet.
+ * Ask again once the renderer is actually up.
+ */
+const onPlayerApiLoaded = () => {
+  if (isOpen()) {
+    requestPlayerState();
+  }
+};
+
+/** Undo the hide that opening the mini player performed — and only that. */
+const unhideMainWindow = () => {
+  if (!didHideMainWindow) {
+    return;
+  }
+
+  didHideMainWindow = false;
+
+  // Nothing to restore while the app itself is going away.
+  if (isQuitting || !mainWindow || mainWindow.isDestroyed()) {
     return;
   }
 
   mainWindow.webContents.setBackgroundThrottling(true);
   mainWindow.show();
+};
 
-  if (focus) {
-    mainWindow.focus();
+/** Explicit request to go back to the full app. */
+const showMainWindow = () => {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
   }
+
+  didHideMainWindow = false;
+  mainWindow.webContents.setBackgroundThrottling(true);
+  mainWindow.show();
+  mainWindow.focus();
 };
 
 const toggleMiniPlayer = () => {
@@ -286,6 +329,12 @@ const toggleMiniPlayer = () => {
   } else {
     openMiniPlayer();
   }
+};
+
+/** The app is shutting down: take the mini player with it, restore nothing. */
+const onMainWindowClose = () => {
+  isQuitting = true;
+  closeMiniPlayer();
 };
 
 const registerHotkey = (window: BrowserWindow) => {
@@ -300,9 +349,22 @@ const registerHotkey = (window: BrowserWindow) => {
   }
 };
 
-const unregisterHotkey = (window: BrowserWindow | null) => {
-  if (window && !window.isDestroyed()) {
-    localShortcut.unregisterAll(window);
+/**
+ * Only remove our own accelerator: the main window is shared with other
+ * plugins (in-app-menu, shortcuts) that register their own local shortcuts.
+ */
+const unregisterHotkey = (
+  window: BrowserWindow | null,
+  accelerator: string,
+) => {
+  if (!accelerator || !window || window.isDestroyed()) {
+    return;
+  }
+
+  try {
+    localShortcut.unregister(window, accelerator);
+  } catch (error: unknown) {
+    console.error(LoggerPrefix, '[mini-player] failed to unregister', error);
   }
 };
 
@@ -365,7 +427,7 @@ const onControl = (
       break;
     }
     case 'restore': {
-      restoreMainWindow(true);
+      showMainWindow();
       if (config.hideMainWindow) {
         closeMiniPlayer();
       }
@@ -406,6 +468,7 @@ export const onMainLoad = async ({
   ipcMain.on('peard:shuffle-changed', onShuffleChanged);
   ipcMain.on('peard:get-shuffle-response', onShuffleChanged);
   ipcMain.on('peard:repeat-changed', onRepeatChanged);
+  ipcMain.on('peard:player-api-loaded', onPlayerApiLoaded);
   ipcMain.on('plugin:toggle-mini-player', toggleMiniPlayer);
 
   if (!callbackRegistered) {
@@ -416,7 +479,7 @@ export const onMainLoad = async ({
 
   registerHotkey(window);
 
-  window.on('close', closeMiniPlayer);
+  window.on('close', onMainWindowClose);
 
   if (config.openOnStart) {
     openMiniPlayer();
@@ -424,12 +487,12 @@ export const onMainLoad = async ({
 };
 
 export const onConfigChange = (newConfig: MiniPlayerPluginConfig) => {
-  const hotkeyChanged = config?.hotkey !== newConfig.hotkey;
+  const previousHotkey = config?.hotkey;
   config = newConfig;
 
-  if (hotkeyChanged) {
-    unregisterHotkey(mainWindow);
-    unregisterHotkey(miniWindow);
+  if (previousHotkey !== newConfig.hotkey) {
+    unregisterHotkey(mainWindow, previousHotkey);
+    unregisterHotkey(miniWindow, previousHotkey);
 
     if (mainWindow) registerHotkey(mainWindow);
     if (miniWindow) registerHotkey(miniWindow);
@@ -448,14 +511,21 @@ export const onUnload = () => {
   ipcMain.removeListener('peard:shuffle-changed', onShuffleChanged);
   ipcMain.removeListener('peard:get-shuffle-response', onShuffleChanged);
   ipcMain.removeListener('peard:repeat-changed', onRepeatChanged);
+  ipcMain.removeListener('peard:player-api-loaded', onPlayerApiLoaded);
   ipcMain.removeAllListeners('plugin:toggle-mini-player');
 
-  unregisterHotkey(mainWindow);
-  closeMiniPlayer();
-  restoreMainWindow(false);
+  if (saveBoundsTimer) {
+    clearTimeout(saveBoundsTimer);
+    saveBoundsTimer = null;
+  }
 
-  mainWindow?.removeListener('close', closeMiniPlayer);
+  unregisterHotkey(mainWindow, config?.hotkey);
+  closeMiniPlayer();
+  unhideMainWindow();
+
+  mainWindow?.removeListener('close', onMainWindowClose);
   mainWindow = null;
+  saveConfig = null;
 };
 
 export const openMiniPlayerWindow = openMiniPlayer;

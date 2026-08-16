@@ -62,7 +62,19 @@ const getMiniPlayerWindow = async (app) => {
 test('Mini player - opens, renders pushed state and forwards controls', async () => {
   test.setTimeout(120_000);
 
-  const { app } = await launchWithMiniPlayer();
+  const { app, userDataDir } = await launchWithMiniPlayer();
+
+  try {
+    await runAssertions(app);
+  } finally {
+    // Always tear down, so a failed assertion cannot leave the app running or
+    // the temporary profile behind.
+    await app.close().catch(() => {});
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  }
+});
+
+const runAssertions = async (app) => {
   const miniPlayer = await getMiniPlayerWindow(app);
 
   await miniPlayer.waitForSelector('#bar');
@@ -128,17 +140,16 @@ test('Mini player - opens, renders pushed state and forwards controls', async ()
   expect(fillRatio).toBeLessThan(0.35);
 
   // Clicking a control must reach the main process over the preload bridge.
-  const nextControl = app.evaluate(
-    ({ ipcMain }) =>
-      new Promise((resolve) => {
-        ipcMain.once('mini-player:control', (_event, action) =>
-          resolve(action),
-        );
-      }),
-  );
+  // Arm the listener in its own awaited step, otherwise the click can beat the
+  // registration and the test hangs until the timeout.
+  await app.evaluate(({ ipcMain }) => {
+    globalThis.__miniPlayerControl = new Promise((resolve) => {
+      ipcMain.once('mini-player:control', (_event, action) => resolve(action));
+    });
+  });
 
   await miniPlayer.locator('[data-action="next"]').click();
-  expect(await nextControl).toBe('next');
 
-  await app.close();
-});
+  const action = await app.evaluate(() => globalThis.__miniPlayerControl);
+  expect(action).toBe('next');
+};

@@ -453,8 +453,14 @@
           updateMarquee(el.artistWrap, el.artist);
         }
 
-        if (state.imageSrc && el.art.src !== state.imageSrc) {
-          el.art.src = state.imageSrc;
+        // Also runs for an empty src, so artwork from the previous song goes
+        // away when the new one has none.
+        if (el.art.getAttribute('src') !== state.imageSrc) {
+          if (state.imageSrc) {
+            el.art.src = state.imageSrc;
+          } else {
+            el.art.removeAttribute('src');
+          }
         }
 
         el.play.setAttribute('d', state.isPaused ? PLAY : PAUSE);
@@ -588,34 +594,54 @@
         }
       });
 
-      el.track.addEventListener('pointerup', (event) => {
+      const endDrag = (event, commit) => {
         if (!dragging) {
           return;
         }
 
-        if (dragging === 'seek') {
+        if (commit && dragging === 'seek') {
           api.control('seek', Math.round(elapsed));
         }
 
         dragging = null;
         el.track.classList.remove('dragging', 'volume');
-        el.track.releasePointerCapture(event.pointerId);
+
+        if (el.track.hasPointerCapture(event.pointerId)) {
+          el.track.releasePointerCapture(event.pointerId);
+        }
+
         lastTick = Date.now();
         renderTrack();
-      });
+      };
+
+      el.track.addEventListener('pointerup', (event) => endDrag(event, true));
+
+      // Without this a cancelled pointer stream would leave `dragging` set,
+      // freezing the progress bar until the next drag.
+      el.track.addEventListener('pointercancel', (event) =>
+        endDrag(event, false),
+      );
 
       // Scroll anywhere on the bar to change the volume.
+      let volumeModeTimer = null;
+      let volumeSendTimer = null;
+
       el.bar.addEventListener('wheel', (event) => {
         const step = event.deltaY > 0 ? -5 : 5;
         state.volume = clamp(state.volume + step, 0, 100);
         state.isMuted = false;
-        api.control('volume', state.volume);
 
         el.track.classList.add('volume');
         renderTrack();
 
-        clearTimeout(el.bar.dataset.volumeTimer);
-        el.bar.dataset.volumeTimer = setTimeout(() => {
+        // One gesture fires many wheel events; only the last value matters.
+        clearTimeout(volumeSendTimer);
+        volumeSendTimer = setTimeout(() => {
+          api.control('volume', state.volume);
+        }, 60);
+
+        clearTimeout(volumeModeTimer);
+        volumeModeTimer = setTimeout(() => {
           if (!dragging) {
             el.track.classList.remove('volume');
             renderTrack();
