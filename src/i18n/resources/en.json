@@ -614,6 +614,35 @@
         "fetched-lyrics": "Fetched lyrics for Genius"
       }
     },
+    "mini-player": {
+      "description": "Adds a small always-on-top player with album art, track info and controls",
+      "menu": {
+        "always-on-top": "Always on top",
+        "close": "Close mini player",
+        "hide-main-window": "Hide main window while open",
+        "hotkey": {
+          "label": "Hotkey",
+          "prompt": {
+            "keybind-options": {
+              "hotkey": "Hotkey"
+            },
+            "label": "Choose a hotkey to toggle the mini player",
+            "title": "Mini Player Hotkey"
+          }
+        },
+        "opacity": {
+          "label": "Opacity",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "opaque-on-hover": "Fully opaque on hover",
+        "open": "Open mini player",
+        "open-on-start": "Open on startup",
+        "reset-position": "Reset position and size"
+      },
+      "name": "Mini Player"
+    },
     "music-together": {
       "description": "Share a playlist with others. When the host plays a song, everyone else will hear the same song",
       "dialog": {

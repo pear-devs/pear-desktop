@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Mini Player</title>
+    <style>
+      :root {
+        --bg: rgba(17, 17, 19, 0.86);
+        --fg: #f5f5f7;
+        --muted: rgba(245, 245, 247, 0.62);
+        --accent: #ff2d55;
+        --line: rgba(255, 255, 255, 0.16);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+        -webkit-user-drag: none;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu,
+          sans-serif;
+        color: var(--fg);
+        cursor: default;
+      }
+
+      #bar {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+        height: 100%;
+        padding: 10px 12px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
+        background: var(--bg);
+        backdrop-filter: blur(24px) saturate(160%);
+        overflow: hidden;
+        -webkit-app-region: drag;
+      }
+
+      button {
+        -webkit-app-region: no-drag;
+        display: grid;
+        place-items: center;
+        border: none;
+        background: none;
+        color: var(--fg);
+        cursor: pointer;
+        opacity: 0.82;
+        transition: opacity 0.15s ease, transform 0.15s ease;
+      }
+
+      button:hover {
+        opacity: 1;
+        transform: scale(1.12);
+      }
+
+      button:active {
+        transform: scale(0.94);
+      }
+
+      button svg {
+        display: block;
+        fill: currentcolor;
+        pointer-events: none;
+      }
+
+      /* --- album art ------------------------------------------------ */
+
+      #art {
+        position: relative;
+        flex: 0 0 auto;
+        width: 64px;
+        height: 64px;
+        border-radius: 9px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.07);
+      }
+
+      #art-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      #restore {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 9px;
+        background: rgba(0, 0, 0, 0.55);
+        opacity: 0;
+        transform: none;
+      }
+
+      #art:hover #restore {
+        opacity: 1;
+      }
+
+      #restore:active {
+        transform: none;
+      }
+
+      /* --- track info ----------------------------------------------- */
+
+      #info {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .marquee {
+        position: relative;
+        width: 100%;
+        overflow: hidden;
+        white-space: nowrap;
+        mask-image: linear-gradient(
+          90deg,
+          #000 0,
+          #000 calc(100% - 16px),
+          transparent 100%
+        );
+      }
+
+      .marquee > span {
+        display: inline-block;
+        will-change: transform;
+      }
+
+      .marquee.overflowing > span {
+        animation: slide 12s linear infinite alternate;
+      }
+
+      @keyframes slide {
+        0%,
+        14% {
+          transform: translateX(0);
+        }
+        86%,
+        100% {
+          transform: translateX(calc(-1 * var(--dist, 0px)));
+        }
+      }
+
+      #title {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.1px;
+      }
+
+      #artist {
+        font-size: 11.5px;
+        color: var(--muted);
+      }
+
+      #time {
+        font-size: 10px;
+        font-variant-numeric: tabular-nums;
+        color: var(--muted);
+        opacity: 0;
+        transition: opacity 0.15s ease;
+      }
+
+      #bar:hover #time {
+        opacity: 1;
+      }
+
+      /* --- controls -------------------------------------------------- */
+
+      #controls {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 1px;
+      }
+
+      #controls button {
+        width: 26px;
+        height: 26px;
+      }
+
+      #play {
+        width: 30px !important;
+        height: 30px !important;
+      }
+
+      #like.liked {
+        color: var(--accent);
+        opacity: 1;
+      }
+
+      #volume.muted {
+        opacity: 0.45;
+      }
+
+      /* --- close ----------------------------------------------------- */
+
+      #close {
+        position: absolute;
+        top: 3px;
+        right: 4px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        opacity: 0;
+        color: var(--muted);
+      }
+
+      #bar:hover #close {
+        opacity: 0.7;
+      }
+
+      #close:hover {
+        opacity: 1 !important;
+        color: var(--fg);
+      }
+
+      /* --- bottom slider (seek / volume) ----------------------------- */
+
+      #track {
+        -webkit-app-region: no-drag;
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 10px;
+        display: flex;
+        align-items: flex-end;
+        cursor: pointer;
+      }
+
+      #rail {
+        position: relative;
+        width: 100%;
+        height: 3px;
+        background: var(--line);
+        transition: height 0.12s ease;
+      }
+
+      #track:hover #rail,
+      #track.dragging #rail {
+        height: 6px;
+      }
+
+      #fill {
+        position: absolute;
+        inset: 0 auto 0 0;
+        width: 0;
+        background: var(--fg);
+      }
+
+      #track.volume #fill {
+        background: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="bar">
+      <div id="art">
+        <img id="art-img" alt="" />
+        <button id="restore" title="Open main window">
+          <svg width="18" height="18" viewBox="0 0 24 24">
+            <path
+              d="M4 14h2v2.6l4-4L11.4 14l-4 4H10v2H4v-6Zm16-4h-2V7.4l-4 4L12.6 10l4-4H14V4h6v6Z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <div id="info">
+        <div class="marquee" id="title-wrap"><span id="title"></span></div>
+        <div class="marquee" id="artist-wrap"><span id="artist"></span></div>
+        <div id="time">0:00 / 0:00</div>
+      </div>
+
+      <div id="controls">
+        <button data-action="previous" title="Previous">
+          <svg width="18" height="18" viewBox="0 0 24 24">
+            <path d="M6 6h2v12H6V6Zm3.5 6L18 6v12L9.5 12Z" />
+          </svg>
+        </button>
+        <button id="play" data-action="playPause" title="Play/Pause">
+          <svg width="22" height="22" viewBox="0 0 24 24">
+            <path id="play-path" d="M8 5v14l11-7L8 5Z" />
+          </svg>
+        </button>
+        <button data-action="next" title="Next">
+          <svg width="18" height="18" viewBox="0 0 24 24">
+            <path d="M16 6h2v12h-2V6Zm-1.5 6L6 18V6l8.5 6Z" />
+          </svg>
+        </button>
+        <button id="like" data-action="like" title="Like">
+          <svg width="17" height="17" viewBox="0 0 24 24">
+            <path
+              id="like-path"
+              d="M12 20.4 3.9 12.6a5 5 0 0 1 7.1-7l1 1 1-1a5 5 0 0 1 7.1 7L12 20.4Zm0-2.8 6.7-6.4a3 3 0 1 0-4.3-4.2L12 9.4 9.6 7A3 3 0 1 0 5.3 11.2L12 17.6Z"
+            />
+          </svg>
+        </button>
+        <button id="volume" data-action="mute" title="Mute">
+          <svg width="17" height="17" viewBox="0 0 24 24">
+            <path
+              id="volume-path"
+              d="M4 9h3l4-4v14l-4-4H4V9Zm11.5 3a3.5 3.5 0 0 0-2-3.2v6.4a3.5 3.5 0 0 0 2-3.2Zm0-7.3v2.1a5.5 5.5 0 0 1 0 10.4v2.1a7.5 7.5 0 0 0 0-14.6Z"
+            />
+          </svg>
+        </button>
+      </div>
+
+      <button id="close" title="Close mini player">
+        <svg width="11" height="11" viewBox="0 0 24 24">
+          <path
+            d="M18.3 5.7 12 12l6.3 6.3-1.4 1.4L10.6 13.4 4.3 19.7 2.9 18.3 9.2 12 2.9 5.7l1.4-1.4L10.6 10.6l6.3-6.3 1.4 1.4Z"
+          />
+        </svg>
+      </button>
+
+      <div id="track"><div id="rail"><div id="fill"></div></div></div>
+    </div>
+
+    <script>
+      const api = window.miniPlayer;
+
+      const el = {
+        bar: document.getElementById('bar'),
+        art: document.getElementById('art-img'),
+        title: document.getElementById('title'),
+        titleWrap: document.getElementById('title-wrap'),
+        artist: document.getElementById('artist'),
+        artistWrap: document.getElementById('artist-wrap'),
+        time: document.getElementById('time'),
+        play: document.getElementById('play-path'),
+        like: document.getElementById('like'),
+        likePath: document.getElementById('like-path'),
+        volume: document.getElementById('volume'),
+        volumePath: document.getElementById('volume-path'),
+        track: document.getElementById('track'),
+        fill: document.getElementById('fill'),
+      };
+
+      const HEART_OUTLINE =
+        'M12 20.4 3.9 12.6a5 5 0 0 1 7.1-7l1 1 1-1a5 5 0 0 1 7.1 7L12 20.4Zm0-2.8 6.7-6.4a3 3 0 1 0-4.3-4.2L12 9.4 9.6 7A3 3 0 1 0 5.3 11.2L12 17.6Z';
+      const HEART_FILLED =
+        'M12 20.4 3.9 12.6a5 5 0 0 1 7.1-7l1 1 1-1a5 5 0 0 1 7.1 7L12 20.4Z';
+      const SPEAKER_ON =
+        'M4 9h3l4-4v14l-4-4H4V9Zm11.5 3a3.5 3.5 0 0 0-2-3.2v6.4a3.5 3.5 0 0 0 2-3.2Zm0-7.3v2.1a5.5 5.5 0 0 1 0 10.4v2.1a7.5 7.5 0 0 0 0-14.6Z';
+      const SPEAKER_OFF =
+        'M4 9h3l4-4v14l-4-4H4V9Zm16.3 1.1-1.4-1.4L17 10.6 15.1 8.7l-1.4 1.4 1.9 1.9-1.9 1.9 1.4 1.4 1.9-1.9 1.9 1.9 1.4-1.4-1.9-1.9 1.9-1.9Z';
+      const PLAY = 'M8 5v14l11-7L8 5Z';
+      const PAUSE = 'M6 5h4v14H6V5Zm8 0h4v14h-4V5Z';
+
+      let state = {
+        title: '',
+        artist: '',
+        imageSrc: '',
+        isPaused: true,
+        songDuration: 0,
+        elapsedSeconds: 0,
+        likeStatus: 'INDIFFERENT',
+        volume: 100,
+        isMuted: false,
+      };
+
+      /** Locally interpolated position, resynced on every state push. */
+      let elapsed = 0;
+      let lastTick = 0;
+      let dragging = null; // 'seek' | 'volume' | null
+
+      const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+      const formatTime = (seconds) => {
+        const total = Math.max(0, Math.floor(seconds || 0));
+        const mins = Math.floor(total / 60);
+        return `${mins}:${String(total % 60).padStart(2, '0')}`;
+      };
+
+      const updateMarquee = (wrap, span) => {
+        const distance = span.scrollWidth - wrap.clientWidth;
+        wrap.classList.toggle('overflowing', distance > 2);
+        wrap.style.setProperty('--dist', `${Math.max(0, distance)}px`);
+      };
+
+      const isVolumeMode = () => el.track.classList.contains('volume');
+
+      const renderTrack = () => {
+        if (dragging === 'volume' || (isVolumeMode() && !dragging)) {
+          el.fill.style.width = `${state.isMuted ? 0 : state.volume}%`;
+          return;
+        }
+
+        const ratio = state.songDuration
+          ? clamp(elapsed / state.songDuration, 0, 1)
+          : 0;
+        el.fill.style.width = `${ratio * 100}%`;
+        el.time.textContent = `${formatTime(elapsed)} / ${formatTime(state.songDuration)}`;
+      };
+
+      const render = () => {
+        if (el.title.textContent !== state.title) {
+          el.title.textContent = state.title;
+          updateMarquee(el.titleWrap, el.title);
+        }
+
+        if (el.artist.textContent !== state.artist) {
+          el.artist.textContent = state.artist;
+          updateMarquee(el.artistWrap, el.artist);
+        }
+
+        if (state.imageSrc && el.art.src !== state.imageSrc) {
+          el.art.src = state.imageSrc;
+        }
+
+        el.play.setAttribute('d', state.isPaused ? PLAY : PAUSE);
+
+        const liked = state.likeStatus === 'LIKE';
+        el.like.classList.toggle('liked', liked);
+        el.likePath.setAttribute('d', liked ? HEART_FILLED : HEART_OUTLINE);
+
+        el.volume.classList.toggle('muted', state.isMuted);
+        el.volumePath.setAttribute(
+          'd',
+          state.isMuted ? SPEAKER_OFF : SPEAKER_ON,
+        );
+
+        renderTrack();
+      };
+
+      // Tick the progress bar between backend updates so it moves smoothly.
+      setInterval(() => {
+        const now = Date.now();
+        const delta = (now - lastTick) / 1000;
+        lastTick = now;
+
+        if (!state.isPaused && !dragging && state.songDuration) {
+          elapsed = clamp(elapsed + delta, 0, state.songDuration);
+          renderTrack();
+        }
+      }, 500);
+
+      api.on('mini-player:state', (next) => {
+        const songChanged = next.title !== state.title;
+        state = { ...state, ...next };
+
+        if (
+          songChanged ||
+          Math.abs((next.elapsedSeconds ?? elapsed) - elapsed) > 1.5
+        ) {
+          elapsed = next.elapsedSeconds ?? 0;
+        }
+
+        lastTick = Date.now();
+        render();
+      });
+
+      // Only sent on platforms where BrowserWindow.setOpacity does nothing.
+      api.on('mini-player:config', ({ opacity }) => {
+        el.bar.style.opacity = String(opacity);
+      });
+
+      // --- interactions ------------------------------------------------
+
+      document.querySelectorAll('[data-action]').forEach((button) => {
+        button.addEventListener('click', () => {
+          api.control(button.dataset.action);
+        });
+      });
+
+      document
+        .getElementById('restore')
+        .addEventListener('click', () => api.control('restore'));
+      document
+        .getElementById('close')
+        .addEventListener('click', () => api.control('close'));
+
+      el.bar.addEventListener('dblclick', (event) => {
+        if (event.target.closest('button') || event.target.closest('#track')) {
+          return;
+        }
+
+        api.control('restore');
+      });
+
+      el.bar.addEventListener('mouseenter', () => api.hover(true));
+      el.bar.addEventListener('mouseleave', () => api.hover(false));
+
+      // Hovering the volume button turns the bottom line into a volume slider.
+      el.volume.addEventListener('mouseenter', () => {
+        if (!dragging) {
+          el.track.classList.add('volume');
+          renderTrack();
+        }
+      });
+
+      el.volume.addEventListener('mouseleave', () => {
+        if (dragging !== 'volume') {
+          el.track.classList.remove('volume');
+          renderTrack();
+        }
+      });
+
+      const ratioFromEvent = (event) => {
+        const rect = el.track.getBoundingClientRect();
+        return clamp((event.clientX - rect.left) / rect.width, 0, 1);
+      };
+
+      const applyDrag = (event) => {
+        const ratio = ratioFromEvent(event);
+
+        if (dragging === 'volume') {
+          state.volume = Math.round(ratio * 100);
+          state.isMuted = false;
+          api.control('volume', state.volume);
+        } else {
+          elapsed = ratio * state.songDuration;
+        }
+
+        renderTrack();
+      };
+
+      el.track.addEventListener('pointerdown', (event) => {
+        dragging = isVolumeMode() ? 'volume' : 'seek';
+        el.track.classList.add('dragging');
+        el.track.setPointerCapture(event.pointerId);
+        applyDrag(event);
+      });
+
+      el.track.addEventListener('pointermove', (event) => {
+        if (dragging) {
+          applyDrag(event);
+        }
+      });
+
+      el.track.addEventListener('pointerup', (event) => {
+        if (!dragging) {
+          return;
+        }
+
+        if (dragging === 'seek') {
+          api.control('seek', Math.round(elapsed));
+        }
+
+        dragging = null;
+        el.track.classList.remove('dragging', 'volume');
+        el.track.releasePointerCapture(event.pointerId);
+        lastTick = Date.now();
+        renderTrack();
+      });
+
+      // Scroll anywhere on the bar to change the volume.
+      el.bar.addEventListener('wheel', (event) => {
+        const step = event.deltaY > 0 ? -5 : 5;
+        state.volume = clamp(state.volume + step, 0, 100);
+        state.isMuted = false;
+        api.control('volume', state.volume);
+
+        el.track.classList.add('volume');
+        renderTrack();
+
+        clearTimeout(el.bar.dataset.volumeTimer);
+        el.bar.dataset.volumeTimer = setTimeout(() => {
+          if (!dragging) {
+            el.track.classList.remove('volume');
+            renderTrack();
+          }
+        }, 1200);
+      });
+
+      window.addEventListener('resize', () => {
+        updateMarquee(el.titleWrap, el.title);
+        updateMarquee(el.artistWrap, el.artist);
+      });
+
+      render();
+      api.ready();
+    </script>
+  </body>
+</html>
