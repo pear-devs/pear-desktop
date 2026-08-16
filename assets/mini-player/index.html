@@ -194,12 +194,20 @@
         height: 26px;
       }
 
+      #shuffle,
+      #repeat {
+        width: 24px !important;
+        height: 24px !important;
+      }
+
       #play {
         width: 30px !important;
         height: 30px !important;
       }
 
-      #like.liked {
+      #like.liked,
+      #shuffle.active,
+      #repeat.active {
         color: var(--accent);
         opacity: 1;
       }
@@ -289,6 +297,29 @@
       </div>
 
       <div id="controls">
+        <button id="like" data-action="like" title="Like">
+          <svg width="17" height="17" viewBox="0 0 24 24">
+            <path
+              id="like-path"
+              d="M12 20.4 3.9 12.6a5 5 0 0 1 7.1-7l1 1 1-1a5 5 0 0 1 7.1 7L12 20.4Zm0-2.8 6.7-6.4a3 3 0 1 0-4.3-4.2L12 9.4 9.6 7A3 3 0 1 0 5.3 11.2L12 17.6Z"
+            />
+          </svg>
+        </button>
+        <button id="volume" data-action="mute" title="Mute">
+          <svg width="17" height="17" viewBox="0 0 24 24">
+            <path
+              id="volume-path"
+              d="M4 9h3l4-4v14l-4-4H4V9Zm11.5 3a3.5 3.5 0 0 0-2-3.2v6.4a3.5 3.5 0 0 0 2-3.2Zm0-7.3v2.1a5.5 5.5 0 0 1 0 10.4v2.1a7.5 7.5 0 0 0 0-14.6Z"
+            />
+          </svg>
+        </button>
+        <button id="shuffle" data-action="shuffle" title="Shuffle">
+          <svg width="16" height="16" viewBox="0 0 24 24">
+            <path
+              d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"
+            />
+          </svg>
+        </button>
         <button data-action="previous" title="Previous">
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path d="M6 6h2v12H6V6Zm3.5 6L18 6v12L9.5 12Z" />
@@ -304,19 +335,11 @@
             <path d="M16 6h2v12h-2V6Zm-1.5 6L6 18V6l8.5 6Z" />
           </svg>
         </button>
-        <button id="like" data-action="like" title="Like">
-          <svg width="17" height="17" viewBox="0 0 24 24">
+        <button id="repeat" data-action="repeat" title="Repeat">
+          <svg width="16" height="16" viewBox="0 0 24 24">
             <path
-              id="like-path"
-              d="M12 20.4 3.9 12.6a5 5 0 0 1 7.1-7l1 1 1-1a5 5 0 0 1 7.1 7L12 20.4Zm0-2.8 6.7-6.4a3 3 0 1 0-4.3-4.2L12 9.4 9.6 7A3 3 0 1 0 5.3 11.2L12 17.6Z"
-            />
-          </svg>
-        </button>
-        <button id="volume" data-action="mute" title="Mute">
-          <svg width="17" height="17" viewBox="0 0 24 24">
-            <path
-              id="volume-path"
-              d="M4 9h3l4-4v14l-4-4H4V9Zm11.5 3a3.5 3.5 0 0 0-2-3.2v6.4a3.5 3.5 0 0 0 2-3.2Zm0-7.3v2.1a5.5 5.5 0 0 1 0 10.4v2.1a7.5 7.5 0 0 0 0-14.6Z"
+              id="repeat-path"
+              d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"
             />
           </svg>
         </button>
@@ -349,6 +372,9 @@
         likePath: document.getElementById('like-path'),
         volume: document.getElementById('volume'),
         volumePath: document.getElementById('volume-path'),
+        shuffle: document.getElementById('shuffle'),
+        repeat: document.getElementById('repeat'),
+        repeatPath: document.getElementById('repeat-path'),
         track: document.getElementById('track'),
         fill: document.getElementById('fill'),
       };
@@ -363,6 +389,10 @@
         'M4 9h3l4-4v14l-4-4H4V9Zm16.3 1.1-1.4-1.4L17 10.6 15.1 8.7l-1.4 1.4 1.9 1.9-1.9 1.9 1.4 1.4 1.9-1.9 1.9 1.9 1.4-1.4-1.9-1.9 1.9-1.9Z';
       const PLAY = 'M8 5v14l11-7L8 5Z';
       const PAUSE = 'M6 5h4v14H6V5Zm8 0h4v14h-4V5Z';
+      const REPEAT =
+        'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z';
+      const REPEAT_ONE =
+        'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z';
 
       let state = {
         title: '',
@@ -374,6 +404,8 @@
         likeStatus: 'INDIFFERENT',
         volume: 100,
         isMuted: false,
+        isShuffled: false,
+        repeatMode: 'NONE',
       };
 
       /** Locally interpolated position, resynced on every state push. */
@@ -436,6 +468,17 @@
           'd',
           state.isMuted ? SPEAKER_OFF : SPEAKER_ON,
         );
+
+        el.shuffle.classList.toggle('active', state.isShuffled);
+
+        const repeatsOne = state.repeatMode === 'ONE';
+        el.repeat.classList.toggle('active', state.repeatMode !== 'NONE');
+        el.repeatPath.setAttribute('d', repeatsOne ? REPEAT_ONE : REPEAT);
+        el.repeat.title = repeatsOne
+          ? 'Repeat one'
+          : state.repeatMode === 'ALL'
+            ? 'Repeat all'
+            : 'Repeat';
 
         renderTrack();
       };

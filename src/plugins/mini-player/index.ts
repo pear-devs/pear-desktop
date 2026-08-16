@@ -29,7 +29,7 @@ export const defaultConfig: MiniPlayerPluginConfig = {
   openOnStart: false,
   hotkey: 'CmdOrCtrl+Shift+M',
   position: null,
-  size: [400, 100],
+  size: [480, 100],
 };
 
 export default createPlugin({

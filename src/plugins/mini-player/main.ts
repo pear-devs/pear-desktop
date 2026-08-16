@@ -6,7 +6,11 @@ import localShortcut from 'electron-localshortcut';
 
 import { getSongControls } from '@/providers/song-controls';
 import { registerCallback, type SongInfo } from '@/providers/song-info';
-import { LikeType, type VolumeState } from '@/types/datahost-get-state';
+import {
+  LikeType,
+  type RepeatMode,
+  type VolumeState,
+} from '@/types/datahost-get-state';
 import { LoggerPrefix } from '@/utils';
 
 import type { MiniPlayerPluginConfig } from './index';
@@ -23,6 +27,8 @@ interface MiniPlayerState {
   likeStatus: LikeType;
   volume: number;
   isMuted: boolean;
+  isShuffled: boolean;
+  repeatMode: RepeatMode;
 }
 
 const MARGIN = 24;
@@ -48,6 +54,8 @@ const state: MiniPlayerState = {
   likeStatus: LikeType.Indifferent,
   volume: 100,
   isMuted: false,
+  isShuffled: false,
+  repeatMode: 'NONE',
 };
 
 const isOpen = () => !!miniWindow && !miniWindow.isDestroyed();
@@ -95,6 +103,16 @@ const onVolumeChanged = (_: Electron.IpcMainEvent, volume: VolumeState) => {
 
 const onLikeChanged = (_: Electron.IpcMainEvent, likeStatus: LikeType) => {
   state.likeStatus = likeStatus;
+  pushState();
+};
+
+const onShuffleChanged = (_: Electron.IpcMainEvent, isShuffled: boolean) => {
+  state.isShuffled = isShuffled;
+  pushState();
+};
+
+const onRepeatChanged = (_: Electron.IpcMainEvent, repeatMode: RepeatMode) => {
+  state.repeatMode = repeatMode ?? 'NONE';
   pushState();
 };
 
@@ -184,7 +202,7 @@ const openMiniPlayer = () => {
     height,
     x: position[0],
     y: position[1],
-    minWidth: 320,
+    minWidth: 400,
     minHeight: 92,
     maxHeight: 140,
     title: 'Mini Player',
@@ -233,9 +251,14 @@ const openMiniPlayer = () => {
     mainWindow.hide();
   }
 
-  // Ask the renderer to start reporting volume and like changes.
+  // Ask the renderer to start reporting player state changes.
   mainWindow?.webContents.send('peard:setup-volume-changed-listener');
   mainWindow?.webContents.send('peard:setup-like-changed-listener');
+  mainWindow?.webContents.send('peard:setup-repeat-changed-listener');
+  mainWindow?.webContents.send('peard:setup-shuffle-changed-listener');
+
+  // The shuffle observer only fires on change, so ask for the current value.
+  mainWindow?.webContents.send('peard:get-shuffle');
 };
 
 const closeMiniPlayer = () => {
@@ -314,6 +337,16 @@ const onControl = (
       controls.like();
       break;
     }
+    case 'shuffle': {
+      controls.shuffle();
+      // The player bar does not always report back, so ask for the new value.
+      controls.requestShuffleInformation();
+      break;
+    }
+    case 'repeat': {
+      controls.switchRepeat(1);
+      break;
+    }
     case 'mute': {
       controls.muteUnmute();
       break;
@@ -370,6 +403,9 @@ export const onMainLoad = async ({
   ipcMain.on('mini-player:ready', onReady);
   ipcMain.on('peard:volume-changed', onVolumeChanged);
   ipcMain.on('peard:like-changed', onLikeChanged);
+  ipcMain.on('peard:shuffle-changed', onShuffleChanged);
+  ipcMain.on('peard:get-shuffle-response', onShuffleChanged);
+  ipcMain.on('peard:repeat-changed', onRepeatChanged);
   ipcMain.on('plugin:toggle-mini-player', toggleMiniPlayer);
 
   if (!callbackRegistered) {
@@ -409,6 +445,9 @@ export const onUnload = () => {
   ipcMain.removeListener('mini-player:ready', onReady);
   ipcMain.removeListener('peard:volume-changed', onVolumeChanged);
   ipcMain.removeListener('peard:like-changed', onLikeChanged);
+  ipcMain.removeListener('peard:shuffle-changed', onShuffleChanged);
+  ipcMain.removeListener('peard:get-shuffle-response', onShuffleChanged);
+  ipcMain.removeListener('peard:repeat-changed', onRepeatChanged);
   ipcMain.removeAllListeners('plugin:toggle-mini-player');
 
   unregisterHotkey(mainWindow);

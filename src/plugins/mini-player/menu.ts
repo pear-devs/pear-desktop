@@ -108,7 +108,7 @@ export const onMenu = async ({
     {
       label: t('plugins.mini-player.menu.reset-position'),
       click() {
-        setConfig({ position: null, size: [400, 100] });
+        setConfig({ position: null, size: [480, 100] });
       },
     },
   ];

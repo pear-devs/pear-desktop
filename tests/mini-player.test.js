@@ -82,7 +82,7 @@ test('Mini player - opens, renders pushed state and forwards controls', async ()
 
   expect(windowFlags.isAlwaysOnTop).toBe(true);
   expect(windowFlags.isResizable).toBe(true);
-  expect(windowFlags.size[0]).toBe(400);
+  expect(windowFlags.size[0]).toBe(480);
 
   // Push a song state through the same channel the backend uses.
   await app.evaluate(({ BrowserWindow }) => {
@@ -100,12 +100,20 @@ test('Mini player - opens, renders pushed state and forwards controls', async ()
       likeStatus: 'LIKE',
       volume: 60,
       isMuted: false,
+      isShuffled: true,
+      repeatMode: 'ONE',
     });
   });
 
   await expect(miniPlayer.locator('#title')).toHaveText('Bohemian Rhapsody');
   await expect(miniPlayer.locator('#artist')).toHaveText('Queen');
   await expect(miniPlayer.locator('#like')).toHaveClass(/liked/);
+  await expect(miniPlayer.locator('#shuffle')).toHaveClass(/active/);
+  await expect(miniPlayer.locator('#repeat')).toHaveClass(/active/);
+  await expect(miniPlayer.locator('#repeat')).toHaveAttribute(
+    'title',
+    'Repeat one',
+  );
 
   // 50s of 200s => the progress fill covers a quarter of the bar.
   const fillRatio = await miniPlayer.evaluate(() => {
