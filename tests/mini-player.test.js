@@ -9,8 +9,8 @@ process.env.NODE_ENV = 'test';
 
 const appPath = path.resolve(import.meta.dirname, '..');
 
-/** Boot the app with the mini player enabled in a throwaway user data dir. */
-const launchWithMiniPlayer = async () => {
+/** A throwaway profile with the mini player enabled. */
+const createUserDataDir = () => {
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ytm-mini-'));
 
   fs.writeFileSync(
@@ -28,7 +28,11 @@ const launchWithMiniPlayer = async () => {
     }),
   );
 
-  const app = await electron.launch({
+  return userDataDir;
+};
+
+const launchWithMiniPlayer = (userDataDir) =>
+  electron.launch({
     cwd: appPath,
     args: [
       appPath,
@@ -39,9 +43,6 @@ const launchWithMiniPlayer = async () => {
       '--disable-dev-shm-usage',
     ],
   });
-
-  return { app, userDataDir };
-};
 
 const getMiniPlayerWindow = async (app) => {
   for (let attempt = 0; attempt < 60; attempt++) {
@@ -62,17 +63,32 @@ const getMiniPlayerWindow = async (app) => {
 test('Mini player - opens, renders pushed state and forwards controls', async () => {
   test.setTimeout(120_000);
 
-  const { app, userDataDir } = await launchWithMiniPlayer();
+  await withMiniPlayerApp(runAssertions);
+});
+
+/**
+ * Owns the temporary profile from before the launch until after the shutdown,
+ * so neither a failed startup nor a failed assertion leaves anything behind.
+ */
+const withMiniPlayerApp = async (run) => {
+  const userDataDir = createUserDataDir();
+  let app;
 
   try {
-    await runAssertions(app);
+    app = await launchWithMiniPlayer(userDataDir);
+    await run(app);
   } finally {
-    // Always tear down, so a failed assertion cannot leave the app running or
-    // the temporary profile behind.
-    await app.close().catch(() => {});
+    if (app) {
+      try {
+        await app.close();
+      } catch (error) {
+        console.warn('mini player test: app.close() failed', error);
+      }
+    }
+
     fs.rmSync(userDataDir, { recursive: true, force: true });
   }
-});
+};
 
 const runAssertions = async (app) => {
   const miniPlayer = await getMiniPlayerWindow(app);
