@@ -38,7 +38,10 @@ export default createPlugin({
 
       const scan = () => {
         for (const [toast, timer] of timers) {
-          if (!toast.classList.contains('paper-toast-open')) {
+          if (
+            !toast.isConnected ||
+            !toast.classList.contains('paper-toast-open')
+          ) {
             clearTimeout(timer);
             timers.delete(toast);
           }
@@ -50,7 +53,23 @@ export default createPlugin({
       };
 
       scan();
-      this.observer = new MutationObserver(scan);
+      this.observer = new MutationObserver((mutations) => {
+        const isToastRelated = (node: Node) =>
+          node instanceof Element &&
+          (node.matches('tp-yt-paper-toast') ||
+            node.closest('tp-yt-paper-toast') !== null ||
+            node.querySelector('tp-yt-paper-toast') !== null);
+
+        if (
+          mutations.some(
+            ({ target, addedNodes, removedNodes }) =>
+              isToastRelated(target) ||
+              [...addedNodes, ...removedNodes].some(isToastRelated),
+          )
+        ) {
+          scan();
+        }
+      });
       this.observer.observe(root, {
         childList: true,
         subtree: true,
