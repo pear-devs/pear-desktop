@@ -36,10 +36,18 @@ export default createPlugin({
         );
       };
 
-      const scan = () =>
+      const scan = () => {
+        for (const [toast, timer] of timers) {
+          if (!toast.classList.contains('paper-toast-open')) {
+            clearTimeout(timer);
+            timers.delete(toast);
+          }
+        }
+
         root
           .querySelectorAll<Toast>('tp-yt-paper-toast.paper-toast-open')
           .forEach(arm);
+      };
 
       scan();
       this.observer = new MutationObserver(scan);
