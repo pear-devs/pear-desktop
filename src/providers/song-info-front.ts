@@ -35,12 +35,19 @@ export const setupSeekedListener = singleton(() => {
 });
 
 export const setupTimeChangedListener = singleton(() => {
+  let lastSentSeconds = Number.NaN;
   const progressObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       const target = mutation.target as Node & { value: string };
       const numberValue = Number(target.value);
-      window.ipcRenderer.send('peard:time-changed', numberValue);
-      songInfo.elapsedSeconds = numberValue;
+      const seconds = Math.floor(numberValue);
+      songInfo.elapsedSeconds = seconds;
+      // The progress bar mutates many times per second; plugins only need whole seconds.
+      if (seconds == lastSentSeconds || Number.isNaN(seconds)) {
+        continue;
+      }
+      lastSentSeconds = seconds;
+      window.ipcRenderer.send('peard:time-changed', seconds);
     }
   });
   const progressBar = document.querySelector('#progress-bar');
@@ -255,6 +262,17 @@ export const setupSongInfo = (api: MusicPlayer) => {
 
   const waitingEvent = new Set<string>();
   const waitingTimeouts = new Map<string, NodeJS.Timeout>();
+  const boundPlaybackVideos = new WeakSet<HTMLVideoElement>();
+
+  const bindPlaybackListeners = (video: HTMLVideoElement) => {
+    if (boundPlaybackVideos.has(video)) {
+      return;
+    }
+    boundPlaybackVideos.add(video);
+    for (const status of ['playing', 'pause'] as const) {
+      video.addEventListener(status, playPausedHandlers[status]);
+    }
+  };
 
   const clearVideoTimeout = (videoId: string) => {
     const timeoutId = waitingTimeouts.get(videoId);
@@ -278,9 +296,8 @@ export const setupSongInfo = (api: MusicPlayer) => {
       const video = document.querySelector<HTMLVideoElement>('video');
       video?.dispatchEvent(srcChangedEvent);
 
-      for (const status of ['playing', 'pause'] as const) {
-        // for fix issue that pause event not fired
-        video?.addEventListener(status, playPausedHandlers[status]);
+      if (video) {
+        bindPlaybackListeners(video);
       }
 
       clearVideoTimeout(videoData.videoId);
@@ -301,9 +318,7 @@ export const setupSongInfo = (api: MusicPlayer) => {
   const video = document.querySelector('video');
 
   if (video) {
-    for (const status of ['playing', 'pause'] as const) {
-      video.addEventListener(status, playPausedHandlers[status]);
-    }
+    bindPlaybackListeners(video);
 
     if (!isNaN(video.duration)) {
       const {

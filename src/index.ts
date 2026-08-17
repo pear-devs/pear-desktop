@@ -106,7 +106,7 @@ app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
 // WaylandWindowDecorations: Required for Wayland decorations
 app.commandLine.appendSwitch(
   'enable-features',
-  'OverlayScrollbar,SharedArrayBuffer,UseOzonePlatform,WaylandWindowDecorations',
+  'OverlayScrollbar,SharedArrayBuffer,UseOzonePlatform,WaylandWindowDecorations,IntensiveWakeUpThrottling,CalculateNativeWinOcclusion',
 );
 
 // Disable Fluent Scrollbar (for OverlayScrollbar)
@@ -367,8 +367,10 @@ async function createMainWindow() {
     backgroundColor: '#000',
     show: false,
     webPreferences: {
+      backgroundThrottling: true,
       contextIsolation: true,
       preload: path.join(__dirname, '..', 'preload', 'preload.cjs'),
+      spellcheck: false,
       ...(isTesting()
         ? undefined
         : {
@@ -403,10 +405,10 @@ async function createMainWindow() {
     const scaledY = windowY;
 
     if (
-      scaledX + (scaledWidth / 2) < display.bounds.x - 8 || // Left
-      scaledX + (scaledWidth / 2) > display.bounds.x + display.bounds.width || // Right
+      scaledX + scaledWidth / 2 < display.bounds.x - 8 || // Left
+      scaledX + scaledWidth / 2 > display.bounds.x + display.bounds.width || // Right
       scaledY < display.bounds.y - 8 || // Top
-      scaledY + (scaledHeight / 2) > display.bounds.y + display.bounds.height // Bottom
+      scaledY + scaledHeight / 2 > display.bounds.y + display.bounds.height // Bottom
     ) {
       // Window is offscreen
       if (is.dev()) {

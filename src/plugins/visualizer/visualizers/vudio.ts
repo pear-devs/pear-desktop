@@ -6,6 +6,7 @@ import type { VisualizerPluginConfig } from '../index';
 
 class VudioVisualizer extends Visualizer {
   private readonly visualizer: Vudio;
+  private readonly onVisibilityChange: () => void;
 
   constructor(
     _audioContext: AudioContext,
@@ -24,6 +25,15 @@ class VudioVisualizer extends Visualizer {
       ...config,
     });
 
+    this.onVisibilityChange = () => {
+      if (document.hidden) {
+        this.visualizer.pause();
+      } else {
+        this.visualizer.dance();
+      }
+    };
+    document.addEventListener('visibilitychange', this.onVisibilityChange);
+
     this.visualizer.dance();
   }
 
@@ -35,6 +45,7 @@ class VudioVisualizer extends Visualizer {
   }
 
   destroy() {
+    document.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.visualizer.pause();
     try {
       this.audioSource.disconnect(this.audioNode);

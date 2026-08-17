@@ -695,7 +695,7 @@
       "name": "Notifications"
     },
     "performance-improvement": {
-      "description": "Improve performance by enabling experimental scripts",
+      "description": "Reduce CPU and memory use with timer taming, unused DOM cleanup, and pausing extra visual work while the window is hidden",
       "name": "Performance improvement [Beta]"
     },
     "picture-in-picture": {
@@ -821,6 +821,48 @@
           "label": "Choose Global Keybinds for Songs Control:",
           "title": "Global Keybinds"
         }
+      }
+    },
+    "skip-ai-music": {
+      "description": "Skip known AI-generated artists and custom blocked artists, songs, or title keywords, using the Soul Over AI community list",
+      "menu": {
+        "clear-blocked-songs": "Clear blocked songs ({{count}})",
+        "clear-blocked-songs-cancel": "Cancel",
+        "clear-blocked-songs-confirm": "Clear",
+        "clear-blocked-songs-message": "Remove every song you blocked from the player bar?",
+        "community-list": {
+          "never": "never",
+          "refresh": "Refresh community AI artist list",
+          "refresh-failed": "Could not download the community AI artist list",
+          "refresh-success": "Loaded {{count}} AI artists",
+          "status": "Community list: {{count}} artists (updated {{fetched}})"
+        },
+        "dislike-on-skip": "Dislike skipped tracks",
+        "edit-allowed-artists": "Edit allowed artists",
+        "edit-blocked-artists": "Edit blocked artists",
+        "edit-keywords": "Edit title keywords",
+        "show-player-buttons": "Show block buttons on the player bar",
+        "skip-common-keywords": "Skip common AI title keywords (Suno, AI cover, sped up, ...)",
+        "use-community-list": "Skip artists from the Soul Over AI list"
+      },
+      "name": "Skip AI Music",
+      "prompt": {
+        "allowed-artists": {
+          "label": "Artists that should always play, even if they are on a block list (comma-separated)",
+          "title": "Allowed artists"
+        },
+        "blocked-artists": {
+          "label": "Artists to skip (comma-separated). Blocking \"Prince\" will not skip \"Princess Nokia\".",
+          "title": "Blocked artists"
+        },
+        "keywords": {
+          "label": "Skip a track when its title or artist contains one of these phrases (comma-separated)",
+          "title": "Title keywords"
+        }
+      },
+      "renderer": {
+        "block-artist": "Block artist",
+        "block-song": "Block song"
       }
     },
     "skip-disliked-songs": {

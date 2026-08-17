@@ -1,0 +1,23 @@
+.skip-ai-music-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 8px;
+}
+
+.skip-ai-music-button {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  color: var(--ytmusic-text-primary, #fff);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 4px 10px;
+  text-transform: uppercase;
+}
+
+.skip-ai-music-button:hover {
+  background: rgba(255, 255, 255, 0.18);
+}

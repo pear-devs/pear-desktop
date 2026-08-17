@@ -128,7 +128,7 @@ export default createPlugin({
             if (lastImageData) {
               const frameOffset =
                 (1 / this.buffer) * (1000 / this.interpolationTime);
-              context.globalAlpha = 1 - (frameOffset * 2); // because of alpha value must be < 1
+              context.globalAlpha = 1 - frameOffset * 2; // because of alpha value must be < 1
               context.putImageData(lastImageData, 0, 0);
               context.globalAlpha = frameOffset;
             }
@@ -175,14 +175,22 @@ export default createPlugin({
           canvasInterval = null;
         };
         const onPlay = () => {
+          if (document.hidden) {
+            return;
+          }
           if (canvasInterval) clearInterval(canvasInterval);
           canvasInterval = setInterval(
             onSync,
             Math.max(1, Math.ceil(1000 / this.buffer)),
           );
         };
+        const onVisibilityChange = () => {
+          if (document.hidden) onPause();
+          else onPlay();
+        };
         songVideo.addEventListener('pause', onPause);
         songVideo.addEventListener('play', onPlay);
+        document.addEventListener('visibilitychange', onVisibilityChange);
 
         /* injecting */
         videoWrapper.prepend(blurCanvas);
@@ -193,6 +201,7 @@ export default createPlugin({
 
           songVideo.removeEventListener('pause', onPause);
           songVideo.removeEventListener('play', onPlay);
+          document.removeEventListener('visibilitychange', onVisibilityChange);
 
           if (blurCanvas.isConnected) blurCanvas.remove();
         };
@@ -252,7 +261,9 @@ export default createPlugin({
         observer.observe(playerPage, { attributes: true });
 
         /* fallback ticker for when the observer isn't triggered */
-        this.interval = setInterval(injectBlurElement, 1000);
+        this.interval = setInterval(() => {
+          if (!document.hidden) injectBlurElement();
+        }, 1000);
       }
     },
     onConfigChange(newConfig) {

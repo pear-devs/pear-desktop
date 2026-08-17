@@ -8,7 +8,7 @@ let hasAudioStarted = false;
 
 const smoothing = 0.1;
 const threshold = -100; // DB (-100 = absolute silence, 0 = loudest)
-const interval = 2; // Ms
+const interval = 25; // Ms
 const history = 10;
 const speakingHistory = Array.from({ length: history }).fill(0) as number[];
 

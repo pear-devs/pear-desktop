@@ -9,6 +9,7 @@ class ButterchurnVisualizer extends Visualizer {
   private readonly visualizer: ReturnType<typeof Butterchurn.createVisualizer>;
   private destroyed: boolean = false;
   private animFrameHandle: number | null;
+  private readonly onVisibilityChange: () => void;
 
   constructor(
     audioContext: AudioContext,
@@ -23,6 +24,10 @@ class ButterchurnVisualizer extends Visualizer {
     const preset = ButterchurnPresets[config.butterchurn.preset];
     const renderVisualizer = () => {
       if (this.destroyed) return;
+      if (document.hidden) {
+        this.animFrameHandle = null;
+        return;
+      }
       this.visualizer.render();
       this.animFrameHandle = requestAnimationFrame(renderVisualizer);
     };
@@ -34,6 +39,14 @@ class ButterchurnVisualizer extends Visualizer {
     this.visualizer.loadPreset(preset, config.butterchurn.blendTimeInSeconds);
     this.visualizer.connectAudio(audioNode);
 
+    this.onVisibilityChange = () => {
+      if (this.destroyed || document.hidden || this.animFrameHandle != null) {
+        return;
+      }
+      this.animFrameHandle = requestAnimationFrame(renderVisualizer);
+    };
+    document.addEventListener('visibilitychange', this.onVisibilityChange);
+
     // Start animation request loop. Do not use setInterval!
     this.animFrameHandle = requestAnimationFrame(renderVisualizer);
   }
@@ -43,6 +56,7 @@ class ButterchurnVisualizer extends Visualizer {
   }
 
   destroy() {
+    document.removeEventListener('visibilitychange', this.onVisibilityChange);
     if (this.animFrameHandle) cancelAnimationFrame(this.animFrameHandle);
     this.destroyed = true;
     try {
