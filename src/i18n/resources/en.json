@@ -823,6 +823,77 @@
         }
       }
     },
+    "skip-ai-music": {
+      "description": "Skip AI-related artists and tracks using Zoundhub, custom block lists, and title keywords",
+      "menu": {
+        "allowed-artists": {
+          "label": "Allowed artists ({{count}})"
+        },
+        "behavior": {
+          "label": "When skipping"
+        },
+        "blocked-artists": {
+          "label": "Blocked artists ({{count}})"
+        },
+        "blocked-songs": {
+          "label": "Blocked songs ({{count}})"
+        },
+        "dislike-on-skip": "Dislike skipped tracks",
+        "keywords": {
+          "label": "Title keywords ({{count}})"
+        },
+        "skip-common-keywords": "Skip common AI title keywords",
+        "use-community-list": "Use Zoundhub artist list",
+        "zoundhub": {
+          "label": "Zoundhub",
+          "never": "never",
+          "refresh": "Refresh list",
+          "status": "{{count}} artists at {{score}}%+ (updated {{fetched}})",
+          "threshold-value": "SubmitHub threshold: {{score}}%"
+        }
+      },
+      "name": "Skip AI Music",
+      "prompt": {
+        "threshold": {
+          "description": "Skip Zoundhub artists at or above this SubmitHub AI score.",
+          "title": "SubmitHub threshold",
+          "value": "{score}% or higher"
+        },
+        "list-editor": {
+          "add": "Add",
+          "cancel": "Cancel",
+          "duplicate": "{name} is already on the list",
+          "empty": "Nothing added yet",
+          "remove": "Remove",
+          "remove-named": "Remove {name}",
+          "save": "Save"
+        },
+        "allowed-artists": {
+          "description": "These artists always play, even if they are on a skip list.",
+          "placeholder": "Artist name",
+          "title": "Allowed artists"
+        },
+        "blocked-artists": {
+          "description": "Add each artist you want skipped.",
+          "placeholder": "Artist name",
+          "title": "Blocked artists"
+        },
+        "blocked-songs": {
+          "description": "Use Artist - Title to block a specific song. Title alone works when the artist is unknown.",
+          "placeholder": "Artist - Title",
+          "title": "Blocked songs"
+        },
+        "keywords": {
+          "description": "Add a phrase to skip when it appears in the title or artist name.",
+          "placeholder": "Phrase",
+          "title": "Title keywords"
+        }
+      },
+      "renderer": {
+        "block-artist": "Block artist",
+        "block-song": "Block song"
+      }
+    },
     "skip-disliked-songs": {
       "description": "Skips disliked songs",
       "name": "Skip Disliked Songs"
