@@ -879,9 +879,10 @@
           "title": "Blocked artists"
         },
         "blocked-songs": {
-          "description": "Use Artist - Title to block a specific song. Title alone works when the artist is unknown.",
-          "placeholder": "Artist - Title",
-          "title": "Blocked songs"
+          "artist-placeholder": "Artist (optional)",
+          "description": "Add artist and title separately. Leave artist empty to block by title only.",
+          "title": "Blocked songs",
+          "title-placeholder": "Title"
         },
         "keywords": {
           "description": "Add a phrase to skip when it appears in the title or artist name.",

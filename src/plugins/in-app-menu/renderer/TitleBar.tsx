@@ -130,10 +130,7 @@ const PanelRenderer = (props: PanelRendererProps) => {
             </Match>
             <Match when={subItem().type === 'submenu'}>
               <PanelItem
-                checked={
-                  subItem().submenu?.items?.[0]?.type === 'checkbox' &&
-                  subItem().submenu?.items?.[0]?.checked
-                }
+                checked={subItem().checked === true}
                 chip={subItem().sublabel}
                 commandId={subItem().commandId}
                 level={[...(props.level ?? []), subItem().commandId]}

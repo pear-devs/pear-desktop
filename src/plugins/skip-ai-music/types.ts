@@ -26,6 +26,8 @@ export const COMMON_AI_KEYWORDS = [
   'udio',
 ];
 
+export const DEFAULT_COMMUNITY_MIN_SCORE = 90;
+
 export const defaultConfig: SkipAiMusicPluginConfig = {
   allowedArtists: [],
   blockedArtists: [],
@@ -35,12 +37,10 @@ export const defaultConfig: SkipAiMusicPluginConfig = {
   enabled: false,
   skipCommonKeywords: false,
   useCommunityList: true,
-  communityMinScore: 90,
+  communityMinScore: DEFAULT_COMMUNITY_MIN_SCORE,
 };
 
 export const COMMUNITY_ARTISTS_URL = 'https://zoundhub.com/api/artists/all';
-
-export const DEFAULT_COMMUNITY_MIN_SCORE = 90;
 
 export const COMMUNITY_CACHE_VERSION = 3;
 

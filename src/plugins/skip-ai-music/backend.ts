@@ -3,7 +3,6 @@ import path from 'node:path';
 
 import { app } from 'electron';
 
-import { store } from '@/config/store';
 import { getSongControls } from '@/providers/song-controls';
 import {
   registerCallback,
@@ -13,7 +12,7 @@ import {
 } from '@/providers/song-info';
 import { createBackend, LoggerPrefix } from '@/utils';
 
-import { shouldSkipTrack } from './match';
+import { buildCommunityArtistSet, shouldSkipTrack } from './match';
 import {
   COMMUNITY_ARTISTS_URL,
   COMMUNITY_CACHE_VERSION,
@@ -42,8 +41,10 @@ type CommunityArtistEntry = {
 let pluginConfig: SkipAiMusicPluginConfig | null = null;
 let scoredArtists: ScoredArtist[] = [];
 let communityArtists: string[] = [];
+let communityArtistSet = new Set<string>();
 let communityFetchedAt = 0;
 let refreshTimer: NodeJS.Timeout | null = null;
+let refreshInFlight: Promise<string[]> | null = null;
 let lastSongInfo: SongInfo | null = null;
 let lastSkippedVideoId = '';
 let lastSkipAt = 0;
@@ -73,6 +74,7 @@ const applyScoreFilter = () => {
   communityArtists = scoredArtists
     .filter((artist) => artist.score >= minScore)
     .map((artist) => artist.name);
+  communityArtistSet = buildCommunityArtistSet(communityArtists);
 };
 
 const parseCommunityArtists = (data: unknown): ScoredArtist[] => {
@@ -179,26 +181,40 @@ export const refreshCommunityArtists = async (
     return communityArtists;
   }
 
-  const response = await fetch(COMMUNITY_ARTISTS_URL);
-  if (!response.ok) {
-    throw new Error(`Community list HTTP ${response.status}`);
+  if (refreshInFlight) {
+    return refreshInFlight;
   }
 
-  const data: unknown = await response.json();
-  const artists = parseCommunityArtists(data);
-  if (artists.length == 0) {
-    throw new Error('Community list was empty');
-  }
+  refreshInFlight = (async () => {
+    try {
+      const response = await fetch(COMMUNITY_ARTISTS_URL, {
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!response.ok) {
+        throw new Error(`Community list HTTP ${response.status}`);
+      }
 
-  scoredArtists = artists;
-  applyScoreFilter();
-  communityFetchedAt = Date.now();
-  await saveCachedArtists();
-  console.log(
-    LoggerPrefix,
-    `skip-ai-music: loaded ${communityArtists.length} community artists at ${minScoreFromConfig()}%+`,
-  );
-  return communityArtists;
+      const data: unknown = await response.json();
+      const artists = parseCommunityArtists(data);
+      if (artists.length == 0) {
+        throw new Error('Community list was empty');
+      }
+
+      scoredArtists = artists;
+      applyScoreFilter();
+      communityFetchedAt = Date.now();
+      await saveCachedArtists();
+      console.log(
+        LoggerPrefix,
+        `skip-ai-music: loaded ${communityArtists.length} community artists at ${minScoreFromConfig()}%+`,
+      );
+      return communityArtists;
+    } finally {
+      refreshInFlight = null;
+    }
+  })();
+
+  return refreshInFlight;
 };
 
 const clearSkipTimer = () => {
@@ -244,7 +260,7 @@ const maybeSkip = (window: Electron.BrowserWindow, songInfo: SongInfo) => {
   const result = shouldSkipTrack(
     { artist: songInfo.artist, title: songInfo.title },
     pluginConfig,
-    communityArtists,
+    communityArtistSet,
   );
 
   if (!result.skip) {
@@ -334,15 +350,15 @@ export const backend = createBackend<
   },
   SkipAiMusicPluginConfig
 >({
-  async start({ getConfig, window }) {
-    if (store.get('plugins.skip-ai-music.showPlayerButtons') != null) {
-      store.delete('plugins.skip-ai-music.showPlayerButtons');
-    }
-
+  async start({ getConfig, setConfig, window }) {
     pluginConfig = await getConfig();
-    pluginConfig.communityMinScore = clampCommunityMinScore(
+    const clampedScore = clampCommunityMinScore(
       pluginConfig.communityMinScore,
     );
+    if (clampedScore != pluginConfig.communityMinScore) {
+      await setConfig({ communityMinScore: clampedScore });
+      pluginConfig.communityMinScore = clampedScore;
+    }
     pluginWindow = window;
     await loadCachedArtists();
 

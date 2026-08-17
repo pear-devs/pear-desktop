@@ -5,6 +5,11 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 
 import promptOptions from '@/providers/prompt-options';
 
+import {
+  editorWebPreferences,
+  serializeEditorPayload,
+} from './editor-utils';
+
 export type ThresholdPickerOptions = {
   cancelLabel: string;
   description: string;
@@ -14,7 +19,9 @@ export type ThresholdPickerOptions = {
   valueLabel: string;
 };
 
-const pickerHtml = (payload: Record<string, unknown>) => `<!DOCTYPE html>
+const pickerHtml = (payload: Record<string, unknown>) => {
+  const serializedPayload = serializeEditorPayload(payload);
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -220,8 +227,7 @@ const pickerHtml = (payload: Record<string, unknown>) => `<!DOCTYPE html>
     </div>
   </div>
   <script>
-    const payload = ${JSON.stringify(payload)};
-    const { ipcRenderer } = require('electron');
+    const payload = ${serializedPayload};
     const slider = document.getElementById('score-slider');
     const valueDisplay = document.getElementById('value-display');
     const sliderFill = document.getElementById('slider-fill');
@@ -243,7 +249,7 @@ const pickerHtml = (payload: Record<string, unknown>) => `<!DOCTYPE html>
     };
 
     const close = (value) => {
-      ipcRenderer.send(payload.channel, value);
+      window.skipAiMusicEditor.send(payload.channel, value);
     };
 
     setValue(payload.value);
@@ -268,12 +274,14 @@ const pickerHtml = (payload: Record<string, unknown>) => `<!DOCTYPE html>
 </body>
 </html>
 `;
+};
 
 export const promptThreshold = (
   parent: Electron.BrowserWindow,
   options: ThresholdPickerOptions,
 ): Promise<number | null> =>
   new Promise((resolve) => {
+    void (async () => {
     const channel = `skip-ai-music-threshold:${Date.now()}-${Math.random()}`;
     const { icon } = promptOptions();
     let settled = false;
@@ -294,10 +302,7 @@ export const promptThreshold = (
       title: options.title,
       icon: icon || undefined,
       backgroundColor: '#0f0f0f',
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-      },
+      webPreferences: await editorWebPreferences(),
     });
 
     const finish = (value: number | null) => {
@@ -330,17 +335,19 @@ export const promptThreshold = (
     });
 
     editor.setMenu(null);
-    writeFile(
-      file,
-      pickerHtml({
-        ...options,
-        channel,
-      }),
-      'utf8',
-    )
-      .then(() => editor.loadFile(file))
-      .catch((error: unknown) => {
-        console.error(error);
-        finish(null);
-      });
+    try {
+      await writeFile(
+        file,
+        pickerHtml({
+          ...options,
+          channel,
+        }),
+        'utf8',
+      );
+      await editor.loadFile(file);
+    } catch (error: unknown) {
+      console.error(error);
+      finish(null);
+    }
+    })();
   });

@@ -35,7 +35,6 @@ export const SkipAiMusicMenuItem = (props: SkipAiMusicMenuItemProps) => (
     </div>
     <div
       class="text style-scope ytmusic-menu-navigation-item-renderer"
-      id={props.id}
     >
       {props.label}
     </div>

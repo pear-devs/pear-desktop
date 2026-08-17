@@ -75,6 +75,30 @@ test('blocked songs require both title and artist', () => {
   expect(cover.skip).toBe(false);
 });
 
+test('blocked songs match featured artist tokens', () => {
+  const result = shouldSkipTrack(
+    { artist: 'Original feat. Someone', title: 'Cover Song' },
+    config({
+      blockedSongs: [{ artist: 'Original', title: 'Cover Song' }],
+    }),
+  );
+
+  expect(result.skip).toBe(true);
+  expect(result.reason).toBe('blocked-song');
+});
+
+test('title-only blocked songs skip any artist', () => {
+  const result = shouldSkipTrack(
+    { artist: 'Anyone', title: 'Cover Song' },
+    config({
+      blockedSongs: [{ artist: '', title: 'Cover Song' }],
+    }),
+  );
+
+  expect(result.skip).toBe(true);
+  expect(result.reason).toBe('blocked-song');
+});
+
 test('keywords use whole-phrase matching', () => {
   expect(hasWholePhrase('Song (Sped Up)', 'sped up')).toBe(true);
   expect(hasWholePhrase('Afterpiece', 'after')).toBe(false);

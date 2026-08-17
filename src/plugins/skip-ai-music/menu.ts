@@ -3,6 +3,7 @@ import { t } from '@/i18n';
 import { refreshCommunityArtists, getCommunityStatus } from './backend';
 import { promptStringList } from './list-editor';
 import { uniqueNormalized } from './match';
+import { promptSongList } from './song-list-editor';
 import { promptThreshold } from './threshold-picker';
 import {
   clampCommunityMinScore,
@@ -12,11 +13,32 @@ import {
 import type { MenuTemplate } from '@/menu';
 import type { MenuContext } from '@/types/contexts';
 
-const songLabel = (song: BlockedSong) => {
-  if (song.artist && song.title) {
-    return `${song.artist} - ${song.title}`;
-  }
-  return song.title || song.artist;
+const promptBlockedSongs = async (
+  window: Electron.BrowserWindow,
+  songs: BlockedSong[],
+) => {
+  const output = await promptSongList(window, {
+    title: t('plugins.skip-ai-music.prompt.blocked-songs.title'),
+    description: t('plugins.skip-ai-music.prompt.blocked-songs.description'),
+    artistPlaceholder: t(
+      'plugins.skip-ai-music.prompt.blocked-songs.artist-placeholder',
+    ),
+    titlePlaceholder: t(
+      'plugins.skip-ai-music.prompt.blocked-songs.title-placeholder',
+    ),
+    songs,
+    addLabel: t('plugins.skip-ai-music.prompt.list-editor.add'),
+    cancelLabel: t('plugins.skip-ai-music.prompt.list-editor.cancel'),
+    duplicateLabel: t('plugins.skip-ai-music.prompt.list-editor.duplicate'),
+    emptyLabel: t('plugins.skip-ai-music.prompt.list-editor.empty'),
+    removeLabel: t('plugins.skip-ai-music.prompt.list-editor.remove'),
+    removeNamedLabel: t(
+      'plugins.skip-ai-music.prompt.list-editor.remove-named',
+    ),
+    saveLabel: t('plugins.skip-ai-music.prompt.list-editor.save'),
+  });
+
+  return output ?? songs;
 };
 
 const promptList = async (
@@ -47,46 +69,6 @@ const promptList = async (
   }
 
   return uniqueNormalized(output);
-};
-
-const promptBlockedSongs = async (
-  window: Electron.BrowserWindow,
-  songs: BlockedSong[],
-) => {
-  const output = await promptStringList(window, {
-    title: t('plugins.skip-ai-music.prompt.blocked-songs.title'),
-    description: t('plugins.skip-ai-music.prompt.blocked-songs.description'),
-    placeholder: t('plugins.skip-ai-music.prompt.blocked-songs.placeholder'),
-    values: songs.map((song) => songLabel(song)),
-    addLabel: t('plugins.skip-ai-music.prompt.list-editor.add'),
-    cancelLabel: t('plugins.skip-ai-music.prompt.list-editor.cancel'),
-    duplicateLabel: t('plugins.skip-ai-music.prompt.list-editor.duplicate'),
-    emptyLabel: t('plugins.skip-ai-music.prompt.list-editor.empty'),
-    removeLabel: t('plugins.skip-ai-music.prompt.list-editor.remove'),
-    removeNamedLabel: t(
-      'plugins.skip-ai-music.prompt.list-editor.remove-named',
-    ),
-    saveLabel: t('plugins.skip-ai-music.prompt.list-editor.save'),
-  });
-
-  if (output == null) {
-    return songs;
-  }
-
-  const next: BlockedSong[] = [];
-  for (const entry of output) {
-    const split = entry.split(' - ');
-    if (split.length >= 2) {
-      const titlePart = split.pop()?.trim() || '';
-      const artistPart = split.join(' - ').trim();
-      if (titlePart) {
-        next.push({ artist: artistPart, title: titlePart });
-        continue;
-      }
-    }
-    next.push({ artist: '', title: entry.trim() });
-  }
-  return next;
 };
 
 export const onMenu = async ({

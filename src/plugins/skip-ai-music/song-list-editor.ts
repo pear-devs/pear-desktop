@@ -9,19 +9,21 @@ import {
   editorWebPreferences,
   serializeEditorPayload,
 } from './editor-utils';
+import type { BlockedSong } from './types';
 
-export type ListEditorOptions = {
+export type SongListEditorOptions = {
   addLabel: string;
+  artistPlaceholder: string;
   cancelLabel: string;
   description: string;
   duplicateLabel: string;
   emptyLabel: string;
-  placeholder: string;
   removeLabel: string;
   removeNamedLabel: string;
   saveLabel: string;
+  songs: BlockedSong[];
   title: string;
-  values: string[];
+  titlePlaceholder: string;
 };
 
 const editorHtml = (payload: Record<string, unknown>) => {
@@ -39,11 +41,8 @@ const editorHtml = (payload: Record<string, unknown>) => {
       --border: rgba(255, 255, 255, 0.1);
       --text: #f1f1f1;
       --muted: #aaa;
-      --accent: #3ea6ff;
     }
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     html, body {
       margin: 0;
       height: 100%;
@@ -51,11 +50,7 @@ const editorHtml = (payload: Record<string, unknown>) => {
       color: var(--text);
       font: 14px/1.5 "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
     }
-    body {
-      display: flex;
-      flex-direction: column;
-      padding: 14px;
-    }
+    body { display: flex; flex-direction: column; padding: 14px; }
     #container {
       display: flex;
       flex-direction: column;
@@ -74,26 +69,16 @@ const editorHtml = (payload: Record<string, unknown>) => {
       flex: 1;
       min-height: 0;
     }
-    #header {
-      text-align: center;
-    }
-    h1 {
-      margin: 0 0 6px;
-      font-size: 18px;
-      font-weight: 650;
-    }
+    #header { text-align: center; }
+    h1 { margin: 0 0 6px; font-size: 18px; font-weight: 650; }
     #description {
       margin: 0;
       color: var(--muted);
       font-size: 13px;
-      max-width: 36ch;
+      max-width: 40ch;
       margin-inline: auto;
     }
-    #count {
-      font-size: 12px;
-      color: var(--muted);
-      text-align: right;
-    }
+    #count { font-size: 12px; color: var(--muted); text-align: right; }
     #list-wrap {
       flex: 1;
       min-height: 160px;
@@ -102,9 +87,7 @@ const editorHtml = (payload: Record<string, unknown>) => {
       border-radius: 8px;
       background: rgba(0, 0, 0, 0.25);
     }
-    #list {
-      margin: 0;
-    }
+    #list { margin: 0; }
     #empty {
       margin: 0;
       padding: 28px 16px;
@@ -113,40 +96,31 @@ const editorHtml = (payload: Record<string, unknown>) => {
       font-size: 13px;
     }
     .row {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 8px;
       align-items: center;
-      gap: 10px;
       padding: 9px 12px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
-    .row:last-child {
-      border-bottom: 0;
-    }
-    .name {
-      flex: 1;
+    .row:last-child { border-bottom: 0; }
+    .field {
       overflow-wrap: anywhere;
       font-size: 13px;
     }
+    .field-label {
+      display: block;
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 2px;
+    }
     #add-form {
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
       gap: 8px;
     }
-    #add-form label {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
-      border: 0;
-    }
-    input, button {
-      font: inherit;
-    }
-    #item-input {
-      flex: 1;
+    input, button { font: inherit; }
+    #add-form input {
       min-width: 0;
       color: var(--text);
       background: rgba(0, 0, 0, 0.35);
@@ -154,15 +128,11 @@ const editorHtml = (payload: Record<string, unknown>) => {
       border-radius: 8px;
       padding: 9px 11px;
     }
-    #item-input:focus {
+    #add-form input:focus {
       outline: none;
       border-color: rgba(255, 255, 255, 0.22);
     }
-    button {
-      cursor: pointer;
-      border-radius: 999px;
-      padding: 9px 14px;
-    }
+    button { cursor: pointer; border-radius: 999px; padding: 9px 14px; }
     .row-remove {
       color: var(--muted);
       background: transparent;
@@ -181,10 +151,6 @@ const editorHtml = (payload: Record<string, unknown>) => {
       border: 1px solid var(--border);
       white-space: nowrap;
     }
-    #add:hover, #add:focus-visible {
-      background: rgba(255, 255, 255, 0.1);
-      outline: none;
-    }
     #actions {
       display: flex;
       justify-content: flex-end;
@@ -199,21 +165,12 @@ const editorHtml = (payload: Record<string, unknown>) => {
       border: 1px solid var(--border);
       min-width: 96px;
     }
-    #cancel:hover, #cancel:focus-visible {
-      background: rgba(255, 255, 255, 0.06);
-      outline: none;
-    }
     #save {
       color: #fff;
       background: #ff0033;
       border: 1px solid #ff0033;
       font-weight: 600;
       min-width: 96px;
-    }
-    #save:hover, #save:focus-visible {
-      background: #ff3355;
-      border-color: #ff3355;
-      outline: none;
     }
     #status {
       position: absolute;
@@ -236,8 +193,8 @@ const editorHtml = (payload: Record<string, unknown>) => {
         <p id="empty" hidden></p>
       </div>
       <form id="add-form">
-        <label for="item-input"></label>
-        <input id="item-input" type="text" autocomplete="off" />
+        <input id="artist-input" type="text" autocomplete="off" />
+        <input id="title-input" type="text" autocomplete="off" />
         <button id="add" type="submit"></button>
       </form>
       <div id="status" aria-live="polite"></div>
@@ -249,19 +206,23 @@ const editorHtml = (payload: Record<string, unknown>) => {
   </div>
   <script>
     const payload = ${serializedPayload};
-    const items = [...payload.values];
+    const items = payload.songs.map((song) => ({
+      artist: String(song.artist || '').trim(),
+      title: String(song.title || '').trim(),
+    }));
     const list = document.getElementById('list');
     const empty = document.getElementById('empty');
     const count = document.getElementById('count');
-    const input = document.getElementById('item-input');
+    const artistInput = document.getElementById('artist-input');
+    const titleInput = document.getElementById('title-input');
     const status = document.getElementById('status');
 
     document.title = payload.title;
     document.getElementById('title').textContent = payload.title;
     document.getElementById('description').textContent = payload.description;
     empty.textContent = payload.emptyLabel;
-    document.querySelector('#add-form label').textContent = payload.placeholder;
-    input.placeholder = payload.placeholder;
+    artistInput.placeholder = payload.artistPlaceholder;
+    titleInput.placeholder = payload.titlePlaceholder;
     document.getElementById('add').textContent = payload.addLabel;
     document.getElementById('cancel').textContent = payload.cancelLabel;
     document.getElementById('save').textContent = payload.saveLabel;
@@ -270,12 +231,21 @@ const editorHtml = (payload: Record<string, unknown>) => {
       window.skipAiMusicEditor.send(payload.channel, value);
     };
 
-    const sameName = (left, right) =>
-      left.trim().toLowerCase() == right.trim().toLowerCase();
+    const displayName = (song) => {
+      if (song.artist && song.title) {
+        return song.artist + ' - ' + song.title;
+      }
+      return song.title || song.artist;
+    };
+
+    const songKey = (song) =>
+      (song.artist + '\\u0000' + song.title).trim().toLowerCase();
 
     const sortItems = () => {
       items.sort((left, right) =>
-        left.localeCompare(right, undefined, { sensitivity: 'base' }),
+        displayName(left).localeCompare(displayName(right), undefined, {
+          sensitivity: 'base',
+        }),
       );
     };
 
@@ -285,54 +255,73 @@ const editorHtml = (payload: Record<string, unknown>) => {
       empty.hidden = items.length > 0;
       count.textContent = items.length > 0 ? items.length + ' entries' : '';
 
-      for (const name of items) {
+      for (const song of items) {
         const row = document.createElement('div');
         row.className = 'row';
         row.setAttribute('role', 'listitem');
 
-        const label = document.createElement('span');
-        label.className = 'name';
-        label.textContent = name;
+        const artistField = document.createElement('div');
+        artistField.className = 'field';
+        artistField.innerHTML =
+          '<span class="field-label">' +
+          payload.artistPlaceholder +
+          '</span>' +
+          (song.artist || '—');
+
+        const titleField = document.createElement('div');
+        titleField.className = 'field';
+        titleField.innerHTML =
+          '<span class="field-label">' +
+          payload.titlePlaceholder +
+          '</span>' +
+          song.title;
 
         const remove = document.createElement('button');
         remove.type = 'button';
         remove.className = 'row-remove';
         remove.textContent = payload.removeLabel;
+        const label = displayName(song);
         remove.setAttribute(
           'aria-label',
-          payload.removeNamedLabel.replace('{name}', name),
+          payload.removeNamedLabel.replace('{name}', label),
         );
         remove.addEventListener('click', () => {
-          const index = items.findIndex((item) => sameName(item, name));
+          const index = items.findIndex((item) => songKey(item) == songKey(song));
           if (index >= 0) {
             items.splice(index, 1);
-            status.textContent = payload.removeNamedLabel.replace('{name}', name);
+            status.textContent = payload.removeNamedLabel.replace('{name}', label);
             render();
-            input.focus();
+            titleInput.focus();
           }
         });
 
-        row.append(label, remove);
+        row.append(artistField, titleField, remove);
         list.append(row);
       }
     };
 
     document.getElementById('add-form').addEventListener('submit', (event) => {
       event.preventDefault();
-      const value = input.value.trim();
-      if (!value) {
+      const artist = artistInput.value.trim();
+      const title = titleInput.value.trim();
+      if (!title) {
         return;
       }
-      if (items.some((item) => sameName(item, value))) {
-        status.textContent = payload.duplicateLabel.replace('{name}', value);
-        input.select();
+      const next = { artist, title };
+      if (items.some((item) => songKey(item) == songKey(next))) {
+        status.textContent = payload.duplicateLabel.replace(
+          '{name}',
+          displayName(next),
+        );
+        titleInput.select();
         return;
       }
-      items.push(value);
-      input.value = '';
-      status.textContent = value;
+      items.push(next);
+      artistInput.value = '';
+      titleInput.value = '';
+      status.textContent = displayName(next);
       render();
-      input.focus();
+      titleInput.focus();
     });
 
     document.getElementById('cancel').addEventListener('click', () => close(null));
@@ -344,87 +333,95 @@ const editorHtml = (payload: Record<string, unknown>) => {
       if (event.key == 'Escape') {
         close(null);
       }
-      if (event.key == 'Enter' && document.activeElement != input) {
-        sortItems();
-        close(items);
-      }
     });
 
     render();
-    input.focus();
+    titleInput.focus();
   </script>
 </body>
 </html>
 `;
 };
 
-export const promptStringList = (
+export const promptSongList = (
   parent: Electron.BrowserWindow,
-  options: ListEditorOptions,
-): Promise<string[] | null> =>
+  options: SongListEditorOptions,
+): Promise<BlockedSong[] | null> =>
   new Promise((resolve) => {
     void (async () => {
-    const channel = `skip-ai-music-list-editor:${Date.now()}-${Math.random()}`;
-    const { icon } = promptOptions();
-    let settled = false;
-    const file = path.join(
-      app.getPath('temp'),
-      `skip-ai-music-list-${Date.now()}.html`,
-    );
-    const editor = new BrowserWindow({
-      parent,
-      modal: true,
-      width: 480,
-      height: 540,
-      minWidth: 400,
-      minHeight: 420,
-      show: false,
-      autoHideMenuBar: true,
-      title: options.title,
-      icon: icon || undefined,
-      backgroundColor: '#0f0f0f',
-      webPreferences: await editorWebPreferences(),
-    });
-
-    const finish = (value: string[] | null) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      ipcMain.removeAllListeners(channel);
-      unlink(file).catch(() => {});
-      if (!editor.isDestroyed()) {
-        editor.destroy();
-      }
-      resolve(value);
-    };
-
-    ipcMain.once(channel, (_event, value: string[] | null) => {
-      finish(Array.isArray(value) ? value : null);
-    });
-
-    editor.once('closed', () => {
-      finish(null);
-    });
-
-    editor.once('ready-to-show', () => {
-      editor.show();
-    });
-
-    editor.setMenu(null);
-    try {
-      await writeFile(
-        file,
-        editorHtml({
-          ...options,
-          channel,
-        }),
-        'utf8',
+      const channel = `skip-ai-music-song-editor:${Date.now()}-${Math.random()}`;
+      const { icon } = promptOptions();
+      let settled = false;
+      const file = path.join(
+        app.getPath('temp'),
+        `skip-ai-music-songs-${Date.now()}.html`,
       );
-      await editor.loadFile(file);
-    } catch (error: unknown) {
-      console.error(error);
-      finish(null);
-    }
+
+      const finish = (value: BlockedSong[] | null) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        ipcMain.removeAllListeners(channel);
+        unlink(file).catch(() => {});
+        if (!editor.isDestroyed()) {
+          editor.destroy();
+        }
+        resolve(value);
+      };
+
+      const editor = new BrowserWindow({
+        parent,
+        modal: true,
+        width: 560,
+        height: 560,
+        minWidth: 480,
+        minHeight: 440,
+        show: false,
+        autoHideMenuBar: true,
+        title: options.title,
+        icon: icon || undefined,
+        backgroundColor: '#0f0f0f',
+        webPreferences: await editorWebPreferences(),
+      });
+
+      ipcMain.once(channel, (_event, value: BlockedSong[] | null) => {
+        if (!Array.isArray(value)) {
+          finish(null);
+          return;
+        }
+        finish(
+          value
+            .map((song) => ({
+              artist: String(song?.artist || '').trim(),
+              title: String(song?.title || '').trim(),
+            }))
+            .filter((song) => song.title || song.artist),
+        );
+      });
+
+      editor.once('closed', () => {
+        finish(null);
+      });
+
+      editor.once('ready-to-show', () => {
+        editor.show();
+      });
+
+      editor.setMenu(null);
+      try {
+        await writeFile(
+          file,
+          editorHtml({
+            ...options,
+            channel,
+          }),
+          'utf8',
+        );
+        await editor.loadFile(file);
+      } catch (error: unknown) {
+        console.error(error);
+        finish(null);
+      }
     })();
   });

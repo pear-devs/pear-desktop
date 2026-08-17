@@ -73,13 +73,16 @@ const toArtistSet = (artists: string[]) => {
   return folded;
 };
 
+export const buildCommunityArtistSet = (artists: string[]) =>
+  toArtistSet(artists);
+
 const songKey = (title: string, artist: string) =>
   `${foldName(title)}\u0000${foldName(artist)}`;
 
 export const shouldSkipTrack = (
   input: SkipMatchInput,
   config: SkipAiMusicPluginConfig,
-  communityArtists: string[] = [],
+  communityArtists: Set<string> | string[] = [],
 ): SkipMatchResult => {
   const title = input.title || '';
   const artist = input.artist || '';
@@ -99,12 +102,16 @@ export const shouldSkipTrack = (
 
   const blockedSongs = config.blockedSongs || [];
   const titleFolded = foldName(title);
+  const titleKeys = new Set(
+    foldedTokens.map((token) => songKey(title, token)),
+  );
+  titleKeys.add(songKey(title, artist));
   for (const song of blockedSongs) {
     if (!song || !song.title) {
       continue;
     }
 
-    if (songKey(song.title, song.artist || '') == songKey(title, artist)) {
+    if (song.artist && titleKeys.has(songKey(song.title, song.artist))) {
       return {
         matched: `${song.artist} - ${song.title}`,
         reason: 'blocked-song',
@@ -112,7 +119,7 @@ export const shouldSkipTrack = (
       };
     }
 
-    // Title-only entries still require an artist match when one was stored.
+    // Entries stored without an artist match on title alone.
     if (!song.artist && foldName(song.title) == titleFolded) {
       return {
         matched: song.title,
@@ -135,7 +142,10 @@ export const shouldSkipTrack = (
   }
 
   if (config.useCommunityList) {
-    const community = toArtistSet(communityArtists);
+    const community =
+      communityArtists instanceof Set
+        ? communityArtists
+        : toArtistSet(communityArtists);
     for (let i = 0; i < foldedTokens.length; i++) {
       const token = foldedTokens[i];
       if (token && community.has(token)) {
