@@ -18,6 +18,7 @@ const MAX_PLAYBACK_SPEED = 16;
 let currentConfig: PlaybackSpeedConfig | null = null;
 let activeVideo: HTMLVideoElement | null = null;
 let videoObserver: MutationObserver | null = null;
+const observedVideos = new Set<HTMLVideoElement>();
 
 export const onConfigChange = (newConfig: PlaybackSpeedConfig) => {
   currentConfig = newConfig;
@@ -128,6 +129,7 @@ export const onPlayerApiReady = async (
 
   const observeVideo = () => {
     const applyVideoEvents = (video: HTMLVideoElement) => {
+      observedVideos.add(video);
       activeVideo = video;
       updatePlayBackSpeed(video);
       video.addEventListener('ratechange', forcePlaybackRate);
@@ -141,11 +143,12 @@ export const onPlayerApiReady = async (
     }
 
     videoObserver = new MutationObserver(() => {
-      const v = document.querySelector<HTMLVideoElement>('video');
-      if (v && !v.dataset.playbackSpeedObserved) {
-        v.dataset.playbackSpeedObserved = 'true';
-        applyVideoEvents(v);
-      }
+      document.querySelectorAll<HTMLVideoElement>('video').forEach((v) => {
+        if (!v.dataset.playbackSpeedObserved) {
+          v.dataset.playbackSpeedObserved = 'true';
+          applyVideoEvents(v);
+        }
+      });
     });
 
     videoObserver.observe(document.body, {
@@ -159,9 +162,14 @@ export const onPlayerApiReady = async (
 };
 
 export const onUnload = () => {
+  for (const video of observedVideos) {
+    video.removeEventListener('ratechange', forcePlaybackRate);
+    video.removeEventListener('peard:src-changed', forcePlaybackRate);
+    delete video.dataset.playbackSpeedObserved;
+  }
+  observedVideos.clear();
+
   if (activeVideo) {
-    activeVideo.removeEventListener('ratechange', forcePlaybackRate);
-    activeVideo.removeEventListener('peard:src-changed', forcePlaybackRate);
     activeVideo = null;
   }
   if (videoObserver) {
