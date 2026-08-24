@@ -16,12 +16,13 @@ const MIN_PLAYBACK_SPEED = 0.07;
 const MAX_PLAYBACK_SPEED = 16;
 
 let currentConfig: PlaybackSpeedConfig | null = null;
+let activeVideo: HTMLVideoElement | null = null;
+let videoObserver: MutationObserver | null = null;
 
 export const onConfigChange = (newConfig: PlaybackSpeedConfig) => {
   currentConfig = newConfig;
-  const videoElement = document.querySelector<HTMLVideoElement>('video');
-  if (videoElement) {
-    (videoElement as HTMLMediaElement & { preservesPitch?: boolean }).preservesPitch = !newConfig.noPreservesPitch;
+  if (activeVideo) {
+    (activeVideo as HTMLMediaElement & { preservesPitch?: boolean }).preservesPitch = !newConfig.noPreservesPitch;
   }
 };
 
@@ -48,8 +49,7 @@ export const onPlayerApiReady = async (
 ) => {
   currentConfig = await getConfig();
 
-  const updatePlayBackSpeed = () => {
-    const videoElement = document.querySelector<HTMLVideoElement>('video');
+  const updatePlayBackSpeed = (videoElement = activeVideo) => {
     if (videoElement) {
       videoElement.playbackRate = speed();
       if (currentConfig) {
@@ -128,7 +128,8 @@ export const onPlayerApiReady = async (
 
   const observeVideo = () => {
     const applyVideoEvents = (video: HTMLVideoElement) => {
-      updatePlayBackSpeed();
+      activeVideo = video;
+      updatePlayBackSpeed(video);
       video.addEventListener('ratechange', forcePlaybackRate);
       video.addEventListener('peard:src-changed', forcePlaybackRate);
     };
@@ -139,7 +140,7 @@ export const onPlayerApiReady = async (
       video.dataset.playbackSpeedObserved = 'true';
     }
 
-    const observer = new MutationObserver(() => {
+    videoObserver = new MutationObserver(() => {
       const v = document.querySelector<HTMLVideoElement>('video');
       if (v && !v.dataset.playbackSpeedObserved) {
         v.dataset.playbackSpeedObserved = 'true';
@@ -147,7 +148,7 @@ export const onPlayerApiReady = async (
       }
     });
 
-    observer.observe(document.body, {
+    videoObserver.observe(document.body, {
       childList: true,
       subtree: true,
     });
@@ -158,10 +159,14 @@ export const onPlayerApiReady = async (
 };
 
 export const onUnload = () => {
-  const video = document.querySelector<HTMLVideoElement>('video');
-  if (video) {
-    video.removeEventListener('ratechange', forcePlaybackRate);
-    video.removeEventListener('peard:src-changed', forcePlaybackRate);
+  if (activeVideo) {
+    activeVideo.removeEventListener('ratechange', forcePlaybackRate);
+    activeVideo.removeEventListener('peard:src-changed', forcePlaybackRate);
+    activeVideo = null;
+  }
+  if (videoObserver) {
+    videoObserver.disconnect();
+    videoObserver = null;
   }
   getSongMenu()?.removeChild(sliderContainer);
 };
