@@ -10,11 +10,10 @@ import {
 import { getSongMenu } from '@/providers/dom-elements';
 
 import { PlaybackSpeedSlider } from './components/slider';
+import type { PlaybackSpeedConfig } from './index';
 
 const MIN_PLAYBACK_SPEED = 0.07;
 const MAX_PLAYBACK_SPEED = 16;
-
-import type { PlaybackSpeedConfig } from './index';
 
 let currentConfig: PlaybackSpeedConfig | null = null;
 
@@ -22,7 +21,7 @@ export const onConfigChange = (newConfig: PlaybackSpeedConfig) => {
   currentConfig = newConfig;
   const videoElement = document.querySelector<HTMLVideoElement>('video');
   if (videoElement) {
-    (videoElement as any).preservesPitch = !newConfig.noPreservesPitch;
+    (videoElement as HTMLMediaElement & { preservesPitch?: boolean }).preservesPitch = !newConfig.noPreservesPitch;
   }
 };
 
@@ -32,8 +31,8 @@ const forcePlaybackRate = (e: Event) => {
     if (videoElement.playbackRate !== speed()) {
       videoElement.playbackRate = speed();
     }
-    if (currentConfig && (videoElement as any).preservesPitch !== !currentConfig.noPreservesPitch) {
-      (videoElement as any).preservesPitch = !currentConfig.noPreservesPitch;
+    if (currentConfig && (videoElement as HTMLMediaElement & { preservesPitch?: boolean }).preservesPitch !== !currentConfig.noPreservesPitch) {
+      (videoElement as HTMLMediaElement & { preservesPitch?: boolean }).preservesPitch = !currentConfig.noPreservesPitch;
     }
   }
 };
@@ -44,24 +43,24 @@ const [speed, setSpeed] = createSignal(1);
 const sliderContainer = document.createElement('div');
 
 export const onPlayerApiReady = async (
-  api: unknown,
+  _api: unknown,
   { getConfig }: RendererContext<PlaybackSpeedConfig>
 ) => {
   currentConfig = await getConfig();
 
-  const observePopupContainer = () => {
-    const updatePlayBackSpeed = () => {
-      const videoElement = document.querySelector<HTMLVideoElement>('video');
-      if (videoElement) {
-        videoElement.playbackRate = speed();
-        if (currentConfig) {
-          (videoElement as any).preservesPitch = !currentConfig.noPreservesPitch;
-        }
+  const updatePlayBackSpeed = () => {
+    const videoElement = document.querySelector<HTMLVideoElement>('video');
+    if (videoElement) {
+      videoElement.playbackRate = speed();
+      if (currentConfig) {
+        (videoElement as HTMLMediaElement & { preservesPitch?: boolean }).preservesPitch = !currentConfig.noPreservesPitch;
       }
+    }
 
-      setSpeed(speed());
-    };
+    setSpeed(speed());
+  };
 
+  const observePopupContainer = () => {
     render(
       () => (
         <PlaybackSpeedSlider
@@ -128,11 +127,30 @@ export const onPlayerApiReady = async (
   };
 
   const observeVideo = () => {
-    const video = document.querySelector<HTMLVideoElement>('video');
-    if (video) {
+    const applyVideoEvents = (video: HTMLVideoElement) => {
+      updatePlayBackSpeed();
       video.addEventListener('ratechange', forcePlaybackRate);
       video.addEventListener('peard:src-changed', forcePlaybackRate);
+    };
+
+    const video = document.querySelector<HTMLVideoElement>('video');
+    if (video) {
+      applyVideoEvents(video);
+      video.dataset.playbackSpeedObserved = 'true';
     }
+
+    const observer = new MutationObserver(() => {
+      const v = document.querySelector<HTMLVideoElement>('video');
+      if (v && !v.dataset.playbackSpeedObserved) {
+        v.dataset.playbackSpeedObserved = 'true';
+        applyVideoEvents(v);
+      }
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
   };
 
   observePopupContainer();

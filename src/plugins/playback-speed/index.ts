@@ -15,7 +15,7 @@ export default createPlugin({
   config: {
     enabled: false,
     noPreservesPitch: false,
-  } as PlaybackSpeedConfig,
+  } satisfies PlaybackSpeedConfig as PlaybackSpeedConfig,
   menu: async ({ getConfig, setConfig }) => {
     const config = await getConfig();
     return [
