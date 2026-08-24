@@ -723,6 +723,9 @@
     },
     "playback-speed": {
       "description": "Listen fast, listen slow! Adds a slider that controls song speed",
+      "menu": {
+        "no-preserves-pitch": "No preserves pitch"
+      },
       "name": "Playback Speed",
       "templates": {
         "button": "Speed"

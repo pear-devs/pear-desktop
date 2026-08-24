@@ -1,6 +1,7 @@
 import { createSignal } from 'solid-js';
 import { render } from 'solid-js/web';
 
+import { type RendererContext } from '@/types/contexts';
 import { t } from '@/i18n';
 import {
   isMusicOrVideoTrack,
@@ -13,11 +14,26 @@ import { PlaybackSpeedSlider } from './components/slider';
 const MIN_PLAYBACK_SPEED = 0.07;
 const MAX_PLAYBACK_SPEED = 16;
 
+import type { PlaybackSpeedConfig } from './index';
+
+let currentConfig: PlaybackSpeedConfig | null = null;
+
+export const onConfigChange = (newConfig: PlaybackSpeedConfig) => {
+  currentConfig = newConfig;
+  const videoElement = document.querySelector<HTMLVideoElement>('video');
+  if (videoElement) {
+    (videoElement as any).preservesPitch = !newConfig.noPreservesPitch;
+  }
+};
+
 const forcePlaybackRate = (e: Event) => {
   if (e.target instanceof HTMLVideoElement) {
     const videoElement = e.target;
     if (videoElement.playbackRate !== speed()) {
       videoElement.playbackRate = speed();
+    }
+    if (currentConfig && (videoElement as any).preservesPitch !== !currentConfig.noPreservesPitch) {
+      (videoElement as any).preservesPitch = !currentConfig.noPreservesPitch;
     }
   }
 };
@@ -27,12 +43,20 @@ const roundToTwo = (n: number) => Math.round(n * 1e2) / 1e2;
 const [speed, setSpeed] = createSignal(1);
 const sliderContainer = document.createElement('div');
 
-export const onPlayerApiReady = () => {
+export const onPlayerApiReady = async (
+  api: unknown,
+  { getConfig }: RendererContext<PlaybackSpeedConfig>
+) => {
+  currentConfig = await getConfig();
+
   const observePopupContainer = () => {
     const updatePlayBackSpeed = () => {
       const videoElement = document.querySelector<HTMLVideoElement>('video');
       if (videoElement) {
         videoElement.playbackRate = speed();
+        if (currentConfig) {
+          (videoElement as any).preservesPitch = !currentConfig.noPreservesPitch;
+        }
       }
 
       setSpeed(speed());
