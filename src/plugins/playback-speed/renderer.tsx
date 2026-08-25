@@ -11,6 +11,7 @@ import { getSongMenu } from '@/providers/dom-elements';
 
 import { PlaybackSpeedSlider } from './components/slider';
 import type { PlaybackSpeedConfig } from './index';
+import { StartupLifecycle } from './startup-lifecycle';
 
 const MIN_PLAYBACK_SPEED = 0.07;
 const MAX_PLAYBACK_SPEED = 16;
@@ -18,6 +19,8 @@ const MAX_PLAYBACK_SPEED = 16;
 let currentConfig: PlaybackSpeedConfig | null = null;
 let activeVideo: HTMLVideoElement | null = null;
 let videoObserver: MutationObserver | null = null;
+let popupObserver: MutationObserver | null = null;
+const startupLifecycle = new StartupLifecycle();
 const observedVideos = new Set<HTMLVideoElement>();
 
 export const onConfigChange = (newConfig: PlaybackSpeedConfig) => {
@@ -47,6 +50,7 @@ const forcePlaybackRate = (e: Event) => {
 const setActiveVideo = (e: Event) => {
   if (e.target instanceof HTMLVideoElement) {
     activeVideo = e.target;
+    updatePlayBackSpeed(activeVideo);
   }
 };
 
@@ -70,8 +74,6 @@ export const onPlayerApiReady = async (
   _api: unknown,
   { getConfig }: RendererContext<PlaybackSpeedConfig>
 ) => {
-  currentConfig = await getConfig();
-
   const observePopupContainer = () => {
     render(
       () => (
@@ -116,7 +118,7 @@ export const onPlayerApiReady = async (
       sliderContainer,
     );
 
-    const observer = new MutationObserver(() => {
+    popupObserver = new MutationObserver(() => {
       const menu = getSongMenu();
 
       if (
@@ -131,7 +133,7 @@ export const onPlayerApiReady = async (
 
     const popupContainer = document.querySelector('ytmusic-popup-container');
     if (popupContainer) {
-      observer.observe(popupContainer, {
+      popupObserver.observe(popupContainer, {
         childList: true,
         subtree: true,
       });
@@ -171,11 +173,16 @@ export const onPlayerApiReady = async (
     });
   };
 
-  observePopupContainer();
-  observeVideo();
+  await startupLifecycle.initialize(getConfig, (config) => {
+    currentConfig = config;
+    observePopupContainer();
+    observeVideo();
+  });
 };
 
 export const onUnload = () => {
+  startupLifecycle.dispose();
+
   for (const video of observedVideos) {
     video.removeEventListener('playing', setActiveVideo);
     video.removeEventListener('ratechange', forcePlaybackRate);
@@ -190,6 +197,10 @@ export const onUnload = () => {
   if (videoObserver) {
     videoObserver.disconnect();
     videoObserver = null;
+  }
+  if (popupObserver) {
+    popupObserver.disconnect();
+    popupObserver = null;
   }
   getSongMenu()?.removeChild(sliderContainer);
 };
