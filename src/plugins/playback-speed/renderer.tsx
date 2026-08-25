@@ -22,8 +22,13 @@ const observedVideos = new Set<HTMLVideoElement>();
 
 export const onConfigChange = (newConfig: PlaybackSpeedConfig) => {
   currentConfig = newConfig;
-  if (activeVideo) {
-    (activeVideo as HTMLMediaElement & { preservesPitch?: boolean }).preservesPitch = !newConfig.noPreservesPitch;
+
+  for (const video of observedVideos) {
+    updatePlayBackSpeed(video);
+  }
+
+  if (activeVideo && !observedVideos.has(activeVideo)) {
+    updatePlayBackSpeed(activeVideo);
   }
 };
 
@@ -39,27 +44,33 @@ const forcePlaybackRate = (e: Event) => {
   }
 };
 
+const setActiveVideo = (e: Event) => {
+  if (e.target instanceof HTMLVideoElement) {
+    activeVideo = e.target;
+  }
+};
+
 const roundToTwo = (n: number) => Math.round(n * 1e2) / 1e2;
 
 const [speed, setSpeed] = createSignal(1);
 const sliderContainer = document.createElement('div');
+
+const updatePlayBackSpeed = (videoElement = activeVideo) => {
+  if (videoElement) {
+    videoElement.playbackRate = speed();
+    if (currentConfig) {
+      (videoElement as HTMLMediaElement & { preservesPitch?: boolean }).preservesPitch = !currentConfig.noPreservesPitch;
+    }
+  }
+
+  setSpeed(speed());
+};
 
 export const onPlayerApiReady = async (
   _api: unknown,
   { getConfig }: RendererContext<PlaybackSpeedConfig>
 ) => {
   currentConfig = await getConfig();
-
-  const updatePlayBackSpeed = (videoElement = activeVideo) => {
-    if (videoElement) {
-      videoElement.playbackRate = speed();
-      if (currentConfig) {
-        (videoElement as HTMLMediaElement & { preservesPitch?: boolean }).preservesPitch = !currentConfig.noPreservesPitch;
-      }
-    }
-
-    setSpeed(speed());
-  };
 
   const observePopupContainer = () => {
     render(
@@ -130,8 +141,11 @@ export const onPlayerApiReady = async (
   const observeVideo = () => {
     const applyVideoEvents = (video: HTMLVideoElement) => {
       observedVideos.add(video);
-      activeVideo = video;
+      if (!activeVideo || (!video.paused && !video.ended)) {
+        activeVideo = video;
+      }
       updatePlayBackSpeed(video);
+      video.addEventListener('playing', setActiveVideo);
       video.addEventListener('ratechange', forcePlaybackRate);
       video.addEventListener('peard:src-changed', forcePlaybackRate);
     };
@@ -163,6 +177,7 @@ export const onPlayerApiReady = async (
 
 export const onUnload = () => {
   for (const video of observedVideos) {
+    video.removeEventListener('playing', setActiveVideo);
     video.removeEventListener('ratechange', forcePlaybackRate);
     video.removeEventListener('peard:src-changed', forcePlaybackRate);
     delete video.dataset.playbackSpeedObserved;
