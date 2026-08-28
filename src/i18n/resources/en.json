@@ -841,6 +841,18 @@
         "fetch": "⚠️\tAn error occurred while fetching the lyrics.\n\tPlease try again later.",
         "not-found": "⚠️ No lyrics found for this song."
       },
+      "search": {
+        "empty-query": "Enter a song title or artist to search.",
+        "failed": "LRCLIB search failed. Please try again.",
+        "label": "Search LRCLIB",
+        "no-results": "No lyrics found for that search.",
+        "open": "Search LRCLIB manually",
+        "placeholder": "Search by title, artist, or both",
+        "plain": "Plain",
+        "searching": "Searching…",
+        "submit": "Search",
+        "synced": "Synced"
+      },
       "menu": {
         "preferred-provider": {
           "label": "Preferred Provider",

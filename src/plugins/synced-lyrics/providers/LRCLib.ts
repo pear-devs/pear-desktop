@@ -9,6 +9,20 @@ export class LRCLib implements LyricProvider {
   name = 'LRCLib';
   baseUrl = 'https://lrclib.net';
 
+  async searchResults(query: string): Promise<LRCLibSearchResult[]> {
+    const data = await this.fetchSearch(
+      new URLSearchParams({ q: query.trim() }),
+    );
+
+    return data
+      .filter(
+        (item) =>
+          !item.instrumental &&
+          Boolean(item.syncedLyrics?.trim() || item.plainLyrics?.trim()),
+      )
+      .slice(0, 25);
+  }
+
   async search({
     title,
     alternativeTitle,
@@ -27,17 +41,7 @@ export class LRCLib implements LyricProvider {
       query.delete('album_name');
     }
 
-    let url = `${this.baseUrl}/api/search?${query.toString()}`;
-    let response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`bad HTTPStatus(${response.statusText})`);
-    }
-
-    let data = (await response.json()) as LRCLIBSearchResponse;
-    if (!data || !Array.isArray(data)) {
-      throw new Error(`Expected an array, instead got ${typeof data}`);
-    }
+    let data = await this.fetchSearch(query);
 
     if (data.length === 0) {
       if (!config()?.showLyricsEvenIfInexact) {
@@ -47,32 +51,12 @@ export class LRCLib implements LyricProvider {
       // Try to search with the alternative title (original language)
       const trackName = alternativeTitle || title;
       query = new URLSearchParams({ q: `${trackName}` });
-      url = `${this.baseUrl}/api/search?${query.toString()}`;
-
-      response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`bad HTTPStatus(${response.statusText})`);
-      }
-
-      data = (await response.json()) as LRCLIBSearchResponse;
-      if (!Array.isArray(data)) {
-        throw new Error(`Expected an array, instead got ${typeof data}`);
-      }
+      data = await this.fetchSearch(query);
 
       // If still no results, try with the original title as fallback
       if (data.length === 0 && alternativeTitle) {
         query = new URLSearchParams({ q: title });
-        url = `${this.baseUrl}/api/search?${query.toString()}`;
-
-        response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`bad HTTPStatus(${response.statusText})`);
-        }
-
-        data = (await response.json()) as LRCLIBSearchResponse;
-        if (!Array.isArray(data)) {
-          throw new Error(`Expected an array, instead got ${typeof data}`);
-        }
+        data = await this.fetchSearch(query);
       }
     }
 
@@ -161,21 +145,47 @@ export class LRCLib implements LyricProvider {
       return null;
     }
 
+    return this.toLyricResult(closestResult);
+  }
+
+  toLyricResult(result: LRCLibSearchResult): LyricResult | null {
+    const raw = result.syncedLyrics;
+    const plain = result.plainLyrics;
+    if (!raw && !plain) return null;
+
     return {
-      title: closestResult.trackName,
-      artists: closestResult.artistName.split(/[&,]/g),
+      title: result.trackName,
+      artists: result.artistName.split(/[&,]/g),
       lines: raw
         ? LRC.parse(raw).lines.map((l) => ({
             ...l,
             status: 'upcoming' as const,
           }))
         : undefined,
-      lyrics: plain,
+      lyrics: plain ?? undefined,
     };
+  }
+
+  private async fetchSearch(
+    query: URLSearchParams,
+  ): Promise<LRCLibSearchResult[]> {
+    const url = `${this.baseUrl}/api/search?${query.toString()}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`bad HTTPStatus(${response.statusText})`);
+    }
+
+    const data = (await response.json()) as LRCLIBSearchResponse;
+    if (!Array.isArray(data)) {
+      throw new Error(`Expected an array, instead got ${typeof data}`);
+    }
+
+    return data;
   }
 }
 
-type LRCLIBSearchResponse = {
+export type LRCLibSearchResult = {
   id: number;
   name: string;
   trackName: string;
@@ -183,6 +193,8 @@ type LRCLIBSearchResponse = {
   albumName: string;
   duration: number;
   instrumental: boolean;
-  plainLyrics: string;
-  syncedLyrics: string;
-}[];
+  plainLyrics?: string | null;
+  syncedLyrics?: string | null;
+};
+
+type LRCLIBSearchResponse = LRCLibSearchResult[];

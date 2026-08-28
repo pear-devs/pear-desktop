@@ -158,12 +158,117 @@
 }
 
 .lyrics-picker {
+  position: relative;
   height: 5em;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-around;
   padding-block: 1em;
+}
+
+.lrclib-search {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% - 0.5em);
+  left: 50%;
+  width: min(32rem, 88vw);
+  padding: 0.75rem;
+  transform: translateX(-50%);
+  background: var(--ytmusic-background, #212121);
+  border: 1px solid var(--ytmusic-divider, rgba(255, 255, 255, 0.16));
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.lrclib-search-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.lrclib-search-input {
+  min-width: 0;
+  flex: 1;
+  padding: 0.65rem 0.75rem;
+  color: var(--ytmusic-text-primary, #fff);
+  font: inherit;
+  background: var(--ytmusic-color-black4, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--ytmusic-divider, rgba(255, 255, 255, 0.16));
+  border-radius: 6px;
+  outline: none;
+}
+
+.lrclib-search-input:focus {
+  border-color: var(--ytmusic-text-primary, #fff);
+}
+
+.lrclib-search-submit {
+  padding: 0.65rem 0.9rem;
+  color: var(--ytmusic-text-primary, #fff);
+  font: inherit;
+  white-space: nowrap;
+  background: var(--ytmusic-color-grey2, #444);
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.lrclib-search-submit:hover:not(:disabled) {
+  background: var(--ytmusic-color-grey3, #555);
+}
+
+.lrclib-search-submit:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.lrclib-search-message {
+  margin: 0.75rem 0 0;
+  color: var(--ytmusic-text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: 0.85rem;
+}
+
+.lrclib-search-results {
+  display: grid;
+  gap: 0.25rem;
+  max-height: min(22rem, 50vh);
+  margin-top: 0.75rem;
+  overflow-y: auto;
+}
+
+.lrclib-search-result {
+  display: grid;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  color: var(--ytmusic-text-primary, #fff);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.lrclib-search-result:hover,
+.lrclib-search-result:focus-visible {
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+
+.lrclib-search-result-title {
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lrclib-search-result-meta,
+.lrclib-search-result-badge {
+  overflow: hidden;
+  color: var(--ytmusic-text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .lyrics-picker-content {

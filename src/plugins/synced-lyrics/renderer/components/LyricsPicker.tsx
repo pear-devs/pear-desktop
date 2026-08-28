@@ -3,6 +3,7 @@ import { IconCheckCircle } from '@mdui/icons/check-circle.js';
 import { IconChevronLeft } from '@mdui/icons/chevron-left.js';
 import { IconChevronRight } from '@mdui/icons/chevron-right.js';
 import { IconError } from '@mdui/icons/error.js';
+import { IconSearch } from '@mdui/icons/search.js';
 import { IconStarBorder } from '@mdui/icons/star-border.js';
 import { IconStar } from '@mdui/icons/star.js';
 import { IconWarning } from '@mdui/icons/warning.js';
@@ -22,6 +23,8 @@ import {
 } from 'solid-js';
 import * as z from 'zod';
 
+import { t } from '@/i18n';
+import { getSongInfo } from '@/providers/song-info-front';
 import { LitElementWrapper } from '@/solit';
 
 import {
@@ -31,11 +34,13 @@ import {
   ProviderNameSchema,
   type ProviderState,
 } from '../../providers';
+import { lrclib } from '../../providers/renderer';
 import { _ytAPI } from '../index';
 import { reactiveOwner } from '../reactive-root';
 import { config } from '../renderer';
 import { currentLyrics, lyricsStore, setLyricsStore } from '../store';
 
+import type { LRCLibSearchResult } from '../../providers/LRCLib';
 import type { PlayerAPIEvents } from '@/types/player-api-events';
 
 const LocalStorageSchema = z.object({
@@ -88,6 +93,14 @@ export const LyricsPicker = (props: {
   const [videoId, setVideoId] = createSignal<string | null>(null);
   const [starredProvider, setStarredProvider] =
     createSignal<ProviderName | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = createSignal(false);
+  const [searchQuery, setSearchQuery] = createSignal('');
+  const [searchResults, setSearchResults] = createSignal<LRCLibSearchResult[]>(
+    [],
+  );
+  const [isSearching, setIsSearching] = createSignal(false);
+  const [searchError, setSearchError] = createSignal<string | null>(null);
+  let searchRequest = 0;
 
   createEffect(() => {
     const id = videoId();
@@ -131,15 +144,83 @@ export const LyricsPicker = (props: {
     });
   };
 
+  const toggleSearch = () => {
+    if (!isSearchOpen()) {
+      const info = getSongInfo();
+      setSearchQuery(`${info.artist} ${info.title}`.trim());
+      setSearchResults([]);
+      setSearchError(null);
+    }
+
+    setIsSearchOpen((open) => !open);
+  };
+
+  const searchLRCLib = async () => {
+    const query = searchQuery().trim();
+    if (!query) {
+      setSearchError(t('plugins.synced-lyrics.search.empty-query'));
+      return;
+    }
+
+    const request = ++searchRequest;
+    setIsSearching(true);
+    setSearchError(null);
+
+    try {
+      const results = await lrclib.searchResults(query);
+      if (request !== searchRequest) return;
+
+      setSearchResults(results);
+      if (results.length === 0) {
+        setSearchError(t('plugins.synced-lyrics.search.no-results'));
+      }
+    } catch (error) {
+      if (request !== searchRequest) return;
+      setSearchError(
+        error instanceof Error
+          ? error.message
+          : t('plugins.synced-lyrics.search.failed'),
+      );
+    } finally {
+      if (request === searchRequest) setIsSearching(false);
+    }
+  };
+
+  const selectSearchResult = (result: LRCLibSearchResult) => {
+    const data = lrclib.toLyricResult(result);
+    if (!data) return;
+
+    setLyricsStore('lyrics', (old) => ({
+      ...old,
+      [ProviderNames.LRCLib]: { state: 'done', data, error: null },
+    }));
+    setIsSearchOpen(false);
+  };
+
+  const formatDuration = (duration: number) => {
+    const seconds = Math.max(0, Math.round(duration));
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  };
+
   const videoDataChangeHandler = (
     name: string,
     { videoId }: PlayerAPIEvents['videodatachange']['value'],
   ) => {
     setVideoId(videoId);
+    searchRequest++;
+    setIsSearchOpen(false);
+    setSearchResults([]);
+    setSearchError(null);
 
     if (name !== 'dataloaded') return;
     setHasManuallySwitchedProvider(false);
   };
+
+  createEffect(() => {
+    if (lyricsStore.provider !== ProviderNames.LRCLib) {
+      setIsSearchOpen(false);
+    }
+  });
 
   // prettier-ignore
   {
@@ -273,6 +354,15 @@ export const LyricsPicker = (props: {
                     <LitElementWrapper elementClass={IconStar} />
                   </Show>
                 </mdui-button-icon>
+                <Show when={provider() === ProviderNames.LRCLib}>
+                  <mdui-button-icon
+                    onClick={toggleSearch}
+                    tabindex={-1}
+                    title={t('plugins.synced-lyrics.search.open')}
+                  >
+                    <LitElementWrapper elementClass={IconSearch} />
+                  </mdui-button-icon>
+                </Show>
               </div>
             )}
           </Index>
@@ -305,6 +395,71 @@ export const LyricsPicker = (props: {
           />
         </mdui-button-icon>
       </div>
+
+      <Show
+        when={isSearchOpen() && lyricsStore.provider === ProviderNames.LRCLib}
+      >
+        <form
+          class="lrclib-search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            searchLRCLib();
+          }}
+        >
+          <div class="lrclib-search-controls">
+            <input
+              aria-label={t('plugins.synced-lyrics.search.label')}
+              autocomplete="off"
+              class="lrclib-search-input"
+              onInput={(event) => setSearchQuery(event.currentTarget.value)}
+              placeholder={t('plugins.synced-lyrics.search.placeholder')}
+              value={searchQuery()}
+            />
+            <button
+              class="lrclib-search-submit"
+              disabled={isSearching()}
+              type="submit"
+            >
+              {isSearching()
+                ? t('plugins.synced-lyrics.search.searching')
+                : t('plugins.synced-lyrics.search.submit')}
+            </button>
+          </div>
+
+          <Show when={searchError()}>
+            <p class="lrclib-search-message">{searchError()}</p>
+          </Show>
+
+          <Show when={searchResults().length > 0}>
+            <div class="lrclib-search-results" role="listbox">
+              <For each={searchResults()}>
+                {(result) => (
+                  <button
+                    class="lrclib-search-result"
+                    onClick={() => selectSearchResult(result)}
+                    role="option"
+                    type="button"
+                  >
+                    <span class="lrclib-search-result-title">
+                      {result.trackName}
+                    </span>
+                    <span class="lrclib-search-result-meta">
+                      {result.artistName}
+                      {result.albumName ? ` — ${result.albumName}` : ''}
+                    </span>
+                    <span class="lrclib-search-result-badge">
+                      {result.syncedLyrics
+                        ? t('plugins.synced-lyrics.search.synced')
+                        : t('plugins.synced-lyrics.search.plain')}{' '}
+                      — {formatDuration(result.duration)}
+                    </span>
+                  </button>
+                )}
+              </For>
+            </div>
+          </Show>
+        </form>
+      </Show>
     </div>
   );
 };
