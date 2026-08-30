@@ -6,6 +6,7 @@ import { createPlugin } from '@/utils';
 import { waitForElement } from '@/utils/wait-for-element';
 
 import { Connection, type ConnectionEventUnion } from './connection';
+import { runDiagnostics } from './diagnostics';
 import { Queue } from './queue';
 import style from './style.css?inline';
 import settingHTML from './templates/setting.html?raw';
@@ -15,6 +16,7 @@ import {
   type Profile,
   type VideoData,
 } from './types';
+import { createDiagnosticsPopup } from './ui/diagnostics';
 import { createGuestPopup } from './ui/guest';
 import { createHostPopup } from './ui/host';
 import { createSettingPopup } from './ui/setting';
@@ -54,6 +56,7 @@ export default createPlugin<
       host: ReturnType<typeof createHostPopup>;
       guest: ReturnType<typeof createGuestPopup>;
       setting: ReturnType<typeof createSettingPopup>;
+      diagnostics: ReturnType<typeof createDiagnosticsPopup>;
     };
     elements: {
       setting: HTMLElement;
@@ -63,6 +66,7 @@ export default createPlugin<
     stateInterval?: number;
     updateNext: boolean;
     ignoreChange: boolean;
+    diagnosticsRunning: boolean;
     rollbackInjector?: () => void;
     me?: Omit<Profile, 'id'>;
     profiles: Record<string, Profile>;
@@ -74,6 +78,7 @@ export default createPlugin<
     onHost: () => Promise<boolean>;
     onJoin: () => Promise<boolean>;
     onStop: () => void;
+    runDiagnosticsFlow: () => Promise<void>;
     putProfile: (id: string, profile?: Profile) => void;
     showSpinner: () => void;
     hideSpinner: () => void;
@@ -101,11 +106,13 @@ export default createPlugin<
   renderer: {
     updateNext: false,
     ignoreChange: false,
+    diagnosticsRunning: false,
     permission: 'playlist',
     popups: {} as {
       host: ReturnType<typeof createHostPopup>;
       guest: ReturnType<typeof createGuestPopup>;
       setting: ReturnType<typeof createSettingPopup>;
+      diagnostics: ReturnType<typeof createDiagnosticsPopup>;
     },
     elements: {} as {
       setting: HTMLElement;
@@ -665,6 +672,23 @@ export default createPlugin<
       this.popups.setting.dismiss();
     },
 
+    async runDiagnosticsFlow() {
+      if (this.diagnosticsRunning) return;
+      this.diagnosticsRunning = true;
+      this.popups.diagnostics.reset();
+
+      try {
+        const result = await runDiagnostics((check) => {
+          this.popups.diagnostics.setCheck(check);
+        });
+        this.popups.diagnostics.setResult(result);
+      } catch (error) {
+        console.error('Music Together: diagnostics failed', error);
+      } finally {
+        this.diagnosticsRunning = false;
+      }
+    },
+
     /* methods */
     putProfile(id: string, profile?: Profile) {
       if (profile === undefined) {
@@ -884,12 +908,44 @@ export default createPlugin<
               );
             }
           }
+
+          if (id === 'music-together-test') {
+            settingPopup.dismiss();
+            diagnosticsPopup.showAtAnchor(setting);
+            void this.runDiagnosticsFlow();
+          }
+        },
+      });
+      const diagnosticsPopup = createDiagnosticsPopup({
+        onItemClick: (id) => {
+          if (id === 'music-together-diagnostics-run') {
+            void this.runDiagnosticsFlow();
+          }
+
+          if (id === 'music-together-diagnostics-copy') {
+            const summary = diagnosticsPopup.getSummary();
+            if (!summary) return;
+
+            navigator.clipboard
+              .writeText(summary)
+              .then(() => {
+                this.api?.toastService?.show(
+                  t('plugins.music-together.toast.diagnostics-copied'),
+                );
+              })
+              .catch(() => {
+                this.api?.toastService?.show(
+                  t('plugins.music-together.toast.diagnostics-copy-failed'),
+                );
+              });
+          }
         },
       });
       this.popups = {
         host: hostPopup,
         guest: guestPopup,
         setting: settingPopup,
+        diagnostics: diagnosticsPopup,
       };
       setting.addEventListener('click', () => {
         let popup = settingPopup;
