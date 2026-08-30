@@ -186,7 +186,8 @@ export default createPlugin<
     onPlayerApiReady() {
       let transitionAudio: Howl; // Howler audio used to fade out the current music
       let firstVideo = true;
-      let waitForTransition: Promise<unknown>;
+      let waitForTransition: Promise<unknown> = Promise.resolve();
+      let originalVolume: number = 1;
 
       const getStreamURL = async (videoID: string): Promise<string> =>
         this.ipc?.invoke('audio-url', videoID) as Promise<string>;
@@ -196,6 +197,13 @@ export default createPlugin<
 
       const isReadyToCrossfade = () =>
         transitionAudio && transitionAudio.state() === 'loaded';
+
+      const ensureVideoVolume = () => {
+        const video = document.querySelector('video');
+        if (video && video.volume === 0 && originalVolume > 0) {
+          video.volume = originalVolume;
+        }
+      };
 
       const watchVideoIDChanges = (cb: (id: string) => void) => {
         window.navigation.addEventListener('navigate', (event) => {
@@ -214,6 +222,7 @@ export default createPlugin<
                 cb(nextVideoID);
               });
             } else {
+              ensureVideoVolume();
               cb(nextVideoID);
               firstVideo = false;
             }
@@ -237,6 +246,10 @@ export default createPlugin<
       const syncVideoWithTransitionAudio = () => {
         const video = document.querySelector('video')!;
 
+        if (video.volume > 0) {
+          originalVolume = video.volume;
+        }
+
         const videoFader = new VolumeFader(video, {
           fadeScaling: this.config?.fadeScaling,
           fadeDuration: this.config?.fadeInDuration,
@@ -245,29 +258,40 @@ export default createPlugin<
         transitionAudio.play();
         transitionAudio.seek(video.currentTime);
 
-        video.addEventListener('seeking', () => {
+        const onSeeking = () => {
           transitionAudio.seek(video.currentTime);
-        });
+        };
 
-        video.addEventListener('pause', () => {
+        const onPause = () => {
           transitionAudio.pause();
-        });
+        };
 
-        video.addEventListener('play', () => {
+        const onPlay = () => {
           transitionAudio.play();
           transitionAudio.seek(video.currentTime);
 
           // Fade in
-          const videoVolume = video.volume;
+          const videoVolume = originalVolume || video.volume || 1;
           video.volume = 0;
           videoFader.fadeTo(videoVolume);
-        });
+        };
+
+        video.addEventListener('seeking', onSeeking);
+        video.addEventListener('pause', onPause);
+        video.addEventListener('play', onPlay);
+
+        if (!video.paused) {
+          const videoVolume = originalVolume || video.volume || 1;
+          if (video.volume === 0) {
+            videoFader.fadeTo(videoVolume);
+          }
+        }
 
         // Exit just before the end for the transition
         const transitionBeforeEnd = () => {
           if (
             video.currentTime >=
-              video.duration - (this.config?.secondsBeforeEnd ?? 0) &&
+            video.duration - (this.config?.secondsBeforeEnd ?? 0) &&
             isReadyToCrossfade()
           ) {
             video.removeEventListener('timeupdate', transitionBeforeEnd);
@@ -282,6 +306,7 @@ export default createPlugin<
 
       const crossfade = (cb: () => void) => {
         if (!isReadyToCrossfade()) {
+          ensureVideoVolume()
           cb();
           return;
         }
@@ -293,8 +318,12 @@ export default createPlugin<
 
         const video = document.querySelector('video')!;
 
+        if (video.volume > 0) {
+          originalVolume = video.volume;
+        }
+
         const fader = new VolumeFader(transitionAudio._sounds[0]._node, {
-          initialVolume: video.volume,
+          initialVolume: originalVolume,
           fadeScaling: this.config?.fadeScaling,
           fadeDuration: this.config?.fadeOutDuration,
         });
@@ -311,6 +340,7 @@ export default createPlugin<
         await waitForTransition;
         const url = await getStreamURL(videoID);
         if (!url) {
+          ensureVideoVolume();
           return;
         }
 
