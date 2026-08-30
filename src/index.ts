@@ -961,6 +961,15 @@ function removeContentSecurityPolicy(
       }
     }
 
+    // Podcast/RSS audio streams from third-party hosts that omit CORS headers,
+    // so the renderer's Web Audio graph silences it. Media is fetched in anonymous
+    // (credential-less) CORS mode, so "*" is valid here, and it covers the whole
+    // redirect chain since every hop passes through this listener.
+    if (details.resourceType === 'media') {
+      delete details.responseHeaders['Access-Control-Allow-Origin'];
+      details.responseHeaders['access-control-allow-origin'] = ['*'];
+    }
+
     callback({ cancel: false, responseHeaders: details.responseHeaders });
   });
 
