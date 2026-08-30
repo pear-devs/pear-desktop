@@ -1,0 +1,110 @@
+.pitch-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 6px;
+    user-select: none;
+    font-family: "Inter", "Segoe UI", sans-serif;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px) saturate(180%);
+    border-radius: 12px;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.pitch-wrapper:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-1px);
+}
+
+/* 🎚️ Premium gradient slider */
+.pitch-slider {
+    width: 160px;
+    height: 5px;
+    appearance: none;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #ff4d4d 0%, #ff8080 100%);
+    outline: none;
+    cursor: pointer;
+    transition: filter 0.2s ease, transform 0.2s ease;
+}
+
+.pitch-slider:hover {
+    filter: brightness(1.15);
+    transform: scaleX(1.03);
+}
+
+/* Chrome / Edge thumb */
+.pitch-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    border: 2px solid #ff4d4d;
+    transition: all 0.25s ease;
+    box-shadow: 0 0 6px rgba(255, 77, 77, 0.5);
+}
+
+.pitch-slider::-webkit-slider-thumb:hover {
+    background: #ff4d4d;
+    border-color: #fff;
+    box-shadow: 0 0 12px rgba(255, 77, 77, 0.8);
+    transform: scale(1.15);
+}
+
+/* Firefox thumb */
+.pitch-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    border: 2px solid #ff4d4d;
+    transition: all 0.25s ease;
+    box-shadow: 0 0 6px rgba(255, 77, 77, 0.5);
+}
+
+.pitch-slider::-moz-range-thumb:hover {
+    background: #ff4d4d;
+    border-color: #fff;
+    box-shadow: 0 0 12px rgba(255, 77, 77, 0.8);
+    transform: scale(1.15);
+}
+
+/* 🎵 Animated label */
+.pitch-label {
+    color: #fff;
+    font-size: 0.9rem;
+    min-width: 80px;
+    text-align: center;
+    letter-spacing: 0.4px;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.pitch-label.active {
+    transform: scale(1.25);
+    opacity: 0.7;
+}
+
+/* 🔄 Animated reset icon */
+.pitch-reset {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    color: #ff6666;
+    cursor: pointer;
+    transition: transform 0.4s ease, color 0.4s ease, filter 0.4s ease;
+}
+
+.pitch-reset:hover {
+    transform: rotate(360deg) scale(1.25);
+    color: #ffaaaa;
+    filter: drop-shadow(0 0 10px rgba(255, 77, 77, 0.7));
+}
