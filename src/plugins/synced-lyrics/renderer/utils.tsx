@@ -8,9 +8,8 @@ import KuromojiAnalyzer from 'kuroshiro-analyzer-kuromoji';
 import lazyVar from 'lazy-var';
 import { pinyin } from 'pinyin-pro';
 import { render } from 'solid-js/web';
-import { detect } from 'tinyld';
-
 import { waitForElement } from '@/utils/wait-for-element';
+import { detectLanguage } from '../language-detector';
 
 import { LyricsRenderer, setIsVisible } from './renderer';
 
@@ -245,9 +244,9 @@ const handlers: Record<string, (line: string) => Promise<string> | string> = {
 };
 
 export const romanize = async (line: string) => {
-  const lang = detect(line);
+  const lang = await detectLanguage(line);
 
-  const handler = handlers[lang];
+  const handler = lang && handlers[lang];
   if (handler) {
     return handler(line);
   }
