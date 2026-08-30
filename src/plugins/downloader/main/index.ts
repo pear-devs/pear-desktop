@@ -441,7 +441,55 @@ async function downloadSongUnsafe(
     return;
   }
 
-  const stream = await info.download(downloadOptions);
+  let stream;
+  let retryCount = 0;
+  const maxRetries = 3;
+
+  while (retryCount < maxRetries) {
+    try {
+      if (retryCount > 0) {
+        console.log(`Retry attempt ${retryCount} for download`);
+        yt.session.cookie = await getCookieFromWindow(win);
+        
+        await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        
+        try {
+          info = await yt.music.getInfo(id);
+        } catch (refreshError) {
+          console.warn('Failed to refresh info:', refreshError);
+        }
+      }
+
+      stream = await info.download(downloadOptions);
+      break;
+      
+    } catch (downloadError) {
+      retryCount++;
+      console.warn(`Download attempt ${retryCount} failed:`, downloadError);
+      
+      if (retryCount >= maxRetries) {
+        if (format.url) {
+          try {
+            const response = await fetch(format.url);
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            stream = response.body;
+            console.log('Using direct URL download as fallback');
+            break;
+          } catch (urlError) {
+            throw new Error(`All download methods failed. Last error: ${downloadError}`);
+          }
+        } else {
+          throw new Error(`Download failed after ${maxRetries} attempts: ${downloadError}`);
+        }
+      }
+    }
+  }
+
+  if (!stream) {
+    throw new Error('Failed to get download stream');
+  }
 
   console.info(
     t('plugins.downloader.backend.feedback.download-info', {
