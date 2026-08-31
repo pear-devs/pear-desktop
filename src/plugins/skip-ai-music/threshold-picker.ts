@@ -281,73 +281,83 @@ export const promptThreshold = (
   options: ThresholdPickerOptions,
 ): Promise<number | null> =>
   new Promise((resolve) => {
-    void (async () => {
-    const channel = `skip-ai-music-threshold:${Date.now()}-${Math.random()}`;
-    const { icon } = promptOptions();
-    let settled = false;
-    const file = path.join(
-      app.getPath('temp'),
-      `skip-ai-music-threshold-${Date.now()}.html`,
-    );
-    const editor = new BrowserWindow({
-      parent,
-      modal: true,
-      width: 440,
-      height: 340,
-      minWidth: 380,
-      minHeight: 320,
-      show: false,
-      resizable: false,
-      autoHideMenuBar: true,
-      title: options.title,
-      icon: icon || undefined,
-      backgroundColor: '#0f0f0f',
-      webPreferences: await editorWebPreferences(),
-    });
+    const run = async () => {
+      const channel = `skip-ai-music-threshold:${Date.now()}-${Math.random()}`;
+      const { icon } = promptOptions();
+      let settled = false;
+      let editor: BrowserWindow | undefined;
+      const file = path.join(
+        app.getPath('temp'),
+        `skip-ai-music-threshold-${Date.now()}.html`,
+      );
 
-    const finish = (value: number | null) => {
-      if (settled) {
-        return;
+      const finish = (value: number | null) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        ipcMain.removeAllListeners(channel);
+        unlink(file).catch(() => {});
+        if (editor && !editor.isDestroyed()) {
+          editor.destroy();
+        }
+        resolve(value);
+      };
+
+      try {
+        const webPreferences = await editorWebPreferences();
+        editor = new BrowserWindow({
+          parent,
+          modal: true,
+          width: 440,
+          height: 340,
+          minWidth: 380,
+          minHeight: 320,
+          show: false,
+          resizable: false,
+          autoHideMenuBar: true,
+          title: options.title,
+          icon: icon || undefined,
+          backgroundColor: '#0f0f0f',
+          webPreferences,
+        });
+
+        ipcMain.once(channel, (_event, value: number | null) => {
+          if (value == null || !Number.isFinite(Number(value))) {
+            finish(null);
+            return;
+          }
+          finish(Math.round(Number(value)));
+        });
+
+        editor.once('closed', () => {
+          finish(null);
+        });
+
+        editor.once('ready-to-show', () => {
+          if (editor && !editor.isDestroyed()) {
+            editor.show();
+          }
+        });
+
+        editor.setMenu(null);
+        await writeFile(
+          file,
+          pickerHtml({
+            ...options,
+            channel,
+          }),
+          'utf8',
+        );
+        await editor.loadFile(file);
+      } catch (error: unknown) {
+        console.error(error);
+        finish(null);
       }
-      settled = true;
-      ipcMain.removeAllListeners(channel);
-      unlink(file).catch(() => {});
-      if (!editor.isDestroyed()) {
-        editor.destroy();
-      }
-      resolve(value);
     };
 
-    ipcMain.once(channel, (_event, value: number | null) => {
-      if (value == null || !Number.isFinite(Number(value))) {
-        finish(null);
-        return;
-      }
-      finish(Math.round(Number(value)));
-    });
-
-    editor.once('closed', () => {
-      finish(null);
-    });
-
-    editor.once('ready-to-show', () => {
-      editor.show();
-    });
-
-    editor.setMenu(null);
-    try {
-      await writeFile(
-        file,
-        pickerHtml({
-          ...options,
-          channel,
-        }),
-        'utf8',
-      );
-      await editor.loadFile(file);
-    } catch (error: unknown) {
+    run().catch((error: unknown) => {
       console.error(error);
-      finish(null);
-    }
-    })();
+      resolve(null);
+    });
   });

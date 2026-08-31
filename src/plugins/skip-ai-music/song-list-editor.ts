@@ -262,19 +262,17 @@ const editorHtml = (payload: Record<string, unknown>) => {
 
         const artistField = document.createElement('div');
         artistField.className = 'field';
-        artistField.innerHTML =
-          '<span class="field-label">' +
-          payload.artistPlaceholder +
-          '</span>' +
-          (song.artist || '—');
+        const artistLabel = document.createElement('span');
+        artistLabel.className = 'field-label';
+        artistLabel.textContent = payload.artistPlaceholder;
+        artistField.append(artistLabel, song.artist || '—');
 
         const titleField = document.createElement('div');
         titleField.className = 'field';
-        titleField.innerHTML =
-          '<span class="field-label">' +
-          payload.titlePlaceholder +
-          '</span>' +
-          song.title;
+        const titleLabel = document.createElement('span');
+        titleLabel.className = 'field-label';
+        titleLabel.textContent = payload.titlePlaceholder;
+        titleField.append(titleLabel, song.title);
 
         const remove = document.createElement('button');
         remove.type = 'button';
@@ -348,10 +346,11 @@ export const promptSongList = (
   options: SongListEditorOptions,
 ): Promise<BlockedSong[] | null> =>
   new Promise((resolve) => {
-    void (async () => {
+    const run = async () => {
       const channel = `skip-ai-music-song-editor:${Date.now()}-${Math.random()}`;
       const { icon } = promptOptions();
       let settled = false;
+      let editor: BrowserWindow | undefined;
       const file = path.join(
         app.getPath('temp'),
         `skip-ai-music-songs-${Date.now()}.html`,
@@ -364,52 +363,55 @@ export const promptSongList = (
         settled = true;
         ipcMain.removeAllListeners(channel);
         unlink(file).catch(() => {});
-        if (!editor.isDestroyed()) {
+        if (editor && !editor.isDestroyed()) {
           editor.destroy();
         }
         resolve(value);
       };
 
-      const editor = new BrowserWindow({
-        parent,
-        modal: true,
-        width: 560,
-        height: 560,
-        minWidth: 480,
-        minHeight: 440,
-        show: false,
-        autoHideMenuBar: true,
-        title: options.title,
-        icon: icon || undefined,
-        backgroundColor: '#0f0f0f',
-        webPreferences: await editorWebPreferences(),
-      });
-
-      ipcMain.once(channel, (_event, value: BlockedSong[] | null) => {
-        if (!Array.isArray(value)) {
-          finish(null);
-          return;
-        }
-        finish(
-          value
-            .map((song) => ({
-              artist: String(song?.artist || '').trim(),
-              title: String(song?.title || '').trim(),
-            }))
-            .filter((song) => song.title || song.artist),
-        );
-      });
-
-      editor.once('closed', () => {
-        finish(null);
-      });
-
-      editor.once('ready-to-show', () => {
-        editor.show();
-      });
-
-      editor.setMenu(null);
       try {
+        const webPreferences = await editorWebPreferences();
+        editor = new BrowserWindow({
+          parent,
+          modal: true,
+          width: 560,
+          height: 560,
+          minWidth: 480,
+          minHeight: 440,
+          show: false,
+          autoHideMenuBar: true,
+          title: options.title,
+          icon: icon || undefined,
+          backgroundColor: '#0f0f0f',
+          webPreferences,
+        });
+
+        ipcMain.once(channel, (_event, value: BlockedSong[] | null) => {
+          if (!Array.isArray(value)) {
+            finish(null);
+            return;
+          }
+          finish(
+            value
+              .map((song) => ({
+                artist: String(song?.artist || '').trim(),
+                title: String(song?.title || '').trim(),
+              }))
+              .filter((song) => song.title || song.artist),
+          );
+        });
+
+        editor.once('closed', () => {
+          finish(null);
+        });
+
+        editor.once('ready-to-show', () => {
+          if (editor && !editor.isDestroyed()) {
+            editor.show();
+          }
+        });
+
+        editor.setMenu(null);
         await writeFile(
           file,
           editorHtml({
@@ -423,5 +425,10 @@ export const promptSongList = (
         console.error(error);
         finish(null);
       }
-    })();
+    };
+
+    run().catch((error: unknown) => {
+      console.error(error);
+      resolve(null);
+    });
   });

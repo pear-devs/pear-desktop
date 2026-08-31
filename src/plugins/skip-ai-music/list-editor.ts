@@ -363,68 +363,78 @@ export const promptStringList = (
   options: ListEditorOptions,
 ): Promise<string[] | null> =>
   new Promise((resolve) => {
-    void (async () => {
-    const channel = `skip-ai-music-list-editor:${Date.now()}-${Math.random()}`;
-    const { icon } = promptOptions();
-    let settled = false;
-    const file = path.join(
-      app.getPath('temp'),
-      `skip-ai-music-list-${Date.now()}.html`,
-    );
-    const editor = new BrowserWindow({
-      parent,
-      modal: true,
-      width: 480,
-      height: 540,
-      minWidth: 400,
-      minHeight: 420,
-      show: false,
-      autoHideMenuBar: true,
-      title: options.title,
-      icon: icon || undefined,
-      backgroundColor: '#0f0f0f',
-      webPreferences: await editorWebPreferences(),
-    });
+    const run = async () => {
+      const channel = `skip-ai-music-list-editor:${Date.now()}-${Math.random()}`;
+      const { icon } = promptOptions();
+      let settled = false;
+      let editor: BrowserWindow | undefined;
+      const file = path.join(
+        app.getPath('temp'),
+        `skip-ai-music-list-${Date.now()}.html`,
+      );
 
-    const finish = (value: string[] | null) => {
-      if (settled) {
-        return;
+      const finish = (value: string[] | null) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        ipcMain.removeAllListeners(channel);
+        unlink(file).catch(() => {});
+        if (editor && !editor.isDestroyed()) {
+          editor.destroy();
+        }
+        resolve(value);
+      };
+
+      try {
+        const webPreferences = await editorWebPreferences();
+        editor = new BrowserWindow({
+          parent,
+          modal: true,
+          width: 480,
+          height: 540,
+          minWidth: 400,
+          minHeight: 420,
+          show: false,
+          autoHideMenuBar: true,
+          title: options.title,
+          icon: icon || undefined,
+          backgroundColor: '#0f0f0f',
+          webPreferences,
+        });
+
+        ipcMain.once(channel, (_event, value: string[] | null) => {
+          finish(Array.isArray(value) ? value : null);
+        });
+
+        editor.once('closed', () => {
+          finish(null);
+        });
+
+        editor.once('ready-to-show', () => {
+          if (editor && !editor.isDestroyed()) {
+            editor.show();
+          }
+        });
+
+        editor.setMenu(null);
+        await writeFile(
+          file,
+          editorHtml({
+            ...options,
+            channel,
+          }),
+          'utf8',
+        );
+        await editor.loadFile(file);
+      } catch (error: unknown) {
+        console.error(error);
+        finish(null);
       }
-      settled = true;
-      ipcMain.removeAllListeners(channel);
-      unlink(file).catch(() => {});
-      if (!editor.isDestroyed()) {
-        editor.destroy();
-      }
-      resolve(value);
     };
 
-    ipcMain.once(channel, (_event, value: string[] | null) => {
-      finish(Array.isArray(value) ? value : null);
-    });
-
-    editor.once('closed', () => {
-      finish(null);
-    });
-
-    editor.once('ready-to-show', () => {
-      editor.show();
-    });
-
-    editor.setMenu(null);
-    try {
-      await writeFile(
-        file,
-        editorHtml({
-          ...options,
-          channel,
-        }),
-        'utf8',
-      );
-      await editor.loadFile(file);
-    } catch (error: unknown) {
+    run().catch((error: unknown) => {
       console.error(error);
-      finish(null);
-    }
-    })();
+      resolve(null);
+    });
   });
