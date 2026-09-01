@@ -138,6 +138,7 @@
             "label": "Starting page",
             "unset": "Unset"
           },
+          "strip-music-from-shared-links": "Strip 'music.' from shared links",
           "tray": {
             "label": "Tray",
             "submenu": {
