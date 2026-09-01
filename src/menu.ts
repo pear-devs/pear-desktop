@@ -99,6 +99,7 @@ export const mainMenuTemplate = async (
           label: pluginLabel,
           sublabel: isNew ? t('main.menu.plugins.new') : undefined,
           toolTip: pluginDescription,
+          checked: true,
           submenu: [
             await pluginEnabledMenu(
               id,
