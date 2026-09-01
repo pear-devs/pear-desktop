@@ -37,6 +37,23 @@ export default createPlugin({
     enableSeekbar: true,
   } satisfies Config as Config,
   stylesheets: [style],
+  settings: [
+    {
+      type: 'slider',
+      key: 'ratio',
+      label: () => t('plugins.album-color-theme.menu.color-mix-ratio.label'),
+      min: 0,
+      max: 100,
+      step: 10,
+      unit: '%',
+      scale: 0.01,
+    },
+    {
+      type: 'switch',
+      key: 'enableSeekbar',
+      label: () => t('plugins.album-color-theme.menu.enable-seekbar'),
+    },
+  ],
   menu: async ({ getConfig, setConfig }) => {
     const ratioList = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
 

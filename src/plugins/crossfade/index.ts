@@ -60,6 +60,43 @@ export default createPlugin<
      */
     fadeScaling: 'linear',
   },
+  settings: [
+    {
+      type: 'slider',
+      key: 'fadeInDuration',
+      label: () => t('plugins.crossfade.settings.fade-in'),
+      min: 0,
+      max: 8000,
+      step: 100,
+      unit: 'ms',
+    },
+    {
+      type: 'slider',
+      key: 'fadeOutDuration',
+      label: () => t('plugins.crossfade.settings.fade-out'),
+      min: 0,
+      max: 10000,
+      step: 100,
+      unit: 'ms',
+    },
+    {
+      type: 'slider',
+      key: 'secondsBeforeEnd',
+      label: () => t('plugins.crossfade.settings.seconds-before-end'),
+      min: 0,
+      max: 30,
+      unit: 's',
+    },
+    {
+      type: 'select',
+      key: 'fadeScaling',
+      label: () => t('plugins.crossfade.settings.fade-scaling'),
+      options: [
+        { value: 'linear', label: () => t('plugins.crossfade.settings.scaling.linear') },
+        { value: 'logarithmic', label: () => t('plugins.crossfade.settings.scaling.logarithmic') },
+      ],
+    },
+  ],
   menu({ window, getConfig, setConfig }) {
     const promptCrossfadeValues = async (
       win: BrowserWindow,

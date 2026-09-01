@@ -53,6 +53,7 @@ import { LoggerPrefix } from '@/utils';
 import { isTesting } from '@/utils/testing';
 
 import type { PluginConfig } from '@/types/plugins';
+import type { RestartRequirement } from '@/types/restart';
 
 // Catch errors and log them
 unhandled({
@@ -62,6 +63,11 @@ unhandled({
 
 // Prevent window being garbage collected
 let mainWindow: Electron.BrowserWindow | null;
+const settingsRestartSessions = new Set<number>();
+const pendingSettingsRestartRequirements = new Map<
+  string,
+  RestartRequirement
+>();
 electronUpdater.autoUpdater.autoDownload = false;
 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -194,6 +200,38 @@ ipcMain.handle('peard:get-main-plugin-names', async () =>
 const initHook = async (win: BrowserWindow) => {
   const allPluginStubs = await allPlugins();
 
+  const addPendingSettingsRestartRequirement = (
+    requirement: RestartRequirement,
+  ) => {
+    const key =
+      requirement.type === 'plugin'
+        ? `plugin:${requirement.id}`
+        : `setting:${requirement.label}`;
+    pendingSettingsRestartRequirements.set(key, requirement);
+  };
+
+  ipcMain.handle('ytmd-sui:restart-session-open', (event) => {
+    // First active session starts a fresh batch; later ones join it.
+    if (settingsRestartSessions.size === 0) {
+      pendingSettingsRestartRequirements.clear();
+    }
+    settingsRestartSessions.add(event.sender.id);
+  });
+  ipcMain.handle(
+    'ytmd-sui:restart-session-close',
+    async (event, requirements: RestartRequirement[]) => {
+      settingsRestartSessions.delete(event.sender.id);
+      requirements.forEach(addPendingSettingsRestartRequirement);
+
+      // Keep batching while any settings window remains active.
+      if (settingsRestartSessions.size > 0) return;
+
+      const pending = [...pendingSettingsRestartRequirements.values()];
+      pendingSettingsRestartRequirements.clear();
+      if (pending.length) await showNeedToRestartDialog(pending, true);
+    },
+  );
+
   ipcMain.handle(
     'peard:get-config',
     (_, id: string) =>
@@ -226,6 +264,9 @@ const initHook = async (win: BrowserWindow) => {
           newPluginConfig ?? {},
         ) as PluginConfig;
 
+        // Essential plugins can never be disabled.
+        if (allPluginStubs[id]?.essential) config.enabled = true;
+
         if (config.enabled !== oldConfig?.enabled) {
           if (config.enabled) {
             win.webContents.send('plugin:enable', id);
@@ -238,7 +279,12 @@ const initHook = async (win: BrowserWindow) => {
           }
 
           if (allPluginStubs[id]?.restartNeeded) {
-            showNeedToRestartDialog(id);
+            const requirement: RestartRequirement = { type: 'plugin', id };
+            if (settingsRestartSessions.size > 0) {
+              addPendingSettingsRestartRequirement(requirement);
+            } else {
+              showNeedToRestartDialog([requirement]);
+            }
           }
         }
 
@@ -258,8 +304,22 @@ const initHook = async (win: BrowserWindow) => {
   });
 };
 
-const showNeedToRestartDialog = async (id: string) => {
-  const plugin = (await allPlugins())[id];
+const showNeedToRestartDialog = async (
+  requirements: RestartRequirement[],
+  showSummary = false,
+) => {
+  const plugins = await allPlugins();
+  const changes = [
+    ...new Set(
+      requirements.map((requirement) =>
+        requirement.type === 'plugin'
+          ? (plugins[requirement.id]?.name?.() ?? requirement.id)
+          : requirement.label,
+      ),
+    ),
+  ];
+  const pluginName = changes[0] ?? '';
+  const useSummary = showSummary || requirements.length > 1;
 
   const dialogOptions: Electron.MessageBoxOptions = {
     type: 'info',
@@ -267,13 +327,23 @@ const showNeedToRestartDialog = async (id: string) => {
       t('main.dialog.need-to-restart.buttons.restart-now'),
       t('main.dialog.need-to-restart.buttons.later'),
     ],
-    title: t('main.dialog.need-to-restart.title'),
-    message: t('main.dialog.need-to-restart.message', {
-      pluginName: plugin?.name?.() ?? id,
-    }),
-    detail: t('main.dialog.need-to-restart.detail', {
-      pluginName: plugin?.name?.() ?? id,
-    }),
+    title: t(
+      useSummary
+        ? 'main.dialog.restart-summary.title'
+        : 'main.dialog.need-to-restart.title',
+    ),
+    message: t(
+      useSummary
+        ? 'main.dialog.restart-summary.message'
+        : 'main.dialog.need-to-restart.message',
+      { pluginName },
+    ),
+    detail: t(
+      useSummary
+        ? 'main.dialog.restart-summary.detail'
+        : 'main.dialog.need-to-restart.detail',
+      { changes: changes.join(', '), pluginName },
+    ),
     defaultId: 0,
     cancelId: 1,
   };

@@ -52,6 +52,17 @@ export default createPlugin({
     additionalBlockLists: [],
     disableDefaultLists: false,
   } as TrackerBlockerConfig,
+  settings: [
+    {
+      type: 'select',
+      key: 'blocker',
+      label: () => t('plugins.do-not-track.menu.blocker'),
+      options: Object.values(blockers).map((blocker) => ({
+        value: blocker,
+        label: () => blocker,
+      })),
+    },
+  ],
   menu: async ({ getConfig, setConfig }) => {
     const config = await getConfig();
 
