@@ -804,6 +804,10 @@
         }
       }
     },
+    "seek-shortcuts": {
+      "description": "Seek 5 seconds backward/forward with the left/right arrow keys",
+      "name": "Seek Shortcuts"
+    },
     "shortcuts": {
       "description": "Allows setting global hotkeys for playback (play/pause/next/previous) and turning off media OSD by overriding media keys, turning on Ctrl/CMD + F to search, turning on Linux MPRIS support for media keys, and custom hotkeys for advanced users",
       "menu": {
