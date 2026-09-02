@@ -103,7 +103,7 @@ html {
  */
 ytmusic-browse-response .ytmusic-responsive-list-item-renderer {
   content-visibility: auto;
-  contain-intrinsic-size: auto 56px;
+  contain-intrinsic-size: auto 48px;
 }
 
 /* fix fullscreen style */

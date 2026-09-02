@@ -191,6 +191,8 @@ export const TitleBar = (props: TitleBarProps) => {
   const [menu, setMenu] = createSignal<Menu | null>(null);
   const [mouseY, setMouseY] = createSignal(0);
   let scrollRafHandle: number | null = null;
+  let scrollListener: (() => void) | undefined;
+  let ytmusicAppLayout: HTMLElement | null = null;
 
   const [data, { refetch }] = createResource(
     async () => (await props.ipc.invoke('get-menu')) as Promise<Menu | null>,
@@ -302,8 +304,9 @@ export const TitleBar = (props: TitleBarProps) => {
     });
 
     // tracking mouse position
+    // tracking mouse position
     window.addEventListener('mousemove', listener);
-    const ytmusicAppLayout = document.querySelector<HTMLElement>('#layout');
+    ytmusicAppLayout = document.querySelector<HTMLElement>('#layout');
 
     // rAF-throttled: raw 'scroll' events can fire far more often than
     // once per animation frame, and each tick here previously read
@@ -315,20 +318,18 @@ export const TitleBar = (props: TitleBarProps) => {
     // scrolling in large playlists" that backface-visibility: hidden
     // (see titlebar.css) only partially papered over.
     let wasScrolled = false;
-    ytmusicAppLayout?.addEventListener(
-      'scroll',
-      () => {
-        if (scrollRafHandle !== null) return; // already scheduled this frame
-        scrollRafHandle = requestAnimationFrame(() => {
-          scrollRafHandle = null;
-          const isScrolled = ytmusicAppLayout.scrollTop > 20;
-          if (isScrolled === wasScrolled) return; // no class change needed
-          wasScrolled = isScrolled;
-          ytmusicAppLayout.classList.toggle('content-scrolled', isScrolled);
-        });
-      },
-      { passive: true },
-    );
+    scrollListener = () => {
+      if (scrollRafHandle !== null) return; // already scheduled this frame
+      scrollRafHandle = requestAnimationFrame(() => {
+        scrollRafHandle = null;
+        if (!ytmusicAppLayout) return;
+        const isScrolled = ytmusicAppLayout.scrollTop > 20;
+        if (isScrolled === wasScrolled) return; // no class change needed
+        wasScrolled = isScrolled;
+        ytmusicAppLayout.classList.toggle('content-scrolled', isScrolled);
+      });
+    };
+    ytmusicAppLayout?.addEventListener('scroll', scrollListener, { passive: true });
   });
 
   createEffect(() => {
@@ -340,6 +341,9 @@ export const TitleBar = (props: TitleBarProps) => {
   onCleanup(() => {
     window.removeEventListener('mousemove', listener);
     if (scrollRafHandle !== null) cancelAnimationFrame(scrollRafHandle);
+    if (scrollListener) {
+      ytmusicAppLayout?.removeEventListener('scroll', scrollListener);
+    }
   });
 
   return (
