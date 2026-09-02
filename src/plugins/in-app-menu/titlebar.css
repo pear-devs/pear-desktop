@@ -87,8 +87,23 @@ html {
 }
 
 /* fixes scrollbar lagging behind in large playlists */
+/*
+ * NOTE: previously `will-change: transform`. That promotes every
+ * matching element to its own GPU compositor layer for as long as
+ * it's in the DOM — on a long playlist, where YouTube Music keeps
+ * every row's element alive at once, that's thousands of simultaneous
+ * layers (a classic "layer explosion"), which gets WORSE the longer
+ * the list is — i.e. worse exactly where this comment says it should
+ * help. content-visibility: auto is the correct tool for this case:
+ * it skips layout and paint entirely for rows not near the viewport,
+ * rather than promoting all of them to the GPU regardless of
+ * visibility. contain-intrinsic-size gives the browser a placeholder
+ * size for skipped rows so scrollbar length/position stay accurate;
+ * `auto` remembers each row's real size after its first paint.
+ */
 ytmusic-browse-response .ytmusic-responsive-list-item-renderer {
-  will-change: transform;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 48px;
 }
 
 /* fix fullscreen style */
