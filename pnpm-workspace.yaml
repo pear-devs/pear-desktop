@@ -23,3 +23,5 @@ patchedDependencies:
 engineStrict: true
 minimumReleaseAgeExclude:
   - vite@8.1.0
+  # Renovate security update: @hono/node-server@2.0.10
+  - "@hono/node-server@2.0.10"
