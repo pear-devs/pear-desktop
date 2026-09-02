@@ -23,3 +23,5 @@ patchedDependencies:
 engineStrict: true
 minimumReleaseAgeExclude:
   - vite@8.1.0
+  # Renovate security update: hono@4.12.34
+  - hono@4.12.34
