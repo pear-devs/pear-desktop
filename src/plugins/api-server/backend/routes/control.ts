@@ -10,11 +10,22 @@ import {
 
 import { API_VERSION } from '../api-version';
 import {
+  AddSongsToPlaylistSchema,
+  AddSongsToQueueSchema,
   AddSongToQueueSchema,
   GoBackSchema,
   GoForwardScheme,
   MoveSongInQueueSchema,
+  PlayAlbumSchema,
+  PlayArtistSchema,
+  PlayerStateSchema,
+  PlaylistIdParamsSchema,
+  PlaylistInfoSchema,
+  PlaylistParamsSchema,
+  PlayPlaylistSchema,
+  UserPlaylistsSchema,
   QueueParamsSchema,
+  ReorderQueueSchema,
   SearchSchema,
   SeekSchema,
   SetFullscreenSchema,
@@ -60,6 +71,68 @@ const routes = {
     path: `/api/${API_VERSION}/play`,
     summary: 'Play',
     description: 'Change the state of the player to play',
+    responses: {
+      204: {
+        description: 'Success',
+      },
+    },
+  }),
+  playPlaylist: createRoute({
+    method: 'post',
+    path: `/api/${API_VERSION}/playPlaylist`,
+    summary: 'play playlist',
+    description: 'Plays a playlist given its ID and optionally a video ID',
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: PlayPlaylistSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      204: {
+        description: 'Success',
+      },
+    },
+  }),
+  playArtist: createRoute({
+    method: 'post',
+    path: `/api/${API_VERSION}/playArtist`,
+    summary: 'play artist',
+    description:
+      'Plays top songs / shuffle playlist for an artist given a channel ID',
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: PlayArtistSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      204: {
+        description: 'Success',
+      },
+    },
+  }),
+  playAlbum: createRoute({
+    method: 'post',
+    path: `/api/${API_VERSION}/playAlbum`,
+    summary: 'play album',
+    description:
+      'Plays an album given a browse ID (MPREb_...) or audio playlist ID (OLAK5uy_...)',
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: PlayAlbumSchema,
+          },
+        },
+      },
+    },
     responses: {
       204: {
         description: 'Success',
@@ -471,6 +544,101 @@ const routes = {
       },
     },
   }),
+  addManyToQueue: createRoute({
+    method: 'post',
+    path: `/api/${API_VERSION}/queue/add-many`,
+    summary: 'add many songs to queue',
+    description: 'Add multiple songs to the queue in one request',
+    request: {
+      body: {
+        description: 'video ids of the songs to add',
+        content: {
+          'application/json': {
+            schema: AddSongsToQueueSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      204: {
+        description: 'Success',
+      },
+    },
+  }),
+  reorderQueue: createRoute({
+    method: 'post',
+    path: `/api/${API_VERSION}/queue/reorder`,
+    summary: 'reorder queue',
+    description:
+      'Reorder the queue using fromIndex/toIndex or a full order permutation',
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: ReorderQueueSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      204: {
+        description: 'Success',
+      },
+      400: {
+        description: 'Invalid reorder payload',
+        content: {
+          'application/json': {
+            schema: z.object({
+              error: z.string(),
+            }),
+          },
+        },
+      },
+    },
+  }),
+  clearQueuePost: createRoute({
+    method: 'post',
+    path: `/api/${API_VERSION}/queue/clear`,
+    summary: 'clear queue',
+    description: 'Clear the queue (POST alias of DELETE /queue)',
+    responses: {
+      204: {
+        description: 'Success',
+      },
+    },
+  }),
+  addSongsToPlaylist: createRoute({
+    method: 'post',
+    path: `/api/${API_VERSION}/playlists/{playlistId}/songs`,
+    summary: 'add songs to playlist',
+    description: 'Add one or more songs to a playlist',
+    request: {
+      params: PlaylistParamsSchema,
+      body: {
+        description: 'video ids of the songs to add',
+        content: {
+          'application/json': {
+            schema: AddSongsToPlaylistSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      204: {
+        description: 'Success',
+      },
+      500: {
+        description: 'Failed to add songs to playlist',
+        content: {
+          'application/json': {
+            schema: z.object({
+              error: z.string(),
+            }),
+          },
+        },
+      },
+    },
+  }),
   moveSongInQueue: createRoute({
     method: 'patch',
     path: `/api/${API_VERSION}/queue/{index}`,
@@ -539,6 +707,79 @@ const routes = {
       },
     },
   }),
+  playerState: createRoute({
+    method: 'get',
+    path: `/api/${API_VERSION}/player-state`,
+    summary: 'get player state',
+    description:
+      'Get combined player state: playing/paused, volume, repeat, shuffle, current song and time',
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: PlayerStateSchema,
+          },
+        },
+      },
+    },
+  }),
+  playlistInfo: createRoute({
+    method: 'get',
+    path: `/api/${API_VERSION}/playlist/{id}`,
+    summary: 'get playlist info',
+    description: 'Get playlist name, track count and tracks',
+    request: {
+      params: PlaylistIdParamsSchema,
+    },
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: PlaylistInfoSchema,
+          },
+        },
+      },
+      500: {
+        description: 'Failed to get playlist info',
+        content: {
+          'application/json': {
+            schema: z.object({
+              error: z.string(),
+            }),
+          },
+        },
+      },
+    },
+  }),
+  userPlaylists: createRoute({
+    method: 'get',
+    path: `/api/${API_VERSION}/playlists`,
+    summary: 'get user playlists',
+    description:
+      'List playlists from the signed-in YouTube Music library (FEmusic_liked_playlists)',
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: UserPlaylistsSchema,
+          },
+        },
+      },
+      500: {
+        description: 'Failed to get user playlists',
+        content: {
+          'application/json': {
+            schema: z.object({
+              error: z.string(),
+            }),
+          },
+        },
+      },
+    },
+  }),
   search: createRoute({
     method: 'post',
     path: `/api/${API_VERSION}/search`,
@@ -593,6 +834,27 @@ export const register = (
   });
   app.openapi(routes.play, (ctx) => {
     controller.play();
+
+    ctx.status(204);
+    return ctx.body(null);
+  });
+  app.openapi(routes.playPlaylist, (ctx) => {
+    const { playlistId, videoId } = ctx.req.valid('json');
+    controller.playPlaylist(playlistId, videoId);
+
+    ctx.status(204);
+    return ctx.body(null);
+  });
+  app.openapi(routes.playArtist, (ctx) => {
+    const { channelId } = ctx.req.valid('json');
+    controller.playArtist(channelId);
+
+    ctx.status(204);
+    return ctx.body(null);
+  });
+  app.openapi(routes.playAlbum, (ctx) => {
+    const { albumId } = ctx.req.valid('json');
+    controller.playAlbum(albumId);
 
     ctx.status(204);
     return ctx.body(null);
@@ -832,6 +1094,51 @@ export const register = (
     ctx.status(204);
     return ctx.body(null);
   });
+  app.openapi(routes.addManyToQueue, (ctx) => {
+    const { videoIds, insertPosition } = ctx.req.valid('json');
+    controller.addSongsToQueue(videoIds, insertPosition);
+
+    ctx.status(204);
+    return ctx.body(null);
+  });
+  app.openapi(routes.reorderQueue, (ctx) => {
+    const body = ctx.req.valid('json');
+
+    if (Array.isArray(body.order) && body.order.length >= 2) {
+      controller.reorderQueue(body.order);
+    } else if (
+      typeof body.fromIndex === 'number' &&
+      typeof body.toIndex === 'number'
+    ) {
+      controller.moveSongInQueue(body.fromIndex, body.toIndex);
+    } else {
+      ctx.status(400);
+      return ctx.json({
+        error: 'Provide fromIndex+toIndex or an order array',
+      });
+    }
+
+    ctx.status(204);
+    return ctx.body(null);
+  });
+  app.openapi(routes.addSongsToPlaylist, async (ctx) => {
+    const { playlistId } = ctx.req.valid('param');
+    const { videoIds } = ctx.req.valid('json');
+
+    try {
+      await controller.addSongsToPlaylist(playlistId, videoIds);
+      ctx.status(204);
+      return ctx.body(null);
+    } catch (error) {
+      ctx.status(500);
+      return ctx.json({
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to add songs to playlist',
+      });
+    }
+  });
   app.openapi(routes.moveSongInQueue, (ctx) => {
     const index = Number(ctx.req.param('index'));
     const { toIndex } = ctx.req.valid('json');
@@ -859,6 +1166,87 @@ export const register = (
 
     ctx.status(204);
     return ctx.body(null);
+  });
+  app.openapi(routes.clearQueuePost, (ctx) => {
+    controller.clearQueue();
+
+    ctx.status(204);
+    return ctx.body(null);
+  });
+  app.openapi(routes.playerState, async (ctx) => {
+    const song = await songInfoGetter();
+    const volumeState = (await volumeStateGetter()) ?? {
+      state: 0,
+      isMuted: false,
+    };
+    const repeat = (await repeatModeGetter()) ?? null;
+
+    const shuffle = await new Promise<boolean | null>((resolve) => {
+      const timeout = setTimeout(() => resolve(null), 1500);
+      ipcMain.once(
+        'peard:get-shuffle-response',
+        (_, isShuffled: boolean | undefined) => {
+          clearTimeout(timeout);
+          resolve(!!isShuffled);
+        },
+      );
+      controller.requestShuffleInformation();
+    });
+
+    const bodySong = song
+      ? (() => {
+          const copy = { ...song };
+          delete copy.image;
+          return copy;
+        })()
+      : null;
+
+    ctx.status(200);
+    return ctx.json({
+      isPlaying: song ? !song.isPaused : false,
+      isPaused: song?.isPaused ?? true,
+      volume: volumeState.state,
+      isMuted: volumeState.isMuted,
+      repeat,
+      shuffle,
+      song: bodySong,
+      elapsedSeconds: song?.elapsedSeconds ?? null,
+      songDuration: song?.songDuration ?? null,
+    });
+  });
+  app.openapi(routes.playlistInfo, async (ctx) => {
+    const { id } = ctx.req.valid('param');
+
+    try {
+      const info = await controller.getPlaylistInfo(id);
+      return ctx.json(info as z.infer<typeof PlaylistInfoSchema>, 200);
+    } catch (error) {
+      return ctx.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to get playlist info',
+        },
+        500,
+      );
+    }
+  });
+  app.openapi(routes.userPlaylists, async (ctx) => {
+    try {
+      const data = await controller.getUserPlaylists();
+      return ctx.json(data as z.infer<typeof UserPlaylistsSchema>, 200);
+    } catch (error) {
+      return ctx.json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to get user playlists',
+        },
+        500,
+      );
+    }
   });
   app.openapi(routes.search, async (ctx) => {
     const { query, params, continuation } = ctx.req.valid('json');
