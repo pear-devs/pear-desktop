@@ -1,0 +1,18 @@
+dev server running for the electron renderer process at:
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+  ➜  Inspect: http://localhost:5173/__inspect/
+
+starting electron app...
+
+
+[YTMusic] i18n loaded
+[YTMusic] Loading all plugins
+[YTMusic] Plugin in-app-menu::backend executed at 0.14ms
+[YTMusic] Window tried to render offscreen, windowSize=1298,973, displaySize={"x":-1920,"y":1069,"width":1920,"height":1080}, position={"x":-1634,"y":1049}
+[196840:0214/113014.771:ERROR:mojo\public\cpp\bindings\lib\interface_endpoint_client.cc:732] Message 0 rejected by interface blink.mojom.WidgetHost
+[196840:0214/113352.791:ERROR:ui\compositor\compositor_animation_observer.cc:65] CompositorAnimationObserver is active for too long (205.149s) location=Button@ui\views\controls\button\button.cc:667
+[YTMusic] Plugin notifications::backend executed at 1.86ms
+[YTMusic] Plugin "notifications::menu" loaded
+[196840:0214/115533.467:ERROR:ui\compositor\compositor_animation_observer.cc:65] CompositorAnimationObserver is active for too long (1173.45s) location=Button@ui\views\controls\button\button.cc:667
