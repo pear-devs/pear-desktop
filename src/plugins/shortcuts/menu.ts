@@ -70,6 +70,62 @@ export const onMenu = async ({
     // Else -> pressed cancel
   }
 
+  async function promptSeekKeybind(
+    config: ShortcutsPluginConfig,
+    win: BrowserWindow,
+  ) {
+    const output = await prompt(
+      {
+        title: t('plugins.shortcuts.prompt.seek-keybind.title'),
+        label: t('plugins.shortcuts.prompt.seek-keybind.label'),
+        type: 'keybind',
+        keybindOptions: [
+          kb(
+            t('plugins.shortcuts.prompt.seek-keybind.keybind-options.forward'),
+            'forward',
+            config.seekGlobalShortcuts?.forward,
+          ),
+          kb(
+            t('plugins.shortcuts.prompt.seek-keybind.keybind-options.backward'),
+            'backward',
+            config.seekGlobalShortcuts?.backward,
+          ),
+        ],
+        ...promptOptions(),
+      },
+      win,
+    );
+
+    if (output) {
+      const newSeekGlobalShortcuts = { forward: '', backward: '' };
+      for (const { value, accelerator } of output) {
+        newSeekGlobalShortcuts[value as keyof typeof newSeekGlobalShortcuts] =
+          accelerator;
+      }
+
+      setConfig({ seekGlobalShortcuts: newSeekGlobalShortcuts });
+    }
+  }
+
+  async function promptSeekSeconds(config: ShortcutsPluginConfig) {
+    const output = await prompt(
+      {
+        title: t('plugins.shortcuts.prompt.seek-seconds.title'),
+        label: t('plugins.shortcuts.prompt.seek-seconds.label'),
+        value: config.seekSeconds || 10,
+        type: 'counter',
+        counterOptions: { minimum: 1, maximum: 120, multiFire: true },
+        width: 380,
+        ...promptOptions(),
+      },
+      window,
+    );
+
+    if (output || output === 0) {
+      setConfig({ seekSeconds: Number(output) });
+    }
+  }
+
   return [
     {
       label: t('plugins.shortcuts.menu.set-keybinds'),
@@ -80,6 +136,21 @@ export const onMenu = async ({
       type: 'checkbox',
       checked: config.overrideMediaKeys,
       click: (item) => setConfig({ overrideMediaKeys: item.checked }),
+    },
+    {
+      label: t('plugins.shortcuts.menu.focus-window-on-double-play-pause'),
+      type: 'checkbox',
+      checked: config.focusWindowOnDoublePlayPause,
+      click: (item) =>
+        setConfig({ focusWindowOnDoublePlayPause: item.checked }),
+    },
+    {
+      label: t('plugins.shortcuts.menu.set-seek-keybinds'),
+      click: () => promptSeekKeybind(config, window),
+    },
+    {
+      label: t('plugins.shortcuts.menu.set-seek-seconds'),
+      click: () => promptSeekSeconds(config),
     },
   ];
 };
