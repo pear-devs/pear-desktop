@@ -24,6 +24,7 @@ export interface PanelHandle {
 }
 
 const THROTTLE_MS = 40;
+const WHEEL_COMMIT_MS = 200;
 
 function throttleLive(fn: (value: number) => void): (value: number) => void {
   let last = 0;
@@ -34,6 +35,29 @@ function throttleLive(fn: (value: number) => void): (value: number) => void {
       fn(value);
     }
   };
+}
+
+function debounceTrailing(
+  fn: (value: number) => void,
+  ms: number,
+): ((value: number) => void) & { cancel: () => void } {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let latest = 0;
+  const wrapped = ((value: number) => {
+    latest = value;
+    if (timer !== null) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      fn(latest);
+    }, ms);
+  }) as ((value: number) => void) & { cancel: () => void };
+  wrapped.cancel = () => {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+  return wrapped;
 }
 
 export function createCogButton(
@@ -157,6 +181,14 @@ export function createPanel(
 
   const slowLive = throttleLive(callbacks.onSlowLive);
   const reverbLive = throttleLive(callbacks.onReverbLive);
+  const slowWheelCommit = debounceTrailing(
+    callbacks.onSlowCommit,
+    WHEEL_COMMIT_MS,
+  );
+  const reverbWheelCommit = debounceTrailing(
+    callbacks.onReverbCommit,
+    WHEEL_COMMIT_MS,
+  );
 
   activeBox.addEventListener('change', () => {
     callbacks.onActiveChange(activeBox.checked);
@@ -187,7 +219,7 @@ export function createPanel(
       speed.value = String(next);
       speedRow.value.textContent = formatRate(next);
       slowLive(next);
-      callbacks.onSlowCommit(next);
+      slowWheelCommit(next);
     },
     { passive: false },
   );
@@ -202,7 +234,7 @@ export function createPanel(
       reverb.value = String(Math.round(next * 100));
       reverbRow.value.textContent = formatPercent(next);
       reverbLive(next);
-      callbacks.onReverbCommit(next);
+      reverbWheelCommit(next);
     },
     { passive: false },
   );
@@ -221,6 +253,8 @@ export function createPanel(
       paint(state);
     },
     destroy: () => {
+      slowWheelCommit.cancel();
+      reverbWheelCommit.cancel();
       root.remove();
     },
   };

@@ -115,6 +115,7 @@ interface SlowedReverbRenderer {
   panel: PanelHandle | null;
   audioHandler: ((event: Event) => void) | null;
   docHandler: ((event: MouseEvent) => void) | null;
+  lastWetGain: number;
   start: (ctx: RendererContext<SlowedReverbConfig>) => Promise<void>;
   stop: () => void;
   onPlayerApiReady: () => void;
@@ -171,6 +172,7 @@ export default createPlugin<
     panel: null,
     audioHandler: null,
     docHandler: null,
+    lastWetGain: 0,
 
     async start(ctx) {
       this.ctx = ctx;
@@ -380,13 +382,6 @@ export default createPlugin<
       }
       this.applyReverb();
       if (this.workletFailed) return;
-      if (this.reverbNode) {
-        try {
-          audioSource.connect(this.reverbNode);
-          if (this.wetGain) this.reverbNode.connect(this.wetGain);
-        } catch {}
-        return;
-      }
       this.ensureWorklet();
     },
 
@@ -510,7 +505,12 @@ export default createPlugin<
       if (this.wetGain) {
         this.wetGain.gain.value = 1;
       }
+      const prevWet = this.lastWetGain;
+      this.lastWetGain = params.wetGain;
       try {
+        if (prevWet === 0 && params.wetGain > 0) {
+          this.reverbNode?.port.postMessage({ type: 'reset' });
+        }
         this.reverbNode?.port.postMessage({ type: 'setParams', params });
       } catch {}
     },

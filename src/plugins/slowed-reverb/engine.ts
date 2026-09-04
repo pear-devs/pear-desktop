@@ -11,7 +11,9 @@ export function clamp(value: number, min: number, max: number): number {
 }
 
 export function clampSlow(value: number): number {
-  return Math.round(clamp(value, SLOW_MIN, SLOW_MAX) * 100) / 100;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 1;
+  return Math.round(clamp(numeric, SLOW_MIN, SLOW_MAX) * 100) / 100;
 }
 
 export function clampIntensity(value: number): number {

@@ -143,6 +143,11 @@ class DattorroReverbProcessor extends AudioWorkletProcessor {
     const n = L.length;
     const outL = out[0];
     const outR = out.length > 1 ? out[1] : out[0];
+    if (this.wetGain === 0) {
+      outL.fill(0);
+      if (outR !== outL) outR.fill(0);
+      return true;
+    }
     const sr = this.sr;
 
     for (let i = 0; i < n; i++) {
