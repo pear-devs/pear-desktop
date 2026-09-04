@@ -194,19 +194,23 @@ export function createPanel(
     callbacks.onActiveChange(activeBox.checked);
   });
   speed.addEventListener('input', () => {
+    slowWheelCommit.cancel();
     const next = clampSlow(Number(speed.value));
     speedRow.value.textContent = formatRate(next);
     slowLive(next);
   });
   speed.addEventListener('change', () => {
+    slowWheelCommit.cancel();
     callbacks.onSlowCommit(clampSlow(Number(speed.value)));
   });
   reverb.addEventListener('input', () => {
+    reverbWheelCommit.cancel();
     const next = clampIntensity(Number(reverb.value) / 100);
     reverbRow.value.textContent = formatPercent(next);
     reverbLive(next);
   });
   reverb.addEventListener('change', () => {
+    reverbWheelCommit.cancel();
     callbacks.onReverbCommit(clampIntensity(Number(reverb.value) / 100));
   });
   speed.addEventListener(
@@ -239,6 +243,8 @@ export function createPanel(
     { passive: false },
   );
   reset.addEventListener('click', () => {
+    slowWheelCommit.cancel();
+    reverbWheelCommit.cancel();
     callbacks.onReset();
   });
 
