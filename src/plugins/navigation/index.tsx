@@ -70,6 +70,7 @@ export default createPlugin({
     },
     stop() {
       this.buttonContainer.remove();
+      this.buttonContainer.replaceChildren();
     },
   },
 });
