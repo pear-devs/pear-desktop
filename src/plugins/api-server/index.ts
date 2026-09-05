@@ -4,6 +4,11 @@ import { createPlugin } from '@/utils';
 import { backend } from './backend';
 import { defaultAPIServerConfig } from './config';
 import { onMenu } from './menu';
+import {
+  onRendererConfigChange,
+  onRendererLoad,
+  onRendererUnload,
+} from './renderer';
 
 export default createPlugin({
   name: () => t('plugins.api-server.name'),
@@ -14,4 +19,10 @@ export default createPlugin({
   menu: onMenu,
 
   backend,
+
+  renderer: {
+    start: onRendererLoad,
+    onConfigChange: onRendererConfigChange,
+    stop: onRendererUnload,
+  },
 });
