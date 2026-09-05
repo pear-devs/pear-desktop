@@ -115,6 +115,8 @@ interface SlowedReverbRenderer {
   panel: PanelHandle | null;
   audioHandler: ((event: Event) => void) | null;
   docHandler: ((event: MouseEvent) => void) | null;
+  rateHandler: ((event: Event) => void) | null;
+  rateVideo: HTMLVideoElement | null;
   lastWetGain: number;
   start: (ctx: RendererContext<SlowedReverbConfig>) => Promise<void>;
   stop: () => void;
@@ -134,6 +136,8 @@ interface SlowedReverbRenderer {
   ensureWorklet: () => Promise<void>;
   applyReverb: () => void;
   applySlow: () => void;
+  attachRateListeners: () => void;
+  detachRateListeners: () => void;
   startWatchdog: () => void;
   teardownAudio: () => void;
   restoreVideo: () => void;
@@ -172,6 +176,8 @@ export default createPlugin<
     panel: null,
     audioHandler: null,
     docHandler: null,
+    rateHandler: null,
+    rateVideo: null,
     lastWetGain: 0,
 
     async start(ctx) {
@@ -195,6 +201,7 @@ export default createPlugin<
       }
       this.ensureUi();
       this.applySlow();
+      this.attachRateListeners();
       this.startWatchdog();
     },
 
@@ -205,6 +212,7 @@ export default createPlugin<
       }
       this.observer?.disconnect();
       this.observer = null;
+      this.detachRateListeners();
       if (this.audioHandler) {
         document.removeEventListener('peard:audio-can-play', this.audioHandler);
         this.audioHandler = null;
@@ -218,6 +226,7 @@ export default createPlugin<
 
     onPlayerApiReady() {
       this.ensureUi();
+      // applySlow() tail already attaches rate listeners; no extra call.
       this.applySlow();
     },
 
@@ -525,6 +534,16 @@ export default createPlugin<
       }
       const current = this.getCurrent();
       const slow = current.active ? clampSlow(current.slow) : 1;
+      const target = slow !== 1 ? slow : this.originalRate || 1;
+      // No-op writes fire no ratechange: drift guard starves any
+      // ping-pong with playback-speed's forcePlaybackRate (which already
+      // guards on drift) by never writing when already at target.
+      if (Math.abs(video.playbackRate - target) <= 0.001) {
+        // Track <video> replacement (YouTube swaps the element on song
+        // change): idempotent, moves listeners when the element changes.
+        this.attachRateListeners();
+        return;
+      }
       try {
         if (slow !== 1) {
           clearPitch(video);
@@ -534,11 +553,68 @@ export default createPlugin<
           video.playbackRate = this.originalRate || 1;
         }
       } catch {}
+      // Track <video> replacement (YouTube swaps the element on song
+      // change): idempotent, moves listeners when the element changes.
+      this.attachRateListeners();
+    },
+
+    attachRateListeners() {
+      // Re-query every time: the <video> element may have been replaced.
+      const video = document.querySelector<HTMLVideoElement>('video');
+      if (!video) return;
+      if (this.rateVideo === video) return;
+      this.detachRateListeners();
+      if (!this.rateHandler) {
+        // YouTube resets playbackRate to 1x on every song change;
+        // re-apply immediately instead of waiting for the watchdog tick.
+        // Mirrors src/plugins/playback-speed/renderer.tsx convention.
+        // Guarded: no-op while inactive, nothing to do at slow 1x, and
+        // drift-checked so an already-correct rate never re-writes (a
+        // write that changes nothing fires no ratechange, starving the
+        // loop with playback-speed's forcePlaybackRate). Handler-driven
+        // re-application is restricted to the YouTube-reset/src-change
+        // case so user-driven playback-speed choices aren't fought back
+        // on every ratechange; the watchdog still repairs other drift.
+        this.rateHandler = (event: Event) => {
+          const current = this.getCurrent();
+          if (!current.active) return;
+          const slow = clampSlow(current.slow);
+          if (slow === 1) return;
+          const video =
+            event.target instanceof HTMLVideoElement
+              ? event.target
+              : document.querySelector<HTMLVideoElement>('video');
+          if (!video) return;
+          if (Math.abs(video.playbackRate - slow) <= 0.001) return;
+          if (
+            event.type === 'peard:src-changed' ||
+            Math.abs(video.playbackRate - 1) <= 0.001
+          ) {
+            this.applySlow();
+          }
+        };
+      }
+      video.addEventListener('ratechange', this.rateHandler);
+      video.addEventListener('peard:src-changed', this.rateHandler);
+      this.rateVideo = video;
+    },
+
+    detachRateListeners() {
+      if (this.rateVideo && this.rateHandler) {
+        this.rateVideo.removeEventListener('ratechange', this.rateHandler);
+        this.rateVideo.removeEventListener(
+          'peard:src-changed',
+          this.rateHandler,
+        );
+      }
+      this.rateVideo = null;
     },
 
     startWatchdog() {
       if (this.watchdog !== null) return;
       this.watchdog = setInterval(() => {
+        // Re-track <video> replacement even when no rate drift is seen.
+        this.attachRateListeners();
         const current = this.getCurrent();
         if (!current.active) return;
         const slow = clampSlow(current.slow);
