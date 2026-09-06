@@ -84,6 +84,10 @@ ytmusic-app-layout[is-bauhaus-sidenav-enabled]
   background: var(--ytmusic-background) !important;
 }
 
+body {
+  background-color: var(--ytmusic-background) !important;
+}
+
 ytmusic-browse-response[has-background]:not([disable-gradient])
   .background-gradient.ytmusic-browse-response {
   background: unset !important;
