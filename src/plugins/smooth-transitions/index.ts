@@ -402,7 +402,12 @@ function setupSmoothTransitions(
       if (token !== skipFadeToken) return;
       isBypassing = true;
       try {
-        target.click();
+        // Re-dispatch on the matched trigger, not on event.target: these
+        // controls are icon buttons, so the actual target is often an
+        // <svg>/<path>, and SVGElement has no click() - calling it there
+        // throws out of this callback and the skip never happens, leaving
+        // the fade stuck down.
+        playTrigger.click();
       } finally {
         isBypassing = false;
       }
