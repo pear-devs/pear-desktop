@@ -264,6 +264,7 @@ function setupSmoothTransitions(
   // --- Manual song selection / skip (next / previous / playlist clicks) ---
   const skipTeardowns: Teardown[] = [];
   let skipFadeToken = 0;
+  let tornDown = false;
   // Held so teardown can cancel it - otherwise it can fire after the plugin
   // is stopped and ramp a fader that has already been disposed.
   let skipSafetyTimer: number | null = null;
@@ -271,6 +272,21 @@ function setupSmoothTransitions(
     if (skipSafetyTimer !== null) window.clearTimeout(skipSafetyTimer);
     skipSafetyTimer = null;
   });
+
+  // A skip fades out and then relies on the new song's loadstart/play to
+  // fade back in. When the action doesn't actually change track - previous
+  // at the start of a queue, a media key the app ignores, a click that
+  // didn't navigate - none of those fire, and the gain would sit at 0 with
+  // playback continuing silently. Restore it if nothing has by then.
+  const scheduleFadeRestore = (token: number, durationMs: number) => {
+    if (skipSafetyTimer !== null) window.clearTimeout(skipSafetyTimer);
+    skipSafetyTimer = window.setTimeout(() => {
+      skipSafetyTimer = null;
+      if (token === skipFadeToken && fader.get() < 1 && !video.paused) {
+        fader.rampTo(1, durationMs);
+      }
+    }, 300);
+  };
 
   const onSongPlay = () => {
     intendedPaused = false;
@@ -414,14 +430,7 @@ function setupSmoothTransitions(
         isBypassing = false;
       }
 
-      // Safety net: If click didn't change tracks or start new playback within 300ms, restore volume
-      if (skipSafetyTimer !== null) window.clearTimeout(skipSafetyTimer);
-      skipSafetyTimer = window.setTimeout(() => {
-        skipSafetyTimer = null;
-        if (token === skipFadeToken && fader.get() < 1 && !video.paused) {
-          fader.rampTo(1, config.skipFadeDuration);
-        }
-      }, 300);
+      scheduleFadeRestore(token, config.skipFadeDuration);
     });
   };
 
@@ -439,7 +448,16 @@ function setupSmoothTransitions(
       if (action === 'nexttrack' || action === 'previoustrack') {
         const wrappedHandler = (details: MediaSessionActionDetails) => {
           const config = getConfig();
-          if (!config?.fadeOnSkip || video.paused || fader.get() <= 0) {
+          // Teardown restores the setActionHandler setter, but handlers
+          // already registered through it stay registered with the app, so
+          // this can still run afterwards - with the gain node no longer in
+          // the graph, fading here would only delay the skip for nothing.
+          if (
+            tornDown ||
+            !config?.fadeOnSkip ||
+            video.paused ||
+            fader.get() <= 0
+          ) {
             return handler(details);
           }
 
@@ -448,6 +466,7 @@ function setupSmoothTransitions(
           fader.rampTo(0, config.skipFadeDuration, () => {
             if (token !== skipFadeToken) return;
             handler(details);
+            scheduleFadeRestore(token, config.skipFadeDuration);
           });
         };
         return originalSetActionHandler(action, wrappedHandler);
@@ -485,9 +504,10 @@ function setupSmoothTransitions(
       const config = getConfig();
       if (!config?.fadeOnSkip || video.paused || fader.get() <= 0) return;
 
-      ++skipFadeToken;
+      const token = ++skipFadeToken;
       debug.skipFadeToken = skipFadeToken;
       fader.rampTo(0, config.skipFadeDuration);
+      scheduleFadeRestore(token, config.skipFadeDuration);
     }
   };
   window.addEventListener('keydown', onKeyDown, true);
@@ -501,6 +521,7 @@ function setupSmoothTransitions(
   );
 
   return () => {
+    tornDown = true;
     video.removeEventListener('pause', onNativePause);
     video.removeEventListener('play', onNativePlay);
     video.removeEventListener('play', onSongPlay);
@@ -782,6 +803,7 @@ export default createPlugin<
   {
     config: SmoothTransitionsPluginConfig | null;
     cleanup: Teardown | null;
+    setupGeneration: number;
   },
   SmoothTransitionsPluginConfig
 >({
@@ -822,6 +844,7 @@ export default createPlugin<
   renderer: {
     config: null,
     cleanup: null,
+    setupGeneration: 0,
     async start({ getConfig }) {
       this.config = await getConfig();
     },
@@ -829,6 +852,10 @@ export default createPlugin<
       this.config = newConfig;
     },
     async onPlayerApiReady(api) {
+      // The isEnabled lookups below are async, and stop() can land while
+      // they're in flight - it would clear this.cleanup first and then this
+      // would install the patches anyway, with nothing left to remove them.
+      const generation = ++this.setupGeneration;
       this.cleanup?.();
       // The crossfade plugin drives its own volume fades on the same
       // <video> element and auto-clicks the next button near the end of
@@ -853,9 +880,11 @@ export default createPlugin<
       const equalizerActive =
         await window.mainConfig.plugins.isEnabled('equalizer');
       if (equalizerActive) return;
+      if (generation !== this.setupGeneration) return;
       this.cleanup = superviseSmoothTransitions(api, () => this.config);
     },
     stop() {
+      this.setupGeneration++;
       this.cleanup?.();
       this.cleanup = null;
     },
