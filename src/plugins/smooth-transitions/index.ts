@@ -47,6 +47,8 @@ type DebugState = {
 type AudioCanPlayDetail = {
   audioContext: AudioContext;
   audioSource: MediaElementAudioSourceNode;
+  /** The element audioSource was created from - see the Compressor type. */
+  video: HTMLVideoElement;
 };
 
 /**
@@ -624,12 +626,36 @@ function superviseSmoothTransitions(
 
   const onAudioCanPlay = (event: Event) => {
     if (fader || disabled) return;
-    const { audioContext, audioSource } = (
-      event as CustomEvent<AudioCanPlayDetail>
-    ).detail;
+    const {
+      audioContext,
+      audioSource,
+      video: sourceVideo,
+    } = (event as CustomEvent<AudioCanPlayDetail>).detail;
     const video = document.querySelector<HTMLVideoElement>('video');
     sharedAudioContext = audioContext;
-    fader = wireGainNode(audioContext, audioSource);
+
+    // The event can arrive after its own element was already replaced -
+    // detaching a media element doesn't remove its listeners, so the
+    // dispatcher in renderer.ts can still fire from the old one. Fading a
+    // source bound to a detached element would silently do nothing, so
+    // capture the element that's actually on the page instead. That's safe
+    // here precisely because it isn't the one renderer.ts captured.
+    let source = audioSource;
+    if (video && sourceVideo && sourceVideo !== video) {
+      try {
+        source = audioContext.createMediaElementSource(video);
+      } catch (err) {
+        console.error(
+          '[smooth-transitions] the video was replaced before setup and the replacement could not be captured, disabling fades for this session',
+          err,
+        );
+        disabled = true;
+        debug.disabled = true;
+        return;
+      }
+    }
+
+    fader = wireGainNode(audioContext, source);
     if (!fader) {
       disabled = true;
       debug.disabled = true;
