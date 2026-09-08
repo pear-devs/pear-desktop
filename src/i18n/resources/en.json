@@ -375,6 +375,13 @@
         }
       }
     },
+    "auto-acknowledge": {
+      "description": "Automatically dismisses YouTube's suicide/self-harm player interstitial so playback is not blocked. Opt-in; does not dismiss age gates, sign-in, or other playability errors",
+      "menu": {
+        "debug": "Debug logging"
+      },
+      "name": "Auto-acknowledge content warnings"
+    },
     "blur-nav-bar": {
       "description": "Makes navigation bar transparent and blurry",
       "name": "Blur Navigation Bar"
