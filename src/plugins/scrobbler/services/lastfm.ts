@@ -269,6 +269,7 @@ const authenticate = async (
         show: false,
         webPreferences: {
           nodeIntegration: false,
+          contextIsolation: true,
         },
         autoHideMenuBar: true,
         parent: mainWindow,

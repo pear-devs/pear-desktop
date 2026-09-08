@@ -3,6 +3,8 @@ import path from 'node:path';
 import url from 'node:url';
 
 import ErrorHtmlAsset from '@assets/error.html?asset';
+import WinIconAsset from '@assets/generated/icons/win/icon.ico?asset&asarUnpack';
+import PngIconAsset from '@assets/icon.png?asset&asarUnpack';
 import {
   enhanceWebRequest,
   type BetterSession,
@@ -174,12 +176,7 @@ electronDebug({
   showDevTools: false, // Disable automatic devTools on new window
 });
 
-let icon = 'assets/icon.png';
-if (process.platform === 'win32') {
-  icon = 'assets/generated/icons/win/icon.ico';
-} else if (process.platform === 'darwin') {
-  icon = 'assets/generated/icons/mac/icon.icns';
-}
+const icon = process.platform === 'win32' ? WinIconAsset : PngIconAsset;
 
 function onClosed() {
   // Dereference the window
@@ -322,9 +319,8 @@ function initTheme(win: BrowserWindow) {
   }
 
   win.webContents.once('did-finish-load', () => {
-    if (is.dev()) {
-      console.debug(LoggerPrefix, t('main.console.did-finish-load.dev-tools'));
-      win.webContents.openDevTools();
+    if (icon) {
+      win.setIcon(icon);
     }
   });
 }
@@ -368,6 +364,7 @@ async function createMainWindow() {
     show: false,
     webPreferences: {
       contextIsolation: true,
+      nodeIntegration: false,
       preload: path.join(__dirname, '..', 'preload', 'preload.cjs'),
       ...(isTesting()
         ? undefined
@@ -402,11 +399,14 @@ async function createMainWindow() {
     const scaledX = windowX;
     const scaledY = windowY;
 
+    const halfWidth = scaledWidth / 2;
+    const halfHeight = scaledHeight / 2;
+
     if (
-      scaledX + (scaledWidth / 2) < display.bounds.x - 8 || // Left
-      scaledX + (scaledWidth / 2) > display.bounds.x + display.bounds.width || // Right
+      scaledX + halfWidth < display.bounds.x - 8 || // Left
+      scaledX + halfWidth > display.bounds.x + display.bounds.width || // Right
       scaledY < display.bounds.y - 8 || // Top
-      scaledY + (scaledHeight / 2) > display.bounds.y + display.bounds.height // Bottom
+      scaledY + halfHeight > display.bounds.y + display.bounds.height // Bottom
     ) {
       // Window is offscreen
       if (is.dev()) {
@@ -530,7 +530,10 @@ async function createMainWindow() {
   return win;
 }
 
-app.once('browser-window-created', (_event, win) => {
+app.on('browser-window-created', (_event, win) => {
+  if (icon) {
+    win.setIcon(icon);
+  }
   if (config.get('options.overrideUserAgent')) {
     // User agents are from https://developers.whatismybrowser.com/useragents/explore/
     const originalUserAgent = win.webContents.userAgent;
@@ -982,4 +985,17 @@ function removeContentSecurityPolicy(
       );
     },
   );
+
+  betterSession.webRequest.setResolver('onBeforeRequest', async (listeners) => {
+    for (const listener of listeners) {
+      const result = await listener.apply();
+      if (result?.cancel) {
+        return { cancel: true };
+      }
+      if (result?.redirectURL) {
+        return result;
+      }
+    }
+    return { cancel: false };
+  });
 }
