@@ -95,8 +95,15 @@ function createGainFader(
       rampTimeout = null;
     }
     const now = audioContext.currentTime;
+    // cancelAndHoldAtTime, not cancelScheduledValues: a fade can be
+    // re-triggered while a previous curve is still running (spamming
+    // play/pause does exactly that), and cancelScheduledValues only drops
+    // events scheduled at or after `now` - a curve that started earlier is
+    // left in place, and scheduling another one over it is an error. This
+    // truncates the running curve and holds the value it had reached, which
+    // is also the value the new curve has to start from.
+    gainNode.gain.cancelAndHoldAtTime(now);
     const startValue = gainNode.gain.value;
-    gainNode.gain.cancelScheduledValues(now);
     const durationSec = durationMs / 1000;
     const curve = new Float32Array(CURVE_LENGTH);
     for (let i = 0; i < CURVE_LENGTH; i++) {
@@ -251,6 +258,13 @@ function setupSmoothTransitions(
   // --- Manual song selection / skip (next / previous / playlist clicks) ---
   const skipTeardowns: Teardown[] = [];
   let skipFadeToken = 0;
+  // Held so teardown can cancel it - otherwise it can fire after the plugin
+  // is stopped and ramp a fader that has already been disposed.
+  let skipSafetyTimer: number | null = null;
+  skipTeardowns.push(() => {
+    if (skipSafetyTimer !== null) window.clearTimeout(skipSafetyTimer);
+    skipSafetyTimer = null;
+  });
 
   const onSongPlay = () => {
     intendedPaused = false;
@@ -390,7 +404,9 @@ function setupSmoothTransitions(
       }
 
       // Safety net: If click didn't change tracks or start new playback within 300ms, restore volume
-      setTimeout(() => {
+      if (skipSafetyTimer !== null) window.clearTimeout(skipSafetyTimer);
+      skipSafetyTimer = window.setTimeout(() => {
+        skipSafetyTimer = null;
         if (token === skipFadeToken && fader.get() < 1 && !video.paused) {
           fader.rampTo(1, config.skipFadeDuration);
         }
@@ -532,6 +548,15 @@ function superviseSmoothTransitions(
   // on renderer.ts to redo anything - it only ever handed us this context
   // and a source bound to the *original* video once, at startup.
   let sharedAudioContext: AudioContext | null = null;
+  // The gain node currently spliced into the graph, kept so teardown can
+  // take it back out. Without this, disabling the plugin mid-fade (e.g.
+  // while paused, so gain sits at 0) would leave the node in place at that
+  // value and silence playback until the app restarts.
+  let insertedGain: {
+    gainNode: GainNode;
+    audioSource: MediaElementAudioSourceNode;
+    audioContext: AudioContext;
+  } | null = null;
 
   const debug: DebugState = {
     video: null,
@@ -577,6 +602,10 @@ function superviseSmoothTransitions(
       }
       audioSource.connect(gainNode);
       gainNode.connect(audioContext.destination);
+      // Drop the node from a previous wiring (a video swap makes a new one)
+      // so stale gain nodes don't pile up in the graph.
+      insertedGain?.gainNode.disconnect();
+      insertedGain = { gainNode, audioSource, audioContext };
       return createGainFader(gainNode, audioContext, debug);
     } catch (err) {
       console.error('[smooth-transitions] failed to insert gain node', err);
@@ -649,9 +678,19 @@ function superviseSmoothTransitions(
         fader = null;
         debug.gainReady = false;
         if (sharedAudioContext) {
-          const audioSource =
-            sharedAudioContext.createMediaElementSource(video);
-          fader = wireGainNode(sharedAudioContext, audioSource);
+          try {
+            // Throws if something already captured this element's audio -
+            // there can only ever be one MediaElementAudioSourceNode per
+            // element, and it can't be undone once taken.
+            const audioSource =
+              sharedAudioContext.createMediaElementSource(video);
+            fader = wireGainNode(sharedAudioContext, audioSource);
+          } catch (err) {
+            console.error(
+              '[smooth-transitions] failed to capture the replaced video element',
+              err,
+            );
+          }
         }
         if (!fader) {
           console.error(
@@ -676,11 +715,29 @@ function superviseSmoothTransitions(
   lastSeenVideo = document.querySelector<HTMLVideoElement>('video');
   attachIfPossible();
 
+  // Puts the audio graph back the way renderer.ts left it: source straight
+  // to destination, with this plugin's gain node removed entirely.
+  const restoreGraph = () => {
+    if (!insertedGain) return;
+    const { gainNode, audioSource, audioContext } = insertedGain;
+    insertedGain = null;
+    try {
+      gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+      gainNode.gain.value = 1;
+      audioSource.disconnect(gainNode);
+      gainNode.disconnect();
+      audioSource.connect(audioContext.destination);
+    } catch (err) {
+      console.error('[smooth-transitions] failed to restore audio graph', err);
+    }
+  };
+
   return () => {
     observer.disconnect();
     document.removeEventListener('peard:audio-can-play', onAudioCanPlay);
     stopCurrent?.();
     fader?.dispose();
+    restoreGraph();
   };
 }
 
