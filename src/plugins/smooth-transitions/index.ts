@@ -117,11 +117,20 @@ function createGainFader(
     const safeDurationMs =
       Number.isFinite(durationMs) && durationMs > 0 ? durationMs : 1;
     const durationSec = safeDurationMs / 1000;
+    // The cos/sin pair only stays within its endpoints when one of them is
+    // 0. Fading between two non-zero values - resuming to 1 from a pause
+    // fade that was interrupted partway, which happens constantly here -
+    // bulges past both: 0.8 -> 1 peaks at about 1.28, i.e. gain above unity,
+    // which amplifies and can clip. Clamping bounds that without touching
+    // the 1 <-> 0 shape, where the curve never leaves its endpoints anyway.
+    const lowest = Math.min(startValue, target);
+    const highest = Math.max(startValue, target);
     const curve = new Float32Array(CURVE_LENGTH);
     for (let i = 0; i < CURVE_LENGTH; i++) {
       const angle = (i / (CURVE_LENGTH - 1)) * (Math.PI / 2);
-      curve[i] =
+      const value =
         (startValue * Math.cos(angle)) + (target * Math.sin(angle));
+      curve[i] = Math.min(Math.max(value, lowest), highest);
     }
     gainNode.gain.setValueCurveAtTime(curve, now, durationSec);
     debug.isFading = true;
@@ -487,20 +496,11 @@ function setupSmoothTransitions(
         return originalSetActionHandler(action, wrappedHandler);
       }
 
-      if (action === 'pause') {
-        const wrappedHandler = () => {
-          video.pause();
-        };
-        return originalSetActionHandler(action, wrappedHandler);
-      }
-
-      if (action === 'play') {
-        const wrappedHandler = () => {
-          video.play();
-        };
-        return originalSetActionHandler(action, wrappedHandler);
-      }
-
+      // pause/play deliberately aren't wrapped. Replacing them with
+      // video.pause()/play() would drop whatever the app itself does on
+      // those actions, and it isn't needed for the fade: api.pauseVideo and
+      // api.playVideo are already patched to route through the element
+      // methods, so the app's own handler reaches the fade on its own.
       return originalSetActionHandler(action, handler);
     };
 
@@ -521,8 +521,13 @@ function setupSmoothTransitions(
 
       const token = ++skipFadeToken;
       debug.skipFadeToken = skipFadeToken;
-      fader.rampTo(0, config.skipFadeDuration);
-      scheduleFadeRestore(token, config.skipFadeDuration);
+      // Scheduled from the completion callback, like the other skip paths:
+      // the restore window is a fixed 300ms, so starting it up front would
+      // let it fire mid-fade and ramp back up before reaching silence
+      // whenever skipFadeDuration is configured above 300.
+      fader.rampTo(0, config.skipFadeDuration, () => {
+        scheduleFadeRestore(token, config.skipFadeDuration);
+      });
     }
   };
   window.addEventListener('keydown', onKeyDown, true);
