@@ -1,4 +1,4 @@
-import { contextBridge, webFrame, type BrowserWindow } from 'electron';
+import { webFrame, type BrowserWindow } from 'electron';
 
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
@@ -8,8 +8,6 @@ import {
   loadTrackerBlockerEngine,
   unloadTrackerBlockerEngine,
 } from './blocker';
-import { inject, isInjected } from './injectors/inject';
-import injectCliqzPreload from './injectors/inject-cliqz-preload';
 import { blockers } from './types';
 
 export interface TrackerBlockerConfig {
@@ -24,8 +22,8 @@ export interface TrackerBlockerConfig {
    */
   cache: boolean;
   /**
-   * Which tracker blocker to use.
-   * @default blockers.InPlayer
+   * Which tracker blocker mode to use.
+   * @default blockers.WithBlocklists
    */
   blocker: (typeof blockers)[keyof typeof blockers];
   /**
@@ -41,48 +39,104 @@ export interface TrackerBlockerConfig {
   disableDefaultLists: boolean;
 }
 
+const IN_PLAYER_AD_KILLER_SCRIPT = `
+(() => {
+  if (window.__peard_adblock_injected__) return;
+  window.__peard_adblock_injected__ = true;
+
+  // 1. Prune ad metadata from all incoming player responses (JSON API & initial payload)
+  const pruneAdPayload = (data) => {
+    if (!data || typeof data !== 'object') return data;
+    delete data.playerAds;
+    delete data.adPlacements;
+    delete data.adSlots;
+    delete data.adBreakHeartbeatParams;
+    if (data.playerResponse) pruneAdPayload(data.playerResponse);
+    if (data.ytInitialPlayerResponse) pruneAdPayload(data.ytInitialPlayerResponse);
+    return data;
+  };
+
+  const originalJSONParse = JSON.parse;
+  JSON.parse = function (...args) {
+    const result = originalJSONParse.apply(this, args);
+    return pruneAdPayload(result);
+  };
+
+  const originalResponseJson = Response.prototype.json;
+  Response.prototype.json = function (...args) {
+    return originalResponseJson.apply(this, args).then(pruneAdPayload);
+  };
+
+  if (window.ytInitialPlayerResponse) {
+    pruneAdPayload(window.ytInitialPlayerResponse);
+  }
+
+  // 2. High-speed In-Stream Ad Fast-Forward & Instant Skipper
+  const fastSkipInStreamAds = () => {
+    const video = document.querySelector('video');
+    const adShowing = document.querySelector('.ad-showing, .ad-interrupting, [class*="ytp-ad-player-overlay"], .video-ads');
+    const skipButton = document.querySelector(
+      '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, .ytp-ad-skip-button-slot, [class*="skip-button"]'
+    );
+
+    if (skipButton instanceof HTMLElement) {
+      skipButton.click();
+    }
+
+    if (adShowing && video instanceof HTMLVideoElement) {
+      video.muted = true;
+      if (!isNaN(video.duration) && video.duration > 0) {
+        video.currentTime = video.duration + 1;
+      }
+      video.playbackRate = 16;
+    }
+  };
+
+  // Run continuously with minimal footprint
+  setInterval(fastSkipInStreamAds, 50);
+
+  // Hook DOM mutations for instantaneous reaction to ad overlays
+  const adObserver = new MutationObserver(() => {
+    fastSkipInStreamAds();
+  });
+
+  const setupObserver = () => {
+    if (document.body) {
+      adObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+    } else {
+      document.addEventListener('DOMContentLoaded', () => {
+        adObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+      });
+    }
+  };
+
+  setupObserver();
+})();
+`;
+
 export default createPlugin({
   name: () => t('plugins.do-not-track.name'),
   description: () => t('plugins.do-not-track.description'),
   restartNeeded: false,
   config: {
-    enabled: false,
+    enabled: true,
     cache: true,
-    blocker: blockers.InPlayer,
+    blocker: blockers.WithBlocklists,
     additionalBlockLists: [],
     disableDefaultLists: false,
   } as TrackerBlockerConfig,
-  menu: async ({ getConfig, setConfig }) => {
-    const config = await getConfig();
-
-    return [
-      {
-        label: t('plugins.do-not-track.menu.blocker'),
-        submenu: Object.values(blockers).map((blocker) => ({
-          label: blocker,
-          type: 'radio',
-          checked: (config.blocker || blockers.WithBlocklists) === blocker,
-          click() {
-            setConfig({ blocker });
-          },
-        })),
-      },
-    ];
-  },
   backend: {
     mainWindow: null as BrowserWindow | null,
     async start({ getConfig, window }) {
       const config = await getConfig();
       this.mainWindow = window;
 
-      if (config.blocker === blockers.WithBlocklists) {
-        await loadTrackerBlockerEngine(
-          window.webContents.session,
-          config.cache,
-          config.additionalBlockLists,
-          config.disableDefaultLists,
-        );
-      }
+      await loadTrackerBlockerEngine(
+        window.webContents.session,
+        config.cache,
+        config.additionalBlockLists,
+        config.disableDefaultLists,
+      );
     },
     stop({ window }) {
       if (isBlockerEnabled(window.webContents.session)) {
@@ -91,49 +145,18 @@ export default createPlugin({
     },
     async onConfigChange(newConfig) {
       if (this.mainWindow) {
-        if (
-          newConfig.blocker === blockers.WithBlocklists &&
-          !isBlockerEnabled(this.mainWindow.webContents.session)
-        ) {
-          await loadTrackerBlockerEngine(
-            this.mainWindow.webContents.session,
-            newConfig.cache,
-            newConfig.additionalBlockLists,
-            newConfig.disableDefaultLists,
-          );
-        }
+        await loadTrackerBlockerEngine(
+          this.mainWindow.webContents.session,
+          newConfig.cache,
+          newConfig.additionalBlockLists,
+          newConfig.disableDefaultLists,
+        );
       }
     },
   },
   preload: {
-    // see #1478
-    script: `const _prunerFn = window._pruner;
-    window._pruner = undefined;
-    JSON.parse = new Proxy(JSON.parse, {
-      apply() {
-        return _prunerFn(Reflect.apply(...arguments));
-      },
-    });
-    Response.prototype.json = new Proxy(Response.prototype.json, {
-      apply() {
-        return Reflect.apply(...arguments).then((o) => _prunerFn(o));
-      },
-    }); 0`,
-    async start({ getConfig }) {
-      const config = await getConfig();
-
-      if (config.blocker === blockers.InPlayer && !isInjected()) {
-        inject(contextBridge);
-        await webFrame.executeJavaScript(this.script);
-      } else if (config.blocker === blockers.WithBlocklists) {
-        await injectCliqzPreload();
-      }
-    },
-    async onConfigChange(newConfig) {
-      if (newConfig.blocker === blockers.InPlayer && !isInjected()) {
-        inject(contextBridge);
-        await webFrame.executeJavaScript(this.script);
-      }
+    async start() {
+      await webFrame.executeJavaScript(IN_PLAYER_AD_KILLER_SCRIPT);
     },
   },
 });
