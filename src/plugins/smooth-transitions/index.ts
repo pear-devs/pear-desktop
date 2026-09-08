@@ -814,6 +814,14 @@ export default createPlugin<
       const audioCompressorActive =
         await window.mainConfig.plugins.isEnabled('audio-compressor');
       if (audioCompressorActive) return;
+      // Equalizer hangs its filters off the same source
+      // (source -> biquad -> destination) without removing the direct
+      // source -> destination edge. Splicing a gain node into that edge
+      // only attenuates one of the two parallel paths, so a "fade to
+      // silence" would leave the filtered path audible. Step aside.
+      const equalizerActive =
+        await window.mainConfig.plugins.isEnabled('equalizer');
+      if (equalizerActive) return;
       this.cleanup = superviseSmoothTransitions(api, () => this.config);
     },
     stop() {
