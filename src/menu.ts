@@ -10,7 +10,7 @@ import {
 } from 'electron';
 import is from 'electron-is';
 import { satisfies } from 'semver';
-import { languageResources } from 'virtual:i18n';
+import { availableLanguages, languageLabels } from 'virtual:i18n';
 import { allPlugins } from 'virtual:plugins';
 
 import { APPLICATION_NAME, setLanguage, t } from '@/i18n';
@@ -31,10 +31,10 @@ const inAppMenuActive = await config.plugins.isEnabled('in-app-menu');
 const pluginEnabledMenu = async (
   plugin: string,
   label = '',
-  description?: string ,
+  description?: string,
   isNew = false,
   hasSubmenu = false,
-  refreshMenu?: (() => void) ,
+  refreshMenu?: () => void,
 ): Promise<Electron.MenuItemConstructorOptions> => ({
   label: label || plugin,
   sublabel: isNew ? t('main.menu.plugins.new') : undefined,
@@ -146,9 +146,6 @@ export const mainMenuTemplate = async (
         );
       }),
   );
-
-  const langResources = await languageResources();
-  const availableLanguages = Object.keys(langResources);
 
   return [
     {
@@ -494,7 +491,7 @@ export const mainMenuTemplate = async (
             availableLanguages
               .map(
                 (lang): Electron.MenuItemConstructorOptions => ({
-                  label: `${langResources[lang].translation.language?.name ?? 'Unknown'} (${langResources[lang].translation.language?.['local-name'] ?? 'Unknown'})`,
+                  label: `${languageLabels[lang].name} (${languageLabels[lang].localName})`,
                   type: 'checkbox',
                   checked: (config.get('options.language') ?? 'en') === lang,
                   click() {
