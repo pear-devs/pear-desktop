@@ -335,6 +335,10 @@ function setupSmoothTransitions(
       fader.rampTo(0, config.skipFadeDuration, () => {
         if (token !== skipFadeToken) return;
         fn(...args);
+        // previousVideo() at the start of a queue, or loadVideoById() for
+        // the track already playing, don't actually change track and so
+        // fire nothing to fade back in on.
+        scheduleFadeRestore(token, config.skipFadeDuration);
       });
       return undefined;
     };
