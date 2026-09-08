@@ -95,15 +95,19 @@ function createGainFader(
       rampTimeout = null;
     }
     const now = audioContext.currentTime;
-    // cancelAndHoldAtTime, not cancelScheduledValues: a fade can be
-    // re-triggered while a previous curve is still running (spamming
-    // play/pause does exactly that), and cancelScheduledValues only drops
-    // events scheduled at or after `now` - a curve that started earlier is
-    // left in place, and scheduling another one over it is an error. This
-    // truncates the running curve and holds the value it had reached, which
-    // is also the value the new curve has to start from.
-    gainNode.gain.cancelAndHoldAtTime(now);
+    // Read the value first, then cancel: a fade is often re-triggered while
+    // a previous curve is still running (spamming play/pause does exactly
+    // that), and the new curve has to pick up from wherever the old one had
+    // reached.
+    //
+    // It must be cancelScheduledValues here, NOT cancelAndHoldAtTime.
+    // cancelAndHoldAtTime cannot cancel a setValueCurveAtTime that is
+    // currently running - it throws NotSupportedError ("setValueCurveAtTime
+    // ... overlaps setValueCurveAtTime ...") and the fade dies mid-curve,
+    // taking play/pause with it. cancelScheduledValues does remove a curve
+    // that spans the cancel time, which is what this needs.
     const startValue = gainNode.gain.value;
+    gainNode.gain.cancelScheduledValues(now);
     const durationSec = durationMs / 1000;
     const curve = new Float32Array(CURVE_LENGTH);
     for (let i = 0; i < CURVE_LENGTH; i++) {
