@@ -154,6 +154,17 @@ export const menu = async (
       },
     },
     {
+      label: t('plugins.synced-lyrics.menu.download.label'),
+      toolTip: t('plugins.synced-lyrics.menu.download.tooltip'),
+      type: 'checkbox',
+      checked: config.enableDownload,
+      click(item) {
+        ctx.setConfig({
+          enableDownload: item.checked,
+        });
+      },
+    },
+    {
       label: t('plugins.synced-lyrics.menu.convert-chinese-character.label'),
       toolTip: t(
         'plugins.synced-lyrics.menu.convert-chinese-character.tooltip',
