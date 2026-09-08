@@ -11,6 +11,13 @@ declare global {
   interface Compressor {
     audioSource: MediaElementAudioSourceNode;
     audioContext: AudioContext;
+    /**
+     * The element `audioSource` was created from. A media element can only
+     * ever back one MediaElementAudioSourceNode, so consumers that want to
+     * re-route the graph need to know whether this source still corresponds
+     * to the video currently on the page.
+     */
+    video: HTMLVideoElement;
   }
 
   interface DocumentEventMap {
