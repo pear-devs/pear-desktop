@@ -110,7 +110,13 @@ function createGainFader(
     // that spans the cancel time, which is what this needs.
     const startValue = gainNode.gain.value;
     gainNode.gain.cancelScheduledValues(now);
-    const durationSec = durationMs / 1000;
+    // setValueCurveAtTime rejects a zero or negative duration, and the fade
+    // durations come from stored config, so don't assume they're sane. A
+    // floor of 1ms also gives "no fade" the sensible reading: effectively
+    // instant, rather than a thrown error that kills play/pause.
+    const safeDurationMs =
+      Number.isFinite(durationMs) && durationMs > 0 ? durationMs : 1;
+    const durationSec = safeDurationMs / 1000;
     const curve = new Float32Array(CURVE_LENGTH);
     for (let i = 0; i < CURVE_LENGTH; i++) {
       const angle = (i / (CURVE_LENGTH - 1)) * (Math.PI / 2);
@@ -123,7 +129,7 @@ function createGainFader(
       rampTimeout = null;
       debug.isFading = false;
       onDone?.();
-    }, durationMs);
+    }, safeDurationMs);
   };
 
   return {
@@ -178,7 +184,12 @@ function setupSmoothTransitions(
   // pause fade can be cancelled by a follow-up play() before its deferred
   // originalVideoPause() ever runs, leaving the element never actually
   // paused even though intendedPaused briefly said otherwise.
-  let realPauseFired = false;
+  //
+  // Seeded from the real state, not `false`: attaching to an
+  // already-paused element and then hitting play would otherwise look like
+  // that cancelled-fade case, and the synthetic play/playing events below
+  // would double up with the real ones originalVideoPlay() fires.
+  let realPauseFired = intendedPaused;
   const onNativePause = () => {
     intendedPaused = true;
     realPauseFired = true;
