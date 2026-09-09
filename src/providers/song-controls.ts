@@ -1,10 +1,35 @@
 // This is used for to control the songs
+import { randomUUID } from 'node:crypto';
+
 import { type BrowserWindow, ipcMain } from 'electron';
 
 import { LikeType } from '@/types/datahost-get-state';
 
 // see protocol-handler.ts
 type ArgsType<T> = T | string[] | undefined;
+const SEARCH_TIMEOUT_MS = 15_000;
+
+type RendererResponse = {
+  requestId: string;
+  result?: unknown;
+  error?: string;
+};
+
+export interface SearchRequest {
+  requestId: string;
+  query: string;
+  params?: string;
+  continuation?: string;
+}
+
+export type SearchResponse = RendererResponse;
+
+export interface LibraryPlaylistsRequest {
+  requestId: string;
+  continuation?: string;
+}
+
+export type LibraryPlaylistsResponse = RendererResponse;
 
 const parseNumberFromArgsType = (args: ArgsType<number>) => {
   if (typeof args === 'number') {
@@ -35,6 +60,42 @@ const parseStringFromArgsType = (args: ArgsType<string>) => {
     return null;
   }
 };
+
+const requestRendererData = <TRequest extends { requestId: string }>(
+  win: BrowserWindow,
+  requestEvent: string,
+  responseEvent: string,
+  request: Omit<TRequest, 'requestId'>,
+  timeoutMessage: string,
+) =>
+  new Promise<unknown>((resolve, reject) => {
+    const requestId = randomUUID();
+    let timeout: NodeJS.Timeout;
+    const listener = (_: Electron.IpcMainEvent, response: RendererResponse) => {
+      if (response.requestId !== requestId) return;
+
+      clearTimeout(timeout);
+      ipcMain.removeListener(responseEvent, listener);
+
+      if (response.error) {
+        reject(new Error(response.error));
+        return;
+      }
+
+      resolve(response.result);
+    };
+
+    timeout = setTimeout(() => {
+      ipcMain.removeListener(responseEvent, listener);
+      reject(new Error(timeoutMessage));
+    }, SEARCH_TIMEOUT_MS);
+
+    ipcMain.on(responseEvent, listener);
+    win.webContents.send(requestEvent, {
+      requestId,
+      ...request,
+    } as TRequest);
+  });
 
 export const getSongControls = (win: BrowserWindow) => {
   return {
@@ -94,10 +155,23 @@ export const getSongControls = (win: BrowserWindow) => {
     requestFullscreenInformation: () => {
       win.webContents.send('peard:get-fullscreen');
     },
-    requestQueueInformation: () => {
-      win.webContents.send('peard:get-queue');
+    requestQueueInformation: (requestId = randomUUID()) => {
+      win.webContents.send('peard:get-queue', requestId);
+      return requestId;
     },
     muteUnmute: () => win.webContents.send('peard:toggle-mute'),
+    playVideo: (videoId: string) => {
+      const videoIdValue = parseStringFromArgsType(videoId);
+      if (videoIdValue === null) return;
+
+      win.webContents.send('peard:play-video', videoIdValue);
+    },
+    playPlaylist: (playlistId: string) => {
+      const playlistIdValue = parseStringFromArgsType(playlistId);
+      if (playlistIdValue === null) return;
+
+      win.webContents.send('peard:play-playlist', playlistIdValue);
+    },
     openSearchBox: () => {
       win.webContents.sendInputEvent({
         type: 'keyDown',
@@ -140,11 +214,20 @@ export const getSongControls = (win: BrowserWindow) => {
     clearQueue: () => win.webContents.send('peard:clear-queue'),
 
     search: (query: string, params?: string, continuation?: string) =>
-      new Promise((resolve) => {
-        ipcMain.once('peard:search-results', (_, result) => {
-          resolve(result as string);
-        });
-        win.webContents.send('peard:search', query, params, continuation);
-      }),
+      requestRendererData<SearchRequest>(
+        win,
+        'peard:search',
+        'peard:search-results',
+        { query, params, continuation },
+        'Pear Desktop search did not respond before the timeout expired.',
+      ),
+    getLibraryPlaylists: (continuation?: string) =>
+      requestRendererData<LibraryPlaylistsRequest>(
+        win,
+        'peard:get-library-playlists',
+        'peard:get-library-playlists-response',
+        { continuation },
+        'Pear Desktop playlist library did not respond before the timeout expired.',
+      ),
   };
 };

@@ -22,6 +22,15 @@ export const onMenu = async ({
 
   return [
     {
+      label: 'MCP Server',
+      type: 'checkbox',
+      checked: config.mcpEnabled,
+      async click(menuItem) {
+        const config = await getConfig();
+        setConfig({ ...config, mcpEnabled: menuItem.checked });
+      },
+    },
+    {
       label: t('plugins.api-server.menu.hostname.label'),
       type: 'normal',
       async click() {
