@@ -71,33 +71,65 @@ const IN_PLAYER_AD_KILLER_SCRIPT = `
     pruneAdPayload(window.ytInitialPlayerResponse);
   }
 
+  let wasInAd = false;
+  let savedMuted = false;
+  let savedPlaybackRate = 1;
+
   // 2. High-speed In-Stream Ad Fast-Forward & Instant Skipper
   const fastSkipInStreamAds = () => {
     const video = document.querySelector('video');
-    const adShowing = document.querySelector('.ad-showing, .ad-interrupting, [class*="ytp-ad-player-overlay"], .video-ads');
-    const skipButton = document.querySelector(
-      '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, .ytp-ad-skip-button-slot, [class*="skip-button"]'
+    const adShowing = document.querySelector(
+      '.ad-showing, .ad-interrupting, [class*="ytp-ad-player-overlay"], .video-ads'
     );
 
-    if (skipButton instanceof HTMLElement) {
-      skipButton.click();
+    if (!adShowing) {
+      if (wasInAd && video instanceof HTMLVideoElement) {
+        video.muted = savedMuted;
+        video.playbackRate = savedPlaybackRate || 1;
+        wasInAd = false;
+      }
+      return;
     }
 
-    if (adShowing && video instanceof HTMLVideoElement) {
+    if (video instanceof HTMLVideoElement) {
+      if (!wasInAd) {
+        savedMuted = video.muted;
+        savedPlaybackRate = video.playbackRate;
+        wasInAd = true;
+      }
+
       video.muted = true;
       if (!isNaN(video.duration) && video.duration > 0) {
         video.currentTime = video.duration + 1;
       }
       video.playbackRate = 16;
     }
+
+    const skipButton = document.querySelector(
+      '.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button, .ytp-ad-skip-button-slot'
+    );
+
+    if (skipButton instanceof HTMLElement) {
+      skipButton.click();
+    }
   };
 
-  // Run continuously with minimal footprint
-  setInterval(fastSkipInStreamAds, 50);
+  let isThrottled = false;
+  const throttledSkip = () => {
+    if (isThrottled) return;
+    isThrottled = true;
+    requestAnimationFrame(() => {
+      isThrottled = false;
+      fastSkipInStreamAds();
+    });
+  };
 
-  // Hook DOM mutations for instantaneous reaction to ad overlays
+  // Passive fallback heartbeat interval (1000ms)
+  setInterval(throttledSkip, 1000);
+
+  // Hook DOM mutations using throttled execution to eliminate render thread overhead
   const adObserver = new MutationObserver(() => {
-    fastSkipInStreamAds();
+    throttledSkip();
   });
 
   const setupObserver = () => {
@@ -127,6 +159,11 @@ export default createPlugin({
   } as TrackerBlockerConfig,
   backend: {
     mainWindow: null as BrowserWindow | null,
+    /**
+     * Initializes the tracker blocker engine for the main browser window.
+     *
+     * @param context - Plugin execution context containing window reference and configuration getter.
+     */
     async start({ getConfig, window }) {
       const config = await getConfig();
       this.mainWindow = window;
@@ -138,11 +175,21 @@ export default createPlugin({
         config.disableDefaultLists,
       );
     },
+    /**
+     * Unloads the tracker blocker engine when the plugin is stopped or disabled.
+     *
+     * @param context - Plugin execution context containing the target browser window.
+     */
     stop({ window }) {
       if (isBlockerEnabled(window.webContents.session)) {
         unloadTrackerBlockerEngine(window.webContents.session);
       }
     },
+    /**
+     * Dynamically reconfigures the blocker engine upon configuration changes.
+     *
+     * @param newConfig - The updated tracker blocker configuration.
+     */
     async onConfigChange(newConfig) {
       if (this.mainWindow) {
         await loadTrackerBlockerEngine(
@@ -155,6 +202,10 @@ export default createPlugin({
     },
   },
   preload: {
+    /**
+     * Injects the in-player ad pruning and instant fast-forward skipper script
+     * into the renderer context at startup.
+     */
     async start() {
       await webFrame.executeJavaScript(IN_PLAYER_AD_KILLER_SCRIPT);
     },

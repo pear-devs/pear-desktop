@@ -9,8 +9,26 @@ import {
 import { app, net, type Session } from 'electron';
 import * as z from 'zod';
 
+/**
+ * Validates whether a given URL string is a secure HTTPS protocol URL.
+ *
+ * @param value - The URL string to validate.
+ * @returns True if the string parses as a valid URL with https: protocol.
+ */
+export const isValidHttpsUrl = (value: string): boolean => {
+  try {
+    return new URL(value).protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
+
 const TbSourcesSchema = z.object({
-  tb: z.array(z.string()),
+  tb: z.array(
+    z.string().refine(isValidHttpsUrl, {
+      message: 'Filter list entries must be secure https URLs',
+    }),
+  ),
 });
 
 // Fallback lists if remote schema fails or is offline (standard EasyList + EasyPrivacy filters)
@@ -37,14 +55,35 @@ export interface NetworkFilterOptions {
 export class NetworkFilterService {
   private static instance: NetworkFilterService;
   private engine: ElectronBlocker | null = null;
-  private activeSessions = new Set<Session>();
-  private isLoading = false;
-  private readonly cacheDir = path.join(app.getPath('userData'), 'tb_cache');
+  private activeSessions = new Map<Session, string | null>();
+  private currentLoadingPromise: Promise<void> | null = null;
+  private pendingReload: (() => Promise<void>) | null = null;
+  /**
+   * Resolves the cache directory path on demand within the main process.
+   *
+   * @returns The absolute path to the tb_cache directory in userData.
+   */
+  private get cacheDir(): string {
+    return path.join(app.getPath('userData'), 'tb_cache');
+  }
 
+  /**
+   * Private constructor for the singleton pattern.
+   * Defers filesystem operations and main-process Electron API calls
+   * so that importing this module in preload or renderer scripts is safe.
+   */
   private constructor() {
-    if (!fs.existsSync(this.cacheDir)) {
+    // Intentionally empty for safe module evaluation across all Electron processes
+  }
+
+  /**
+   * Ensures that the cache directory exists on disk, creating it recursively if needed.
+   */
+  private ensureCacheDir(): void {
+    const dir = this.cacheDir;
+    if (!fs.existsSync(dir)) {
       try {
-        fs.mkdirSync(this.cacheDir, { recursive: true });
+        fs.mkdirSync(dir, { recursive: true });
       } catch (err) {
         console.error(
           '[NetworkFilterService] Failed to create cache directory',
@@ -54,6 +93,11 @@ export class NetworkFilterService {
     }
   }
 
+  /**
+   * Retrieves the singleton instance of the NetworkFilterService.
+   *
+   * @returns The active NetworkFilterService instance.
+   */
   public static getInstance(): NetworkFilterService {
     if (!NetworkFilterService.instance) {
       NetworkFilterService.instance = new NetworkFilterService();
@@ -63,8 +107,52 @@ export class NetworkFilterService {
 
   /**
    * Initializes or reloads the in-memory native filter engine.
+   * Coalesces concurrent calls and guarantees that any configuration change
+   * requested while an initialization is in flight will automatically re-run
+   * with the latest parameters once the current run completes.
+   *
+   * @param session - Optional Electron session to attach the network filter to.
+   * @param options - Configuration options for filter lists and caching.
+   * @returns A promise that resolves when the filter engine is fully loaded and attached.
    */
   public async initialize(
+    session?: Session,
+    options: NetworkFilterOptions = {},
+  ): Promise<void> {
+    this.ensureCacheDir();
+
+    const run = () => this.doInitialize(session, options);
+
+    if (this.currentLoadingPromise) {
+      this.pendingReload = run;
+      return this.currentLoadingPromise;
+    }
+
+    this.currentLoadingPromise = (async () => {
+      try {
+        await run();
+      } finally {
+        this.currentLoadingPromise = null;
+        const next = this.pendingReload;
+        this.pendingReload = null;
+        if (next) {
+          await next();
+        }
+      }
+    })();
+
+    return this.currentLoadingPromise;
+  }
+
+  /**
+   * Internal implementation that builds the native filter engine from remote
+   * or cached blocklists and attaches it to the specified Electron session.
+   *
+   * @param session - Optional Electron session to attach the filter interceptor to.
+   * @param options - Configuration options controlling caching and blocklists.
+   * @returns A promise that resolves when the filter engine is built and enabled.
+   */
+  private async doInitialize(
     session?: Session,
     options: NetworkFilterOptions = {},
   ): Promise<void> {
@@ -74,12 +162,10 @@ export class NetworkFilterService {
       disableDefaultLists = false,
     } = options;
 
-    if (this.isLoading) return;
-    this.isLoading = true;
-
     try {
       const cachePath = path.join(this.cacheDir, 'tb-engine.bin');
-      const shouldUseCache = cache && additionalBlockLists.length === 0;
+      const shouldUseCache =
+        cache && additionalBlockLists.length === 0 && !disableDefaultLists;
 
       const cachingOptions = shouldUseCache
         ? {
@@ -111,7 +197,7 @@ export class NetworkFilterService {
         }
       }
 
-      const lists = [...defaultLists, ...additionalBlockLists];
+      const lists = [...defaultLists, ...additionalBlockLists].filter(isValidHttpsUrl);
 
       // Build native engine in memory.
       // loadCosmeticFilters is explicitly false to ensure ZERO DOM/script injection.
@@ -135,13 +221,14 @@ export class NetworkFilterService {
         '[NetworkFilterService] Error loading native filter engine:',
         error,
       );
-    } finally {
-      this.isLoading = false;
     }
   }
 
   /**
    * Synchronously evaluates an outgoing request against the in-memory rules engine.
+   *
+   * @param details - Electron webRequest details for the outgoing request.
+   * @returns A response indicating whether the request should be cancelled.
    */
   public matchRequest(
     details: Electron.OnBeforeRequestListenerDetails,
@@ -169,15 +256,22 @@ export class NetworkFilterService {
 
   /**
    * Attaches the deep network interceptor to an Electron Session.
+   * Stores the returned listener ID to allow clean removal through the enhanced API.
+   *
+   * @param session - The Electron session to attach the network interceptor to.
    */
   public enable(session: Session): void {
     if (this.activeSessions.has(session)) {
       return;
     }
 
-    this.activeSessions.add(session);
-
-    session.webRequest.onBeforeRequest(
+    const registration = (session.webRequest.onBeforeRequest as unknown as (
+      filter: { urls: string[] },
+      listener: (
+        details: Electron.OnBeforeRequestListenerDetails,
+        callback: (response: Electron.CallbackResponse) => void,
+      ) => void,
+    ) => { id?: string } | void)(
       { urls: ['<all_urls>'] },
       (details, callback) => {
         try {
@@ -189,25 +283,53 @@ export class NetworkFilterService {
         }
       },
     );
+
+    const listenerId =
+      registration && typeof registration === 'object' && 'id' in registration
+        ? (registration as { id: string }).id
+        : null;
+
+    this.activeSessions.set(session, listenerId);
   }
 
   /**
-   * Detaches the network interceptor from an Electron Session.
+   * Detaches the network interceptor from an Electron Session using the enhanced removeListener API.
+   *
+   * @param session - The Electron session to detach the network interceptor from.
    */
   public disable(session: Session): void {
-    if (this.activeSessions.has(session)) {
-      this.activeSessions.delete(session);
-      try {
+    if (!this.activeSessions.has(session)) {
+      return;
+    }
+
+    const listenerId = this.activeSessions.get(session);
+    this.activeSessions.delete(session);
+
+    try {
+      const enhancedWebRequest = session.webRequest as unknown as {
+        removeListener?: (method: string, id: string) => void;
+      };
+
+      if (listenerId && typeof enhancedWebRequest.removeListener === 'function') {
+        enhancedWebRequest.removeListener('onBeforeRequest', listenerId);
+      } else {
+        // Fallback for native unenhanced Electron session
         session.webRequest.onBeforeRequest(null);
-      } catch (err) {
-        console.error(
-          '[NetworkFilterService] Error detaching interceptor:',
-          err,
-        );
       }
+    } catch (err) {
+      console.error(
+        '[NetworkFilterService] Error detaching interceptor:',
+        err,
+      );
     }
   }
 
+  /**
+   * Checks whether the network filter is actively attached to the given session.
+   *
+   * @param session - The Electron session to check.
+   * @returns True if the session has active network filtering enabled.
+   */
   public isEnabled(session: Session): boolean {
     return this.activeSessions.has(session);
   }

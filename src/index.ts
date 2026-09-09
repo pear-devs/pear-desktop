@@ -530,10 +530,28 @@ async function createMainWindow() {
   return win;
 }
 
+/**
+ * Persistently applies the application icon to any BrowserWindow instance created,
+ * including popups, authentication dialogs, and secondary windows.
+ *
+ * @param _event - The Electron event emitted when a browser window is created.
+ * @param win - The newly created BrowserWindow instance.
+ */
 app.on('browser-window-created', (_event, win) => {
   if (icon) {
     win.setIcon(icon);
   }
+});
+
+/**
+ * Performs one-shot setup for the primary application window when initially created.
+ * Configures user-agent overrides, registers IPC handlers for app controls and song info,
+ * and attaches network failure recovery handlers.
+ *
+ * @param _event - The Electron event emitted on the first window creation.
+ * @param win - The primary BrowserWindow instance.
+ */
+app.once('browser-window-created', (_event, win) => {
   if (config.get('options.overrideUserAgent')) {
     // User agents are from https://developers.whatismybrowser.com/useragents/explore/
     const originalUserAgent = win.webContents.userAgent;
