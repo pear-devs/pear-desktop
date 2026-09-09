@@ -204,10 +204,15 @@ export default createPlugin({
   preload: {
     /**
      * Injects the in-player ad pruning and instant fast-forward skipper script
-     * into the renderer context at startup.
+     * into the page's main world (World 0) at startup, ensuring response pruning
+     * operates directly on the page's global JSON.parse and Response.prototype.json.
+     *
+     * @returns A promise that resolves once the script execution is scheduled.
      */
-    async start() {
-      await webFrame.executeJavaScript(IN_PLAYER_AD_KILLER_SCRIPT);
+    async start(): Promise<void> {
+      await webFrame.executeJavaScriptInIsolatedWorld(0, [
+        { code: IN_PLAYER_AD_KILLER_SCRIPT },
+      ]);
     },
   },
 });
