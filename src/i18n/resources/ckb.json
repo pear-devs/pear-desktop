@@ -1,1 +1,30 @@
-{}
+{
+  "common": {
+    "console": {
+      "plugins": {
+        "execute-failed": "شکستی هێنا لە جێبەجێکردنی پڵەگین{{pluginName}}::{{contextName}}",
+        "executed-at-ms": "پڵەگین{{pluginName}}::{{contextName}}جێبەجێکرا لە {{ms}}ms",
+        "initialize-failed": "شکستی هێنا لە دەسپێکردنی پڵەگین \"{{pluginName}}\"",
+        "load-all": "لەودکردنی هەموو پڵەگینەکان",
+        "load-failed": "شکستی هێنا لە دەستپێکردنی پڵەگین \"{{pluginName}}\"",
+        "loaded": "پڵەگین \"{{pluginName}}\" دەستیپێکرد",
+        "unload-failed": "شکستی هێنا لە وەستاندنی پڵەگین \"{{pluginName}}\"",
+        "unloaded": "پڵەگین \"{{pluginName}}\" وەستێنرا"
+      }
+    }
+  },
+  "language": {
+    "local-name": "ئینگلیزی",
+    "name": "English"
+  },
+  "main": {
+    "console": {
+      "did-finish-load": {
+        "dev-tools": "لەودکردن تەواوبوو. دێڤ توڵس کرایەوە"
+      },
+      "i18n": {
+        "loaded": "i18n دەستیپێکرد"
+      }
+    }
+  }
+}
