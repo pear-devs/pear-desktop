@@ -77,7 +77,7 @@
     "color": "5.0.3",
     "conf": "15.1.0",
     "custom-electron-prompt": "1.6.1",
-    "deepmerge-ts": "7.1.5",
+    "deepmerge-ts": "8.0.0",
     "electron-debug": "4.1.0",
     "electron-is": "3.0.0",
     "electron-localshortcut": "3.2.1",
