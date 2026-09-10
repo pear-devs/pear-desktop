@@ -6,14 +6,24 @@ import {
   isMusicOrVideoTrack,
   isPlayerMenu,
 } from '@/plugins/utils/renderer/check';
+import {
+  claimPlaybackRate,
+  isPlaybackRateOwner,
+  releasePlaybackRate,
+} from '@/plugins/utils/renderer/playback-rate-owner';
 import { getSongMenu } from '@/providers/dom-elements';
 
 import { PlaybackSpeedSlider } from './components/slider';
 
 const MIN_PLAYBACK_SPEED = 0.07;
 const MAX_PLAYBACK_SPEED = 16;
+const PLUGIN_ID = 'playback-speed';
 
 const forcePlaybackRate = (e: Event) => {
+  // While another plugin owns the rate (e.g. slowed-reverb is engaged), it
+  // re-applies its own value, so answering here would make both plugins
+  // overwrite each other on every ratechange forever.
+  if (!isPlaybackRateOwner(PLUGIN_ID)) return;
   if (e.target instanceof HTMLVideoElement) {
     const videoElement = e.target;
     if (videoElement.playbackRate !== speed()) {
@@ -53,6 +63,12 @@ export const onPlayerApiReady = () => {
               MAX_PLAYBACK_SPEED,
             );
 
+            // Programmatic value echoes carry the current speed; only an
+            // actual change is an explicit choice that takes ownership.
+            if (targetSpeed !== speed()) {
+              claimPlaybackRate(PLUGIN_ID);
+            }
+
             setSpeed(targetSpeed);
             updatePlayBackSpeed();
           }}
@@ -62,6 +78,10 @@ export const onPlayerApiReady = () => {
             if (isNaN(speed())) {
               setSpeed(1);
             }
+
+            // Wheel is always a user gesture: take the rate from any other
+            // plugin controlling it.
+            claimPlaybackRate(PLUGIN_ID);
 
             // E.deltaY < 0 means wheel-up
             setSpeed((prev) =>
@@ -116,6 +136,7 @@ export const onPlayerApiReady = () => {
 };
 
 export const onUnload = () => {
+  releasePlaybackRate(PLUGIN_ID);
   const video = document.querySelector<HTMLVideoElement>('video');
   if (video) {
     video.removeEventListener('ratechange', forcePlaybackRate);
