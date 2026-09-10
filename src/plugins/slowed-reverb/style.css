@@ -1,0 +1,97 @@
+.sr-cog {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--ytmusic-text-primary, #fff);
+  opacity: 0.7;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px;
+  margin: 0 2px;
+  border-radius: 50%;
+  align-self: center;
+}
+
+.sr-cog svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.sr-cog:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sr-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 96px;
+  z-index: 9999;
+  min-width: 230px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--yt-spec-menu-background, #212121);
+  color: var(--ytmusic-text-primary, #fff);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+  font-size: 13px;
+}
+
+.sr-title {
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  opacity: 0.95;
+}
+
+.sr-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.sr-label {
+  min-width: 52px;
+  opacity: 0.85;
+}
+
+.sr-value {
+  min-width: 44px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
+.sr-range {
+  flex: 1;
+  accent-color: #ff4e45;
+  cursor: pointer;
+}
+
+.sr-check {
+  width: 15px;
+  height: 15px;
+  accent-color: #ff4e45;
+  cursor: pointer;
+}
+
+.sr-reset {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ytmusic-text-primary, #fff);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.sr-reset:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
