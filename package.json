@@ -108,6 +108,7 @@
     "pinyin-pro": "3.28.1",
     "semver": "7.8.5",
     "serve": "14.2.6",
+    "simple-youtube-age-restriction-bypass": "github:zerodytrash/Simple-YouTube-Age-Restriction-Bypass",
     "socks": "2.8.9",
     "solid-element": "1.9.1",
     "solid-floating-ui": "0.3.1",
