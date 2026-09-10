@@ -121,6 +121,7 @@ interface SlowedReverbRenderer {
   docHandler: ((event: MouseEvent) => void) | null;
   rateHandler: ((event: Event) => void) | null;
   rateVideo: HTMLVideoElement | null;
+  pitchOverridden: boolean;
   lastWetGain: number;
   start: (ctx: RendererContext<SlowedReverbConfig>) => Promise<void>;
   stop: () => void;
@@ -141,6 +142,7 @@ interface SlowedReverbRenderer {
   ensureWorklet: () => Promise<void>;
   applyReverb: () => void;
   applySlow: () => void;
+  releasePitchOverride: (video: HTMLVideoElement) => void;
   attachRateListeners: () => void;
   detachRateListeners: () => void;
   startWatchdog: () => void;
@@ -183,6 +185,7 @@ export default createPlugin<
     docHandler: null,
     rateHandler: null,
     rateVideo: null,
+    pitchOverridden: false,
     lastWetGain: 0,
 
     async start(ctx) {
@@ -586,7 +589,7 @@ export default createPlugin<
       if (isPlaybackRateControlledByOther(PLUGIN_ID)) {
         // Another plugin owns the rate: yield instead of fighting, but undo
         // our pitch override so its playback stays pitch-preserved.
-        if (this.savedPitch) restorePitch(video, this.savedPitch);
+        this.releasePitchOverride(video);
         this.attachRateListeners();
         return;
       }
@@ -601,15 +604,26 @@ export default createPlugin<
       try {
         if (slow !== 1) {
           clearPitch(video);
+          this.pitchOverridden = true;
           video.playbackRate = slow;
         } else {
-          if (this.savedPitch) restorePitch(video, this.savedPitch);
+          this.releasePitchOverride(video);
           video.playbackRate = this.originalRate || 1;
         }
       } catch {}
       // Track <video> replacement (YouTube swaps the element on song
       // change): idempotent, moves listeners when the element changes.
       this.attachRateListeners();
+    },
+
+    releasePitchOverride(video) {
+      if (!this.pitchOverridden) return;
+      // Only restore flags we set on this element; after a <video> swap the
+      // new element carries its own defaults.
+      if (video === this.video && this.savedPitch) {
+        restorePitch(video, this.savedPitch);
+      }
+      this.pitchOverridden = false;
     },
 
     attachRateListeners() {
@@ -625,20 +639,27 @@ export default createPlugin<
         // Guarded: no-op while inactive, nothing to do at slow 1x, and
         // drift-checked so an already-correct rate never re-writes (a
         // write that changes nothing fires no ratechange). While another
-        // plugin owns the rate we skip entirely: it re-applies its own
-        // value, and answering it here would queue a ratechange per write
-        // for both plugins, forever.
+        // plugin owns the rate we never touch playbackRate (answering it
+        // would queue a ratechange per write for both plugins, forever),
+        // but we still release our pitch override so the other plugin's
+        // speed is not left with pitch-shifted timbre.
         this.rateHandler = (event: Event) => {
           const current = this.getCurrent();
           if (!current.active) return;
           const slow = clampSlow(current.slow);
           if (slow === 1) return;
-          if (isPlaybackRateControlledByOther(PLUGIN_ID)) return;
           const video =
             event.target instanceof HTMLVideoElement
               ? event.target
               : document.querySelector<HTMLVideoElement>('video');
           if (!video) return;
+          if (isPlaybackRateControlledByOther(PLUGIN_ID)) {
+            // Ownership moved to playback-speed: its write emitted this
+            // ratechange, so drop our pitch override or its speed keeps our
+            // pitch-shifted timbre.
+            this.releasePitchOverride(video);
+            return;
+          }
           if (Math.abs(video.playbackRate - slow) <= 0.001) return;
           if (
             event.type === 'peard:src-changed' ||
@@ -673,7 +694,11 @@ export default createPlugin<
         if (!current.active) return;
         const slow = clampSlow(current.slow);
         if (slow === 1) return;
-        if (isPlaybackRateControlledByOther(PLUGIN_ID)) return;
+        if (isPlaybackRateControlledByOther(PLUGIN_ID)) {
+          const video = document.querySelector<HTMLVideoElement>('video');
+          if (video) this.releasePitchOverride(video);
+          return;
+        }
         const video = document.querySelector<HTMLVideoElement>('video');
         if (video && Math.abs(video.playbackRate - slow) > 0.001) {
           this.applySlow();
@@ -716,6 +741,7 @@ export default createPlugin<
           video.playbackRate = this.originalRate || 1;
         }
       } catch {}
+      this.pitchOverridden = false;
       this.video = null;
     },
   },
