@@ -1,6 +1,13 @@
 import { t } from '@/i18n';
+import {
+  claimPlaybackRate,
+  getPlaybackRateOwner,
+  isPlaybackRateControlledByOther,
+  releasePlaybackRate,
+} from '@/plugins/utils/renderer/playback-rate-owner';
 import { createPlugin } from '@/utils';
 
+import { getLatestAudioDetail, type AudioCanPlayDetail } from './audio-graph';
 import {
   clampIntensity,
   clampSlow,
@@ -33,16 +40,13 @@ interface SavedPitch {
   webkitPreservesPitch?: boolean;
 }
 
-interface AudioCanPlayDetail {
-  audioContext: AudioContext;
-  audioSource: MediaElementAudioSourceNode;
-}
-
 const PITCH_KEYS: PitchKey[] = [
   'preservesPitch',
   'mozPreservesPitch',
   'webkitPreservesPitch',
 ];
+
+const PLUGIN_ID = 'slowed-reverb';
 
 const DEFAULT_CONFIG: SlowedReverbConfig = {
   enabled: false,
@@ -123,6 +127,7 @@ interface SlowedReverbRenderer {
   onPlayerApiReady: () => void;
   onConfigChange: (newConfig: SlowedReverbConfig) => void;
   getCurrent: () => SlowedReverbConfig;
+  claimRateIfEngaged: () => void;
   ensureUi: () => void;
   injectCog: () => void;
   togglePanel: () => void;
@@ -192,12 +197,22 @@ export default createPlugin<
       this.audioHandler = (event: Event) => {
         this.handleAudioEvent(event);
       };
+      this.claimRateIfEngaged();
       document.addEventListener('peard:audio-can-play', this.audioHandler, {
         passive: true,
       });
       // Re-wire cached graph when re-enabled mid-song (nodes were torn down).
-      if (this.audioContext && this.audioSource) {
-        this.wireAudio(this.audioContext, this.audioSource);
+      // On the first enable mid-song the announcement already fired while the
+      // plugin was unloaded: fall back to the graph cached at module scope so
+      // the wet path engages for the current song instead of the next one.
+      // A worklet load failure is also retried on every (re)enable instead of
+      // disabling reverb for the rest of the app session.
+      this.workletFailed = false;
+      const announced = getLatestAudioDetail();
+      const audioContext = this.audioContext ?? announced?.audioContext;
+      const audioSource = this.audioSource ?? announced?.audioSource;
+      if (audioContext && audioSource) {
+        this.wireAudio(audioContext, audioSource);
       }
       this.ensureUi();
       this.applySlow();
@@ -206,6 +221,7 @@ export default createPlugin<
     },
 
     stop() {
+      releasePlaybackRate(PLUGIN_ID);
       if (this.watchdog !== null) {
         clearInterval(this.watchdog);
         this.watchdog = null;
@@ -232,11 +248,21 @@ export default createPlugin<
 
     onConfigChange(newConfig) {
       const normalized = normalize(newConfig);
+      const previous = this.config;
       this.config = {
         ...newConfig,
         slow: normalized.slow,
         reverbIntensity: normalized.reverbIntensity,
       };
+      // An external speed/activation change is an explicit intent: take the
+      // rate back (reverb-only changes must not steal it from playback-speed).
+      if (
+        !previous ||
+        previous.active !== this.config.active ||
+        clampSlow(previous.slow) !== normalized.slow
+      ) {
+        this.claimRateIfEngaged();
+      }
       this.applySlow();
       this.applyReverb();
       this.syncPanel();
@@ -244,6 +270,15 @@ export default createPlugin<
 
     getCurrent() {
       return this.config ?? { ...DEFAULT_CONFIG };
+    },
+
+    claimRateIfEngaged() {
+      const current = this.getCurrent();
+      if (current.active && clampSlow(current.slow) !== 1) {
+        claimPlaybackRate(PLUGIN_ID);
+      } else {
+        releasePlaybackRate(PLUGIN_ID);
+      }
     },
 
     ensureUi() {
@@ -287,17 +322,20 @@ export default createPlugin<
           onActiveChange: (active: boolean) => {
             this.config = { ...this.getCurrent(), active };
             this.ctx?.setConfig({ active });
+            this.claimRateIfEngaged();
             this.applySlow();
             this.applyReverb();
             this.syncPanel();
           },
           onSlowLive: (value: number) => {
             this.config = { ...this.getCurrent(), slow: value };
+            this.claimRateIfEngaged();
             this.applySlow();
           },
           onSlowCommit: (value: number) => {
             this.config = { ...this.getCurrent(), slow: value };
             this.ctx?.setConfig({ slow: value });
+            this.claimRateIfEngaged();
             this.applySlow();
             this.syncPanel();
           },
@@ -323,6 +361,7 @@ export default createPlugin<
               reverbIntensity: 0,
               active: true,
             });
+            this.claimRateIfEngaged();
             this.applySlow();
             this.applyReverb();
             this.syncPanel();
@@ -525,6 +564,18 @@ export default createPlugin<
     },
 
     applySlow() {
+      const current = this.getCurrent();
+      const slow = current.active ? clampSlow(current.slow) : 1;
+      if (slow !== 1) {
+        // Engaged but unowned: take the rate. Taking it back from another
+        // plugin is reserved for explicit user actions (panel callbacks), so
+        // a reverb-only change cannot steal playback-speed's rate.
+        if (getPlaybackRateOwner() === null) {
+          claimPlaybackRate(PLUGIN_ID);
+        }
+      } else {
+        releasePlaybackRate(PLUGIN_ID);
+      }
       const video = document.querySelector<HTMLVideoElement>('video');
       if (!video) return;
       if (this.video !== video) {
@@ -532,12 +583,15 @@ export default createPlugin<
         this.originalRate = video.playbackRate || 1;
         this.savedPitch = readPitch(video);
       }
-      const current = this.getCurrent();
-      const slow = current.active ? clampSlow(current.slow) : 1;
+      if (isPlaybackRateControlledByOther(PLUGIN_ID)) {
+        // Another plugin owns the rate: yield instead of fighting, but undo
+        // our pitch override so its playback stays pitch-preserved.
+        if (this.savedPitch) restorePitch(video, this.savedPitch);
+        this.attachRateListeners();
+        return;
+      }
       const target = slow !== 1 ? slow : this.originalRate || 1;
-      // No-op writes fire no ratechange: drift guard starves any
-      // ping-pong with playback-speed's forcePlaybackRate (which already
-      // guards on drift) by never writing when already at target.
+      // No-op writes fire no ratechange: never write when already at target.
       if (Math.abs(video.playbackRate - target) <= 0.001) {
         // Track <video> replacement (YouTube swaps the element on song
         // change): idempotent, moves listeners when the element changes.
@@ -570,16 +624,16 @@ export default createPlugin<
         // Mirrors src/plugins/playback-speed/renderer.tsx convention.
         // Guarded: no-op while inactive, nothing to do at slow 1x, and
         // drift-checked so an already-correct rate never re-writes (a
-        // write that changes nothing fires no ratechange, starving the
-        // loop with playback-speed's forcePlaybackRate). Handler-driven
-        // re-application is restricted to the YouTube-reset/src-change
-        // case so user-driven playback-speed choices aren't fought back
-        // on every ratechange; the watchdog still repairs other drift.
+        // write that changes nothing fires no ratechange). While another
+        // plugin owns the rate we skip entirely: it re-applies its own
+        // value, and answering it here would queue a ratechange per write
+        // for both plugins, forever.
         this.rateHandler = (event: Event) => {
           const current = this.getCurrent();
           if (!current.active) return;
           const slow = clampSlow(current.slow);
           if (slow === 1) return;
+          if (isPlaybackRateControlledByOther(PLUGIN_ID)) return;
           const video =
             event.target instanceof HTMLVideoElement
               ? event.target
@@ -619,6 +673,7 @@ export default createPlugin<
         if (!current.active) return;
         const slow = clampSlow(current.slow);
         if (slow === 1) return;
+        if (isPlaybackRateControlledByOther(PLUGIN_ID)) return;
         const video = document.querySelector<HTMLVideoElement>('video');
         if (video && Math.abs(video.playbackRate - slow) > 0.001) {
           this.applySlow();
@@ -655,7 +710,11 @@ export default createPlugin<
       }
       try {
         if (this.savedPitch) restorePitch(video, this.savedPitch);
-        video.playbackRate = this.originalRate || 1;
+        // Don't stomp a rate another plugin took over while we were loaded
+        // (only relevant when we never held the rate in the first place).
+        if (!isPlaybackRateControlledByOther(PLUGIN_ID)) {
+          video.playbackRate = this.originalRate || 1;
+        }
       } catch {}
       this.video = null;
     },

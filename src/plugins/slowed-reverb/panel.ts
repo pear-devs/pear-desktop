@@ -40,7 +40,7 @@ function throttleLive(fn: (value: number) => void): (value: number) => void {
 function debounceTrailing(
   fn: (value: number) => void,
   ms: number,
-): ((value: number) => void) & { cancel: () => void } {
+): ((value: number) => void) & { cancel: () => void; flush: () => void } {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let latest = 0;
   const wrapped = ((value: number) => {
@@ -50,11 +50,18 @@ function debounceTrailing(
       timer = null;
       fn(latest);
     }, ms);
-  }) as ((value: number) => void) & { cancel: () => void };
+  }) as ((value: number) => void) & { cancel: () => void; flush: () => void };
   wrapped.cancel = () => {
     if (timer !== null) {
       clearTimeout(timer);
       timer = null;
+    }
+  };
+  wrapped.flush = () => {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+      fn(latest);
     }
   };
   return wrapped;
@@ -259,8 +266,10 @@ export function createPanel(
       paint(state);
     },
     destroy: () => {
-      slowWheelCommit.cancel();
-      reverbWheelCommit.cancel();
+      // Persist a wheel adjustment that is still inside the debounce window:
+      // the live rate was applied, keep config in sync with it.
+      slowWheelCommit.flush();
+      reverbWheelCommit.flush();
       root.remove();
     },
   };
