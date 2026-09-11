@@ -76,7 +76,7 @@ export const loadAllMenuPlugins = async (win: BrowserWindow) => {
       pluginConfigs[pluginId] ?? {},
     );
 
-    if (config.enabled) {
+    if (pluginDef.essential || config.enabled) {
       await forceLoadMenuPlugin(pluginId, win);
     }
   }

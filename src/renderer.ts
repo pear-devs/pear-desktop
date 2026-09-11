@@ -4,6 +4,7 @@ import 'mdui/mdui.css';
 import 'mdui';
 
 import { loadI18n, setLanguage, t as i18t } from '@/i18n';
+import { bootStandaloneSettings } from '@/plugins/settings-ui/standalone';
 import {
   defaultTrustedTypePolicy,
   registerWindowDefaultTrustedTypePolicy,
@@ -536,4 +537,8 @@ const initObserver = async () => {
   });
 };
 
-initObserver().then(preload).then(main);
+if (new URLSearchParams(window.location.search).has('settings')) {
+  bootStandaloneSettings();
+} else {
+  initObserver().then(preload).then(main);
+}

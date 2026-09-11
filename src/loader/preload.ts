@@ -85,11 +85,11 @@ export const loadAllPreloadPlugins = async () => {
 
   for (const [pluginId, pluginDef] of Object.entries(await preloadPlugins())) {
     const config = deepmerge(
-      pluginDef.config ?? { enable: false },
+      pluginDef.config ?? { enabled: false },
       pluginConfigs[pluginId] ?? {},
     );
 
-    if (config.enabled) {
+    if (pluginDef.essential || config.enabled) {
       forceLoadPreloadPlugin(pluginId);
     } else {
       if (loadedPluginMap[pluginId]) {

@@ -12,8 +12,11 @@ export function getPlugins() {
 }
 
 export async function isEnabled(plugin: string) {
+  const pluginDef = (await allPlugins())[plugin];
+  if (pluginDef?.essential) return true;
+
   const pluginConfig = deepmerge(
-    (await allPlugins())[plugin]?.config ?? { enabled: false },
+    pluginDef?.config ?? { enabled: false },
     (store.get('plugins') as Record<string, PluginConfig>)[plugin] ?? {},
   );
   return pluginConfig !== undefined && pluginConfig.enabled;

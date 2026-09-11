@@ -45,6 +45,28 @@ export default createPlugin({
   restartNeeded: true,
   config: defaultConfig,
   stylesheets: [style],
+  settings: [
+    {
+      type: 'select',
+      variant: 'dropdown',
+      key: 'selectedPreset',
+      label: () => t('plugins.downloader.menu.presets'),
+      options: Object.keys(DefaultPresetList).map((name) => ({
+        value: name,
+        label: () => name,
+      })),
+    },
+    {
+      type: 'action',
+      key: 'downloadFolder',
+      label: () => t('plugins.downloader.menu.choose-download-folder'),
+      buttonLabel: () => t('plugins.downloader.menu.choose-download-folder'),
+      onClick: async ({ pickDirectory, setValue }) => {
+        const dir = await pickDirectory();
+        if (dir) setValue('downloadFolder', dir);
+      },
+    },
+  ],
   menu: onMenu,
   backend: {
     start: onMainLoad,
