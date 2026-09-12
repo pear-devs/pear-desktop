@@ -178,6 +178,9 @@ electronDebug({
 
 const icon = process.platform === 'win32' ? WinIconAsset : PngIconAsset;
 
+/**
+ * Cleans up the main window reference when closed.
+ */
 function onClosed() {
   // Dereference the window
   // For multiple Windows store them in an array
@@ -188,6 +191,11 @@ ipcMain.handle('peard:get-main-plugin-names', async () =>
   Object.keys(await mainPlugins()),
 );
 
+/**
+ * Registers global IPC configuration handlers and observers for dynamic plugin reloading.
+ *
+ * @param win - The primary application BrowserWindow instance to attach hooks to.
+ */
 const initHook = async (win: BrowserWindow) => {
   const allPluginStubs = await allPlugins();
 
@@ -271,6 +279,11 @@ const initHook = async (win: BrowserWindow) => {
   });
 };
 
+/**
+ * Prompts the user with a dialog when a plugin configuration change requires an application restart.
+ *
+ * @param id - The unique plugin identifier.
+ */
 const showNeedToRestartDialog = async (id: string) => {
   const plugin = (await allPlugins())[id];
 
@@ -942,6 +955,12 @@ app.whenReady().then(async () => {
   }
 });
 
+/**
+ * Displays an error dialog when the renderer process crashes or becomes unresponsive.
+ *
+ * @param win - The BrowserWindow instance that crashed.
+ * @param details - Information regarding why the render process exited.
+ */
 function showUnresponsiveDialog(
   win: BrowserWindow,
   details: Electron.RenderProcessGoneDetails,

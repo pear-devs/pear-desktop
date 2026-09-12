@@ -156,7 +156,17 @@ const IN_PLAYER_AD_KILLER_SCRIPT = `
 `;
 
 export default createPlugin({
+  /**
+   * Returns the localized display name of the plugin.
+   *
+   * @returns The localized plugin name.
+   */
   name: () => t('plugins.do-not-track.name'),
+  /**
+   * Returns the localized description of the plugin.
+   *
+   * @returns The localized plugin description.
+   */
   description: () => t('plugins.do-not-track.description'),
   restartNeeded: false,
   config: {
