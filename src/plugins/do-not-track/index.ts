@@ -125,7 +125,7 @@ const IN_PLAYER_AD_KILLER_SCRIPT = `
   };
 
   // Passive fallback heartbeat interval (1000ms)
-  setInterval(throttledSkip, 1000);
+  const heartbeat = setInterval(throttledSkip, 1000);
 
   // Hook DOM mutations using throttled execution to eliminate render thread overhead
   const adObserver = new MutationObserver(() => {
@@ -143,6 +143,15 @@ const IN_PLAYER_AD_KILLER_SCRIPT = `
   };
 
   setupObserver();
+
+  window.__peard_adblock_dispose__ = () => {
+    clearInterval(heartbeat);
+    adObserver.disconnect();
+    JSON.parse = originalJSONParse;
+    Response.prototype.json = originalResponseJson;
+    window.__peard_adblock_injected__ = false;
+    window.__peard_adblock_dispose__ = undefined;
+  };
 })();
 `;
 
@@ -212,6 +221,17 @@ export default createPlugin({
     async start(): Promise<void> {
       await webFrame.executeJavaScriptInIsolatedWorld(0, [
         { code: IN_PLAYER_AD_KILLER_SCRIPT },
+      ]);
+    },
+    /**
+     * Cleans up the in-player ad blocker script injected into the main world (World 0)
+     * by invoking the disposal hook to clear timers, disconnect observers, and restore native APIs.
+     *
+     * @returns A promise that resolves once the teardown script execution is scheduled.
+     */
+    async stop(): Promise<void> {
+      await webFrame.executeJavaScriptInIsolatedWorld(0, [
+        { code: 'window.__peard_adblock_dispose__?.(); 0' },
       ]);
     },
   },

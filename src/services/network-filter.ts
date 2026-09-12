@@ -197,7 +197,9 @@ export class NetworkFilterService {
         }
       }
 
-      const lists = [...defaultLists, ...additionalBlockLists].filter(isValidHttpsUrl);
+      const lists = [...defaultLists, ...additionalBlockLists].filter(
+        isValidHttpsUrl,
+      );
 
       // Build native engine in memory.
       // loadCosmeticFilters is explicitly false to ensure ZERO DOM/script injection.
@@ -221,6 +223,7 @@ export class NetworkFilterService {
         '[NetworkFilterService] Error loading native filter engine:',
         error,
       );
+      throw error;
     }
   }
 
@@ -265,24 +268,23 @@ export class NetworkFilterService {
       return;
     }
 
-    const registration = (session.webRequest.onBeforeRequest as unknown as (
-      filter: { urls: string[] },
-      listener: (
-        details: Electron.OnBeforeRequestListenerDetails,
-        callback: (response: Electron.CallbackResponse) => void,
-      ) => void,
-    ) => { id?: string } | void)(
-      { urls: ['<all_urls>'] },
-      (details, callback) => {
-        try {
-          const response = this.matchRequest(details);
-          callback(response);
-        } catch (err) {
-          console.error('[NetworkFilterService] Interception error:', err);
-          callback({ cancel: false });
-        }
-      },
-    );
+    const registration = (
+      session.webRequest.onBeforeRequest as unknown as (
+        filter: { urls: string[] },
+        listener: (
+          details: Electron.OnBeforeRequestListenerDetails,
+          callback: (response: Electron.CallbackResponse) => void,
+        ) => void,
+      ) => { id?: string } | void
+    )({ urls: ['<all_urls>'] }, (details, callback) => {
+      try {
+        const response = this.matchRequest(details);
+        callback(response);
+      } catch (err) {
+        console.error('[NetworkFilterService] Interception error:', err);
+        callback({ cancel: false });
+      }
+    });
 
     const listenerId =
       registration && typeof registration === 'object' && 'id' in registration
@@ -310,17 +312,17 @@ export class NetworkFilterService {
         removeListener?: (method: string, id: string) => void;
       };
 
-      if (listenerId && typeof enhancedWebRequest.removeListener === 'function') {
+      if (
+        listenerId &&
+        typeof enhancedWebRequest.removeListener === 'function'
+      ) {
         enhancedWebRequest.removeListener('onBeforeRequest', listenerId);
       } else {
         // Fallback for native unenhanced Electron session
         session.webRequest.onBeforeRequest(null);
       }
     } catch (err) {
-      console.error(
-        '[NetworkFilterService] Error detaching interceptor:',
-        err,
-      );
+      console.error('[NetworkFilterService] Error detaching interceptor:', err);
     }
   }
 

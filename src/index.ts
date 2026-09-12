@@ -242,10 +242,26 @@ const initHook = async (win: BrowserWindow) => {
         const mainPlugin = getAllLoadedMainPlugins()[id];
         if (mainPlugin) {
           if (config.enabled && typeof mainPlugin.backend !== 'function') {
-            mainPlugin.backend?.onConfigChange?.call(
-              mainPlugin.backend,
-              config,
-            );
+            try {
+              Promise.resolve(
+                mainPlugin.backend?.onConfigChange?.call(
+                  mainPlugin.backend,
+                  config,
+                ),
+              ).catch((err: unknown) => {
+                console.error(
+                  LoggerPrefix,
+                  `[Plugins] Error during onConfigChange for ${id}:`,
+                  err,
+                );
+              });
+            } catch (err) {
+              console.error(
+                LoggerPrefix,
+                `[Plugins] Error during onConfigChange for ${id}:`,
+                err,
+              );
+            }
           }
         }
 
@@ -297,6 +313,12 @@ const showNeedToRestartDialog = async (id: string) => {
   });
 };
 
+/**
+ * Initializes and injects custom application CSS and user-defined themes
+ * into the main browser window's webContents.
+ *
+ * @param win - The target BrowserWindow instance to style.
+ */
 function initTheme(win: BrowserWindow) {
   injectCSS(win.webContents, musicPlayerCss);
   // Load user CSS
@@ -325,6 +347,13 @@ function initTheme(win: BrowserWindow) {
   });
 }
 
+/**
+ * Creates, configures, and displays the primary application BrowserWindow.
+ * Manages window sizing, multi-monitor bounds restoration, custom protocol handlers,
+ * plugin bootstrapping, and initial navigation to YouTube Music.
+ *
+ * @returns A promise resolving to the initialized BrowserWindow instance.
+ */
 async function createMainWindow() {
   const windowSize = config.get('window-size');
   const windowMaximized = config.get('window-maximized');
@@ -954,6 +983,12 @@ function showUnresponsiveDialog(
     });
 }
 
+/**
+ * Configures the web session to relax specific Content Security Policy (CSP) headers,
+ * allowing plugins to inject styles and scripts, and sets up request conflict resolution.
+ *
+ * @param betterSession - The enhanced Electron session to configure. Defaults to the default session.
+ */
 function removeContentSecurityPolicy(
   betterSession: BetterSession = session.defaultSession as BetterSession,
 ) {
