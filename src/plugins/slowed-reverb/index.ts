@@ -538,8 +538,13 @@ export default createPlugin<
           '[slowed-reverb] worklet load failed, slow-only fallback',
           error,
         );
-        this.workletFailed = true;
-        this.applyReverb();
+        // Only poison the generation that actually failed: a teardown or
+        // re-wire while the load was in flight means this graph is gone, and
+        // a stale flag would disable reverb for the rest of the session.
+        if (epoch === this.workletEpoch) {
+          this.workletFailed = true;
+          this.applyReverb();
+        }
       }
     },
 
