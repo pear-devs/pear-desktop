@@ -26,7 +26,7 @@ import unhandled from 'electron-unhandled';
 import electronUpdater from 'electron-updater';
 import { deepEqual } from 'fast-equals';
 import { parse } from 'node-html-parser';
-import { languageResources } from 'virtual:i18n';
+import { availableLanguages } from 'virtual:i18n';
 import { allPlugins, mainPlugins } from 'virtual:plugins';
 
 import * as config from '@/config';
@@ -640,12 +640,12 @@ app.on('activate', async () => {
   }
 });
 
-const getDefaultLocale = async (locale: string) =>
-  Object.keys(await languageResources()).includes(locale) ? locale : null;
+const getDefaultLocale = (locale: string) =>
+  availableLanguages.includes(locale) ? locale : null;
 
 app.whenReady().then(async () => {
   if (!config.get('options.language')) {
-    const locale = await getDefaultLocale(app.getLocale());
+    const locale = getDefaultLocale(app.getLocale());
     if (locale) {
       config.set('options.language', locale);
     }
