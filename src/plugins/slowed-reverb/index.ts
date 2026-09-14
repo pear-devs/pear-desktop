@@ -590,6 +590,9 @@ export default createPlugin<
         this.video = video;
         this.originalRate = video.playbackRate || 1;
         this.savedPitch = readPitch(video);
+        // pitchOverridden described the previous element; a replacement
+        // element carries its own default pitch flags.
+        this.pitchOverridden = false;
       }
       if (isPlaybackRateControlledByOther(PLUGIN_ID)) {
         // Another plugin owns the rate: yield instead of fighting, but undo
@@ -605,10 +608,12 @@ export default createPlugin<
         // branch: clearPitch()/releasePitchOverride() otherwise only run on
         // the rate-write path, leaving a matching rate pitch-preserved.
         if (slow !== 1) {
-          if (!this.pitchOverridden) {
-            clearPitch(video);
-            this.pitchOverridden = true;
-          }
+          try {
+            if (!this.pitchOverridden) {
+              clearPitch(video);
+              this.pitchOverridden = true;
+            }
+          } catch {}
         } else {
           this.releasePitchOverride(video);
         }
