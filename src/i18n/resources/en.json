@@ -236,6 +236,53 @@
       },
       "name": "Album Color Theme"
     },
+    "custom-theme": {
+      "description": "Applies a custom theme app-wide including colors, with a green-on-black CLI preset",
+      "menu": {
+        "colors": {
+          "label": "Colors",
+          "submenu": {
+            "accent-color": "Accent color",
+            "background-color": "Background color",
+            "surface-color": "Surface color",
+            "text-color": "Text color"
+          }
+        },
+        "reset": {
+          "label": "Reset colors"
+        },
+        "theme": {
+          "label": "Theme",
+          "submenu": {
+            "cli": {
+              "label": "CLI"
+            },
+            "custom": {
+              "label": "Custom"
+            }
+          }
+        }
+      },
+      "name": "Custom Theme",
+      "prompt": {
+        "accent-color": {
+          "label": "Accent color (hex)",
+          "title": "Accent color"
+        },
+        "background-color": {
+          "label": "Background color (hex)",
+          "title": "Background color"
+        },
+        "surface-color": {
+          "label": "Surface color (hex)",
+          "title": "Surface color"
+        },
+        "text-color": {
+          "label": "Text color (hex)",
+          "title": "Text color"
+        }
+      }
+    },
     "ambient-mode": {
       "description": "Applies a lighting effect by casting gentle colors from the video, into your screen’s background",
       "menu": {
