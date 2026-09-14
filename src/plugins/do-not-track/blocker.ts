@@ -1,78 +1,44 @@
-import fs, { promises } from 'node:fs';
-import path from 'node:path';
+import { networkFilterService } from '@/services/network-filter';
 
-import { ElectronBlocker } from '@ghostery/adblocker-electron';
-import { app, net } from 'electron';
-import * as z from 'zod';
-
-let blocker: ElectronBlocker | undefined;
-
-const TbSourcesSchema = z.object({
-  tb: z.array(z.string()),
-});
-
+/**
+ * Loads and initializes the tracker blocker engine for an Electron session.
+ *
+ * @param session - Optional Electron session to attach the network filter to.
+ * @param cache - Whether to enable binary disk caching of compiled filter rules. Defaults to true.
+ * @param additionalBlockLists - Extra URLs pointing to adblock/privacy filter lists to load.
+ * @param disableDefaultLists - Flag or array indicating whether default filter lists should be skipped.
+ */
 export const loadTrackerBlockerEngine = async (
   session?: Electron.Session,
   cache: boolean = true,
   additionalBlockLists: string[] = [],
   disableDefaultLists: boolean | unknown[] = false,
-) => {
-  // Only use cache if no additional blocklists are passed
-  const cacheDirectory = path.join(app.getPath('userData'), 'tb_cache');
-  if (!fs.existsSync(cacheDirectory)) {
-    fs.mkdirSync(cacheDirectory);
-  }
-  const cachingOptions =
-    cache && additionalBlockLists.length === 0
-      ? {
-          path: path.join(cacheDirectory, 'tb-engine.bin'),
-          read: promises.readFile,
-          write: promises.writeFile,
-        }
-      : undefined;
-  const tbSources = TbSourcesSchema.safeParse(
-    await (
-      await net.fetch(
-        'https://raw.githubusercontent.com/organization/tb-list/refs/heads/main/tb.json',
-      )
-    ).json(),
-  );
-  const lists = [
-    ...((disableDefaultLists && !Array.isArray(disableDefaultLists)) ||
-    (Array.isArray(disableDefaultLists) && disableDefaultLists.length > 0)
-      ? []
-      : tbSources.success
-        ? tbSources.data.tb
-        : []),
-    ...additionalBlockLists,
-  ];
+): Promise<void> => {
+  const disableDefaults =
+    (disableDefaultLists && !Array.isArray(disableDefaultLists)) ||
+    (Array.isArray(disableDefaultLists) && disableDefaultLists.length > 0);
 
-  try {
-    blocker = await ElectronBlocker.fromLists(
-      (url: string) => net.fetch(url),
-      lists,
-      {
-        enableCompression: true,
-        // When generating the engine for caching, do not load network filters
-        // So that enhancing the session works as expected
-        // Allowing to define multiple webRequest listeners
-        loadNetworkFilters: session !== undefined,
-      },
-      cachingOptions,
-    );
-    if (session) {
-      blocker.enableBlockingInSession(session);
-    }
-  } catch (error) {
-    console.error('Error loading blocker engine', error);
-  }
+  await networkFilterService.initialize(session, {
+    cache,
+    additionalBlockLists,
+    disableDefaultLists: disableDefaults,
+  });
 };
 
-export const unloadTrackerBlockerEngine = (session: Electron.Session) => {
-  if (blocker) {
-    blocker.disableBlockingInSession(session);
-  }
+/**
+ * Unloads and detaches the network filter engine from an active Electron session.
+ *
+ * @param session - The Electron session to detach the filter interceptor from.
+ */
+export const unloadTrackerBlockerEngine = (session: Electron.Session): void => {
+  networkFilterService.disable(session);
 };
 
-export const isBlockerEnabled = (session: Electron.Session) =>
-  blocker !== undefined && blocker.isBlockingEnabled(session);
+/**
+ * Checks whether the tracker blocker is currently enabled on a given Electron session.
+ *
+ * @param session - The Electron session to inspect.
+ * @returns True if network filtering is actively enabled on the session.
+ */
+export const isBlockerEnabled = (session: Electron.Session): boolean =>
+  networkFilterService.isEnabled(session);
