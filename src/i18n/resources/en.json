@@ -678,6 +678,11 @@
     },
     "notifications": {
       "description": "Display a notification when a song starts playing (interactive notifications are available on Windows)",
+      "like-status": {
+        "disliked": "Disliked",
+        "indifferent": "Removed rating",
+        "liked": "Liked"
+      },
       "menu": {
         "interactive": "Interactive Notifications",
         "interactive-settings": {
@@ -688,6 +693,7 @@
             "tray-controls": "Open/Close on tray click"
           }
         },
+        "notify-on-like-change": "Show notification on like/dislike",
         "priority": "Notification Priority",
         "toast-style": "Toast style",
         "unpause-notification": "Show notification on unpause"
@@ -723,7 +729,20 @@
     },
     "playback-speed": {
       "description": "Listen fast, listen slow! Adds a slider that controls song speed",
+      "menu": {
+        "global-shortcuts": "Global Hotkeys"
+      },
       "name": "Playback Speed",
+      "prompt": {
+        "global-shortcuts": {
+          "keybind-options": {
+            "decrease": "Decrease Speed",
+            "increase": "Increase Speed"
+          },
+          "label": "Choose Global Speed Keybinds:",
+          "title": "Global Speed Keybinds"
+        }
+      },
       "templates": {
         "button": "Speed"
       }
@@ -807,8 +826,11 @@
     "shortcuts": {
       "description": "Allows setting global hotkeys for playback (play/pause/next/previous) and turning off media OSD by overriding media keys, turning on Ctrl/CMD + F to search, turning on Linux MPRIS support for media keys, and custom hotkeys for advanced users",
       "menu": {
+        "focus-window-on-double-play-pause": "Focus Window on Double Play/Pause Press",
         "override-media-keys": "Override Media Keys",
-        "set-keybinds": "Set Global Song Controls"
+        "set-keybinds": "Set Global Song Controls",
+        "set-seek-keybinds": "Set Seek Keybinds",
+        "set-seek-seconds": "Set Seek Duration"
       },
       "name": "Shortcuts (& MPRIS)",
       "prompt": {
@@ -820,6 +842,18 @@
           },
           "label": "Choose Global Keybinds for Songs Control:",
           "title": "Global Keybinds"
+        },
+        "seek-keybind": {
+          "keybind-options": {
+            "backward": "Seek Backward",
+            "forward": "Seek Forward"
+          },
+          "label": "Choose Global Keybinds for Seeking:",
+          "title": "Seek Keybinds"
+        },
+        "seek-seconds": {
+          "label": "Choose Seek Duration (seconds)",
+          "title": "Seek Duration"
         }
       }
     },
