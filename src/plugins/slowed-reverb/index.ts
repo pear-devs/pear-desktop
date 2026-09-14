@@ -601,6 +601,17 @@ export default createPlugin<
       const target = slow !== 1 ? slow : this.originalRate || 1;
       // No-op writes fire no ratechange: never write when already at target.
       if (Math.abs(video.playbackRate - target) <= 0.001) {
+        // Rate is already right, but pitch handling still belongs to this
+        // branch: clearPitch()/releasePitchOverride() otherwise only run on
+        // the rate-write path, leaving a matching rate pitch-preserved.
+        if (slow !== 1) {
+          if (!this.pitchOverridden) {
+            clearPitch(video);
+            this.pitchOverridden = true;
+          }
+        } else {
+          this.releasePitchOverride(video);
+        }
         // Track <video> replacement (YouTube swaps the element on song
         // change): idempotent, moves listeners when the element changes.
         this.attachRateListeners();
