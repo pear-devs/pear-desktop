@@ -1,0 +1,90 @@
+<div
+  aria-disabled="false"
+  aria-selected="false"
+  class="style-scope menu-item ytmusic-menu-popup-renderer"
+  role="option"
+  tabindex="-1"
+>
+  <div
+    class="yt-simple-endpoint style-scope ytmusic-menu-navigation-item-renderer"
+    id="navigation-endpoint"
+    tabindex="-1"
+  >
+    <tp-yt-paper-slider
+      aria-disabled="false"
+      aria-label="Pitch Shift"
+      aria-valuemax="12"
+      aria-valuemin="-12"
+      aria-valuenow="0"
+      class="volume-slider style-scope ytmusic-player-bar on-hover"
+      dir="ltr"
+      id="pitch-shift-slider"
+      max="12"
+      min="-12"
+      role="slider"
+      step="1"
+      style="display: inherit !important"
+      tabindex="0"
+      title="Pitch Shift"
+      value="0"
+      ><!--css-build:shady-->
+      <div class="style-scope tp-yt-paper-slider" id="sliderContainer">
+        <div class="bar-container style-scope tp-yt-paper-slider">
+          <tp-yt-paper-progress
+            aria-disabled="false"
+            aria-hidden="true"
+            aria-valuemax="12"
+            aria-valuemin="-12"
+            aria-valuenow="0"
+            class="style-scope tp-yt-paper-slider"
+            id="sliderBar"
+            role="progressbar"
+            style="touch-action: none"
+            value="1"
+            ><!--css-build:shady-->
+
+            <div
+              class="style-scope tp-yt-paper-progress"
+              id="progressContainer"
+            >
+              <div
+                class="style-scope tp-yt-paper-progress"
+                hidden="true"
+                id="secondaryProgress"
+                style="transform: scaleX(0)"
+              ></div>
+              <div
+                class="style-scope tp-yt-paper-progress"
+                id="primaryProgress"
+                style="transform: scaleX(0.5)"
+              ></div>
+            </div>
+          </tp-yt-paper-progress>
+        </div>
+        <dom-if class="style-scope tp-yt-paper-slider">
+          <template is="dom-if"></template>
+        </dom-if>
+        <div
+          class="slider-knob style-scope tp-yt-paper-slider"
+          id="sliderKnob"
+          style="left: 50%; touch-action: none"
+        >
+          <div
+            class="slider-knob-inner style-scope tp-yt-paper-slider"
+            value="0"
+          ></div>
+        </div>
+      </div>
+      <dom-if class="style-scope tp-yt-paper-slider">
+        <template is="dom-if"></template>
+      </dom-if>
+    </tp-yt-paper-slider>
+    <div
+      class="text style-scope ytmusic-menu-navigation-item-renderer"
+      id="ytmcustom-pitch-shift"
+    >
+      <ytmd-trans key="plugins.pitch-shift.templates.button"></ytmd-trans>
+      (<span id="pitch-shift-value">0</span>)
+    </div>
+  </div>
+</div>
