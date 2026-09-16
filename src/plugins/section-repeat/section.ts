@@ -108,6 +108,8 @@ export function createSection(
   let active = initial.active;
   let startSeconds = initial.startSeconds;
   let endSeconds = initial.endSeconds;
+  let fromDirty = false;
+  let toDirty = false;
 
   const currentState = (): LoopState => ({
     active,
@@ -197,6 +199,8 @@ export function createSection(
     endSeconds = live.endSeconds;
     fromInput.value = startSeconds === null ? '' : formatTime(startSeconds);
     toInput.value = endSeconds === null ? '' : formatTime(endSeconds);
+    fromDirty = false;
+    toDirty = false;
     callbacks.onPointsChange({
       startSeconds,
       endSeconds,
@@ -209,8 +213,14 @@ export function createSection(
     callbacks.onActiveChange(active);
     paintFromState();
   });
-  fromInput.addEventListener('input', paintLive);
-  toInput.addEventListener('input', paintLive);
+  fromInput.addEventListener('input', () => {
+    fromDirty = true;
+    paintLive();
+  });
+  toInput.addEventListener('input', () => {
+    toDirty = true;
+    paintLive();
+  });
   fromInput.addEventListener('change', commit);
   toInput.addEventListener('change', commit);
   fromInput.addEventListener('keydown', (event: KeyboardEvent) => {
@@ -242,11 +252,11 @@ export function createSection(
     startSeconds = state.startSeconds;
     endSeconds = state.endSeconds;
     activeBox.checked = active;
-    // Never clobber a field the user is currently editing.
-    if (document.activeElement !== fromInput) {
+    // Never clobber a field with uncommitted edits.
+    if (!fromDirty) {
       fromInput.value = startSeconds === null ? '' : formatTime(startSeconds);
     }
-    if (document.activeElement !== toInput) {
+    if (!toDirty) {
       toInput.value = endSeconds === null ? '' : formatTime(endSeconds);
     }
     paintFromState();
