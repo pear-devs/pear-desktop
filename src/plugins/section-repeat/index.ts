@@ -167,6 +167,7 @@ export default createPlugin<
 
     attachVideo(video) {
       if (this.video === video) return;
+      const replaced = this.video !== null;
       this.detachVideo();
       this.video = video;
       this.sourceHandler = () => {
@@ -189,6 +190,15 @@ export default createPlugin<
       };
       video.addEventListener('peard:src-changed', this.sourceHandler);
       video.addEventListener('ended', this.endedHandler);
+      if (replaced) {
+        // Element replacement = new song context.
+        this.state = {
+          ...this.state,
+          startSeconds: null,
+          endSeconds: null,
+        };
+        this.syncSection();
+      }
     },
 
     detachVideo() {
