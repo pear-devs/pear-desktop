@@ -13,7 +13,7 @@
       }
     },
     "player-panel": {
-      "cog-label": "Playback tools"
+      "cog-label": "Player Actions"
     }
   },
   "language": {
@@ -731,6 +731,10 @@
         "button": "Speed"
       }
     },
+    "player-actions": {
+      "description": "Slowed + Reverb and section looping in one panel.",
+      "name": "Player Actions"
+    },
     "precise-volume": {
       "description": "Control the volume precisely using mousewheel/hotkeys, with a custom HUD and customizable volume steps",
       "menu": {
@@ -808,8 +812,6 @@
       }
     },
     "section-repeat": {
-      "description": "Repeat part of a song on loop (A-B repeat): e.g. 5:00 to the end, or 5:00 to 5:40.",
-      "name": "Section Repeat",
       "panel": {
         "active": "Repeat",
         "clear": "Clear",
@@ -855,8 +857,6 @@
       "name": "Skip Silences"
     },
     "slowed-reverb": {
-      "description": "Slow down playback and add reverb (slowed + reverb).",
-      "name": "Slowed Reverb",
       "panel": {
         "active": "Active",
         "reset": "Reset",

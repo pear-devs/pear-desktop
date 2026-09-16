@@ -9,7 +9,6 @@ import {
   registerPlayerPanelSection,
   unregisterPlayerPanelSection,
 } from '@/plugins/utils/renderer/player-panel';
-import { createPlugin } from '@/utils';
 
 import { getLatestAudioDetail, type AudioCanPlayDetail } from './audio-graph';
 import {
@@ -24,13 +23,19 @@ import {
 } from './panel';
 import { DATTORRO_WORKLET_SOURCE } from './worklet';
 
-import type { RendererContext } from '@/types/contexts';
-
 export interface SlowedReverbConfig {
-  enabled: boolean;
   slow: number;
   reverbIntensity: number;
   active: boolean;
+}
+
+/**
+ * Minimal host surface this controller needs from the merged player-actions
+ * entry; the entry adapts its aggregate config slices onto it.
+ */
+interface FeatureContext<Slice> {
+  getConfig: () => Slice | Promise<Slice>;
+  setConfig: (patch: Partial<Slice>) => void;
 }
 
 type PitchKey = 'preservesPitch' | 'mozPreservesPitch' | 'webkitPreservesPitch';
@@ -50,7 +55,6 @@ const PITCH_KEYS: PitchKey[] = [
 const PLUGIN_ID = 'slowed-reverb';
 
 const DEFAULT_CONFIG: SlowedReverbConfig = {
-  enabled: false,
   slow: 1,
   reverbIntensity: 0,
   active: true,
@@ -98,8 +102,8 @@ function restorePitch(video: HTMLVideoElement, saved: SavedPitch): void {
   }
 }
 
-interface SlowedReverbRenderer {
-  ctx: RendererContext<SlowedReverbConfig> | null;
+export interface SlowedReverbController {
+  ctx: FeatureContext<SlowedReverbConfig> | null;
   config: SlowedReverbConfig | null;
   audioContext: AudioContext | null;
   audioSource: MediaElementAudioSourceNode | null;
@@ -121,7 +125,7 @@ interface SlowedReverbRenderer {
   rateVideo: HTMLVideoElement | null;
   pitchOverridden: boolean;
   lastWetGain: number;
-  start: (ctx: RendererContext<SlowedReverbConfig>) => Promise<void>;
+  start: (ctx: FeatureContext<SlowedReverbConfig>) => Promise<void>;
   stop: () => void;
   onPlayerApiReady: () => void;
   onConfigChange: (newConfig: SlowedReverbConfig) => void;
@@ -145,18 +149,8 @@ interface SlowedReverbRenderer {
   restoreVideo: () => void;
 }
 
-export default createPlugin<
-  unknown,
-  unknown,
-  SlowedReverbRenderer,
-  SlowedReverbConfig
->({
-  name: () => t('plugins.slowed-reverb.name'),
-  description: () => t('plugins.slowed-reverb.description'),
-  authors: ['nathwn12'],
-  restartNeeded: false,
-  config: { ...DEFAULT_CONFIG },
-  renderer: {
+export function createSlowedReverbController(): SlowedReverbController {
+  return {
     ctx: null,
     config: null,
     audioContext: null,
@@ -710,5 +704,5 @@ export default createPlugin<
       this.pitchOverridden = false;
       this.video = null;
     },
-  },
-});
+  };
+}

@@ -3,7 +3,6 @@ import {
   registerPlayerPanelSection,
   unregisterPlayerPanelSection,
 } from '@/plugins/utils/renderer/player-panel';
-import { createPlugin } from '@/utils';
 
 import {
   resolveEndSeekTarget,
@@ -17,30 +16,31 @@ import {
   type SectionPoints,
 } from './section';
 
-import type { RendererContext } from '@/types/contexts';
-
 export interface SectionRepeatConfig {
-  enabled: boolean;
   active: boolean;
 }
 
 const PLUGIN_ID = 'section-repeat';
 const TICK_MS = 100;
 
-const DEFAULT_CONFIG: SectionRepeatConfig = {
-  enabled: false,
-  active: true,
-};
+/**
+ * Minimal host surface this controller needs from the merged player-actions
+ * entry; the entry adapts its aggregate config slices onto it.
+ */
+interface FeatureContext<Slice> {
+  getConfig: () => Slice | Promise<Slice>;
+  setConfig: (patch: Partial<Slice>) => void;
+}
 
-interface SectionRepeatRenderer {
-  ctx: RendererContext<SectionRepeatConfig> | null;
+export interface SectionRepeatController {
+  ctx: FeatureContext<SectionRepeatConfig> | null;
   state: LoopState;
   section: SectionHandle | null;
   tick: ReturnType<typeof setInterval> | null;
   video: HTMLVideoElement | null;
   sourceHandler: (() => void) | null;
   endedHandler: (() => void) | null;
-  start: (ctx: RendererContext<SectionRepeatConfig>) => Promise<void>;
+  start: (ctx: FeatureContext<SectionRepeatConfig>) => Promise<void>;
   stop: () => void;
   onConfigChange: (newConfig: SectionRepeatConfig) => void;
   ensureSection: () => void;
@@ -50,18 +50,8 @@ interface SectionRepeatRenderer {
   detachVideo: () => void;
 }
 
-export default createPlugin<
-  unknown,
-  unknown,
-  SectionRepeatRenderer,
-  SectionRepeatConfig
->({
-  name: () => t('plugins.section-repeat.name'),
-  description: () => t('plugins.section-repeat.description'),
-  authors: ['nathwn12'],
-  restartNeeded: false,
-  config: { ...DEFAULT_CONFIG },
-  renderer: {
+export function createSectionRepeatController(): SectionRepeatController {
+  return {
     ctx: null,
     state: { active: true, startSeconds: null, endSeconds: null },
     section: null,
@@ -212,5 +202,5 @@ export default createPlugin<
       this.sourceHandler = null;
       this.endedHandler = null;
     },
-  },
-});
+  };
+}
