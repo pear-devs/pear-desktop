@@ -70,6 +70,17 @@ export function formatTime(seconds: number): string {
   return `${mins}:${pad(secs)}`;
 }
 
+/**
+ * Whether the loop is armed at all: Repeat on and at least one point set.
+ * A blank `From` alone is the `Clear` state and never loops; blank `From`
+ * with a set `To` engages a loop from the start of the song.
+ */
+export function isLoopEngaged(state: LoopState): boolean {
+  return (
+    state.active && (state.startSeconds !== null || state.endSeconds !== null)
+  );
+}
+
 interface ArmedLoop {
   start: number;
   threshold: number;
@@ -77,20 +88,22 @@ interface ArmedLoop {
 
 /**
  * Resolves the loop into its start point and end threshold, or `null` when
- * it is disarmed: inactive, without a finite start, without a finite
- * resolved end, or with a threshold that sits no more than 50 ms past its
- * start (a range collapsed into the song's tail). A typed end that reaches
- * or passes the song's end is clamped to the song's end so the trigger sits
- * just before the end instead of beyond it.
+ * it is disarmed: inactive, with no point set, without a finite start,
+ * without a finite resolved end, or with a threshold that sits no more than
+ * 50 ms past its start (a range collapsed into the song's tail). A blank
+ * `From` starts the loop at `0:00`. A typed end that reaches or passes the
+ * song's end is clamped to the song's end so the trigger sits just before
+ * the end instead of beyond it.
  */
 function resolveArmedLoop(
   state: LoopState,
   duration: number,
 ): ArmedLoop | null {
-  if (!state.active) return null;
+  if (!isLoopEngaged(state)) return null;
 
-  const start = state.startSeconds;
-  if (start === null || !Number.isFinite(start)) return null;
+  // Blank From means the start of the song.
+  const start = state.startSeconds ?? 0;
+  if (!Number.isFinite(start)) return null;
 
   const end = state.endSeconds ?? duration;
   if (!Number.isFinite(end)) return null;

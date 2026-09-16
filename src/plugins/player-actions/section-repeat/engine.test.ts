@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 
 import {
   formatTime,
+  isLoopEngaged,
   parseTimeInput,
   resolveEndSeekTarget,
   resolveSeekTarget,
@@ -82,9 +83,55 @@ const resolveCases: {
     expected: null,
   },
   {
+    // A blank From now starts the loop at the song's start.
     name: 'start null',
     state: loop({ endSeconds: 340 }),
     player: sample({ currentTime: 340, duration: 400 }),
+    expected: 0,
+  },
+  {
+    name: 'to-only loop arms at the song start',
+    state: loop({ endSeconds: 340 }),
+    player: sample({ currentTime: 0, duration: 400 }),
+    expected: null,
+  },
+  {
+    name: 'to-only loop triggers at the end threshold',
+    state: loop({ endSeconds: 340 }),
+    player: sample({ currentTime: 339.95, duration: 400 }),
+    expected: 0,
+  },
+  {
+    name: 'to-only loop just below the end threshold stays put',
+    state: loop({ endSeconds: 340 }),
+    player: sample({ currentTime: 339.9499999999999, duration: 400 }),
+    expected: null,
+  },
+  {
+    name: 'to-only loop past the song end clamps to the song end',
+    state: loop({ endSeconds: 340 }),
+    player: sample({ currentTime: 299.75, duration: 300 }),
+    expected: 0,
+  },
+  {
+    name: 'to-only loop past the song end clamps: below threshold',
+    state: loop({ endSeconds: 340 }),
+    player: sample({ currentTime: 299.6, duration: 300 }),
+    expected: null,
+  },
+  {
+    // Both points blank is the Clear state: nothing arms.
+    name: 'clear stays disarmed',
+    state: loop(),
+    player: sample({ currentTime: 100, duration: 400 }),
+    expected: null,
+  },
+  {
+    // A 0:00 -> 0.2 map collapses into the song tail (threshold -0.1),
+    // so the threshold invariant keeps it disarmed.
+    name: 'to-only loop collapsed into the song tail stays disarmed',
+    state: loop({ endSeconds: 0.2 }),
+    player: sample({ currentTime: 0.15, duration: 0.2 }),
     expected: null,
   },
   {
@@ -266,9 +313,28 @@ const endSeekCases: {
     expected: null,
   },
   {
+    // A blank From now resolves the restore point to the song's start.
     name: 'start null',
     state: loop({ endSeconds: 340 }),
     duration: 300,
+    expected: 0,
+  },
+  {
+    name: 'to-only loop resolves to the song start',
+    state: loop({ endSeconds: 340 }),
+    duration: 400,
+    expected: 0,
+  },
+  {
+    name: 'clear resolves to nothing',
+    state: loop(),
+    duration: 400,
+    expected: null,
+  },
+  {
+    name: 'to-only loop collapsed into the song tail stays disarmed',
+    state: loop({ endSeconds: 0.2 }),
+    duration: 0.2,
     expected: null,
   },
   {
@@ -319,6 +385,52 @@ test.describe('resolveEndSeekTarget', () => {
   for (const { name, state, duration, expected } of endSeekCases) {
     test(name, () => {
       expect(resolveEndSeekTarget(state, duration)).toBe(expected);
+    });
+  }
+});
+
+const engagedCases: { name: string; state: LoopState; expected: boolean }[] = [
+  {
+    name: 'active with no points is disarmed',
+    state: loop(),
+    expected: false,
+  },
+  {
+    name: 'inactive with an explicit range is disarmed',
+    state: loop({ active: false, startSeconds: 300, endSeconds: 340 }),
+    expected: false,
+  },
+  {
+    name: 'inactive with a blank From and an end is disarmed',
+    state: loop({ active: false, endSeconds: 340 }),
+    expected: false,
+  },
+  {
+    name: 'blank From with an end is engaged',
+    state: loop({ endSeconds: 340 }),
+    expected: true,
+  },
+  {
+    name: 'explicit From with a blank end is engaged',
+    state: loop({ startSeconds: 300 }),
+    expected: true,
+  },
+  {
+    name: 'explicit range is engaged',
+    state: loop({ startSeconds: 300, endSeconds: 340 }),
+    expected: true,
+  },
+  {
+    name: 'a non-finite From is still engaged (the resolve guard disarms it)',
+    state: loop({ startSeconds: NaN, endSeconds: 340 }),
+    expected: true,
+  },
+];
+
+test.describe('isLoopEngaged', () => {
+  for (const { name, state, expected } of engagedCases) {
+    test(name, () => {
+      expect(isLoopEngaged(state)).toBe(expected);
     });
   }
 });

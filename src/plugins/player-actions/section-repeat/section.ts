@@ -147,7 +147,8 @@ export function createSection(
 
     const nextStart = parsedFrom.kind === 'time' ? parsedFrom.seconds : null;
     const nextEnd = parsedTo.kind === 'time' ? parsedTo.seconds : null;
-    if (nextStart !== null && nextEnd !== null && nextEnd <= nextStart) {
+    // A blank From starts at 0:00, so a To at or below zero is reversed.
+    if (nextEnd !== null && nextEnd <= (nextStart ?? 0)) {
       setInputInvalid(fromInput, true);
       setInputInvalid(toInput, true);
       return null;
@@ -175,18 +176,19 @@ export function createSection(
       status.textContent = t('plugins.section-repeat.panel.status-off');
       return;
     }
-    if (state.startSeconds === null) {
+    if (state.startSeconds === null && state.endSeconds === null) {
       status.textContent = t('plugins.section-repeat.panel.status-need-start');
       return;
     }
+    // A blank From renders as 0:00 so a To-only loop reads `0:00 -> To`.
     if (state.endSeconds === null) {
       status.textContent = t('plugins.section-repeat.panel.status-to-end', {
-        start: formatTime(state.startSeconds),
+        start: formatTime(state.startSeconds ?? 0),
       });
       return;
     }
     status.textContent = t('plugins.section-repeat.panel.status-loop', {
-      start: formatTime(state.startSeconds),
+      start: formatTime(state.startSeconds ?? 0),
       end: formatTime(state.endSeconds),
     });
   };
