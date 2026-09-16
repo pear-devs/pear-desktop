@@ -73,7 +73,9 @@ export function formatTime(seconds: number): string {
 /**
  * Returns the start of the loop when playback crossed the end threshold,
  * otherwise `null`. Nothing is returned while inactive, without a start
- * point, paused or seeking, and never a non-finite value.
+ * point, paused or seeking, and never a non-finite value. A typed end that
+ * reaches or passes the song's end is clamped to the song's end so the
+ * trigger sits just before the end instead of beyond it.
  */
 export function resolveSeekTarget(
   state: LoopState,
@@ -90,7 +92,13 @@ export function resolveSeekTarget(
   if (!Number.isFinite(end)) return null;
   if (!(end > start + 0.05)) return null;
 
-  const threshold = state.endSeconds === null ? end - 0.3 : end - 0.05;
+  const clampedToSongEnd =
+    state.endSeconds !== null &&
+    Number.isFinite(player.duration) &&
+    end >= player.duration;
+  const toSongEnd = state.endSeconds === null || clampedToSongEnd;
+  const loopEnd = toSongEnd ? player.duration : end;
+  const threshold = toSongEnd ? loopEnd - 0.3 : loopEnd - 0.05;
   if (!Number.isFinite(threshold)) return null;
   return player.currentTime >= threshold ? start : null;
 }

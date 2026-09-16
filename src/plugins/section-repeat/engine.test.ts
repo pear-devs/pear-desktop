@@ -176,6 +176,50 @@ const resolveCases: {
     player: sample({ currentTime: 359.69, duration: 360 }),
     expected: null,
   },
+  {
+    name: 'explicit end past the song end clamps to the song end',
+    state: loop({ startSeconds: 300, endSeconds: 340 }),
+    player: sample({ currentTime: 299.75, duration: 300 }),
+    expected: 300,
+  },
+  {
+    name: 'explicit end past the song end clamps: below threshold',
+    state: loop({ startSeconds: 300, endSeconds: 340 }),
+    player: sample({ currentTime: 299.6, duration: 300 }),
+    expected: null,
+  },
+  {
+    name: 'explicit end past the song end clamps: currentTime past the end',
+    state: loop({ startSeconds: 300, endSeconds: 340 }),
+    player: sample({ currentTime: 340, duration: 300 }),
+    expected: 300,
+  },
+  {
+    name: 'explicit end equal to the song end clamps to the song end',
+    state: loop({ startSeconds: 200, endSeconds: 300 }),
+    player: sample({ currentTime: 299.75, duration: 300 }),
+    expected: 200,
+  },
+  {
+    name: 'explicit end equal to the song end clamps: below threshold',
+    state: loop({ startSeconds: 200, endSeconds: 300 }),
+    player: sample({ currentTime: 299.6, duration: 300 }),
+    expected: null,
+  },
+  {
+    // A zero-length loop is rejected before the clamp applies (end == start
+    // fails the `end > start + 0.05` guard), even when both sit at the end.
+    name: 'zero-length loop at the song end stays inactive',
+    state: loop({ startSeconds: 300, endSeconds: 300 }),
+    player: sample({ currentTime: 299.75, duration: 300 }),
+    expected: null,
+  },
+  {
+    name: 'zero-length loop at the song end stays inactive below threshold',
+    state: loop({ startSeconds: 300, endSeconds: 300 }),
+    player: sample({ currentTime: 299.6, duration: 300 }),
+    expected: null,
+  },
 ];
 
 test.describe('resolveSeekTarget', () => {

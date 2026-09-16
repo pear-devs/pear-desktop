@@ -95,6 +95,7 @@ export function createSection(
 
   const status = document.createElement('div');
   status.className = 'pbg-status';
+  status.setAttribute('role', 'status');
   root.appendChild(status);
 
   const clear = document.createElement('button');
@@ -241,8 +242,13 @@ export function createSection(
     startSeconds = state.startSeconds;
     endSeconds = state.endSeconds;
     activeBox.checked = active;
-    fromInput.value = startSeconds === null ? '' : formatTime(startSeconds);
-    toInput.value = endSeconds === null ? '' : formatTime(endSeconds);
+    // Never clobber a field the user is currently editing.
+    if (document.activeElement !== fromInput) {
+      fromInput.value = startSeconds === null ? '' : formatTime(startSeconds);
+    }
+    if (document.activeElement !== toInput) {
+      toInput.value = endSeconds === null ? '' : formatTime(endSeconds);
+    }
     paintFromState();
   };
 
