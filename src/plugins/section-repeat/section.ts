@@ -7,9 +7,11 @@ export interface SectionPoints {
   endSeconds: number | null;
 }
 
+export type CommitSource = 'from' | 'to' | 'clear';
+
 export interface SectionCallbacks {
   onActiveChange: (active: boolean) => void;
-  onPointsChange: (points: SectionPoints) => void;
+  onPointsChange: (points: SectionPoints, source: CommitSource) => void;
   getCurrentTime: () => number | null;
 }
 
@@ -189,7 +191,7 @@ export function createSection(
     );
   };
 
-  const commit = (): void => {
+  const commit = (source: CommitSource): void => {
     const live = readInputPoints();
     if (live === null) {
       paintStatus(currentState(), true);
@@ -201,10 +203,13 @@ export function createSection(
     toInput.value = endSeconds === null ? '' : formatTime(endSeconds);
     fromDirty = false;
     toDirty = false;
-    callbacks.onPointsChange({
-      startSeconds,
-      endSeconds,
-    });
+    callbacks.onPointsChange(
+      {
+        startSeconds,
+        endSeconds,
+      },
+      source,
+    );
     paintFromState();
   };
 
@@ -221,30 +226,30 @@ export function createSection(
     toDirty = true;
     paintLive();
   });
-  fromInput.addEventListener('change', commit);
-  toInput.addEventListener('change', commit);
+  fromInput.addEventListener('change', () => commit('from'));
+  toInput.addEventListener('change', () => commit('to'));
   fromInput.addEventListener('keydown', (event: KeyboardEvent) => {
-    if (event.key === 'Enter') commit();
+    if (event.key === 'Enter') commit('from');
   });
   toInput.addEventListener('keydown', (event: KeyboardEvent) => {
-    if (event.key === 'Enter') commit();
+    if (event.key === 'Enter') commit('to');
   });
   fromNow.addEventListener('click', () => {
     const time = callbacks.getCurrentTime();
     if (time === null || !Number.isFinite(time)) return;
     fromInput.value = formatTime(time);
-    commit();
+    commit('from');
   });
   toNow.addEventListener('click', () => {
     const time = callbacks.getCurrentTime();
     if (time === null || !Number.isFinite(time)) return;
     toInput.value = formatTime(time);
-    commit();
+    commit('to');
   });
   clear.addEventListener('click', () => {
     fromInput.value = '';
     toInput.value = '';
-    commit();
+    commit('clear');
   });
 
   const sync = (state: LoopState): void => {

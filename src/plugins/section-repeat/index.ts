@@ -12,6 +12,7 @@ import {
 } from './engine';
 import {
   createSection,
+  type CommitSource,
   type SectionHandle,
   type SectionPoints,
 } from './section';
@@ -112,12 +113,21 @@ export default createPlugin<
           this.ctx?.setConfig({ active });
           this.syncSection();
         },
-        onPointsChange: (points: SectionPoints) => {
+        onPointsChange: (points: SectionPoints, source: CommitSource) => {
           this.state = {
             ...this.state,
             startSeconds: points.startSeconds,
             endSeconds: points.endSeconds,
           };
+          // A committed From jumps playback there at once; To/clear never seek.
+          if (source !== 'from') return;
+          const video = document.querySelector<HTMLVideoElement>('video');
+          if (!video) return;
+          const target = resolveEndSeekTarget(this.state, video.duration);
+          if (target === null) return;
+          try {
+            video.currentTime = target;
+          } catch {}
         },
         getCurrentTime: () => {
           const video = document.querySelector<HTMLVideoElement>('video');
