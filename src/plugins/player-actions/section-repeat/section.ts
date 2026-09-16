@@ -12,12 +12,16 @@ export type CommitSource = 'from' | 'to' | 'clear';
 export interface SectionCallbacks {
   onActiveChange: (active: boolean) => void;
   onPointsChange: (points: SectionPoints, source: CommitSource) => void;
+  onSave: () => void;
   getCurrentTime: () => number | null;
 }
+
+export type SectionNotice = 'saved' | 'removed';
 
 export interface SectionHandle {
   root: HTMLElement;
   sync: (state: LoopState) => void;
+  notify: (notice: SectionNotice | null) => void;
   destroy: () => void;
 }
 
@@ -107,11 +111,19 @@ export function createSection(
   clear.setAttribute('aria-label', t('plugins.section-repeat.panel.clear'));
   root.appendChild(clear);
 
+  const save = document.createElement('button');
+  save.type = 'button';
+  save.className = 'pbg-button';
+  save.textContent = t('plugins.section-repeat.panel.save');
+  save.setAttribute('aria-label', t('plugins.section-repeat.panel.save'));
+  root.appendChild(save);
+
   let active = initial.active;
   let startSeconds = initial.startSeconds;
   let endSeconds = initial.endSeconds;
   let fromDirty = false;
   let toDirty = false;
+  let notice: SectionNotice | null = null;
 
   const currentState = (): LoopState => ({
     active,
@@ -147,6 +159,16 @@ export function createSection(
     status.classList.toggle(STATUS_ERROR_CLASS, invalid);
     if (invalid) {
       status.textContent = t('plugins.section-repeat.panel.status-invalid');
+      return;
+    }
+    if (notice === 'saved') {
+      status.textContent = t('plugins.section-repeat.panel.status-saved');
+      return;
+    }
+    if (notice === 'removed') {
+      status.textContent = t(
+        'plugins.section-repeat.panel.status-saved-removed',
+      );
       return;
     }
     if (!state.active) {
@@ -197,6 +219,7 @@ export function createSection(
       paintStatus(currentState(), true);
       return;
     }
+    notice = null;
     startSeconds = live.startSeconds;
     endSeconds = live.endSeconds;
     fromInput.value = startSeconds === null ? '' : formatTime(startSeconds);
@@ -215,6 +238,7 @@ export function createSection(
 
   activeBox.addEventListener('change', () => {
     active = activeBox.checked;
+    notice = null;
     callbacks.onActiveChange(active);
     paintFromState();
   });
@@ -251,6 +275,9 @@ export function createSection(
     toInput.value = '';
     commit('clear');
   });
+  save.addEventListener('click', () => {
+    callbacks.onSave();
+  });
 
   const sync = (state: LoopState): void => {
     active = state.active;
@@ -272,6 +299,10 @@ export function createSection(
   return {
     root,
     sync,
+    notify: (kind: SectionNotice | null) => {
+      notice = kind;
+      paintFromState();
+    },
     destroy: () => {
       root.remove();
     },

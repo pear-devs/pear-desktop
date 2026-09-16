@@ -3,12 +3,14 @@ import {
   registerPlayerPanelSection,
   unregisterPlayerPanelSection,
 } from '@/plugins/utils/renderer/player-panel';
+import { getSongInfo } from '@/providers/song-info-front';
 
 import {
   resolveEndSeekTarget,
   resolveSeekTarget,
   type LoopState,
 } from './engine';
+import { lookupSaved, upsertSaved, type SavedSongs } from './saved';
 import {
   createSection,
   type CommitSource,
@@ -16,8 +18,11 @@ import {
   type SectionPoints,
 } from './section';
 
+import type { MusicPlayer } from '@/types/music-player';
+
 export interface SectionRepeatConfig {
   active: boolean;
+  saved: SavedSongs;
 }
 
 const PLUGIN_ID = 'section-repeat';
@@ -35,6 +40,9 @@ interface FeatureContext<Slice> {
 export interface SectionRepeatController {
   ctx: FeatureContext<SectionRepeatConfig> | null;
   state: LoopState;
+  saved: SavedSongs;
+  api: MusicPlayer | null;
+  pendingRestoreSeek: boolean;
   section: SectionHandle | null;
   tick: ReturnType<typeof setInterval> | null;
   video: HTMLVideoElement | null;
@@ -43,6 +51,10 @@ export interface SectionRepeatController {
   start: (ctx: FeatureContext<SectionRepeatConfig>) => Promise<void>;
   stop: () => void;
   onConfigChange: (newConfig: SectionRepeatConfig) => void;
+  onPlayerApiReady: (api: MusicPlayer) => void;
+  currentVideoId: () => string | null;
+  onSave: () => void;
+  restoreForCurrentSong: () => void;
   ensureSection: () => void;
   syncSection: () => void;
   handleTick: () => void;
@@ -54,6 +66,9 @@ export function createSectionRepeatController(): SectionRepeatController {
   return {
     ctx: null,
     state: { active: true, startSeconds: null, endSeconds: null },
+    saved: [],
+    api: null,
+    pendingRestoreSeek: false,
     section: null,
     tick: null,
     video: null,
@@ -63,18 +78,21 @@ export function createSectionRepeatController(): SectionRepeatController {
     async start(ctx) {
       this.ctx = ctx;
       const raw = await ctx.getConfig();
-      // Points are per song and never persisted: only `active` is restored.
+      // Points are per song: only `active` and the saved sections are
+      // restored, and playback points come back when the song does.
       this.state = {
         active: raw.active !== false,
         startSeconds: null,
         endSeconds: null,
       };
+      this.saved = raw.saved;
       this.ensureSection();
       if (this.tick === null) {
         this.tick = setInterval(() => {
           this.handleTick();
         }, TICK_MS);
       }
+      this.restoreForCurrentSong();
     },
 
     stop() {
@@ -82,6 +100,7 @@ export function createSectionRepeatController(): SectionRepeatController {
         clearInterval(this.tick);
         this.tick = null;
       }
+      this.pendingRestoreSeek = false;
       this.detachVideo();
       unregisterPlayerPanelSection(PLUGIN_ID);
       this.section = null;
@@ -92,7 +111,78 @@ export function createSectionRepeatController(): SectionRepeatController {
         ...this.state,
         active: newConfig.active !== false,
       };
+      // Adopt persisted saves; restoring here would fight the user's edits.
+      this.saved = newConfig.saved;
       this.syncSection();
+    },
+
+    onPlayerApiReady(api) {
+      this.api = api;
+      this.restoreForCurrentSong();
+    },
+
+    currentVideoId() {
+      try {
+        const videoId = this.api?.getPlayerResponse().videoDetails.videoId;
+        if (typeof videoId === 'string' && videoId !== '') return videoId;
+      } catch {}
+      const videoId = getSongInfo().videoId;
+      if (typeof videoId === 'string' && videoId !== '') return videoId;
+      return null;
+    },
+
+    onSave() {
+      const videoId = this.currentVideoId();
+      if (videoId === null) return;
+      const entry = {
+        videoId,
+        startSeconds: this.state.startSeconds,
+        endSeconds: this.state.endSeconds,
+      };
+      const removed = entry.startSeconds === null && entry.endSeconds === null;
+      const existing = lookupSaved(this.saved, videoId);
+      const unchanged = removed
+        ? existing === null
+        : existing !== null &&
+          existing.startSeconds === entry.startSeconds &&
+          existing.endSeconds === entry.endSeconds;
+      if (unchanged) return;
+
+      this.saved = upsertSaved(this.saved, entry);
+      this.ctx?.setConfig({ saved: this.saved });
+      this.section?.notify(removed ? 'removed' : 'saved');
+    },
+
+    restoreForCurrentSong() {
+      const videoId = this.currentVideoId();
+      this.pendingRestoreSeek = false;
+      if (videoId === null) return;
+      const entry = lookupSaved(this.saved, videoId);
+      if (entry === null) {
+        this.state = { ...this.state, startSeconds: null, endSeconds: null };
+        this.syncSection();
+        return;
+      }
+
+      this.state = {
+        ...this.state,
+        startSeconds: entry.startSeconds,
+        endSeconds: entry.endSeconds,
+      };
+      this.syncSection();
+
+      const video =
+        this.video ?? document.querySelector<HTMLVideoElement>('video');
+      const target = resolveEndSeekTarget(this.state, video?.duration ?? NaN);
+      if (video !== null && target !== null) {
+        try {
+          video.currentTime = target;
+        } catch {}
+        return;
+      }
+      // No duration yet (a to-end loop) or no video: seek on the first tick
+      // that resolves, unless the points change first.
+      this.pendingRestoreSeek = true;
     },
 
     ensureSection() {
@@ -104,6 +194,7 @@ export function createSectionRepeatController(): SectionRepeatController {
           this.syncSection();
         },
         onPointsChange: (points: SectionPoints, source: CommitSource) => {
+          this.pendingRestoreSeek = false;
           this.state = {
             ...this.state,
             startSeconds: points.startSeconds,
@@ -118,6 +209,9 @@ export function createSectionRepeatController(): SectionRepeatController {
           try {
             video.currentTime = target;
           } catch {}
+        },
+        onSave: () => {
+          this.onSave();
         },
         getCurrentTime: () => {
           const video = document.querySelector<HTMLVideoElement>('video');
@@ -143,6 +237,16 @@ export function createSectionRepeatController(): SectionRepeatController {
       const video = document.querySelector<HTMLVideoElement>('video');
       if (!video) return;
       this.attachVideo(video);
+      if (this.pendingRestoreSeek) {
+        const restoreTarget = resolveEndSeekTarget(this.state, video.duration);
+        if (restoreTarget !== null) {
+          this.pendingRestoreSeek = false;
+          try {
+            video.currentTime = restoreTarget;
+          } catch {}
+          return;
+        }
+      }
       const target = resolveSeekTarget(this.state, {
         currentTime: video.currentTime,
         duration: video.duration,
@@ -167,7 +271,10 @@ export function createSectionRepeatController(): SectionRepeatController {
           startSeconds: null,
           endSeconds: null,
         };
+        this.pendingRestoreSeek = false;
         this.syncSection();
+        this.section?.notify(null);
+        this.restoreForCurrentSong();
       };
       this.endedHandler = () => {
         // Backstop for an end-of-song loop the tick missed.
@@ -187,7 +294,10 @@ export function createSectionRepeatController(): SectionRepeatController {
           startSeconds: null,
           endSeconds: null,
         };
+        this.pendingRestoreSeek = false;
         this.syncSection();
+        this.section?.notify(null);
+        this.restoreForCurrentSong();
       }
     },
 

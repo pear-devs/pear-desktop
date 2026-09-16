@@ -5,6 +5,7 @@ import {
   createSectionRepeatController,
   type SectionRepeatController,
 } from './section-repeat/controller';
+import { sanitizeSaved, type SavedSongs } from './section-repeat/saved';
 import {
   createSlowedReverbController,
   type SlowedReverbController,
@@ -12,17 +13,18 @@ import {
 import { clampIntensity, clampSlow } from './slowed-reverb/engine';
 
 import type { RendererContext } from '@/types/contexts';
+import type { MusicPlayer } from '@/types/music-player';
 
 export interface PlayerActionsConfig {
   enabled: boolean;
   slowedReverb: { slow: number; reverbIntensity: number; active: boolean };
-  sectionRepeat: { active: boolean };
+  sectionRepeat: { active: boolean; saved: SavedSongs };
 }
 
 const DEFAULT_CONFIG: PlayerActionsConfig = {
   enabled: false,
   slowedReverb: { slow: 1, reverbIntensity: 0, active: true },
-  sectionRepeat: { active: true },
+  sectionRepeat: { active: true, saved: [] },
 };
 
 interface PlayerActionsRenderer {
@@ -32,7 +34,7 @@ interface PlayerActionsRenderer {
   sectionRepeat: SectionRepeatController;
   start: (ctx: RendererContext<PlayerActionsConfig>) => Promise<void>;
   stop: () => void;
-  onPlayerApiReady: () => void;
+  onPlayerApiReady: (api: MusicPlayer) => void;
   onConfigChange: (newConfig: PlayerActionsConfig) => void;
   getCurrent: () => PlayerActionsConfig;
 }
@@ -47,7 +49,10 @@ function normalize(raw: Partial<PlayerActionsConfig>): PlayerActionsConfig {
       reverbIntensity: clampIntensity(slowed.reverbIntensity),
       active: slowed.active !== false,
     },
-    sectionRepeat: { active: repeat.active !== false },
+    sectionRepeat: {
+      active: repeat.active !== false,
+      saved: sanitizeSaved(repeat.saved),
+    },
   };
 }
 
@@ -94,8 +99,9 @@ export default createPlugin<
       this.sectionRepeat.stop();
     },
 
-    onPlayerApiReady() {
+    onPlayerApiReady(api: MusicPlayer) {
       this.slowedReverb.onPlayerApiReady();
+      this.sectionRepeat.onPlayerApiReady(api);
     },
 
     onConfigChange(newConfig) {
