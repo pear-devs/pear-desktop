@@ -216,7 +216,6 @@ export default createPlugin<
     },
 
     stop() {
-      releasePlaybackRate(PLUGIN_ID);
       if (this.watchdog !== null) {
         clearInterval(this.watchdog);
         this.watchdog = null;
@@ -227,6 +226,8 @@ export default createPlugin<
         this.audioHandler = null;
       }
       unregisterPlayerPanelSection(PLUGIN_ID);
+      // The panel flush re-claims the rate via onSlowCommit: release after it.
+      releasePlaybackRate(PLUGIN_ID);
       this.section = null;
       this.teardownAudio();
       this.restoreVideo();
