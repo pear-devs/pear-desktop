@@ -5,6 +5,10 @@ import {
   isPlaybackRateControlledByOther,
   releasePlaybackRate,
 } from '@/plugins/utils/renderer/playback-rate-owner';
+import {
+  registerPlayerPanelSection,
+  unregisterPlayerPanelSection,
+} from '@/plugins/utils/renderer/player-panel';
 import { createPlugin } from '@/utils';
 
 import { getLatestAudioDetail, type AudioCanPlayDetail } from './audio-graph';
@@ -15,12 +19,9 @@ import {
   normalize,
 } from './engine';
 import {
-  createCogButton,
-  createPanel,
-  findCogAnchor,
-  type PanelHandle,
+  createSlowedReverbSection,
+  type SlowedReverbSectionHandle,
 } from './panel';
-import style from './style.css?inline';
 import { DATTORRO_WORKLET_SOURCE } from './worklet';
 
 import type { RendererContext } from '@/types/contexts';
@@ -114,11 +115,8 @@ interface SlowedReverbRenderer {
   originalRate: number;
   savedPitch: SavedPitch | null;
   watchdog: ReturnType<typeof setInterval> | null;
-  observer: MutationObserver | null;
-  cog: HTMLButtonElement | null;
-  panel: PanelHandle | null;
+  section: SlowedReverbSectionHandle | null;
   audioHandler: ((event: Event) => void) | null;
-  docHandler: ((event: MouseEvent) => void) | null;
   rateHandler: ((event: Event) => void) | null;
   rateVideo: HTMLVideoElement | null;
   pitchOverridden: boolean;
@@ -129,11 +127,8 @@ interface SlowedReverbRenderer {
   onConfigChange: (newConfig: SlowedReverbConfig) => void;
   getCurrent: () => SlowedReverbConfig;
   claimRateIfEngaged: () => void;
-  ensureUi: () => void;
-  injectCog: () => void;
-  togglePanel: () => void;
-  closePanel: () => void;
-  syncPanel: () => void;
+  ensureSection: () => void;
+  syncSection: () => void;
   wireAudio: (
     audioContext: AudioContext,
     audioSource: MediaElementAudioSourceNode,
@@ -158,9 +153,9 @@ export default createPlugin<
 >({
   name: () => t('plugins.slowed-reverb.name'),
   description: () => t('plugins.slowed-reverb.description'),
+  authors: ['nathwn12'],
   restartNeeded: false,
   config: { ...DEFAULT_CONFIG },
-  stylesheets: [style],
   renderer: {
     ctx: null,
     config: null,
@@ -178,11 +173,8 @@ export default createPlugin<
     originalRate: 1,
     savedPitch: null,
     watchdog: null,
-    observer: null,
-    cog: null,
-    panel: null,
+    section: null,
     audioHandler: null,
-    docHandler: null,
     rateHandler: null,
     rateVideo: null,
     pitchOverridden: false,
@@ -217,7 +209,7 @@ export default createPlugin<
       if (audioContext && audioSource) {
         this.wireAudio(audioContext, audioSource);
       }
-      this.ensureUi();
+      this.ensureSection();
       this.applySlow();
       this.attachRateListeners();
       this.startWatchdog();
@@ -229,22 +221,19 @@ export default createPlugin<
         clearInterval(this.watchdog);
         this.watchdog = null;
       }
-      this.observer?.disconnect();
-      this.observer = null;
       this.detachRateListeners();
       if (this.audioHandler) {
         document.removeEventListener('peard:audio-can-play', this.audioHandler);
         this.audioHandler = null;
       }
-      this.closePanel();
-      this.cog?.remove();
-      this.cog = null;
+      unregisterPlayerPanelSection(PLUGIN_ID);
+      this.section = null;
       this.teardownAudio();
       this.restoreVideo();
     },
 
     onPlayerApiReady() {
-      this.ensureUi();
+      this.ensureSection();
       // applySlow() tail already attaches rate listeners; no extra call.
       this.applySlow();
     },
@@ -268,7 +257,7 @@ export default createPlugin<
       }
       this.applySlow();
       this.applyReverb();
-      this.syncPanel();
+      this.syncSection();
     },
 
     getCurrent() {
@@ -284,38 +273,10 @@ export default createPlugin<
       }
     },
 
-    ensureUi() {
-      this.injectCog();
-      if (!this.observer) {
-        this.observer = new MutationObserver(() => {
-          this.injectCog();
-        });
-        const target =
-          document.querySelector('ytmusic-player-bar') ?? document.body;
-        this.observer.observe(target, { childList: true, subtree: true });
-      }
-    },
-
-    injectCog() {
-      if (this.cog?.isConnected) return;
-      const anchor = findCogAnchor();
-      if (!anchor) return;
-      if (!this.cog) {
-        this.cog = createCogButton((event: MouseEvent) => {
-          event.stopPropagation();
-          this.togglePanel();
-        });
-      }
-      anchor.parent.insertBefore(this.cog, anchor.before);
-    },
-
-    togglePanel() {
-      if (this.panel) {
-        this.closePanel();
-        return;
-      }
+    ensureSection() {
+      if (this.section) return;
       const current = this.getCurrent();
-      const handle = createPanel(
+      const handle = createSlowedReverbSection(
         {
           slow: clampSlow(current.slow),
           reverbIntensity: clampIntensity(current.reverbIntensity),
@@ -328,7 +289,7 @@ export default createPlugin<
             this.claimRateIfEngaged();
             this.applySlow();
             this.applyReverb();
-            this.syncPanel();
+            this.syncSection();
           },
           onSlowLive: (value: number) => {
             this.config = { ...this.getCurrent(), slow: value };
@@ -340,7 +301,7 @@ export default createPlugin<
             this.ctx?.setConfig({ slow: value });
             this.claimRateIfEngaged();
             this.applySlow();
-            this.syncPanel();
+            this.syncSection();
           },
           onReverbLive: (value: number) => {
             this.config = { ...this.getCurrent(), reverbIntensity: value };
@@ -350,7 +311,7 @@ export default createPlugin<
             this.config = { ...this.getCurrent(), reverbIntensity: value };
             this.ctx?.setConfig({ reverbIntensity: value });
             this.applyReverb();
-            this.syncPanel();
+            this.syncSection();
           },
           onReset: () => {
             this.config = {
@@ -367,38 +328,21 @@ export default createPlugin<
             this.claimRateIfEngaged();
             this.applySlow();
             this.applyReverb();
-            this.syncPanel();
+            this.syncSection();
           },
         },
       );
-      this.panel = handle;
-      document.body.appendChild(handle.root);
-      this.docHandler = (event: MouseEvent) => {
-        if (!this.panel) return;
-        const target = event.target;
-        if (!(target instanceof Node)) return;
-        if (this.panel.root.contains(target)) return;
-        if (this.cog && (target === this.cog || this.cog.contains(target))) {
-          return;
-        }
-        this.closePanel();
-      };
-      document.addEventListener('click', this.docHandler, { capture: true });
+      this.section = handle;
+      registerPlayerPanelSection({
+        id: PLUGIN_ID,
+        title: t('plugins.slowed-reverb.panel.title'),
+        root: handle.root,
+        onDestroy: () => handle.destroy(),
+      });
     },
 
-    closePanel() {
-      if (this.docHandler) {
-        document.removeEventListener('click', this.docHandler, {
-          capture: true,
-        });
-        this.docHandler = null;
-      }
-      this.panel?.destroy();
-      this.panel = null;
-    },
-
-    syncPanel() {
-      const handle = this.panel;
+    syncSection() {
+      const handle = this.section;
       if (!handle) return;
       const current = this.getCurrent();
       handle.sync({

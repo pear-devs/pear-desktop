@@ -11,6 +11,9 @@
         "unload-failed": "Failed to unload plugin \"{{pluginName}}\"",
         "unloaded": "Plugin \"{{pluginName}}\" unloaded"
       }
+    },
+    "player-panel": {
+      "cog-label": "Playback tools"
     }
   },
   "language": {

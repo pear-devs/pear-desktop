@@ -1,4 +1,4 @@
-.sr-cog {
+.pbg-cog {
   appearance: none;
   border: none;
   background: transparent;
@@ -13,18 +13,18 @@
   align-self: center;
 }
 
-.sr-cog svg {
+.pbg-cog svg {
   display: block;
   width: 20px;
   height: 20px;
 }
 
-.sr-cog:hover {
+.pbg-cog:hover {
   opacity: 1;
   background: rgba(255, 255, 255, 0.08);
 }
 
-.sr-panel {
+.pbg-panel {
   position: fixed;
   right: 16px;
   bottom: 96px;
@@ -42,46 +42,46 @@
   font-size: 13px;
 }
 
-.sr-title {
+.pbg-section-title {
   font-weight: 600;
   font-size: 13px;
   letter-spacing: 0.02em;
   opacity: 0.95;
 }
 
-.sr-row {
+.pbg-row {
   display: flex;
   align-items: center;
   gap: 8px;
   cursor: pointer;
 }
 
-.sr-label {
+.pbg-label {
   min-width: 52px;
   opacity: 0.85;
 }
 
-.sr-value {
+.pbg-value {
   min-width: 44px;
   text-align: right;
   font-variant-numeric: tabular-nums;
   opacity: 0.85;
 }
 
-.sr-range {
+.pbg-range {
   flex: 1;
   accent-color: #ff4e45;
   cursor: pointer;
 }
 
-.sr-check {
+.pbg-check {
   width: 15px;
   height: 15px;
   accent-color: #ff4e45;
   cursor: pointer;
 }
 
-.sr-reset {
+.pbg-button {
   appearance: none;
   border: 1px solid rgba(255, 255, 255, 0.16);
   background: rgba(255, 255, 255, 0.06);
@@ -92,6 +92,67 @@
   font-size: 12px;
 }
 
-.sr-reset:hover {
+.pbg-button:hover {
   background: rgba(255, 255, 255, 0.12);
+}
+
+.pbg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pbg-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pbg-section + .pbg-section {
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 10px;
+}
+
+.pbg-input {
+  flex: 1;
+  min-width: 64px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  padding: 5px 8px;
+}
+
+.pbg-input:focus-visible {
+  outline: 2px solid rgba(255, 78, 69, 0.7);
+  outline-offset: 1px;
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+.pbg-now {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ytmusic-text-primary, #fff);
+  border-radius: 8px;
+  padding: 5px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.pbg-now:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.pbg-status {
+  font-size: 11.5px;
+  opacity: 0.7;
+}
+
+.pbg-status-error {
+  color: #ff8a80;
+  opacity: 1;
 }
