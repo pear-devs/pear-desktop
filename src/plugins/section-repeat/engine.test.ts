@@ -177,22 +177,30 @@ const resolveCases: {
     expected: null,
   },
   {
-    name: 'explicit end past the song end clamps to the song end',
+    name: 'explicit end past the song end disarms a range collapsed into the tail',
     state: loop({ startSeconds: 300, endSeconds: 340 }),
     player: sample({ currentTime: 299.75, duration: 300 }),
-    expected: 300,
+    expected: null,
   },
   {
-    name: 'explicit end past the song end clamps: below threshold',
+    name: 'explicit end past the song end disarms: below threshold',
     state: loop({ startSeconds: 300, endSeconds: 340 }),
     player: sample({ currentTime: 299.6, duration: 300 }),
     expected: null,
   },
   {
-    name: 'explicit end past the song end clamps: currentTime past the end',
+    name: 'explicit end past the song end disarms: currentTime past the end',
     state: loop({ startSeconds: 300, endSeconds: 340 }),
     player: sample({ currentTime: 340, duration: 300 }),
-    expected: 300,
+    expected: null,
+  },
+  {
+    // The start sits just inside the last 0.3 s, so the to-end threshold
+    // (299.7) is not 50 ms past it: arming would re-seek to 299.8 forever.
+    name: 'start inside the last 0.3s of the song stays inactive',
+    state: loop({ startSeconds: 299.8, endSeconds: 340 }),
+    player: sample({ currentTime: 299.9, duration: 300 }),
+    expected: null,
   },
   {
     name: 'explicit end equal to the song end clamps to the song end',
@@ -207,8 +215,22 @@ const resolveCases: {
     expected: null,
   },
   {
-    // A zero-length loop is rejected before the clamp applies (end == start
-    // fails the `end > start + 0.05` guard), even when both sit at the end.
+    // Threshold 299.7 sits well past the start, so the clamped range still
+    // loops after the tail is reached from mid-song.
+    name: 'explicit end past the song end still loops from mid-song',
+    state: loop({ startSeconds: 180, endSeconds: 340 }),
+    player: sample({ currentTime: 299.75, duration: 300 }),
+    expected: 180,
+  },
+  {
+    name: 'explicit end past the song end from mid-song: below threshold',
+    state: loop({ startSeconds: 180, endSeconds: 340 }),
+    player: sample({ currentTime: 299.6, duration: 300 }),
+    expected: null,
+  },
+  {
+    // A zero-length loop is rejected by the threshold invariant
+    // (`threshold > start + 0.05`), even when both sit at the end.
     name: 'zero-length loop at the song end stays inactive',
     state: loop({ startSeconds: 300, endSeconds: 300 }),
     player: sample({ currentTime: 299.75, duration: 300 }),
