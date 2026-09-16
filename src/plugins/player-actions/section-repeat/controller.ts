@@ -122,6 +122,10 @@ export function createSectionRepeatController(): SectionRepeatController {
     },
 
     currentVideoId() {
+      // `getSongInfo()` can trail a song change by ~1.5 s; before the player API
+      // is set, the fallback could restore the previous song's saved section.
+      // `onPlayerApiReady` drives the first restore instead.
+      if (!this.api) return null;
       try {
         const videoId = this.api?.getPlayerResponse().videoDetails.videoId;
         if (typeof videoId === 'string' && videoId !== '') return videoId;
