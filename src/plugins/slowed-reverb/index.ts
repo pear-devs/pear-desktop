@@ -220,13 +220,13 @@ export default createPlugin<
         clearInterval(this.watchdog);
         this.watchdog = null;
       }
-      this.detachRateListeners();
       if (this.audioHandler) {
         document.removeEventListener('peard:audio-can-play', this.audioHandler);
         this.audioHandler = null;
       }
       unregisterPlayerPanelSection(PLUGIN_ID);
-      // The panel flush re-claims the rate via onSlowCommit: release after it.
+      // The panel flush's applySlow() can re-attach: detach, then release.
+      this.detachRateListeners();
       releasePlaybackRate(PLUGIN_ID);
       this.section = null;
       this.teardownAudio();
