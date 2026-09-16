@@ -85,7 +85,6 @@ export function resolveSeekTarget(
   if (start === null || !Number.isFinite(start)) return null;
   if (player.paused || player.seeking) return null;
   if (!Number.isFinite(player.currentTime)) return null;
-  if (!Number.isFinite(player.duration)) return null;
 
   const end = state.endSeconds ?? player.duration;
   if (!Number.isFinite(end)) return null;
