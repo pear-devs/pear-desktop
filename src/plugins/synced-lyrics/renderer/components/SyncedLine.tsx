@@ -30,6 +30,14 @@ interface AnimatedWord {
 
 const GENERIC_WORD_DELAY = 0.05;
 
+const wordTimingStyle = (delay: number, status: SyncedLineProps['status']) => {
+  const value = status === 'current' ? `${delay}s` : '0s';
+  return {
+    'transition-delay': value,
+    'animation-delay': value,
+  };
+};
+
 const convertLineText = (line: string) => {
   const convertChineseText = config()?.convertChineseCharacter;
   if (convertChineseText && convertChineseText !== 'disabled') {
@@ -191,12 +199,7 @@ export const SyncedLine = (props: SyncedLineProps) => {
               <For each={words()}>
                 {(word) => {
                   return (
-                    <span
-                      style={{
-                        'transition-delay': `${word.delay}s`,
-                        'animation-delay': `${word.delay}s`,
-                      }}
-                    >
+                    <span style={wordTimingStyle(word.delay, props.status)}>
                       <yt-formatted-string
                         text={{
                           runs: [{ text: word.text }],
@@ -218,12 +221,7 @@ export const SyncedLine = (props: SyncedLineProps) => {
                 <For each={romanizedWords()}>
                   {(word) => {
                     return (
-                      <span
-                        style={{
-                          'transition-delay': `${word.delay}s`,
-                          'animation-delay': `${word.delay}s`,
-                        }}
-                      >
+                      <span style={wordTimingStyle(word.delay, props.status)}>
                         <yt-formatted-string
                           text={{
                             runs: [{ text: word.text }],
