@@ -49,6 +49,7 @@ export interface SectionRepeatController {
   video: HTMLVideoElement | null;
   sourceHandler: (() => void) | null;
   endedHandler: (() => void) | null;
+  videoChangeHandler: ((event: Event) => void) | null;
   start: (ctx: FeatureContext<SectionRepeatConfig>) => Promise<void>;
   stop: () => void;
   onConfigChange: (newConfig: SectionRepeatConfig) => void;
@@ -76,6 +77,7 @@ export function createSectionRepeatController(): SectionRepeatController {
     video: null,
     sourceHandler: null,
     endedHandler: null,
+    videoChangeHandler: null,
 
     async start(ctx) {
       this.ctx = ctx;
@@ -88,6 +90,18 @@ export function createSectionRepeatController(): SectionRepeatController {
         endSeconds: null,
       };
       this.saved = raw.saved;
+      // Song-change detection is independent of the seek-loop tick: the 100 ms
+      // interval only exists while a loop is armed, so tick-coupled discovery
+      // would miss a <video> swap whenever no points are set, and a song with a
+      // saved section would never be restored. `videodatachange` is dispatched
+      // on `document`; song-info-front then dispatches `peard:src-changed` on
+      // the <video>, which the listener attachVideo() installs here still
+      // receives (and the already-attached listener fires when it is not).
+      this.videoChangeHandler = () => {
+        const video = document.querySelector<HTMLVideoElement>('video');
+        if (video) this.attachVideo(video);
+      };
+      document.addEventListener('videodatachange', this.videoChangeHandler);
       this.ensureSection();
       this.syncTick();
       this.restoreForCurrentSong();
@@ -99,6 +113,13 @@ export function createSectionRepeatController(): SectionRepeatController {
         this.tick = null;
       }
       this.pendingRestoreSeek = false;
+      if (this.videoChangeHandler) {
+        document.removeEventListener(
+          'videodatachange',
+          this.videoChangeHandler,
+        );
+        this.videoChangeHandler = null;
+      }
       this.detachVideo();
       unregisterPlayerPanelSection(PLUGIN_ID);
       this.section = null;

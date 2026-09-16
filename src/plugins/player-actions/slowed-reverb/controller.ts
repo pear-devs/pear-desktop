@@ -407,6 +407,10 @@ export function createSlowedReverbController(): SlowedReverbController {
         this.wireAudio(audioContext, audioSource);
         return;
       }
+      // The retry belongs to the next engagement, not just to a plugin
+      // restart: leaving a failed addModule() latched here would keep
+      // wireAudio() bailing out for the rest of the session.
+      this.workletFailed = false;
       this.teardownAudio();
     },
 
