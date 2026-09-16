@@ -64,10 +64,11 @@ export const onPlayerApiReady = () => {
             );
 
             // Programmatic value echoes carry the current speed; only an
-            // actual change is an explicit choice that takes ownership.
-            if (targetSpeed !== speed()) {
-              claimPlaybackRate(PLUGIN_ID);
-            }
+            // actual change is an explicit choice that takes ownership. An
+            // echo must not write the rate either: it would clobber the
+            // current owner (e.g. an engaged slowed-reverb rate).
+            if (targetSpeed === speed()) return;
+            claimPlaybackRate(PLUGIN_ID);
 
             setSpeed(targetSpeed);
             updatePlayBackSpeed();

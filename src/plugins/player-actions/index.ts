@@ -30,6 +30,8 @@ const DEFAULT_CONFIG: PlayerActionsConfig = {
 interface PlayerActionsRenderer {
   ctx: RendererContext<PlayerActionsConfig> | null;
   current: PlayerActionsConfig | null;
+  lifecycle: number;
+  running: boolean;
   slowedReverb: SlowedReverbController;
   sectionRepeat: SectionRepeatController;
   start: (ctx: RendererContext<PlayerActionsConfig>) => Promise<void>;
@@ -70,12 +72,20 @@ export default createPlugin<
   renderer: {
     ctx: null,
     current: null,
+    lifecycle: 0,
+    running: false,
     slowedReverb: createSlowedReverbController(),
     sectionRepeat: createSectionRepeatController(),
 
     async start(ctx) {
+      const generation = ++this.lifecycle;
       this.ctx = ctx;
-      this.current = normalize(await ctx.getConfig());
+      const raw = await ctx.getConfig();
+      // A stop() can run while the config round-trip is pending; never
+      // resurrect the features after teardown.
+      if (generation !== this.lifecycle) return;
+      this.running = true;
+      this.current = normalize(raw);
       await this.slowedReverb.start({
         getConfig: () => this.getCurrent().slowedReverb,
         setConfig: (patch) => {
@@ -95,11 +105,14 @@ export default createPlugin<
     },
 
     stop() {
+      this.lifecycle += 1;
+      this.running = false;
       this.slowedReverb.stop();
       this.sectionRepeat.stop();
     },
 
     onPlayerApiReady(api: MusicPlayer) {
+      if (!this.running) return;
       this.slowedReverb.onPlayerApiReady();
       this.sectionRepeat.onPlayerApiReady(api);
     },

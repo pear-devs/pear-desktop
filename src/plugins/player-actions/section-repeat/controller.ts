@@ -181,11 +181,11 @@ export function createSectionRepeatController(): SectionRepeatController {
       if (video !== null && target !== null) {
         try {
           video.currentTime = target;
+          return;
         } catch {}
-        return;
       }
-      // No duration yet (a to-end loop) or no video: seek on the first tick
-      // that resolves, unless the points change first.
+      // No duration yet (a to-end loop), no video, or a failed seek: retry on
+      // the first tick that resolves, unless the points change first.
       this.pendingRestoreSeek = true;
     },
 
@@ -244,11 +244,11 @@ export function createSectionRepeatController(): SectionRepeatController {
       if (this.pendingRestoreSeek) {
         const restoreTarget = resolveEndSeekTarget(this.state, video.duration);
         if (restoreTarget !== null) {
-          this.pendingRestoreSeek = false;
           try {
             video.currentTime = restoreTarget;
+            this.pendingRestoreSeek = false;
+            return;
           } catch {}
-          return;
         }
       }
       const target = resolveSeekTarget(this.state, {
