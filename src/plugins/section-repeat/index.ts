@@ -5,7 +5,11 @@ import {
 } from '@/plugins/utils/renderer/player-panel';
 import { createPlugin } from '@/utils';
 
-import { resolveSeekTarget, type LoopState } from './engine';
+import {
+  resolveEndSeekTarget,
+  resolveSeekTarget,
+  type LoopState,
+} from './engine';
 import {
   createSection,
   type SectionHandle,
@@ -166,10 +170,10 @@ export default createPlugin<
       };
       this.endedHandler = () => {
         // Backstop for an end-of-song loop the tick missed.
-        if (!this.state.active || this.state.startSeconds === null) return;
-        const start = this.state.startSeconds;
+        const target = resolveEndSeekTarget(this.state, video.duration);
+        if (target === null) return;
         try {
-          video.currentTime = start;
+          video.currentTime = target;
           video.play().catch(() => {});
         } catch {}
       };

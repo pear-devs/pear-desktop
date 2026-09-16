@@ -70,37 +70,66 @@ export function formatTime(seconds: number): string {
   return `${mins}:${pad(secs)}`;
 }
 
+interface ArmedLoop {
+  start: number;
+  threshold: number;
+}
+
+/**
+ * Resolves the loop into its start point and end threshold, or `null` when
+ * it is disarmed: inactive, without a finite start, without a finite
+ * resolved end, or with a threshold that sits no more than 50 ms past its
+ * start (a range collapsed into the song's tail). A typed end that reaches
+ * or passes the song's end is clamped to the song's end so the trigger sits
+ * just before the end instead of beyond it.
+ */
+function resolveArmedLoop(
+  state: LoopState,
+  duration: number,
+): ArmedLoop | null {
+  if (!state.active) return null;
+
+  const start = state.startSeconds;
+  if (start === null || !Number.isFinite(start)) return null;
+
+  const end = state.endSeconds ?? duration;
+  if (!Number.isFinite(end)) return null;
+
+  const clampedToSongEnd =
+    state.endSeconds !== null && Number.isFinite(duration) && end >= duration;
+  const toSongEnd = state.endSeconds === null || clampedToSongEnd;
+  const loopEnd = toSongEnd ? duration : end;
+  const threshold = toSongEnd ? loopEnd - 0.3 : loopEnd - 0.05;
+  if (!Number.isFinite(threshold)) return null;
+  if (!(threshold > start + 0.05)) return null;
+  return { start, threshold };
+}
+
 /**
  * Returns the start of the loop when playback crossed the end threshold,
- * otherwise `null`. Nothing is returned while inactive, without a start
- * point, paused or seeking, and never a non-finite value. A typed end that
- * reaches or passes the song's end is clamped to the song's end so the
- * trigger sits just before the end instead of beyond it. A loop is only
- * armed while its threshold sits at least 50 ms past its start, so a range
- * that has collapsed into the song's tail stays inactive.
+ * otherwise `null`. Nothing is returned while disarmed, paused or seeking,
+ * and never a non-finite value. Arming is shared with `resolveEndSeekTarget`.
  */
 export function resolveSeekTarget(
   state: LoopState,
   player: PlayerSample,
 ): number | null {
-  if (!state.active) return null;
-
-  const start = state.startSeconds;
-  if (start === null || !Number.isFinite(start)) return null;
+  const armed = resolveArmedLoop(state, player.duration);
+  if (armed === null) return null;
   if (player.paused || player.seeking) return null;
   if (!Number.isFinite(player.currentTime)) return null;
+  return player.currentTime >= armed.threshold ? armed.start : null;
+}
 
-  const end = state.endSeconds ?? player.duration;
-  if (!Number.isFinite(end)) return null;
-
-  const clampedToSongEnd =
-    state.endSeconds !== null &&
-    Number.isFinite(player.duration) &&
-    end >= player.duration;
-  const toSongEnd = state.endSeconds === null || clampedToSongEnd;
-  const loopEnd = toSongEnd ? player.duration : end;
-  const threshold = toSongEnd ? loopEnd - 0.3 : loopEnd - 0.05;
-  if (!Number.isFinite(threshold)) return null;
-  if (!(threshold > start + 0.05)) return null;
-  return player.currentTime >= threshold ? start : null;
+/**
+ * Returns the start the natural end-of-song backstop should seek to, or
+ * `null` when the loop is disarmed (the same arming rules as
+ * `resolveSeekTarget`, without the playback-state gates).
+ */
+export function resolveEndSeekTarget(
+  state: LoopState,
+  duration: number,
+): number | null {
+  const armed = resolveArmedLoop(state, duration);
+  return armed === null ? null : armed.start;
 }

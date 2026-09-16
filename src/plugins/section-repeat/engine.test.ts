@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 import {
   formatTime,
   parseTimeInput,
+  resolveEndSeekTarget,
   resolveSeekTarget,
   type LoopState,
   type ParsedTimeInput,
@@ -248,6 +249,76 @@ test.describe('resolveSeekTarget', () => {
   for (const { name, state, player, expected } of resolveCases) {
     test(name, () => {
       expect(resolveSeekTarget(state, player)).toBe(expected);
+    });
+  }
+});
+
+const endSeekCases: {
+  name: string;
+  state: LoopState;
+  duration: number;
+  expected: number | null;
+}[] = [
+  {
+    name: 'inactive',
+    state: loop({ active: false, startSeconds: 300, endSeconds: 340 }),
+    duration: 300,
+    expected: null,
+  },
+  {
+    name: 'start null',
+    state: loop({ endSeconds: 340 }),
+    duration: 300,
+    expected: null,
+  },
+  {
+    name: 'to-end loop whose start sits at the song end stays disarmed',
+    state: loop({ startSeconds: 300 }),
+    duration: 300,
+    expected: null,
+  },
+  {
+    name: 'start inside the last 0.3s of the song stays disarmed',
+    state: loop({ startSeconds: 299.8, endSeconds: 340 }),
+    duration: 300,
+    expected: null,
+  },
+  {
+    name: 'start at the song end stays disarmed',
+    state: loop({ startSeconds: 300, endSeconds: 340 }),
+    duration: 300,
+    expected: null,
+  },
+  {
+    name: 'no end and unknown duration',
+    state: loop({ startSeconds: 300 }),
+    duration: NaN,
+    expected: null,
+  },
+  {
+    name: 'to-end loop',
+    state: loop({ startSeconds: 200 }),
+    duration: 300,
+    expected: 200,
+  },
+  {
+    name: 'explicit end past the song end still loops from mid-song',
+    state: loop({ startSeconds: 200, endSeconds: 340 }),
+    duration: 300,
+    expected: 200,
+  },
+  {
+    name: 'explicit end inside the song',
+    state: loop({ startSeconds: 300, endSeconds: 340 }),
+    duration: 999,
+    expected: 300,
+  },
+];
+
+test.describe('resolveEndSeekTarget', () => {
+  for (const { name, state, duration, expected } of endSeekCases) {
+    test(name, () => {
+      expect(resolveEndSeekTarget(state, duration)).toBe(expected);
     });
   }
 });
