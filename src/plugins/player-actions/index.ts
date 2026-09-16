@@ -94,6 +94,8 @@ export default createPlugin<
           this.ctx?.setConfig({ slowedReverb: next });
         },
       });
+      // Never start the second controller for a stale generation.
+      if (generation !== this.lifecycle) return;
       await this.sectionRepeat.start({
         getConfig: () => this.getCurrent().sectionRepeat,
         setConfig: (patch) => {
