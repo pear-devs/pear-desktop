@@ -11,12 +11,25 @@ export interface PlayerPanelSection {
 
 const STYLE_ID = 'peard-player-panel-style';
 
+/**
+ * The player bar is not in the DOM at app open, so poll for it until it
+ * appears. A bounded retry would leave the cog unplaced - the plugin's only UI
+ * entry point unreachable for the session - if the bar mounted after the cap,
+ * which is worse than the cost avoided: this is a 2 Hz querySelector that only
+ * exists while the bar is missing, far cheaper than the document-wide subtree
+ * observer it replaced, and it stops on the tick that finds the bar (1-2 ticks
+ * in the normal case, then zero idle work).
+ */
+const OBSERVER_RETRY_MS = 500;
+
 /** Ordered by registration; the first section is rendered on top. */
 const sections = new Map<string, PlayerPanelSection>();
 
 let cog: HTMLButtonElement | null = null;
 let panel: HTMLDivElement | null = null;
 let observer: MutationObserver | null = null;
+let observerTarget: Element | null = null;
+let observerRetry: ReturnType<typeof setInterval> | null = null;
 let outsideHandler: ((event: MouseEvent) => void) | null = null;
 let escapeHandler: ((event: KeyboardEvent) => void) | null = null;
 
@@ -76,13 +89,50 @@ function ensureCog(): void {
   anchor.parent.insertBefore(cog, anchor.before);
 }
 
-function ensureObserver(): void {
-  if (observer) return;
-  observer = new MutationObserver(() => {
+function stopObserverRetry(): void {
+  if (observerRetry === null) return;
+  clearInterval(observerRetry);
+  observerRetry = null;
+}
+
+function scheduleObserverRetry(): void {
+  if (observerRetry !== null) return;
+  observerRetry = setInterval(() => {
+    ensureObserver();
     ensureCog();
-  });
-  const target = document.querySelector('ytmusic-player-bar') ?? document.body;
+  }, OBSERVER_RETRY_MS);
+}
+
+/**
+ * Observes only `ytmusic-player-bar`, never `document.body`: a document-wide
+ * subtree observer fires on every mutation the app makes for the rest of the
+ * session. A missing bar (app open) is polled instead, and a bar that is
+ * replaced is re-targeted rather than watched after it is detached.
+ */
+function ensureObserver(): void {
+  if (!observer) {
+    observer = new MutationObserver(() => {
+      if (observerTarget !== null && !observerTarget.isConnected) {
+        observerTarget = null;
+      }
+      ensureObserver();
+      ensureCog();
+    });
+  }
+  const target = document.querySelector('ytmusic-player-bar');
+  if (!target) {
+    if (observerTarget !== null) {
+      observer.disconnect();
+      observerTarget = null;
+    }
+    scheduleObserverRetry();
+    return;
+  }
+  if (observerTarget === target) return;
+  observer.disconnect();
   observer.observe(target, { childList: true, subtree: true });
+  observerTarget = target;
+  stopObserverRetry();
 }
 
 function ensureStyle(): void {
@@ -169,6 +219,8 @@ function teardown(): void {
   cog = null;
   observer?.disconnect();
   observer = null;
+  observerTarget = null;
+  stopObserverRetry();
   document.getElementById(STYLE_ID)?.remove();
 }
 

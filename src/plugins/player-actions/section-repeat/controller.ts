@@ -6,6 +6,7 @@ import {
 import { getSongInfo } from '@/providers/song-info-front';
 
 import {
+  isLoopEngaged,
   resolveEndSeekTarget,
   resolveSeekTarget,
   type LoopState,
@@ -60,6 +61,7 @@ export interface SectionRepeatController {
   handleTick: () => void;
   attachVideo: (video: HTMLVideoElement) => void;
   detachVideo: () => void;
+  syncTick: () => void;
 }
 
 export function createSectionRepeatController(): SectionRepeatController {
@@ -87,11 +89,7 @@ export function createSectionRepeatController(): SectionRepeatController {
       };
       this.saved = raw.saved;
       this.ensureSection();
-      if (this.tick === null) {
-        this.tick = setInterval(() => {
-          this.handleTick();
-        }, TICK_MS);
-      }
+      this.syncTick();
       this.restoreForCurrentSong();
     },
 
@@ -106,6 +104,26 @@ export function createSectionRepeatController(): SectionRepeatController {
       this.section = null;
     },
 
+    /**
+     * The 100 ms tick only exists while the loop is engaged: no points and
+     * Repeat off both mean there is nothing to watch, and the interval never
+     * outlives the engagement that asked for it.
+     */
+    syncTick() {
+      if (isLoopEngaged(this.state)) {
+        if (this.tick === null) {
+          this.tick = setInterval(() => {
+            this.handleTick();
+          }, TICK_MS);
+        }
+        return;
+      }
+      if (this.tick !== null) {
+        clearInterval(this.tick);
+        this.tick = null;
+      }
+    },
+
     onConfigChange(newConfig) {
       this.state = {
         ...this.state,
@@ -113,6 +131,7 @@ export function createSectionRepeatController(): SectionRepeatController {
       };
       // Adopt persisted saves; restoring here would fight the user's edits.
       this.saved = newConfig.saved;
+      this.syncTick();
       this.syncSection();
     },
 
@@ -164,6 +183,7 @@ export function createSectionRepeatController(): SectionRepeatController {
       const entry = lookupSaved(this.saved, videoId);
       if (entry === null) {
         this.state = { ...this.state, startSeconds: null, endSeconds: null };
+        this.syncTick();
         this.syncSection();
         return;
       }
@@ -173,6 +193,7 @@ export function createSectionRepeatController(): SectionRepeatController {
         startSeconds: entry.startSeconds,
         endSeconds: entry.endSeconds,
       };
+      this.syncTick();
       this.syncSection();
 
       const video =
@@ -195,6 +216,7 @@ export function createSectionRepeatController(): SectionRepeatController {
         onActiveChange: (active: boolean) => {
           this.state = { ...this.state, active };
           this.ctx?.setConfig({ active });
+          this.syncTick();
           this.syncSection();
         },
         onPointsChange: (points: SectionPoints, source: CommitSource) => {
@@ -204,6 +226,7 @@ export function createSectionRepeatController(): SectionRepeatController {
             startSeconds: points.startSeconds,
             endSeconds: points.endSeconds,
           };
+          this.syncTick();
           // A committed From jumps playback there at once; To/clear never seek.
           if (source !== 'from') return;
           const video = document.querySelector<HTMLVideoElement>('video');
@@ -276,6 +299,7 @@ export function createSectionRepeatController(): SectionRepeatController {
           endSeconds: null,
         };
         this.pendingRestoreSeek = false;
+        this.syncTick();
         this.syncSection();
         this.section?.notify(null);
         this.restoreForCurrentSong();
@@ -299,6 +323,7 @@ export function createSectionRepeatController(): SectionRepeatController {
           endSeconds: null,
         };
         this.pendingRestoreSeek = false;
+        this.syncTick();
         this.syncSection();
         this.section?.notify(null);
         this.restoreForCurrentSong();

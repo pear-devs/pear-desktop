@@ -40,6 +40,29 @@ export function normalize(raw: unknown): {
   };
 }
 
+/**
+ * Whether the slow feature has work to do: enabled and not at 1x. Gate for
+ * the rate watchdog and for the rate-claim paths.
+ */
+export function isSlowEngaged(config: {
+  active: boolean;
+  slow: number;
+}): boolean {
+  return config.active && clampSlow(config.slow) !== 1;
+}
+
+/**
+ * Whether the reverb has audio to produce: enabled with a non-zero
+ * intensity. Gate for building the wet audio path (it stays unbuilt while
+ * silent) and for posting parameters.
+ */
+export function isReverbEngaged(config: {
+  active: boolean;
+  reverbIntensity: number;
+}): boolean {
+  return config.active && clampIntensity(config.reverbIntensity) > 0;
+}
+
 export function formatRate(value: number): string {
   return `${clampSlow(value).toFixed(2)}x`;
 }

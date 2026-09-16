@@ -15,6 +15,8 @@ import {
   clampIntensity,
   clampSlow,
   computeDattorroParams,
+  isReverbEngaged,
+  isSlowEngaged,
   normalize,
 } from './engine';
 import {
@@ -144,7 +146,10 @@ export interface SlowedReverbController {
   releasePitchOverride: (video: HTMLVideoElement) => void;
   attachRateListeners: () => void;
   detachRateListeners: () => void;
-  startWatchdog: () => void;
+  /** Internal: keeps the watchdog interval in step with engagement. */
+  syncWatchdog: () => void;
+  /** Internal: keeps the wet audio tap in step with engagement. */
+  syncWetTap: () => void;
   teardownAudio: () => void;
   restoreVideo: () => void;
 }
@@ -197,28 +202,30 @@ export function createSlowedReverbController(): SlowedReverbController {
       // A worklet load failure is also retried on every (re)enable instead of
       // disabling reverb for the rest of the app session.
       this.workletFailed = false;
-      const announced = getLatestAudioDetail();
-      const audioContext = this.audioContext ?? announced?.audioContext;
-      const audioSource = this.audioSource ?? announced?.audioSource;
-      if (audioContext && audioSource) {
-        this.wireAudio(audioContext, audioSource);
-      }
+      // Lazy wet path: the GainNode and the worklet are only built while the
+      // reverb is audible, not at the default intensity 0.
+      this.syncWetTap();
       this.ensureSection();
       this.applySlow();
       this.attachRateListeners();
-      this.startWatchdog();
+      this.syncWatchdog();
     },
 
     stop() {
-      if (this.watchdog !== null) {
-        clearInterval(this.watchdog);
-        this.watchdog = null;
-      }
       if (this.audioHandler) {
         document.removeEventListener('peard:audio-can-play', this.audioHandler);
         this.audioHandler = null;
       }
       unregisterPlayerPanelSection(PLUGIN_ID);
+      // Cleared after the unregister, and directly rather than via
+      // syncWatchdog(), for two reasons: the section's destroy flushes a
+      // pending wheel debounce, whose onSlowCommit -> syncWatchdog() would
+      // otherwise re-arm the interval this clears; and the config still reads
+      // as engaged after teardown, which would restart it too.
+      if (this.watchdog !== null) {
+        clearInterval(this.watchdog);
+        this.watchdog = null;
+      }
       // The panel flush's applySlow() can re-attach: detach, then release.
       this.detachRateListeners();
       releasePlaybackRate(PLUGIN_ID);
@@ -251,7 +258,9 @@ export function createSlowedReverbController(): SlowedReverbController {
         this.claimRateIfEngaged();
       }
       this.applySlow();
+      this.syncWetTap();
       this.applyReverb();
+      this.syncWatchdog();
       this.syncSection();
     },
 
@@ -283,6 +292,8 @@ export function createSlowedReverbController(): SlowedReverbController {
             this.ctx?.setConfig({ active });
             this.claimRateIfEngaged();
             this.applySlow();
+            this.syncWatchdog();
+            this.syncWetTap();
             this.applyReverb();
             this.syncSection();
           },
@@ -290,21 +301,25 @@ export function createSlowedReverbController(): SlowedReverbController {
             this.config = { ...this.getCurrent(), slow: value };
             this.claimRateIfEngaged();
             this.applySlow();
+            this.syncWatchdog();
           },
           onSlowCommit: (value: number) => {
             this.config = { ...this.getCurrent(), slow: value };
             this.ctx?.setConfig({ slow: value });
             this.claimRateIfEngaged();
             this.applySlow();
+            this.syncWatchdog();
             this.syncSection();
           },
           onReverbLive: (value: number) => {
             this.config = { ...this.getCurrent(), reverbIntensity: value };
+            this.syncWetTap();
             this.applyReverb();
           },
           onReverbCommit: (value: number) => {
             this.config = { ...this.getCurrent(), reverbIntensity: value };
             this.ctx?.setConfig({ reverbIntensity: value });
+            this.syncWetTap();
             this.applyReverb();
             this.syncSection();
           },
@@ -322,6 +337,8 @@ export function createSlowedReverbController(): SlowedReverbController {
             });
             this.claimRateIfEngaged();
             this.applySlow();
+            this.syncWatchdog();
+            this.syncWetTap();
             this.applyReverb();
             this.syncSection();
           },
@@ -375,10 +392,32 @@ export function createSlowedReverbController(): SlowedReverbController {
       this.ensureWorklet();
     },
 
+    /**
+     * Keeps the wet audio tap in step with engagement: the GainNode and the
+     * worklet are built only while the reverb has audio to produce, and are
+     * torn down when it goes silent (intensity 0 or inactive) so the audio
+     * thread stops running the worklet for silence. The cached graph is kept
+     * (teardownAudio() does not drop it) so a rise from 0 rebuilds in place.
+     */
+    syncWetTap() {
+      const announced = getLatestAudioDetail();
+      const audioContext = this.audioContext ?? announced?.audioContext;
+      const audioSource = this.audioSource ?? announced?.audioSource;
+      if (isReverbEngaged(this.getCurrent()) && audioContext && audioSource) {
+        this.wireAudio(audioContext, audioSource);
+        return;
+      }
+      this.teardownAudio();
+    },
+
     handleAudioEvent(event: Event) {
       const detail = (event as CustomEvent<AudioCanPlayDetail>).detail;
       if (!detail?.audioContext || !detail?.audioSource) return;
-      this.wireAudio(detail.audioContext, detail.audioSource);
+      // Record the announced graph even while the reverb is silent: the lazy
+      // tap wires it as soon as the intensity rises above 0.
+      this.audioContext = detail.audioContext;
+      this.audioSource = detail.audioSource;
+      this.syncWetTap();
     },
 
     async ensureWorklet() {
@@ -645,7 +684,20 @@ export function createSlowedReverbController(): SlowedReverbController {
       this.rateVideo = null;
     },
 
-    startWatchdog() {
+    /**
+     * Keeps the 2 s rate watchdog in step with engagement: the interval only
+     * exists while the slow feature has work to do (active and not at 1x).
+     * stop() clears the interval directly because the config still reads as
+     * engaged after teardown, which would restart it here.
+     */
+    syncWatchdog() {
+      if (!isSlowEngaged(this.getCurrent())) {
+        if (this.watchdog !== null) {
+          clearInterval(this.watchdog);
+          this.watchdog = null;
+        }
+        return;
+      }
       if (this.watchdog !== null) return;
       this.watchdog = setInterval(() => {
         // Re-track <video> replacement even when no rate drift is seen.
