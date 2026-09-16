@@ -807,6 +807,26 @@
         }
       }
     },
+    "section-repeat": {
+      "description": "Repeat part of a song on loop (A-B repeat): e.g. 5:00 to the end, or 5:00 to 5:40.",
+      "name": "Section Repeat",
+      "panel": {
+        "active": "Repeat",
+        "clear": "Clear",
+        "from": "From",
+        "now": "Now",
+        "set-from-now": "Set From to the current time",
+        "set-to-now": "Set To to the current time",
+        "status-invalid": "From must be earlier than To",
+        "status-loop": "Looping {{start}} → {{end}}",
+        "status-need-start": "Set a From time to start looping",
+        "status-off": "Repeat is off",
+        "status-to-end": "Looping {{start}} → end of song",
+        "title": "Section Repeat",
+        "to": "To",
+        "to-placeholder": "end of song"
+      }
+    },
     "shortcuts": {
       "description": "Allows setting global hotkeys for playback (play/pause/next/previous) and turning off media OSD by overriding media keys, turning on Ctrl/CMD + F to search, turning on Linux MPRIS support for media keys, and custom hotkeys for advanced users",
       "menu": {
