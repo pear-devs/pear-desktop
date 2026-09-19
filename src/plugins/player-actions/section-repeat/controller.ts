@@ -157,12 +157,9 @@ export function createSectionRepeatController(): SectionRepeatController {
         }
         const video = document.querySelector<HTMLVideoElement>('video');
         if (video) this.attachVideo(video);
-        if (videoId === null) {
-          // No id, no lookup: defer until an authoritative id arrives.
-          this.restoreForCurrentSong();
-          return;
-        }
-        if (videoId === this.restoredVideoId) return;
+        // No id means defer (restore itself handles a null id); a repeat event
+        // for the same song is coalesced.
+        if (videoId !== null && videoId === this.restoredVideoId) return;
         this.restoreForCurrentSong();
       };
       document.addEventListener('videodatachange', this.videoChangeHandler);
@@ -271,17 +268,11 @@ export function createSectionRepeatController(): SectionRepeatController {
 
     restoreForCurrentSong() {
       const videoId = this.latestVideoId;
-      // The `videodatachange` id is authoritative the moment it fires;
-      // `getPlayerResponse()` / `getSongInfo()` trail a change, so seeking off
-      // them can land on the previous song. Defer until the real id arrives.
-      if (videoId === null) {
-        this.pendingRestoreSeek = true;
-        this.armSettleCheck();
-        return;
-      }
-      // Before the save list has loaded, a miss cannot be told from a cold
-      // start. Defer without pinning so the later real restore is not deduped.
-      if (!this.configLoaded) {
+      // Defer until the `videodatachange` id has arrived (authoritative; the
+      // player API trails a change) and the save list has loaded (before that a
+      // miss cannot be told from a cold start), without pinning an id so the
+      // later real restore is not deduped.
+      if (videoId === null || !this.configLoaded) {
         this.pendingRestoreSeek = true;
         this.armSettleCheck();
         return;
@@ -379,11 +370,7 @@ export function createSectionRepeatController(): SectionRepeatController {
       // below the drift a successful restore has already accumulated, or the
       // pass would re-seek and reintroduce the audible rewind it removes.
       const elapsedSeconds = (Date.now() - armedAt) / 1000;
-      const settleGraceSeconds =
-        Number.isFinite(elapsedSeconds) && elapsedSeconds >= 0
-          ? elapsedSeconds
-          : SETTLE_MS / 1000;
-      const windowEnd = target + settleGraceSeconds + SETTLE_TOLERANCE_SECONDS;
+      const windowEnd = target + elapsedSeconds + SETTLE_TOLERANCE_SECONDS;
       if (
         video.currentTime >= target - SETTLE_TOLERANCE_SECONDS &&
         video.currentTime <= windowEnd
