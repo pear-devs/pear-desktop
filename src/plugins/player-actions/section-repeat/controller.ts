@@ -77,6 +77,7 @@ export interface SectionRepeatController {
   onConfigChange: (newConfig: SectionRepeatConfig) => void;
   onPlayerApiReady: (api: MusicPlayer) => void;
   currentVideoId: () => string | null;
+  seedCurrentSongIfUnknown: () => void;
   onSave: () => void;
   restoreForCurrentSong: () => void;
   armSettleCheck: () => void;
@@ -165,6 +166,11 @@ export function createSectionRepeatController(): SectionRepeatController {
       document.addEventListener('videodatachange', this.videoChangeHandler);
       this.ensureSection();
       this.syncTick();
+      // Whichever enable-time entry point runs LAST seeds: if the API has not
+      // arrived yet `currentVideoId()` returns null here and the later
+      // `onPlayerApiReady` seeds instead. Enable-time only — a real change is
+      // left to the event above, which stays authoritative once it fires.
+      this.seedCurrentSongIfUnknown();
       this.restoreForCurrentSong();
     },
 
@@ -225,7 +231,27 @@ export function createSectionRepeatController(): SectionRepeatController {
 
     onPlayerApiReady(api) {
       this.api = api;
+      // See start(): together these two are the only enable-time callers, so
+      // whichever runs last supplies the id when no event has spoken.
+      this.seedCurrentSongIfUnknown();
       this.restoreForCurrentSong();
+    },
+
+    /**
+     * One-shot, enable-time only. Enabling the plugin mid-song fires no
+     * `videodatachange` for the song already playing, so without a seed the
+     * restore would defer forever and the saved section would not apply until
+     * the user changed song. An id already latched from a real change is left
+     * untouched: once an event has spoken it stays authoritative, and the
+     * API—which trails a change—must never override it.
+     */
+    seedCurrentSongIfUnknown() {
+      if (this.latestVideoId !== null) return;
+      // Before the save list loads a miss is not definitive, so do not pin an
+      // id off a possibly-stale player API.
+      if (!this.configLoaded) return;
+      const videoId = this.currentVideoId();
+      if (videoId !== null) this.latestVideoId = videoId;
     },
 
     currentVideoId() {

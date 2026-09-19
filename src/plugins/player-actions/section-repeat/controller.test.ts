@@ -131,11 +131,13 @@ function changeSongWithoutId(): void {
   document.dispatchEvent(new CustomEvent('videodatachange', { detail: {} }));
 }
 
-test('a cold id does not seek and defers without pinning', async () => {
+test('enabling mid-song applies the saved section without a song-change event', async () => {
   const { video, controller, ctx } = await boot({
     saved: [savedEntry('song-a', 10, 20)],
   });
-  // A trailing fallback that WOULD resolve an id: it must not be sought off.
+  // The plugin is enabled while song-a is already playing: no
+  // `videodatachange` will fire for the current song, so the enable-time seed
+  // must adopt the player's id and apply its saved section.
   controller.api = {
     getPlayerResponse: () => ({ videoDetails: { videoId: 'song-a' } }),
   } as unknown as PlayerApi;
@@ -143,10 +145,62 @@ test('a cold id does not seek and defers without pinning', async () => {
 
   await controller.start(ctx);
 
-  expect(video.currentTime).toBe(3);
+  expect(controller.latestVideoId).toBe('song-a');
+  expect(controller.restoredVideoId).toBe('song-a');
+  expect(controller.pendingRestoreSeek).toBe(false);
+  expect(video.currentTime).toBe(10);
+});
+
+test('the API arriving after start applies the saved section', async () => {
+  const { video, controller, ctx } = await boot({
+    saved: [savedEntry('song-a', 10, 20)],
+  });
+  // start() runs before the API arrives, so it cannot seed; the later hook must.
+  await controller.start(ctx);
   expect(controller.latestVideoId).toBeNull();
-  expect(controller.restoredVideoId).toBeNull();
-  expect(controller.pendingRestoreSeek).toBe(true);
+  expect(video.currentTime).toBe(0);
+
+  controller.onPlayerApiReady({
+    getPlayerResponse: () => ({ videoDetails: { videoId: 'song-a' } }),
+  } as unknown as PlayerApi);
+
+  expect(controller.latestVideoId).toBe('song-a');
+  expect(video.currentTime).toBe(10);
+});
+
+test('a seeded id yields to a later real change for another song', async () => {
+  const { video, controller, ctx } = await boot({
+    saved: [savedEntry('song-a', 10, 20), savedEntry('song-b', 30, 40)],
+  });
+  controller.api = {
+    getPlayerResponse: () => ({ videoDetails: { videoId: 'song-a' } }),
+  } as unknown as PlayerApi;
+
+  await controller.start(ctx);
+  expect(video.currentTime).toBe(10);
+
+  // The event is authoritative once it fires: the next song's own entry wins.
+  changeSong('song-b');
+  expect(controller.latestVideoId).toBe('song-b');
+  expect(video.currentTime).toBe(30);
+});
+
+test('an event id is never overridden by a trailing API id', async () => {
+  const { video, controller, ctx } = await boot({
+    saved: [savedEntry('song-a', 10, 20), savedEntry('song-x', 70, 80)],
+  });
+  await controller.start(ctx);
+  changeSong('song-a');
+  expect(video.currentTime).toBe(10);
+
+  // The API still reports the previous song (it trails a change). An id is
+  // already latched from the event, so the seed must be a no-op.
+  controller.onPlayerApiReady({
+    getPlayerResponse: () => ({ videoDetails: { videoId: 'song-x' } }),
+  } as unknown as PlayerApi);
+
+  expect(controller.latestVideoId).toBe('song-a');
+  expect(video.currentTime).toBe(10);
 });
 
 test('a saved entry applies once the authoritative id arrives', async () => {
