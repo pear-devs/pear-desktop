@@ -28,7 +28,8 @@ const sections = new Map<string, PlayerPanelSection>();
 let cog: HTMLButtonElement | null = null;
 let panel: HTMLDivElement | null = null;
 let observer: MutationObserver | null = null;
-let observerTarget: Element | null = null;
+/** The live bar being watched out for; the observer itself sits on its parent. */
+let observedBar: Element | null = null;
 let observerRetry: ReturnType<typeof setInterval> | null = null;
 let outsideHandler: ((event: MouseEvent) => void) | null = null;
 let escapeHandler: ((event: KeyboardEvent) => void) | null = null;
@@ -104,34 +105,35 @@ function scheduleObserverRetry(): void {
 }
 
 /**
- * Observes only `ytmusic-player-bar`, never `document.body`: a document-wide
- * subtree observer fires on every mutation the app makes for the rest of the
- * session. A missing bar (app open) is polled instead, and a bar that is
- * replaced is re-targeted rather than watched after it is detached.
+ * Observes `ytmusic-player-bar`'s parent, never the bar itself and never
+ * `document.body`: a MutationObserver does not fire when its observed node is
+ * removed (removal is a childList mutation of the parent), so watching the bar
+ * left the observer bound to a detached node and the cog gone for the session
+ * when the bar was replaced. The parent's childList catches the bar being
+ * removed/replaced and being born, stays scoped to the bar with no document-wide
+ * subtree, and a missing bar (app open) is still polled.
  */
 function ensureObserver(): void {
   if (!observer) {
     observer = new MutationObserver(() => {
-      if (observerTarget !== null && !observerTarget.isConnected) {
-        observerTarget = null;
-      }
       ensureObserver();
       ensureCog();
     });
   }
-  const target = document.querySelector('ytmusic-player-bar');
-  if (!target) {
-    if (observerTarget !== null) {
+  const bar = document.querySelector('ytmusic-player-bar');
+  const parent = bar?.parentNode ?? null;
+  if (!bar || !parent) {
+    if (observedBar !== null) {
       observer.disconnect();
-      observerTarget = null;
+      observedBar = null;
     }
     scheduleObserverRetry();
     return;
   }
-  if (observerTarget === target) return;
+  if (observedBar === bar && bar.isConnected) return;
   observer.disconnect();
-  observer.observe(target, { childList: true, subtree: true });
-  observerTarget = target;
+  observer.observe(parent, { childList: true });
+  observedBar = bar;
   stopObserverRetry();
 }
 
@@ -219,7 +221,7 @@ function teardown(): void {
   cog = null;
   observer?.disconnect();
   observer = null;
-  observerTarget = null;
+  observedBar = null;
   stopObserverRetry();
   document.getElementById(STYLE_ID)?.remove();
 }
