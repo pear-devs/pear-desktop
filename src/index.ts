@@ -60,6 +60,9 @@ unhandled({
   showDialog: false,
 });
 
+// How long to wait for the page to paint before showing the window anyway.
+const EARLY_SHOW_DELAY = 500;
+
 // Prevent window being garbage collected
 let mainWindow: Electron.BrowserWindow | null;
 electronUpdater.autoUpdater.autoDownload = false;
@@ -489,11 +492,20 @@ async function createMainWindow() {
     showUnresponsiveDialog(win, details);
   });
 
-  win.once('ready-to-show', () => {
+  // 'ready-to-show' only fires once the remote page has painted, which takes
+  // seconds on a cold start. The window paints its own background colour
+  // already, so show it as soon as either that or a short timer fires.
+  const showWindow = () => {
+    if (win.isDestroyed() || win.isVisible()) return;
     if (config.get('options.appVisible')) {
       win.show();
     }
-  });
+  };
+
+  win.once('ready-to-show', showWindow);
+  const earlyShowTimer = setTimeout(showWindow, EARLY_SHOW_DELAY);
+  win.once('show', () => clearTimeout(earlyShowTimer));
+  win.once('closed', () => clearTimeout(earlyShowTimer));
 
   removeContentSecurityPolicy();
 
