@@ -38,6 +38,7 @@ export const FinishedStatuses: DownloadStatus[] = [
   'error',
 ];
 
+/** True for the statuses a task cannot leave again */
 export const isFinishedStatus = (status: DownloadStatus) =>
   FinishedStatuses.includes(status);
 

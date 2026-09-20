@@ -4,6 +4,7 @@ import { t } from '@/i18n';
 
 import { type DownloadTask, isFinishedStatus } from '../types';
 
+/** Inline svg icon, sized through the class of the surrounding element */
 const Icon = (props: { path: string; class?: string }) => (
   <svg aria-hidden="true" class={props.class} viewBox="0 0 24 24">
     <path d={props.path} />
@@ -20,14 +21,17 @@ const ICONS = {
   clear: 'M5 19h14v2H5v-2zm7-17 5 5-4 4-5-5 4-4zM3 13l4-4 5 5-4 4H3v-5z',
 } as const;
 
+/** Translated label of a task status */
 const statusLabel = (task: DownloadTask) =>
   t(`plugins.downloader.renderer.panel.status.${task.status}`);
 
+/** Progress in percent, empty while it is unknown or no longer moving */
 const percentLabel = (task: DownloadTask) =>
   task.progress >= 0 && !isFinishedStatus(task.status)
     ? `${Math.min(Math.round(task.progress * 100), 100)}%`
     : '';
 
+/** A single download, with its cancel, retry and dismiss actions */
 const TaskRow = (props: {
   task: DownloadTask;
   onCancel: (id: string) => void;
@@ -145,6 +149,7 @@ const TaskRow = (props: {
   );
 };
 
+/** Panel listing the running and the recently finished downloads */
 export const DownloadProgressPanel = (props: {
   tasks: DownloadTask[];
   collapsed: boolean;

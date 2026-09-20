@@ -26,6 +26,7 @@ const toWholeNumber = (
   return Math.min(Math.max(Math.round(parsed), min), max);
 };
 
+/** Builds the plugin's menu entries */
 export const onMenu = async ({
   getConfig,
   setConfig,

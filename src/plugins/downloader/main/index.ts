@@ -41,6 +41,7 @@ import {
   finishTask,
   getTask,
   isCancelRequested,
+  releaseCancel,
   requestCancel,
   resendState,
   throwIfCancelled,
@@ -110,6 +111,7 @@ const PLAYLIST_ITEM_PAUSE = 750;
 /** Upper bound for the "already downloaded automatically" memory */
 const AUTO_DOWNLOAD_MEMORY = 500;
 
+/** Resolves after the given delay */
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const ffmpeg = lazyVar.lazy(async () =>
@@ -148,6 +150,7 @@ let config: DownloaderPluginConfig;
 
 let premiumCache: { value: boolean; checkedAt: number } | undefined;
 
+/** Whether the signed-in account has Premium, cached for a short while */
 const isPremium = async () => {
   if (premiumCache && Date.now() - premiumCache.checkedAt < PREMIUM_CACHE_TTL) {
     return premiumCache.value;
@@ -158,6 +161,7 @@ const isPremium = async () => {
   return value;
 };
 
+/** Reads the sign-in state and the upgrade entry out of the page */
 const resolveIsPremium = async () => {
   // If signed out, it is understood as non-premium
   const isSignedIn = (await win.webContents.executeJavaScript(
@@ -181,6 +185,7 @@ const resolveIsPremium = async () => {
   )) as boolean;
 };
 
+/** Full error text for the dialog and the log, including the cause */
 const describeError = (error: unknown, source?: string) => {
   const causeOf = (err: Error) =>
     err.cause
@@ -198,6 +203,7 @@ const describeError = (error: unknown, source?: string) => {
   return source ? `${message}\nin ${source}` : message;
 };
 
+/** One-line error text, as it is shown in the progress panel */
 const shortErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
 
@@ -219,6 +225,7 @@ const canRepeatRequest = (input: RequestInfo | URL, init?: RequestInit) => {
   );
 };
 
+/** Host and path of a request, to keep the log lines readable */
 const describeRequest = (input: RequestInfo | URL) => {
   const raw =
     typeof input === 'string'
@@ -318,6 +325,7 @@ const createRetryingFetch = (): typeof fetch => {
   }) as typeof fetch;
 };
 
+/** Logs the message and puts it in front of the user */
 const showErrorDialog = (message: string) => {
   console.error(message);
   dialog.showMessageBox(win, {
@@ -335,6 +343,7 @@ const sendError = (error: Error, source?: string) => {
   showErrorDialog(describeError(error, source));
 };
 
+/** Session cookies of the window, Innertube needs them to act as signed in */
 export const getCookieFromWindow = async (win: BrowserWindow) => {
   return (
     await win.webContents.session.cookies.get({
@@ -345,6 +354,7 @@ export const getCookieFromWindow = async (win: BrowserWindow) => {
     .join(';');
 };
 
+/** Registers the IPC handlers of the plugin and starts the Innertube session */
 export const onMainLoad = async ({
   window: _win,
   getConfig,
@@ -388,6 +398,7 @@ export const onMainLoad = async ({
 /** Resolves once the Innertube session is usable */
 let sessionReady: Promise<void> | undefined;
 
+/** Creates the Innertube session and, when possible, a PoToken for it */
 const setupSession = async () => {
   // Parser mismatches are reported for pages this plugin does not even look
   // at; they are noise between the actual download messages
@@ -469,16 +480,20 @@ const waitForSession = async () => {
   await sessionReady;
 };
 
+/** Keeps the local copy of the plugin config up to date */
 export const onConfigChange = (newConfig: DownloaderPluginConfig) => {
   config = newConfig;
 };
 
+/** Configured download folder, or the one of the system */
 const defaultDownloadFolder = () =>
   config.downloadFolder || app.getPath('downloads');
 
+/** Key a request is deduplicated by inside the queue */
 const requestKeyOf = (request: SongRequest) =>
   `song:${request.id ?? request.url ?? ''}:${request.folder ?? ''}`;
 
+/** Placeholder for the panel, until the real title is resolved */
 const taskLabelOf = (request: SongRequest) =>
   request.id ?? request.url ?? t('plugins.downloader.templates.button');
 
@@ -508,6 +523,7 @@ const queueSongDownload = (request: SongRequest): string | null => {
 const retryRequests = new Map<string, SongRequest>();
 const MAX_RETRY_REQUESTS = 200;
 
+/** Stores the request behind a task, dropping the oldest ones when it gets full */
 const rememberRetryRequest = (taskId: string, request: SongRequest) => {
   if (retryRequests.size >= MAX_RETRY_REQUESTS) {
     retryRequests.delete(retryRequests.keys().next().value!);
@@ -516,6 +532,7 @@ const rememberRetryRequest = (taskId: string, request: SongRequest) => {
   retryRequests.set(taskId, request);
 };
 
+/** Queues a failed task again and takes the old entry out of the panel */
 const retryTask = (taskId: string) => {
   const request = retryRequests.get(taskId);
   const task = getTask(taskId);
@@ -526,6 +543,7 @@ const retryTask = (taskId: string) => {
   queueSongDownload(request);
 };
 
+/** Cancellations and permanently unplayable videos are not worth another attempt */
 const isRetryableError = (error: unknown) =>
   !(error instanceof DownloadCancelledError) &&
   !(error instanceof PermanentDownloadError);
@@ -600,10 +618,12 @@ const runSongDownload = async (
   }
 };
 
+/** Queues the song behind a watch URL */
 export function downloadSong(url: string, folder?: string) {
   queueSongDownload({ url, folder: folder ?? defaultDownloadFolder() });
 }
 
+/** Queues a song by its video id */
 export function downloadSongFromId(id: string, folder?: string) {
   queueSongDownload({ id, folder: folder ?? defaultDownloadFolder() });
 }
@@ -612,6 +632,7 @@ export function downloadSongFromId(id: string, folder?: string) {
 
 const automaticallyDownloaded = new Set<string>();
 
+/** Notes a video as automatically downloaded, forgetting the oldest ones */
 const rememberAutomaticDownload = (videoId: string) => {
   if (automaticallyDownloaded.size >= AUTO_DOWNLOAD_MEMORY) {
     // Drop the oldest entry, insertion order is guaranteed for Set
@@ -632,6 +653,7 @@ interface PlaybackSnapshot {
 
 let currentPlayback: PlaybackSnapshot | undefined;
 
+/** Whether the song has played far enough for the configured trigger */
 const thresholdReached = (snapshot: PlaybackSnapshot) => {
   const settings = config.downloadOnFinish;
   if (!settings) return false;
@@ -641,6 +663,7 @@ const thresholdReached = (snapshot: PlaybackSnapshot) => {
     : snapshot.duration - snapshot.elapsed <= settings.seconds;
 };
 
+/** Starts the automatic download of a song, at most once per video */
 const maybeDownloadAutomatically = (
   snapshot: PlaybackSnapshot,
   reason: 'threshold' | 'song-change',
@@ -705,6 +728,7 @@ const trackPlayback = (
   maybeDownloadAutomatically(currentPlayback, 'threshold');
 };
 
+/** Subscribes to both playback sources that feed "download on finish" */
 function setupAutomaticDownloads({
   ipc,
 }: Pick<BackendContext<DownloaderPluginConfig>, 'ipc'>) {
@@ -739,6 +763,7 @@ function setupAutomaticDownloads({
 
 /* ------------------------------- downloading ------------------------------ */
 
+/** The configured ffmpeg preset, falling back to the mp3 default */
 const resolvePreset = (): Preset => {
   const selected = config.selectedPreset ?? 'mp3 (256kbps)';
   if (selected === 'Custom') {
@@ -748,6 +773,7 @@ const resolvePreset = (): Preset => {
   return DefaultPresetList[selected] ?? DefaultPresetList['mp3 (256kbps)'];
 };
 
+/** Downloads, converts, tags and writes a single song, throwing on every failure */
 async function downloadSongUnsafe(request: SongRequest, taskId: string) {
   const isPlaylistItem = !!request.playlistTitle;
   const feedback = (message?: unknown) => {
@@ -902,6 +928,7 @@ async function downloadSongUnsafe(request: SongRequest, taskId: string) {
   );
 }
 
+/** Collects the stream, reporting the download share of the task progress */
 async function downloadChunks(
   stream: AsyncGenerator<Uint8Array, void>,
   contentLength: number,
@@ -930,6 +957,7 @@ async function downloadChunks(
   return chunks;
 }
 
+/** Downloads the stream and runs it through ffmpeg, returns the converted file */
 async function iterableStreamToProcessedUint8Array({
   stream,
   extension,
@@ -1013,11 +1041,13 @@ async function iterableStreamToProcessedUint8Array({
   });
 }
 
+/** Cover artwork as PNG, or null when there is none to embed */
 const getCoverBuffer = async (url: string) => {
   const nativeImage = cropMaxWidth(await getImage(url));
   return nativeImage && !nativeImage.isEmpty() ? nativeImage.toPNG() : null;
 };
 
+/** Writes title, artist, album and cover into the mp3 buffer */
 async function writeID3(buffer: Buffer, metadata: CustomSongInfo) {
   const tags: NodeID3.Tags = {};
 
@@ -1068,6 +1098,7 @@ interface PlaylistItem {
   failedTaskId?: string;
 }
 
+/** Queues every song of a playlist, the queue then works through them one by one */
 export async function downloadPlaylist(givenUrl?: string | URL) {
   await waitForSession();
 
@@ -1315,6 +1346,7 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
   });
 }
 
+/** Metadata arguments for ffmpeg, for the containers that carry their own tags */
 function getFFmpegMetadataArgs(metadata: CustomSongInfo) {
   if (!metadata) {
     return [];
@@ -1331,6 +1363,7 @@ function getFFmpegMetadataArgs(metadata: CustomSongInfo) {
 // Playlist radio modifier needs to be cut from playlist ID
 const INVALID_PLAYLIST_MODIFIER = 'RDAMPL';
 
+/** Playlist id of a URL, with the radio modifier cut off */
 const getPlaylistID = (aURL?: URL): string | null | undefined => {
   const result =
     aURL?.searchParams.get('list') || aURL?.searchParams.get('playlist');
@@ -1341,12 +1374,14 @@ const getPlaylistID = (aURL?: URL): string | null | undefined => {
   return result;
 };
 
+/** Video id of a watch URL */
 const getVideoId = (url: URL | string): string | null => {
   const parsedUrl = URL.parse(url);
   if (!parsedUrl) return null;
   return parsedUrl.searchParams.get('v');
 };
 
+/** Maps the Innertube track info onto the song info used by this plugin */
 const getMetadata = (info: YTMusic.TrackInfo): CustomSongInfo => ({
   videoId: info.basic_info.id!,
   title: cleanupName(info.basic_info.title!),
@@ -1361,7 +1396,7 @@ const getMetadata = (info: YTMusic.TrackInfo): CustomSongInfo => ({
   mediaType: MediaType.Audio,
 });
 
-// This is used to bypass age restrictions
+/** Streaming data of a video, over the client that ignores age restrictions */
 const getAndroidTvInfo = async (id: string): Promise<YT.VideoInfo> => {
   // GetInfo 404s with the bypass, so we use getBasicInfo instead
   // that's fine as we only need the streaming data

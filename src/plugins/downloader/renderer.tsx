@@ -52,6 +52,7 @@ const menuObserver = new MutationObserver(() => {
   menu.prepend(buttonContainer);
 });
 
+/** Prepares the download action and subscribes to the state of the backend */
 export const onRendererLoad = async ({
   ipc,
   getConfig,
@@ -111,10 +112,12 @@ export const onRendererLoad = async ({
   setShowProgress((await getConfig()).showProgress ?? true);
 };
 
+/** Shows or hides the progress panel when the setting changes */
 export const onRendererConfigChange = (newConfig: DownloaderPluginConfig) => {
   setShowProgress(newConfig.showProgress ?? true);
 };
 
+/** Renders the progress panel into the page, at most once */
 const mountProgressPanel = () => {
   if (panelContainer) return;
 
@@ -195,6 +198,7 @@ const setupPlaybackReporting = (
   report();
 };
 
+/** Starts the playback reporting and adds the download entry to the song menu */
 export const onPlayerApiReady = (
   playerApi: MusicPlayer,
   context: RendererContext<DownloaderPluginConfig>,

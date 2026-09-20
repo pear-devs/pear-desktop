@@ -17,8 +17,10 @@ const pending: QueueEntry[] = [];
 const knownKeys = new Set<string>();
 let draining = false;
 
+/** True while a job with this key is queued or running */
 export const isQueued = (key: string) => knownKeys.has(key);
 
+/** Runs the queued jobs one after another, a failing job never stops the queue */
 const drain = async () => {
   if (draining) return;
   draining = true;

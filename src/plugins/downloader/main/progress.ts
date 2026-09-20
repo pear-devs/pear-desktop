@@ -30,17 +30,20 @@ const tasks = new Map<string, DownloadTask>();
 const removalTimers = new Map<string, NodeJS.Timeout>();
 const cancelled = new Set<string>();
 
+/** Binds the window that receives the state broadcasts */
 export const attachWindow = (window: BrowserWindow) => {
   win = window;
 };
 
-
+/** Guards against sending to a window that is already gone */
 const isAlive = () =>
   !!win && !win.isDestroyed() && !win.webContents.isDestroyed();
 
+/** Every task that has not reached a final status yet */
 const activeTasks = () =>
   [...tasks.values()].filter((task) => !isFinishedStatus(task.status));
 
+/** Mirrors the combined progress onto the taskbar or dock icon */
 const updateNativeProgress = () => {
   if (!isAlive()) return;
 
@@ -61,7 +64,7 @@ const updateNativeProgress = () => {
   setBadge(active.length);
 };
 
-
+/** Sends the current task list to the renderer right away */
 const broadcastNow = () => {
   broadcastTimeout = undefined;
   updateNativeProgress();
@@ -74,6 +77,7 @@ const broadcastNow = () => {
   win!.webContents.send(DownloaderIPC.state, state);
 };
 
+/** Sends the state, coalescing the frequent progress updates */
 const broadcast = (immediate = false) => {
   if (immediate) {
     if (broadcastTimeout) {
@@ -89,6 +93,7 @@ const broadcast = (immediate = false) => {
 /** Re-sends the current state, e.g. after the renderer was reloaded */
 export const resendState = () => broadcast(true);
 
+/** Registers a task in the panel and returns its id */
 export const createTask = (
   init: Pick<DownloadTask, 'title'> & Partial<DownloadTask>,
 ): string => {
@@ -106,8 +111,10 @@ export const createTask = (
   return id;
 };
 
+/** Looks up a task, as long as it is still in the list */
 export const getTask = (id: string): DownloadTask | undefined => tasks.get(id);
 
+/** Patches a task, a pure progress change is broadcast with a delay */
 export const updateTask = (id: string, patch: Partial<DownloadTask>) => {
   const task = tasks.get(id);
   if (!task) return;
@@ -119,10 +126,7 @@ export const updateTask = (id: string, patch: Partial<DownloadTask>) => {
   broadcast(!isProgressOnly);
 };
 
-export const releaseCancel = (id: string) => {
-  cancelled.delete(id);
-};
-
+/** Drops a finished task from the list once its TTL is over */
 const scheduleRemoval = (id: string) => {
   clearTimeout(removalTimers.get(id));
   removalTimers.set(
@@ -135,6 +139,7 @@ const scheduleRemoval = (id: string) => {
   );
 };
 
+/** Moves a task to its final status, errors stay until they are dismissed */
 export const finishTask = (
   id: string,
   status: Extract<DownloadStatus, 'done' | 'skipped' | 'cancelled' | 'error'>,
@@ -154,6 +159,7 @@ export const finishTask = (
   }
 };
 
+/** Marks a task as cancelled, a task that never started ends right away */
 export const requestCancel = (id: string) => {
   const task = tasks.get(id);
   if (!task || isFinishedStatus(task.status)) return;
@@ -166,7 +172,13 @@ export const requestCancel = (id: string) => {
   }
 };
 
+/** True once a cancel was requested for this task */
 export const isCancelRequested = (id: string) => cancelled.has(id);
+
+/** Drops the cancel marker of a finished job so it cannot pile up */
+export const releaseCancel = (id: string) => {
+  cancelled.delete(id);
+};
 
 /** Throws if the task was cancelled, used to abort long running steps */
 export const throwIfCancelled = (id: string) => {
@@ -175,6 +187,7 @@ export const throwIfCancelled = (id: string) => {
   }
 };
 
+/** Removes a task from the list, e.g. when the user closes it */
 export const dismissTask = (id: string) => {
   clearTimeout(removalTimers.get(id));
   removalTimers.delete(id);
@@ -182,6 +195,7 @@ export const dismissTask = (id: string) => {
   broadcast(true);
 };
 
+/** Removes every task that already reached a final status */
 export const clearFinishedTasks = () => {
   for (const [id, task] of tasks) {
     if (isFinishedStatus(task.status)) {
