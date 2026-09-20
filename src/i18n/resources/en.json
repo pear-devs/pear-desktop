@@ -814,6 +814,8 @@
       "prompt": {
         "keybind": {
           "keybind-options": {
+            "dislike": "Dislike",
+            "like": "Like",
             "next": "Next",
             "play-pause": "Play / Pause",
             "previous": "Previous"
