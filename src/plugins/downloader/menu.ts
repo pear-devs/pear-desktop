@@ -13,32 +13,44 @@ import { DefaultPresetList } from './types';
 import type { MenuTemplate } from '@/menu';
 import type { MenuContext } from '@/types/contexts';
 
+/** Keeps a prompt result inside sane bounds, falling back to the old value */
+const toWholeNumber = (
+  value: string | undefined,
+  fallback: number,
+  min: number,
+  max: number,
+) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+
+  return Math.min(Math.max(Math.round(parsed), min), max);
+};
+
 export const onMenu = async ({
   getConfig,
   setConfig,
 }: MenuContext<DownloaderPluginConfig>): Promise<MenuTemplate> => {
   const config = await getConfig();
+  const onFinish = deepmerge(
+    defaultConfig.downloadOnFinish,
+    config.downloadOnFinish,
+  );
+
+  const finishSettingsKey = (key: string) =>
+    `plugins.downloader.menu.download-finish-settings.${key}`;
 
   return [
     {
-      label: t('plugins.downloader.menu.download-finish-settings.label'),
+      label: t(finishSettingsKey('label')),
       type: 'submenu',
       submenu: [
         {
-          label: t(
-            'plugins.downloader.menu.download-finish-settings.submenu.enabled',
-          ),
+          label: t(finishSettingsKey('submenu.enabled')),
           type: 'checkbox',
-          checked: config.downloadOnFinish?.enabled ?? false,
+          checked: onFinish.enabled,
           click(item) {
             setConfig({
-              downloadOnFinish: {
-                ...deepmerge(
-                  defaultConfig.downloadOnFinish,
-                  config.downloadOnFinish,
-                ),
-                enabled: item.checked,
-              },
+              downloadOnFinish: { ...onFinish, enabled: item.checked },
             });
           },
         },
@@ -46,100 +58,34 @@ export const onMenu = async ({
           type: 'separator',
         },
         {
-          label: t('plugins.downloader.menu.choose-download-folder'),
-          click() {
-            const result = dialog.showOpenDialogSync({
-              properties: ['openDirectory', 'createDirectory'],
-              defaultPath: getFolder(
-                config.downloadOnFinish?.folder ?? config.downloadFolder,
-              ),
-            });
-            if (result) {
-              setConfig({
-                downloadOnFinish: {
-                  ...deepmerge(
-                    defaultConfig.downloadOnFinish,
-                    config.downloadOnFinish,
-                  ),
-                  folder: result[0],
-                },
-              });
-            }
-          },
-        },
-        {
-          label: t(
-            'plugins.downloader.menu.download-finish-settings.submenu.mode',
-          ),
-          type: 'submenu',
-          submenu: [
-            {
-              label: t(
-                'plugins.downloader.menu.download-finish-settings.submenu.seconds',
-              ),
-              type: 'radio',
-              checked: config.downloadOnFinish?.mode === 'seconds',
-              click() {
-                setConfig({
-                  downloadOnFinish: {
-                    ...deepmerge(
-                      defaultConfig.downloadOnFinish,
-                      config.downloadOnFinish,
-                    ),
-                    mode: 'seconds',
-                  },
-                });
-              },
-            },
-            {
-              label: t(
-                'plugins.downloader.menu.download-finish-settings.submenu.percent',
-              ),
-              type: 'radio',
-              checked: config.downloadOnFinish?.mode === 'percent',
-              click() {
-                setConfig({
-                  downloadOnFinish: {
-                    ...deepmerge(
-                      defaultConfig.downloadOnFinish,
-                      config.downloadOnFinish,
-                    ),
-                    mode: 'percent',
-                  },
-                });
-              },
-            },
-          ],
-        },
-        {
-          label: t(
-            'plugins.downloader.menu.download-finish-settings.submenu.advanced',
-          ),
+          label: t(finishSettingsKey('submenu.settings')),
           async click() {
             const res = await prompt({
-              title: t(
-                'plugins.downloader.menu.download-finish-settings.prompt.title',
-              ),
+              title: t(finishSettingsKey('prompt.title')),
+              label: t(finishSettingsKey('prompt.description')),
               type: 'multiInput',
               multiInputOptions: [
                 {
-                  label: t(
-                    'plugins.downloader.menu.download-finish-settings.prompt.last-seconds',
-                  ),
+                  label: t(finishSettingsKey('prompt.mode')),
+                  value: onFinish.mode,
+                  selectOptions: {
+                    seconds: t(finishSettingsKey('prompt.mode-seconds')),
+                    percent: t(finishSettingsKey('prompt.mode-percent')),
+                  },
+                },
+                {
+                  label: t(finishSettingsKey('prompt.last-seconds')),
+                  value: onFinish.seconds,
                   inputAttrs: {
                     type: 'number',
                     required: true,
                     min: '0',
                     step: '1',
                   },
-                  value:
-                    config.downloadOnFinish?.seconds ??
-                    defaultConfig.downloadOnFinish!.seconds,
                 },
                 {
-                  label: t(
-                    'plugins.downloader.menu.download-finish-settings.prompt.last-percent',
-                  ),
+                  label: t(finishSettingsKey('prompt.last-percent')),
+                  value: onFinish.percent,
                   inputAttrs: {
                     type: 'number',
                     required: true,
@@ -147,31 +93,50 @@ export const onMenu = async ({
                     max: '100',
                     step: '1',
                   },
-                  value:
-                    config.downloadOnFinish?.percent ??
-                    defaultConfig.downloadOnFinish!.percent,
+                },
+                {
+                  label: t(finishSettingsKey('prompt.folder')),
+                  value: onFinish.folder ?? '',
+                  inputAttrs: {
+                    type: 'text',
+                    placeholder: getFolder(config.downloadFolder),
+                  },
                 },
               ],
               ...promptOptions(),
-              height: 240,
+              width: 540,
+              height: 460,
               resizable: true,
             }).catch(console.error);
 
             if (!res) {
-              return undefined;
+              return;
             }
 
+            const [mode, seconds, percent, folder] = res;
             setConfig({
               downloadOnFinish: {
-                ...deepmerge(
-                  defaultConfig.downloadOnFinish,
-                  config.downloadOnFinish,
-                ),
-                seconds: Number(res[0]),
-                percent: Number(res[1]),
+                ...onFinish,
+                mode: mode === 'percent' ? 'percent' : 'seconds',
+                seconds: toWholeNumber(seconds, onFinish.seconds, 0, 3600),
+                percent: toWholeNumber(percent, onFinish.percent, 1, 100),
+                folder: folder?.trim() || undefined,
               },
             });
-            return;
+          },
+        },
+        {
+          label: t(finishSettingsKey('submenu.choose-folder')),
+          click() {
+            const result = dialog.showOpenDialogSync({
+              properties: ['openDirectory', 'createDirectory'],
+              defaultPath: getFolder(onFinish.folder ?? config.downloadFolder),
+            });
+            if (result) {
+              setConfig({
+                downloadOnFinish: { ...onFinish, folder: result[0] },
+              });
+            }
           },
         },
       ],
@@ -186,7 +151,7 @@ export const onMenu = async ({
       click() {
         const result = dialog.showOpenDialogSync({
           properties: ['openDirectory', 'createDirectory'],
-          defaultPath: getFolder(config.downloadFolder ?? ''),
+          defaultPath: getFolder(config.downloadFolder),
         });
         if (result) {
           setConfig({ downloadFolder: result[0] });
@@ -195,14 +160,61 @@ export const onMenu = async ({
     },
     {
       label: t('plugins.downloader.menu.presets'),
-      submenu: Object.keys(DefaultPresetList).map((preset) => ({
-        label: preset,
-        type: 'radio',
-        checked: config.selectedPreset === preset,
-        click() {
-          setConfig({ selectedPreset: preset });
+      submenu: [
+        ...Object.keys(DefaultPresetList).map(
+          (preset) =>
+            ({
+              label: preset,
+              type: 'radio',
+              checked: config.selectedPreset === preset,
+              click() {
+                setConfig({ selectedPreset: preset });
+              },
+            }) satisfies MenuTemplate[number],
+        ),
+        { type: 'separator' },
+        {
+          label: t('plugins.downloader.menu.custom-preset.label'),
+          async click() {
+            const currentPreset =
+              config.customPresetSetting ?? defaultConfig.customPresetSetting;
+            const res = await prompt({
+              title: t('plugins.downloader.menu.custom-preset.title'),
+              type: 'multiInput',
+              multiInputOptions: [
+                {
+                  label: t('plugins.downloader.menu.custom-preset.extension'),
+                  value: currentPreset.extension ?? '',
+                  inputAttrs: { type: 'text', placeholder: 'mp3' },
+                },
+                {
+                  label: t('plugins.downloader.menu.custom-preset.ffmpeg-args'),
+                  value: currentPreset.ffmpegArgs.join(' '),
+                  inputAttrs: { type: 'text', placeholder: '-b:a 320k' },
+                },
+              ],
+              ...promptOptions(),
+              height: 240,
+              resizable: true,
+            }).catch(console.error);
+
+            if (!res) {
+              return;
+            }
+
+            const extension = String(res[0] ?? '').trim();
+            setConfig({
+              customPresetSetting: {
+                extension: extension || null,
+                ffmpegArgs: String(res[1] ?? '')
+                  .split(' ')
+                  .map((argument) => argument.trim())
+                  .filter(Boolean),
+              },
+            });
+          },
         },
-      })),
+      ],
     },
     {
       label: t('plugins.downloader.menu.skip-existing'),
@@ -210,6 +222,37 @@ export const onMenu = async ({
       checked: config.skipExisting,
       click(item) {
         setConfig({ skipExisting: item.checked });
+      },
+    },
+    {
+      label: t('plugins.downloader.menu.show-progress'),
+      type: 'checkbox',
+      checked: config.showProgress ?? true,
+      click(item) {
+        setConfig({ showProgress: item.checked });
+      },
+    },
+    {
+      label: t('plugins.downloader.menu.playlist-max-items.label'),
+      async click() {
+        const res = await prompt({
+          title: t('plugins.downloader.menu.playlist-max-items.title'),
+          label: t('plugins.downloader.menu.playlist-max-items.description'),
+          type: 'input',
+          value: String(config.playlistMaxItems ?? 0),
+          inputAttrs: { type: 'number', min: '0', step: '1' },
+          ...promptOptions(),
+        }).catch(console.error);
+
+        if (res === null || res === undefined) {
+          return;
+        }
+
+        const value = Number(res);
+        setConfig({
+          playlistMaxItems:
+            Number.isFinite(value) && value > 0 ? Math.floor(value) : undefined,
+        });
       },
     },
   ];

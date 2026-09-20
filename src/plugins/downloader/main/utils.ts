@@ -1,8 +1,10 @@
 import { app, type BrowserWindow } from 'electron';
 import is from 'electron-is';
 
+// An empty string is treated as "not configured", otherwise the downloads
+// would end up in a relative path next to the working directory
 export const getFolder = (customFolder?: string) =>
-  customFolder ?? app.getPath('downloads');
+  customFolder || app.getPath('downloads');
 
 export const sendFeedback = (win: BrowserWindow, message?: unknown) => {
   win.webContents.send('downloader-feedback', message);
