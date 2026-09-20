@@ -15,7 +15,7 @@ export type SmoothTransitionsPluginConfig = {
   /**
    * Duration of the pause/resume fade, in milliseconds.
    *
-   * @default 250
+   * @default 200
    */
   pauseFadeDuration: number;
   /**
@@ -28,7 +28,7 @@ export type SmoothTransitionsPluginConfig = {
   /**
    * Duration of the skip fade, in milliseconds.
    *
-   * @default 200
+   * @default 180
    */
   skipFadeDuration: number;
 };
@@ -75,21 +75,26 @@ function createGainFader(
 ) {
   let rampTimeout: number | null = null;
 
-  // Gain is linear, but perceived loudness isn't, so a plain
-  // linearRampToValueAtTime from 1 to 0 sounds like it stays at full volume
-  // for most of the ramp and only drops at the very end (a "delayed cut").
-  // The natural fix, exponentialRampToValueAtTime, overcorrects at the
-  // short durations used here (~200ms): the spec forbids ramping to/from
-  // exactly 0, so the target has to be approximated with a tiny value, and
-  // covering that huge dB range (0 to roughly -80dB) in a couple hundred ms
-  // dumps nearly all of the audible drop into the first third of the ramp -
-  // it sounds like an instant cut followed by inaudible silence, not a
-  // fade (measured live: gain reaches -75dB by 30% of the ramp). An
-  // equal-power curve (the standard crossfade curve, built from cos/sin of
-  // the same angle) spreads the perceived drop evenly across the whole
-  // duration in both directions and reaches the target exactly, so no
-  // near-zero approximation is needed.
+  // Curve shape decides how "direct" a fade feels, independently of its
+  // duration. An equal-power curve (cos/sin, the standard crossfade shape)
+  // is only -0.7dB into a fade-out at 25% of the ramp and -3dB at the
+  // halfway point, so the first half is barely quieter than full volume -
+  // pressing pause reads as a delay before anything happens. Linear gain
+  // is not much better early on. exponentialRampToValueAtTime overcorrects
+  // instead: the spec forbids ramping to exactly 0, so the target has to be
+  // a tiny approximation, and covering 0 to roughly -80dB in a couple
+  // hundred ms dumps the whole audible drop into the first third (measured
+  // live: -75dB by 30% of the ramp) - an instant cut, not a fade.
+  //
+  // Easing the interpolation with t^EASE_EXPONENT front-loads the movement
+  // without any of that: at 25% of a fade-out the gain is already down to
+  // about 0.57 (-4.9dB) and at the halfway point about 0.34 (-9dB), so the
+  // drop is immediately audible and the rest of the ramp is the tail. The
+  // same easing applies to fade-ins, which makes a resume come back just as
+  // promptly. Endpoints are still hit exactly, so no approximation of 0 is
+  // needed.
   const CURVE_LENGTH = 32;
+  const EASE_EXPONENT = 0.6;
 
   const rampTo = (target: number, durationMs: number, onDone?: () => void) => {
     if (rampTimeout !== null) {
@@ -117,19 +122,17 @@ function createGainFader(
     const safeDurationMs =
       Number.isFinite(durationMs) && durationMs > 0 ? durationMs : 1;
     const durationSec = safeDurationMs / 1000;
-    // The cos/sin pair only stays within its endpoints when one of them is
-    // 0. Fading between two non-zero values - resuming to 1 from a pause
-    // fade that was interrupted partway, which happens constantly here -
-    // bulges past both: 0.8 -> 1 peaks at about 1.28, i.e. gain above unity,
-    // which amplifies and can clip. Clamping bounds that without touching
-    // the 1 <-> 0 shape, where the curve never leaves its endpoints anyway.
+    // Interpolating between the two endpoints keeps the curve inside them by
+    // construction, so a fade between two non-zero values - resuming to 1
+    // from a pause fade that was interrupted partway, which happens
+    // constantly here - can't overshoot above unity and clip. The clamp is
+    // belt and braces against floating point landing a hair outside.
     const lowest = Math.min(startValue, target);
     const highest = Math.max(startValue, target);
     const curve = new Float32Array(CURVE_LENGTH);
     for (let i = 0; i < CURVE_LENGTH; i++) {
-      const angle = (i / (CURVE_LENGTH - 1)) * (Math.PI / 2);
-      const value =
-        (startValue * Math.cos(angle)) + (target * Math.sin(angle));
+      const progress = (i / (CURVE_LENGTH - 1)) ** EASE_EXPONENT;
+      const value = startValue + ((target - startValue) * progress);
       curve[i] = Math.min(Math.max(value, lowest), highest);
     }
     gainNode.gain.setValueCurveAtTime(curve, now, durationSec);
@@ -254,7 +257,7 @@ function setupSmoothTransitions(
     // this at all, so skip the no-op ramp when gain is already at rest.
     if (fader.get() < 1) {
       const config = getConfig();
-      fader.rampTo(1, config?.pauseFadeDuration ?? 250);
+      fader.rampTo(1, config?.pauseFadeDuration ?? 200);
     }
     const result = originalVideoPlay();
     // If a pause fade was in flight and got invalidated by this very call
@@ -314,7 +317,7 @@ function setupSmoothTransitions(
       const config = getConfig();
       fader.rampTo(
         1,
-        config?.skipFadeDuration ?? config?.pauseFadeDuration ?? 200,
+        config?.skipFadeDuration ?? config?.pauseFadeDuration ?? 180,
       );
     }
   };
@@ -833,9 +836,9 @@ export default createPlugin<
   config: {
     enabled: false,
     fadeOnPause: true,
-    pauseFadeDuration: 250,
+    pauseFadeDuration: 200,
     fadeOnSkip: true,
-    skipFadeDuration: 200,
+    skipFadeDuration: 180,
   },
   menu: async ({ getConfig, setConfig }) => {
     const config = await getConfig();
