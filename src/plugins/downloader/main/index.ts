@@ -600,7 +600,6 @@ const runSongDownload = async (
   }
 };
 
-Damit läuft releaseCancel(taskId) bei jedem Verlassen von runSongDownload — also bei done, cancelled, error und auch bei einem unerwarteten Fehler — und zwar genau einmal pro Aufruf der Funktion.
 export function downloadSong(url: string, folder?: string) {
   queueSongDownload({ url, folder: folder ?? defaultDownloadFolder() });
 }
