@@ -34,6 +34,7 @@ export const attachWindow = (window: BrowserWindow) => {
   win = window;
 };
 
+
 const isAlive = () =>
   !!win && !win.isDestroyed() && !win.webContents.isDestroyed();
 
@@ -59,6 +60,7 @@ const updateNativeProgress = () => {
   );
   setBadge(active.length);
 };
+
 
 const broadcastNow = () => {
   broadcastTimeout = undefined;
@@ -117,6 +119,10 @@ export const updateTask = (id: string, patch: Partial<DownloadTask>) => {
   broadcast(!isProgressOnly);
 };
 
+export const releaseCancel = (id: string) => {
+  cancelled.delete(id);
+};
+
 const scheduleRemoval = (id: string) => {
   clearTimeout(removalTimers.get(id));
   removalTimers.set(
@@ -124,7 +130,6 @@ const scheduleRemoval = (id: string) => {
     setTimeout(() => {
       removalTimers.delete(id);
       tasks.delete(id);
-      cancelled.delete(id);
       broadcast(true);
     }, FINISHED_TASK_TTL),
   );
@@ -174,7 +179,6 @@ export const dismissTask = (id: string) => {
   clearTimeout(removalTimers.get(id));
   removalTimers.delete(id);
   tasks.delete(id);
-  cancelled.delete(id);
   broadcast(true);
 };
 
@@ -184,7 +188,6 @@ export const clearFinishedTasks = () => {
       clearTimeout(removalTimers.get(id));
       removalTimers.delete(id);
       tasks.delete(id);
-      cancelled.delete(id);
     }
   }
   broadcast(true);
