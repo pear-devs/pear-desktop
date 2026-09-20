@@ -537,65 +537,70 @@ const runSongDownload = async (
   request: SongRequest,
   taskId: string,
 ): Promise<DownloadOutcome> => {
-  rememberRetryRequest(taskId, request);
+  try {
+    rememberRetryRequest(taskId, request);
 
-  if (isCancelRequested(taskId)) {
-    finishTask(taskId, 'cancelled');
-    return 'cancelled';
-  }
+    if (isCancelRequested(taskId)) {
+      finishTask(taskId, 'cancelled');
+      return 'cancelled';
+    }
 
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      await downloadSongUnsafe(request, taskId);
-      retryRequests.delete(taskId);
-      return 'done';
-    } catch (error: unknown) {
-      if (error instanceof DownloadCancelledError) {
-        finishTask(taskId, 'cancelled');
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        await downloadSongUnsafe(request, taskId);
         retryRequests.delete(taskId);
-        if (!request.playlistTitle) sendFeedback_(win);
-        return 'cancelled';
-      }
-
-      if (attempt < MAX_ATTEMPTS && isRetryableError(error)) {
-        console.warn(
-          `[downloader] attempt ${attempt} failed, retrying`,
-          shortErrorMessage(error),
-        );
-        updateTask(taskId, { status: 'queued', progress: -1 });
-        await sleep(RETRY_DELAY * attempt);
-        if (isCancelRequested(taskId)) {
+        return 'done';
+      } catch (error: unknown) {
+        if (error instanceof DownloadCancelledError) {
           finishTask(taskId, 'cancelled');
+          retryRequests.delete(taskId);
+          if (!request.playlistTitle) sendFeedback_(win);
           return 'cancelled';
         }
-        continue;
+
+        if (attempt < MAX_ATTEMPTS && isRetryableError(error)) {
+          console.warn(
+            `[downloader] attempt ${attempt} failed, retrying`,
+            shortErrorMessage(error),
+          );
+          updateTask(taskId, { status: 'queued', progress: -1 });
+          await sleep(RETRY_DELAY * attempt);
+          if (isCancelRequested(taskId)) {
+            finishTask(taskId, 'cancelled');
+            return 'cancelled';
+          }
+          continue;
+        }
+
+        const task = getTask(taskId);
+        const source =
+          task && task.title !== taskLabelOf(request)
+            ? `${task.artist ? `${task.artist} - ` : ''}${task.title}`
+            : taskLabelOf(request);
+
+        finishTask(taskId, 'error', shortErrorMessage(error));
+        console.error(describeError(error, source));
+
+        // Playlist items stay silent, a modal per failed song would be
+        // unusable. Automatic downloads only speak up when the progress panel
+        // is switched off, so a failure is never completely silent
+        const reportedByPanel =
+          !!request.playlistTitle || (request.automatic && config.showProgress);
+        if (!reportedByPanel) {
+          sendFeedback_(win);
+          showErrorDialog(describeError(error, source));
+        }
+        return 'error';
       }
-
-      const task = getTask(taskId);
-      const source =
-        task && task.title !== taskLabelOf(request)
-          ? `${task.artist ? `${task.artist} - ` : ''}${task.title}`
-          : taskLabelOf(request);
-
-      finishTask(taskId, 'error', shortErrorMessage(error));
-      console.error(describeError(error, source));
-
-      // Playlist items stay silent, a modal per failed song would be
-      // unusable. Automatic downloads only speak up when the progress panel
-      // is switched off, so a failure is never completely silent
-      const reportedByPanel =
-        !!request.playlistTitle || (request.automatic && config.showProgress);
-      if (!reportedByPanel) {
-        sendFeedback_(win);
-        showErrorDialog(describeError(error, source));
-      }
-      return 'error';
     }
-  }
 
-  return 'error';
+    return 'error';
+  } finally {
+    releaseCancel(taskId);
+  }
 };
 
+Damit läuft releaseCancel(taskId) bei jedem Verlassen von runSongDownload — also bei done, cancelled, error und auch bei einem unerwarteten Fehler — und zwar genau einmal pro Aufruf der Funktion.
 export function downloadSong(url: string, folder?: string) {
   queueSongDownload({ url, folder: folder ?? defaultDownloadFolder() });
 }
