@@ -113,10 +113,10 @@ const playRelease = async (releaseRows: unknown[], queue: unknown[]) => {
   };
 };
 
-const playOutsideRelease = (videoId: string) =>
+const playOutsideRelease = (videoId: string, playlistId?: string) =>
   fetch('/youtubei/v1/player', {
     method: 'POST',
-    body: JSON.stringify({ videoId }),
+    body: JSON.stringify(playlistId ? { videoId, playlistId } : { videoId }),
   });
 
 test('replaces a music video with the song version', async () => {
@@ -155,7 +155,7 @@ test('ignores autoplay tracks', async () => {
   expect(track).toEqual(queue[0].playlistPanelVideoRenderer);
 });
 
-test('ignores a music video played outside a release', async () => {
+test('ignores a music video played on its own', async () => {
   const { playerRequests } = await playRelease(
     [releaseRow('video-1', 'song-1')],
     [queueItem('video-1', { musicVideo: true })],
@@ -164,4 +164,20 @@ test('ignores a music video played outside a release', async () => {
   await playOutsideRelease('video-1');
 
   expect(playerRequests).toEqual([{ videoId: 'video-1' }]);
+});
+
+test('ignores a music video played from a mix', async () => {
+  const { playerRequests } = await playRelease(
+    [releaseRow('video-1', 'song-1')],
+    [queueItem('video-1', { musicVideo: true })],
+  );
+  (globalThis as unknown as { location: { search: string } }).location = {
+    search: `?list=${RELEASE_PLAYLIST}`,
+  };
+
+  await playOutsideRelease('video-1', 'RDAMPLmix');
+
+  expect(playerRequests).toEqual([
+    { videoId: 'video-1', playlistId: 'RDAMPLmix' },
+  ]);
 });

@@ -232,9 +232,7 @@ export function installPreferSong() {
     const requestedId = body.videoId;
     if (typeof requestedId !== 'string') return originalFetch(input, init);
 
-    const playlistId =
-      releasePlaylistId(body.playlistId) ??
-      releasePlaylistId(new URLSearchParams(location.search).get('list'));
+    const playlistId = releasePlaylistId(body.playlistId);
     if (!playlistId) return originalFetch(input, init);
     if (!studioIdByRowId.has(requestedId))
       await loadReleaseOfPlaylist(playlistId);
