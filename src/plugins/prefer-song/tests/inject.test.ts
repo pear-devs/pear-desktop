@@ -2,11 +2,11 @@ import { test, expect } from '@playwright/test';
 
 import { installPreferSong } from '../injectors/inject';
 
-const ALBUM_PLAYLIST = 'OLAK5uy_album';
+const RELEASE_PLAYLIST = 'OLAK5uy_album';
 
 const runs = (text: string) => ({ runs: [{ text }] });
 
-const albumRow = (rowId: string, songId: string) => ({
+const releaseRow = (rowId: string, songId: string) => ({
   musicResponsiveListItemRenderer: {
     playlistItemData: { videoId: rowId },
     menu: {
@@ -61,7 +61,9 @@ interface Renderer {
   thumbnail: { thumbnails: { url: string }[] };
 }
 
-const playAlbum = async (albumRows: unknown[], queue: unknown[]) => {
+const setupYouTubeMusic = (releaseRows: unknown[], queue: unknown[]) => {
+  const playerRequests: Record<string, unknown>[] = [];
+
   const upstream = (input: RequestInfo | URL, init?: RequestInit) => {
     const json = (data: unknown) => Promise.resolve(Response.json(data));
     const url = input instanceof Request ? input.url : String(input);
@@ -69,7 +71,11 @@ const playAlbum = async (albumRows: unknown[], queue: unknown[]) => {
       typeof init?.body === 'string' ? init.body : '{}',
     ) as Record<string, unknown>;
 
-    if (url.includes('/browse')) return json({ contents: albumRows });
+    if (url.includes('/browse')) return json({ contents: releaseRows });
+    if (url.includes('/player')) {
+      playerRequests.push(body);
+      return json({});
+    }
     if (typeof body.videoId === 'string' && !body.playlistId) {
       return json({
         contents: [queueItem(body.videoId, { label: 'from-song-row' })],
@@ -89,20 +95,35 @@ const playAlbum = async (albumRows: unknown[], queue: unknown[]) => {
   scope.ytcfg = { get: () => 'stub' };
   scope.fetch = upstream as typeof fetch;
   installPreferSong();
+  return { playerRequests };
+};
 
+const playRelease = async (releaseRows: unknown[], queue: unknown[]) => {
+  const { playerRequests } = setupYouTubeMusic(releaseRows, queue);
   const response = await fetch('/youtubei/v1/next', {
     method: 'POST',
-    body: JSON.stringify({ playlistId: ALBUM_PLAYLIST }),
+    body: JSON.stringify({ playlistId: RELEASE_PLAYLIST }),
   });
   const { contents } = (await response.json()) as {
     contents: { playlistPanelVideoRenderer: Renderer }[];
   };
-  return contents.map((entry) => entry.playlistPanelVideoRenderer);
+  return {
+    tracks: contents.map((entry) => entry.playlistPanelVideoRenderer),
+    playerRequests,
+  };
 };
 
+const playOutsideRelease = (videoId: string) =>
+  fetch('/youtubei/v1/player', {
+    method: 'POST',
+    body: JSON.stringify({ videoId }),
+  });
+
 test('replaces a music video with the song version', async () => {
-  const [track] = await playAlbum(
-    [albumRow('video-1', 'song-1')],
+  const {
+    tracks: [track],
+  } = await playRelease(
+    [releaseRow('video-1', 'song-1')],
     [queueItem('video-1', { musicVideo: true })],
   );
 
@@ -117,7 +138,9 @@ test('replaces a music video with the song version', async () => {
 test('keeps the music video when there is no song version', async () => {
   const queue = [queueItem('video-1', { musicVideo: true })];
 
-  const [track] = await playAlbum([albumRow('video-1', 'video-1')], queue);
+  const {
+    tracks: [track],
+  } = await playRelease([releaseRow('video-1', 'video-1')], queue);
 
   expect(track).toEqual(queue[0].playlistPanelVideoRenderer);
 });
@@ -125,7 +148,20 @@ test('keeps the music video when there is no song version', async () => {
 test('ignores autoplay tracks', async () => {
   const queue = [queueItem('video-1', { autoplay: true, musicVideo: true })];
 
-  const [track] = await playAlbum([albumRow('video-1', 'song-1')], queue);
+  const {
+    tracks: [track],
+  } = await playRelease([releaseRow('video-1', 'song-1')], queue);
 
   expect(track).toEqual(queue[0].playlistPanelVideoRenderer);
+});
+
+test('ignores a music video played outside a release', async () => {
+  const { playerRequests } = await playRelease(
+    [releaseRow('video-1', 'song-1')],
+    [queueItem('video-1', { musicVideo: true })],
+  );
+
+  await playOutsideRelease('video-1');
+
+  expect(playerRequests).toEqual([{ videoId: 'video-1' }]);
 });

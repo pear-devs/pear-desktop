@@ -16,14 +16,25 @@ interface QueueItem {
   thumbnail?: Thumbnails;
 }
 
-interface AlbumRow {
+interface ReleaseRow {
   playlistItemData?: { videoId?: string };
 }
 
+/**
+ * Replaces music videos with their song version while a release is playing.
+ *
+ * YouTube Music serves some release tracks as music videos, which play the
+ * video's audio including its intro and outro. Every release row links to its
+ * song version through the `MPTC` credits id, and that mapping is used to
+ * rewrite the queue and the player request before playback starts.
+ *
+ * Runs in the page via `webFrame.executeJavaScript`, so it must stay
+ * self-contained: it is injected as its own source and closes over nothing.
+ */
 export function installPreferSong() {
   const originalFetch = window.fetch.bind(window);
   const studioIdByRowId = new Map<string, string>();
-  const albumRequests = new Map<string, Promise<void>>();
+  const releaseRequests = new Map<string, Promise<void>>();
   const playlistRequests = new Map<string, Promise<void>>();
   const studioItemRequests = new Map<string, Promise<QueueItem | undefined>>();
 
@@ -90,15 +101,15 @@ export function installPreferSong() {
     return credits;
   };
 
-  const albumPlaylistId = (value: unknown) =>
+  const releasePlaylistId = (value: unknown) =>
     typeof value === 'string' && value.startsWith('OLAK5uy_') ? value : null;
 
-  const loadAlbum = (browseId: string) => {
-    const pending = albumRequests.get(browseId);
+  const loadRelease = (browseId: string) => {
+    const pending = releaseRequests.get(browseId);
     if (pending) return pending;
 
     const request = (async () => {
-      const rows = collect<AlbumRow>(
+      const rows = collect<ReleaseRow>(
         await innertube('browse', { browseId }),
         'musicResponsiveListItemRenderer',
       );
@@ -108,20 +119,22 @@ export function installPreferSong() {
         if (rowId && studioId) studioIdByRowId.set(rowId, studioId);
       }
     })();
-    albumRequests.set(browseId, request);
+    releaseRequests.set(browseId, request);
+    request.catch(() => releaseRequests.delete(browseId));
     return request;
   };
 
-  const loadAlbumOfPlaylist = (playlistId: string) => {
+  const loadReleaseOfPlaylist = (playlistId: string) => {
     const pending = playlistRequests.get(playlistId);
     if (pending) return pending;
 
     const request = (async () => {
       const queue = JSON.stringify(await innertube('next', { playlistId }));
       const browseId = /MPREb_[A-Za-z0-9_-]+/.exec(queue)?.[0];
-      if (browseId) await loadAlbum(browseId);
+      if (browseId) await loadRelease(browseId);
     })();
     playlistRequests.set(playlistId, request);
+    request.catch(() => playlistRequests.delete(playlistId));
     return request;
   };
 
@@ -137,6 +150,7 @@ export function installPreferSong() {
       return items.find((item) => item.videoId === videoId);
     })();
     studioItemRequests.set(videoId, request);
+    request.catch(() => studioItemRequests.delete(videoId));
     return request;
   };
 
@@ -175,7 +189,7 @@ export function installPreferSong() {
     playlistId: string | null,
   ) => {
     if (!playlistId) return response;
-    await loadAlbumOfPlaylist(playlistId);
+    await loadReleaseOfPlaylist(playlistId);
 
     const queue: unknown = JSON.parse(await response.text());
     await Promise.all(
@@ -218,12 +232,12 @@ export function installPreferSong() {
     const requestedId = body.videoId;
     if (typeof requestedId !== 'string') return originalFetch(input, init);
 
-    if (!studioIdByRowId.has(requestedId)) {
-      const playlistId =
-        albumPlaylistId(body.playlistId) ??
-        albumPlaylistId(new URLSearchParams(location.search).get('list'));
-      if (playlistId) await loadAlbumOfPlaylist(playlistId);
-    }
+    const playlistId =
+      releasePlaylistId(body.playlistId) ??
+      releasePlaylistId(new URLSearchParams(location.search).get('list'));
+    if (!playlistId) return originalFetch(input, init);
+    if (!studioIdByRowId.has(requestedId))
+      await loadReleaseOfPlaylist(playlistId);
 
     const studioId = studioIdFor(requestedId);
     if (!studioId) return originalFetch(input, init);
@@ -247,7 +261,7 @@ export function installPreferSong() {
           : null;
         return await patchQueueResponse(
           await originalFetch(input, init),
-          albumPlaylistId(body?.playlistId),
+          releasePlaylistId(body?.playlistId),
         );
       }
       if (url.includes('/youtubei/v1/player')) {
