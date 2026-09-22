@@ -1,0 +1,82 @@
+/* Terminal look, applied only while the cli theme is active
+   (this stylesheet is injected into <head> by the plugin). */
+
+/* Monospace everywhere (declared on containers so descendants inherit;
+   icon fonts override their own family and stay intact). */
+body.pear-cli-theme > ytmusic-app,
+body.pear-cli-theme ytmusic-app-layout,
+body.pear-cli-theme ytmusic-player-bar,
+body.pear-cli-theme ytmusic-nav-bar,
+body.pear-cli-theme ytmusic-player,
+body.pear-cli-theme ytmusic-browse-response {
+  font-family:
+    ui-monospace, 'SF Mono', 'Cascadia Mono', Consolas, 'Liberation Mono',
+    'DejaVu Sans Mono', monospace !important;
+}
+
+body.pear-cli-theme ytmusic-app-layout {
+  --ytmusic-nav-bar-offset: 0px;
+}
+
+body.pear-cli-theme ytmusic-app-layout > #content {
+  padding-top: 0 !important;
+  width: 100% !important;
+}
+
+body.pear-cli-theme ytmusic-app-layout > [slot='player-page'] {
+  margin-top: 0 !important;
+  height: calc(100vh - var(--ytmusic-player-bar-height, 72px)) !important;
+}
+
+/* Hide the chrome that a single-column terminal layout doesn't need. */
+body.pear-cli-theme ytmusic-guide-renderer,
+body.pear-cli-theme #mini-guide-spacer.ytmusic-app,
+body.pear-cli-theme #guide-spacer.ytmusic-app,
+body.pear-cli-theme ytmusic-nav-bar,
+body.pear-cli-theme #nav-bar-background.ytmusic-app-layout,
+body.pear-cli-theme #nav-bar-divider.ytmusic-app-layout,
+body.pear-cli-theme .background-gradient.style-scope,
+body.pear-cli-theme
+  ytmusic-app-layout
+  ytmusic-player-page[is-mweb-modernization-enabled]
+  .side-panel.ytmusic-player-page
+  .background-gradient.ytmusic-browse-response {
+  display: none !important;
+}
+
+/* Flat, box-drawn player bar. */
+body.pear-cli-theme ytmusic-player-bar {
+  border-radius: 0 !important;
+  border-top: 1px solid var(--pear-theme-accent) !important;
+  box-shadow: none !important;
+}
+
+/* Single-column reorder: art/title left, transport center, time far right. */
+body.pear-cli-theme ytmusic-player-bar #left-controls.ytmusic-player-bar {
+  order: 1 !important;
+}
+
+body.pear-cli-theme ytmusic-player-bar .middle-controls.ytmusic-player-bar {
+  order: 2 !important;
+}
+
+body.pear-cli-theme ytmusic-player-bar .right-controls.ytmusic-player-bar {
+  order: 3 !important;
+}
+
+body.pear-cli-theme ytmusic-player-bar .time-info.ytmusic-player-bar {
+  order: 4 !important;
+}
+
+/* Thin, square, accent progress bar. */
+body.pear-cli-theme ytmusic-player-bar #progress-bar.ytmusic-player-bar {
+  height: 2px !important;
+  border-radius: 0 !important;
+}
+
+body.pear-cli-theme
+  ytmusic-player-bar
+  #progress-bar.ytmusic-player-bar
+  [class*='knob'] {
+  border-radius: 0 !important;
+}
