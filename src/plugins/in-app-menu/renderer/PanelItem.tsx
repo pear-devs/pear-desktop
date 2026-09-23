@@ -187,7 +187,18 @@ export const PanelItem = (props: PanelItemProps) => {
   const [anchor, setAnchor] = createSignal<HTMLElement | null>(null);
   const [child, setChild] = createSignal<HTMLElement | null>(null);
 
-  const position = useFloating(anchor, toolTip, {
+  // toolTip ref mounts as soon as this item has a toolTip prop at all
+  // (see the outer <Show> below, unchanged to preserve the existing
+  // enter/exit transition). Passing it straight to useFloating would
+  // start floating-ui's autoUpdate (ancestor scroll/resize listeners +
+  // a ResizeObserver) the moment the item mounts and never stop, for
+  // every menu item with a tooltip, for the life of the app — even
+  // though the tooltip is only ever visible while hovered. Panel.tsx's
+  // submenu handling avoids this by gating its ref on `open`; this
+  // does the equivalent by only handing floating-ui a real element
+  // while toolTipOpen() is true, so autoUpdate starts/stops with
+  // actual visibility instead of running unconditionally.
+  const position = useFloating(anchor, () => (toolTipOpen() ? toolTip() : null), {
     whileElementsMounted: autoUpdate,
     placement: 'bottom-start',
     strategy: 'fixed',
