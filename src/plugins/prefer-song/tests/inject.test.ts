@@ -80,6 +80,14 @@ const gunzip = (buffer: ArrayBuffer) =>
     new Blob([buffer]).stream().pipeThrough(new DecompressionStream('gzip')),
   ).text();
 
+const receivedBody = async (input: RequestInfo | URL, init?: RequestInit) =>
+  (input instanceof Request
+    ? JSON.parse(await gunzip(await input.arrayBuffer()))
+    : JSON.parse(typeof init?.body === 'string' ? init.body : '{}')) as Record<
+    string,
+    unknown
+  >;
+
 const post = async (path: string, body: Record<string, unknown>) =>
   fetch(
     new Request('https://music.youtube.com' + path, {
@@ -88,19 +96,20 @@ const post = async (path: string, body: Record<string, unknown>) =>
     }),
   );
 
-const setupYouTubeMusic = (releaseRows: unknown[], queue: unknown[]) => {
+const setupYouTubeMusic = (
+  releaseRows: unknown[],
+  queue: unknown[],
+  { failBrowse = false } = {},
+) => {
   const playerRequests: Record<string, unknown>[] = [];
 
   const upstream = async (input: RequestInfo | URL, init?: RequestInit) => {
     const json = (data: unknown) => Response.json(data);
     const url = input instanceof Request ? input.url : String(input);
-    const body = (
-      input instanceof Request
-        ? JSON.parse(await gunzip(await input.clone().arrayBuffer()))
-        : JSON.parse(typeof init?.body === 'string' ? init.body : '{}')
-    ) as Record<string, unknown>;
+    const body = await receivedBody(input, init);
 
     if (url.includes('/browse')) {
+      if (failBrowse) throw new Error('offline');
       return json(
         typeof body.browseId === 'string' && body.browseId.startsWith('VL')
           ? { contents: [{ browseEndpoint: { browseId: RELEASE_BROWSE } }] }
@@ -133,8 +142,12 @@ const setupYouTubeMusic = (releaseRows: unknown[], queue: unknown[]) => {
   return { playerRequests };
 };
 
-const playRelease = async (releaseRows: unknown[], queue: unknown[]) => {
-  const { playerRequests } = setupYouTubeMusic(releaseRows, queue);
+const playRelease = async (
+  releaseRows: unknown[],
+  queue: unknown[],
+  options?: { failBrowse?: boolean },
+) => {
+  const { playerRequests } = setupYouTubeMusic(releaseRows, queue, options);
   const response = await post('/youtubei/v1/next', {
     playlistId: RELEASE_PLAYLIST,
   });
@@ -182,6 +195,18 @@ test('keeps the music video when there is no song version', async () => {
   const {
     tracks: [track],
   } = await playRelease([releaseRow('video-1', 'video-1')], queue);
+
+  expect(track).toEqual(queue[0].playlistPanelVideoRenderer);
+});
+
+test('keeps the queue playable when the release lookup fails', async () => {
+  const queue = [queueItem('video-1', { musicVideo: true })];
+
+  const {
+    tracks: [track],
+  } = await playRelease([releaseRow('video-1', 'song-1')], queue, {
+    failBrowse: true,
+  });
 
   expect(track).toEqual(queue[0].playlistPanelVideoRenderer);
 });

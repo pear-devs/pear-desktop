@@ -192,11 +192,42 @@ export function installPreferSong() {
     item.thumbnail = studio.thumbnail;
   };
 
-  const patchQueueResponse = async (
-    response: Response,
-    playlistId: string | null,
-  ) => {
-    if (!playlistId) return response;
+  const requestBodyOf = async (request: Request) =>
+    JSON.parse(await gunzip(await request.clone().arrayBuffer())) as Record<
+      string,
+      unknown
+    >;
+
+  const patchedOr = async <T>(patched: Promise<T | null>, original: T) => {
+    try {
+      return (await patched) ?? original;
+    } catch {
+      return original;
+    }
+  };
+
+  const songPlayerRequest = async (request: Request) => {
+    const body = await requestBodyOf(request);
+    const requestedId = body.videoId;
+    if (typeof requestedId !== 'string') return null;
+
+    const playlistId = releasePlaylistId(body.playlistId);
+    const setId = playerSetVideoId(body.params);
+    if (!playlistId || !setId) return null;
+    if (!studioIdBySetId.has(setId)) await loadReleaseOfPlaylist(playlistId);
+
+    const studioId = studioIdFor(setId, requestedId);
+    if (!studioId) return null;
+
+    body.videoId = studioId;
+    return new Request(request, { body: await gzip(JSON.stringify(body)) });
+  };
+
+  const songQueueResponse = async (response: Response, sent: Request) => {
+    const playlistId = releasePlaylistId(
+      (await requestBodyOf(sent)).playlistId,
+    );
+    if (!playlistId) return null;
     await loadReleaseOfPlaylist(playlistId);
 
     const queue: unknown = JSON.parse(await response.text());
@@ -211,45 +242,16 @@ export function installPreferSong() {
     });
   };
 
-  const requestBodyOf = async (input: Request) =>
-    JSON.parse(await gunzip(await input.clone().arrayBuffer())) as Record<
-      string,
-      unknown
-    >;
-
-  const patchPlayerRequest = async (input: Request, init?: RequestInit) => {
-    const body = await requestBodyOf(input);
-    const requestedId = body.videoId;
-    if (typeof requestedId !== 'string') return originalFetch(input, init);
-
-    const playlistId = releasePlaylistId(body.playlistId);
-    const setId = playerSetVideoId(body.params);
-    if (!playlistId || !setId) return originalFetch(input, init);
-    if (!studioIdBySetId.has(setId)) await loadReleaseOfPlaylist(playlistId);
-
-    const studioId = studioIdFor(setId, requestedId);
-    if (!studioId) return originalFetch(input, init);
-
-    body.videoId = studioId;
-    const patched = await gzip(JSON.stringify(body));
-    return originalFetch(new Request(input, { body: patched }));
-  };
-
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = input instanceof Request ? input.url : String(input);
-    try {
-      if (input instanceof Request && url.includes('/youtubei/v1/next')) {
-        const body = await requestBodyOf(input);
-        return await patchQueueResponse(
-          await originalFetch(input, init),
-          releasePlaylistId(body.playlistId),
-        );
-      }
-      if (input instanceof Request && url.includes('/youtubei/v1/player')) {
-        return await patchPlayerRequest(input, init);
-      }
-    } catch {
-      return originalFetch(input, init);
+    if (!(input instanceof Request)) return originalFetch(input, init);
+
+    if (input.url.includes('/youtubei/v1/player')) {
+      return originalFetch(await patchedOr(songPlayerRequest(input), input));
+    }
+    if (input.url.includes('/youtubei/v1/next')) {
+      const sent = input.clone();
+      const response = await originalFetch(input);
+      return patchedOr(songQueueResponse(response.clone(), sent), response);
     }
     return originalFetch(input, init);
   };
