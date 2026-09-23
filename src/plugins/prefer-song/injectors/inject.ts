@@ -17,7 +17,7 @@ interface QueueItem {
 }
 
 interface ReleaseRow {
-  playlistItemData?: { videoId?: string };
+  playlistItemData?: { playlistSetVideoId?: string };
 }
 
 /**
@@ -33,7 +33,7 @@ interface ReleaseRow {
  */
 export function installPreferSong() {
   const originalFetch = window.fetch.bind(window);
-  const studioIdByRowId = new Map<string, string>();
+  const studioIdBySetId = new Map<string, string>();
   const releaseRequests = new Map<string, Promise<void>>();
   const playlistRequests = new Map<string, Promise<void>>();
   const studioItemRequests = new Map<string, Promise<QueueItem | undefined>>();
@@ -104,6 +104,11 @@ export function installPreferSong() {
   const releasePlaylistId = (value: unknown) =>
     typeof value === 'string' && value.startsWith('OLAK5uy_') ? value : null;
 
+  const playerSetVideoId = (params: unknown) =>
+    typeof params === 'string'
+      ? (/[0-9A-F]{16}/.exec(atob(decodeURIComponent(params)))?.[0] ?? null)
+      : null;
+
   const loadRelease = (browseId: string) => {
     const pending = releaseRequests.get(browseId);
     if (pending) return pending;
@@ -114,9 +119,9 @@ export function installPreferSong() {
         'musicResponsiveListItemRenderer',
       );
       for (const row of rows) {
-        const rowId = row.playlistItemData?.videoId;
         const studioId = creditsVideoId(row);
-        if (rowId && studioId) studioIdByRowId.set(rowId, studioId);
+        const setId = row.playlistItemData?.playlistSetVideoId;
+        if (studioId && setId) studioIdBySetId.set(setId, studioId);
       }
     })();
     releaseRequests.set(browseId, request);
@@ -129,8 +134,10 @@ export function installPreferSong() {
     if (pending) return pending;
 
     const request = (async () => {
-      const queue = JSON.stringify(await innertube('next', { playlistId }));
-      const browseId = /MPREb_[A-Za-z0-9_-]+/.exec(queue)?.[0];
+      const playlist = JSON.stringify(
+        await innertube('browse', { browseId: 'VL' + playlistId }),
+      );
+      const browseId = /MPREb_[A-Za-z0-9_-]+/.exec(playlist)?.[0];
       if (browseId) await loadRelease(browseId);
     })();
     playlistRequests.set(playlistId, request);
@@ -154,15 +161,16 @@ export function installPreferSong() {
     return request;
   };
 
-  const studioIdFor = (videoId: string) => {
-    const studioId = studioIdByRowId.get(videoId);
+  const studioIdFor = (setId: string, videoId: string) => {
+    const studioId = studioIdBySetId.get(setId);
     return studioId && studioId !== videoId ? studioId : null;
   };
 
   const swapQueueItem = async (item: QueueItem) => {
     const rowId = item.videoId;
-    if (!rowId || !item.playlistSetVideoId) return;
-    const studioId = studioIdFor(rowId);
+    const setId = item.playlistSetVideoId;
+    if (!rowId || !setId) return;
+    const studioId = studioIdFor(setId, rowId);
     if (!studioId) return;
     const studio = await studioQueueItem(studioId);
     if (!studio) return;
@@ -203,66 +211,41 @@ export function installPreferSong() {
     });
   };
 
-  const requestBodyOf = async (
-    input: RequestInfo | URL,
-    init?: RequestInit,
-  ) => {
-    if (typeof init?.body === 'string') {
-      return { text: init.body, gzipped: false, inline: true };
-    }
-    if (!(input instanceof Request)) return null;
+  const requestBodyOf = async (input: Request) =>
+    JSON.parse(await gunzip(await input.clone().arrayBuffer())) as Record<
+      string,
+      unknown
+    >;
 
-    const buffer = await input.clone().arrayBuffer();
-    const bytes = new Uint8Array(buffer);
-    const gzipped = bytes[0] === 0x1f && bytes[1] === 0x8b;
-    const text = gzipped
-      ? await gunzip(buffer)
-      : new TextDecoder().decode(buffer);
-    return { text, gzipped, inline: false };
-  };
-
-  const patchPlayerRequest = async (
-    input: RequestInfo | URL,
-    init?: RequestInit,
-  ) => {
-    const source = await requestBodyOf(input, init);
-    if (!source) return originalFetch(input, init);
-
-    const body = JSON.parse(source.text) as Record<string, unknown>;
+  const patchPlayerRequest = async (input: Request, init?: RequestInit) => {
+    const body = await requestBodyOf(input);
     const requestedId = body.videoId;
     if (typeof requestedId !== 'string') return originalFetch(input, init);
 
     const playlistId = releasePlaylistId(body.playlistId);
-    if (!playlistId) return originalFetch(input, init);
-    if (!studioIdByRowId.has(requestedId))
-      await loadReleaseOfPlaylist(playlistId);
+    const setId = playerSetVideoId(body.params);
+    if (!playlistId || !setId) return originalFetch(input, init);
+    if (!studioIdBySetId.has(setId)) await loadReleaseOfPlaylist(playlistId);
 
-    const studioId = studioIdFor(requestedId);
+    const studioId = studioIdFor(setId, requestedId);
     if (!studioId) return originalFetch(input, init);
 
     body.videoId = studioId;
-    const patched = source.gzipped
-      ? await gzip(JSON.stringify(body))
-      : JSON.stringify(body);
-    return source.inline
-      ? originalFetch(input, { ...init, body: patched })
-      : originalFetch(new Request(input as Request, { body: patched }));
+    const patched = await gzip(JSON.stringify(body));
+    return originalFetch(new Request(input, { body: patched }));
   };
 
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = input instanceof Request ? input.url : String(input);
     try {
-      if (url.includes('/youtubei/v1/next')) {
-        const source = await requestBodyOf(input, init);
-        const body = source
-          ? (JSON.parse(source.text) as Record<string, unknown>)
-          : null;
+      if (input instanceof Request && url.includes('/youtubei/v1/next')) {
+        const body = await requestBodyOf(input);
         return await patchQueueResponse(
           await originalFetch(input, init),
-          releasePlaylistId(body?.playlistId),
+          releasePlaylistId(body.playlistId),
         );
       }
-      if (url.includes('/youtubei/v1/player')) {
+      if (input instanceof Request && url.includes('/youtubei/v1/player')) {
         return await patchPlayerRequest(input, init);
       }
     } catch {
