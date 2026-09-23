@@ -1,6 +1,7 @@
 import { jaroWinkler } from '@skyra/jaro-winkler';
 
 import { LRC } from '../parsers/lrc';
+import { LyricsFile } from '../parsers/lyricsfile';
 import { config } from '../renderer/renderer';
 
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
@@ -156,20 +157,33 @@ export class LRCLib implements LyricProvider {
     }
 
     const raw = closestResult.syncedLyrics;
+    const lyricsfile = closestResult.lyricsfile;
     const plain = closestResult.plainLyrics;
-    if (!raw && !plain) {
+    if (!raw && !lyricsfile && !plain) {
       return null;
     }
+
+    const timedLines = (() => {
+      if (lyricsfile) {
+        try {
+          const parsed = LyricsFile.parse(lyricsfile).lines;
+          if (parsed.length) return parsed;
+        } catch {
+          // Fall back to LRC if the lyricsfile payload cannot be parsed.
+        }
+      }
+
+      if (raw) return LRC.parse(raw).lines;
+      return undefined;
+    })();
 
     return {
       title: closestResult.trackName,
       artists: closestResult.artistName.split(/[&,]/g),
-      lines: raw
-        ? LRC.parse(raw).lines.map((l) => ({
-            ...l,
-            status: 'upcoming' as const,
-          }))
-        : undefined,
+      lines: timedLines?.map((l) => ({
+        ...l,
+        status: 'upcoming' as const,
+      })),
       lyrics: plain,
     };
   }
@@ -185,4 +199,5 @@ type LRCLIBSearchResponse = {
   instrumental: boolean;
   plainLyrics: string;
   syncedLyrics: string;
+  lyricsfile?: string | null;
 }[];

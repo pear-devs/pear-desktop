@@ -1,7 +1,10 @@
 import { createEffect, For, Show, createSignal, createMemo } from 'solid-js';
 import { type VirtualizerHandle } from 'virtua/solid';
 
-import { type LineLyrics } from '@/plugins/synced-lyrics/types';
+import {
+  type LineLyrics,
+  type LineLyricsWord,
+} from '@/plugins/synced-lyrics/types';
 
 import { _ytAPI } from '..';
 import { config, currentTime } from '../renderer';
@@ -19,6 +22,57 @@ interface SyncedLineProps {
   line: LineLyrics;
   status: 'upcoming' | 'current' | 'previous';
 }
+
+interface AnimatedWord {
+  text: string;
+  delay: number;
+}
+
+const GENERIC_WORD_DELAY = 0.05;
+
+const wordTimingStyle = (delay: number, status: SyncedLineProps['status']) => {
+  const value = status === 'current' ? `${delay}s` : '0s';
+  return {
+    'transition-delay': value,
+    'animation-delay': value,
+  };
+};
+
+const convertLineText = (line: string) => {
+  const convertChineseText = config()?.convertChineseCharacter;
+  if (convertChineseText && convertChineseText !== 'disabled') {
+    return convertChineseCharacter(line, convertChineseText);
+  }
+  return line;
+};
+
+const toAnimatedWords = (
+  text: string,
+  line: LineLyrics,
+  timedWords?: LineLyricsWord[],
+): AnimatedWord[] => {
+  if (timedWords?.length) {
+    const joined = timedWords.map((item) => item.word).join('');
+    const addSpaces = joined.trim() !== line.text.trim();
+
+    return timedWords.map((item, index) => {
+      let word = convertLineText(item.word);
+      if (addSpaces && index < timedWords.length - 1 && !/\s$/.test(word)) {
+        word += ' ';
+      }
+
+      return {
+        text: word,
+        delay: Math.max(0, item.timeInMs - line.timeInMs) / 1000,
+      };
+    });
+  }
+
+  return text.split(' ').map((word, index) => ({
+    text: `${word} `,
+    delay: index * GENERIC_WORD_DELAY,
+  }));
+};
 
 const EmptyLine = (props: SyncedLineProps) => {
   const states = createMemo(() => {
@@ -84,14 +138,11 @@ const EmptyLine = (props: SyncedLineProps) => {
 };
 
 export const SyncedLine = (props: SyncedLineProps) => {
-  const text = createMemo(() => {
-    let line = props.line.text;
-    const convertChineseText = config()?.convertChineseCharacter;
-    if (convertChineseText && convertChineseText !== 'disabled') {
-      line = convertChineseCharacter(line, convertChineseText);
-    }
-    return line.trim();
-  });
+  const text = createMemo(() => convertLineText(props.line.text).trim());
+
+  const words = createMemo(() =>
+    toAnimatedWords(text(), props.line, props.line.words),
+  );
 
   const [romanization, setRomanization] = createSignal('');
   createEffect(() => {
@@ -101,6 +152,16 @@ export const SyncedLine = (props: SyncedLineProps) => {
     romanize(input).then((result) => {
       setRomanization(canonicalize(result));
     });
+  });
+
+  const romanizedWords = createMemo(() => {
+    const delays = words().map((word) => word.delay);
+    const parts = romanization().split(' ');
+
+    return parts.map((word, index) => ({
+      text: `${word} `,
+      delay: delays[index] ?? index * GENERIC_WORD_DELAY,
+    }));
   });
 
   return (
@@ -135,18 +196,13 @@ export const SyncedLine = (props: SyncedLineProps) => {
             style={{ 'display': 'flex', 'flex-direction': 'column' }}
           >
             <span>
-              <For each={text().split(' ')}>
-                {(word, index) => {
+              <For each={words()}>
+                {(word) => {
                   return (
-                    <span
-                      style={{
-                        'transition-delay': `${index() * 0.05}s`,
-                        'animation-delay': `${index() * 0.05}s`,
-                      }}
-                    >
+                    <span style={wordTimingStyle(word.delay, props.status)}>
                       <yt-formatted-string
                         text={{
-                          runs: [{ text: `${word} ` }],
+                          runs: [{ text: word.text }],
                         }}
                       />
                     </span>
@@ -162,18 +218,13 @@ export const SyncedLine = (props: SyncedLineProps) => {
               }
             >
               <span class="romaji">
-                <For each={romanization().split(' ')}>
-                  {(word, index) => {
+                <For each={romanizedWords()}>
+                  {(word) => {
                     return (
-                      <span
-                        style={{
-                          'transition-delay': `${index() * 0.05}s`,
-                          'animation-delay': `${index() * 0.05}s`,
-                        }}
-                      >
+                      <span style={wordTimingStyle(word.delay, props.status)}>
                         <yt-formatted-string
                           text={{
-                            runs: [{ text: `${word} ` }],
+                            runs: [{ text: word.text }],
                           }}
                         />
                       </span>
