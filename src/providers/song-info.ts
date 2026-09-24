@@ -182,9 +182,16 @@ export type SongInfoCallback = (
 ) => void;
 const callbacks: Set<SongInfoCallback> = new Set();
 
+let currentSongInfo: SongInfo | null = null;
+
 // This function will allow plugins to register callback that will be triggered when data changes
 export const registerCallback = (callback: SongInfoCallback) => {
   callbacks.add(callback);
+};
+
+// This function allows plugins to get the current song info at any time
+export const getCurrentSongInfo = (): SongInfo | null => {
+  return currentSongInfo;
 };
 
 const registerProvider = (win: BrowserWindow) => {
@@ -196,6 +203,7 @@ const registerProvider = (win: BrowserWindow) => {
     const tempSongInfo = await dataMutex.runExclusive<SongInfo | null>(
       async () => {
         songInfo = await handleData(data, win);
+        currentSongInfo = songInfo;
         return songInfo;
       },
     );
@@ -222,6 +230,7 @@ const registerProvider = (win: BrowserWindow) => {
 
         songInfo.isPaused = isPaused;
         songInfo.elapsedSeconds = elapsedSeconds;
+        currentSongInfo = songInfo;
 
         return songInfo;
       });
@@ -241,6 +250,7 @@ const registerProvider = (win: BrowserWindow) => {
       }
 
       songInfo.elapsedSeconds = seconds;
+      currentSongInfo = songInfo;
 
       return songInfo;
     });
