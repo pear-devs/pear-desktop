@@ -23,3 +23,5 @@ patchedDependencies:
 engineStrict: true
 minimumReleaseAgeExclude:
   - vite@8.1.0
+  # Renovate security update: electron@42.5.1
+  - electron@42.5.1
