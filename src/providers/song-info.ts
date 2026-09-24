@@ -43,6 +43,7 @@ export interface SongInfo {
   playlistId?: string;
   mediaType: MediaType;
   tags?: string[];
+  artistImageSrc?: string | null;
 }
 
 // Grab the native image using the src
@@ -86,6 +87,7 @@ const handleData = async (
     playlistId: '',
     mediaType: MediaType.Audio,
     tags: [],
+    artistImageSrc: '',
   } satisfies SongInfo;
 
   const microformat = data.microformat?.microformatDataRenderer;
@@ -96,6 +98,9 @@ const handleData = async (
       URL.parse(microformat.urlCanonical)?.searchParams?.get('list') ?? '';
     if (microformat.pageOwnerDetails?.externalChannelId) {
       songInfo.artistUrl = `https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/channel/${microformat.pageOwnerDetails.externalChannelId}`;
+      if (artistImageCache.has(songInfo.artistUrl)) {
+        songInfo.artistImageSrc = artistImageCache.get(songInfo.artistUrl);
+      }
     }
     // Used for options.resumeOnStart
     config.set('url', microformat.urlCanonical);
@@ -169,10 +174,70 @@ const handleData = async (
   return songInfo;
 };
 
+const artistImageCache = new Map<string, string>();
+
+export const fetchArtistImage = async (artistUrl: string): Promise<string | null> => {
+  if (artistImageCache.has(artistUrl)) {
+    return artistImageCache.get(artistUrl) ?? null;
+  }
+
+  try {
+    const response = await net.fetch(artistUrl);
+    if (!response.ok) return null;
+
+    if (response.body && typeof response.body.getReader === 'function') {
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let htmlBuffer = '';
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          htmlBuffer += decoder.decode(value, { stream: true });
+          const match = htmlBuffer.match(/<meta property="og:image" content="([^"]+)"/);
+          if (match && match[1]) {
+            const imgSrc = match[1];
+            artistImageCache.set(artistUrl, imgSrc);
+            reader.cancel();
+            return imgSrc;
+          }
+          if (htmlBuffer.includes('</head>')) {
+            reader.cancel();
+            break;
+          }
+        }
+      } catch (err) {
+        // stream error
+      }
+
+      // Check if we accumulated the tag but finished or broke before matching
+      const match = htmlBuffer.match(/<meta property="og:image" content="([^"]+)"/);
+      if (match && match[1]) {
+        const imgSrc = match[1];
+        artistImageCache.set(artistUrl, imgSrc);
+        return imgSrc;
+      }
+    } else {
+      const html = await response.text();
+      const match = html.match(/<meta property="og:image" content="([^"]+)"/);
+      if (match && match[1]) {
+        const imgSrc = match[1];
+        artistImageCache.set(artistUrl, imgSrc);
+        return imgSrc;
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching artist image:', error);
+  }
+  return null;
+};
+
 export enum SongInfoEvent {
   VideoSrcChanged = 'peard:video-src-changed',
   PlayOrPaused = 'peard:play-or-paused',
   TimeChanged = 'peard:time-changed',
+  ArtistImageLoaded = 'peard:artist-image-loaded',
 }
 
 // This variable will be filled with the callbacks once they register
@@ -203,6 +268,26 @@ const registerProvider = (win: BrowserWindow) => {
     if (tempSongInfo) {
       for (const c of callbacks) {
         c(tempSongInfo, SongInfoEvent.VideoSrcChanged);
+      }
+
+      if (tempSongInfo.artistUrl && !tempSongInfo.artistImageSrc) {
+        fetchArtistImage(tempSongInfo.artistUrl).then(async (imgSrc) => {
+          if (imgSrc) {
+            const updatedSongInfo = await dataMutex.runExclusive<SongInfo | null>(() => {
+              if (songInfo && songInfo.videoId === tempSongInfo.videoId) {
+                songInfo.artistImageSrc = imgSrc;
+                return songInfo;
+              }
+              return null;
+            });
+            if (updatedSongInfo) {
+              win.webContents.send('peard:update-song-info', updatedSongInfo);
+              for (const c of callbacks) {
+                c(updatedSongInfo, SongInfoEvent.ArtistImageLoaded);
+              }
+            }
+          }
+        }).catch(err => console.error('Failed to fetch artist image:', err));
       }
     }
   });
