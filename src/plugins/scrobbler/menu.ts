@@ -1,5 +1,7 @@
 import prompt from 'custom-electron-prompt';
-import { type BrowserWindow } from 'electron';
+import { app, dialog, type BrowserWindow } from 'electron';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
@@ -72,16 +74,45 @@ async function promptListenbrainzOptions(
     window,
   );
 
-  if (output) {
+  if (output !== null) {
     options.scrobblers.listenbrainz.token = output;
     setConfig(options);
   }
+}
+
+async function promptMusicBrainzEmail(
+  options: ScrobblerPluginConfig,
+  setConfig: SetConfType,
+  window: BrowserWindow,
+): Promise<string | null> {
+  const output = await prompt(
+    {
+      title: t('plugins.scrobbler.prompt.musicbrainz-email.title'),
+      label: t('plugins.scrobbler.prompt.musicbrainz-email.label'),
+      type: 'input',
+      value: options.musicBrainzEmail,
+      ...promptOptions(),
+    },
+    window,
+  );
+
+  if (output === null) return null;
+
+  const email = output.trim();
+  if (email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return null;
+  }
+
+  options.musicBrainzEmail = email;
+  await setConfig({ musicBrainzEmail: email });
+  return email;
 }
 
 export const onMenu = async ({
   window,
   getConfig,
   setConfig,
+  refresh,
 }: MenuContext<ScrobblerPluginConfig>): Promise<MenuTemplate> => {
   const config = await getConfig();
 
@@ -111,6 +142,160 @@ export const onMenu = async ({
       click(item) {
         config.alternativeArtist = item.checked;
         setConfig(config);
+      },
+    },
+    {
+      label: t('plugins.scrobbler.menu.use-musicbrainz'),
+      type: 'checkbox',
+      checked: Boolean(config.useMusicBrainz),
+      async click(item) {
+        const enabled = item.checked;
+        if (enabled && !config.musicBrainzEmail) {
+          const email = await promptMusicBrainzEmail(config, setConfig, window);
+          if (!email) {
+            config.useMusicBrainz = false;
+            item.checked = false;
+            await setConfig({ useMusicBrainz: false });
+            await refresh();
+            return;
+          }
+        }
+        config.useMusicBrainz = enabled;
+        item.checked = enabled;
+        await setConfig({ useMusicBrainz: enabled });
+        await refresh();
+      },
+    },
+    {
+      label: t('plugins.scrobbler.menu.musicbrainz-email'),
+      click() {
+        promptMusicBrainzEmail(config, setConfig, window);
+      },
+    },
+    {
+      label: t('plugins.scrobbler.menu.regex-filters'),
+      async click() {
+        // HACK: custom-electron-prompt does not support <textarea> natively.
+        // Instead of building a complex custom BrowserWindow from scratch with IPC, we use its
+        // customScript option to inject a script that hides the default single-line <input>
+        // and renders a <textarea> over it, syncing the value back to the hidden input.
+        const scriptDirectory = join(app.getPath('userData'), 'scrobbler');
+        let customScriptDirectory: string | undefined;
+        let output: string | null;
+
+        try {
+          mkdirSync(scriptDirectory, { recursive: true, mode: 0o700 });
+          customScriptDirectory = mkdtempSync(
+            join(scriptDirectory, 'prompt-textarea-'),
+          );
+          const customScriptPath = join(customScriptDirectory, 'script.js');
+          writeFileSync(
+            customScriptPath,
+            `
+            module.exports = () => {
+              const input = document.getElementById('data');
+              if (input && input.tagName === 'INPUT') {
+                input.style.display = 'none';
+
+                const textarea = document.createElement('textarea');
+                textarea.value = decodeURIComponent(input.value);
+
+                textarea.style.width = '100%';
+                textarea.style.height = '100%';
+                textarea.style.boxSizing = 'border-box';
+                textarea.style.resize = 'none';
+                textarea.style.marginTop = '10px';
+                textarea.style.padding = '5px';
+                textarea.style.background = '#2c2c2c';
+                textarea.style.color = '#fff';
+                textarea.style.border = '1px solid #444';
+                textarea.style.fontFamily = 'monospace';
+
+                textarea.addEventListener('input', () => {
+                  input.value = encodeURIComponent(textarea.value);
+                });
+
+                input.parentNode.insertBefore(textarea, input);
+
+                const form = document.getElementById('form');
+                if (form) {
+                   form.style.display = 'flex';
+                   form.style.flexDirection = 'column';
+                   form.style.height = 'calc(100vh - 20px)';
+                }
+                const dataContainer = document.getElementById('data-container');
+                if (dataContainer) {
+                   dataContainer.style.flex = '1';
+                   dataContainer.style.display = 'flex';
+                   dataContainer.style.flexDirection = 'column';
+                }
+              }
+            };
+          `,
+            { mode: 0o600 },
+          );
+
+          output = await prompt(
+            {
+              title: t('plugins.scrobbler.menu.regex-filters'),
+              label: t('plugins.scrobbler.prompt.regex-filter-multi.label'),
+              type: 'input',
+              value: encodeURIComponent(
+                (config.customRegexFilters || []).join('\n'),
+              ),
+              resizable: true,
+              height: 400,
+              width: 500,
+              customScript: customScriptPath,
+              ...promptOptions(),
+            },
+            window,
+          );
+        } finally {
+          if (customScriptDirectory) {
+            try {
+              rmSync(customScriptDirectory, { force: true, recursive: true });
+            } catch {}
+          }
+        }
+
+        if (output !== null) {
+          const filters = decodeURIComponent(output)
+            .split('\n')
+            .map((line, index) => ({ value: line.trim(), line: index + 1 }))
+            .filter(({ value }) => Boolean(value));
+          const invalidFilter = filters.find(({ value }) => {
+            try {
+              new RegExp(value, 'i');
+              return false;
+            } catch {
+              return true;
+            }
+          });
+
+          if (invalidFilter) {
+            let errorMessage = '';
+            try {
+              new RegExp(invalidFilter.value, 'i');
+            } catch (error) {
+              errorMessage =
+                error instanceof Error ? error.message : String(error);
+            }
+
+            await dialog.showMessageBox(window, {
+              type: 'error',
+              title: t('plugins.scrobbler.dialog.invalid-regex.title'),
+              message: t('plugins.scrobbler.dialog.invalid-regex.message', {
+                line: invalidFilter.line,
+                error: errorMessage,
+              }),
+            });
+            return;
+          }
+
+          config.customRegexFilters = filters.map(({ value }) => value);
+          setConfig({ customRegexFilters: config.customRegexFilters });
+        }
       },
     },
     {
