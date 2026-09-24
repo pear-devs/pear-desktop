@@ -20,6 +20,7 @@ import { getAllMenuTemplate, loadAllMenuPlugins } from './loader/menu';
 import { restart } from './providers/app-controls';
 import { startingPages } from './providers/extracted-data';
 import promptOptions from './providers/prompt-options';
+import { stripMusicSubdomain } from './providers/share-url';
 
 import packageJson from '../package.json';
 
@@ -172,6 +173,21 @@ export const mainMenuTemplate = async (
           checked: config.get('options.resumeOnStart'),
           click(item: MenuItem) {
             config.setMenuOption('options.resumeOnStart', item.checked);
+          },
+        },
+        {
+          label: t('main.menu.options.submenu.strip-music-from-shared-links'),
+          type: 'checkbox',
+          checked: config.get('options.stripMusicFromSharedLinks'),
+          click(item: MenuItem) {
+            config.setMenuOption(
+              'options.stripMusicFromSharedLinks',
+              item.checked,
+            );
+            win.webContents.send(
+              'peard:strip-music-from-shared-links',
+              item.checked,
+            );
           },
         },
         {
@@ -676,7 +692,11 @@ export const mainMenuTemplate = async (
           label: t('main.menu.navigation.submenu.copy-current-url'),
           click() {
             const currentURL = win.webContents.getURL();
-            clipboard.writeText(currentURL);
+            clipboard.writeText(
+              config.get('options.stripMusicFromSharedLinks')
+                ? stripMusicSubdomain(currentURL)
+                : currentURL,
+            );
           },
         },
         {
