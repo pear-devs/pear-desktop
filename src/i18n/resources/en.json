@@ -593,6 +593,10 @@
       "description": "Makes the volume slider exponential so it's easier to select lower volumes.",
       "name": "Exponential Volume"
     },
+    "fullscreen-auto-hide": {
+      "description": "Automatically hide the player controls and mouse cursor after a few seconds of inactivity while in fullscreen",
+      "name": "Fullscreen Auto-hide"
+    },
     "in-app-menu": {
       "description": "Gives menu-bars a fancy, dark or album-color look",
       "menu": {
