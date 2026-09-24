@@ -4,6 +4,7 @@ import { type BrowserWindow, ipcMain, nativeImage, net } from 'electron';
 import * as config from '@/config';
 
 import type { GetPlayerResponse } from '@/types/get-player-response';
+import type { PlayerState } from '@/types/player-state';
 
 export enum MediaType {
   /**
@@ -35,6 +36,7 @@ export interface SongInfo {
   imageSrc?: string | null;
   image?: Electron.NativeImage | null;
   isPaused?: boolean;
+  playerState?: PlayerState;
   songDuration: number;
   elapsedSeconds?: number;
   url?: string;
@@ -78,6 +80,7 @@ const handleData = async (
     imageSrc: '',
     image: null,
     isPaused: undefined,
+    playerState: undefined,
     songDuration: 0,
     elapsedSeconds: 0,
     url: '',
@@ -107,14 +110,17 @@ const handleData = async (
 
   const { videoDetails } = data;
   if (videoDetails) {
-    songInfo.title = cleanupName(videoDetails.title);
-    songInfo.artist = cleanupName(videoDetails.author);
+    songInfo.title = cleanupTitle(videoDetails.title);
+    songInfo.artist = cleanupArtist(videoDetails.author);
     songInfo.views = Number(videoDetails.viewCount);
     songInfo.songDuration = Number(videoDetails.lengthSeconds);
     songInfo.elapsedSeconds = videoDetails.elapsedSeconds;
     songInfo.isPaused = videoDetails.isPaused;
+    songInfo.playerState = videoDetails.playerState;
     songInfo.videoId = videoDetails.videoId;
-    songInfo.album = videoDetails.album; // Will be undefined if video exist
+    songInfo.album = videoDetails.album
+      ? cleanupAlbum(videoDetails.album)
+      : videoDetails.album; // Will be undefined if video exist
 
     switch (videoDetails?.musicVideoType) {
       case 'MUSIC_VIDEO_TYPE_ATV':
@@ -130,7 +136,7 @@ const handleData = async (
         songInfo.mediaType = MediaType.PodcastEpisode;
         // HACK: Podcast's participant is not the artist
         if (!config.get('options.usePodcastParticipantAsArtist')) {
-          songInfo.artist = cleanupName(
+          songInfo.artist = cleanupArtist(
             data.microformat.microformatDataRenderer.pageOwnerDetails.name,
           );
         }
@@ -144,7 +150,7 @@ const handleData = async (
             ?.at(0)
             ?.params?.find((it) => it.key === 'ipcc')?.value ?? '1') != '0'
         ) {
-          songInfo.artist = cleanupName(
+          songInfo.artist = cleanupArtist(
             data.microformat.microformatDataRenderer.pageOwnerDetails.name,
           );
         }
@@ -213,7 +219,12 @@ const registerProvider = (win: BrowserWindow) => {
       {
         isPaused,
         elapsedSeconds,
-      }: { isPaused: boolean; elapsedSeconds: number },
+        playerState,
+      }: {
+        isPaused: boolean;
+        elapsedSeconds: number;
+        playerState?: PlayerState;
+      },
     ) => {
       const tempSongInfo = await dataMutex.runExclusive<SongInfo | null>(() => {
         if (!songInfo) {
@@ -222,6 +233,7 @@ const registerProvider = (win: BrowserWindow) => {
 
         songInfo.isPaused = isPaused;
         songInfo.elapsedSeconds = elapsedSeconds;
+        songInfo.playerState = playerState;
 
         return songInfo;
       });
@@ -253,12 +265,8 @@ const registerProvider = (win: BrowserWindow) => {
   });
 };
 
-const suffixesToRemove = [
-  // Artist names
-  /\s*(- topic)$/i,
-  /\s*vevo$/i,
-
-  // Video titles
+// Suffixes stripped from song/video titles.
+const titleSuffixes = [
   /\s*[(|[]official(.*?)[)|\]]/i, // (Official Music Video), [Official Visualizer], etc...
   /\s*[(|[]((lyrics?|visualizer|audio)\s*(video)?)[)|\]]/i,
   /\s*[(|[](performance video)[)|\]]/i,
@@ -267,18 +275,38 @@ const suffixesToRemove = [
   /\s*[(|[](HD|HQ)\s*?(?:audio)?[)|\]]$/i,
   /\s*[(|[](live)[)|\]]$/i,
   /\s*[(|[]4K\s*?(?:upgrade)?[)|\]]$/i,
+  /\s*[(|[](\d{4}\s+)?remaster(ed)?(\s+\d{4})?[)|\]]/i,
+  /\s*[(|[](mono|stereo)[)|\]]/i,
 ];
 
-export function cleanupName(name: string): string {
+// Suffixes stripped from artist names.
+const artistSuffixes = [/\s*(- topic)$/i, /\s*vevo$/i];
+
+// Suffixes stripped from album names.
+const albumSuffixes = [/\s*[(|[](\d{4}\s+)?remaster(ed)?(\s+\d{4})?[)|\]]/i];
+
+function applySuffixes(name: string, suffixes: RegExp[]): string {
   if (!name) {
     return name;
   }
 
-  for (const suffix of suffixesToRemove) {
+  for (const suffix of suffixes) {
     name = name.replace(suffix, '');
   }
 
   return name;
+}
+
+export function cleanupTitle(name: string): string {
+  return applySuffixes(name, titleSuffixes);
+}
+
+export function cleanupArtist(name: string): string {
+  return applySuffixes(name, artistSuffixes);
+}
+
+export function cleanupAlbum(name: string): string {
+  return applySuffixes(name, albumSuffixes);
 }
 
 export const setupSongInfo = registerProvider;
