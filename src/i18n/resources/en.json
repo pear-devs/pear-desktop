@@ -884,6 +884,10 @@
           "label": "Romanize lyrics",
           "tooltip": "If the lyrics are in a different language, try to display a latin version."
         },
+        "big-romanization": {
+          "label": "Big romanized lyrics",
+          "tooltip": "Make romanized lyrics bigger, and kanji, hangul, etc. smaller"
+        },
         "show-lyrics-even-if-inexact": {
           "label": "Show lyrics even if inexact",
           "tooltip": "If the song is not found, the plugin tries again with a different search query.\nThe result from the second attempt may not be exact."

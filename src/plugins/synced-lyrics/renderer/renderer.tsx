@@ -124,6 +124,10 @@ runWithOwner(reactiveOwner, () => {
         root.style.setProperty('--lyrics-active-offset', '0');
         break;
     }
+    root.style.setProperty(
+      '--lyrics-romaji-scale',
+      config()?.bigRomanization ? '1' : '0.7',
+    );
   });
 });
 
