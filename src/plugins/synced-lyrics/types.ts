@@ -14,7 +14,16 @@ export type SyncedLyricsPluginConfig = {
     | 'simplifiedToTraditional'
     | 'traditionalToSimplified'
     | 'disabled';
+    //nuevo
+//nuevo
+  translationEnabled: boolean;
+  translationTargetLang: string;
+  translationProvider?: TranslationProvider;
+  googleCloudApiKey?: string;
+  libretranslateApiKey?: string;
 };
+
+export type TranslationProvider = 'google-gtx' | 'google-cloud' | 'libretranslate';
 
 export type LineLyricsStatus = 'previous' | 'current' | 'upcoming';
 

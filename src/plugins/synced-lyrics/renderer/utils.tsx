@@ -14,6 +14,8 @@ import { waitForElement } from '@/utils/wait-for-element';
 
 import { LyricsRenderer, setIsVisible } from './renderer';
 
+import type { TranslationProvider } from '../types';
+
 export const selectors = {
   head: '#tabsContent > .tab-header:nth-of-type(2)',
   body: {
@@ -261,4 +263,138 @@ export const romanize = async (line: string) => {
   if (hasHindi([line])) line = romanizeHindi(line);
 
   return line;
+};
+
+const translationCache = new Map<string, string>();
+
+// Cola simple: máximo 2 peticiones en vuelo a la vez
+let activeRequests = 0;
+const MAX_CONCURRENT = 2;
+const queue: (() => void)[] = [];
+
+const acquireSlot = () =>
+  new Promise<void>((resolve) => {
+    const tryAcquire = () => {
+      if (activeRequests < MAX_CONCURRENT) {
+        activeRequests++;
+        resolve();
+      } else {
+        queue.push(tryAcquire);
+      }
+    };
+    tryAcquire();
+  });
+
+const releaseSlot = () => {
+  activeRequests--;
+  const next = queue.shift();
+  if (next) next();
+};
+
+interface TranslationKeys {
+  googleCloudApiKey?: string;
+  libretranslateApiKey?: string;
+}
+
+const translateGoogleGtx = async (
+  line: string,
+  targetLang: string,
+): Promise<string> => {
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(line)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`google-gtx failed: ${res.status}`);
+
+  const data = (await res.json()) as unknown[];
+  const segments = data[0] as [string, string][];
+  if (!segments?.length) throw new Error('google-gtx: empty response');
+
+  return segments.map((seg) => seg[0]).join('');
+};
+
+const translateGoogleCloud = async (
+  line: string,
+  targetLang: string,
+  apiKey?: string,
+): Promise<string> => {
+  if (!apiKey) throw new Error('google-cloud: missing API key');
+
+  const url = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ q: line, target: targetLang, format: 'text' }),
+  });
+  if (!res.ok) throw new Error(`google-cloud failed: ${res.status}`);
+
+  const data = (await res.json()) as {
+    data?: { translations?: { translatedText?: string }[] };
+  };
+  const translated = data.data?.translations?.[0]?.translatedText;
+  if (!translated) throw new Error('google-cloud: empty response');
+
+  return translated;
+};
+
+const translateLibreTranslate = async (
+  line: string,
+  targetLang: string,
+  apiKey?: string,
+): Promise<string> => {
+  const url = 'https://libretranslate.com/translate';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      q: line,
+      source: 'auto',
+      target: targetLang,
+      format: 'text',
+      ...(apiKey ? { api_key: apiKey } : {}),
+    }),
+  });
+  if (!res.ok) throw new Error(`libretranslate failed: ${res.status}`);
+
+  const data = (await res.json()) as { translatedText?: string };
+  if (!data.translatedText) throw new Error('libretranslate: empty response');
+
+  return data.translatedText;
+};
+
+export const translate = async (
+  line: string,
+  targetLang: string,
+  provider: TranslationProvider = 'google-gtx',
+  keys: TranslationKeys = {},
+): Promise<string> => {
+  if (!line.trim()) return '';
+
+  const cacheKey = `${provider}:${targetLang}:${line}`;
+  const cached = translationCache.get(cacheKey);
+  if (cached !== undefined) return cached;
+
+  await acquireSlot();
+  try {
+    let result: string;
+
+    switch (provider) {
+      case 'google-cloud':
+        result = await translateGoogleCloud(line, targetLang, keys.googleCloudApiKey);
+        break;
+      case 'libretranslate':
+        result = await translateLibreTranslate(line, targetLang, keys.libretranslateApiKey);
+        break;
+      case 'google-gtx':
+      default:
+        result = await translateGoogleGtx(line, targetLang);
+        break;
+    }
+
+    translationCache.set(cacheKey, result);
+    return result;
+  } catch (err) {
+    console.error(`[synced-lyrics] translation failed (${provider}):`, err);
+    return line;
+  } finally {
+    releaseSlot();
+  }
 };
