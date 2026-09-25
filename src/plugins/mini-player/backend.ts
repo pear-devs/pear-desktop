@@ -416,10 +416,11 @@ const restoreMainWindow = () => {
 
 const closeWindow = () => {
   stopProgressTimer();
-  if (miniWindow && !miniWindow.isDestroyed()) {
-    miniWindow.destroy();
-  }
+  const win = miniWindow;
   miniWindow = null;
+  if (win && !win.isDestroyed()) {
+    win.destroy();
+  }
   restoreMainWindow();
 };
 
@@ -427,7 +428,7 @@ const createWindow = async (config: MiniPlayerPluginConfig) => {
   if (!songControls) return;
   showLyricsAreaRef = config.showLyricsArea ?? true;
 
-  miniWindow = new BrowserWindow({
+  const win = new BrowserWindow({
     width: MINI_WIDTH,
     height: miniLyrics ? MINI_HEIGHT_LYRICS : MINI_HEIGHT,
     frame: false,
@@ -447,8 +448,9 @@ const createWindow = async (config: MiniPlayerPluginConfig) => {
       nodeIntegration: false,
     },
   });
+  miniWindow = win;
 
-  miniWindow.removeMenu();
+  win.removeMenu();
 
   const controls = songControls;
   const actions: Record<string, () => void> = {
@@ -530,11 +532,11 @@ const createWindow = async (config: MiniPlayerPluginConfig) => {
     if (url.startsWith('minip://minheight/')) {
       const height = Number(url.slice('minip://minheight/'.length));
       if (Number.isFinite(height) && height > 0 && miniWindow) {
-        const win = miniWindow;
-        const [, currentHeight] = win.getSize();
+        const current = miniWindow;
+        const [, currentHeight] = current.getSize();
         const wasAtMinimum = currentHeight <= lastMinHeight + 1;
         const rounded = Math.round(height);
-        win.setMinimumSize(280, rounded);
+        current.setMinimumSize(280, rounded);
         lastMinHeight = rounded;
         // only snap height when window was sitting at its minimum;
         // user-resized windows keep their height
@@ -545,27 +547,33 @@ const createWindow = async (config: MiniPlayerPluginConfig) => {
     }
   };
 
-  miniWindow.webContents.on('will-navigate', (event, url) => {
+  win.webContents.on('will-navigate', (event, url) => {
     event.preventDefault();
     handleAction(url);
   });
-  miniWindow.webContents.setWindowOpenHandler(({ url }) => {
+  win.webContents.setWindowOpenHandler(({ url }) => {
     handleAction(url);
     return { action: 'deny' };
   });
 
-  miniWindow.on('closed', () => {
+  win.on('closed', () => {
+    if (miniWindow !== win) return;
     miniWindow = null;
     stopProgressTimer();
     restoreMainWindow();
     setConfigRef?.({ visible: false });
   });
 
-  await miniWindow.loadURL(
-    `data:text/html;charset=utf-8,${encodeURIComponent(pageHtml)}`,
-  );
+  try {
+    await win.loadURL(
+      `data:text/html;charset=utf-8,${encodeURIComponent(pageHtml)}`,
+    );
+  } catch {
+    return;
+  }
 
-  miniWindow.show();
+  if (miniWindow !== win || win.isDestroyed()) return;
+  win.show();
   // exclusive windows: mini player visible -> minimize main window
   if (mainWindow && !mainWindow.isMinimized()) {
     mainWindow.minimize();
