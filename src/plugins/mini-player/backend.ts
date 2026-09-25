@@ -329,6 +329,8 @@ let playing = false;
 let showLyricsAreaRef = true;
 let lastMinHeight = 110;
 let progressTimer: ReturnType<typeof setInterval> | null = null;
+let mainWindowMinimizedByMini = false;
+let unregisterSongInfo: (() => void) | null = null;
 
 const getElapsed = () => {
   if (!playing) return lastElapsed;
@@ -404,12 +406,21 @@ const stopProgressTimer = () => {
   }
 };
 
+const restoreMainWindow = () => {
+  if (!mainWindowMinimizedByMini) return;
+  mainWindowMinimizedByMini = false;
+  if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+};
+
 const closeWindow = () => {
   stopProgressTimer();
   if (miniWindow && !miniWindow.isDestroyed()) {
     miniWindow.destroy();
   }
   miniWindow = null;
+  restoreMainWindow();
 };
 
 const createWindow = async (config: MiniPlayerPluginConfig) => {
@@ -510,7 +521,10 @@ const createWindow = async (config: MiniPlayerPluginConfig) => {
       return;
     }
     if (url.startsWith('minip://seek/')) {
-      controls.seekTo(Number(url.slice('minip://seek/'.length)));
+      const seconds = Number(url.slice('minip://seek/'.length));
+      if (Number.isFinite(seconds) && seconds >= 0) {
+        controls.seekTo(seconds);
+      }
       return;
     }
     if (url.startsWith('minip://minheight/')) {
@@ -543,6 +557,7 @@ const createWindow = async (config: MiniPlayerPluginConfig) => {
   miniWindow.on('closed', () => {
     miniWindow = null;
     stopProgressTimer();
+    restoreMainWindow();
     setConfigRef?.({ visible: false });
   });
 
@@ -554,6 +569,7 @@ const createWindow = async (config: MiniPlayerPluginConfig) => {
   // exclusive windows: mini player visible -> minimize main window
   if (mainWindow && !mainWindow.isMinimized()) {
     mainWindow.minimize();
+    mainWindowMinimizedByMini = true;
   }
   progressTimer ??= setInterval(() => {
     if (lastInfo) push({ elapsed: getElapsed() });
@@ -585,7 +601,7 @@ export const backend = createBackend({
       },
     );
 
-    registerCallback((songInfo, event) => {
+    unregisterSongInfo = registerCallback((songInfo, event) => {
       lastInfo = songInfo;
 
       if (event === SongInfoEvent.PlayOrPaused) {
@@ -635,6 +651,8 @@ export const backend = createBackend({
   },
 
   stop() {
+    unregisterSongInfo?.();
+    unregisterSongInfo = null;
     mainWindow?.removeListener('restore', onMainRestored);
     closeWindow();
   },

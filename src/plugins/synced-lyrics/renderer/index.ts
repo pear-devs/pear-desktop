@@ -134,7 +134,8 @@ export const renderer = createRenderer<
     });
   },
 
-  stop() {
+  stop(ctx: RendererContext<SyncedLyricsPluginConfig>) {
+    ctx.ipc.send('synced-lyrics:mini-lyrics', { state: 'none' });
     disposeReactiveRoot();
   },
 });
