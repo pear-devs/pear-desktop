@@ -39,3 +39,8 @@ declare module '*.css?inline' {
 
   export default css;
 }
+declare module '*.tflite?url' {
+  const url: string;
+
+  export default url;
+}
