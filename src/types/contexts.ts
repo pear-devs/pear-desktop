@@ -18,6 +18,7 @@ export interface BackendContext<
     send: WebContents['send'];
     handle: (event: string, listener: CallableFunction) => void;
     on: (event: string, listener: CallableFunction) => void;
+    removeListener: (event: string, listener: CallableFunction) => void;
     removeHandler: IpcMain['removeHandler'];
   };
 

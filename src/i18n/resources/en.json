@@ -614,6 +614,59 @@
         "fetched-lyrics": "Fetched lyrics for Genius"
       }
     },
+    "mini-player": {
+      "description": "Compact always-on-top mini player window with playback controls",
+      "menu": {
+        "visible": {
+          "label": "Show mini player",
+          "tooltip": "Open/close the mini player window"
+        },
+        "always-on-top": {
+          "label": "Always on top",
+          "tooltip": "Keep the mini player window above all other windows"
+        },
+        "hide-meta": {
+          "label": "Hide album art and song info",
+          "tooltip": "Hide the album art, title and artist in the mini player (playback buttons stay)"
+        },
+        "show-lyrics": {
+          "label": "Show lyrics",
+          "tooltip": "Show or hide the lyrics area in the mini player"
+        },
+        "transparent-bg": {
+          "label": "Transparent background",
+          "tooltip": "Make the mini player background invisible so the lyrics float on the desktop"
+        },
+        "lyrics-emphasis": {
+          "label": "Lyrics emphasis",
+          "tooltip": "Choose how much bigger the current line is compared to the other lines",
+          "none": "None",
+          "subtle": "Subtle",
+          "normal": "Normal",
+          "strong": "Strong"
+        },
+        "lyrics-color": {
+          "label": "Lyrics color",
+          "tooltip": "Choose the color of the lyrics text in the mini player",
+          "colors": {
+            "white": "White",
+            "gold": "Gold",
+            "yellow": "Yellow",
+            "cyan": "Cyan",
+            "light-blue": "Light Blue",
+            "green": "Green",
+            "red": "Red",
+            "pink": "Pink"
+          }
+        }
+      },
+      "name": "Mini Player",
+      "templates": {
+        "open": {
+          "title": "Open mini player"
+        }
+      }
+    },
     "music-together": {
       "description": "Share a playlist with others. When the host plays a song, everyone else will hear the same song",
       "dialog": {
