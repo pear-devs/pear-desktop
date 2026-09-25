@@ -569,6 +569,11 @@ const createWindow = async (config: MiniPlayerPluginConfig) => {
       `data:text/html;charset=utf-8,${encodeURIComponent(pageHtml)}`,
     );
   } catch {
+    if (miniWindow === win) {
+      miniWindow = null;
+      win.destroy();
+      setConfigRef?.({ visible: false });
+    }
     return;
   }
 
