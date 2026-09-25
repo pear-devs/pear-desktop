@@ -14,6 +14,13 @@ export interface APIServerConfig {
   useHttps: boolean;
   certPath: string;
   keyPath: string;
+
+  /** Stream real-time audio spectrum data over the API. */
+  spectrumEnabled: boolean;
+  /** Number of log-spaced frequency bands to report. */
+  spectrumBands: number;
+  /** How many spectrum frames per second to emit. */
+  spectrumFps: number;
 }
 
 export const defaultAPIServerConfig: APIServerConfig = {
@@ -27,4 +34,8 @@ export const defaultAPIServerConfig: APIServerConfig = {
   useHttps: false,
   certPath: '',
   keyPath: '',
+
+  spectrumEnabled: true,
+  spectrumBands: 16,
+  spectrumFps: 20,
 };
