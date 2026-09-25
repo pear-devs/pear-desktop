@@ -1,10 +1,12 @@
+import { createEffect, runWithOwner } from 'solid-js';
+
 import { createRenderer } from '@/utils';
 import { waitForElement } from '@/utils/wait-for-element';
 
-import { disposeReactiveRoot } from './reactive-root';
-import { setConfig, setCurrentTime } from './renderer';
-import { fetchLyrics } from './store';
-import { selectors, tabStates } from './utils';
+import { disposeReactiveRoot, reactiveOwner } from './reactive-root';
+import { config, setConfig, setCurrentTime } from './renderer';
+import { currentLyrics, fetchLyrics } from './store';
+import { romanize, selectors, tabStates } from './utils';
 
 import type { SyncedLyricsPluginConfig } from '../types';
 import type { SongInfo } from '@/providers/song-info';
@@ -82,6 +84,53 @@ export const renderer = createRenderer<
 
     ctx.ipc.on('peard:update-song-info', (info: SongInfo) => {
       fetchLyrics(info);
+    });
+
+    // Broadcast enriched lyrics (text + romaji) for the mini-player window.
+    // Guarded by a token so stale async runs are dropped.
+    let broadcastToken = 0;
+    runWithOwner(reactiveOwner, () => {
+      createEffect(() => {
+        const lyrics = currentLyrics();
+        const conf = config();
+        const lines = lyrics?.data?.lines;
+
+        const token = ++broadcastToken;
+        const send = (payload: unknown) => {
+          if (token === broadcastToken) {
+            ctx.ipc.send('synced-lyrics:mini-lyrics', payload);
+          }
+        };
+
+        if (!lines?.length) {
+          if (lyrics?.state === 'fetching') {
+            send({ state: 'loading' });
+          } else if (lyrics) {
+            send({ state: 'none' });
+          }
+          return;
+        }
+
+        const enrich = async () => {
+          const out = [];
+          for (const line of lines) {
+            let romaji: string | undefined;
+
+            if (conf?.romanization) {
+              try {
+                const result = await romanize(line.text);
+                if (result && result !== line.text) romaji = result;
+              } catch {
+                romaji = undefined;
+              }
+            }
+
+            out.push({ timeInMs: line.timeInMs, text: line.text, romaji });
+          }
+          send({ state: 'lines', lines: out });
+        };
+        enrich();
+      });
     });
   },
 
