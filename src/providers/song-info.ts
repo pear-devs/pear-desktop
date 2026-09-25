@@ -37,6 +37,7 @@ export interface SongInfo {
   isPaused?: boolean;
   songDuration: number;
   elapsedSeconds?: number;
+  elapsedMilliseconds?: number;
   url?: string;
   album?: string | null;
   videoId: string;

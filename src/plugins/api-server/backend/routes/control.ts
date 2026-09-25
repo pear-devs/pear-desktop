@@ -736,8 +736,23 @@ export const register = (
       return ctx.body(null);
     }
 
-    const body = { ...info };
+    const body = {
+      elapsedMilliseconds: 0,
+      ...info
+    };
     delete body.image;
+
+    // Prefer live video.currentTime for ms precision
+    const currentTime = (await window.webContents.executeJavaScript(
+      'document.querySelector("video")?.currentTime ?? null',
+    )) as number | null;
+
+    if (typeof currentTime === 'number' && Number.isFinite(currentTime)) {
+      body.elapsedMilliseconds = Math.floor(currentTime * 1000);
+      body.elapsedSeconds = Math.floor(currentTime);
+    } else if (typeof body.elapsedSeconds === 'number') {
+      body.elapsedMilliseconds = Math.floor(body.elapsedSeconds * 1000);
+    }
 
     ctx.status(200);
     return ctx.json(body satisfies ResponseSongInfo);
