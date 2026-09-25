@@ -1,6 +1,7 @@
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 
+import { EqualizerPresets } from './EqualizerPresets';
 import {
   defaultPresets,
   presetConfigs,
@@ -29,6 +30,14 @@ export default createPlugin({
     filters: [],
     presets: { 'bass-booster': false },
   } as EqualizerPluginConfig,
+  settings: [
+    {
+      type: 'custom',
+      key: 'presets',
+      label: () => t('plugins.equalizer.menu.presets.label'),
+      component: 'equalizer.presets',
+    },
+  ],
   menu: async ({
     getConfig,
     setConfig,
@@ -53,6 +62,7 @@ export default createPlugin({
     ];
   },
   renderer: {
+    components: { presets: EqualizerPresets },
     async start({ getConfig }) {
       const config = await getConfig();
 

@@ -43,6 +43,33 @@ export default createPlugin({
     },
     savedVolume: undefined,
   } as PreciseVolumePluginConfig,
+  settings: [
+    {
+      type: 'slider',
+      key: 'steps',
+      label: () => t('plugins.precise-volume.settings.steps'),
+      min: 1,
+      max: 20,
+      unit: '%',
+    },
+    {
+      type: 'switch',
+      key: 'arrowsShortcut',
+      label: () => t('plugins.precise-volume.settings.arrows-shortcut'),
+    },
+    {
+      type: 'text',
+      key: 'globalShortcuts.volumeUp',
+      label: () => t('plugins.precise-volume.settings.shortcut-up'),
+      placeholder: () => 'e.g. Ctrl+Shift+Up',
+    },
+    {
+      type: 'text',
+      key: 'globalShortcuts.volumeDown',
+      label: () => t('plugins.precise-volume.settings.shortcut-down'),
+      placeholder: () => 'e.g. Ctrl+Shift+Down',
+    },
+  ],
   stylesheets: [hudStyle],
   menu: async ({ setConfig, getConfig, window }) => {
     const config = await getConfig();

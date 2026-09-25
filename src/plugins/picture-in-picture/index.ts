@@ -34,6 +34,34 @@ export default createPlugin({
     'useNativePiP': true,
   } as PictureInPicturePluginConfig,
   stylesheets: [style],
+  settings: [
+    {
+      type: 'switch',
+      key: 'alwaysOnTop',
+      label: () => t('plugins.picture-in-picture.menu.always-on-top'),
+    },
+    {
+      type: 'switch',
+      key: 'savePosition',
+      label: () => t('plugins.picture-in-picture.menu.save-window-position'),
+    },
+    {
+      type: 'switch',
+      key: 'saveSize',
+      label: () => t('plugins.picture-in-picture.menu.save-window-size'),
+    },
+    {
+      type: 'switch',
+      key: 'useNativePiP',
+      label: () => t('plugins.picture-in-picture.menu.use-native-pip'),
+    },
+    {
+      type: 'text',
+      key: 'hotkey',
+      label: () => t('plugins.picture-in-picture.menu.hotkey.label'),
+      placeholder: () => 'e.g. P',
+    },
+  ],
   menu: onMenu,
 
   backend: {

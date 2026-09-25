@@ -57,6 +57,11 @@
         "message": "\"{{pluginName}}\" needs to restart",
         "title": "Restart Required"
       },
+      "restart-summary": {
+        "detail": "Restart the app to apply: {{changes}}",
+        "message": "Some changes require a restart",
+        "title": "Restart Required"
+      },
       "unresponsive": {
         "buttons": {
           "quit": "Quit",
@@ -441,6 +446,16 @@
           },
           "title": "Crossfade options"
         }
+      },
+      "settings": {
+        "fade-in": "Fade in",
+        "fade-out": "Fade out",
+        "seconds-before-end": "Start before end",
+        "fade-scaling": "Fade scaling",
+        "scaling": {
+          "linear": "Linear",
+          "logarithmic": "Logarithmic"
+        }
       }
     },
     "custom-output-device": {
@@ -495,6 +510,13 @@
           "label": "Enter inactivity timeout in seconds:",
           "title": "Set inactivity timeout"
         }
+      },
+      "settings": {
+        "auto-reconnect": "Auto-reconnect",
+        "activity-timeout-enabled": "Clear presence when paused",
+        "activity-timeout-time": "Clear after",
+        "hide-github-button": "Hide “View on GitHub” button",
+        "hide-duration-left": "Hide time remaining"
       }
     },
     "do-not-track": {
@@ -749,6 +771,12 @@
           "label": "Choose Volume Increase/Decrease Steps",
           "title": "Volume Steps"
         }
+      },
+      "settings": {
+        "steps": "Volume step",
+        "arrows-shortcut": "Arrow key shortcuts",
+        "shortcut-up": "Global shortcut: volume up",
+        "shortcut-down": "Global shortcut: volume down"
       }
     },
     "quality-changer": {
@@ -833,7 +861,19 @@
     },
     "sponsorblock": {
       "description": "Automatically Skips non-music parts like intro/outro or parts of music videos where the song isn't playing",
-      "name": "SponsorBlock"
+      "name": "SponsorBlock",
+      "settings": {
+        "categories": "Segments to skip",
+        "category": {
+          "sponsor": "Sponsor",
+          "intro": "Intro",
+          "outro": "Outro",
+          "interaction": "Interaction reminder",
+          "selfpromo": "Self-promotion",
+          "music_offtopic": "Non-music section"
+        },
+        "api-url": "API URL"
+      }
     },
     "synced-lyrics": {
       "description": "Provides synced lyrics to songs, using providers like LRClib.",
@@ -920,6 +960,19 @@
         "duration-mismatch": "⚠️ - The lyrics may be out of sync due to a duration mismatch.",
         "inexact": "⚠️ - The lyrics for this song may not be exact",
         "instrumental": "⚠️ - This is an instrumental song"
+      },
+      "settings": {
+        "precise-timing": "Precise timing",
+        "show-inexact": "Show inexact lyrics",
+        "show-time-codes": "Show time codes",
+        "romanization": "Romanize lyrics",
+        "line-effect": "Line effect",
+        "effect": {
+          "fancy": "Fancy",
+          "scale": "Scale",
+          "offset": "Offset",
+          "focus": "Focus"
+        }
       }
     },
     "taskbar-mediacontrol": {
@@ -997,6 +1050,79 @@
         "visualizer-type": "Visualizer Type"
       },
       "name": "Visualizer"
+    }
+  },
+  "settings-ui": {
+    "name": "Settings UI",
+    "description": "Adds an in-app settings panel, opened from the sidebar",
+    "title": "Settings",
+    "subtitle": "Pear Desktop",
+    "search-placeholder": "Search settings",
+    "search-results": "Search results",
+    "search-matching": "Matching “{{query}}”",
+    "no-match": "No settings match “{{query}}”.",
+    "close": "Close",
+    "edit-config": "Edit config.json",
+    "restart-banner": "Some changes need a restart to take effect.",
+    "restart-now": "Restart now",
+    "later": "Later",
+    "restart-pill": "restart",
+    "restart-pill-hint": "Requires restart",
+    "refresh-options": "Refresh options",
+    "about": {
+      "tagline": "A feature-rich desktop app for YouTube Music",
+      "versions": "Versions",
+      "version-app": "App",
+      "version-electron": "Electron",
+      "version-chromium": "Chromium",
+      "version-node": "Node.js",
+      "version-platform": "Platform",
+      "links": "Links",
+      "link-repo": "Repository",
+      "link-issue": "Report an issue",
+      "link-releases": "Releases",
+      "link-license": "License",
+      "actions": "Actions",
+      "check-updates": "Check for updates",
+      "copy-debug": "Copy debug info",
+      "copied": "Copied!"
+    },
+    "sections": {
+      "general": {
+        "label": "General",
+        "sub": "Updates, session and language"
+      },
+      "appearance": {
+        "label": "Appearance",
+        "sub": "Interface and window title"
+      },
+      "window": {
+        "label": "Window & Tray",
+        "sub": "Window behaviour and system tray"
+      },
+      "advanced": {
+        "label": "Advanced",
+        "sub": "Network, performance and developer"
+      },
+      "plugins": {
+        "label": "Plugins",
+        "sub": "Enable plugins and configure them"
+      },
+      "about": {
+        "label": "About",
+        "sub": "Version, Check for updates, App info"
+      }
+    },
+    "groups": {
+      "updates-session": "Updates & session",
+      "startup-language": "Startup & language",
+      "interface": "Interface",
+      "window-title": "Window",
+      "window": "Window",
+      "system": "System",
+      "network": "Network",
+      "performance": "Performance",
+      "configuration": "Configuration"
     }
   }
 }
