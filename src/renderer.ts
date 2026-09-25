@@ -244,6 +244,39 @@ async function onApiLoaded() {
     },
   );
   window.ipcRenderer.on(
+    'peard:add-songs-to-playlist',
+    async (
+      _,
+      responseChannel: string,
+      playlistId: string,
+      videoIds: string[],
+    ) => {
+      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+      if (!app) {
+        window.ipcRenderer.send(responseChannel, 'YouTube Music is not ready');
+        return;
+      }
+
+      try {
+        await app.networkManager.fetch('/browse/edit_playlist', {
+          playlistId,
+          actions: videoIds.map((addedVideoId) => ({
+            action: 'ACTION_ADD_VIDEO',
+            addedVideoId,
+          })),
+        });
+        window.ipcRenderer.send(responseChannel);
+      } catch (error) {
+        window.ipcRenderer.send(
+          responseChannel,
+          error instanceof Error
+            ? error.message
+            : 'Failed to add songs to playlist',
+        );
+      }
+    },
+  );
+  window.ipcRenderer.on(
     'peard:move-in-queue',
     (_, fromIndex: number, toIndex: number) => {
       const queue = document.querySelector<QueueElement>('#queue');
