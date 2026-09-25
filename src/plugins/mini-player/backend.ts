@@ -26,6 +26,8 @@ const pageHtml = `<!DOCTYPE html>
     font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; }
   html { background: transparent; }
   body { background: #0d0d0d; }
+  /* 1% alpha: a fully transparent body loses hit-testing on
+     Windows and clicks would fall through to the desktop */
   body.transparent { background: rgba(13, 13, 13, 0.01); }
   body.transparent :is(.art, .title, .artist, .controls, .progress-wrap,
     .toolbar, .drag-handle) { opacity: 0; transition: opacity 0.2s ease; }
@@ -84,8 +86,6 @@ const pageHtml = `<!DOCTYPE html>
   body.em-none .lyrics .line.active .orig { font-weight: 400; }
   .lyrics .rom { font-size: calc(10px * var(--lyr-scale, 1)); font-style: italic;
     color: #bbb;
-    white-space: normal; word-break: break-word; }
-  .lyrics .trans { font-size: calc(10px * var(--lyr-scale, 1)); color: #888;
     white-space: normal; word-break: break-word; }
   body.hide-meta .art, body.hide-meta .title, body.hide-meta .artist {
     display: none; }
@@ -191,12 +191,6 @@ const pageHtml = `<!DOCTYPE html>
         rom.className = 'rom';
         rom.textContent = line.romaji;
         div.appendChild(rom);
-      }
-      if (line.translation) {
-        const trans = document.createElement('div');
-        trans.className = 'trans';
-        trans.textContent = line.translation;
-        div.appendChild(trans);
       }
       el.appendChild(div);
     }
@@ -331,6 +325,15 @@ let lastMinHeight = 110;
 let progressTimer: ReturnType<typeof setInterval> | null = null;
 let mainWindowMinimizedByMini = false;
 const unregisterSongInfo = new Set<() => void>();
+let runToken = 0;
+let backendIpc: BackendContext<MiniPlayerPluginConfig>['ipc'] | null = null;
+let saveBoundsTimer: ReturnType<typeof setTimeout> | null = null;
+
+const onMiniLyrics = (payload: { state: string; lines?: unknown[] }) => {
+  miniLyrics = payload;
+  push({ lyrics: payload });
+  resizeForLyrics();
+};
 
 const getElapsed = () => {
   if (!playing) return lastElapsed;
@@ -362,10 +365,12 @@ const pushAll = () => {
 
 const resizeForLyrics = () => {
   if (!miniWindow || miniWindow.isDestroyed()) return;
-  const [width] = miniWindow.getSize();
+  const [width, height] = miniWindow.getSize();
   const target =
     miniLyrics && showLyricsAreaRef ? MINI_HEIGHT_LYRICS : MINI_HEIGHT;
-  if (miniWindow.getSize()[1] !== target) {
+  // only snap when sitting at the minimum height; user-resized
+  // windows keep their height
+  if (height <= lastMinHeight + 1 && height !== target) {
     miniWindow.setSize(width, target);
   }
 };
@@ -429,8 +434,11 @@ const createWindow = async (config: MiniPlayerPluginConfig) => {
   showLyricsAreaRef = config.showLyricsArea ?? true;
 
   const win = new BrowserWindow({
-    width: MINI_WIDTH,
-    height: miniLyrics ? MINI_HEIGHT_LYRICS : MINI_HEIGHT,
+    width: config.bounds?.width ?? MINI_WIDTH,
+    height:
+      config.bounds?.height ?? (miniLyrics ? MINI_HEIGHT_LYRICS : MINI_HEIGHT),
+    x: config.bounds?.x,
+    y: config.bounds?.y,
     frame: false,
     resizable: true,
     minWidth: 280,
@@ -452,6 +460,21 @@ const createWindow = async (config: MiniPlayerPluginConfig) => {
 
   win.removeMenu();
 
+  // persist window size/position (debounced) across restarts
+  const saveBounds = () => {
+    if (saveBoundsTimer) clearTimeout(saveBoundsTimer);
+    saveBoundsTimer = setTimeout(() => {
+      saveBoundsTimer = null;
+      if (miniWindow === win && !win.isDestroyed()) {
+        const [x, y] = win.getPosition();
+        const [width, height] = win.getSize();
+        setConfigRef?.({ bounds: { x, y, width, height } });
+      }
+    }, 500);
+  };
+  win.on('resize', saveBounds);
+  win.on('move', saveBounds);
+
   const controls = songControls;
   const actions: Record<string, () => void> = {
     'minip://prev': controls.previous,
@@ -465,6 +488,8 @@ const createWindow = async (config: MiniPlayerPluginConfig) => {
         mainWindow.show();
       }
       mainWindow.focus();
+      // close the mini player via config so both windows never stay open
+      setConfigRef?.({ visible: false });
     },
     'minip://font-inc': () => {
       Promise.resolve(getConfigRef?.() ?? { lyricsScale: 1 }).then((conf) => {
@@ -559,6 +584,10 @@ const createWindow = async (config: MiniPlayerPluginConfig) => {
   win.on('closed', () => {
     if (miniWindow !== win) return;
     miniWindow = null;
+    if (saveBoundsTimer) {
+      clearTimeout(saveBoundsTimer);
+      saveBoundsTimer = null;
+    }
     stopProgressTimer();
     restoreMainWindow();
     setConfigRef?.({ visible: false });
@@ -598,21 +627,16 @@ export const backend = createBackend({
     setConfig,
     ipc,
   }: BackendContext<MiniPlayerPluginConfig>) {
+    const token = ++runToken;
     songControls = getSongControls(window);
     mainWindow = window;
     getConfigRef = getConfig;
     setConfigRef = setConfig;
+    backendIpc = ipc;
 
     window.on('restore', onMainRestored);
 
-    ipc.on(
-      'synced-lyrics:mini-lyrics',
-      (payload: { state: string; lines?: unknown[] }) => {
-        miniLyrics = payload;
-        push({ lyrics: payload });
-        resizeForLyrics();
-      },
-    );
+    ipc.on('synced-lyrics:mini-lyrics', onMiniLyrics);
 
     unregisterSongInfo.add(
       registerCallback((songInfo, event) => {
@@ -627,7 +651,7 @@ export const backend = createBackend({
           playing = !songInfo.isPaused;
           lastElapsed = songInfo.elapsedSeconds ?? 0;
           lastElapsedAt = Date.now();
-          miniLyrics = { state: 'none' };
+          miniLyrics = { state: 'loading' };
           pushAll();
         } else if (event === SongInfoEvent.TimeChanged) {
           lastElapsed = songInfo.elapsedSeconds ?? lastElapsed;
@@ -638,7 +662,8 @@ export const backend = createBackend({
     );
 
     Promise.resolve(getConfig()).then((config) => {
-      if (config.visible) {
+      // ignore a start that raced a stop/disable in between
+      if (token === runToken && config.visible) {
         createWindow(config);
       }
     });
@@ -667,9 +692,19 @@ export const backend = createBackend({
   },
 
   stop() {
+    runToken++;
     for (const unregister of unregisterSongInfo) unregister();
     unregisterSongInfo.clear();
+    backendIpc?.removeListener('synced-lyrics:mini-lyrics', onMiniLyrics);
+    backendIpc = null;
     mainWindow?.removeListener('restore', onMainRestored);
     closeWindow();
+    mainWindow = null;
+    songControls = null;
+    getConfigRef = null;
+    setConfigRef = null;
+    lastInfo = null;
+    miniLyrics = null;
+    lastMinHeight = 110;
   },
 });

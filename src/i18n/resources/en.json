@@ -647,7 +647,17 @@
         },
         "lyrics-color": {
           "label": "Lyrics color",
-          "tooltip": "Choose the color of the lyrics text in the mini player"
+          "tooltip": "Choose the color of the lyrics text in the mini player",
+          "colors": {
+            "white": "White",
+            "gold": "Gold",
+            "yellow": "Yellow",
+            "cyan": "Cyan",
+            "light-blue": "Light Blue",
+            "green": "Green",
+            "red": "Red",
+            "pink": "Pink"
+          }
         }
       },
       "name": "Mini Player",

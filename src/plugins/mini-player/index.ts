@@ -15,6 +15,7 @@ export type MiniPlayerPluginConfig = {
   showLyricsArea: boolean;
   transparentBg: boolean;
   lyricsColor: string;
+  bounds?: { x: number; y: number; width: number; height: number } | null;
 };
 
 export default createPlugin<

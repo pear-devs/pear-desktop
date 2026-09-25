@@ -5,14 +5,14 @@ import type { MenuContext } from '@/types/contexts';
 import type { MenuItemConstructorOptions } from 'electron';
 
 const lyricsColors = [
-  { code: '#ffffff', name: 'White' },
-  { code: '#ffd700', name: 'Gold' },
-  { code: '#ffd54f', name: 'Yellow' },
-  { code: '#4dd0e1', name: 'Cyan' },
-  { code: '#64b5f6', name: 'Light Blue' },
-  { code: '#69f0ae', name: 'Green' },
-  { code: '#ff5252', name: 'Red' },
-  { code: '#f48fb1', name: 'Pink' },
+  { code: '#ffffff', key: 'white' },
+  { code: '#ffd700', key: 'gold' },
+  { code: '#ffd54f', key: 'yellow' },
+  { code: '#4dd0e1', key: 'cyan' },
+  { code: '#64b5f6', key: 'light-blue' },
+  { code: '#69f0ae', key: 'green' },
+  { code: '#ff5252', key: 'red' },
+  { code: '#f48fb1', key: 'pink' },
 ];
 
 export const menu = async (
@@ -100,8 +100,8 @@ export const menu = async (
       label: t('plugins.mini-player.menu.lyrics-color.label'),
       toolTip: t('plugins.mini-player.menu.lyrics-color.tooltip'),
       type: 'submenu',
-      submenu: lyricsColors.map(({ code, name }) => ({
-        label: name,
+      submenu: lyricsColors.map(({ code, key }) => ({
+        label: t(`plugins.mini-player.menu.lyrics-color.colors.${key}`),
         type: 'radio',
         checked: (config.lyricsColor ?? '#ffffff') === code,
         click() {
