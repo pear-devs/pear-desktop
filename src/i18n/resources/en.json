@@ -628,6 +628,42 @@
         "click-to-copy-id": "Copy Host ID",
         "close": "Close Music Together",
         "connected-users": "Connected Users",
+        "diagnostics": {
+          "check": {
+            "nat": "Network type (NAT)",
+            "signaling": "Signaling server",
+            "stun": "Direct connection (STUN)",
+            "turn": "Relay fallback (TURN)"
+          },
+          "copy": "Copy summary",
+          "detail": {
+            "public-ip": "Public address: {{ip}}",
+            "public-ip-hidden": "Public address: click to reveal",
+            "reveal": "Click to reveal your public IP address",
+            "signaling-fail": "Unreachable ({{reason}})",
+            "signaling-ok": "Reachable",
+            "stun-fail": "No public address (UDP/STUN blocked)",
+            "stun-ok": "Public address found",
+            "turn-fail": "Relay unreachable",
+            "turn-ok": "Relay reachable"
+          },
+          "nat": {
+            "blocked": "UDP or STUN blocked",
+            "open": "Open / cone (direct works)",
+            "symmetric": "Symmetric (relay required)",
+            "unknown": "Undetermined"
+          },
+          "run-again": "Run again",
+          "running": "Running checks…",
+          "test": "Test connection",
+          "title": "Connection diagnostics",
+          "verdict": {
+            "blocked": "This network will likely block Music Together. Try another network or a VPN.",
+            "good": "Direct connections should work on this network.",
+            "no-signaling": "Can't reach the Music Together server. Check your firewall or internet connection.",
+            "relay": "Direct connections may fail here; a relay will be used (works, but adds latency)."
+          }
+        },
         "disconnect": "Disconnect Music Together",
         "empty-user": "No connected users",
         "host": "Music Together Host",
@@ -648,6 +684,8 @@
       "toast": {
         "add-song-failed": "Failed to add song",
         "closed": "Music Together closed",
+        "diagnostics-copied": "Diagnostics summary copied to clipboard",
+        "diagnostics-copy-failed": "Failed to copy diagnostics summary",
         "disconnected": "Music Together disconnected",
         "host-failed": "Failed to host Music Together",
         "id-copied": "Host ID copied to clipboard",

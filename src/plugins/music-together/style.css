@@ -140,6 +140,128 @@
   text-align: center;
 }
 
+.music-together-diagnostics {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+
+  box-sizing: border-box;
+  width: 260px;
+  max-width: 100%;
+  padding: 16px;
+}
+.music-together-diagnostics-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.music-together-diagnostics-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.music-together-diagnostics-indicator {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+
+  &.is-pending {
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: rgba(255, 255, 255, 0.8);
+    animation: music-together-spin 0.8s linear infinite;
+  }
+  &.is-pass {
+    background-color: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+  }
+  &.is-pass::after {
+    content: '✓';
+  }
+  &.is-warn {
+    background-color: rgba(241, 196, 15, 0.15);
+    color: #f1c40f;
+  }
+  &.is-warn::after {
+    content: '!';
+  }
+  &.is-fail {
+    background-color: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+  }
+  &.is-fail::after {
+    content: '✕';
+  }
+}
+@keyframes music-together-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.music-together-diagnostics-text {
+  flex: 1;
+  min-width: 0;
+
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+.music-together-diagnostics-label {
+  font-size: 14px;
+  color: #fff;
+  white-space: nowrap;
+}
+.music-together-diagnostics-detail {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  &.is-revealable {
+    cursor: pointer;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+  }
+  &.is-revealable:focus-visible {
+    outline: 1px solid rgba(255, 255, 255, 0.6);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+.music-together-diagnostics-verdict {
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: break-word;
+
+  &.is-running {
+    color: rgba(255, 255, 255, 0.5);
+  }
+  &.is-good {
+    color: #2ecc71;
+  }
+  &.is-relay {
+    color: #f1c40f;
+  }
+  &.is-blocked,
+  &.is-no-signaling {
+    color: #e74c3c;
+  }
+}
+
 .music-together-owner {
   width: 24px;
   height: 24px;
