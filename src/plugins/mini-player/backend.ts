@@ -330,7 +330,7 @@ let showLyricsAreaRef = true;
 let lastMinHeight = 110;
 let progressTimer: ReturnType<typeof setInterval> | null = null;
 let mainWindowMinimizedByMini = false;
-let unregisterSongInfo: (() => void) | null = null;
+const unregisterSongInfo = new Set<() => void>();
 
 const getElapsed = () => {
   if (!playing) return lastElapsed;
@@ -614,25 +614,28 @@ export const backend = createBackend({
       },
     );
 
-    unregisterSongInfo = registerCallback((songInfo, event) => {
-      lastInfo = songInfo;
+    unregisterSongInfo.add(
+      registerCallback((songInfo, event) => {
+        lastInfo = songInfo;
 
-      if (event === SongInfoEvent.PlayOrPaused) {
-        playing = !songInfo.isPaused;
-        lastElapsed = songInfo.elapsedSeconds ?? lastElapsed;
-        lastElapsedAt = Date.now();
-        push({ isPaused: !playing });
-      } else if (event === SongInfoEvent.VideoSrcChanged) {
-        playing = !songInfo.isPaused;
-        lastElapsed = songInfo.elapsedSeconds ?? 0;
-        lastElapsedAt = Date.now();
-        pushAll();
-      } else if (event === SongInfoEvent.TimeChanged) {
-        lastElapsed = songInfo.elapsedSeconds ?? lastElapsed;
-        lastElapsedAt = Date.now();
-        push({ elapsed: lastElapsed });
-      }
-    });
+        if (event === SongInfoEvent.PlayOrPaused) {
+          playing = !songInfo.isPaused;
+          lastElapsed = songInfo.elapsedSeconds ?? lastElapsed;
+          lastElapsedAt = Date.now();
+          push({ isPaused: !playing });
+        } else if (event === SongInfoEvent.VideoSrcChanged) {
+          playing = !songInfo.isPaused;
+          lastElapsed = songInfo.elapsedSeconds ?? 0;
+          lastElapsedAt = Date.now();
+          miniLyrics = { state: 'none' };
+          pushAll();
+        } else if (event === SongInfoEvent.TimeChanged) {
+          lastElapsed = songInfo.elapsedSeconds ?? lastElapsed;
+          lastElapsedAt = Date.now();
+          push({ elapsed: lastElapsed });
+        }
+      }),
+    );
 
     Promise.resolve(getConfig()).then((config) => {
       if (config.visible) {
@@ -664,8 +667,8 @@ export const backend = createBackend({
   },
 
   stop() {
-    unregisterSongInfo?.();
-    unregisterSongInfo = null;
+    for (const unregister of unregisterSongInfo) unregister();
+    unregisterSongInfo.clear();
     mainWindow?.removeListener('restore', onMainRestored);
     closeWindow();
   },
