@@ -18,7 +18,15 @@ export type ShortcutsPluginConfig = {
   local: ShortcutMappingType;
   seekForwardSeconds: number;
   seekBackwardSeconds: number;
+  podcastSeekForwardSeconds: number;
+  podcastSeekBackwardSeconds: number;
 };
+
+export type SeekSecondsKey =
+  | 'seekForwardSeconds'
+  | 'seekBackwardSeconds'
+  | 'podcastSeekForwardSeconds'
+  | 'podcastSeekBackwardSeconds';
 
 export default createPlugin({
   name: () => t('plugins.shortcuts.name'),
@@ -43,6 +51,8 @@ export default createPlugin({
     },
     seekForwardSeconds: 5,
     seekBackwardSeconds: 5,
+    podcastSeekForwardSeconds: 10,
+    podcastSeekBackwardSeconds: 30,
   } as ShortcutsPluginConfig,
   menu: onMenu,
 

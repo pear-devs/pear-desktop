@@ -809,6 +809,8 @@
       "menu": {
         "override-media-keys": "Override Media Keys",
         "set-keybinds": "Set Global Song Controls",
+        "set-podcast-seek-backward-seconds": "Skip backward seconds (podcasts): {{seconds}}",
+        "set-podcast-seek-forward-seconds": "Skip forward seconds (podcasts): {{seconds}}",
         "set-seek-backward-seconds": "Skip backward seconds: {{seconds}}",
         "set-seek-forward-seconds": "Skip forward seconds: {{seconds}}"
       },

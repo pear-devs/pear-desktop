@@ -6,6 +6,7 @@ import {
 } from 'electron-localshortcut';
 
 import { getSongControls } from '@/providers/song-controls';
+import { MediaType, registerCallback } from '@/providers/song-info';
 import { createBackend } from '@/utils';
 
 import { registerMPRIS } from './mpris';
@@ -15,6 +16,7 @@ import type { ShortcutMappingType, ShortcutsPluginConfig } from './index';
 type ShortcutsBackend = {
   window?: BrowserWindow;
   config?: ShortcutsPluginConfig;
+  isPodcast: boolean;
   registeredGlobal: string[];
   registeredLocal: string[];
   register(config: ShortcutsPluginConfig): void;
@@ -22,11 +24,17 @@ type ShortcutsBackend = {
 };
 
 export const backend = createBackend<ShortcutsBackend, ShortcutsPluginConfig>({
+  isPodcast: false,
   registeredGlobal: [],
   registeredLocal: [],
 
   async start({ getConfig, window }) {
     this.window = window;
+
+    // Podcasts get their own skip seconds
+    registerCallback((songInfo) => {
+      this.isPodcast = songInfo.mediaType === MediaType.PodcastEpisode;
+    });
 
     if (is.linux()) {
       registerMPRIS(window);
@@ -54,13 +62,20 @@ export const backend = createBackend<ShortcutsBackend, ShortcutsPluginConfig>({
     const { playPause, next, previous, goForward, goBack } =
       getSongControls(window);
 
-    // Seconds are read at call time so changing them applies immediately
+    // Seconds are read at call time so config and media type changes apply immediately
+    const seekSeconds = (direction: 'Forward' | 'Backward') =>
+      Number(
+        this.isPodcast
+          ? this.config?.[`podcastSeek${direction}Seconds`]
+          : this.config?.[`seek${direction}Seconds`],
+      );
+
     const shortcutActions: Record<keyof ShortcutMappingType, () => void> = {
       previous,
       playPause,
       next,
-      seekForward: () => goForward(Number(this.config?.seekForwardSeconds)),
-      seekBackward: () => goBack(Number(this.config?.seekBackwardSeconds)),
+      seekForward: () => goForward(seekSeconds('Forward')),
+      seekBackward: () => goBack(seekSeconds('Backward')),
     };
 
     const registerGlobal = (accelerator: string, action: () => void) => {

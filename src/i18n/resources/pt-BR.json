@@ -809,6 +809,8 @@
       "menu": {
         "override-media-keys": "Substituir chaves de multimédia",
         "set-keybinds": "Definir controles globais de música",
+        "set-podcast-seek-backward-seconds": "Segundos para voltar (podcasts): {{seconds}}",
+        "set-podcast-seek-forward-seconds": "Segundos para avançar (podcasts): {{seconds}}",
         "set-seek-backward-seconds": "Segundos para voltar: {{seconds}}",
         "set-seek-forward-seconds": "Segundos para avançar: {{seconds}}"
       },

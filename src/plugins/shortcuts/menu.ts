@@ -3,7 +3,7 @@ import prompt, { type KeybindOptions } from 'custom-electron-prompt';
 import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 
-import type { ShortcutsPluginConfig } from './index';
+import type { SeekSecondsKey, ShortcutsPluginConfig } from './index';
 import type { MenuTemplate } from '@/menu';
 import type { MenuContext } from '@/types/contexts';
 import type { BrowserWindow } from 'electron';
@@ -84,7 +84,7 @@ export const onMenu = async ({
   }
 
   async function promptSeekSeconds(
-    key: 'seekForwardSeconds' | 'seekBackwardSeconds',
+    key: SeekSecondsKey,
     title: string,
     label: string,
     win: BrowserWindow,
@@ -111,35 +111,48 @@ export const onMenu = async ({
     }
   }
 
+  const seekSecondsItem = (
+    key: SeekSecondsKey,
+    menuKey: string,
+    promptKey: string,
+  ): MenuTemplate => [
+    {
+      label: t(`plugins.shortcuts.menu.${menuKey}`, { seconds: config[key] }),
+      click: () =>
+        promptSeekSeconds(
+          key,
+          t(`plugins.shortcuts.prompt.${promptKey}.title`),
+          t(`plugins.shortcuts.prompt.${promptKey}.label`),
+          window,
+        ),
+    },
+  ];
+
   return [
     {
       label: t('plugins.shortcuts.menu.set-keybinds'),
       click: () => promptKeybind(config, window),
     },
-    {
-      label: t('plugins.shortcuts.menu.set-seek-forward-seconds', {
-        seconds: config.seekForwardSeconds,
-      }),
-      click: () =>
-        promptSeekSeconds(
-          'seekForwardSeconds',
-          t('plugins.shortcuts.prompt.seek-forward-seconds.title'),
-          t('plugins.shortcuts.prompt.seek-forward-seconds.label'),
-          window,
-        ),
-    },
-    {
-      label: t('plugins.shortcuts.menu.set-seek-backward-seconds', {
-        seconds: config.seekBackwardSeconds,
-      }),
-      click: () =>
-        promptSeekSeconds(
-          'seekBackwardSeconds',
-          t('plugins.shortcuts.prompt.seek-backward-seconds.title'),
-          t('plugins.shortcuts.prompt.seek-backward-seconds.label'),
-          window,
-        ),
-    },
+    ...seekSecondsItem(
+      'seekForwardSeconds',
+      'set-seek-forward-seconds',
+      'seek-forward-seconds',
+    ),
+    ...seekSecondsItem(
+      'seekBackwardSeconds',
+      'set-seek-backward-seconds',
+      'seek-backward-seconds',
+    ),
+    ...seekSecondsItem(
+      'podcastSeekForwardSeconds',
+      'set-podcast-seek-forward-seconds',
+      'seek-forward-seconds',
+    ),
+    ...seekSecondsItem(
+      'podcastSeekBackwardSeconds',
+      'set-podcast-seek-backward-seconds',
+      'seek-backward-seconds',
+    ),
     {
       label: t('plugins.shortcuts.menu.override-media-keys'),
       type: 'checkbox',
