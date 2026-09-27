@@ -36,7 +36,16 @@ export const onMainLoad = async ({
   const config = await getConfig();
 
   const songControls = getSongControls(window);
-  const { playPause, next, previous } = songControls;
+  const { playPause, next, previous, goForward, goBack } = songControls;
+
+  // Seconds are read at call time so changing them doesn't need a restart
+  const shortcutActions: Record<keyof ShortcutMappingType, () => void> = {
+    previous,
+    playPause,
+    next,
+    seekForward: async () => goForward((await getConfig()).seekForwardSeconds),
+    seekBackward: async () => goBack((await getConfig()).seekBackwardSeconds),
+  };
 
   if (config.overrideMediaKeys) {
     _registerGlobalShortcut(window.webContents, 'MediaPlayPause', playPause);
@@ -73,7 +82,7 @@ export const onMainLoad = async ({
         ':',
         action,
       );
-      const actionCallback: () => void = songControls[action];
+      const actionCallback: () => void = shortcutActions[action];
       if (typeof actionCallback !== 'function') {
         console.warn('Invalid action', action);
         continue;

@@ -808,7 +808,9 @@
       "description": "Permite definir teclas de atalho globais para reprodução (reproduzir/pausar/próximo/anterior) e desativar o OSD de mídia substituindo as teclas de mídia, ativando Ctrl/CMD + F para pesquisar, ativando o suporte Linux MPRIS para teclas de mídia e teclas de atalho personalizadas para usuários avançados",
       "menu": {
         "override-media-keys": "Substituir chaves de multimédia",
-        "set-keybinds": "Definir controles globais de música"
+        "set-keybinds": "Definir controles globais de música",
+        "set-seek-backward-seconds": "Segundos para voltar: {{seconds}}",
+        "set-seek-forward-seconds": "Segundos para avançar: {{seconds}}"
       },
       "name": "Atalhos (& MPRIS)",
       "prompt": {
@@ -816,10 +818,20 @@
           "keybind-options": {
             "next": "Próximo",
             "play-pause": "Reproduzir / Pausar",
-            "previous": "Anterior"
+            "previous": "Anterior",
+            "seek-backward": "Voltar",
+            "seek-forward": "Avançar"
           },
           "label": "Escolha atalhos de teclado globais para controle de músicas:",
           "title": "Atalhos de teclado global"
+        },
+        "seek-backward-seconds": {
+          "label": "Quantos segundos voltar:",
+          "title": "Voltar"
+        },
+        "seek-forward-seconds": {
+          "label": "Quantos segundos avançar:",
+          "title": "Avançar"
         }
       }
     },

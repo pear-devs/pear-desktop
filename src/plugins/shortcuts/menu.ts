@@ -12,6 +12,7 @@ export const onMenu = async ({
   window,
   getConfig,
   setConfig,
+  refresh,
 }: MenuContext<ShortcutsPluginConfig>): Promise<MenuTemplate> => {
   const config = await getConfig();
 
@@ -50,8 +51,18 @@ export const onMenu = async ({
             'next',
             config.global?.next,
           ),
+          kb(
+            t('plugins.shortcuts.prompt.keybind.keybind-options.seek-forward'),
+            'seekForward',
+            config.global?.seekForward,
+          ),
+          kb(
+            t('plugins.shortcuts.prompt.keybind.keybind-options.seek-backward'),
+            'seekBackward',
+            config.global?.seekBackward,
+          ),
         ],
-        height: 270,
+        height: 370,
         ...promptOptions(),
       },
       win,
@@ -70,10 +81,60 @@ export const onMenu = async ({
     // Else -> pressed cancel
   }
 
+  async function promptSeekSeconds(
+    key: 'seekForwardSeconds' | 'seekBackwardSeconds',
+    title: string,
+    label: string,
+    win: BrowserWindow,
+  ) {
+    const output = await prompt(
+      {
+        title,
+        label,
+        value: config[key],
+        type: 'counter',
+        counterOptions: { minimum: 1, maximum: 600, multiFire: true },
+        width: 380,
+        ...promptOptions(),
+      },
+      win,
+    );
+
+    if (output) {
+      config[key] = output;
+      await setConfig({ [key]: output });
+      await refresh();
+    }
+  }
+
   return [
     {
       label: t('plugins.shortcuts.menu.set-keybinds'),
       click: () => promptKeybind(config, window),
+    },
+    {
+      label: t('plugins.shortcuts.menu.set-seek-forward-seconds', {
+        seconds: config.seekForwardSeconds,
+      }),
+      click: () =>
+        promptSeekSeconds(
+          'seekForwardSeconds',
+          t('plugins.shortcuts.prompt.seek-forward-seconds.title'),
+          t('plugins.shortcuts.prompt.seek-forward-seconds.label'),
+          window,
+        ),
+    },
+    {
+      label: t('plugins.shortcuts.menu.set-seek-backward-seconds', {
+        seconds: config.seekBackwardSeconds,
+      }),
+      click: () =>
+        promptSeekSeconds(
+          'seekBackwardSeconds',
+          t('plugins.shortcuts.prompt.seek-backward-seconds.title'),
+          t('plugins.shortcuts.prompt.seek-backward-seconds.label'),
+          window,
+        ),
     },
     {
       label: t('plugins.shortcuts.menu.override-media-keys'),
