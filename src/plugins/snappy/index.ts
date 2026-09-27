@@ -27,7 +27,7 @@ export default createPlugin<
   {
     styleSheet: CSSStyleSheet | null;
     removePrefetch: (() => void) | null;
-    apply(config: SnappyPluginConfig): Promise<void>;
+    apply(config: SnappyPluginConfig): void;
   },
   SnappyPluginConfig
 >({
@@ -67,7 +67,7 @@ export default createPlugin<
     styleSheet: null,
     removePrefetch: null,
 
-    async apply(config) {
+    apply(config) {
       if (config.prefetchOnHover && !this.removePrefetch) {
         this.removePrefetch = installPrefetch();
       } else if (!config.prefetchOnHover && this.removePrefetch) {
@@ -82,19 +82,23 @@ export default createPlugin<
           this.styleSheet,
         ];
       }
-      await this.styleSheet.replace(config.fasterImages ? style : '');
+      // replaceSync, not replace(): a second async replace() issued while
+      // one is still pending is rejected, which could leave the faster fades
+      // applied after they were switched off. The CSS has no @import, so
+      // the synchronous form is enough.
+      this.styleSheet.replaceSync(config.fasterImages ? style : '');
     },
 
     async start({ getConfig }) {
-      await this.apply(await getConfig());
+      this.apply(await getConfig());
     },
-    async onConfigChange(newConfig) {
-      await this.apply(newConfig);
+    onConfigChange(newConfig) {
+      this.apply(newConfig);
     },
-    async stop() {
+    stop() {
       this.removePrefetch?.();
       this.removePrefetch = null;
-      await this.styleSheet?.replace('');
+      this.styleSheet?.replaceSync('');
     },
   },
 });

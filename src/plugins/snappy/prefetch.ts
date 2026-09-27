@@ -51,12 +51,39 @@ type Template = {
   capturedAt: number;
 };
 
-type Entry = { response: Promise<Response>; createdAt: number };
+type Entry = {
+  response: Promise<Response>;
+  createdAt: number;
+  fingerprint: string;
+};
 
 // Only these keys are rebuilt by a prefetch. A real request carrying anything
 // else (filters, form data, ...) asks for something different, so never
 // answer it from a prefetch.
 const PREFETCHABLE_KEYS = new Set(['context', 'browseId', 'params']);
+
+// Headers that legitimately differ between two otherwise identical requests:
+// the signed-in auth header embeds a timestamp.
+const VOLATILE_HEADERS = new Set(['authorization']);
+
+// Everything about a browse request that can change the response, apart
+// from the page itself. A prefetch is only handed out when the real request
+// matches the one it was made with - same account, language, client version,
+// consistency tokens and so on. Tracking fields are dropped: they're
+// analytics only and differ on every navigation (click tracking params,
+// and ad signals that include the history length).
+const fingerprintOf = (url: string, headers: Headers, context: unknown) => {
+  const stable: Record<string, unknown> =
+    context && typeof context === 'object'
+      ? { ...(context as Record<string, unknown>) }
+      : {};
+  delete stable.clickTracking;
+  delete stable.adSignalsInfo;
+  const headerPairs = [...headers]
+    .filter(([name]) => !VOLATILE_HEADERS.has(name))
+    .sort(([a], [b]) => a.localeCompare(b));
+  return JSON.stringify([url, headerPairs, stable]);
+};
 
 const keyOf = (browseId: string, params?: string) =>
   `${browseId}|${params ?? ''}`;
@@ -167,7 +194,32 @@ export const installPrefetch = () => {
       ))();
     // Nobody may ever claim this; don't let a failure surface as unhandled.
     response.catch(() => {});
-    entries.set(key, { response, createdAt: Date.now() });
+    entries.set(key, {
+      response,
+      createdAt: Date.now(),
+      fingerprint: fingerprintOf(current.url, current.headers, current.context),
+    });
+  };
+
+  // Resolves to null if the prefetch hasn't answered before the entry
+  // expires, so a stalled prefetch never holds up navigation for long.
+  const claim = async (entry: Entry) => {
+    const remaining = entry.createdAt + ENTRY_TTL - Date.now();
+    if (remaining <= 0) return null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const response = await Promise.race([
+        entry.response,
+        new Promise<null>((resolve) => {
+          timer = setTimeout(() => resolve(null), remaining);
+        }),
+      ]);
+      return response?.ok ? response : null;
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
   };
 
   const handleBrowse = async (request: Request) => {
@@ -197,13 +249,14 @@ export const installPrefetch = () => {
       // One use per prefetch: a later visit to the same page gets fresh data.
       entries.delete(key);
       const plain = Object.keys(body).every((k) => PREFETCHABLE_KEYS.has(k));
-      if (entry && plain && Date.now() - entry.createdAt <= ENTRY_TTL) {
-        try {
-          const response = await entry.response;
-          if (response.ok) return response;
-        } catch {
-          // Fall through to a normal request.
-        }
+      if (
+        entry &&
+        plain &&
+        entry.fingerprint ===
+          fingerprintOf(request.url, request.headers, body.context)
+      ) {
+        const response = await claim(entry);
+        if (response) return response;
       }
     }
     return originalFetch.call(window, request);
@@ -214,11 +267,20 @@ export const installPrefetch = () => {
     input,
     init,
   ) {
-    if (active && input instanceof Request && init === undefined) {
-      const path = pathOf(input.url);
+    if (active) {
+      const path = pathOf(
+        input instanceof Request ? input.url : input.toString(),
+      );
+      // Invalidate on every call form - fetch(url), fetch(url, init),
+      // fetch(request), fetch(request, init).
       if (MUTATION_PATHS.some((prefix) => path.startsWith(prefix))) {
         entries.clear();
-      } else if (path === BROWSE_PATH && input.method === 'POST') {
+      } else if (
+        path === BROWSE_PATH &&
+        input instanceof Request &&
+        init === undefined &&
+        input.method === 'POST'
+      ) {
         return handleBrowse(input);
       }
     }
