@@ -69,14 +69,16 @@ export const onMenu = async ({
     );
 
     if (output) {
-      const newConfig = { ...config };
+      const global = { ...config.global };
 
       for (const { value, accelerator } of output) {
-        newConfig.global[value as keyof ShortcutsPluginConfig['global']] =
-          accelerator;
+        global[value as keyof ShortcutsPluginConfig['global']] = accelerator;
       }
 
-      setConfig(config);
+      config.global = global;
+      await setConfig({ global });
+      // Rebuild the menu so the prompt shows the new keybinds next time
+      await refresh();
     }
     // Else -> pressed cancel
   }
@@ -100,9 +102,11 @@ export const onMenu = async ({
       win,
     );
 
-    if (output) {
-      config[key] = output;
-      await setConfig({ [key]: output });
+    // The counter prompt returns a string, but seek controls need a number
+    const seconds = Number(output);
+    if (output && Number.isFinite(seconds) && seconds > 0) {
+      config[key] = seconds;
+      await setConfig({ [key]: seconds });
       await refresh();
     }
   }

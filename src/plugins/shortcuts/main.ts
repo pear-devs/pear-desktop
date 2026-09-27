@@ -1,103 +1,127 @@
 import { type BrowserWindow, globalShortcut } from 'electron';
 import is from 'electron-is';
-import { register as registerElectronLocalShortcut } from 'electron-localshortcut';
+import {
+  register as registerElectronLocalShortcut,
+  unregister as unregisterElectronLocalShortcut,
+} from 'electron-localshortcut';
 
 import { getSongControls } from '@/providers/song-controls';
+import { createBackend } from '@/utils';
 
 import { registerMPRIS } from './mpris';
 
 import type { ShortcutMappingType, ShortcutsPluginConfig } from './index';
-import type { BackendContext } from '@/types/contexts';
 
-function _registerGlobalShortcut(
-  webContents: Electron.WebContents,
-  shortcut: string,
-  action: (webContents: Electron.WebContents) => void,
-) {
-  globalShortcut.register(shortcut, () => {
-    action(webContents);
-  });
-}
+type ShortcutsBackend = {
+  window?: BrowserWindow;
+  config?: ShortcutsPluginConfig;
+  registeredGlobal: string[];
+  registeredLocal: string[];
+  register(config: ShortcutsPluginConfig): void;
+  unregister(): void;
+};
 
-function _registerLocalShortcut(
-  win: BrowserWindow,
-  shortcut: string,
-  action: (webContents: Electron.WebContents) => void,
-) {
-  registerElectronLocalShortcut(win, shortcut, () => {
-    action(win.webContents);
-  });
-}
+export const backend = createBackend<ShortcutsBackend, ShortcutsPluginConfig>({
+  registeredGlobal: [],
+  registeredLocal: [],
 
-export const onMainLoad = async ({
-  getConfig,
-  window,
-}: BackendContext<ShortcutsPluginConfig>) => {
-  const config = await getConfig();
+  async start({ getConfig, window }) {
+    this.window = window;
 
-  const songControls = getSongControls(window);
-  const { playPause, next, previous, goForward, goBack } = songControls;
+    if (is.linux()) {
+      registerMPRIS(window);
+    }
 
-  // Seconds are read at call time so changing them doesn't need a restart
-  const shortcutActions: Record<keyof ShortcutMappingType, () => void> = {
-    previous,
-    playPause,
-    next,
-    seekForward: async () => goForward((await getConfig()).seekForwardSeconds),
-    seekBackward: async () => goBack((await getConfig()).seekBackwardSeconds),
-  };
+    this.register(await getConfig());
+  },
 
-  if (config.overrideMediaKeys) {
-    _registerGlobalShortcut(window.webContents, 'MediaPlayPause', playPause);
-    _registerGlobalShortcut(window.webContents, 'MediaNextTrack', next);
-    _registerGlobalShortcut(window.webContents, 'MediaPreviousTrack', previous);
-  }
+  stop() {
+    this.unregister();
+  },
 
-  if (is.linux()) {
-    registerMPRIS(window);
-  }
+  // Re-register so changed keybinds apply without restarting the app
+  onConfigChange(newConfig) {
+    this.unregister();
+    this.register(newConfig);
+  },
 
-  const { global, local } = config;
-  const shortcutOptions = { global, local };
+  register(config) {
+    const window = this.window;
+    if (!window) return;
 
-  for (const optionType in shortcutOptions) {
-    registerAllShortcuts(
-      shortcutOptions[optionType as 'global' | 'local'],
-      optionType,
-    );
-  }
+    this.config = config;
 
-  function registerAllShortcuts(container: ShortcutMappingType, type: string) {
-    for (const _action in container) {
-      // HACK: _action is detected as string, but it's actually a key of ShortcutMappingType
-      const action = _action as keyof ShortcutMappingType;
+    const { playPause, next, previous, goForward, goBack } =
+      getSongControls(window);
 
-      if (!container[action]) {
-        continue; // Action accelerator is empty
+    // Seconds are read at call time so changing them applies immediately
+    const shortcutActions: Record<keyof ShortcutMappingType, () => void> = {
+      previous,
+      playPause,
+      next,
+      seekForward: () => goForward(Number(this.config?.seekForwardSeconds)),
+      seekBackward: () => goBack(Number(this.config?.seekBackwardSeconds)),
+    };
+
+    const registerGlobal = (accelerator: string, action: () => void) => {
+      try {
+        if (globalShortcut.register(accelerator, action)) {
+          this.registeredGlobal.push(accelerator);
+        } else {
+          console.warn('Failed to register global shortcut', accelerator);
+        }
+      } catch (error) {
+        console.warn('Invalid global shortcut', accelerator, error);
       }
+    };
 
-      console.debug(
-        `Registering ${type} shortcut`,
-        container[action],
-        ':',
-        action,
-      );
-      const actionCallback: () => void = shortcutActions[action];
-      if (typeof actionCallback !== 'function') {
-        console.warn('Invalid action', action);
-        continue;
-      }
+    if (config.overrideMediaKeys) {
+      registerGlobal('MediaPlayPause', playPause);
+      registerGlobal('MediaNextTrack', next);
+      registerGlobal('MediaPreviousTrack', previous);
+    }
 
-      if (type === 'global') {
-        _registerGlobalShortcut(
-          window.webContents,
-          container[action],
-          actionCallback,
-        );
-      } else {
-        // Type === "local"
-        _registerLocalShortcut(window, local[action], actionCallback);
+    for (const type of ['global', 'local'] as const) {
+      const container = config[type];
+
+      for (const _action in container) {
+        // HACK: _action is detected as string, but it's actually a key of ShortcutMappingType
+        const action = _action as keyof ShortcutMappingType;
+        const accelerator = container[action];
+
+        if (!accelerator) {
+          continue; // Action accelerator is empty
+        }
+
+        const actionCallback = shortcutActions[action];
+        if (typeof actionCallback !== 'function') {
+          console.warn('Invalid action', action);
+          continue;
+        }
+
+        console.debug(`Registering ${type} shortcut`, accelerator, ':', action);
+
+        if (type === 'global') {
+          registerGlobal(accelerator, actionCallback);
+        } else {
+          registerElectronLocalShortcut(window, accelerator, actionCallback);
+          this.registeredLocal.push(accelerator);
+        }
       }
     }
-  }
-};
+  },
+
+  unregister() {
+    for (const accelerator of this.registeredGlobal) {
+      globalShortcut.unregister(accelerator);
+    }
+    this.registeredGlobal = [];
+
+    if (this.window && !this.window.isDestroyed()) {
+      for (const accelerator of this.registeredLocal) {
+        unregisterElectronLocalShortcut(this.window, accelerator);
+      }
+    }
+    this.registeredLocal = [];
+  },
+});
