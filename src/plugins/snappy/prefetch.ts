@@ -150,6 +150,9 @@ const findEndpoint = (event: Event): BrowseEndpoint | null => {
 export const installPrefetch = () => {
   const originalFetch = window.fetch;
   const entries = new Map<string, Entry>();
+  // Bumped on every mutation, so a browse already waiting on a prefetch
+  // can tell its response predates the change.
+  let invalidation = 0;
   let template: Template | null = null;
   let hoverTimer: ReturnType<typeof setTimeout> | undefined;
   let hoverKey: string | null = null;
@@ -255,8 +258,9 @@ export const installPrefetch = () => {
         entry.fingerprint ===
           fingerprintOf(request.url, request.headers, body.context)
       ) {
+        const version = invalidation;
         const response = await claim(entry);
-        if (response) return response;
+        if (response && version === invalidation) return response;
       }
     }
     return originalFetch.call(window, request);
@@ -275,6 +279,7 @@ export const installPrefetch = () => {
       // fetch(request), fetch(request, init).
       if (MUTATION_PATHS.some((prefix) => path.startsWith(prefix))) {
         entries.clear();
+        invalidation++;
       } else if (
         path === BROWSE_PATH &&
         input instanceof Request &&
