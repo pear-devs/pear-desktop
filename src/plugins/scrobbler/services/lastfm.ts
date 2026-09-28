@@ -324,11 +324,9 @@ const authenticate = async (
   });
 };
 
-/**
- * Opens the Last.fm authorization window without discarding the current
- * session key; the stored session is only replaced after a successful login.
- */
-export const login = async (
+let loginInFlight: Promise<void> | undefined;
+
+const runLogin = async (
   config: ScrobblerPluginConfig,
   setConfig: SetConfType,
   mainWindow: BrowserWindow,
@@ -338,4 +336,20 @@ export const login = async (
   if (authorized) {
     await new LastFmScrobbler(mainWindow).createSession(config, setConfig);
   }
+};
+
+/**
+ * Opens the Last.fm authorization window without discarding the current
+ * session key; the stored session is only replaced after a successful login.
+ * Concurrent invocations share a single in-flight login attempt.
+ */
+export const login = (
+  config: ScrobblerPluginConfig,
+  setConfig: SetConfType,
+  mainWindow: BrowserWindow,
+): Promise<void> => {
+  loginInFlight ??= runLogin(config, setConfig, mainWindow).finally(() => {
+    loginInFlight = undefined;
+  });
+  return loginInFlight;
 };
