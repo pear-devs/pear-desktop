@@ -11,6 +11,20 @@ export const AddSongToQueueSchema = z.object({
     .optional()
     .default('INSERT_AT_END'),
 });
+export const AddPlaylistToQueueSchema = z.object({
+  playlistId: z.string(),
+  videoId: z
+    .string()
+    .optional()
+    .describe(
+      'if given, only this track and the tracks following it in the playlist are added',
+    ),
+  insertPosition: z
+    .enum(['INSERT_AT_END', 'INSERT_AFTER_CURRENT_VIDEO'])
+    .optional()
+    .default('INSERT_AT_END'),
+});
+
 export const MoveSongInQueueSchema = z.object({
   toIndex: z.number(),
 });
