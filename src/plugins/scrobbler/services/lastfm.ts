@@ -322,13 +322,18 @@ const authenticate = async (
   });
 };
 
-/** Drops any stored token/session key so createSession walks the login window flow. */
+/**
+ * Opens the Last.fm authorization window without discarding the current
+ * session key; the stored session is only replaced after a successful login.
+ */
 export const login = async (
   config: ScrobblerPluginConfig,
   setConfig: SetConfType,
   mainWindow: BrowserWindow,
 ) => {
-  config.scrobblers.lastfm.token = undefined;
-  config.scrobblers.lastfm.sessionKey = undefined;
-  await new LastFmScrobbler(mainWindow).createSession(config, setConfig);
+  config.scrobblers.lastfm.token = await createToken(config);
+  const authorized = await authenticate(config, mainWindow);
+  if (authorized) {
+    await new LastFmScrobbler(mainWindow).createSession(config, setConfig);
+  }
 };
