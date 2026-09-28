@@ -53,7 +53,7 @@ export class LastFmScrobbler extends ScrobblerBase {
       token: config.scrobblers.lastfm.token,
     };
     const apiSignature = createApiSig(data, config.scrobblers.lastfm.secret);
-    const response = await net.fetch(
+    const response = await fetchAuthApi(
       `${config.scrobblers.lastfm.apiRoot}${createQueryString(data, apiSignature)}`,
     );
     const json = (await response.json()) as {
@@ -229,6 +229,17 @@ const createApiSig = (parameters: LastFmSongData, secret: string) => {
   return sig;
 };
 
+// apiRoot is user-configurable, and the createToken/createSession requests carry
+// the token or session key, so an http value (or an https->http redirect) would
+// leak it in cleartext (CWE-319): upgrade the scheme and refuse insecure final URLs.
+const fetchAuthApi = async (url: string) => {
+  const response = await net.fetch(url.replace(/^http:\/\//i, 'https://'));
+  if (!response.url.startsWith('https://')) {
+    throw new Error('Last.fm auth request was redirected to an insecure URL');
+  }
+  return response;
+};
+
 const createToken = async ({
   scrobblers: {
     lastfm: { apiKey, apiRoot, secret },
@@ -245,7 +256,7 @@ const createToken = async ({
     format: 'json',
   };
   const apiSigature = createApiSig(data, secret);
-  const response = await net.fetch(
+  const response = await fetchAuthApi(
     `${apiRoot}${createQueryString(data, apiSigature)}`,
   );
   const json = (await response.json()) as Record<string, string>;
@@ -262,6 +273,7 @@ const authenticate = async (
   return new Promise<boolean>((resolve) => {
     if (!authWindowOpened) {
       authWindowOpened = true;
+      latestAuthResult = false;
       const url = `https://www.last.fm/api/auth/?api_key=${config.scrobblers.lastfm.apiKey}&token=${config.scrobblers.lastfm.token}`;
       const browserWindow = new BrowserWindow({
         width: 500,
@@ -303,6 +315,8 @@ const authenticate = async (
         });
         browserWindow.on('closed', () => {
           if (!latestAuthResult) {
+            // closing without approval must still settle loginInFlight
+            resolve(false);
             dialog.showMessageBox({
               title: t('plugins.scrobbler.dialog.lastfm.auth-failed.title'),
               message: t('plugins.scrobbler.dialog.lastfm.auth-failed.message'),
