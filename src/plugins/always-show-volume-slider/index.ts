@@ -20,7 +20,7 @@ export default createPlugin({
         this.styleSheet,
       ];
     },
-    async stop() {
+    stop() {
       if (this.styleSheet) {
         document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
           (it) => it !== this.styleSheet,
