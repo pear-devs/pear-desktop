@@ -321,3 +321,14 @@ const authenticate = async (
     }
   });
 };
+
+/** Drops any stored token/session key so createSession walks the login window flow. */
+export const login = async (
+  config: ScrobblerPluginConfig,
+  setConfig: SetConfType,
+  mainWindow: BrowserWindow,
+) => {
+  config.scrobblers.lastfm.token = undefined;
+  config.scrobblers.lastfm.sessionKey = undefined;
+  await new LastFmScrobbler(mainWindow).createSession(config, setConfig);
+};
