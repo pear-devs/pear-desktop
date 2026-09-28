@@ -21,7 +21,12 @@ export default createPlugin({
       ];
     },
     async stop() {
-      await this.styleSheet?.replace('');
+      if (this.styleSheet) {
+        document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+          (it) => it !== this.styleSheet,
+        );
+        this.styleSheet = null;
+      }
     },
   },
 });
