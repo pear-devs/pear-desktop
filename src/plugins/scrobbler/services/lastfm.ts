@@ -313,11 +313,13 @@ const authenticate = async (
         });
       });
     } else {
-      // wait for the previous window to close
-      while (authWindowOpened) {
-        // wait
-      }
-      resolve(latestAuthResult);
+      // wait for the previous window to close without blocking the main process
+      const timer = setInterval(() => {
+        if (!authWindowOpened) {
+          clearInterval(timer);
+          resolve(latestAuthResult);
+        }
+      }, 100);
     }
   });
 };
