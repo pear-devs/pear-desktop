@@ -154,6 +154,7 @@ export class LastFmScrobbler extends ScrobblerBase {
       .fetch('https://ws.audioscrobbler.com/2.0/', {
         method: 'POST',
         body: formData,
+        redirect: 'error',
       })
       .catch(
         async (error: {
@@ -233,7 +234,11 @@ const createApiSig = (parameters: LastFmSongData, secret: string) => {
 // the token or session key, so an http value (or an https->http redirect) would
 // leak it in cleartext (CWE-319): upgrade the scheme and refuse insecure final URLs.
 const fetchAuthApi = async (url: string) => {
-  const response = await net.fetch(url.replace(/^http:\/\//i, 'https://'));
+  // redirect: "error" makes the request reject instead of resending the
+  // token/session key on a redirect hop, which could cross an http leg
+  const response = await net.fetch(url.replace(/^http:\/\//i, 'https://'), {
+    redirect: 'error',
+  });
   if (!response.url.startsWith('https://')) {
     throw new Error('Last.fm auth request was redirected to an insecure URL');
   }
