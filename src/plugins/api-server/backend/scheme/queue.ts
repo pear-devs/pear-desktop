@@ -15,6 +15,7 @@ export const AddPlaylistToQueueSchema = z.object({
   playlistId: z.string(),
   videoId: z
     .string()
+    .min(1)
     .optional()
     .describe(
       'if given, only this track and the tracks following it in the playlist are added',
