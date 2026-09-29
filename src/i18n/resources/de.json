@@ -497,6 +497,13 @@
         }
       }
     },
+    "do-not-track": {
+      "description": "Blockiert jegliches Tracking",
+      "menu": {
+        "blocker": "Blocker"
+      },
+      "name": "Verhindere Tracking"
+    },
     "downloader": {
       "backend": {
         "dialog": {

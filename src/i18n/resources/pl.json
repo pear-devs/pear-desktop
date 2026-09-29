@@ -3,7 +3,7 @@
     "console": {
       "plugins": {
         "execute-failed": "Błąd uruchamiania wtyczki {{pluginName}}::{{contextName}}",
-        "executed-at-ms": "Wtyczka {{pluginName}}::{{contextName}} uruchomiona w {{ms}}ms",
+        "executed-at-ms": "Wtyczka {{pluginName}}::{{contextName}} uruchomiła się w {{ms}}ms",
         "initialize-failed": "Błąd inicjalizacji wtyczki \"{{pluginName}}\"",
         "load-all": "Wszystkie wtyczki",
         "load-failed": "Błąd w ładowaniu wtyczki \"{{pluginName}}\"",

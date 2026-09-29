@@ -161,7 +161,8 @@
                 "default": "Default",
                 "force-show": "Pilitang ipakita",
                 "hide": "Itago",
-                "label": "Mga Like na button"
+                "label": "Mga Like na button",
+                "swap": "Ipagpalit ang pagkakasunud-sunod ng mga like button"
               },
               "remove-upgrade-button": "Tanggalin ang upgrade na button",
               "theme": {
@@ -230,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Paganahin ang seekbar theming"
       },
       "name": "Tema ng Kulay ng Album"
     },
@@ -312,6 +314,22 @@
         "hostname": {
           "label": "Hostname"
         },
+        "https": {
+          "label": "HTTPS at Mga Certificate",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Pumili ng HTTPS certificate file",
+              "label": "Certificate file (.crt o .pem)"
+            },
+            "enable-https": {
+              "label": "Paganahin ang HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Pumili ng HTTPS private key file",
+              "label": "Private key file (.key o .pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
@@ -384,6 +402,17 @@
         "no-captions": "Walang captions ay available para sa kantang ito"
       }
     },
+    "clock": {
+      "description": "Magdagdag ng orasan sa bar ng nabigasyon",
+      "menu": {
+        "format": {
+          "24-hour-format": "24-Oras na Format",
+          "display-seconds": "Ipakita ang Segundo",
+          "label": "Pormat"
+        }
+      },
+      "name": "Orasan"
+    },
     "compact-sidebar": {
       "description": "Laging i-set ang sidebar sa compact mode",
       "name": "Pinaliit na Sidebar"
@@ -443,9 +472,9 @@
         "set-inactivity-timeout": "I-set ang inactivity timeout",
         "set-status-display-type": {
           "submenu": {
+            "application": "Kumikinig sa {{applicationName}}",
             "artist": "Nakikinig sa {artist}",
-            "title": "Nakikinig sa {song title}",
-            "application": "Kumikinig sa {{applicationName}}"
+            "title": "Nakikinig sa {song title}"
           }
         }
       },
@@ -456,6 +485,13 @@
           "title": "I-set ang inactivity timeout"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Harangan ang lahat ng pagsubaybay (tracking) nang tuluyan",
+      "menu": {
+        "blocker": "Tagaharang"
+      },
+      "name": "Huwag Subaybayan"
     },
     "downloader": {
       "backend": {
@@ -558,6 +594,9 @@
     },
     "lyrics-genius": {
       "description": "Nagdaragdag ng suporta sa lyrics para sa karamihan ng kanta",
+      "menu": {
+        "romanized-lyrics": "Romanized na mga Lyrics"
+      },
       "name": "Lyrics Genius",
       "renderer": {
         "fetched-lyrics": "Kinuha ang lyrics para sa Genius"
@@ -783,6 +822,24 @@
         "not-found": "⚠️ Walang nakitang lyrics para sa kantang ito."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "I-convert ang karakter na Chinese",
+          "submenu": {
+            "disabled": {
+              "label": "Di-napagana",
+              "tooltip": "Huwag paganahin ang conversion ng karakter na Chinese"
+            },
+            "simplified-to-traditional": {
+              "label": "Pinasimple sa Tradisyonal",
+              "tooltip": "I-convert ang Pinasimpleng Chinese patungong Tradisyunal na Chinese"
+            },
+            "traditional-to-simplified": {
+              "label": "Tradisyonal patungong Pinasimple",
+              "tooltip": "I-convert ang Tradisyunal na Chinese sa Pinasimpleng Chinese"
+            }
+          },
+          "tooltip": "I-convert ang karakter na Chinese sa Tradisyonal o Pinasimple"
+        },
         "default-text-string": {
           "label": "Default na character sa pagitan ng lyrics",
           "tooltip": "Pumili ng default na character na gagamitin sa pagitan ng lyrics"
@@ -857,6 +914,7 @@
         "type": {
           "label": "Uri",
           "submenu": {
+            "fullscreen-ui": "Fullscreen na UI",
             "none": "Wala",
             "tabbed": "Naka-tab"
           }

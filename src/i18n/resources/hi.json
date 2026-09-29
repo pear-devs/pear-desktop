@@ -154,7 +154,7 @@
                 "label": "कस्टम विंडो टाइटल",
                 "prompt": {
                   "label": "कस्टम विंडो टाइटल डालें: (डिसएबल करने के लिए खाली छोड़ें)",
-                  "placeholder": "उदाहरण: {{पियर डेस्कटॉप}}"
+                  "placeholder": "उदाहरण: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -282,7 +282,7 @@
       "name": "अम्बिएन्ट मोड्"
     },
     "amuse": {
-      "description": "6K लैब्स द्वारा Amuse now playing विजेट के लिए Music Player म्यूजिक समर्थन जोड़ा गया",
+      "description": "{{applicationName}}6K लैब्स द्वारा Amuse now playing विजेट के लिए Music Player म्यूजिक समर्थन जोड़ा गया",
       "name": "मन बहलाना",
       "response": {
         "query": "अमयूस ए.पि.ऐ. चल रहा है। गाने की जान्कारि होने के लिये GET /query कीजिये।"
@@ -496,6 +496,13 @@
           "title": "निष्क्रियता समय समाप्ति सेट करें"
         }
       }
+    },
+    "do-not-track": {
+      "description": "डिफ़ॉल्ट रूप से सभी ट्रैकिंग को ब्लॉक करें",
+      "menu": {
+        "blocker": "ब्लॉकर"
+      },
+      "name": "मुझे ट्रैक न करें"
     },
     "downloader": {
       "backend": {
@@ -829,11 +836,74 @@
       "name": "SponsorBlock"
     },
     "synced-lyrics": {
-      "description": "LRClib जैसे सोर्सेज के उपयोग से, गानों के लिए सिंक किए गए लिरिक्स देता है।"
+      "description": "LRClib जैसे सोर्सेज के उपयोग से, गानों के लिए सिंक किए गए लिरिक्स देता है।",
+      "errors": {
+        "not-found": "⚠️ इस गाने के लिए कोई गीत नहीं मिले।"
+      },
+      "menu": {
+        "default-text-string": {
+          "label": "गीत पंक्तियों के बीच डिफ़ॉल्ट वर्ण",
+          "tooltip": "लिरिक्स के बीच अंतर दिखाने के लिए डिफ़ॉल्ट वर्ण चुनें"
+        },
+        "line-effect": {
+          "label": "लाइन इफ़ेक्ट",
+          "submenu": {
+            "fancy": {
+              "label": "आकर्षक",
+              "tooltip": "मौजूदा लाइन पर बड़े, ऐप-जैसे इफ़ेक्ट लगाएँ"
+            },
+            "focus": {
+              "tooltip": "केवल वर्तमान लाइन सफेद बनाओ"
+            },
+            "offset": {
+              "label": "ऑफसेट",
+              "tooltip": "सही वर्तमान लाइन पर ऑफसेट"
+            },
+            "scale": {
+              "label": "स्केल"
+            }
+          },
+          "tooltip": "वर्तमान लाइन पर लागू करने के लिए प्रभाव चुनें"
+        },
+        "precise-timing": {
+          "label": "पूरी तरह से सिंक किए गए गीत बनाएं"
+        },
+        "preferred-provider": {
+          "label": "पसंदीदा प्रदाता",
+          "none": {
+            "label": "कोई नहीं",
+            "tooltip": "कोई पसंदीदा प्रदाता नहीं"
+          },
+          "tooltip": "उपयोग करने के लिए डिफ़ॉल्ट प्रदाता चुनें"
+        },
+        "show-time-codes": {
+          "label": "समय कोड दिखाएं",
+          "tooltip": "गीत के बगल में टाइम कोड दिखाएं"
+        }
+      }
+    },
+    "taskbar-mediacontrol": {
+      "name": "कार्यबार मीडिया नियंत्रण"
+    },
+    "transparent-player": {
+      "menu": {
+        "type": {
+          "submenu": {
+            "content": "सामग्री",
+            "none": "कुछ नहीं",
+            "window": "विंडो"
+          }
+        }
+      }
+    },
+    "tuna-obs": {
+      "description": "OBS के प्लगइन Tuna के साथ एकीकरण",
+      "name": "Tuna OBS"
     },
     "video-toggle": {
       "menu": {
         "align": {
+          "label": "संरेखण",
           "submenu": {
             "left": "बाएं",
             "middle": "मध्य",

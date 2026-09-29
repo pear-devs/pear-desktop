@@ -161,7 +161,8 @@
                 "default": "Alapértelmezett",
                 "force-show": "Megjelenítés kényszerítése",
                 "hide": "Elrejtése",
-                "label": "Reakció gombok"
+                "label": "Reakció gombok",
+                "swap": "A reakció gombok sorrendjének megcserélése"
               },
               "remove-upgrade-button": "Előfizetés gombjának eltávolítása",
               "theme": {
@@ -451,8 +452,8 @@
         "set-status-display-type": {
           "label": "Tevékenység szöveg",
           "submenu": {
-            "artist": "Hallgatja: {artist}",
             "application": "Hallgatja: {{applicationName}}",
+            "artist": "Hallgatja: {artist}",
             "title": "Hallgatja: {song title}"
           }
         }

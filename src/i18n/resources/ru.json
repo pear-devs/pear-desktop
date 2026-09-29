@@ -497,6 +497,13 @@
         }
       }
     },
+    "do-not-track": {
+      "description": "Блокировать всё отслеживание по умолчанию",
+      "menu": {
+        "blocker": "Блокировщик"
+      },
+      "name": "Не отслеживать"
+    },
     "downloader": {
       "backend": {
         "dialog": {
@@ -936,9 +943,14 @@
           "label": "Тип",
           "submenu": {
             "acrylic": "Акриловый",
+            "content": "Контент",
+            "fullscreen-ui": "Полноэкранный интерфейс",
             "mica": "Слюдяной",
             "none": "Отключено",
-            "tabbed": "Страничный"
+            "tabbed": "Страничный",
+            "under-page": "Под страницей",
+            "under-window": "Под окном",
+            "window": "Окно"
           }
         }
       },
