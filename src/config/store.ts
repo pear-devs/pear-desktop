@@ -1,12 +1,13 @@
-import fs from 'node:fs';
-import path from 'node:path';
-
-import { app } from 'electron';
+import { app, dialog } from 'electron';
 
 import { blockers } from '@/plugins/do-not-track/types';
 import { DefaultPresetList, type Preset } from '@/plugins/downloader/types';
 
 import { defaultConfig as defaults } from './defaults';
+import {
+  configureWindowsPortablePaths,
+  getWindowsPortableDir,
+} from './portable';
 
 import type { TrackerBlockerConfig } from '@/plugins/do-not-track';
 import type { SyncedLyricsPluginConfig } from '@/plugins/synced-lyrics/types';
@@ -277,55 +278,24 @@ const migrations = {
   },
 };
 
-if (process.env.PORTABLE_EXECUTABLE_DIR) {
+const portableDir = getWindowsPortableDir(
+  process.platform,
+  process.type,
+  process.env.PORTABLE_EXECUTABLE_DIR,
+);
+if (portableDir) {
   try {
-    const portableDir = path.resolve(process.env.PORTABLE_EXECUTABLE_DIR);
-    const userDataPath = path.resolve(portableDir, 'user-data');
-
-    // Prevent path traversal (CWE-22) by ensuring userDataPath resolves inside portableDir
-    if (path.relative(portableDir, userDataPath).startsWith('..')) {
-      throw new Error('Path traversal detected');
-    }
-
-    // README: Test writability of the portable folder before overriding paths.
-    // If mkdirSync succeeds but write test fails (e.g. read-only disk/AV lock),
-    // it may leave an empty 'user-data' folder next to the exe. This is harmless.
-    if (!fs.existsSync(userDataPath)) {
-      fs.mkdirSync(userDataPath, { recursive: true });
-    }
-    const testFile = path.join(userDataPath, '.writable-test');
-    fs.writeFileSync(testFile, '');
-    try {
-      fs.unlinkSync(testFile);
-    } catch (cleanupError) {
-      console.warn('Could not remove writability test file:', cleanupError);
-    }
-
-    // README: Ensure required logs and crash-dumps directories exist before setPath.
-    // In Electron, app.setPath throws an error if the directory does not exist,
-    // which would leave us with a partially-applied path setup.
-    const logsPath = path.join(userDataPath, 'logs');
-    const crashDumpsPath = path.join(userDataPath, 'crash-dumps');
-    if (!fs.existsSync(logsPath)) {
-      fs.mkdirSync(logsPath, { recursive: true });
-    }
-    if (!fs.existsSync(crashDumpsPath)) {
-      fs.mkdirSync(crashDumpsPath, { recursive: true });
-    }
-
-    // README: Apply complete overrides to isolate all data inside the portable user-data folder.
-    // We intentionally collapse appData and userData to the identical folder to keep all
-    // configurations, caches, logs, and session data fully self-contained.
-    app.setPath('appData', userDataPath);
-    app.setPath('userData', userDataPath);
-    app.setPath('sessionData', userDataPath);
-    app.setPath('logs', logsPath);
-    app.setPath('crashDumps', crashDumpsPath);
-  } catch (error) {
-    console.error(
-      'Portable directory is not writable; falling back to default paths:',
-      error,
+    configureWindowsPortablePaths(portableDir, (name, value) =>
+      app.setPath(name, value),
     );
+  } catch (error) {
+    console.error('Could not prepare portable data directory:', error);
+    dialog.showErrorBox(
+      'Portable data unavailable',
+      `Pear Desktop could not prepare its portable data directory at ${portableDir}. Move the executable to a writable folder and try again.\n\n${String(error)}`,
+    );
+    app.exit(1);
+    throw error;
   }
 }
 
