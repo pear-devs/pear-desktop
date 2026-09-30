@@ -16,7 +16,7 @@ export default createPlugin<
 >({
   name: () => t('plugins.synced-lyrics.name'),
   description: () => t('plugins.synced-lyrics.description'),
-  authors: ['Non0reo', 'ArjixWasTaken', 'KimJammer', 'Strvm'],
+  authors: ['Non0reo', 'ArjixWasTaken', 'KimJammer', 'Strvm', 'EditedBy:ImNotGonza'],
   restartNeeded: true,
   addedVersion: '3.5.X',
   config: {
@@ -27,6 +27,8 @@ export default createPlugin<
     defaultTextString: '♪',
     lineEffect: 'fancy',
     romanization: true,
+    translationEnabled: false,
+    translationTargetLang: 'es',
   },
 
   menu,
