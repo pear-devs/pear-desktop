@@ -19,6 +19,74 @@ export const DefaultPresetList: Record<string, Preset> = {
   },
 };
 
+export type DownloadStatus =
+  | 'queued'
+  | 'preparing'
+  | 'downloading'
+  | 'converting'
+  | 'tagging'
+  | 'saving'
+  | 'done'
+  | 'skipped'
+  | 'cancelled'
+  | 'error';
+
+export const FinishedStatuses: DownloadStatus[] = [
+  'done',
+  'skipped',
+  'cancelled',
+  'error',
+];
+
+/** True for the statuses a task cannot leave again */
+export const isFinishedStatus = (status: DownloadStatus) =>
+  FinishedStatuses.includes(status);
+
+export interface DownloadTask {
+  id: string;
+  /** Label shown while the metadata is not resolved yet */
+  title: string;
+  artist?: string;
+  status: DownloadStatus;
+  /** 0..1, or -1 when the progress cannot be determined yet */
+  progress: number;
+  error?: string;
+  /** Set for every item that belongs to a playlist download */
+  playlistTitle?: string;
+  /** 1-based index inside the playlist */
+  playlistIndex?: number;
+  playlistSize?: number;
+  /** True when the task was started by "download on finish" */
+  automatic: boolean;
+  /** Whether the task can still be retried (failed manual downloads) */
+  retryable: boolean;
+  createdAt: number;
+}
+
+export interface DownloadState {
+  tasks: DownloadTask[];
+}
+
+export const DownloaderIPC = {
+  /** main -> renderer: full snapshot of every known task */
+  state: 'downloader:state',
+  /** renderer -> main: playback position used by "download on finish" */
+  playbackProgress: 'downloader:playback-progress',
+  /** renderer -> main: the plugin renderer finished booting */
+  rendererReady: 'downloader:renderer-ready',
+  cancel: 'downloader:cancel',
+  retry: 'downloader:retry',
+  dismiss: 'downloader:dismiss',
+  clearFinished: 'downloader:clear-finished',
+} as const;
+
+export interface PlaybackProgress {
+  videoId: string;
+  elapsed: number;
+  duration: number;
+  paused: boolean;
+}
+
 export interface VideoFormat {
   itag: number;
   container: string;
