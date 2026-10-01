@@ -7,7 +7,6 @@ import MprisPlayer, {
 } from '@jellybrick/mpris-service';
 import { type BrowserWindow, ipcMain } from 'electron';
 
-import * as config from '@/config';
 import { APPLICATION_NAME } from '@/i18n';
 import { getSongControls } from '@/providers/song-controls';
 import {
@@ -308,13 +307,8 @@ export function registerMPRIS(win: BrowserWindow) {
         : Number.parseFloat((newVolumeState.state / 100).toFixed(2));
     });
 
-    player.on('volume', async (newVolume: number) => {
-      if (await config.plugins.isEnabled('precise-volume')) {
-        // With precise volume we can set the volume to the exact value.
-        win.webContents.send('setVolume', ~~(newVolume * 100));
-      } else {
-        setVolume(newVolume * 100);
-      }
+    player.on('volume', (newVolume: number) => {
+      setVolume(newVolume * 100);
     });
 
     registerCallback((songInfo: SongInfo, event) => {
