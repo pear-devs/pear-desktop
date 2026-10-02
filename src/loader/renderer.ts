@@ -116,9 +116,12 @@ export const loadAllRendererPlugins = async () => {
   const pluginConfigs = window.mainConfig.plugins.getPlugins();
 
   for (const [pluginId, pluginDef] of Object.entries(await rendererPlugins())) {
-    const config = deepmerge(pluginDef.config, pluginConfigs[pluginId] ?? {});
+    const config = deepmerge(
+      pluginDef.config ?? { enabled: false },
+      pluginConfigs[pluginId] ?? {},
+    );
 
-    if (config.enabled) {
+    if (pluginDef.essential || config.enabled) {
       await forceLoadRendererPlugin(pluginId);
     } else {
       if (loadedPluginMap[pluginId]) {
