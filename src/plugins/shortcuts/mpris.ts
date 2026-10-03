@@ -18,6 +18,7 @@ import {
 import { LoggerPrefix } from '@/utils';
 
 import type { RepeatMode, VolumeState } from '@/types/datahost-get-state';
+import type { GetPlayerResponse } from '@/types/get-player-response';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';
 
 class YTPlayer extends MprisPlayer {
@@ -102,6 +103,22 @@ export function registerMPRIS(win: BrowserWindow) {
     };
 
     const player = setupMPRIS();
+
+    // SongInfo waits for artwork validation and native image decoding. Publish
+    // the remote artwork URL now so MPRIS clients can fetch it in parallel.
+    ipcMain.on('peard:video-src-changed', (_, data: GetPlayerResponse) => {
+      const video = data.videoDetails;
+      if (!video?.videoId) return;
+
+      const artUrl = video.thumbnail?.thumbnails?.at(-1)?.url;
+      player.metadata = {
+        'mpris:length': secToMicro(Number(video.lengthSeconds)),
+        ...(artUrl ? { 'mpris:artUrl': artUrl } : undefined),
+        'xesam:title': video.title,
+        'xesam:artist': [video.author],
+        'mpris:trackid': player.objectPath(`Track/${correctId(video.videoId)}`),
+      };
+    });
 
     const seekTo = (event: Position) => {
       if (
