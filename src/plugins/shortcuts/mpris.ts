@@ -103,6 +103,7 @@ export function registerMPRIS(win: BrowserWindow) {
     };
 
     const player = setupMPRIS();
+    let pendingArtwork: { videoId: string; url?: string } | null = null;
 
     // SongInfo waits for artwork validation and native image decoding. Publish
     // the remote artwork URL now so MPRIS clients can fetch it in parallel.
@@ -111,6 +112,7 @@ export function registerMPRIS(win: BrowserWindow) {
       if (!video?.videoId) return;
 
       const artUrl = video.thumbnail?.thumbnails?.at(-1)?.url;
+      pendingArtwork = { videoId: video.videoId, url: artUrl };
       player.metadata = {
         'mpris:length': secToMicro(Number(video.lengthSeconds)),
         ...(artUrl ? { 'mpris:artUrl': artUrl } : undefined),
@@ -340,11 +342,21 @@ export function registerMPRIS(win: BrowserWindow) {
         return;
       }
       if (player) {
+        if (
+          event === SongInfoEvent.VideoSrcChanged &&
+          pendingArtwork &&
+          songInfo.videoId !== pendingArtwork.videoId
+        ) {
+          return;
+        }
+
+        const artUrl =
+          pendingArtwork?.videoId === songInfo.videoId
+            ? pendingArtwork.url
+            : songInfo.imageSrc;
         const data: Track = {
           'mpris:length': secToMicro(songInfo.songDuration),
-          ...(songInfo.imageSrc
-            ? { 'mpris:artUrl': songInfo.imageSrc }
-            : undefined),
+          ...(artUrl ? { 'mpris:artUrl': artUrl } : undefined),
           'xesam:title': songInfo.title,
           'xesam:url': songInfo.url,
           'xesam:artist': [songInfo.artist],
