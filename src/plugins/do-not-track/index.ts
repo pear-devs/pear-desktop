@@ -177,7 +177,8 @@ export default createPlugin({
           if (!this.mainWindow) return;
 
           const session = this.mainWindow.webContents.session;
-          if (isBlockerEnabled(session)) {
+          const wasBlockerEnabled = isBlockerEnabled(session);
+          if (wasBlockerEnabled) {
             unloadTrackerBlockerEngine(session);
           }
           if (usesBlockLists(newConfig.blocker, newConfig.customEnabled)) {
@@ -191,6 +192,10 @@ export default createPlugin({
               newConfig.customEnabled,
               newConfig.disabledLocalBlockLists,
             );
+          } else if (wasBlockerEnabled) {
+            // unregisterPreloadScript only affects later navigations. Reload so
+            // Ghostery code in this page cannot invoke removed IPC handlers.
+            this.mainWindow.webContents.reload();
           }
         });
       await this.reloadPromise;

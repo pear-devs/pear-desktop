@@ -184,17 +184,20 @@ export const loadTrackerBlockerEngine = async (
       session.webRequest.onBeforeRequest(
         { urls: ['<all_urls>'] },
         (details, callback) => {
-          const { match, redirect, rewrite } = engine.match(
-            fromElectronDetails(details),
-          );
+          const request = fromElectronDetails(details);
+          const { match, redirect, rewrite } = engine.match(request);
           callback(
-            redirect
-              ? { redirectURL: redirect.dataUrl }
-              : rewrite
+            request.isMainFrame()
+              ? rewrite
                 ? { redirectURL: rewrite.url }
-                : match
-                  ? { cancel: true }
-                  : {},
+                : {}
+              : redirect
+                ? { redirectURL: redirect.dataUrl }
+                : rewrite
+                  ? { redirectURL: rewrite.url }
+                  : match
+                    ? { cancel: true }
+                    : {},
           );
         },
       );
