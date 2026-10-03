@@ -22,6 +22,7 @@ export interface NotificationsPluginConfig {
   refreshOnPlayPause: boolean;
   trayControls: boolean;
   hideButtonText: boolean;
+  notifyOnLikeChange: boolean;
 }
 
 export const defaultConfig: NotificationsPluginConfig = {
@@ -33,6 +34,7 @@ export const defaultConfig: NotificationsPluginConfig = {
   refreshOnPlayPause: false,
   trayControls: true,
   hideButtonText: false,
+  notifyOnLikeChange: false,
 };
 
 export default createPlugin({
