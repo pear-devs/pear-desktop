@@ -123,6 +123,9 @@ jobs:
             pack/*.snap
             pack/*.tar.gz
             pack/*.yml
+            pack/nsis-web/*.exe
+            pack/nsis-web/*.nsis.7z
+            pack/nsis-web/*.yml
             !pack/builder-debug.yml
 
       - name: Test
@@ -195,7 +198,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION_TAG: ${{ needs.prepare.outputs.version_tag }}
         run: |
-          gh release upload "$VERSION_TAG" release-assets/* --clobber
+          find release-assets -type f -print0 | xargs -0 gh release upload "$VERSION_TAG" --clobber
           gh release edit "$VERSION_TAG" --draft=false
 
       - name: Update changelog
