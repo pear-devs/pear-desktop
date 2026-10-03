@@ -145,35 +145,30 @@ export const fetchLyrics = (info: SongInfo) => {
 };
 
 export const retrySearch = (provider: ProviderName, info: SongInfo) => {
-  setLyricsStore('lyrics', (old) => {
-    const pCache = {
-      state: 'fetching',
-      data: null,
-      error: null,
-    };
+  const update = (state: ProviderState) => {
+    const cache = searchCache.get(info.videoId);
+    if (cache) cache.data[provider] = state;
 
-    return {
-      ...old,
-      [provider]: pCache,
-    };
-  });
+    if (getSongInfo().videoId === info.videoId) {
+      setLyricsStore('lyrics', (old) => ({
+        ...old,
+        [provider]: state,
+      }));
+    }
+  };
+
+  update({ state: 'fetching', data: null, error: null });
 
   providers[provider]
     .search(info)
     .then((res) => {
-      setLyricsStore('lyrics', (old) => {
-        return {
-          ...old,
-          [provider]: { state: 'done', data: res, error: null },
-        };
-      });
+      update({ state: 'done', data: res, error: null });
     })
     .catch((error) => {
-      setLyricsStore('lyrics', (old) => {
-        return {
-          ...old,
-          [provider]: { state: 'error', data: null, error },
-        };
+      update({
+        state: 'error',
+        data: null,
+        error: error instanceof Error ? error : new Error(String(error)),
       });
     });
 };

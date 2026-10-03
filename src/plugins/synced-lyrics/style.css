@@ -224,6 +224,7 @@
 div:has(> .lyrics-picker) {
   z-index: 100;
   position: sticky !important;
+  top: 0;
 
   & > .lyrics-picker {
     position: relative;

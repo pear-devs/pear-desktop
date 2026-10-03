@@ -22,7 +22,8 @@ export class LyricsGenius implements LyricProvider {
     }
 
     const data = (await response.json()) as LyricsGeniusSearch;
-    const hits = data.response.sections[0].hits;
+    const hits = data.response?.sections?.[0]?.hits;
+    if (!Array.isArray(hits)) return null;
 
     hits.sort(
       ({
@@ -52,9 +53,9 @@ export class LyricsGenius implements LyricProvider {
 
     const { result: { path } } = closestHit;
 
-    const html = await fetch(`${this.baseUrl}${path}`).then((res) =>
-      res.text(),
-    );
+    const lyricsResponse = await fetch(`${this.baseUrl}${path}`);
+    if (!lyricsResponse.ok) return null;
+    const html = await lyricsResponse.text();
     const doc = this.domParser.parseFromString(html, 'text/html');
 
     const preloadedStateScript = Array.prototype.find.call(
@@ -64,7 +65,7 @@ export class LyricsGenius implements LyricProvider {
       },
     ) as HTMLScriptElement;
 
-    const preloadedState = preloadedStateScript.textContent?.match(
+    const preloadedState = preloadedStateScript?.textContent?.match(
       preloadedStateRegex,
     )?.[1]?.replace(/\\"/g, '"');
 
@@ -79,7 +80,7 @@ export class LyricsGenius implements LyricProvider {
       /lyricsPlaceholderReason.{1,5}unreleased/.test(preloadedState);
     if (!lyricsHtml) {
       if (hasUnreleasedPlaceholder) return null;
-      throw new Error('Failed to extract lyrics from preloaded state.');
+      return null;
     }
 
     const lyricsDoc = this.domParser.parseFromString(lyricsHtml, 'text/html');

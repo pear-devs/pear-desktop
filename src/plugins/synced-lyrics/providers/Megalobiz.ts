@@ -28,23 +28,26 @@ export class Megalobiz implements LyricProvider {
     const response = await fetch(`${this.baseUrl}/search/all?${query}`, {
       signal: AbortSignal.timeout(5_000),
     });
-    if (!response.ok) {
-      throw new Error(`bad HTTPStatus(${response.statusText})`);
-    }
+    if (!response.ok) return null;
 
     const data = await response.text();
     const searchDoc = this.domParser.parseFromString(data, 'text/html');
 
     // prettier-ignore
     const searchResults: MegalobizSearchResult[] = Array.prototype.map
-      .call(searchDoc.querySelectorAll('a.entity_name[href^="/lrc/maker/"][name][title]'),
-        (anchor: HTMLAnchorElement) => {
-          const { minutes, seconds, millis } = anchor
-            .getAttribute('title')!
-            .match(/\[(?<minutes>\d+):(?<seconds>\d+)\.(?<millis>\d+)\]/)!
-            .groups!;
+        .call(searchDoc.querySelectorAll('a.entity_name[href^="/lrc/maker/"][name][title]'),
+          (anchor: HTMLAnchorElement) => {
+          const duration = anchor
+            .getAttribute('title')
+            ?.match(/\[(?<minutes>\d+):(?<seconds>\d+)\.(?<millis>\d+)\]/)
+            ?.groups;
+          const href = anchor.getAttribute('href');
+          const nameAttribute = anchor.getAttribute('name');
+          if (!duration || !href || !nameAttribute) return null;
 
-          let name = anchor.getAttribute('name')!;
+          const { minutes, seconds, millis } = duration;
+
+          let name = nameAttribute;
 
           const artists = [
             removeNoise(name.match(/\(?[Ff]eat\. (.+)\)?/)?.[1] ?? ''),
@@ -62,7 +65,7 @@ export class Megalobiz implements LyricProvider {
           return {
             title: name,
             artists,
-            href: anchor.getAttribute('href')!,
+            href,
             duration:
               (parseInt(minutes) * 60) +
               parseInt(seconds) +
@@ -87,10 +90,14 @@ export class Megalobiz implements LyricProvider {
       return null;
     }
 
-    const html = await fetch(`${this.baseUrl}${closestResult.href}`).then((r) => r.text());
+    const lyricsResponse = await fetch(`${this.baseUrl}${closestResult.href}`, {
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!lyricsResponse.ok) return null;
+    const html = await lyricsResponse.text();
     const lyricsDoc = this.domParser.parseFromString(html, 'text/html');
     const raw = lyricsDoc.querySelector('span[id^="lrc_"][id$="_lyrics"]')?.textContent;
-    if (!raw) throw new Error('Failed to extract lyrics from page.');
+    if (!raw) return null;
 
     const lyrics = LRC.parse(raw);
 
