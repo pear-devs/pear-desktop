@@ -25,6 +25,43 @@ const rendererConfigKeys = new Set([
   'plugins.transparent-player.opacity',
 ]);
 
+const isValidVideoToggleOptions = (
+  options: unknown,
+): options is Record<string, unknown> => {
+  if (
+    options === null ||
+    typeof options !== 'object' ||
+    Object.getPrototypeOf(options) !== Object.prototype
+  )
+    return false;
+
+  return Reflect.ownKeys(options).every((key) => {
+    if (typeof key !== 'string') return false;
+
+    const descriptor = Object.getOwnPropertyDescriptor(options, key);
+    if (!descriptor || !('value' in descriptor)) return false;
+
+    switch (key) {
+      case 'enabled':
+      case 'hideVideo':
+      case 'forceHide':
+        return typeof descriptor.value === 'boolean';
+      case 'mode':
+        return (
+          typeof descriptor.value === 'string' &&
+          ['custom', 'native', 'disabled'].includes(descriptor.value)
+        );
+      case 'align':
+        return (
+          typeof descriptor.value === 'string' &&
+          ['left', 'middle', 'right'].includes(descriptor.value)
+        );
+      default:
+        return false;
+    }
+  });
+};
+
 const rendererConfig = {
   get: (key: string) =>
     rendererConfigKeys.has(key) ? config.get(key as never) : undefined,
@@ -38,7 +75,7 @@ const rendererConfig = {
       ),
     isEnabled: (plugin: string) => config.plugins.isEnabled(plugin),
     setOptions: (plugin: string, options: object) => {
-      if (plugin === 'video-toggle') {
+      if (plugin === 'video-toggle' && isValidVideoToggleOptions(options)) {
         config.plugins.setOptions(plugin, options);
       }
     },
