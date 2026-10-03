@@ -4,6 +4,12 @@ on:
   push:
     branches: [ master ]
   workflow_dispatch:
+    inputs:
+      repair_release:
+        description: Rebuild and upload missing Windows release assets
+        required: false
+        default: false
+        type: boolean
 
 permissions: {}
 
@@ -18,6 +24,7 @@ jobs:
     outputs:
       version_tag: ${{ steps.release.outputs.version_tag }}
       should_publish: ${{ steps.release.outputs.should_publish }}
+      repair_release: ${{ steps.release.outputs.repair_release }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
@@ -27,10 +34,14 @@ jobs:
         name: Check whether release is needed
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPAIR_RELEASE: ${{ inputs.repair_release }}
         run: |
           VERSION_TAG="v$(node -pe "require('./package.json').version")"
           echo "version_tag=$VERSION_TAG" >> "$GITHUB_OUTPUT"
-          if gh release view "$VERSION_TAG" --json isDraft --jq .isDraft 2>/dev/null | grep -qx false; then
+          echo "repair_release=${REPAIR_RELEASE:-false}" >> "$GITHUB_OUTPUT"
+          if [ "$REPAIR_RELEASE" = true ]; then
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          elif gh release view "$VERSION_TAG" --json isDraft --jq .isDraft 2>/dev/null | grep -qx false; then
             echo "should_publish=false" >> "$GITHUB_OUTPUT"
           else
             echo "should_publish=true" >> "$GITHUB_OUTPUT"
@@ -82,12 +93,12 @@ jobs:
 
       # Release builds run only from this repository's master branch.
       - name: Build release assets on Mac
-        if: needs.prepare.outputs.should_publish == 'true' && startsWith(matrix.os, 'macOS')
+        if: needs.prepare.outputs.should_publish == 'true' && needs.prepare.outputs.repair_release != 'true' && startsWith(matrix.os, 'macOS')
         run: |
           pnpm electron-builder --mac -p never
 
       - name: Build release assets on Linux
-        if: needs.prepare.outputs.should_publish == 'true' && startsWith(matrix.os, 'ubuntu')
+        if: needs.prepare.outputs.should_publish == 'true' && needs.prepare.outputs.repair_release != 'true' && startsWith(matrix.os, 'ubuntu')
         run: |
           sudo snap install snapcraft --classic
           sudo apt update
@@ -104,7 +115,7 @@ jobs:
           pnpm electron-builder --win -p never
 
       - name: Upload release assets
-        if: needs.prepare.outputs.should_publish == 'true'
+        if: needs.prepare.outputs.should_publish == 'true' && (needs.prepare.outputs.repair_release != 'true' || startsWith(matrix.os, 'windows'))
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: release-assets-${{ matrix.os }}
@@ -202,10 +213,12 @@ jobs:
           gh release edit "$VERSION_TAG" --draft=false
 
       - name: Update changelog
+        if: needs.prepare.outputs.repair_release != 'true'
         run: |
           pnpm changelog
 
       - name: Commit changelog
+        if: needs.prepare.outputs.repair_release != 'true'
         uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9
         with:
           commit_message: Update changelog for ${{ needs.prepare.outputs.version_tag }}
