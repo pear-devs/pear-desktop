@@ -103,7 +103,16 @@ export const LyricsPicker = (props: {
       return;
     }
 
-    const parseResult = LocalStorageSchema.safeParse(JSON.parse(value));
+    let stored: unknown;
+    try {
+      stored = JSON.parse(value);
+    } catch {
+      localStorage.removeItem(key);
+      setStarredProvider(null);
+      return;
+    }
+
+    const parseResult = LocalStorageSchema.safeParse(stored);
     if (parseResult.success) {
       setLyricsStore('provider', parseResult.data.provider);
       setStarredProvider(parseResult.data.provider);
@@ -112,19 +121,18 @@ export const LyricsPicker = (props: {
     }
   });
 
-  const toggleStar = () => {
+  const toggleStar = (provider: ProviderName) => {
     const id = videoId();
     if (id === null) return;
 
     const key = `ytmd-sl-starred-${id}`;
 
     setStarredProvider((starredProvider) => {
-      if (lyricsStore.provider === starredProvider) {
+      if (provider === starredProvider) {
         localStorage.removeItem(key);
         return null;
       }
 
-      const provider = lyricsStore.provider;
       localStorage.setItem(key, JSON.stringify({ provider }));
 
       return provider;
@@ -143,7 +151,10 @@ export const LyricsPicker = (props: {
 
   // prettier-ignore
   {
-    onMount(() => _ytAPI?.addEventListener('videodatachange', videoDataChangeHandler));
+    onMount(() => {
+      setVideoId(_ytAPI?.getVideoData()?.video_id ?? null);
+      _ytAPI?.addEventListener('videodatachange', videoDataChangeHandler);
+    });
     onCleanup(() => _ytAPI?.removeEventListener('videodatachange', videoDataChangeHandler));
   }
 
@@ -186,6 +197,11 @@ export const LyricsPicker = (props: {
         (idx + providerNames.length - 1) % providerNames.length
       ];
     });
+  };
+
+  const selectProvider = (provider: ProviderName) => {
+    setHasManuallySwitchedProvider(true);
+    setLyricsStore('provider', provider);
   };
 
   return (
@@ -263,7 +279,10 @@ export const LyricsPicker = (props: {
                   class="description ytmusic-description-shelf-renderer"
                   text={{ runs: [{ text: provider() }] }}
                 />
-                <mdui-button-icon onClick={toggleStar} tabindex={-1}>
+                <mdui-button-icon
+                  onClick={() => toggleStar(provider())}
+                  tabindex={-1}
+                >
                   <Show
                     fallback={
                       <LitElementWrapper elementClass={IconStarBorder} />
@@ -283,7 +302,7 @@ export const LyricsPicker = (props: {
             {(_, idx) => (
               <li
                 class="lyrics-picker-dot"
-                onClick={() => setLyricsStore('provider', providerNames[idx()])}
+                onClick={() => selectProvider(providerNames[idx()])}
                 style={{
                   background: idx() === providerIdx() ? 'white' : 'black',
                 }}

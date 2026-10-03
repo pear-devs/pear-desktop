@@ -1,6 +1,7 @@
 import { jaroWinkler } from '@skyra/jaro-winkler';
 
 import { LRC } from '../parsers/lrc';
+import { netFetch } from '../renderer';
 import { config } from '../renderer/renderer';
 
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
@@ -28,16 +29,7 @@ export class LRCLib implements LyricProvider {
     }
 
     let url = `${this.baseUrl}/api/search?${query.toString()}`;
-    let response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error(`bad HTTPStatus(${response.statusText})`);
-    }
-
-    let data = (await response.json()) as LRCLIBSearchResponse;
-    if (!data || !Array.isArray(data)) {
-      throw new Error(`Expected an array, instead got ${typeof data}`);
-    }
+    let data = await fetchSearch(url);
 
     if (data.length === 0) {
       if (!config()?.showLyricsEvenIfInexact) {
@@ -49,30 +41,14 @@ export class LRCLib implements LyricProvider {
       query = new URLSearchParams({ q: `${trackName}` });
       url = `${this.baseUrl}/api/search?${query.toString()}`;
 
-      response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`bad HTTPStatus(${response.statusText})`);
-      }
-
-      data = (await response.json()) as LRCLIBSearchResponse;
-      if (!Array.isArray(data)) {
-        throw new Error(`Expected an array, instead got ${typeof data}`);
-      }
+      data = await fetchSearch(url);
 
       // If still no results, try with the original title as fallback
       if (data.length === 0 && alternativeTitle) {
         query = new URLSearchParams({ q: title });
         url = `${this.baseUrl}/api/search?${query.toString()}`;
 
-        response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`bad HTTPStatus(${response.statusText})`);
-        }
-
-        data = (await response.json()) as LRCLIBSearchResponse;
-        if (!Array.isArray(data)) {
-          throw new Error(`Expected an array, instead got ${typeof data}`);
-        }
+        data = await fetchSearch(url);
       }
     }
 
@@ -173,6 +149,48 @@ export class LRCLib implements LyricProvider {
       lyrics: plain,
     };
   }
+}
+
+const retryableStatus = (status: number) =>
+  status === 408 || status === 425 || status === 429 || status >= 500;
+
+async function fetchSearch(url: string): Promise<LRCLIBSearchResponse> {
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let shouldRetry = true;
+    try {
+      const [status, body] = await netFetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'YouTube Music Desktop/3.12.0 (pear-desktop)',
+        },
+      });
+
+      if (status === 404) return [];
+      if (status < 200 || status >= 300) {
+        lastError = new Error(`LRCLib returned HTTP ${status}`);
+        if (!retryableStatus(status)) shouldRetry = false;
+      } else {
+        const data: unknown = JSON.parse(body);
+        if (!Array.isArray(data)) {
+          throw new Error(`Expected an array, instead got ${typeof data}`);
+        }
+        return data as LRCLIBSearchResponse;
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+    }
+
+    if (!shouldRetry) throw lastError;
+    if (attempt < 2) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, 500 * Math.pow(2, attempt)),
+      );
+    }
+  }
+
+  throw lastError ?? new Error('LRCLib request failed');
 }
 
 type LRCLIBSearchResponse = {

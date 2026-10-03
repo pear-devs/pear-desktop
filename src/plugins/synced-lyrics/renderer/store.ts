@@ -53,7 +53,84 @@ interface SearchCache {
   data: SearchCacheData;
 }
 
-// TODO: Maybe use localStorage for the cache.
+type PersistentCacheEntry = {
+  cachedAt: number;
+  lyrics: Partial<Record<ProviderName, NonNullable<ProviderState['data']>>>;
+};
+
+type PersistentCache = Record<VideoId, PersistentCacheEntry>;
+
+const persistentCacheKey = 'ytmd-sl-cache-v1';
+const persistentCacheLifetime = 30 * 24 * 60 * 60 * 1000;
+const persistentCacheLimit = 50;
+
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+const loadPersistentCache = (): PersistentCache => {
+  try {
+    const stored: unknown = JSON.parse(
+      localStorage.getItem(persistentCacheKey) ?? '{}',
+    );
+    if (!stored || typeof stored !== 'object' || Array.isArray(stored))
+      return {};
+
+    const now = Date.now();
+    return Object.fromEntries(
+      Object.entries(stored).filter(([, entry]) => {
+        const candidate = entry as { cachedAt?: unknown };
+        return (
+          entry &&
+          typeof entry === 'object' &&
+          typeof candidate.cachedAt === 'number' &&
+          now - candidate.cachedAt < persistentCacheLifetime
+        );
+      }),
+    ) as PersistentCache;
+  } catch {
+    localStorage.removeItem(persistentCacheKey);
+    return {};
+  }
+};
+
+let persistentCache = loadPersistentCache();
+
+const savePersistentCache = () => {
+  try {
+    localStorage.setItem(persistentCacheKey, JSON.stringify(persistentCache));
+  } catch {
+    const oldest = Object.entries(persistentCache).sort(
+      ([, a], [, b]) => a.cachedAt - b.cachedAt,
+    )[0]?.[0];
+    if (!oldest) return;
+
+    delete persistentCache[oldest];
+    try {
+      localStorage.setItem(persistentCacheKey, JSON.stringify(persistentCache));
+    } catch {}
+  }
+};
+
+const cachePersistentLyrics = (
+  videoId: VideoId,
+  provider: ProviderName,
+  lyrics: NonNullable<ProviderState['data']>,
+) => {
+  const entry = persistentCache[videoId] ?? {
+    cachedAt: Date.now(),
+    lyrics: {},
+  };
+  entry.cachedAt = Date.now();
+  entry.lyrics[provider] = clone(lyrics);
+  persistentCache[videoId] = entry;
+
+  const excessEntries = Object.entries(persistentCache)
+    .sort(([, a], [, b]) => b.cachedAt - a.cachedAt)
+    .slice(persistentCacheLimit);
+  for (const [id] of excessEntries) delete persistentCache[id];
+
+  savePersistentCache();
+};
+
 const searchCache = new Map<VideoId, SearchCache>();
 export const fetchLyrics = (info: SongInfo) => {
   if (searchCache.has(info.videoId)) {
@@ -69,23 +146,34 @@ export const fetchLyrics = (info: SongInfo) => {
     if (getSongInfo().videoId === info.videoId) {
       setLyricsStore('lyrics', () => {
         // weird bug with solid-js
-        return JSON.parse(JSON.stringify(cache.data)) as typeof cache.data;
+        return clone(cache.data);
       });
     }
 
     return;
   }
 
+  const data = initialData();
+  const cachedLyrics = persistentCache[info.videoId]?.lyrics;
+  if (cachedLyrics) {
+    for (const [provider, lyrics] of Object.entries(cachedLyrics) as [
+      ProviderName,
+      NonNullable<ProviderState['data']>,
+    ][]) {
+      data[provider] = { state: 'done', data: clone(lyrics), error: null };
+    }
+  }
+
   const cache: SearchCache = {
     state: 'loading',
-    data: initialData(),
+    data,
   };
 
   searchCache.set(info.videoId, cache);
   if (getSongInfo().videoId === info.videoId) {
     setLyricsStore('lyrics', () => {
       // weird bug with solid-js
-      return JSON.parse(JSON.stringify(cache.data)) as typeof cache.data;
+      return clone(cache.data);
     });
   }
 
@@ -99,6 +187,7 @@ export const fetchLyrics = (info: SongInfo) => {
   ][]
     ) {
     const pCache = cache.data[providerName];
+    if (pCache.state === 'done') continue;
 
     tasks.push(
       provider
@@ -106,6 +195,7 @@ export const fetchLyrics = (info: SongInfo) => {
         .then((res) => {
           pCache.state = 'done';
           pCache.data = res;
+          if (res) cachePersistentLyrics(info.videoId, providerName, res);
 
           if (getSongInfo().videoId === info.videoId) {
             setLyricsStore('lyrics', (old) => {
@@ -145,35 +235,31 @@ export const fetchLyrics = (info: SongInfo) => {
 };
 
 export const retrySearch = (provider: ProviderName, info: SongInfo) => {
-  setLyricsStore('lyrics', (old) => {
-    const pCache = {
-      state: 'fetching',
-      data: null,
-      error: null,
-    };
+  const update = (state: ProviderState) => {
+    const cache = searchCache.get(info.videoId);
+    if (cache) cache.data[provider] = state;
 
-    return {
-      ...old,
-      [provider]: pCache,
-    };
-  });
+    if (getSongInfo().videoId === info.videoId) {
+      setLyricsStore('lyrics', (old) => ({
+        ...old,
+        [provider]: state,
+      }));
+    }
+  };
+
+  update({ state: 'fetching', data: null, error: null });
 
   providers[provider]
     .search(info)
     .then((res) => {
-      setLyricsStore('lyrics', (old) => {
-        return {
-          ...old,
-          [provider]: { state: 'done', data: res, error: null },
-        };
-      });
+      update({ state: 'done', data: res, error: null });
+      if (res) cachePersistentLyrics(info.videoId, provider, res);
     })
     .catch((error) => {
-      setLyricsStore('lyrics', (old) => {
-        return {
-          ...old,
-          [provider]: { state: 'error', data: null, error },
-        };
+      update({
+        state: 'error',
+        data: null,
+        error: error instanceof Error ? error : new Error(String(error)),
       });
     });
 };

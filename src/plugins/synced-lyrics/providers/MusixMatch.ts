@@ -52,9 +52,8 @@ export class MusixMatch implements LyricProvider {
   }
 }
 
-// API Implementation, based on https://github.com/Strvm/musicxmatch-api/blob/main/src/musicxmatch_api/main.py
+// API Implementation, based on https://github.com/spicetify/cli/blob/master/CustomApps/lyrics-plus/ProviderMusixmatch.js
 
-const zBoolean = z.union([z.literal(0), z.literal(1)]);
 const Track = z.object({
   track_id: z.number(),
   track_name: z.string(),
@@ -62,25 +61,18 @@ const Track = z.object({
 });
 
 const Lyrics = z.object({
-  instrumental: zBoolean,
   lyrics_body: z.string(),
-  lyrics_language: z.string(),
-  lyrics_language_description: z.string(),
 });
 
 const Subtitle = z.object({
   subtitle_body: z.string(),
-  subtitle_length: z.number(),
-  subtitle_language: z.string(),
 });
 
 enum Endpoint {
   getMacroSubtitles = 'macro.subtitles.get',
-  searchTrack = 'track.search',
 }
 
 type Query = {
-  q?: string;
   q_track?: string;
   q_artist?: string;
   q_album?: string;
@@ -92,18 +84,9 @@ type Params = {
     namespace: 'lyrics_richsynched';
     subtitle_format: 'lrc';
   };
-  [Endpoint.searchTrack]: {
-    q: string;
-    f_has_lyrics: 'true' | 'false';
-    page_size: string;
-    page: string;
-  };
 };
 
 const ResponseSchema = {
-  [Endpoint.searchTrack]: z.object({
-    track_list: z.array(z.object({ track: Track })),
-  }),
   [Endpoint.getMacroSubtitles]: z.object({
     macro_calls: z.object({
       'track.lyrics.get': z.object({
@@ -157,7 +140,6 @@ const ResponseSchema = {
 
 class MusixMatchAPI {
   private initPromise: Promise<void>;
-  private cookie = 'x-mxm-user-id=';
   private token: string | null = null;
 
   private constructor() {
@@ -173,7 +155,6 @@ class MusixMatchAPI {
   public async reinit() {
     const [{ status }] = await Promise.allSettled([this.initPromise]);
     if (status === 'rejected') {
-      this.cookie = 'x-mxm-user-id=';
       localStorage.removeItem(this.key);
       this.initPromise = this.init();
       await this.initPromise;
@@ -206,16 +187,9 @@ class MusixMatchAPI {
       ),
     );
 
-    const [, json, headers] = await netFetch(`${url}?${clonedParams}`, {
-      headers: { Cookie: this.cookie },
+    const [, json] = await netFetch(`${url}?${clonedParams}`, {
+      headers: this.headers,
     });
-
-    const setCookie = Object.entries(headers).find(
-      ([key]) => key.toLowerCase() === 'set-cookie',
-    );
-    if (setCookie) {
-      this.cookie = setCookie[1];
-    }
 
     const response = JSON.parse(json);
     // prettier-ignore
@@ -288,19 +262,9 @@ class MusixMatchAPI {
   private async getToken() {
     const endpoint = 'token.get';
     const params = new URLSearchParams({ app_id: this.app_id });
-    const [, json, headers] = await netFetch(
-      `${this.baseUrl}${endpoint}?${params}`,
-      {
-        headers: Object.assign({ Cookie: this.cookie }, this.headers),
-      },
-    );
-
-    const setCookie = Object.entries(headers).find(
-      ([key]) => key.toLowerCase() === 'set-cookie',
-    );
-    if (setCookie) {
-      this.cookie = setCookie[1];
-    }
+    const [, json] = await netFetch(`${this.baseUrl}${endpoint}?${params}`, {
+      headers: this.headers,
+    });
 
     const {
       message: { body },
@@ -308,9 +272,14 @@ class MusixMatchAPI {
     return body?.user_token ?? '';
   }
 
-  private readonly baseUrl = 'https://apic-desktop.musixmatch.com/ws/1.1/';
-  private readonly app_id = 'web-desktop-app-v1.0';
+  private readonly baseUrl = 'https://apic-appmobile.musixmatch.com/ws/1.1/';
+  private readonly app_id = 'mac-ios-v2.0';
   private readonly headers = {
-    Authority: 'apic-desktop.musixmatch.com',
-  };
+    'authority': 'apic-appmobile.musixmatch.com',
+    'X-Cookie': 'x-mxm-token-guid=',
+    'x-mxm-app-version': '10.1.1',
+    'X-User-Agent': 'Musixmatch/2025120901 CFNetwork/3860.300.31 Darwin/25.2.0',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept': 'application/json',
+  } as const;
 }

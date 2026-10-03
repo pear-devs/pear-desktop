@@ -18,6 +18,7 @@ import {
 import { LoggerPrefix } from '@/utils';
 
 import type { RepeatMode, VolumeState } from '@/types/datahost-get-state';
+import type { GetPlayerResponse } from '@/types/get-player-response';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';
 
 class YTPlayer extends MprisPlayer {
@@ -102,6 +103,24 @@ export function registerMPRIS(win: BrowserWindow) {
     };
 
     const player = setupMPRIS();
+    let pendingArtwork: { videoId: string; url?: string } | null = null;
+
+    // SongInfo waits for artwork validation and native image decoding. Publish
+    // the remote artwork URL now so MPRIS clients can fetch it in parallel.
+    ipcMain.on('peard:video-src-changed', (_, data: GetPlayerResponse) => {
+      const video = data.videoDetails;
+      if (!video?.videoId) return;
+
+      const artUrl = video.thumbnail?.thumbnails?.at(-1)?.url;
+      pendingArtwork = { videoId: video.videoId, url: artUrl };
+      player.metadata = {
+        'mpris:length': secToMicro(Number(video.lengthSeconds)),
+        ...(artUrl ? { 'mpris:artUrl': artUrl } : undefined),
+        'xesam:title': video.title,
+        'xesam:artist': [video.author],
+        'mpris:trackid': player.objectPath(`Track/${correctId(video.videoId)}`),
+      };
+    });
 
     const seekTo = (event: Position) => {
       if (
@@ -323,11 +342,21 @@ export function registerMPRIS(win: BrowserWindow) {
         return;
       }
       if (player) {
+        if (
+          event === SongInfoEvent.VideoSrcChanged &&
+          pendingArtwork &&
+          songInfo.videoId !== pendingArtwork.videoId
+        ) {
+          return;
+        }
+
+        const artUrl =
+          pendingArtwork?.videoId === songInfo.videoId
+            ? pendingArtwork.url
+            : songInfo.imageSrc;
         const data: Track = {
           'mpris:length': secToMicro(songInfo.songDuration),
-          ...(songInfo.imageSrc
-            ? { 'mpris:artUrl': songInfo.imageSrc }
-            : undefined),
+          ...(artUrl ? { 'mpris:artUrl': artUrl } : undefined),
           'xesam:title': songInfo.title,
           'xesam:url': songInfo.url,
           'xesam:artist': [songInfo.artist],
