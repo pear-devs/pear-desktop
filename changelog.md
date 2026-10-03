@@ -2,7 +2,15 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [v3.12.2](https://github.com/maseckt/pearum-desktop/compare/v3.12.2...v3.12.2)
+
+- Update changelog for v3.12.2 [`b48dfad`](https://github.com/maseckt/pearum-desktop/commit/b48dfadc18af3febde9e6bed35a578dac0a7bf6f)
+- ci(release): publish assets from one job [`f41d699`](https://github.com/maseckt/pearum-desktop/commit/f41d699b51792b5c4ab2974050ea6ed7cce3884c)
+- fix(privacy): preserve blocker reload safety [`034aa3a`](https://github.com/maseckt/pearum-desktop/commit/034aa3a33d1438210c168fef7f6c862811362460)
+
 #### [v3.12.2](https://github.com/maseckt/pearum-desktop/compare/v3.12.1...v3.12.2)
+
+> 3 October 2026
 
 - Update changelog for v3.12.1 [`fcebd2c`](https://github.com/maseckt/pearum-desktop/commit/fcebd2cf7e5036ab294ab0f13a4d43d145154e38)
 - feat(privacy): add layered blocker profiles [`1ef1def`](https://github.com/maseckt/pearum-desktop/commit/1ef1def1ac52cee16b8e80a77a6fbeb937d82195)
