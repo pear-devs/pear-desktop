@@ -14,6 +14,7 @@ import { languageResources } from 'virtual:i18n';
 import { allPlugins } from 'virtual:plugins';
 
 import { APPLICATION_NAME, setLanguage, t } from '@/i18n';
+import { stripMusicFromShareUrl } from '@/utils/share-url';
 
 import * as config from './config';
 import { getAllMenuTemplate, loadAllMenuPlugins } from './loader/menu';
@@ -196,6 +197,17 @@ export const mainMenuTemplate = async (
             });
             return subMenuArray;
           })(),
+        },
+        {
+          label: t('main.menu.options.submenu.strip-music-from-shared-links'),
+          type: 'checkbox',
+          checked: config.get('options.stripMusicFromSharedLinks'),
+          click(item: MenuItem) {
+            config.setMenuOption(
+              'options.stripMusicFromSharedLinks',
+              item.checked,
+            );
+          },
         },
         {
           label: t('main.menu.options.submenu.visual-tweaks.label'),
@@ -676,7 +688,11 @@ export const mainMenuTemplate = async (
           label: t('main.menu.navigation.submenu.copy-current-url'),
           click() {
             const currentURL = win.webContents.getURL();
-            clipboard.writeText(currentURL);
+            clipboard.writeText(
+              config.get('options.stripMusicFromSharedLinks')
+                ? stripMusicFromShareUrl(currentURL)
+                : currentURL,
+            );
           },
         },
         {
