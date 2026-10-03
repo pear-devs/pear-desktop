@@ -15,6 +15,36 @@ import {
   loadAllPreloadPlugins,
 } from './loader/preload';
 
+const rendererConfigKeys = new Set([
+  'options.startingPage',
+  'options.removeUpgradeButton',
+  'options.likeButtons',
+  'options.swapLikeButtonsOrder',
+  'options.language',
+  'options.hideMenu',
+  'plugins.transparent-player.opacity',
+]);
+
+const rendererConfig = {
+  get: (key: string) =>
+    rendererConfigKeys.has(key) ? config.get(key as never) : undefined,
+  plugins: {
+    getPlugins: () =>
+      Object.fromEntries(
+        Object.entries(config.plugins.getPlugins()).map(([id, plugin]) => [
+          id,
+          { enabled: plugin.enabled },
+        ]),
+      ),
+    isEnabled: (plugin: string) => config.plugins.isEnabled(plugin),
+    setOptions: (plugin: string, options: object) => {
+      if (plugin === 'video-toggle') {
+        config.plugins.setOptions(plugin, options);
+      }
+    },
+  },
+};
+
 // @ts-expect-error dummy
 globalThis.customElements = { define() {} };
 
@@ -50,7 +80,7 @@ ipcRenderer.on('plugin:enable', async (_, id: string) => {
   await forceLoadPreloadPlugin(id);
 });
 
-contextBridge.exposeInMainWorld('mainConfig', config);
+contextBridge.exposeInMainWorld('mainConfig', rendererConfig);
 contextBridge.exposeInMainWorld('electronIs', is);
 contextBridge.exposeInMainWorld('ipcRenderer', {
   on: (
