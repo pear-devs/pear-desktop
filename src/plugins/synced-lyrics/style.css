@@ -209,7 +209,8 @@
 }
 
 .lyrics-picker-left,
-.lyrics-picker-right {
+.lyrics-picker-right,
+.lyrics-picker-save {
   display: flex;
   justify-content: center;
   align-items: center;
