@@ -60,6 +60,12 @@ export const fetchLyrics = (info: SongInfo) => {
     const cache = searchCache.get(info.videoId)!;
 
     if (cache.state === 'loading') {
+      if (getSongInfo().videoId === info.videoId) {
+        setLyricsStore('lyrics', () => {
+          // weird bug with solid-js
+          return JSON.parse(JSON.stringify(cache.data)) as typeof cache.data;
+        });
+      }
       setTimeout(() => {
         fetchLyrics(info);
       });
