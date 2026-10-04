@@ -93,6 +93,7 @@ export class LyricsGenius implements LyricProvider {
     return {
       title: closestHit.result.title,
       artists: closestHit.result.primary_artists.map(({ name }) => name),
+      syncLevel: 'plain',
       lyrics,
     };
   }

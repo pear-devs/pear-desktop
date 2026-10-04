@@ -16,25 +16,30 @@ export type SyncedLyricsPluginConfig = {
     | 'disabled';
 };
 
-export type LineLyricsStatus = 'previous' | 'current' | 'upcoming';
+export type SyncLevel = 'plain' | 'line' | 'word' | 'syllable';
 
-export type LineLyrics = {
-  time: string;
-  timeInMs: number;
-  duration: number;
-
+export interface LyricSegment {
   text: string;
-  status: LineLyricsStatus;
-};
+  startMs: number;
+  endMs?: number;
+}
+
+export interface LyricLine extends LyricSegment {
+  segments?: LyricSegment[];
+  translation?: string;
+  romanization?: string;
+}
 
 export type LineEffect = 'fancy' | 'scale' | 'offset' | 'focus';
 
 export interface LyricResult {
   title: string;
   artists: string[];
+  syncLevel: SyncLevel;
 
+  // Exact plain text (also retained when a provider supplies a plain fallback).
   lyrics?: string;
-  lines?: LineLyrics[];
+  lines?: LyricLine[];
 }
 
 // prettier-ignore

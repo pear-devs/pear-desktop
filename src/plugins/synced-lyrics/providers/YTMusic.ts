@@ -1,3 +1,5 @@
+import { normalizeLines } from '../domain';
+
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
 import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
 
@@ -18,7 +20,7 @@ export class YTMusic implements LyricProvider {
 
   // prettier-ignore
   public async search(
-    { videoId, title, artist }: SearchSongInfo,
+    { videoId, title, artist, songDuration }: SearchSongInfo,
   ): Promise<LyricResult | null> {
     const data = await this.fetchNext(videoId);
 
@@ -51,14 +53,11 @@ export class YTMusic implements LyricProvider {
       ?.componentType?.model?.timedLyricsModel?.lyricsData?.timedLyricsData;
 
     const synced = syncedLines?.length && syncedLines[0]?.cueRange
-      ? syncedLines.map((it) => ({
-        time: this.millisToTime(parseInt(it.cueRange.startTimeMilliseconds)),
-        timeInMs: parseInt(it.cueRange.startTimeMilliseconds),
-        duration: parseInt(it.cueRange.endTimeMilliseconds) -
-          parseInt(it.cueRange.startTimeMilliseconds),
-        text: it.lyricLine.trim() === '♪' ? '' : it.lyricLine.trim(),
-        status: 'upcoming' as const,
-      }))
+      ? normalizeLines(syncedLines.map((it) => ({
+        startMs: Number(it.cueRange?.startTimeMilliseconds),
+        endMs: Number(it.cueRange?.endTimeMilliseconds),
+        text: it.lyricLine,
+      })), songDuration * 1000)
       : undefined;
 
     const plain = !synced
@@ -76,32 +75,13 @@ export class YTMusic implements LyricProvider {
       return null;
     }
 
-    if (synced?.length && synced[0].timeInMs > 300) {
-      synced.unshift({
-        duration: 0,
-        text: '',
-        time: '00:00.00',
-        timeInMs: 0,
-        status: 'upcoming' as const,
-      });
-    }
-
     return {
       title,
       artists: [artist],
-
+      syncLevel: synced ? 'line' : 'plain',
       lyrics: plain,
       lines: synced,
     };
-  }
-
-  private millisToTime(millis: number) {
-    const minutes = Math.floor(millis / 60000);
-    const seconds = Math.floor((millis - ((minutes * 60) * 1000)) / 1000);
-    const remaining = (millis - ((minutes * 60) * 1000) - (seconds * 1000)) / 10;
-    return `${minutes.toString().padStart(2, '0')}:${seconds
-      .toString()
-      .padStart(2, '0')}.${remaining.toString().padStart(2, '0')}`;
   }
 
   // RATE LIMITED (2 req per sec)

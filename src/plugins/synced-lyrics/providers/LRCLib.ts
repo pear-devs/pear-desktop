@@ -137,15 +137,12 @@ export class LRCLib implements LyricProvider {
       return null;
     }
 
+    const synced = raw ? LRC.parse(raw, songDuration * 1000) : undefined;
     return {
       title: closestResult.trackName,
       artists: closestResult.artistName.split(/[&,]/g),
-      lines: raw
-        ? LRC.parse(raw).lines.map((l) => ({
-            ...l,
-            status: 'upcoming' as const,
-          }))
-        : undefined,
+      syncLevel: synced?.syncLevel ?? 'plain',
+      lines: synced?.lines,
       lyrics: plain,
     };
   }

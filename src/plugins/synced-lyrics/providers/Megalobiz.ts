@@ -99,12 +99,13 @@ export class Megalobiz implements LyricProvider {
     const raw = lyricsDoc.querySelector('span[id^="lrc_"][id$="_lyrics"]')?.textContent;
     if (!raw) return null;
 
-    const lyrics = LRC.parse(raw);
+    const lyrics = LRC.parse(raw, songDuration * 1000);
 
     return {
       title: closestResult.title,
       artists: closestResult.artists,
-      lines: lyrics.lines.map((l) => ({ ...l, status: 'upcoming' })),
+      syncLevel: lyrics.syncLevel,
+      lines: lyrics.lines,
     };
   }
 }

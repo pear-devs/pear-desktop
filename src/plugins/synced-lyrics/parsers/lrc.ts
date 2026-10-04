@@ -1,125 +1,128 @@
+import { normalizeLines } from '../domain';
+
+import type { LyricLine, LyricSegment, SyncLevel } from '../types';
+
 interface LRCTag {
   tag: string;
   value: string;
 }
 
-interface LRCLine {
-  time: string;
-  timeInMs: number;
-  duration: number;
-  text: string;
-  words: { timeInMs: number; word: string }[];
-}
-
-interface LRC {
+interface ParsedLRC {
   tags: LRCTag[];
-  lines: LRCLine[];
+  lines: LyricLine[];
+  syncLevel: SyncLevel;
 }
 
-const tagRegex = /^\[(?<tag>\w+):\s*(?<value>.+?)\s*\]$/;
-// prettier-ignore
-const timestampRegex = /^\[(?<minutes>\d+):(?<seconds>\d+)\.(?<centiseconds>\d+)\]/m;
+// LRC fractions are decimal seconds: .1 / .12 / .123, not integer millis.
+const timestamp = String.raw`(\d+):([0-5]?\d)(?:\.(\d{1,3}))?`;
+const lineTimestamp = new RegExp(`^\\[${timestamp}\\]`);
+const segmentTimestamp = new RegExp(`<${timestamp}>`, 'g');
+const tagRegex = /^\[([a-z]+):\s*(.*?)\s*\]$/i;
+const millis = (match: RegExpMatchArray) => {
+  const minutesMs = Number(match[1]) * 60000;
+  const secondsMs = Number(match[2]) * 1000;
+  return minutesMs + secondsMs + Number((match[3] ?? '').padEnd(3, '0'));
+};
 
-// prettier-ignore
-const wordRegex = /<(?<minutes>\d+):(?<seconds>\d+)\.(?<centiseconds>\d+)> *(?<word>\w+)/g;
+const parseLine = (text: string, startMs: number): LyricLine => {
+  const markers = [...text.matchAll(segmentTimestamp)].filter((match) =>
+    Number.isFinite(millis(match)),
+  );
+  if (!markers.length) return { text, startMs };
+
+  const segments: LyricSegment[] = [];
+  const prefix = text.slice(0, markers[0].index);
+  if (prefix) segments.push({ text: prefix, startMs });
+  let endMs: number | undefined;
+  for (let index = 0; index < markers.length; index++) {
+    const marker = markers[index];
+    const time = millis(marker);
+    const next = markers[index + 1];
+    const fragment = text.slice(marker.index + marker[0].length, next?.index);
+    const previous = segments.at(-1);
+    if (previous && time >= previous.startMs) previous.endMs = time;
+    if (fragment) segments.push({ text: fragment, startMs: time });
+    // A trailing timestamp explicitly ends the line/last segment.
+    else if (!next && time >= startMs) endMs = time;
+  }
+  return {
+    text: segments.map((segment) => segment.text).join(''),
+    startMs,
+    ...(endMs === undefined ? {} : { endMs }),
+    segments,
+  };
+};
 
 export const LRC = {
-  parse: (text: string): LRC => {
-    const lrc: LRC = {
-      tags: [],
-      lines: [],
-    };
-
+  parse(text: string, trackDurationMs?: number): ParsedLRC {
+    const tags: LRCTag[] = [];
+    const lines: LyricLine[] = [];
     let offset = 0;
+    let enhanced = false;
 
-    for (let line of text.split('\n')) {
-      line = line.trim();
-      if (!line.startsWith('[')) continue;
-
-      const timestamps = [];
-      let match: Record<string, string> | undefined;
-      while ((match = line.match(timestampRegex)?.groups)) {
-        const { minutes, seconds, centiseconds } = match;
-        const milliseconds = match.centiseconds.padEnd(3, '0');
-        const timeInMs =
-          ((parseInt(minutes) * 60) * 1000) +
-          (parseInt(seconds) * 1000) +
-          parseInt(milliseconds);
-
-        timestamps.push({
-          time: `${minutes}:${seconds}:${centiseconds}`,
-          timeInMs,
-        });
-
-        line = line.replace(timestampRegex, '');
+    for (const raw of text.replace(/^\uFEFF/, '').split(/\r?\n/)) {
+      // Ignore indentation before syntax, never trim lyric content.
+      let remaining = raw.trimStart();
+      const timestamps: number[] = [];
+      let match: RegExpMatchArray | null;
+      while ((match = remaining.match(lineTimestamp))) {
+        const time = millis(match);
+        if (Number.isFinite(time)) timestamps.push(time);
+        remaining = remaining.slice(match[0].length);
       }
-
       if (!timestamps.length) {
-        const tag = line.match(tagRegex)?.groups;
+        const tag = remaining.match(tagRegex);
         if (tag) {
-          if (tag.tag === 'offset') {
-            offset = parseInt(tag.value);
-            continue;
-          }
-
-          lrc.tags.push({
-            tag: tag.tag,
-            value: tag.value,
-          });
+          if (tag[1].toLowerCase() === 'offset') {
+            if (/^[+-]?\d+$/.test(tag[2]) && Number.isFinite(Number(tag[2]))) {
+              offset = Number(tag[2]);
+            }
+          } else tags.push({ tag: tag[1], value: tag[2] });
         }
         continue;
       }
 
-      let text = line.trim();
-      const words = Array.from(text.matchAll(wordRegex), ({ groups }) => {
-        const { minutes, seconds, centiseconds, word } = groups!;
-        const milliseconds = centiseconds.padEnd(3, '0');
-        const timeInMs =
-          ((parseInt(minutes) * 60) * 1000) +
-          (parseInt(seconds) * 1000) +
-          parseInt(milliseconds);
-
-        return { timeInMs, word };
-      });
-
-      if (words.length) {
-        text = words.map(({ word }) => word).join(' ');
-      }
-
-      for (const { time, timeInMs } of timestamps) {
-        lrc.lines.push({
-          time,
-          timeInMs,
-          text,
-          words,
-          duration: Infinity,
+      const parsed = parseLine(remaining, timestamps[0]);
+      enhanced ||= parsed.segments !== undefined;
+      for (const startMs of timestamps) {
+        // Repeated timestamps repeat the whole line, including relative segments.
+        const shift = startMs - parsed.startMs;
+        lines.push({
+          ...parsed,
+          startMs,
+          ...(parsed.endMs === undefined
+            ? {}
+            : { endMs: parsed.endMs + shift }),
+          ...(parsed.segments === undefined
+            ? {}
+            : {
+                segments: parsed.segments.map((segment) => ({
+                  ...segment,
+                  startMs: segment.startMs + shift,
+                  ...(segment.endMs === undefined
+                    ? {}
+                    : { endMs: segment.endMs + shift }),
+                })),
+              }),
         });
       }
     }
 
-    lrc.lines.sort(({ timeInMs: timeA }, { timeInMs: timeB }) => timeA - timeB);
-    for (let i = 0; i < lrc.lines.length; i++) {
-      const current = lrc.lines[i];
-      const next = lrc.lines[i + 1];
-
-      current.timeInMs += offset;
-
-      if (next) {
-        current.duration = next.timeInMs - current.timeInMs;
+    // Shift all source times before inferring any intervals. Negative times stay
+    // negative: clamping would change intervals and desynchronize segments.
+    for (const line of lines) {
+      line.startMs += offset;
+      if (line.endMs !== undefined) line.endMs += offset;
+      for (const segment of line.segments ?? []) {
+        segment.startMs += offset;
+        if (segment.endMs !== undefined) segment.endMs += offset;
       }
     }
-
-    const first = lrc.lines.at(0);
-    if (first && first.timeInMs > 300) {
-      lrc.lines.unshift({
-        time: '00:00:00',
-        timeInMs: 0,
-        duration: first.timeInMs,
-        text: '',
-        words: [],
-      });
-    }
-
-    return lrc;
+    return {
+      tags,
+      lines: normalizeLines(lines, trackDurationMs),
+      // Enhanced LRC supplies segment boundaries, not reliable word/syllable labels.
+      syncLevel: enhanced ? 'word' : 'line',
+    };
   },
 };

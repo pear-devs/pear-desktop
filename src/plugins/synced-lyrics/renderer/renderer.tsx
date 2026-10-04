@@ -19,9 +19,10 @@ import {
 import { LyricsPicker } from './components/LyricsPicker';
 import { reactiveOwner } from './reactive-root';
 import { currentLyrics } from './store';
+import { lineStatus, type LineStatus } from './timing';
 import { selectors } from './utils';
 
-import type { LineLyrics, SyncedLyricsPluginConfig } from '../types';
+import type { LyricLine, SyncedLyricsPluginConfig } from '../types';
 
 export const [isVisible, setIsVisible] = createSignal<boolean>(false);
 export const [config, setConfig] =
@@ -134,7 +135,7 @@ type LyricsRendererChild =
   | { kind: 'Error'; error: Error }
   | {
       kind: 'SyncedLine';
-      line: LineLyrics;
+      line: LyricLine;
     }
   | {
       kind: 'PlainLine';
@@ -229,9 +230,7 @@ export const LyricsRenderer = () => {
     });
   });
 
-  const [statuses, setStatuses] = createSignal<
-    ('previous' | 'current' | 'upcoming')[]
-  >([]);
+  const [statuses, setStatuses] = createSignal<LineStatus[]>([]);
   createEffect(() => {
     const time = currentTime();
     const data = currentLyrics()?.data;
@@ -239,11 +238,7 @@ export const LyricsRenderer = () => {
     if (!data || !data.lines) return setStatuses([]);
 
     const previous = untrack(statuses);
-    const current = data.lines.map((line) => {
-      if (line.timeInMs >= time) return 'upcoming';
-      if (time - line.timeInMs >= line.duration) return 'previous';
-      return 'current';
-    });
+    const current = data.lines.map((line) => lineStatus(line, time));
 
     if (previous.length !== current.length) return setStatuses(current);
     if (previous.every((status, idx) => status === current[idx])) return;

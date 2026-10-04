@@ -60,7 +60,8 @@ type PersistentCacheEntry = {
 
 type PersistentCache = Record<VideoId, PersistentCacheEntry>;
 
-const persistentCacheKey = 'ytmd-sl-cache-v1';
+// New domain schema: old entries contain timeInMs/status and serialized Infinity.
+const persistentCacheKey = 'ytmd-sl-cache-v2';
 const persistentCacheLifetime = 30 * 24 * 60 * 60 * 1000;
 const persistentCacheLimit = 50;
 

@@ -38,15 +38,14 @@ export class MusixMatch implements LyricProvider {
     // either no track found, or musixmatch's algorithm returned "Coldplay - Paradise" for no reason whatsoever
     if (!track || track.track_id === 115264642) return null;
 
+    const synced = subtitle
+      ? LRC.parse(subtitle.subtitle.subtitle_body, info.songDuration * 1000)
+      : undefined;
     return {
       title: track.track_name,
       artists: [track.artist_name],
-      lines: subtitle
-        ? LRC.parse(subtitle.subtitle.subtitle_body).lines.map((l) => ({
-            ...l,
-            status: 'upcoming' as const,
-          }))
-        : undefined,
+      syncLevel: synced?.syncLevel ?? 'plain',
+      lines: synced?.lines,
       lyrics: lyrics,
     };
   }
@@ -246,7 +245,7 @@ class MusixMatchAPI {
 
     localStorage.setItem(
       this.key,
-      JSON.stringify({ token: this.token, expires: Date.now() + (60 * 1000) }),
+      JSON.stringify({ token: this.token, expires: Date.now() + 60_000 }),
     );
   }
 
