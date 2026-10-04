@@ -20,6 +20,20 @@ before end inference; track duration itself is not shifted. Enhanced LRC uses
 the `word` convention because the format does not declare word versus syllable
 granularity; the model supports explicitly declared syllables independently.
 
+Consecutive enhanced markers retain empty timed segments for each gap. The first
+following marker closes a segment once; a terminal marker ends the line without
+inventing another segment. Empty intervals may have zero duration.
+
+Normalization validates nested timing after offset/end inference: nonfinite,
+out-of-line or decreasing segment starts lose their timing entry, without
+reordering other segments or rewriting `line.text`. Invalid/out-of-line segment
+ends become absent, not clamped; valid explicit ends remain unchanged. Thus a
+malformed line may have only partially timed text. Invalid line starts cannot
+form a timed line and are discarded; unrelated valid lines remain. Nonfinite
+ends or overflowing intervals are never retained. Unrecognized malformed markers
+stay literal text; recognized numeric markers with invalid timing lose their
+timing, not their associated text.
+
 Persistent cache schema v2 intentionally ignores v1 entries rather than keeping
 an old-model compatibility adapter. Search, provider ranking and cache policy
 are unchanged.

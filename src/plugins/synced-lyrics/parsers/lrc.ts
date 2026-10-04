@@ -25,9 +25,7 @@ const millis = (match: RegExpMatchArray) => {
 };
 
 const parseLine = (text: string, startMs: number): LyricLine => {
-  const markers = [...text.matchAll(segmentTimestamp)].filter((match) =>
-    Number.isFinite(millis(match)),
-  );
+  const markers = [...text.matchAll(segmentTimestamp)];
   if (!markers.length) return { text, startMs };
 
   const segments: LyricSegment[] = [];
@@ -40,10 +38,18 @@ const parseLine = (text: string, startMs: number): LyricLine => {
     const next = markers[index + 1];
     const fragment = text.slice(marker.index + marker[0].length, next?.index);
     const previous = segments.at(-1);
-    if (previous && time >= previous.startMs) previous.endMs = time;
-    if (fragment) segments.push({ text: fragment, startMs: time });
+    if (
+      previous &&
+      previous.endMs === undefined &&
+      Number.isFinite(time) &&
+      time >= previous.startMs
+    )
+      previous.endMs = time;
+    // Every nonterminal marker starts an interval, including empty text. This
+    // preserves consecutive boundaries/gaps without extending earlier text.
+    if (next || fragment) segments.push({ text: fragment, startMs: time });
     // A trailing timestamp explicitly ends the line/last segment.
-    else if (!next && time >= startMs) endMs = time;
+    else if (Number.isFinite(time) && time >= startMs) endMs = time;
   }
   return {
     text: segments.map((segment) => segment.text).join(''),

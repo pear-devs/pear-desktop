@@ -180,3 +180,167 @@ test('malformed enhanced markers remain literal text; timing remains finite', ()
     lines: [{ text: 'last', startMs: 0 }],
   });
 });
+
+test('consecutive enhanced markers preserve the confirmed boundary and gap', () => {
+  expect(
+    LRC.parse('[00:00]<00:00>Hello<00:01><00:02>world<00:03>').lines,
+  ).toEqual([
+    {
+      text: 'Helloworld',
+      startMs: 0,
+      endMs: 3000,
+      segments: [
+        { text: 'Hello', startMs: 0, endMs: 1000 },
+        { text: '', startMs: 1000, endMs: 2000 },
+        { text: 'world', startMs: 2000, endMs: 3000 },
+      ],
+    },
+  ]);
+});
+
+test('multiple empty boundaries preserve every interval and exact whitespace', () => {
+  expect(
+    LRC.parse('[00:00]<00:00> Hello \t<00:01><00:01.5><00:02>世界!  <00:03>')
+      .lines[0],
+  ).toEqual({
+    text: ' Hello \t世界!  ',
+    startMs: 0,
+    endMs: 3000,
+    segments: [
+      { text: ' Hello \t', startMs: 0, endMs: 1000 },
+      { text: '', startMs: 1000, endMs: 1500 },
+      { text: '', startMs: 1500, endMs: 2000 },
+      { text: '世界!  ', startMs: 2000, endMs: 3000 },
+    ],
+  });
+});
+
+test('consecutive trailing and equal markers retain empty nonnegative intervals', () => {
+  expect(
+    LRC.parse('[00:00]<00:00>Hello<00:01><00:01><00:02><00:03>').lines[0],
+  ).toEqual({
+    text: 'Hello',
+    startMs: 0,
+    endMs: 3000,
+    segments: [
+      { text: 'Hello', startMs: 0, endMs: 1000 },
+      { text: '', startMs: 1000, endMs: 1000 },
+      { text: '', startMs: 1000, endMs: 2000 },
+      { text: '', startMs: 2000, endMs: 3000 },
+    ],
+  });
+});
+
+test('consecutive markers at the beginning preserve a timed blank interval', () => {
+  expect(LRC.parse('[00:00]<00:00><00:01>Hello<00:02>').lines[0]).toEqual({
+    text: 'Hello',
+    startMs: 0,
+    endMs: 2000,
+    segments: [
+      { text: '', startMs: 0, endMs: 1000 },
+      { text: 'Hello', startMs: 1000, endMs: 2000 },
+    ],
+  });
+});
+
+test('normal enhanced input retains identical text and explicit timing', () => {
+  expect(LRC.parse("[00:00]<00:00>I'd <00:01>sing!<00:02>").lines[0]).toEqual({
+    text: "I'd sing!",
+    startMs: 0,
+    endMs: 2000,
+    segments: [
+      { text: "I'd ", startMs: 0, endMs: 1000 },
+      { text: 'sing!', startMs: 1000, endMs: 2000 },
+    ],
+  });
+});
+
+test('decreasing terminal marker drops incompatible timing, not lyric content', () => {
+  expect(LRC.parse('[00:00]<00:05>Hello<00:02>\n[00:03]Next').lines).toEqual([
+    { text: 'Hello', startMs: 0, endMs: 2000, segments: [] },
+    { text: 'Next', startMs: 3000 },
+  ]);
+});
+
+test('decreasing segment starts recover locally without reordering text', () => {
+  expect(
+    LRC.parse('[00:00]<00:00>A<00:02>B<00:01>bad<00:03>C<00:04>').lines[0],
+  ).toEqual({
+    text: 'ABbadC',
+    startMs: 0,
+    endMs: 4000,
+    segments: [
+      { text: 'A', startMs: 0, endMs: 2000 },
+      { text: 'B', startMs: 2000 },
+      { text: 'C', startMs: 3000, endMs: 4000 },
+    ],
+  });
+});
+
+test('segments outside inferred next-line/track ends lose only invalid timing', () => {
+  for (const parsed of [
+    LRC.parse('[00:00]<00:00>ok<00:05>bad\n[00:02]Next'),
+    LRC.parse('[00:00]<00:00>ok<00:05>bad', 2000),
+  ]) {
+    expect(parsed.lines[0]).toEqual({
+      text: 'okbad',
+      startMs: 0,
+      endMs: 2000,
+      segments: [{ text: 'ok', startMs: 0 }],
+    });
+  }
+});
+
+test('numeric marker overflow removes malformed timing without losing text', () => {
+  const huge = '9'.repeat(310);
+  expect(
+    LRC.parse(`[00:00]<00:00>good<${huge}:00> bad <00:01>end<00:02>`).lines[0],
+  ).toEqual({
+    text: 'good bad end',
+    startMs: 0,
+    endMs: 2000,
+    segments: [
+      { text: 'good', startMs: 0 },
+      { text: 'end', startMs: 1000, endMs: 2000 },
+    ],
+  });
+});
+
+test('finite timestamps plus offset cannot leak overflowing segment starts or ends', () => {
+  const minutes = '2' + '0'.repeat(303);
+  const offset = '179' + '0'.repeat(306);
+  const startOverflow = LRC.parse(
+    `[00:00]<${minutes}:00>Hi\n[offset:${offset}]`,
+  );
+  expect(startOverflow.lines.at(-1)).toEqual({
+    text: 'Hi',
+    startMs: 1.79e308,
+    segments: [],
+  });
+  const endOverflow = LRC.parse(
+    `[00:00]<00:00>Hi<${minutes}:00>\n[offset:${offset}]`,
+  );
+  expect(endOverflow.lines.at(-1)).toEqual({
+    text: 'Hi',
+    startMs: 1.79e308,
+    segments: [{ text: 'Hi', startMs: 1.79e308 }],
+  });
+  for (const result of [startOverflow, endOverflow]) {
+    expect(JSON.parse(JSON.stringify(result))).toEqual(result);
+    expect(JSON.stringify(result)).not.toContain('null');
+  }
+});
+
+test('overflowing line start/offset does not remove unrelated valid lines', () => {
+  const minutes = '2' + '0'.repeat(303);
+  const offset = '179' + '0'.repeat(306);
+  expect(
+    LRC.parse(`[00:00]Good\n[${minutes}:00]bad\n[offset:${offset}]`).lines,
+  ).toEqual([
+    { text: '', startMs: 0, endMs: 1.79e308 },
+    { text: 'Good', startMs: 1.79e308 },
+  ]);
+  expect(LRC.parse(`[offset:${'9'.repeat(310)}]\n[00:00]Good`).lines).toEqual([
+    { text: 'Good', startMs: 0 },
+  ]);
+});
