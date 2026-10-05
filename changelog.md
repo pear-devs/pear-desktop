@@ -2,11 +2,11 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
-#### [v3.12.2](https://github.com/maseckt/pearum-desktop/compare/v3.12.2...v3.12.2)
+#### [v3.12.3](https://github.com/maseckt/pearum-desktop/compare/v3.12.2...v3.12.3)
 
+- refactor(lyrics): add candidate search sessions [`103998d`](https://github.com/maseckt/pearum-desktop/commit/103998d721b6cc1301b83297a97dfea45c3c5501)
 - Update changelog for v3.12.2 [`b48dfad`](https://github.com/maseckt/pearum-desktop/commit/b48dfadc18af3febde9e6bed35a578dac0a7bf6f)
-- ci(release): publish assets from one job [`f41d699`](https://github.com/maseckt/pearum-desktop/commit/f41d699b51792b5c4ab2974050ea6ed7cce3884c)
-- fix(privacy): preserve blocker reload safety [`034aa3a`](https://github.com/maseckt/pearum-desktop/commit/034aa3a33d1438210c168fef7f6c862811362460)
+- refactor(lyrics): normalize domain and LRC timing [`49bef1e`](https://github.com/maseckt/pearum-desktop/commit/49bef1ec50a8ab29c85d95d5648d543fbeadf7e2)
 
 #### [v3.12.2](https://github.com/maseckt/pearum-desktop/compare/v3.12.1...v3.12.2)
 
