@@ -1,13 +1,15 @@
-import { jaroWinkler } from '@skyra/jaro-winkler';
-
 import { LRC } from '../parsers/lrc';
+import { lyricsHttp } from '../search/http';
 
-import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
+import type {
+  LyricProvider,
+  LyricCandidate,
+  SearchSongInfo,
+  SearchContext,
+} from '../types';
 
 const removeNoise = (text: string) => {
   return text
-    .replace(/\[.*?\]/g, '')
-    .replace(/\(.*?\)/g, '')
     .trim()
     .replace(/(^[-•])|([-•]$)/g, '')
     .trim()
@@ -20,17 +22,12 @@ export class Megalobiz implements LyricProvider {
   private domParser = new DOMParser();
 
   // prettier-ignore
-  async search({ title, artist, songDuration }: SearchSongInfo): Promise<LyricResult | null> {
+  async search({ title, artist }: SearchSongInfo, context?: SearchContext): Promise<LyricCandidate[]> {
     const query = new URLSearchParams({
       qry: `${artist} ${title}`,
     });
 
-    const response = await fetch(`${this.baseUrl}/search/all?${query}`, {
-      signal: AbortSignal.timeout(5_000),
-    });
-    if (!response.ok) return null;
-
-    const data = await response.text();
+    const data = await lyricsHttp.text(`${this.baseUrl}/search/all?${query}`, { signal: context?.signal, timeoutMs: 5000 });
     const searchDoc = this.domParser.parseFromString(data, 'text/html');
 
     // prettier-ignore
@@ -60,7 +57,6 @@ export class Megalobiz implements LyricProvider {
             name = removeNoise(name);
           }
 
-          if (jaroWinkler(title, name) < 0.8) return null;
 
           return {
             title: name,
@@ -75,37 +71,24 @@ export class Megalobiz implements LyricProvider {
       )
       .filter(Boolean);
 
-    const sortedResults = searchResults.sort(
-      ({ duration: durationA }, { duration: durationB }) => {
-        const left = Math.abs(durationA - songDuration);
-        const right = Math.abs(durationB - songDuration);
-
-        return left - right;
-      },
-    );
-
-    const closestResult = sortedResults[0];
-    if (!closestResult) return null;
-    if (Math.abs(closestResult.duration - songDuration) > 15) {
-      return null;
-    }
-
-    const lyricsResponse = await fetch(`${this.baseUrl}${closestResult.href}`, {
-      signal: AbortSignal.timeout(5_000),
-    });
-    if (!lyricsResponse.ok) return null;
-    const html = await lyricsResponse.text();
+    return Promise.all(searchResults.map(async (source): Promise<LyricCandidate | null> => {
+    const html = await lyricsHttp.text(`${this.baseUrl}${source.href}`, { signal: context?.signal, timeoutMs: 5000 });
     const lyricsDoc = this.domParser.parseFromString(html, 'text/html');
     const raw = lyricsDoc.querySelector('span[id^="lrc_"][id$="_lyrics"]')?.textContent;
     if (!raw) return null;
 
-    const lyrics = LRC.parse(raw);
+    const lyrics = LRC.parse(raw, source.duration * 1000);
 
     return {
-      title: closestResult.title,
-      artists: closestResult.artists,
-      lines: lyrics.lines.map((l) => ({ ...l, status: 'upcoming' })),
+      provider: this.name, id: source.href, sourceId: source.href, durationMs: source.duration * 1000,
+      result: {
+      title: source.title,
+      artists: source.artists,
+      syncLevel: lyrics.syncLevel,
+      lines: lyrics.lines,
+      },
     };
+    })).then((candidates) => candidates.filter((candidate): candidate is LyricCandidate => candidate !== null));
   }
 }
 

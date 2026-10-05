@@ -1,4 +1,4 @@
-import { contextBridge, webFrame, type BrowserWindow } from 'electron';
+import { contextBridge, dialog, webFrame, type BrowserWindow } from 'electron';
 
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
@@ -13,6 +13,7 @@ import { inject, isInjected } from './injectors/inject';
 import injectCliqzPreload from './injectors/inject-cliqz-preload';
 import balancedRules from './lists/balanced.txt?raw';
 import strictRules from './lists/strict-addon.txt?raw';
+import { createProfileReloadPrompt, profileKey } from './profile-reload';
 import { blockers, isLegacyCustomBlocker, normalizeBlocker } from './types';
 
 const usesBlockLists = (blocker: unknown, customEnabled: unknown) =>
@@ -137,7 +138,11 @@ export default createPlugin({
   backend: {
     mainWindow: null as BrowserWindow | null,
     reloadPromise: Promise.resolve(),
+    generation: 0,
+    currentProfile: null as string | null,
+    promptReload: null as (() => Promise<void>) | null,
     async start({ getConfig, setConfig, window }) {
+      const generation = ++this.generation;
       const config = await getConfig();
       const blocker = normalizeBlocker(config.blocker);
       const customEnabled =
@@ -150,7 +155,23 @@ export default createPlugin({
         config.blocker = blocker;
         config.customEnabled = customEnabled;
       }
+      if (generation !== this.generation || window.isDestroyed()) return;
       this.mainWindow = window;
+      this.currentProfile = profileKey(config);
+      const isActive = () =>
+        generation === this.generation &&
+        this.mainWindow === window &&
+        !window.isDestroyed();
+      this.promptReload = createProfileReloadPrompt({
+        show: (options) => dialog.showMessageBox(window, options),
+        translate: (key) => t(key),
+        isActive,
+        reload: async () => {
+          // Apply any profile changes queued while the dialog was open first.
+          await this.reloadPromise;
+          if (isActive()) window.webContents.reload();
+        },
+      });
 
       if (usesBlockLists(config.blocker, config.customEnabled)) {
         await loadTrackerBlockerEngine(
@@ -166,20 +187,34 @@ export default createPlugin({
       }
     },
     stop({ window }) {
-      if (isBlockerEnabled(window.webContents.session)) {
+      ++this.generation;
+      this.mainWindow = null;
+      this.currentProfile = null;
+      this.promptReload = null;
+      if (!window.isDestroyed()) {
         unloadTrackerBlockerEngine(window.webContents.session);
       }
     },
     async onConfigChange(newConfig) {
+      const generation = this.generation;
       this.reloadPromise = this.reloadPromise
         .catch(() => undefined)
         .then(async () => {
-          if (!this.mainWindow) return;
+          if (
+            generation !== this.generation ||
+            !this.mainWindow ||
+            this.mainWindow.isDestroyed()
+          )
+            return;
 
           const session = this.mainWindow.webContents.session;
+          const nextProfile = profileKey(newConfig);
+          const profileChanged =
+            this.currentProfile !== null && this.currentProfile !== nextProfile;
+          this.currentProfile = nextProfile;
           const wasBlockerEnabled = isBlockerEnabled(session);
           if (wasBlockerEnabled) {
-            unloadTrackerBlockerEngine(session);
+            unloadTrackerBlockerEngine(session, true);
           }
           if (usesBlockLists(newConfig.blocker, newConfig.customEnabled)) {
             await loadTrackerBlockerEngine(
@@ -192,10 +227,11 @@ export default createPlugin({
               newConfig.customEnabled,
               newConfig.disabledLocalBlockLists,
             );
-          } else if (wasBlockerEnabled) {
-            // unregisterPreloadScript only affects later navigations. Reload so
-            // Ghostery code in this page cannot invoke removed IPC handlers.
-            this.mainWindow.webContents.reload();
+          }
+          if (generation === this.generation && profileChanged) {
+            this.promptReload?.().catch((error: unknown) =>
+              console.error('Error showing DNT reload dialog', error),
+            );
           }
         });
       await this.reloadPromise;

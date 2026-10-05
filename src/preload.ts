@@ -120,6 +120,15 @@ ipcRenderer.on('plugin:enable', async (_, id: string) => {
 contextBridge.exposeInMainWorld('mainConfig', rendererConfig);
 contextBridge.exposeInMainWorld('electronIs', is);
 contextBridge.exposeInMainWorld('ipcRenderer', {
+  subscribe: (channel: string, listener: (...args: unknown[]) => void) => {
+    const wrapped = (_event: IpcRendererEvent, ...args: unknown[]) =>
+      listener(...args);
+    ipcRenderer.on(channel, wrapped);
+    // Keep exact listener identity on the preload side of contextBridge.
+    return () => {
+      ipcRenderer.removeListener(channel, wrapped);
+    };
+  },
   on: (
     channel: string,
     listener: (event: IpcRendererEvent, ...args: unknown[]) => void,

@@ -206,6 +206,17 @@
   margin: 0 4px 0;
   border-radius: 200px;
   border: 1px solid #6e7c7c7f;
+  background: black;
+}
+
+.lyrics-picker-dot-available {
+  background: white;
+  border-color: white;
+}
+
+.lyrics-picker-dot-current {
+  outline: 1px solid white;
+  outline-offset: 2px;
 }
 
 .lyrics-picker-left,
@@ -221,19 +232,39 @@
   }
 }
 
-div:has(> .lyrics-picker) {
+.synced-lyrics-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.lyrics-picker-header {
+  position: absolute;
+  inset: 0 0 auto;
   z-index: 100;
-  position: sticky !important;
-  top: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
 
-  & > .lyrics-picker {
-    position: relative;
+.lyrics-picker-header > .lyrics-picker {
+  pointer-events: auto;
+  transform: translateY(0);
+  transition: transform 325ms ease-in-out;
+  backdrop-filter: blur(5px);
+}
 
-    top: var(--lyrics-picker-top, 0) !important;
-    transition: top 325ms ease-in-out;
+.lyrics-picker-header-hidden > .lyrics-picker {
+  transform: translateY(-100%);
+  pointer-events: none;
+}
 
-    backdrop-filter: blur(5px);
-  }
+.synced-lyrics-layout > .synced-lyrics-vlist {
+  flex: 1;
+  min-height: 0;
+  height: auto !important;
 }
 
 /* Animations */
