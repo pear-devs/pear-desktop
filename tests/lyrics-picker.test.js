@@ -151,6 +151,10 @@ test('original picker controls with retained multi-candidate logic and progressi
       window.loadURL('http://lyrics-picker.test/');
     });
     const page = await opened;
+    // Desktop window managers may tile/resize native Electron windows while
+    // opening the main app. Layout assertions need a controlled CSS viewport.
+    await page.setViewportSize({ width: 360, height: 700 });
+    await page.bringToFront();
     await page.waitForSelector('#fixture', { state: 'attached' });
     await page.addStyleTag({ content: css });
     await page.addStyleTag({ content: theme });
