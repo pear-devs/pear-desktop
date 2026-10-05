@@ -9,7 +9,20 @@ import {
 import { app, ipcMain, net } from 'electron';
 import * as z from 'zod';
 
+import { installCosmeticInjection } from './cosmetics';
+
 let blocker: ElectronBlocker | undefined;
+let disposeCosmetics: (() => void) | undefined;
+let loadGeneration = 0;
+let activeSession: Electron.Session | undefined;
+let ownedPreloadIds: string[] = [];
+let hasIdleCosmeticHandlers = false;
+
+const removeCosmeticHandlers = () => {
+  ipcMain.removeHandler('@ghostery/adblocker/inject-cosmetic-filters');
+  ipcMain.removeHandler('@ghostery/adblocker/is-mutation-observer-enabled');
+  hasIdleCosmeticHandlers = false;
+};
 
 const TbSourcesSchema = z.object({
   tb: z.array(z.string()),
@@ -92,6 +105,7 @@ export const loadTrackerBlockerEngine = async (
   loadCustomBlockLists: boolean = true,
   disabledLocalBlockLists: string[] = [],
 ) => {
+  const generation = ++loadGeneration;
   const localLists = loadCustomBlockLists
     ? await loadLocalBlockLists(disabledLocalBlockLists)
     : new Map<string, string>();
@@ -174,9 +188,23 @@ export const loadTrackerBlockerEngine = async (
       },
       cachingOptions,
     );
+    if (generation !== loadGeneration) return;
+    disposeCosmetics = installCosmeticInjection(engine);
     blocker = engine;
     if (session) {
-      engine.enableBlockingInSession(session);
+      activeSession = session;
+      if (hasIdleCosmeticHandlers) removeCosmeticHandlers();
+      const previousPreloads = new Set(
+        session.getPreloadScripts().map(({ id }) => id),
+      );
+      try {
+        engine.enableBlockingInSession(session);
+      } finally {
+        ownedPreloadIds = session
+          .getPreloadScripts()
+          .map(({ id }) => id)
+          .filter((id) => !previousPreloads.has(id));
+      }
       // @ghostery/adblocker-electron applies blocking and resource redirects,
       // but currently drops the engine's URL rewrites. Registering this after
       // enableBlockingInSession replaces its sole Electron listener while
@@ -203,21 +231,25 @@ export const loadTrackerBlockerEngine = async (
       );
     }
   } catch (error) {
+    if (generation === loadGeneration && session && blocker)
+      unloadTrackerBlockerEngine(session);
     console.error('Error loading blocker engine', error);
   }
 };
 
-export const unloadTrackerBlockerEngine = (session: Electron.Session) => {
+export const unloadTrackerBlockerEngine = (
+  session: Electron.Session,
+  keepPageHandlers = false,
+) => {
+  if (activeSession && activeSession !== session) return;
+  ++loadGeneration;
+  disposeCosmetics?.();
+  disposeCosmetics = undefined;
   if (blocker) {
     // Electron 42 no longer accepts `webRequest.onBeforeRequest(null)`, which
     // @ghostery/adblocker-electron still calls during disable. Replace the two
     // singleton listeners with inert callbacks and release its IPC/preload
     // resources ourselves, otherwise a profile reload leaks handlers.
-    const context = (
-      blocker as unknown as {
-        contexts: WeakMap<Electron.Session, { preloadScriptId?: string }>;
-      }
-    ).contexts.get(session);
     session.webRequest.onBeforeRequest(
       { urls: ['<all_urls>'] },
       (_details, callback) => callback({}),
@@ -226,13 +258,28 @@ export const unloadTrackerBlockerEngine = (session: Electron.Session) => {
       { urls: ['<all_urls>'] },
       (_details, callback) => callback({}),
     );
-    if (context?.preloadScriptId) {
-      session.unregisterPreloadScript(context.preloadScriptId);
+    for (const id of ownedPreloadIds) {
+      session.unregisterPreloadScript(id);
     }
-    ipcMain.removeHandler('@ghostery/adblocker/inject-cosmetic-filters');
-    ipcMain.removeHandler('@ghostery/adblocker/is-mutation-observer-enabled');
+    removeCosmeticHandlers();
+    if (keepPageHandlers) {
+      // "Later" leaves the old page alive. Its observer must not invoke
+      // missing handlers while Lite is active; these perform no filtering.
+      ipcMain.handle(
+        '@ghostery/adblocker/inject-cosmetic-filters',
+        () => undefined,
+      );
+      ipcMain.handle(
+        '@ghostery/adblocker/is-mutation-observer-enabled',
+        () => false,
+      );
+      hasIdleCosmeticHandlers = true;
+    }
     blocker = undefined;
+    activeSession = undefined;
+    ownedPreloadIds = [];
   }
+  if (!keepPageHandlers && hasIdleCosmeticHandlers) removeCosmeticHandlers();
 };
 
 export const isBlockerEnabled = (session: Electron.Session) =>
