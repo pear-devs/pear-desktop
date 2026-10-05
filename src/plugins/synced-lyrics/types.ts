@@ -3,7 +3,7 @@ import type { SongInfo } from '@/providers/song-info';
 
 export type SyncedLyricsPluginConfig = {
   enabled: boolean;
-  preferredProvider?: ProviderName;
+  preferredProvider: 'auto' | ProviderName;
   preciseTiming: boolean;
   showTimeCodes: boolean;
   defaultTextString: string | string[];
@@ -49,5 +49,29 @@ export interface LyricProvider {
   name: string;
   baseUrl: string;
 
-  search(songInfo: SearchSongInfo): Promise<LyricResult | null>;
+  search(
+    songInfo: SearchSongInfo,
+    context?: SearchContext,
+  ): Promise<LyricCandidate[]>;
+}
+
+// Source metadata stays separate from canonical timed content. IDs identify a
+// source variant, not its rank or its position in a response array.
+export interface LyricCandidate {
+  id: string;
+  provider: string;
+  sourceId: string;
+  result: LyricResult;
+  album?: string;
+  durationMs?: number;
+  language?: string;
+  variant?: string;
+  exactVideoId?: string;
+}
+
+export interface SearchOptions {
+  showLyricsEvenIfInexact: boolean;
+}
+export interface SearchContext {
+  signal: AbortSignal;
 }

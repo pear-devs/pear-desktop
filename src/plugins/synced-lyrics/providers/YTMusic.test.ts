@@ -56,7 +56,13 @@ const searchFixture = async (contents: unknown) => {
   globalThis.fetch = () =>
     Promise.resolve(new Response(JSON.stringify({ contents })));
   try {
-    return await new YTMusic().search(info);
+    const candidates = await new YTMusic().search(info);
+    expect(candidates[0]).toMatchObject({
+      provider: 'YTMusic',
+      sourceId: 'lyrics',
+      exactVideoId: 'test',
+    });
+    return candidates[0]?.result;
   } finally {
     globalThis.fetch = originalFetch;
     if (documentDescriptor)
@@ -135,4 +141,36 @@ test('YTMusic plain lyrics remain exact and untimed', async () => {
   expect(result?.syncLevel).toBe('plain');
   expect(result?.lyrics).toBe('  Hello\n世界  ');
   expect(result?.lines).toBeUndefined();
+});
+
+test('cancelled internal next wait settles and never starts downstream browse', async () => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const originalFetch = globalThis.fetch;
+  let browseCalls = 0;
+  Object.defineProperty(globalThis, 'document', {
+    configurable: true,
+    value: {
+      querySelector: () => ({
+        networkManager: { fetch: () => new Promise(() => {}) },
+      }),
+    },
+  });
+  globalThis.fetch = () => {
+    browseCalls++;
+    return Promise.resolve(new Response('{}'));
+  };
+  try {
+    const controller = new AbortController();
+    const pending = new YTMusic().search(info, {
+      signal: controller.signal,
+    });
+    await Promise.resolve();
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ kind: 'aborted' });
+    expect(browseCalls).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (descriptor) Object.defineProperty(globalThis, 'document', descriptor);
+    else Reflect.deleteProperty(globalThis, 'document');
+  }
 });

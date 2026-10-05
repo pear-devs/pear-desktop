@@ -1,9 +1,17 @@
-import { createEffect, For, Show, createSignal, createMemo } from 'solid-js';
+import {
+  createEffect,
+  For,
+  Show,
+  createSignal,
+  createMemo,
+  onCleanup,
+} from 'solid-js';
 import { type VirtualizerHandle } from 'virtua/solid';
 
 import { type LyricLine } from '@/plugins/synced-lyrics/types';
 
 import { _ytAPI } from '..';
+import { observeLyricsTask } from '../lifecycle';
 import { config, currentTime } from '../renderer';
 import {
   blankProgress,
@@ -104,9 +112,11 @@ export const SyncedLine = (props: SyncedLineProps) => {
     const input = canonicalize(text());
     if (!config()?.romanization) return;
 
-    romanize(input).then((result) => {
-      setRomanization(canonicalize(result));
-    });
+    onCleanup(
+      observeLyricsTask(romanize(input), (result) => {
+        setRomanization(canonicalize(result));
+      }),
+    );
   });
 
   return (

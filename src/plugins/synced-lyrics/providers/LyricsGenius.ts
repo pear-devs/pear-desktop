@@ -1,61 +1,55 @@
-import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
+import { lyricsHttp, LyricsError } from '../search/http';
+
+import type {
+  LyricProvider,
+  LyricCandidate,
+  SearchSongInfo,
+  SearchContext,
+} from '../types';
 
 const preloadedStateRegex = /__PRELOADED_STATE__ = JSON\.parse\('(.*?)'\);/;
 const preloadHtmlRegex = /body":{"html":"(.*?)","children"/;
 
 export class LyricsGenius implements LyricProvider {
-  public name = 'Genius';
+  public name = 'LyricsGenius';
   public baseUrl = 'https://genius.com';
   private domParser = new DOMParser();
 
   // prettier-ignore
-  async search({ title, artist }: SearchSongInfo): Promise<LyricResult | null> {
+  async search({ title, artist }: SearchSongInfo, context?: SearchContext): Promise<LyricCandidate[]> {
     const query = new URLSearchParams({
       q: `${artist} ${title}`,
       page: '1',
       per_page: '10',
     });
 
-    const response = await fetch(`${this.baseUrl}/api/search/song?${query}`);
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = (await response.json()) as LyricsGeniusSearch;
+    const data = await lyricsHttp.json<LyricsGeniusSearch>(`${this.baseUrl}/api/search/song?${query}`, { signal: context?.signal });
     const hits = data.response?.sections?.[0]?.hits;
-    if (!Array.isArray(hits)) return null;
+    if (!Array.isArray(hits)) return [];
+    const sources = hits.map(({ result }) => result).filter((source, index, all) =>
+      source.primary_artist.url !== 'https://genius.com/artists/Deleted-artist' && all.findIndex((other) => other.id === source.id) === index);
+    const settled = await Promise.allSettled(sources.map((source) => this.fetchCandidate(source, context?.signal)));
+    context?.signal.throwIfAborted();
+    const candidates = settled.flatMap((item) => item.status === 'fulfilled' && item.value ? [item.value] : []);
+    const failed = settled.filter((item) => item.status === 'rejected');
+    if (!candidates.length && failed.length) throw failed[0].reason;
+    for (const failure of failed) console.warn('Genius candidate retrieval failed', failure.reason);
+    return candidates;
+  }
 
-    hits.sort(
-      ({
-        result: {
-          title: titleA,
-          primary_artist: { name: artistA },
-        },
-      }, {
-        result: {
-          title: titleB,
-          primary_artist: { name: artistB },
-        },
-      }) => {
-        const pointsA = (titleA === title ? 1 : 0) +
-          (artistA.includes(artist) ? 1 : 0);
-        const pointsB = (titleB === title ? 1 : 0) +
-          (artistB.includes(artist) ? 1 : 0);
+  private async fetchCandidate(
+    source: Result,
+    signal?: AbortSignal,
+  ): Promise<LyricCandidate | null> {
+    const { path } = source;
 
-        return pointsB - pointsA;
-      },
-    );
-
-    const closestHit = hits.at(0);
-    if (!closestHit || closestHit.result.primary_artist.url === 'https://genius.com/artists/Deleted-artist') {
-      return null;
+    let html: string;
+    try {
+      html = await lyricsHttp.text(`${this.baseUrl}${path}`, { signal });
+    } catch (error) {
+      if (error instanceof LyricsError && error.status === 404) return null;
+      throw error;
     }
-
-    const { result: { path } } = closestHit;
-
-    const lyricsResponse = await fetch(`${this.baseUrl}${path}`);
-    if (!lyricsResponse.ok) return null;
-    const html = await lyricsResponse.text();
     const doc = this.domParser.parseFromString(html, 'text/html');
 
     const preloadedStateScript = Array.prototype.find.call(
@@ -65,18 +59,20 @@ export class LyricsGenius implements LyricProvider {
       },
     ) as HTMLScriptElement;
 
-    const preloadedState = preloadedStateScript?.textContent?.match(
-      preloadedStateRegex,
-    )?.[1]?.replace(/\\"/g, '"');
+    const preloadedState = preloadedStateScript?.textContent
+      ?.match(preloadedStateRegex)?.[1]
+      ?.replace(/\\"/g, '"');
 
-    const lyricsHtml = preloadedState?.match(preloadHtmlRegex)?.[1]
+    const lyricsHtml = preloadedState
+      ?.match(preloadHtmlRegex)?.[1]
       ?.replace(/\\\//g, '/')
       ?.replace(/\\\\/g, '\\')
       ?.replace(/\\n/g, '\n')
       ?.replace(/\\'/g, "'")
       ?.replace(/\\"/g, '"');
 
-    const hasUnreleasedPlaceholder = preloadedState &&
+    const hasUnreleasedPlaceholder =
+      preloadedState &&
       /lyricsPlaceholderReason.{1,5}unreleased/.test(preloadedState);
     if (!lyricsHtml) {
       if (hasUnreleasedPlaceholder) return null;
@@ -91,10 +87,15 @@ export class LyricsGenius implements LyricProvider {
     }
 
     return {
-      title: closestHit.result.title,
-      artists: closestHit.result.primary_artists.map(({ name }) => name),
-      syncLevel: 'plain',
-      lyrics,
+      provider: this.name,
+      id: String(source.id),
+      sourceId: String(source.id),
+      result: {
+        title: source.title,
+        artists: source.primary_artists.map(({ name }) => name),
+        syncLevel: 'plain',
+        lyrics,
+      },
     };
   }
 }

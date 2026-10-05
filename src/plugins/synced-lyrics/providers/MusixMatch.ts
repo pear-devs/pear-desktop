@@ -1,23 +1,29 @@
 import * as z from 'zod';
 
 import { LRC } from '../parsers/lrc';
-import { netFetch } from '../renderer';
+import { electronTransport } from '../search/electron-transport';
+import { lyricsHttp, LyricsError } from '../search/http';
+import { variantDigest } from '../search/identity';
 
-import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
+import type {
+  LyricProvider,
+  LyricCandidate,
+  SearchSongInfo,
+  SearchContext,
+} from '../types';
 
 export class MusixMatch implements LyricProvider {
   name = 'MusixMatch';
   baseUrl = 'https://www.musixmatch.com/';
 
-  private api: MusixMatchAPI | undefined;
+  async search(
+    info: SearchSongInfo,
+    context?: SearchContext,
+  ): Promise<LyricCandidate[]> {
+    // Per-search initialization avoids sharing an aborted token request with a new track.
+    const api = await MusixMatchAPI.new(context?.signal);
 
-  async search(info: SearchSongInfo): Promise<LyricResult | null> {
-    // late-init the API, to avoid an electron IPC issue
-    // an added benefit is that if it has an error during init, the user can hit the retry button
-    this.api ??= await MusixMatchAPI.new();
-    await this.api.reinit();
-
-    const data = await this.api.query(Endpoint.getMacroSubtitles, {
+    const data = await api.query(Endpoint.getMacroSubtitles, {
       q_track: info.alternativeTitle || info.title,
       q_artist: info.artist,
       q_duration: info.songDuration.toString(),
@@ -33,21 +39,52 @@ export class MusixMatch implements LyricProvider {
 
     const track = getter('matcher.track.get')?.track;
     const lyrics = getter('track.lyrics.get')?.lyrics?.lyrics_body;
-    const subtitle = getter('track.subtitles.get')?.subtitle_list?.[0];
-
-    // either no track found, or musixmatch's algorithm returned "Coldplay - Paradise" for no reason whatsoever
-    if (!track || track.track_id === 115264642) return null;
-
-    const synced = subtitle
-      ? LRC.parse(subtitle.subtitle.subtitle_body, info.songDuration * 1000)
-      : undefined;
-    return {
-      title: track.track_name,
-      artists: [track.artist_name],
-      syncLevel: synced?.syncLevel ?? 'plain',
-      lines: synced?.lines,
-      lyrics: lyrics,
-    };
+    const subtitles = getter('track.subtitles.get')?.subtitle_list ?? [];
+    if (!track) return [];
+    const variants = subtitles.length
+      ? subtitles.map(({ subtitle }) => subtitle)
+      : [undefined];
+    const candidates = await Promise.all(
+      variants.map(async (subtitle): Promise<LyricCandidate> => {
+        const synced = subtitle
+          ? LRC.parse(
+              subtitle.subtitle_body,
+              (track.track_length ?? info.songDuration) * 1000,
+            )
+          : undefined;
+        const variantId = subtitle
+          ? String(
+              subtitle.subtitle_id ??
+                (await variantDigest(
+                  `${subtitle.subtitle_language ?? 'unknown'}:${subtitle.subtitle_body}`,
+                )),
+            )
+          : 'plain';
+        return {
+          provider: this.name,
+          sourceId: String(track.track_id),
+          id: `${track.track_id}:${variantId}`,
+          album: track.album_name,
+          durationMs:
+            track.track_length === undefined
+              ? undefined
+              : track.track_length * 1000,
+          language: subtitle?.subtitle_language,
+          result: {
+            title: track.track_name,
+            artists: [track.artist_name],
+            syncLevel: synced?.syncLevel ?? 'plain',
+            lines: synced?.lines,
+            lyrics,
+          },
+        };
+      }),
+    );
+    context?.signal.throwIfAborted();
+    return candidates.filter(
+      (candidate, index) =>
+        candidates.findIndex((other) => other.id === candidate.id) === index,
+    );
   }
 }
 
@@ -57,6 +94,8 @@ const Track = z.object({
   track_id: z.number(),
   track_name: z.string(),
   artist_name: z.string(),
+  album_name: z.string().optional(),
+  track_length: z.number().nonnegative().optional(),
 });
 
 const Lyrics = z.object({
@@ -65,6 +104,8 @@ const Lyrics = z.object({
 
 const Subtitle = z.object({
   subtitle_body: z.string(),
+  subtitle_id: z.number().optional(),
+  subtitle_language: z.string().optional(),
 });
 
 enum Endpoint {
@@ -138,26 +179,14 @@ const ResponseSchema = {
 } as const;
 
 class MusixMatchAPI {
-  private initPromise: Promise<void>;
   private token: string | null = null;
 
-  private constructor() {
-    this.initPromise = this.init();
-  }
+  private constructor(private signal?: AbortSignal) {}
 
-  public static async new() {
-    const api = new MusixMatchAPI();
-    await api.initPromise;
+  public static async new(signal?: AbortSignal) {
+    const api = new MusixMatchAPI(signal);
+    await api.init();
     return api;
-  }
-
-  public async reinit() {
-    const [{ status }] = await Promise.allSettled([this.initPromise]);
-    if (status === 'rejected') {
-      localStorage.removeItem(this.key);
-      this.initPromise = this.init();
-      await this.initPromise;
-    }
   }
 
   // god I love typescript generics, they're so useful
@@ -169,9 +198,9 @@ class MusixMatchAPI {
         ? z.infer<(typeof ResponseSchema)[T]>
         : unknown;
     },
-  >(endpoint: T, params: Params[T]): Promise<R> {
-    await this.initPromise;
-    if (!this.token) throw new Error('Token not initialized');
+  >(endpoint: T, params: Params[T], refreshed = false): Promise<R> {
+    this.signal?.throwIfAborted();
+    if (!this.token) throw new LyricsError('auth', 'Token not initialized');
 
     const url = `${this.baseUrl}${endpoint}`;
 
@@ -186,11 +215,11 @@ class MusixMatchAPI {
       ),
     );
 
-    const [, json] = await netFetch(`${url}?${clonedParams}`, {
+    const response = await lyricsHttp.json<unknown>(`${url}?${clonedParams}`, {
       headers: this.headers,
+      signal: this.signal,
+      transport: electronTransport,
     });
-
-    const response = JSON.parse(json);
     // prettier-ignore
     if (
       response && typeof response === 'object' &&
@@ -199,8 +228,10 @@ class MusixMatchAPI {
       'status_code' in response.message.header && typeof response.message.header.status_code === 'number' &&
       response.message.header.status_code === 401
     ) {
-      await this.reinit();
-      return this.query(endpoint, params);
+      if (refreshed) throw new LyricsError('auth', 'MusixMatch rejected refreshed token');
+      localStorage.removeItem(this.key);
+      await this.init();
+      return this.query(endpoint, params, true);
     }
 
     const parsed = z
@@ -210,8 +241,10 @@ class MusixMatchAPI {
       .safeParse(response);
 
     if (!parsed.success) {
-      console.error('Malformed response', response, parsed.error);
-      throw new Error('Failed to parse response from MusixMatch API');
+      throw new LyricsError(
+        'parse/schema',
+        'Failed to parse response from MusixMatch API',
+      );
     }
 
     return parsed.data.message as R;
@@ -230,9 +263,17 @@ class MusixMatchAPI {
 
   private key = 'ytm:synced-lyrics:mxm:token';
   private async init() {
-    const { token, expires } = this.savedTokenSchema.parse(
-      JSON.parse(localStorage.getItem(this.key) ?? '{ "token": null }'),
-    );
+    this.signal?.throwIfAborted();
+    let saved: unknown;
+    try {
+      saved = JSON.parse(localStorage.getItem(this.key) ?? '{ "token": null }');
+    } catch {
+      saved = null;
+    }
+    const parsed = this.savedTokenSchema.safeParse(saved);
+    const { token, expires } = parsed.success
+      ? parsed.data
+      : { token: null, expires: undefined };
     if (token && expires > Date.now()) {
       this.token = token;
       return;
@@ -241,7 +282,8 @@ class MusixMatchAPI {
     localStorage.removeItem(this.key);
 
     this.token = await this.getToken();
-    if (!this.token) throw new Error('Failed to get token');
+    this.signal?.throwIfAborted();
+    if (!this.token) throw new LyricsError('auth', 'Failed to get token');
 
     localStorage.setItem(
       this.key,
@@ -261,13 +303,17 @@ class MusixMatchAPI {
   private async getToken() {
     const endpoint = 'token.get';
     const params = new URLSearchParams({ app_id: this.app_id });
-    const [, json] = await netFetch(`${this.baseUrl}${endpoint}?${params}`, {
-      headers: this.headers,
-    });
-
     const {
       message: { body },
-    } = this.tokenSchema.parse(JSON.parse(json));
+    } = await lyricsHttp.json(
+      `${this.baseUrl}${endpoint}?${params}`,
+      {
+        headers: this.headers,
+        signal: this.signal,
+        transport: electronTransport,
+      },
+      (value) => this.tokenSchema.parse(value),
+    );
     return body?.user_token ?? '';
   }
 
