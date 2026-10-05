@@ -477,6 +477,7 @@
         "connected": "Connected",
         "disconnected": "Disconnected",
         "hide-duration-left": "Hide duration left",
+        "hide-artist-image": "Hide artist avatar image",
         "hide-github-button": "Hide GitHub link Button",
         "play-on-application": "Play on {{applicationName}}",
         "set-inactivity-timeout": "Set inactivity timeout",
