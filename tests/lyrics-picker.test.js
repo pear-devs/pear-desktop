@@ -6,8 +6,16 @@ import { test, expect, _electron as electron } from '@playwright/test';
 import { build } from 'vite';
 import solid from 'vite-plugin-solid';
 
+import { modulePath } from './helpers/module-path.js';
+
 const root = path.resolve(import.meta.dirname, '..');
-const plugin = path.join(root, 'src/plugins/synced-lyrics');
+const plugin = modulePath(path.join(root, 'src/plugins/synced-lyrics'));
+const fixtureEntry = modulePath(
+  path.join(root, 'tests/lyrics-picker-fixture.tsx'),
+);
+const layoutEntry = modulePath(
+  path.join(root, 'tests/lyrics-layout-components.tsx'),
+);
 let bundle;
 let css;
 let theme;
@@ -24,13 +32,15 @@ test.beforeAll(async ({}, testInfo) => {
         name: 'lyrics-picker-fixture',
         enforce: 'pre',
         resolveId(id, importer) {
+          id = modulePath(id);
+          importer = importer && modulePath(importer);
           if (
             importer?.endsWith('/renderer/renderer.tsx') &&
             id === './components'
           )
-            return path.join(root, 'tests/lyrics-layout-components.tsx');
-          if (id === 'fixture' || id === path.join(root, 'fixture'))
-            return path.join(root, 'tests/lyrics-picker-fixture.tsx');
+            return layoutEntry;
+          if (id === 'fixture' || id === modulePath(path.join(root, 'fixture')))
+            return fixtureEntry;
           if (importer?.endsWith('/renderer/store.ts') && id === './renderer')
             return '\0fixture-config';
           if (
@@ -41,7 +51,8 @@ test.beforeAll(async ({}, testInfo) => {
           return null;
         },
         load(id) {
-          if (id === path.join(root, 'tests/lyrics-layout-components.tsx'))
+          id = modulePath(id);
+          if (id === layoutEntry)
             return `
             export const LoadingKaomoji=()=> <div>Searching</div>;
             export const NotFoundKaomoji=()=> <div>No lyrics</div>;
@@ -53,14 +64,13 @@ test.beforeAll(async ({}, testInfo) => {
             return `import {createSignal} from 'solid-js'; export const [config,setConfig]=createSignal({enabled:true,preferredProvider:'auto',showLyricsEvenIfInexact:false});`;
           if (id === '\0fixture-providers')
             return `export const providers=Object.fromEntries(['YTMusic','LRCLib','MusixMatch','LyricsGenius'].map(name=>[name,{name,baseUrl:'fixture',search:()=>new Promise(()=>{})}]));`;
-          if (id !== path.join(root, 'tests/lyrics-picker-fixture.tsx'))
-            return null;
+          if (id !== fixtureEntry) return null;
           return `
           import 'mdui'; import 'mdui/mdui.css';
           import {render} from 'solid-js/web';
-          import {LyricsPicker} from '${plugin}/renderer/components/LyricsPicker.tsx';
-          import * as store from '${plugin}/renderer/store.ts';
-          import {LyricsRenderer,setIsVisible,setCurrentTime} from '${plugin}/renderer/renderer';
+          import {LyricsPicker} from ${JSON.stringify(`${plugin}/renderer/components/LyricsPicker.tsx`)};
+          import * as store from ${JSON.stringify(`${plugin}/renderer/store.ts`)};
+          import {LyricsRenderer,setIsVisible,setCurrentTime} from ${JSON.stringify(`${plugin}/renderer/renderer`)};
           if(!customElements.get('yt-formatted-string')) customElements.define('yt-formatted-string',class extends HTMLElement {set text(value){this.textContent=value.runs.map(run=>run.text).join('');}});
           let dispose=render(()=><LyricsPicker setStickRef={()=>null}/>,document.getElementById('fixture'));
           window.fixture={

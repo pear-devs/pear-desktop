@@ -5,6 +5,8 @@ import { createRequire } from 'node:module';
 import { test, expect, _electron as electron } from '@playwright/test';
 import { build } from 'vite';
 
+import { modulePath } from './helpers/module-path.js';
+
 test('cosmetics on actual Electron loading window do not accumulate native execution listeners', async ({}, testInfo) => {
   const directory = testInfo.outputPath('fixture');
   await build({
@@ -34,11 +36,13 @@ test('cosmetics on actual Electron loading window do not accumulate native execu
         ],
         output: {
           paths: {
-            '@ghostery/adblocker-electron': createRequire(
-              import.meta.url,
-            ).resolve('@ghostery/adblocker-electron'),
-            '@/i18n': path.join(directory, 'i18n.cjs'),
-            '@/utils': path.join(directory, 'utils.cjs'),
+            '@ghostery/adblocker-electron': modulePath(
+              createRequire(import.meta.url).resolve(
+                '@ghostery/adblocker-electron',
+              ),
+            ),
+            '@/i18n': modulePath(path.join(directory, 'i18n.cjs')),
+            '@/utils': modulePath(path.join(directory, 'utils.cjs')),
           },
         },
       },
