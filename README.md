@@ -2,12 +2,13 @@
 
 # :pear: Pearum Desktop
 
+**English** | [Русский](README.ru.md)
+
 [![GitHub release](https://img.shields.io/github/release/maseckt/pearum-desktop.svg?style=for-the-badge)](https://github.com/maseckt/pearum-desktop/releases/)
 [![GitHub license](https://img.shields.io/github/license/maseckt/pearum-desktop.svg?style=for-the-badge)](https://github.com/maseckt/pearum-desktop/blob/master/license)
 [![Oxlint code style](https://img.shields.io/badge/code_style-Oxlint-5ed9c7.svg?style=for-the-badge)](https://github.com/maseckt/pearum-desktop/blob/dev/.oxlintrc.json)
 [![Build status](https://img.shields.io/github/actions/workflow/status/maseckt/pearum-desktop/build.yml?branch=master&style=for-the-badge)](https://github.com/maseckt/pearum-desktop/actions/workflows/build.yml)
 [![GitHub All Releases](https://img.shields.io/github/downloads/maseckt/pearum-desktop/total?style=for-the-badge)](https://github.com/maseckt/pearum-desktop/releases/)
-<!--[![AUR](https://img.shields.io/aur/version/pear-desktop-bin?color=blueviolet&style=for-the-badge)](https://aur.archlinux.org/packages/pear-desktop-bin)-->
 
 </div>
 
@@ -39,8 +40,7 @@ Development changes may not yet be available in published releases.
 - [Features](#features)
 - [Translation](#translation)
 - [Download](#download)
-  - [Arch Linux](#arch-linux)
-  - [Solus](#solus)
+  - [Linux](#linux)
   - [MacOS](#macos)
   - [Windows](#windows)
     - [How to install without a network connection? (in Windows)](#how-to-install-without-a-network-connection-in-windows)
@@ -75,31 +75,16 @@ For fork-specific text, submit changes to this repository's `src/i18n/resources/
 
 ## Download
 
-Check this fork's [releases](https://github.com/maseckt/pearum-desktop/releases/) for published builds.
-If no build is available for your platform, follow the [build instructions](#build).
+Download Pearum Desktop only from this project's [GitHub Releases](https://github.com/maseckt/pearum-desktop/releases/).
+Choose an asset for your operating system and device architecture. If no build is available for your platform, follow the [build instructions](#build).
 
-> [!NOTE]
-> The package-manager instructions below install **upstream Pear Desktop**, not this fork.
-> To use Pearum Desktop changes, use a build from this repository.
+### Linux
 
-### Arch Linux
-
-Install the [`pear-desktop`](https://aur.archlinux.org/packages/pear-desktop) package from the AUR. For AUR installation instructions, take a look at
-this [wiki page](https://wiki.archlinux.org/index.php/Arch_User_Repository#Installing_packages).
-
-### [Solus](https://getsol.us/)
-
-```bash
-sudo eopkg install pear-desktop
-```
+Download a Linux build from [GitHub Releases](https://github.com/maseckt/pearum-desktop/releases/) and choose a format supported by your distribution from the available assets.
 
 ### macOS
 
-You can install the app using Homebrew (see the [cask definition](https://github.com/pear-devs/homebrew-pear)):
-
-```bash
-brew install pear-devs/pear/pear-desktop
-```
+Download a macOS build for your device architecture from [GitHub Releases](https://github.com/maseckt/pearum-desktop/releases/).
 
 If you install the app manually and get an error "is damaged and can’t be opened." when launching the app, run the following in the Terminal:
 
@@ -109,24 +94,9 @@ If you install the app manually and get an error "is damaged and can’t be open
 
 ### Windows
 
-You can use the [Scoop package manager](https://scoop.sh) to install the `pear-desktop` package from
-the [`extras` bucket](https://github.com/ScoopInstaller/Extras).
+Download a Windows installer for your device architecture from [GitHub Releases](https://github.com/maseckt/pearum-desktop/releases/) and run it.
 
-```bash
-scoop bucket add extras
-scoop install extras/pear-desktop
-```
-
-Alternately you can use [Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/), Windows 11s
-official CLI package manager to install the `pear-devs.pear-desktop` package.
-
-*Note: Microsoft Defender SmartScreen might block the installation since it is from an "unknown publisher". This is also
-true for the manual installation when trying to run the executable(.exe) after a manual download here on github (same
-file).*
-
-```bash
-winget install pear-devs.pear-desktop
-```
+*Note: Microsoft Defender SmartScreen may flag the installer as coming from an "unknown publisher".*
 
 #### How to install without a network connection? (in Windows)
 
@@ -169,6 +139,10 @@ Using plugins, you can:
 Create a folder in `src/plugins/YOUR-PLUGIN-NAME`:
 
 - `index.ts`: the main file of the plugin
+
+<details>
+<summary>Plugin example</summary>
+
 ```typescript
 import style from './style.css?inline'; // import style as inline
 
@@ -234,9 +208,14 @@ export default createPlugin({
 });
 ```
 
+</details>
+
 ### Common use cases
 
 - injecting custom CSS: create a `style.css` file in the same folder then:
+
+<details>
+<summary>Custom CSS example</summary>
 
 ```typescript
 // index.ts
@@ -255,7 +234,12 @@ export default createPlugin({
 });
 ```
 
+</details>
+
 - If you want to change the HTML:
+
+<details>
+<summary>Renderer example</summary>
 
 ```typescript
 import { createPlugin } from '@/utils';
@@ -271,6 +255,8 @@ export default createPlugin({
   } // define renderer hook
 });
 ```
+
+</details>
 
 - communicating between the front and back: can be done using the ipcMain module from electron. See `index.ts` file and
   example in `sponsorblock` plugin.
