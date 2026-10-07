@@ -276,10 +276,19 @@ export default createPlugin({
 ## Build
 
 1. Clone the repo
+```shell
+git clone https://github.com/pear-devs/pear-desktop
+```
 2. Follow [this guide](https://pnpm.io/installation) to install `pnpm`
-3. Run `pnpm install --frozen-lockfile` to install dependencies
-4. Run `pnpm build:OS`
-
+3. Install pear-desktop dependicies using pnpm
+```shell
+pnpm install --frozen-lockfile -y
+```
+4. Build pear-desktop for your OS
+```shell
+pnpm build:OS
+```
+If you want to build pear-desktop for a specific OS use one of the following commands:
 - `pnpm dist:win` - Windows
 - `pnpm dist:linux` - Linux (amd64)
 - `pnpm dist:linux:deb-arm64` - Linux (arm64 for Debian)
