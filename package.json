@@ -1,10 +1,9 @@
 {
-
-  "name": "\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063",
-  "desktopName": "com.github.th-ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063",
-  "productName": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063",
+  "name": "youtube-music",
+  "desktopName": "com.github.th-ch.youtube-music",
+  "productName": "YouTube Music",
   "version": "3.12.0",
-  "description": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063 Desktop App - including custom plugins",
+  "description": "YouTube Music Desktop App - including custom plugins",
   "main": "./dist/main/index.js",
   "type": "module",
   "license": "MIT",
@@ -81,6 +80,7 @@
     "electron-debug": "4.1.0",
     "electron-is": "3.0.0",
     "electron-localshortcut": "3.2.1",
+    "electron-prompt": "^1.7.0",
     "electron-store": "11.0.2",
     "electron-unhandled": "5.0.0",
     "electron-updater": "6.8.9",
