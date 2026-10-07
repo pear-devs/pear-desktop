@@ -2,6 +2,11 @@ import { blockers } from '@/plugins/do-not-track/types';
 import { DefaultPresetList, type Preset } from '@/plugins/downloader/types';
 
 import { defaultConfig as defaults } from './defaults';
+import {
+  LEGACY_SECTION_REPEAT_PLUGIN_ID,
+  LEGACY_SLOWED_REVERB_PLUGIN_ID,
+  migratePlayerActionsPlugins,
+} from './player-actions-migration';
 
 import type { TrackerBlockerConfig } from '@/plugins/do-not-track';
 import type { SyncedLyricsPluginConfig } from '@/plugins/synced-lyrics/types';
@@ -20,8 +25,24 @@ export type IStore = InstanceType<
 >;
 
 const migrations = {
+  '>=3.12.1'(store: IStore) {
+    const plugins = store.get('plugins');
+    if (
+      !plugins ||
+      typeof plugins !== 'object' ||
+      Array.isArray(plugins) ||
+      (!Object.hasOwn(plugins, LEGACY_SLOWED_REVERB_PLUGIN_ID) &&
+        !Object.hasOwn(plugins, LEGACY_SECTION_REPEAT_PLUGIN_ID))
+    ) {
+      return;
+    }
+
+    store.set('plugins', migratePlayerActionsPlugins(plugins));
+  },
   '>=3.12.0'(store: IStore) {
-    const blockerConfig = store.get('plugins.adblocker') as TrackerBlockerConfig;
+    const blockerConfig = store.get(
+      'plugins.adblocker',
+    ) as TrackerBlockerConfig;
     if (blockerConfig) {
       if (!Object.values(blockers).includes(blockerConfig.blocker)) {
         blockerConfig.blocker = blockers.InPlayer;
