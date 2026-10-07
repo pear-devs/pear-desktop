@@ -12,6 +12,7 @@ export const SongInfoSchema = z.object({
   isPaused: z.boolean().optional(),
   songDuration: z.number(),
   elapsedSeconds: z.number().optional(),
+  elapsedMilliseconds: z.number().optional(),
   url: z.string().optional(),
   album: z.string().nullable().optional(),
   videoId: z.string(),
