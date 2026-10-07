@@ -27,6 +27,7 @@ import {
 
 import type { APIServerConfig } from '../../config';
 import type { HonoApp } from '../types';
+import type { SpectrumData } from './websocket';
 import type { SongInfo } from '@/providers/song-info';
 import type { BackendContext } from '@/types/contexts';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';
@@ -298,6 +299,30 @@ const routes = {
             }),
           },
         },
+      },
+    },
+  }),
+  getSpectrum: createRoute({
+    method: 'get',
+    path: `/api/${API_VERSION}/spectrum`,
+    summary: 'get audio spectrum',
+    description:
+      'Get the most recent audio spectrum frame. Bands are log-spaced and each value is 0-255. Returns 204 if spectrum streaming is disabled or no audio has played yet.',
+    responses: {
+      200: {
+        description: 'Success',
+        content: {
+          'application/json': {
+            schema: z.object({
+              bands: z.array(z.number()),
+              peak: z.number(),
+              timestamp: z.number(),
+            }),
+          },
+        },
+      },
+      204: {
+        description: 'No spectrum data',
       },
     },
   }),
@@ -576,6 +601,7 @@ export const register = (
   repeatModeGetter: () => PromiseOrValue<RepeatMode | undefined>,
   likeTypeGetter: () => PromiseOrValue<LikeType | undefined>,
   volumeStateGetter: () => PromiseOrValue<VolumeState | undefined>,
+  spectrumGetter: () => PromiseOrValue<SpectrumData | undefined>,
 ) => {
   const controller = getSongControls(window);
 
@@ -695,6 +721,17 @@ export const register = (
     return ctx.json(
       (await volumeStateGetter()) ?? { state: 0, isMuted: false },
     );
+  });
+  app.openapi(routes.getSpectrum, async (ctx) => {
+    const spectrum = await spectrumGetter();
+
+    if (!spectrum) {
+      ctx.status(204);
+      return ctx.body(null);
+    }
+
+    ctx.status(200);
+    return ctx.json(spectrum);
   });
   app.openapi(routes.setFullscreen, (ctx) => {
     const { state } = ctx.req.valid('json');
