@@ -71,14 +71,14 @@ jobs:
           run_install: false
 
       - name: Setup NodeJS
-        if: startsWith(matrix.os, 'macOS') != true
+        if: startsWith(matrix.os, 'macos') != true
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Setup NodeJS for macOS
-        if: startsWith(matrix.os, 'macOS')
+        if: startsWith(matrix.os, 'macos')
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -140,11 +140,18 @@ jobs:
             !pack/builder-debug.yml
 
       - name: Test
-        uses: coactions/setup-xvfb@b6b4fcfb9f5a895edadc3bc76318fae0ac17c8b3
+        # Electron UI tests require an X server. Run once on Linux; the other
+        # matrix entries still compile/package their respective platform builds.
+        if: startsWith(matrix.os, 'ubuntu')
+        shell: bash
         env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
-        with:
-          run: pnpm test:debug
+          XDG_CONFIG_HOME: ${{ runner.temp }}/pearum-tests/config
+          XDG_CACHE_HOME: ${{ runner.temp }}/pearum-tests/cache
+          XDG_DATA_HOME: ${{ runner.temp }}/pearum-tests/data
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y xvfb
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' pnpm test
 
 
   release:
