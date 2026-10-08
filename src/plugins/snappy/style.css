@@ -1,0 +1,16 @@
+/*
+ * YouTube Music fades thumbnails and page header art in over 500ms after
+ * a page has already rendered, which makes every page switch feel like it
+ * lands late. Shorten those fades instead of removing them: the durations
+ * stay non-zero so any transitionend listeners still fire, and images
+ * still ease in rather than popping.
+ */
+#placeholder.faded-out.tp-yt-iron-image,
+ytmusic-fullbleed-thumbnail-renderer:not([no-transition])
+  .image.ytmusic-fullbleed-thumbnail-renderer {
+  transition-duration: 120ms !important;
+}
+
+yt-img-shadow {
+  transition-duration: 100ms !important;
+}
