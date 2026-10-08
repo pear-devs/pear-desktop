@@ -1,5 +1,7 @@
 import { contextBridge, webFrame, type BrowserWindow } from 'electron';
 
+import bypassScript from 'simple-youtube-age-restriction-bypass/dist/Simple-YouTube-Age-Restriction-Bypass.user.js?raw';
+
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 
@@ -39,6 +41,11 @@ export interface TrackerBlockerConfig {
    * @default false
    */
   disableDefaultLists: boolean;
+  /**
+   * Whether to enable the Bypass Age Restriction.
+   * @default false
+   */
+  bypassAgeRestriction: boolean;
 }
 
 export default createPlugin({
@@ -51,6 +58,7 @@ export default createPlugin({
     blocker: blockers.InPlayer,
     additionalBlockLists: [],
     disableDefaultLists: false,
+    bypassAgeRestriction: false,
   } as TrackerBlockerConfig,
   menu: async ({ getConfig, setConfig }) => {
     const config = await getConfig();
@@ -66,6 +74,16 @@ export default createPlugin({
             setConfig({ blocker });
           },
         })),
+      },
+      {
+        label: t('plugins.do-not-track.menu.bypass-age-restriction'),
+        type: 'checkbox',
+        checked: config.bypassAgeRestriction,
+        click() {
+          setConfig({
+            bypassAgeRestriction: !config.bypassAgeRestriction,
+          });
+        },
       },
     ];
   },
@@ -128,6 +146,16 @@ export default createPlugin({
       } else if (config.blocker === blockers.WithBlocklists) {
         await injectCliqzPreload();
       }
+
+      if (config.bypassAgeRestriction) {
+        // Simple workaround to prevent userscript from creating 'default' TrustedType policy,
+        // causing TypeError "Policy with name 'default' already exist" at src/utils/trusted-types.ts.
+        const sanitizedScript = bypassScript.replace(
+          "trustedTypes.createPolicy('default'",
+          "trustedTypes.createPolicy('syarb-default'",
+        );
+        await webFrame.executeJavaScript(sanitizedScript);
+      }
     },
     async onConfigChange(newConfig) {
       if (newConfig.blocker === blockers.InPlayer && !isInjected()) {
@@ -137,3 +165,4 @@ export default createPlugin({
     },
   },
 });
+
