@@ -161,7 +161,8 @@
                 "default": "Lalai",
                 "force-show": "Paksa pamer",
                 "hide": "Sembunyi",
-                "label": "Butang suka"
+                "label": "Butang suka",
+                "swap": "Tukar susunan butang Suka"
               },
               "remove-upgrade-button": "Buang butang naik taraf",
               "theme": {
@@ -230,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Benarkan penyesuaian tema bar carian"
       },
       "name": "Tema Warna Album"
     },
@@ -313,6 +315,22 @@
         "hostname": {
           "label": "Nama perumah"
         },
+        "https": {
+          "label": "HTTPS & Sijil",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Pilih fail sijil HTTPS",
+              "label": "Fail sijil (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Dayakan HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Pilih fail kunci peribadi HTTPS",
+              "label": "Fail kunci peribadi (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
@@ -388,6 +406,17 @@
         "no-captions": "Tiada sarikata untuk lagu ini"
       }
     },
+    "clock": {
+      "description": "Tambah jam pada bar navigasi",
+      "menu": {
+        "format": {
+          "24-hour-format": "Format 24 jam",
+          "display-seconds": "Paparkan saat",
+          "label": "Format"
+        }
+      },
+      "name": "Jam"
+    },
     "compact-sidebar": {
       "description": "Sentiasa tetapkan bar sisi dalam mod padat",
       "name": "Bar Sisi Padat"
@@ -454,8 +483,8 @@
         "set-status-display-type": {
           "label": "Teks status",
           "submenu": {
-            "artist": "Sedang mendengar {artist}",
             "application": "Mendengar {{applicationName}}",
+            "artist": "Sedang mendengar {artist}",
             "title": "Sedang mendengar {tajuk lagu}"
           }
         }
@@ -467,6 +496,13 @@
           "title": "Tetapkan tamat masa tidak aktif"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Sekat semua penjejakan secara lalai",
+      "menu": {
+        "blocker": "Penyekat"
+      },
+      "name": "Jangan Jejak"
     },
     "downloader": {
       "backend": {
@@ -550,7 +586,8 @@
             "bass-booster": "Penggalak bass"
           }
         }
-      }
+      },
+      "name": "Penyama Bunyi"
     },
     "exponential-volume": {
       "description": "Menjadikan gelangsar kelantangan eksponen supaya lebih mudah memilih kelantangan yang lebih rendah."
