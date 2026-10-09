@@ -1,0 +1,11 @@
+diff --git a/types.d.ts b/types.d.ts
+index 1156f0097943205ec8c0f7ce4c98dd9875320a93..0dd4e639ddc86e66bb10e87627e6bb43817f74ac 100644
+--- a/types.d.ts
++++ b/types.d.ts
+@@ -1,5 +1,4 @@
+-
+-declare module 'dbus-next' {
++declare module '@jellybrick/dbus-next' {
+     import { EventEmitter } from "events";
+ 
+     export type ObjectPath = string;
