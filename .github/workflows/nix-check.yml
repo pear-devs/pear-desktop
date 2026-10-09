@@ -1,0 +1,42 @@
+name: Nix Check
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'nix/**'
+      - 'flake.nix'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      actions: write # needed for purging the cache
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Nix install
+        uses: nixbuild/nix-quick-install-action@9f63be77f412a248c9d9a65a4c82cf066cdf8f0c
+
+      - name: Nix store cache
+        uses: nix-community/cache-nix-action@7df957e333c1e5da7721f60227dbba6d06080569
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+          gc-max-store-size-linux: 1G
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-
+          purge-created: 0
+          purge-last-accessed: 0
+          purge-primary-key: never
+
+      - name: Nix check
+        run: nix flake check --print-build-logs

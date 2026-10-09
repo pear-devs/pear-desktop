@@ -51,6 +51,7 @@
 - [Translation](#translation)
 - [Download](#download)
   - [Arch Linux](#arch-linux)
+  - [NixOS](#nixos)
   - [Solus](#solus)
   - [MacOS](#macos)
   - [Windows](#windows)
@@ -84,6 +85,23 @@ latest version.
 
 Install the [`pear-desktop`](https://aur.archlinux.org/packages/pear-desktop) package from the AUR. For AUR installation instructions, take a look at
 this [wiki page](https://wiki.archlinux.org/index.php/Arch_User_Repository#Installing_packages).
+
+### NixOS
+
+You can add
+[`pear-desktop`](https://search.nixos.org/packages?channel=unstable&type=packages&query=pear-desktop)
+from nixpkgs to your `environment.systemPackages` for a system-wide
+installation:
+
+```nix
+{ pkgs, ...} :
+{
+  environment.systemPackages = [ pkgs.pear-desktop ];
+}
+```
+
+Or use our [`Home Manager Module`](./nix/README.md) to install and configure it
+declaratively per user.
 
 ### [Solus](https://getsol.us/)
 
