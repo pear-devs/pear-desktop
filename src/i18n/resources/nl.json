@@ -161,7 +161,8 @@
                 "default": "Standaard",
                 "force-show": "Forceren weergeven",
                 "hide": "Verbergen",
-                "label": "Vind ik leuk-knoppen"
+                "label": "Vind ik leuk-knoppen",
+                "swap": "Wissel de volgorde van de like knoppen om"
               },
               "remove-upgrade-button": "Upgrade-knop verwijderen",
               "theme": {
@@ -409,7 +410,9 @@
       "description": "Voeg een klok toe aan de navigatiebalk",
       "menu": {
         "format": {
-          "24-hour-format": "24-uursformaat"
+          "24-hour-format": "24-uursformaat",
+          "display-seconds": "Toon Seconden",
+          "label": "Formaat"
         }
       },
       "name": "Klok"
@@ -493,6 +496,13 @@
           "title": "Inactiviteitstime-out instellen"
         }
       }
+    },
+    "do-not-track": {
+      "description": "standaard alle tracking blokkeren",
+      "menu": {
+        "blocker": "Blokker"
+      },
+      "name": "Niet tracken"
     },
     "downloader": {
       "backend": {
@@ -833,7 +843,12 @@
       },
       "menu": {
         "convert-chinese-character": {
+          "label": "Converteer Chinees karakter",
           "submenu": {
+            "disabled": {
+              "label": "Uitgeschakeld",
+              "tooltip": "Schakel chinese karakter conversie"
+            },
             "simplified-to-traditional": {
               "label": "Vereenvoudigd naar Traditioneel",
               "tooltip": "Zet Vereenvoudigd Chinees om naar Traditioneel Chinees"
@@ -842,7 +857,8 @@
               "label": "Traditioneel naar Vereenvoudigd",
               "tooltip": "Zet Traditioneel Chinees om naar Vereenvoudigd Chinees"
             }
-          }
+          },
+          "tooltip": "Vertaal Chinese karakters naar Vereenvoudigd of Traditioneel Chinees"
         },
         "default-text-string": {
           "label": "Standaardteken tussen songteksten",
