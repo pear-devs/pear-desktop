@@ -3,6 +3,8 @@ import path from 'node:path';
 import url from 'node:url';
 
 import ErrorHtmlAsset from '@assets/error.html?asset';
+import WinIconAsset from '@assets/generated/icons/win/icon.ico?asset&asarUnpack';
+import PngIconAsset from '@assets/icon.png?asset&asarUnpack';
 import {
   enhanceWebRequest,
   type BetterSession,
@@ -174,13 +176,11 @@ electronDebug({
   showDevTools: false, // Disable automatic devTools on new window
 });
 
-let icon = 'assets/icon.png';
-if (process.platform === 'win32') {
-  icon = 'assets/generated/icons/win/icon.ico';
-} else if (process.platform === 'darwin') {
-  icon = 'assets/generated/icons/mac/icon.icns';
-}
+const icon = process.platform === 'win32' ? WinIconAsset : PngIconAsset;
 
+/**
+ * Cleans up the main window reference when closed.
+ */
 function onClosed() {
   // Dereference the window
   // For multiple Windows store them in an array
@@ -191,6 +191,11 @@ ipcMain.handle('peard:get-main-plugin-names', async () =>
   Object.keys(await mainPlugins()),
 );
 
+/**
+ * Registers global IPC configuration handlers and observers for dynamic plugin reloading.
+ *
+ * @param win - The primary application BrowserWindow instance to attach hooks to.
+ */
 const initHook = async (win: BrowserWindow) => {
   const allPluginStubs = await allPlugins();
 
@@ -245,10 +250,26 @@ const initHook = async (win: BrowserWindow) => {
         const mainPlugin = getAllLoadedMainPlugins()[id];
         if (mainPlugin) {
           if (config.enabled && typeof mainPlugin.backend !== 'function') {
-            mainPlugin.backend?.onConfigChange?.call(
-              mainPlugin.backend,
-              config,
-            );
+            try {
+              Promise.resolve(
+                mainPlugin.backend?.onConfigChange?.call(
+                  mainPlugin.backend,
+                  config,
+                ),
+              ).catch((err: unknown) => {
+                console.error(
+                  LoggerPrefix,
+                  `[Plugins] Error during onConfigChange for ${id}:`,
+                  err,
+                );
+              });
+            } catch (err) {
+              console.error(
+                LoggerPrefix,
+                `[Plugins] Error during onConfigChange for ${id}:`,
+                err,
+              );
+            }
           }
         }
 
@@ -258,6 +279,11 @@ const initHook = async (win: BrowserWindow) => {
   });
 };
 
+/**
+ * Prompts the user with a dialog when a plugin configuration change requires an application restart.
+ *
+ * @param id - The unique plugin identifier.
+ */
 const showNeedToRestartDialog = async (id: string) => {
   const plugin = (await allPlugins())[id];
 
@@ -300,6 +326,12 @@ const showNeedToRestartDialog = async (id: string) => {
   });
 };
 
+/**
+ * Initializes and injects custom application CSS and user-defined themes
+ * into the main browser window's webContents.
+ *
+ * @param win - The target BrowserWindow instance to style.
+ */
 function initTheme(win: BrowserWindow) {
   injectCSS(win.webContents, musicPlayerCss);
   // Load user CSS
@@ -322,13 +354,19 @@ function initTheme(win: BrowserWindow) {
   }
 
   win.webContents.once('did-finish-load', () => {
-    if (is.dev()) {
-      console.debug(LoggerPrefix, t('main.console.did-finish-load.dev-tools'));
-      win.webContents.openDevTools();
+    if (icon) {
+      win.setIcon(icon);
     }
   });
 }
 
+/**
+ * Creates, configures, and displays the primary application BrowserWindow.
+ * Manages window sizing, multi-monitor bounds restoration, custom protocol handlers,
+ * plugin bootstrapping, and initial navigation to YouTube Music.
+ *
+ * @returns A promise resolving to the initialized BrowserWindow instance.
+ */
 async function createMainWindow() {
   const windowSize = config.get('window-size');
   const windowMaximized = config.get('window-maximized');
@@ -368,6 +406,7 @@ async function createMainWindow() {
     show: false,
     webPreferences: {
       contextIsolation: true,
+      nodeIntegration: false,
       preload: path.join(__dirname, '..', 'preload', 'preload.cjs'),
       ...(isTesting()
         ? undefined
@@ -402,11 +441,14 @@ async function createMainWindow() {
     const scaledX = windowX;
     const scaledY = windowY;
 
+    const halfWidth = scaledWidth / 2;
+    const halfHeight = scaledHeight / 2;
+
     if (
-      scaledX + (scaledWidth / 2) < display.bounds.x - 8 || // Left
-      scaledX + (scaledWidth / 2) > display.bounds.x + display.bounds.width || // Right
+      scaledX + halfWidth < display.bounds.x - 8 || // Left
+      scaledX + halfWidth > display.bounds.x + display.bounds.width || // Right
       scaledY < display.bounds.y - 8 || // Top
-      scaledY + (scaledHeight / 2) > display.bounds.y + display.bounds.height // Bottom
+      scaledY + halfHeight > display.bounds.y + display.bounds.height // Bottom
     ) {
       // Window is offscreen
       if (is.dev()) {
@@ -530,6 +572,27 @@ async function createMainWindow() {
   return win;
 }
 
+/**
+ * Persistently applies the application icon to any BrowserWindow instance created,
+ * including popups, authentication dialogs, and secondary windows.
+ *
+ * @param _event - The Electron event emitted when a browser window is created.
+ * @param win - The newly created BrowserWindow instance.
+ */
+app.on('browser-window-created', (_event, win) => {
+  if (icon) {
+    win.setIcon(icon);
+  }
+});
+
+/**
+ * Performs one-shot setup for the primary application window when initially created.
+ * Configures user-agent overrides, registers IPC handlers for app controls and song info,
+ * and attaches network failure recovery handlers.
+ *
+ * @param _event - The Electron event emitted on the first window creation.
+ * @param win - The primary BrowserWindow instance.
+ */
 app.once('browser-window-created', (_event, win) => {
   if (config.get('options.overrideUserAgent')) {
     // User agents are from https://developers.whatismybrowser.com/useragents/explore/
@@ -892,6 +955,12 @@ app.whenReady().then(async () => {
   }
 });
 
+/**
+ * Displays an error dialog when the renderer process crashes or becomes unresponsive.
+ *
+ * @param win - The BrowserWindow instance that crashed.
+ * @param details - Information regarding why the render process exited.
+ */
 function showUnresponsiveDialog(
   win: BrowserWindow,
   details: Electron.RenderProcessGoneDetails,
@@ -933,6 +1002,12 @@ function showUnresponsiveDialog(
     });
 }
 
+/**
+ * Configures the web session to relax specific Content Security Policy (CSP) headers,
+ * allowing plugins to inject styles and scripts, and sets up request conflict resolution.
+ *
+ * @param betterSession - The enhanced Electron session to configure. Defaults to the default session.
+ */
 function removeContentSecurityPolicy(
   betterSession: BetterSession = session.defaultSession as BetterSession,
 ) {
@@ -982,4 +1057,17 @@ function removeContentSecurityPolicy(
       );
     },
   );
+
+  betterSession.webRequest.setResolver('onBeforeRequest', async (listeners) => {
+    for (const listener of listeners) {
+      const result = await listener.apply();
+      if (result?.cancel) {
+        return { cancel: true };
+      }
+      if (result?.redirectURL) {
+        return result;
+      }
+    }
+    return { cancel: false };
+  });
 }
