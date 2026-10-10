@@ -328,7 +328,19 @@ async function onApiLoaded() {
         );
         window.ipcRenderer.send(responseChannel, { result });
       } catch (error) {
-        window.ipcRenderer.send(responseChannel, { error: String(error) });
+        let message: string;
+        if (error instanceof Error) message = error.message;
+        else if (typeof error === 'string') message = error;
+        else {
+          try {
+            message = JSON.stringify(error);
+          } catch {
+            message = String(error);
+          }
+        }
+        window.ipcRenderer.send(responseChannel, {
+          error: message || 'Unknown error',
+        });
       }
     },
   );

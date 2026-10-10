@@ -382,8 +382,9 @@ export const getComments = async (
   // Continuation tokens are prefixed with the client which issued them,
   // so the same client keeps being used for the next pages
   if (continuation) {
-    const [client, token] = continuation.includes(':')
-      ? [continuation.slice(0, 3), continuation.slice(4)]
+    const prefixed = /^(ytm|web):(.*)$/s.exec(continuation);
+    const [client, token] = prefixed
+      ? [prefixed[1], prefixed[2]]
       : ['web', continuation];
     const request = client === 'ytm' ? musicRequest : youtubeWebRequest;
     const page = parseCommentsPage(

@@ -26,7 +26,18 @@ import type { APIServerConfig } from '../../config';
 import type { HonoApp } from '../types';
 import type { SongInfo } from '@/providers/song-info';
 import type { BackendContext } from '@/types/contexts';
-import type { Context } from 'hono';
+import type { Context, MiddlewareHandler } from 'hono';
+
+// A zero-byte `application/json` body would fail JSON parsing before the
+// optional body's default applies, so treat it as an absent body (`{}`)
+const emptyBodyAsAbsent: MiddlewareHandler = async (ctx, next) => {
+  if ((await ctx.req.text()).trim() === '') {
+    // bodyCache holds promises at runtime, despite its typing
+    (ctx.req.bodyCache as { text?: Promise<string> }).text =
+      Promise.resolve('{}');
+  }
+  await next();
+};
 
 // Same params YouTube Music uses for "Start radio" / "Shuffle"
 const RADIO_PARAMS = 'wAEB';
@@ -139,6 +150,7 @@ const routes = {
     summary: 'start radio',
     description:
       'Start a radio based on a song (the current song by default) or a playlist, like "Start radio" in YouTube Music',
+    middleware: [emptyBodyAsAbsent] as const,
     request: {
       body: {
         description: 'song or playlist to start the radio from',
