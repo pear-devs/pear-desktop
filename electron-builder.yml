@@ -30,6 +30,11 @@ win:
         - x64
         - ia32
         - arm64
+    - target: nsis
+      arch:
+        - x64
+        - ia32
+        - arm64
     - target: portable
       arch:
         - x64
@@ -37,6 +42,10 @@ win:
         - arm64
   compression: maximum
 nsisWeb:
+  runAfterFinish: false
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
   runAfterFinish: false
 linux:
   icon: assets/generated/icons/png
