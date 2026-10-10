@@ -926,6 +926,10 @@
       "description": "Control playback from your Windows taskbar",
       "name": "Taskbar Media Control"
     },
+    "toast-autoclose": {
+      "description": "Automatically close YouTube Music toasts after three seconds",
+      "name": "Toast Auto-Close"
+    },
     "touchbar": {
       "description": "Adds a TouchBar widget for macOS users",
       "name": "TouchBar"
