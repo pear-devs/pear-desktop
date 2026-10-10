@@ -87,13 +87,14 @@ export const backend = createBackend<BackendType, APIServerConfig>({
   init(backendCtx) {
     this.app = new Hono();
 
-    this.app.use('*', cors());
-
     // for web remote control
+    // registered before cors() so it also applies to preflight responses
     this.app.use('*', async (ctx, next) => {
-      ctx.header('Access-Control-Allow-Private-Network', 'true');
       await next();
+      ctx.res.headers.set('Access-Control-Allow-Private-Network', 'true');
     });
+
+    this.app.use('*', cors());
 
     // middlewares
     const jwtGuard: MiddlewareHandler = async (ctx, next) => {
