@@ -1,6 +1,7 @@
 // This is used for to control the songs
 import { type BrowserWindow, ipcMain } from 'electron';
 
+import * as config from '@/config';
 import { LikeType } from '@/types/datahost-get-state';
 
 // see protocol-handler.ts
@@ -75,10 +76,16 @@ export const getSongControls = (win: BrowserWindow) => {
       }
     },
     // General
-    setVolume: (volume: ArgsType<number>) => {
+    setVolume: async (volume: ArgsType<number>) => {
       const volumeNumber = parseNumberFromArgsType(volume);
-      if (volumeNumber !== null) {
-        win.webContents.send('peard:update-volume', volume);
+      if (volumeNumber === null) return;
+
+      if (await config.plugins.isEnabled('precise-volume')) {
+        // precise-volume owns the volume UI (saved volume, tooltip, slider,
+        // HUD), so let it apply the change instead of writing the player.
+        win.webContents.send('setVolume', volumeNumber);
+      } else {
+        win.webContents.send('peard:update-volume', volumeNumber);
       }
     },
     setFullscreen: (isFullscreen: ArgsType<boolean>) => {
