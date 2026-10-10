@@ -309,6 +309,41 @@ async function onApiLoaded() {
     },
   );
 
+  window.ipcRenderer.on(
+    'peard:innertube-request',
+    async (_, requestId: string, endpoint: string, body: unknown) => {
+      const responseChannel = `peard:innertube-response:${requestId}`;
+      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+      if (!app) {
+        window.ipcRenderer.send(responseChannel, {
+          error: 'ytmusic-app is not available',
+        });
+        return;
+      }
+
+      try {
+        const result = await app.networkManager.fetch<unknown, unknown>(
+          endpoint,
+          body,
+        );
+        window.ipcRenderer.send(responseChannel, { result });
+      } catch (error) {
+        window.ipcRenderer.send(responseChannel, { error: String(error) });
+      }
+    },
+  );
+
+  window.ipcRenderer.on('peard:play-endpoint', (_, endpoint: unknown) => {
+    // Same event YouTube Music fires when a song / "Start radio" / playlist is clicked
+    document.querySelector('ytmusic-app')?.dispatchEvent(
+      new CustomEvent('yt-navigate', {
+        bubbles: true,
+        composed: true,
+        detail: { endpoint },
+      }),
+    );
+  });
+
   const video = document.querySelector('video')!;
   const audioContext = new AudioContext();
   const audioSource = audioContext.createMediaElementSource(video);

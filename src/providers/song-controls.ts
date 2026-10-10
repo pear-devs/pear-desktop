@@ -146,5 +146,42 @@ export const getSongControls = (win: BrowserWindow) => {
         });
         win.webContents.send('peard:search', query, params, continuation);
       }),
+
+    // Calls YouTube Music's internal API (e.g. '/browse', '/next') through the
+    // page's own network manager, so the request is made as the signed-in user
+    innertubeRequest: <T = unknown>(
+      endpoint: string,
+      body: Record<string, unknown>,
+      timeoutMs = 15_000,
+    ) =>
+      new Promise<T>((resolve, reject) => {
+        const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const channel = `peard:innertube-response:${requestId}`;
+
+        const listener = (
+          _: unknown,
+          response: { result?: unknown; error?: string },
+        ) => {
+          clearTimeout(timeout);
+          if (response?.error) reject(new Error(response.error));
+          else resolve(response?.result as T);
+        };
+        const timeout = setTimeout(() => {
+          ipcMain.removeListener(channel, listener);
+          reject(new Error(`Request to ${endpoint} timed out`));
+        }, timeoutMs);
+
+        ipcMain.once(channel, listener);
+        win.webContents.send(
+          'peard:innertube-request',
+          requestId,
+          endpoint,
+          body,
+        );
+      }),
+    // Plays a navigation endpoint (watchEndpoint / watchPlaylistEndpoint)
+    // the same way clicking it inside YouTube Music does
+    playEndpoint: (endpoint: Record<string, unknown>) =>
+      win.webContents.send('peard:play-endpoint', endpoint),
   };
 };
