@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import { createRoute, z } from '@hono/zod-openapi';
 import { ipcMain } from 'electron';
 
@@ -7,6 +9,8 @@ import {
   type RepeatMode,
   type VolumeState,
 } from '@/types/datahost-get-state';
+
+import { getQueueItemRenderer, getSelectedQueueIndex } from './queue';
 
 import { API_VERSION } from '../api-version';
 import {
@@ -568,6 +572,7 @@ const routes = {
 };
 
 type PromiseOrValue<T> = T | Promise<T>;
+const QUEUE_RESPONSE_TIMEOUT_MS = 5_000;
 
 export const register = (
   app: HonoApp,
@@ -578,6 +583,26 @@ export const register = (
   volumeStateGetter: () => PromiseOrValue<VolumeState | undefined>,
 ) => {
   const controller = getSongControls(window);
+  const getQueueResponse = () =>
+    new Promise<QueueResponse | undefined>((resolve) => {
+      const requestId = randomUUID();
+      const event = 'peard:get-queue-response';
+      let timeout: NodeJS.Timeout;
+      const listener = (_: Electron.IpcMainEvent, queue: QueueResponse) => {
+        if (queue.requestId !== requestId) return;
+
+        clearTimeout(timeout);
+        ipcMain.removeListener(event, listener);
+        resolve(queue);
+      };
+
+      ipcMain.on(event, listener);
+      timeout = setTimeout(() => {
+        ipcMain.removeListener(event, listener);
+        resolve(undefined);
+      }, QUEUE_RESPONSE_TIMEOUT_MS);
+      controller.requestQueueInformation(requestId);
+    });
 
   app.openapi(routes.previous, (ctx) => {
     controller.previous();
@@ -747,51 +772,32 @@ export const register = (
 
   // Queue
   const queueInfo = async (ctx: Context) => {
-    const queueResponsePromise = new Promise<QueueResponse>((resolve) => {
-      ipcMain.once('peard:get-queue-response', (_, queue: QueueResponse) => {
-        return resolve(queue);
-      });
+    const info = await getQueueResponse();
 
-      controller.requestQueueInformation();
-    });
-
-    const info = await queueResponsePromise;
-
-    if (!info) {
+    if (!info?.items) {
       ctx.status(204);
       return ctx.body(null);
     }
 
     ctx.status(200);
-    return ctx.json(info);
+    return ctx.json({
+      items: info.items,
+      autoPlaying: info.autoPlaying,
+      continuation: info.continuation,
+    });
   };
   app.openapi(routes.oldQueueInfo, queueInfo);
   app.openapi(routes.queueInfo, queueInfo);
 
   app.openapi(routes.nextSongInfo, async (ctx) => {
-    const queueResponsePromise = new Promise<QueueResponse>((resolve) => {
-      ipcMain.once('peard:get-queue-response', (_, queue: QueueResponse) => {
-        return resolve(queue);
-      });
-
-      controller.requestQueueInformation();
-    });
-
-    const queue = await queueResponsePromise;
+    const queue = await getQueueResponse();
 
     if (!queue?.items || queue.items.length === 0) {
       ctx.status(204);
       return ctx.body(null);
     }
 
-    // Find the currently selected song
-    const currentIndex = queue.items.findIndex((item) => {
-      const renderer =
-        item.playlistPanelVideoRenderer ||
-        item.playlistPanelVideoWrapperRenderer?.primaryRenderer
-          ?.playlistPanelVideoRenderer;
-      return renderer?.selected === true;
-    });
+    const currentIndex = getSelectedQueueIndex(queue);
 
     // Get the next song (currentIndex + 1)
     const nextIndex = currentIndex + 1;
@@ -802,10 +808,7 @@ export const register = (
     }
 
     const nextItem = queue.items[nextIndex];
-    const nextRenderer =
-      nextItem.playlistPanelVideoRenderer ||
-      nextItem.playlistPanelVideoWrapperRenderer?.primaryRenderer
-        ?.playlistPanelVideoRenderer;
+    const nextRenderer = getQueueItemRenderer(nextItem);
 
     if (!nextRenderer) {
       ctx.status(204);
