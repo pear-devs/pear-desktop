@@ -54,6 +54,10 @@ const errorResponses = {
     description: 'YouTube Music request failed',
     content: { 'application/json': { schema: ErrorSchema } },
   },
+  503: {
+    description: 'YouTube Music is not ready to start playback',
+    content: { 'application/json': { schema: ErrorSchema } },
+  },
 };
 
 const rawResponse = (description: string) => ({
@@ -121,6 +125,7 @@ const routes = {
       204: {
         description: 'Success',
       },
+      503: errorResponses[503],
     },
   }),
   playPlaylist: createRoute({
@@ -142,6 +147,7 @@ const routes = {
       204: {
         description: 'Success',
       },
+      503: errorResponses[503],
     },
   }),
   startRadio: createRoute({
@@ -167,6 +173,7 @@ const routes = {
         description: 'Success',
       },
       400: errorResponses[400],
+      503: errorResponses[503],
     },
   }),
   lyrics: createRoute({
@@ -244,6 +251,8 @@ export const register = (
 
   const noSongError = (ctx: Context) =>
     ctx.json({ error: 'No song is playing and no videoId was given' }, 400);
+  const notReadyError = (ctx: Context) =>
+    ctx.json({ error: 'YouTube Music is not ready to start playback' }, 503);
   const requestError = (ctx: Context, error: unknown) =>
     ctx.json(
       { error: error instanceof Error ? error.message : String(error) },
@@ -281,24 +290,26 @@ export const register = (
     }
   });
 
-  app.openapi(routes.playSong, (ctx) => {
+  app.openapi(routes.playSong, async (ctx) => {
     const { videoId, playlistId } = ctx.req.valid('json');
-    controller.playEndpoint({
+    const dispatched = await controller.playEndpoint({
       watchEndpoint: { videoId, playlistId },
     });
+    if (!dispatched) return notReadyError(ctx);
 
     ctx.status(204);
     return ctx.body(null);
   });
 
-  app.openapi(routes.playPlaylist, (ctx) => {
+  app.openapi(routes.playPlaylist, async (ctx) => {
     const { playlistId, videoId, shuffle } = ctx.req.valid('json');
     const params = shuffle ? SHUFFLE_PARAMS : undefined;
-    controller.playEndpoint(
+    const dispatched = await controller.playEndpoint(
       videoId
         ? { watchEndpoint: { videoId, playlistId, params } }
         : { watchPlaylistEndpoint: { playlistId, params } },
     );
+    if (!dispatched) return notReadyError(ctx);
 
     ctx.status(204);
     return ctx.body(null);
@@ -307,8 +318,9 @@ export const register = (
   app.openapi(routes.startRadio, async (ctx) => {
     const { videoId, playlistId } = ctx.req.valid('json') ?? {};
 
+    let dispatched: boolean;
     if (playlistId && !videoId) {
-      controller.playEndpoint({
+      dispatched = await controller.playEndpoint({
         watchPlaylistEndpoint: {
           playlistId: `RDAMPL${playlistId}`,
           params: RADIO_PARAMS,
@@ -318,7 +330,7 @@ export const register = (
       const radioVideoId = await resolveVideoId(videoId);
       if (!radioVideoId) return noSongError(ctx);
 
-      controller.playEndpoint({
+      dispatched = await controller.playEndpoint({
         watchEndpoint: {
           videoId: radioVideoId,
           playlistId: `RDAMVM${radioVideoId}`,
@@ -326,6 +338,7 @@ export const register = (
         },
       });
     }
+    if (!dispatched) return notReadyError(ctx);
 
     ctx.status(204);
     return ctx.body(null);

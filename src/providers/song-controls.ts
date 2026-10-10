@@ -180,8 +180,24 @@ export const getSongControls = (win: BrowserWindow) => {
         );
       }),
     // Plays a navigation endpoint (watchEndpoint / watchPlaylistEndpoint)
-    // the same way clicking it inside YouTube Music does
-    playEndpoint: (endpoint: Record<string, unknown>) =>
-      win.webContents.send('peard:play-endpoint', endpoint),
+    // the same way clicking it inside YouTube Music does.
+    // Resolves to whether the page could dispatch it
+    playEndpoint: (endpoint: Record<string, unknown>, timeoutMs = 5_000) =>
+      new Promise<boolean>((resolve) => {
+        const requestId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const channel = `peard:play-endpoint-response:${requestId}`;
+
+        const listener = (_: unknown, dispatched: boolean) => {
+          clearTimeout(timeout);
+          resolve(dispatched);
+        };
+        const timeout = setTimeout(() => {
+          ipcMain.removeListener(channel, listener);
+          resolve(false);
+        }, timeoutMs);
+
+        ipcMain.once(channel, listener);
+        win.webContents.send('peard:play-endpoint', requestId, endpoint);
+      }),
   };
 };

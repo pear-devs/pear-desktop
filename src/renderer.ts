@@ -345,16 +345,24 @@ async function onApiLoaded() {
     },
   );
 
-  window.ipcRenderer.on('peard:play-endpoint', (_, endpoint: unknown) => {
-    // Same event YouTube Music fires when a song / "Start radio" / playlist is clicked
-    document.querySelector('ytmusic-app')?.dispatchEvent(
-      new CustomEvent('yt-navigate', {
-        bubbles: true,
-        composed: true,
-        detail: { endpoint },
-      }),
-    );
-  });
+  window.ipcRenderer.on(
+    'peard:play-endpoint',
+    (_, requestId: string, endpoint: unknown) => {
+      // Same event YouTube Music fires when a song / "Start radio" / playlist is clicked
+      const app = document.querySelector('ytmusic-app');
+      app?.dispatchEvent(
+        new CustomEvent('yt-navigate', {
+          bubbles: true,
+          composed: true,
+          detail: { endpoint },
+        }),
+      );
+      window.ipcRenderer.send(
+        `peard:play-endpoint-response:${requestId}`,
+        !!app,
+      );
+    },
+  );
 
   const video = document.querySelector('video')!;
   const audioContext = new AudioContext();
