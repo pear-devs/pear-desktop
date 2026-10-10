@@ -165,7 +165,17 @@
     ],
     "@stylistic/comma-dangle": ["error", "always-multiline"],
     "@stylistic/max-len": "off",
-    "@stylistic/no-mixed-operators": "error",
+    "@stylistic/no-mixed-operators": [
+      "error",
+      {
+        "groups": [
+          ["&", "|", "^", "~", "<<", ">>", ">>>"],
+          ["==", "!=", "===", "!==", ">", ">=", "<", "<="],
+          ["&&", "||"],
+          ["in", "instanceof"]
+        ]
+      }
+    ],
     "@stylistic/no-multi-spaces": [
       "error",
       {
@@ -246,8 +256,5 @@
     "node": true,
     "es2024": true
   },
-  "ignorePatterns": [
-    "dist/**",
-    "node_modules/**"
-  ]
+  "ignorePatterns": ["dist/**", "node_modules/**"]
 }

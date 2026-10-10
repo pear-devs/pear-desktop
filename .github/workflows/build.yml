@@ -3,6 +3,13 @@ name: Build Pear Desktop
 on:
   push:
     branches: [ master ]
+  workflow_dispatch:
+    inputs:
+      repair_release:
+        description: Rebuild and upload missing Windows release assets
+        required: false
+        default: false
+        type: boolean
 
 permissions: {}
 
@@ -10,19 +17,52 @@ env:
   NODE_VERSION: "24.x"
 
 jobs:
+  prepare:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.release.outputs.version_tag }}
+      should_publish: ${{ steps.release.outputs.should_publish }}
+      repair_release: ${{ steps.release.outputs.repair_release }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - id: release
+        name: Check whether release is needed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPAIR_RELEASE: ${{ inputs.repair_release }}
+        run: |
+          VERSION_TAG="v$(node -pe "require('./package.json').version")"
+          echo "version_tag=$VERSION_TAG" >> "$GITHUB_OUTPUT"
+          echo "repair_release=${REPAIR_RELEASE:-false}" >> "$GITHUB_OUTPUT"
+          if [ "$REPAIR_RELEASE" = true ]; then
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          elif gh release view "$VERSION_TAG" --json isDraft --jq .isDraft 2>/dev/null | grep -qx false; then
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     permissions:
-      contents: write
+      contents: read
     if: github.event.pull_request.draft == false
+    needs: prepare
     name: Build Pear Desktop
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: [ macos-26, ubuntu-latest, windows-latest ]
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
@@ -31,14 +71,14 @@ jobs:
           run_install: false
 
       - name: Setup NodeJS
-        if: startsWith(matrix.os, 'macOS') != true
+        if: startsWith(matrix.os, 'macos') != true
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Setup NodeJS for macOS
-        if: startsWith(matrix.os, 'macOS')
+        if: startsWith(matrix.os, 'macos')
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -46,24 +86,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # Only vite build without release if it is a fork, or it is a pull-request
+      # Electron tests launch compiled main process from dist/.
       - name: Vite Build
-        if: github.repository == 'pear-devs/pear-desktop' && github.event_name == 'pull_request'
         run: |
           pnpm build
 
-      # Build and release if it's the main repository and is not pull-request
-      - name: Build and release on Mac
-        if: startsWith(matrix.os, 'macOS') && (github.repository == 'pear-devs/pear-desktop' && github.event_name != 'pull_request')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Release builds run only from this repository's master branch.
+      - name: Build release assets on Mac
+        if: needs.prepare.outputs.should_publish == 'true' && needs.prepare.outputs.repair_release != 'true' && startsWith(matrix.os, 'macOS')
         run: |
-          pnpm release:mac
+          pnpm electron-builder --mac -p never
 
-      - name: Build and release on Linux
-        if: startsWith(matrix.os, 'ubuntu') && (github.repository == 'pear-devs/pear-desktop' && github.event_name != 'pull_request')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build release assets on Linux
+        if: needs.prepare.outputs.should_publish == 'true' && needs.prepare.outputs.repair_release != 'true' && startsWith(matrix.os, 'ubuntu')
         run: |
           sudo snap install snapcraft --classic
           sudo apt update
@@ -72,21 +107,51 @@ jobs:
           sudo flatpak install -y flathub org.freedesktop.Platform/x86_64/24.08
           sudo flatpak install -y flathub org.freedesktop.Sdk/x86_64/24.08
           sudo flatpak install -y flathub org.electronjs.Electron2.BaseApp/x86_64/24.08
-          pnpm release:linux
+          pnpm electron-builder --linux -p never
 
-      - name: Build and release on Windows
-        if: startsWith(matrix.os, 'windows') && (github.repository == 'pear-devs/pear-desktop' && github.event_name != 'pull_request')
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build release assets on Windows
+        if: needs.prepare.outputs.should_publish == 'true' && startsWith(matrix.os, 'windows')
         run: |
-          pnpm release:win
+          pnpm electron-builder --win -p never
+
+      - name: Upload release assets
+        if: needs.prepare.outputs.should_publish == 'true' && (needs.prepare.outputs.repair_release != 'true' || startsWith(matrix.os, 'windows'))
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: release-assets-${{ matrix.os }}
+          if-no-files-found: error
+          retention-days: 1
+          path: |
+            pack/*.AppImage
+            pack/*.deb
+            pack/*.dmg
+            pack/*.dmg.blockmap
+            pack/*.exe
+            pack/*.flatpak
+            pack/*.freebsd
+            pack/*.nsis.7z
+            pack/*.rpm
+            pack/*.snap
+            pack/*.tar.gz
+            pack/*.yml
+            pack/nsis-web/*.exe
+            pack/nsis-web/*.nsis.7z
+            pack/nsis-web/*.yml
+            !pack/builder-debug.yml
 
       - name: Test
-        uses: coactions/setup-xvfb@b6b4fcfb9f5a895edadc3bc76318fae0ac17c8b3
+        # Electron UI tests require an X server. Run once on Linux; the other
+        # matrix entries still compile/package their respective platform builds.
+        if: startsWith(matrix.os, 'ubuntu')
+        shell: bash
         env:
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
-        with:
-          run: pnpm test:debug
+          XDG_CONFIG_HOME: ${{ runner.temp }}/pearum-tests/config
+          XDG_CACHE_HOME: ${{ runner.temp }}/pearum-tests/cache
+          XDG_DATA_HOME: ${{ runner.temp }}/pearum-tests/data
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y xvfb
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' pnpm test
 
 
   release:
@@ -94,8 +159,8 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     name: Release Pear Desktop
-    if: github.repository == 'pear-devs/pear-desktop' && github.ref == 'refs/heads/master'
-    needs: build
+    if: needs.prepare.outputs.should_publish == 'true'
+    needs: [prepare, build]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
@@ -123,54 +188,47 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Get version
-        run: |
-          echo "VERSION_TAG=v$(node -pe "require('./package.json').version")" >> $GITHUB_ENV
-
-      - name: Check if version already exists in tags
-        run: |
-          echo "VERSION_HASH=$(git rev-parse -q --verify 'refs/tags/${{ env.VERSION_TAG }}')" >> $GITHUB_ENV
-          echo "CHANGELOG_ANCHOR=$(echo $VERSION_TAG | sed -e 's/\.//g')" >> $GITHUB_ENV
-
-      - name: Fetch draft release
-        if: ${{ env.VERSION_HASH == '' }}
-        uses: cardinalby/git-get-release-action@cedef2faf69cb7c55b285bad07688d04430b7ada
-        id: get_draft_release
+      - name: Create draft release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION_TAG: ${{ needs.prepare.outputs.version_tag }}
+        run: |
+          cat > release-notes.md <<EOF
+          See [changelog](${{ github.server_url }}/${{ github.repository }}/blob/master/changelog.md#$(echo "$VERSION_TAG" | sed -e 's/\.//g')) for the list of updates and the full diff.
+
+          Thanks to all contributors! 🏅
+
+          (Note for Windows: Pear-Desktop-Web-Setup-$VERSION_TAG.exe is an installer, and Pear-Desktop-$VERSION_TAG.exe is a portable version)
+          EOF
+          if ! gh release view "$VERSION_TAG" >/dev/null 2>&1; then
+            gh release create "$VERSION_TAG" --draft --title "$VERSION_TAG" --notes-file release-notes.md
+          fi
+
+      - name: Download release assets
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          latest: true
-          draft: true
-          searchLimit: 1
+          pattern: release-assets-*
+          merge-multiple: true
+          path: release-assets
 
-      - name: Publish Release (if it does not exist)
-        if: ${{ env.VERSION_HASH == '' }}
-        uses: irongut/EditRelease@ccf529ad26dddf9996e7dd0f24ca5da4ea507cc2
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-          id: ${{ steps.get_draft_release.outputs.id }}
-          draft: false
-          prerelease: false
-          replacename: true
-          name: ${{ env.VERSION_TAG }}
-          replacebody: true
-          body: |
-            See [changelog](https://github.com/pear-devs/pear-desktop/blob/master/changelog.md#${{ env.CHANGELOG_ANCHOR }}) for the list of updates and the full diff.
-
-            Thanks to all contributors! 🏅
-
-            (Note for Windows: `Pear-Desktop-Web-Setup-${{ env.VERSION_TAG }}.exe` is an installer, and `Pear-Desktop-${{ env.VERSION_TAG }}.exe` is a portable version)
+      - name: Upload and publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION_TAG: ${{ needs.prepare.outputs.version_tag }}
+        run: |
+          find release-assets -type f -print0 | xargs -0 gh release upload "$VERSION_TAG" --clobber
+          gh release edit "$VERSION_TAG" --draft=false
 
       - name: Update changelog
-        if: ${{ env.VERSION_HASH == '' }}
+        if: needs.prepare.outputs.repair_release != 'true'
         run: |
           pnpm changelog
 
       - name: Commit changelog
-        if: ${{ env.VERSION_HASH == '' }}
+        if: needs.prepare.outputs.repair_release != 'true'
         uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9
         with:
-          commit_message: Update changelog for ${{ env.VERSION_TAG }}
+          commit_message: Update changelog for ${{ needs.prepare.outputs.version_tag }}
           file_pattern: "changelog.md"
           commit_user_name: CI
           commit_user_email: th-ch@users.noreply.github.com

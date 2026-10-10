@@ -3,7 +3,7 @@ import type { SongInfo } from '@/providers/song-info';
 
 export type SyncedLyricsPluginConfig = {
   enabled: boolean;
-  preferredProvider?: ProviderName;
+  preferredProvider: 'auto' | ProviderName;
   preciseTiming: boolean;
   showTimeCodes: boolean;
   defaultTextString: string | string[];
@@ -16,25 +16,30 @@ export type SyncedLyricsPluginConfig = {
     | 'disabled';
 };
 
-export type LineLyricsStatus = 'previous' | 'current' | 'upcoming';
+export type SyncLevel = 'plain' | 'line' | 'word' | 'syllable';
 
-export type LineLyrics = {
-  time: string;
-  timeInMs: number;
-  duration: number;
-
+export interface LyricSegment {
   text: string;
-  status: LineLyricsStatus;
-};
+  startMs: number;
+  endMs?: number;
+}
+
+export interface LyricLine extends LyricSegment {
+  segments?: LyricSegment[];
+  translation?: string;
+  romanization?: string;
+}
 
 export type LineEffect = 'fancy' | 'scale' | 'offset' | 'focus';
 
 export interface LyricResult {
   title: string;
   artists: string[];
+  syncLevel: SyncLevel;
 
+  // Exact plain text (also retained when a provider supplies a plain fallback).
   lyrics?: string;
-  lines?: LineLyrics[];
+  lines?: LyricLine[];
 }
 
 // prettier-ignore
@@ -44,5 +49,29 @@ export interface LyricProvider {
   name: string;
   baseUrl: string;
 
-  search(songInfo: SearchSongInfo): Promise<LyricResult | null>;
+  search(
+    songInfo: SearchSongInfo,
+    context?: SearchContext,
+  ): Promise<LyricCandidate[]>;
+}
+
+// Source metadata stays separate from canonical timed content. IDs identify a
+// source variant, not its rank or its position in a response array.
+export interface LyricCandidate {
+  id: string;
+  provider: string;
+  sourceId: string;
+  result: LyricResult;
+  album?: string;
+  durationMs?: number;
+  language?: string;
+  variant?: string;
+  exactVideoId?: string;
+}
+
+export interface SearchOptions {
+  showLyricsEvenIfInexact: boolean;
+}
+export interface SearchContext {
+  signal: AbortSignal;
 }

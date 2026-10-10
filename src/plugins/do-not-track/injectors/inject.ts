@@ -19,6 +19,40 @@ interface PrunableResponse {
 
 type PropertyOwner = Record<string, unknown>;
 
+const pruneReelWatchAds = (response: PrunableResponse) => {
+  const pruneEntries = (entries: unknown) => {
+    if (!Array.isArray(entries)) return;
+
+    for (const entry of entries) {
+      if (typeof entry !== 'object' || entry === null) continue;
+
+      const command = (entry as Record<string, unknown>).command;
+      if (typeof command !== 'object' || command === null) continue;
+
+      const reelWatchEndpoint = (command as Record<string, unknown>)
+        .reelWatchEndpoint;
+      if (typeof reelWatchEndpoint !== 'object' || reelWatchEndpoint === null)
+        continue;
+
+      const adClientParams = (reelWatchEndpoint as Record<string, unknown>)
+        .adClientParams;
+      if (typeof adClientParams === 'object' && adClientParams !== null) {
+        delete (adClientParams as Record<string, unknown>).isAd;
+      }
+    }
+  };
+
+  pruneEntries(response.entries);
+  if (
+    typeof response.reelWatchSequenceResponse === 'object' &&
+    response.reelWatchSequenceResponse !== null
+  ) {
+    pruneEntries(
+      (response.reelWatchSequenceResponse as PrunableResponse).entries,
+    );
+  }
+};
+
 interface TrapHandler {
   v: unknown;
   init(value: unknown): boolean;
@@ -30,29 +64,30 @@ let injected = false;
 
 export const isInjected = (): boolean => injected;
 
+export const pruneResponse = (value: unknown): unknown => {
+  // JSON.parse and Response.json also return null, primitives and arrays.
+  // Those are not player responses and must retain normal JSON semantics.
+  if (typeof value !== 'object' || value === null || Array.isArray(value))
+    return value;
+  const response = value as PrunableResponse;
+  for (const target of [
+    response,
+    response.playerResponse,
+    response.ytInitialPlayerResponse,
+  ]) {
+    if (typeof target !== 'object' || target === null || Array.isArray(target))
+      continue;
+    delete target.playerAds;
+    delete target.adPlacements;
+    delete target.adSlots;
+  }
+  pruneReelWatchAds(response);
+  return response;
+};
+
 export const inject = (contextBridge: ContextBridge): void => {
   injected = true;
-  {
-    const pruner = (o: PrunableResponse): PrunableResponse => {
-      delete o.playerAds;
-      delete o.adPlacements;
-      delete o.adSlots;
-      if (o.playerResponse) {
-        delete o.playerResponse.playerAds;
-        delete o.playerResponse.adPlacements;
-        delete o.playerResponse.adSlots;
-      }
-      if (o.ytInitialPlayerResponse) {
-        delete o.ytInitialPlayerResponse.playerAds;
-        delete o.ytInitialPlayerResponse.adPlacements;
-        delete o.ytInitialPlayerResponse.adSlots;
-      }
-
-      return o;
-    };
-
-    contextBridge.exposeInMainWorld('_pruner', pruner);
-  }
+  contextBridge.exposeInMainWorld('_pruner', pruneResponse);
 
   const chains = [
     {

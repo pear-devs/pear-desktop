@@ -1,4 +1,12 @@
-import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
+import { normalizeLines } from '../domain';
+import { bounded, lyricsHttp } from '../search/http';
+
+import type {
+  LyricProvider,
+  LyricCandidate,
+  SearchSongInfo,
+  SearchContext,
+} from '../types';
 import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
 
 const headers = {
@@ -18,14 +26,16 @@ export class YTMusic implements LyricProvider {
 
   // prettier-ignore
   public async search(
-    { videoId, title, artist }: SearchSongInfo,
-  ): Promise<LyricResult | null> {
-    const data = await this.fetchNext(videoId);
+    { videoId, title, artist, songDuration }: SearchSongInfo,
+    context?: SearchContext,
+  ): Promise<LyricCandidate[]> {
+    const data = await bounded(() => Promise.resolve(this.fetchNext(videoId)), context?.signal);
+    context?.signal.throwIfAborted();
 
     const { tabs } =
       data?.contents?.singleColumnMusicWatchNextResultsRenderer?.tabbedRenderer
         ?.watchNextTabbedResultsRenderer ?? {};
-    if (!Array.isArray(tabs)) return null;
+    if (!Array.isArray(tabs)) return [];
 
     const lyricsTab = tabs.find((it) => {
       const pageType = it?.tabRenderer?.endpoint?.browseEndpoint
@@ -34,13 +44,13 @@ export class YTMusic implements LyricProvider {
       return pageType === 'MUSIC_PAGE_TYPE_TRACK_LYRICS';
     });
 
-    if (!lyricsTab) return null;
+    if (!lyricsTab) return [];
 
     const { browseId } = lyricsTab?.tabRenderer?.endpoint?.browseEndpoint ?? {};
-    if (!browseId) return null;
+    if (!browseId) return [];
 
-    const { contents } = await this.fetchBrowse(browseId);
-    if (!contents) return null;
+    const { contents } = await this.fetchBrowse(browseId, context?.signal);
+    if (!contents) return [];
 
     /*
       NOTE: Due to the nature of the library, the json responses are not consistent,
@@ -51,14 +61,11 @@ export class YTMusic implements LyricProvider {
       ?.componentType?.model?.timedLyricsModel?.lyricsData?.timedLyricsData;
 
     const synced = syncedLines?.length && syncedLines[0]?.cueRange
-      ? syncedLines.map((it) => ({
-        time: this.millisToTime(parseInt(it.cueRange.startTimeMilliseconds)),
-        timeInMs: parseInt(it.cueRange.startTimeMilliseconds),
-        duration: parseInt(it.cueRange.endTimeMilliseconds) -
-          parseInt(it.cueRange.startTimeMilliseconds),
-        text: it.lyricLine.trim() === '♪' ? '' : it.lyricLine.trim(),
-        status: 'upcoming' as const,
-      }))
+      ? normalizeLines(syncedLines.map((it) => ({
+        startMs: Number(it.cueRange?.startTimeMilliseconds),
+        endMs: Number(it.cueRange?.endTimeMilliseconds),
+        text: it.lyricLine,
+      })), songDuration * 1000)
       : undefined;
 
     const plain = !synced
@@ -73,35 +80,19 @@ export class YTMusic implements LyricProvider {
       : undefined;
 
     if (typeof plain === 'string' && plain === 'Lyrics not available') {
-      return null;
+      return [];
     }
 
-    if (synced?.length && synced[0].timeInMs > 300) {
-      synced.unshift({
-        duration: 0,
-        text: '',
-        time: '00:00.00',
-        timeInMs: 0,
-        status: 'upcoming' as const,
-      });
-    }
-
-    return {
+    return [{
+      provider: this.name, id: `${videoId}:${browseId}`, sourceId: browseId, exactVideoId: videoId,
+      result: {
       title,
       artists: [artist],
-
+      syncLevel: synced ? 'line' : 'plain',
       lyrics: plain,
       lines: synced,
-    };
-  }
-
-  private millisToTime(millis: number) {
-    const minutes = Math.floor(millis / 60000);
-    const seconds = Math.floor((millis - ((minutes * 60) * 1000)) / 1000);
-    const remaining = (millis - ((minutes * 60) * 1000) - (seconds * 1000)) / 10;
-    return `${minutes.toString().padStart(2, '0')}:${seconds
-      .toString()
-      .padStart(2, '0')}.${remaining.toString().padStart(2, '0')}`;
+      },
+    }];
   }
 
   // RATE LIMITED (2 req per sec)
@@ -122,15 +113,19 @@ export class YTMusic implements LyricProvider {
     });
   }
 
-  private fetchBrowse(browseId: string) {
-    return fetch(this.PROXIED_ENDPOINT + 'browse?prettyPrint=false', {
-      headers,
-      method: 'POST',
-      body: JSON.stringify({
-        browseId,
-        context: { client },
-      }),
-    }).then((res) => res.json()) as Promise<BrowseData>;
+  private fetchBrowse(browseId: string, signal?: AbortSignal) {
+    return lyricsHttp.json<BrowseData>(
+      this.PROXIED_ENDPOINT + 'browse?prettyPrint=false',
+      {
+        signal,
+        headers,
+        method: 'POST',
+        body: JSON.stringify({
+          browseId,
+          context: { client },
+        }),
+      },
+    );
   }
 }
 
