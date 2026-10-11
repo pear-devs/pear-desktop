@@ -27,6 +27,24 @@ let options: PreciseVolumePluginConfig;
 const newSliderSelector =
   'ytmusic-miniplayer .ytMusicMiniPlayerVolumePopup input[type="range"]';
 
+/**
+ * Script that applies the saved volume as soon as the player exists.
+ * Injected from the preload: YTM can start playing at its default (full)
+ * volume well before the renderer plugins and onPlayerApiReady are loaded.
+ */
+export const restoreVolumeScript = (volume: number) => `(() => {
+  const apply = () => {
+    const player = document.querySelector('#movie_player');
+    if (typeof player?.setVolume !== 'function') return false;
+    player.setVolume(${volume});
+    return true;
+  };
+  if (apply()) return;
+  // MutationObserver instead of polling: timers can be throttled during startup
+  const observer = new MutationObserver(() => apply() && observer.disconnect());
+  observer.observe(document, { childList: true, subtree: true });
+})(); 0`;
+
 export const onPlayerApiReady = async (
   playerApi: MusicPlayer,
   context: RendererContext<PreciseVolumePluginConfig>,
