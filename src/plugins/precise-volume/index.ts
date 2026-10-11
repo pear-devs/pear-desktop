@@ -189,6 +189,7 @@ export default createPlugin({
   },
 
   preload: {
+    /** Restore the saved volume before YTM starts playback */
     async start({ getConfig }) {
       const { savedVolume } = await getConfig();
       if (typeof savedVolume === 'number') {
