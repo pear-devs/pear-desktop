@@ -24,6 +24,9 @@ export const moveVolumeHud = debounce((showVideo: boolean) => {
 
 let options: PreciseVolumePluginConfig;
 
+const newSliderSelector =
+  'ytmusic-miniplayer .ytMusicMiniPlayerVolumePopup input[type="range"]';
+
 export const onPlayerApiReady = async (
   playerApi: MusicPlayer,
   context: RendererContext<PreciseVolumePluginConfig>,
@@ -130,7 +133,10 @@ export const onPlayerApiReady = async (
 
   /** Add onwheel event to play bar and also track if play bar is hovered */
   function setupPlaybar() {
-    const playerbar = $<HTMLElement>('ytmusic-player-bar');
+    // YTM's newer UI replaced ytmusic-player-bar with ytmusic-miniplayer
+    const playerbar =
+      $<HTMLElement>('ytmusic-player-bar') ??
+      $<HTMLElement>('ytmusic-miniplayer');
     if (!playerbar) return;
 
     playerbar.addEventListener('wheel', (event) => {
@@ -149,6 +155,25 @@ export const onPlayerApiReady = async (
     });
 
     setupSliderObserver();
+    setupNewSliderListener();
+  }
+
+  /** Save volume when the newer UI's native range slider is manually changed */
+  function setupNewSliderListener() {
+    // The slider is re-rendered inside a hover popup, so listen on the document.
+    // Capture phase, in case YTM stops propagation on the slider itself
+    document.addEventListener(
+      'change',
+      (event) => {
+        const target = event.target as HTMLElement | null;
+        if (!target?.matches(newSliderSelector)) return;
+
+        const volume = Number((target as HTMLInputElement).value);
+        setTooltip(volume);
+        saveVolume(volume);
+      },
+      true,
+    );
   }
 
   /** Save volume + Update the volume tooltip when volume-slider is manually changed */
@@ -219,6 +244,16 @@ export const onPlayerApiReady = async (
           savedVolume > 0 && savedVolume < 5 ? 5 : savedVolume,
         );
       }
+    }
+
+    // The newer UI's slider doesn't follow api.setVolume() on its own
+    const newSlider = $<HTMLInputElement>(newSliderSelector);
+    if (newSlider) {
+      newSlider.value = String(savedVolume);
+      newSlider.style.setProperty(
+        '--yt-slider-shape-gradient-percent',
+        `${savedVolume}%`,
+      );
     }
   }
 
