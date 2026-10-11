@@ -40,9 +40,17 @@ export const restoreVolumeScript = (volume: number) => `(() => {
     return true;
   };
   if (apply()) return;
+  const finish = () => {
+    if (!apply()) return;
+    observer.disconnect();
+    document.removeEventListener('play', finish, true);
+  };
   // MutationObserver instead of polling: timers can be throttled during startup
-  const observer = new MutationObserver(() => apply() && observer.disconnect());
+  const observer = new MutationObserver(finish);
   observer.observe(document, { childList: true, subtree: true });
+  // In case the player API shows up without a later DOM mutation:
+  // apply when playback starts at the latest (media events don't bubble, so capture)
+  document.addEventListener('play', finish, true);
 })(); 0`;
 
 export const onPlayerApiReady = async (
