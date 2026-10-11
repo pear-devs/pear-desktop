@@ -23,6 +23,68 @@ export default createPlugin({
   restartNeeded: false,
   config: defaultConfig,
   stylesheets: [style],
+  settings: [
+    {
+      type: 'slider',
+      key: 'interpolationTime',
+      label: () => t('plugins.ambient-mode.menu.smoothness-transition.label'),
+      min: 0,
+      max: 5,
+      step: 0.5,
+      unit: 's',
+      scale: 1000,
+    },
+    {
+      type: 'slider',
+      key: 'quality',
+      label: () => t('plugins.ambient-mode.menu.quality.label'),
+      min: 10,
+      max: 1000,
+      step: 10,
+      unit: 'px',
+    },
+    {
+      type: 'slider',
+      key: 'size',
+      label: () => t('plugins.ambient-mode.menu.size.label'),
+      min: 100,
+      max: 300,
+      step: 5,
+      unit: '%',
+    },
+    {
+      type: 'slider',
+      key: 'buffer',
+      label: () => t('plugins.ambient-mode.menu.buffer.label'),
+      min: 1,
+      max: 30,
+      step: 1,
+    },
+    {
+      type: 'slider',
+      key: 'opacity',
+      label: () => t('plugins.ambient-mode.menu.opacity.label'),
+      min: 10,
+      max: 100,
+      step: 10,
+      unit: '%',
+      scale: 0.01,
+    },
+    {
+      type: 'slider',
+      key: 'blur',
+      label: () => t('plugins.ambient-mode.menu.blur-amount.label'),
+      min: 0,
+      max: 500,
+      step: 5,
+      unit: 'px',
+    },
+    {
+      type: 'switch',
+      key: 'fullscreen',
+      label: () => t('plugins.ambient-mode.menu.use-fullscreen.label'),
+    },
+  ],
   menu: menu,
 
   renderer: {
@@ -128,7 +190,7 @@ export default createPlugin({
             if (lastImageData) {
               const frameOffset =
                 (1 / this.buffer) * (1000 / this.interpolationTime);
-              context.globalAlpha = 1 - (frameOffset * 2); // because of alpha value must be < 1
+              context.globalAlpha = 1 - frameOffset * 2; // because of alpha value must be < 1
               context.putImageData(lastImageData, 0, 0);
               context.globalAlpha = frameOffset;
             }

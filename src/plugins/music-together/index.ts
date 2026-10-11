@@ -657,12 +657,12 @@ export default createPlugin<
       }
 
       this.profiles = {};
-      this.popups.host.setUsers(Object.values(this.profiles));
-      this.popups.guest.setUsers(Object.values(this.profiles));
+      this.popups.host?.setUsers(Object.values(this.profiles));
+      this.popups.guest?.setUsers(Object.values(this.profiles));
 
-      this.popups.host.dismiss();
-      this.popups.guest.dismiss();
-      this.popups.setting.dismiss();
+      this.popups.host?.dismiss();
+      this.popups.guest?.dismiss();
+      this.popups.setting?.dismiss();
     },
 
     /* methods */

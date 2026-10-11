@@ -5,6 +5,8 @@ import type {
   RendererContext,
 } from './contexts';
 import type { MusicPlayer } from '@/types/music-player';
+import type { CustomFieldContext, SettingsSchema } from '@/types/settings';
+import type { Component } from 'solid-js';
 
 type Author = string;
 
@@ -28,6 +30,7 @@ export type RendererPluginLifecycleExtra<Config, Context, This> = This &
       playerApi: MusicPlayer,
       context: Context,
     ) => void | Promise<void>;
+    components?: Record<string, Component<{ ctx: CustomFieldContext }>>;
   };
 
 export type PluginLifecycle<Config, Context, This> =
@@ -56,6 +59,7 @@ export interface PluginDef<
   addedVersion?: string;
   config?: Config;
   platform?: Platform;
+  essential?: boolean;
 
   menu?: (
     ctx: MenuContext<Config>,
@@ -64,6 +68,9 @@ export interface PluginDef<
     | Electron.MenuItemConstructorOptions[];
   stylesheets?: string[];
   restartNeeded?: boolean;
+
+  /** Declarative settings rendered by the in-app Settings modal (dotted paths allowed). */
+  settings?: SettingsSchema;
 
   backend?: {
     [Key in keyof BackendProperties]: BackendProperties[Key];
