@@ -375,6 +375,23 @@
         }
       }
     },
+    "blocklist": {
+      "description": "Block artists to automatically skip their songs",
+      "name": "Blocklist",
+      "templates": {
+        "button": "Block {{name}}"
+      },
+      "menu": {
+        "add": {
+          "label": "Add blocked artist…",
+          "prompt-title": "Block artist",
+          "prompt-label": "Artist name"
+        },
+        "no-artists": "No blocked artists",
+        "remove": "Remove",
+        "clear": "Clear all"
+      }
+    },
     "blur-nav-bar": {
       "description": "Makes navigation bar transparent and blurry",
       "name": "Blur Navigation Bar"
