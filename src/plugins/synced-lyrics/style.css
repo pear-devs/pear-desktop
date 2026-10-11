@@ -49,13 +49,12 @@
   --lyrics-duration: 2s;
 
   /* Animations */
-  --lyrics-animations:
-    lyrics-glow var(--lyrics-glow-duration) forwards,
-    lyrics-wobble var(--lyrics-wobble-duration) forwards;
+  --lyrics-animations: lyrics-wobble var(--lyrics-wobble-duration) forwards;
   --lyrics-scale-duration: 0.166s;
   --lyrics-opacity-transition: 0.33s;
   --lyrics-glow-duration: var(--lyrics-duration);
   --lyrics-wobble-duration: calc(var(--lyrics-duration) / 2);
+  --lyrics-word-glow: 0 0 0 var(--glow-color);
 
   /* Colors */
   --glow-color: rgba(255, 255, 255, 0.5);
@@ -137,7 +136,10 @@
   display: inline-block;
   white-space: pre-wrap;
   opacity: var(--lyrics-inactive-opacity);
-  transition: opacity var(--lyrics-opacity-transition);
+  text-shadow: 0 0 0 var(--glow-color);
+  transition:
+    opacity var(--lyrics-opacity-transition),
+    text-shadow var(--lyrics-opacity-transition);
 }
 
 .current .text-lyrics {
@@ -148,6 +150,7 @@
 
 .current .text-lyrics > span > span {
   opacity: var(--lyrics-active-opacity);
+  text-shadow: var(--lyrics-word-glow);
   animation: var(--lyrics-animations);
 }
 
