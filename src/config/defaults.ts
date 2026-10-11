@@ -28,6 +28,7 @@ export interface DefaultConfig {
     trayClickPlayPause: boolean;
     autoResetAppCache: boolean;
     resumeOnStart: boolean;
+    stripMusicFromSharedLinks: boolean;
     likeButtons: string;
     swapLikeButtonsOrder: boolean;
     proxy: string;
@@ -65,6 +66,7 @@ export const defaultConfig: DefaultConfig = {
     trayClickPlayPause: false,
     autoResetAppCache: false,
     resumeOnStart: true,
+    stripMusicFromSharedLinks: false,
     likeButtons: '',
     swapLikeButtonsOrder: false,
     proxy: '',
