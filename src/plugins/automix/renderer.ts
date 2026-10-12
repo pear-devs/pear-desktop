@@ -2,8 +2,9 @@ import Color from 'color';
 import { FastAverageColor } from 'fast-average-color';
 import { createSignal } from 'solid-js';
 
+import { AiBeatTracker } from './ai';
 import { defaultConfig, type AutoMixPluginConfig } from './config';
-import { FETCH_AUDIO_CHANNEL } from './constants';
+import { AI_ASSETS_CHANNEL, FETCH_AUDIO_CHANNEL } from './constants';
 import { AutoMixEngine, type AutoMixStatus } from './engine';
 import { mountUi } from './ui';
 
@@ -16,6 +17,49 @@ const [config, setConfig] = createSignal<AutoMixPluginConfig>(defaultConfig);
 let engine: AutoMixEngine | null = null;
 let unmountUi: (() => void) | null = null;
 let stopAccent: (() => void) | null = null;
+let aiTracker: AiBeatTracker | null = null;
+let aiLoading = false;
+let rendererContext: RendererContext<AutoMixPluginConfig> | null = null;
+
+/** Load / unload the optional AI beat tracker to match the setting */
+const syncAi = async () => {
+  const context = rendererContext;
+  if (!context || !engine) return;
+
+  if (!config().aiBeats) {
+    aiTracker?.dispose();
+    aiTracker = null;
+    engine.setAi(null);
+    return;
+  }
+  if (aiTracker || aiLoading) return;
+
+  aiLoading = true;
+  engine.setAiLoading('loading');
+  try {
+    const assets = (await context.ipc.invoke(AI_ASSETS_CHANNEL)) as {
+      model: Uint8Array;
+      wasm: Uint8Array;
+    } | null;
+    if (!assets) throw new Error('Could not download the AI model');
+    if (!config().aiBeats || !engine) return;
+
+    const tracker = new AiBeatTracker(assets);
+    const provider = await tracker.provider;
+    if (!config().aiBeats || !engine) {
+      tracker.dispose();
+      return;
+    }
+    aiTracker = tracker;
+    engine.setAi(tracker, provider);
+    console.info('[AutoMix] AI beat tracker ready on', provider);
+  } catch (error) {
+    console.warn('[AutoMix] AI beat tracker unavailable', error);
+    engine?.setAiLoading('failed');
+  } finally {
+    aiLoading = false;
+  }
+};
 
 const ACCENT_KEY = '--automix-accent';
 
@@ -77,6 +121,9 @@ export const renderer = {
     engine?.destroy();
     unmountUi?.();
     stopAccent?.();
+    // A fresh engine gets a fresh tracker (the model is cached on disk)
+    aiTracker?.dispose();
+    aiTracker = null;
     stopAccent = followArtworkColor(api);
 
     engine = new AutoMixEngine(
@@ -92,6 +139,9 @@ export const renderer = {
       config(),
     );
 
+    rendererContext = context;
+    syncAi().catch(console.error);
+
     unmountUi = mountUi({
       status,
       config,
@@ -106,9 +156,12 @@ export const renderer = {
   onConfigChange(newConfig: AutoMixPluginConfig) {
     setConfig(newConfig);
     engine?.setConfig(newConfig);
+    syncAi().catch(console.error);
   },
 
   stop() {
+    aiTracker?.dispose();
+    aiTracker = null;
     engine?.destroy();
     engine = null;
     unmountUi?.();

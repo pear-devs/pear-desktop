@@ -29,14 +29,25 @@ const styleName = (plan: TransitionPlan) =>
   t(`plugins.automix.style.${plan.style}`);
 
 const describePlan = (plan: TransitionPlan) => {
-  const detail = describeStyle(plan);
-  return plan.fromKey && plan.toKey
-    ? `${detail} · ${t('plugins.automix.ui.detail.keys', {
+  const parts = [describeStyle(plan)];
+  if (plan.fromKey && plan.toKey) {
+    parts.push(
+      t('plugins.automix.ui.detail.keys', {
         from: plan.fromKey,
         to: plan.toKey,
-      })}`
-    : detail;
+      }),
+    );
+  }
+  if (plan.ai) parts.push(t('plugins.automix.ui.detail.ai'));
+  return parts.join(' · ');
 };
+
+const describeAi = (status: AutoMixStatus) =>
+  status.ai
+    ? t(`plugins.automix.ui.ai.${status.ai}`, {
+        provider: status.aiProvider === 'webgpu' ? 'GPU' : 'CPU',
+      })
+    : undefined;
 
 const describeStyle = (plan: TransitionPlan) => {
   const from = Math.round(plan.fromBpm);
@@ -118,6 +129,7 @@ const hintFor = (status: AutoMixStatus): Hint => {
             ]
           : []),
         describePlan(plan),
+        ...(describeAi(status) ? [describeAi(status)!] : []),
       ],
       footer,
     };
@@ -178,11 +190,13 @@ const Pill = (props: PillProps) => {
       aria-pressed={phase() !== 'inactive'}
       class="automix-pill"
       data-phase={phase()}
-      onBlur={hide}
-      onClick={(event) => {
+      // A native listener on the button itself: the player bar stops clicks
+      // from bubbling up to Solid's document-level (delegated) handlers
+      on:click={(event) => {
         event.stopPropagation();
         props.onToggle();
       }}
+      onBlur={hide}
       onFocus={show}
       onMouseEnter={show}
       onMouseLeave={hide}

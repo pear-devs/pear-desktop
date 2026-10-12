@@ -379,6 +379,7 @@
       "description": "Transitions between songs like Apple Music AutoMix: lets real endings play out and segues in as they die away, beat-matches songs with a steady beat (time-stretched, phrase aligned), trims silence, and can also do beat cuts or smooth fades. Don't use together with Crossfade",
       "menu": {
         "active": "AutoMix on",
+        "ai-beats": "AI beat detection (Beat This!, downloads ~100 MB once)",
         "beats": "{{beats}} beats",
         "blend-length": "Blend length",
         "fade-length": "Smooth fade length",
@@ -406,11 +407,18 @@
         "detail": {
           "blend": "{{from}} → {{to}} BPM · stretched {{stretch}}%",
           "cut": "Cut on the downbeat · {{bpm}} BPM",
+          "ai": "AI beats",
           "keys": "key {{from}} → {{to}}",
           "lead-in": "{{seconds}} s lead-in, lands on the final hit",
           "segue": "Plays the ending out, next song in as it dies away",
           "segue-cold": "Next song lands right on the final hit",
           "smooth": "{{seconds}} s fade"
+        },
+        "ai": {
+          "analysing": "AI beat detection is analysing these songs…",
+          "failed": "AI beat detection is unavailable, using the built-in detection",
+          "loading": "Downloading / starting the AI beat detection model…",
+          "ready": "Beats found by AI (Beat This! on {{provider}})"
         },
         "mixing": "AutoMixing",
         "off": "AutoMix off",
@@ -425,8 +433,8 @@
         "hint": {
           "analyzing": "Analysing the beats of this song and the next one",
           "analyzing-heading": "Picking a transition…",
-          "click-off": "Click to turn AutoMix off",
-          "click-on": "Click to turn AutoMix on",
+          "click-off": "Click the AutoMix button to turn it off",
+          "click-on": "Click the AutoMix button to turn it on",
           "next": "Next: {{style}}",
           "now": "Mixing now: {{style}}",
           "off-heading": "AutoMix is off",

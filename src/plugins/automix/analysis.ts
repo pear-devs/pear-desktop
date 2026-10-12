@@ -446,6 +446,8 @@ export interface TempoSection {
    * section's tempo, e.g. -0.06 for a song slowing down 6% into its end
    */
   drift: number;
+  /** Beats and downbeats come from the AI beat tracker */
+  ai?: boolean;
 }
 
 export const emptySection: TempoSection = {
@@ -456,6 +458,56 @@ export const emptySection: TempoSection = {
   beats: [],
   downbeats: [],
   drift: 0,
+};
+
+/**
+ * Builds a section from beats / downbeats found by the AI beat tracker
+ * (times in seconds), keeping the DSP section's key.
+ */
+export const sectionFromBeats = (
+  beats: number[],
+  downbeats: number[],
+  dsp: TempoSection,
+  edge: 'start' | 'end',
+): TempoSection | null => {
+  if (beats.length < 8) return null;
+
+  const intervals = beats.slice(1).map((beat, i) => beat - beats[i]);
+  const median = percentile(intervals, 0.5);
+  if (!(median > 0)) return null;
+  let steps = 0;
+  for (const interval of intervals) {
+    steps += Math.max(1, Math.round(interval / median));
+  }
+  const period = (beats[beats.length - 1] - beats[0]) / steps;
+
+  // How regular the beats are: 1 for a machine-tight grid
+  const deviation = percentile(
+    intervals.map((interval) =>
+      Math.abs((interval / period) - Math.round(interval / period)),
+    ),
+    0.5,
+  );
+
+  const edgeBeats = edge === 'end' ? beats.slice(-9) : beats.slice(0, 9);
+  const edgeIntervals = edgeBeats.slice(1).map((beat, i) => beat - edgeBeats[i]);
+  const drift = (period / percentile(edgeIntervals, 0.5)) - 1;
+
+  return {
+    key: dsp.key,
+    bpm: 60 / period,
+    beatPeriod: period,
+    tempoConfidence: clamp(1 - (deviation * 4), 0, 1),
+    beats,
+    // A bar has several beats; if nearly every beat came back as a downbeat
+    // the model found no bar structure, so keep the DSP downbeats
+    downbeats:
+      downbeats.length >= 2 && downbeats.length <= beats.length * 0.4
+        ? downbeats
+        : dsp.downbeats,
+    drift: Number.isFinite(drift) ? drift : 0,
+    ai: true,
+  };
 };
 
 /** Seconds analysed at each end of a track for the mixing tempo / grid */

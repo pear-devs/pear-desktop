@@ -55,6 +55,8 @@ export interface TransitionPlan {
   holdOutgoing?: boolean;
   /** Bring the incoming song in high-passed, opening up as it fades in */
   filterIn?: boolean;
+  /** Both songs' beats at the mix point come from the AI beat tracker */
+  ai?: boolean;
   /** Camelot keys at the mix point, when detected (e.g. "8A") */
   fromKey?: string;
   toKey?: string;

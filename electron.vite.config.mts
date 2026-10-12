@@ -16,6 +16,7 @@ import solidPlugin from 'vite-plugin-solid';
 import { i18nImporter } from './vite-plugins/i18n-importer.mjs';
 import { pluginVirtualModuleGenerator } from './vite-plugins/plugin-importer.mjs';
 import pluginLoader from './vite-plugins/plugin-loader.mjs';
+import stubOrtWasm from './vite-plugins/stub-ort-wasm.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -112,6 +113,9 @@ export default defineConfig(({ mode }) => {
       }),
     ],
     root: './src/',
+    worker: {
+      plugins: () => [stubOrtWasm()],
+    },
     build: {
       lib: {
         entry: 'src/index.html',

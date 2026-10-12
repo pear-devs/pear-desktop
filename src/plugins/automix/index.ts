@@ -103,6 +103,12 @@ export default createPlugin({
         click: (item) => setConfig({ respectAlbums: item.checked }),
       },
       {
+        label: t('plugins.automix.menu.ai-beats'),
+        type: 'checkbox',
+        checked: config.aiBeats,
+        click: (item) => setConfig({ aiBeats: item.checked }),
+      },
+      {
         label: t('plugins.automix.menu.show-mix-card'),
         type: 'checkbox',
         checked: config.showMixCard,

@@ -1,8 +1,17 @@
-import { emptySection, type TrackAnalysis } from './analysis';
-import { decodeAndAnalyze, type AnalyzedTrack } from './decoder';
+import {
+  emptySection,
+  sectionFromBeats,
+  type TrackAnalysis,
+} from './analysis';
+import {
+  decodeAndAnalyze,
+  resampleForAi,
+  type AnalyzedTrack,
+} from './decoder';
 import { planTransition, type TransitionPlan } from './planner';
 import { getQueueStore, readQueue, type QueueTrack } from './queue';
 
+import type { AiBeatTracker } from './ai';
 import type { AutoMixPluginConfig } from './config';
 import type { MusicPlayer } from '@/types/music-player';
 
@@ -30,7 +39,13 @@ export interface AutoMixStatus {
   toTitle?: string;
   /** 0..1 progress of the audible blend (mixing only) */
   progress?: number;
+  /** AI beat tracker state, when the setting is on */
+  ai?: AiState;
+  /** Where the AI model runs ("webgpu" or "wasm") */
+  aiProvider?: string;
 }
+
+export type AiState = 'loading' | 'analysing' | 'ready' | 'failed';
 
 interface EngineOptions {
   api: MusicPlayer;
@@ -122,6 +137,8 @@ const SEEK_AND_SKIP_KEYS = new Set([
 const IDLE_TICK_MS = 250;
 const FAST_TICK_MS = 20;
 const QUEUE_REFRESH_MS = 2000;
+/** Seconds of a song's end the AI beat tracker looks at */
+const AI_SECTION_SECONDS = 45;
 /** A song-length mismatch has to last this long to count (seeks re-buffer) */
 const MISMATCH_GRACE_MS = 3000;
 const RETRY_FAILED_MS = 120_000;
@@ -188,6 +205,13 @@ export class AutoMixEngine {
   private context: AudioContext | null = null;
 
   private readonly tracks = new Map<string, Promise<AnalyzedTrack | null>>();
+  /** Analyses refined by the AI beat tracker, per video id */
+  private readonly aiAnalyses = new Map<string, TrackAnalysis>();
+  private readonly aiFailed = new Set<string>();
+  private ai: AiBeatTracker | null = null;
+  private aiProvider: string | undefined;
+  private aiLoadState: 'off' | 'loading' | 'ready' | 'failed' = 'off';
+  private aiBusy: string | null = null;
   private readonly ready = new Map<string, AnalyzedTrack>();
   private readonly failedAt = new Map<string, number>();
 
@@ -357,6 +381,123 @@ export class AutoMixEngine {
         this.ready.delete(id);
       }
     }
+    for (const id of [...this.aiAnalyses.keys()]) {
+      if (!keep.includes(id)) this.aiAnalyses.delete(id);
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Optional AI beat tracker                                            */
+  /* ------------------------------------------------------------------ */
+
+  setAi(tracker: AiBeatTracker | null, provider?: string) {
+    this.ai = tracker;
+    this.aiProvider = provider;
+    this.aiLoadState = tracker ? 'ready' : 'off';
+    this.aiFailed.clear();
+    this.planKey = '';
+    this.schedule(0);
+  }
+
+  setAiLoading(state: 'loading' | 'failed' | 'off') {
+    this.aiLoadState = state;
+    this.lastStatus = '';
+    this.schedule(0);
+  }
+
+  /** The analysis to plan with: AI-refined beats when available */
+  private analysisOf(track: AnalyzedTrack) {
+    return (
+      (this.config.aiBeats && this.aiAnalyses.get(track.videoId)) ||
+      track.analysis
+    );
+  }
+
+  private aiStatus(ids: (string | undefined)[]): Partial<AutoMixStatus> {
+    if (!this.config.aiBeats) return {};
+    if (this.aiLoadState === 'loading' || this.aiLoadState === 'failed') {
+      return { ai: this.aiLoadState };
+    }
+    if (this.aiLoadState !== 'ready') return {};
+    const [current, next] = ids;
+    const sectionDone = (id: string | undefined, edge: 'start' | 'end') =>
+      !id ||
+      Boolean(this.aiAnalyses.get(id)?.[edge].ai) ||
+      this.aiFailed.has(`${id}:${edge}`);
+    const done = sectionDone(current, 'end') && sectionDone(next, 'start');
+    return {
+      ai: done ? 'ready' : 'analysing',
+      aiProvider: this.aiProvider,
+    };
+  }
+
+  /**
+   * Refine one song section at a time, most urgent first: the end of the
+   * current song and the start of the next one decide the coming mix.
+   */
+  private refineWithAi() {
+    if (!this.ai || !this.config.aiBeats || this.aiBusy) return;
+
+    const jobs: [string | undefined, 'start' | 'end'][] = [
+      [this.mix?.toId, 'end'],
+      [this.currentId ?? undefined, 'end'],
+      [this.next?.videoId, 'start'],
+      [this.next?.videoId, 'end'],
+    ];
+    const job = jobs.find(([id, edge]) => {
+      if (!id || this.aiFailed.has(`${id}:${edge}`)) return false;
+      const track = this.ready.get(id);
+      return track && !this.aiAnalyses.get(id)?.[edge].ai;
+    });
+    if (!job) return;
+    const [id, edge] = job as [string, 'start' | 'end'];
+    const track = this.ready.get(id)!;
+
+    const ai = this.ai;
+    const busy = `${id}:${edge}`;
+    this.aiBusy = busy;
+    (async () => {
+      const { analysis, head, tail, tailStart } = track;
+      // The model only listens to the stretch we mix on
+      let audio: Float32Array;
+      let offset = 0;
+      if (edge === 'start') {
+        audio = await resampleForAi(head, 0, head.duration);
+      } else {
+        const from = Math.max(
+          0,
+          analysis.trailingSilenceStart - AI_SECTION_SECONDS - tailStart,
+        );
+        audio = await resampleForAi(tail, from, from + AI_SECTION_SECONDS + 0.5);
+        offset = tailStart + from;
+      }
+      const found = await ai.analyze(audio);
+      const base = this.aiAnalyses.get(id) ?? analysis;
+      const section = sectionFromBeats(
+        found.beats.map((time) => time + offset),
+        found.downbeats.map((time) => time + offset),
+        analysis[edge],
+        edge,
+      );
+      if (!section) throw new Error('Too few beats found');
+      return { ...base, [edge]: section };
+    })()
+      .then((refined) => {
+        if (this.ai !== ai) return;
+        this.aiAnalyses.set(id, refined);
+        console.info(
+          `[AutoMix] AI beats ready for the ${edge} of ${id}:`,
+          `${refined[edge].bpm.toFixed(1)} BPM`,
+        );
+      })
+      .catch((error: unknown) => {
+        console.warn('[AutoMix] AI beat tracking failed', error);
+        this.aiFailed.add(busy);
+      })
+      .finally(() => {
+        this.aiBusy = null;
+        this.schedule(0);
+      });
   }
 
   /* ------------------------------------------------------------------ */
@@ -483,6 +624,7 @@ export class AutoMixEngine {
     }
 
     this.watchQueue();
+    this.refineWithAi();
 
     const nextId = this.next?.videoId;
     const afterNextId = this.afterNext?.videoId;
@@ -541,20 +683,35 @@ export class AutoMixEngine {
       return IDLE_TICK_MS;
     }
 
-    const key = JSON.stringify([id, nextId, Boolean(to), this.config]);
+    const fromAnalysis = this.analysisOf(from);
+    const toAnalysis = to ? this.analysisOf(to) : unknownTrack;
+    const key = JSON.stringify([
+      id,
+      nextId,
+      Boolean(to),
+      Boolean(fromAnalysis.end.ai),
+      Boolean(toAnalysis.start.ai),
+      this.config,
+    ]);
     const tooLate =
       this.plan &&
       video.currentTime > this.plan.mixOut - prerollFor(this.plan) + 0.5;
     if (key !== this.planKey || tooLate) {
       this.planKey = key;
-      const plan = planTransition(from.analysis, to?.analysis ?? unknownTrack, {
+      const plan = planTransition(fromAnalysis, toAnalysis, {
         preference: to ? this.config.transition : 'smooth',
         blendBeats: this.config.blendBeats,
         maxStretch: this.config.maxStretch,
         smoothSeconds: this.config.smoothSeconds,
         earliestMixOut: Math.max(video.currentTime + 6.5, from.tailStart + 6.5),
       });
-      this.plan = plan && !to ? { ...plan, reason: 'late-change' } : plan;
+      this.plan =
+        plan && !to
+          ? { ...plan, reason: 'late-change' }
+          : plan && {
+              ...plan,
+              ai: Boolean(fromAnalysis.end.ai && toAnalysis.start.ai),
+            };
     }
 
     const plan = this.plan;
@@ -568,6 +725,7 @@ export class AutoMixEngine {
       plan,
       fromTitle: this.currentTitle,
       toTitle: this.next?.title,
+      ...this.aiStatus([id, nextId]),
     });
 
     const remaining = plan.mixOut - prerollFor(plan) - video.currentTime;
