@@ -11,6 +11,8 @@ export type TransitionReason =
   | 'ending-blend'
   | 'natural-ending'
   | 'cold-ending'
+  | 'natural-fade'
+  | 'cold-lead-in'
   | 'loud-handover'
   | 'tempo-mismatch'
   | 'no-beat'
@@ -51,6 +53,8 @@ export interface TransitionPlan {
    * final hit ring out, instead of fading it across the blend
    */
   holdOutgoing?: boolean;
+  /** Bring the incoming song in high-passed, opening up as it fades in */
+  filterIn?: boolean;
   /** Camelot keys at the mix point, when detected (e.g. "8A") */
   fromKey?: string;
   toKey?: string;
@@ -68,6 +72,10 @@ const PHRASE_SNAP_SECONDS = 5;
 
 /** Longest a segue waits for an ending to die away before coming in */
 const SEGUE_MAX_WAIT = 8;
+/** How long the next song's intro may rise in under a song's final hit */
+const LEAD_IN_MIN = 1.5;
+const LEAD_IN_MAX = 5;
+const LEAD_IN_DEFAULT = 3;
 
 /** Both songs need a clearly steady beat before they get a DJ-style blend */
 const DJ_TEMPO_CONFIDENCE = 0.45;
@@ -328,12 +336,46 @@ const planSegue = (
   };
 };
 
+/**
+ * An audible transition that doesn't need matching tempos. The next song
+ * comes in filtered (no bass) and quiet, then opens up:
+ * - a song that fades out: the next one fades in underneath the fade
+ * - a song that stops on a hit: the next one's intro rises in under its
+ *   last moments, timed so one of its downbeats lands on that hit
+ */
 const planSmooth = (
   from: TrackAnalysis,
   to: TrackAnalysis,
   options: PlannerOptions,
 ): TransitionPlan | null => {
-  const end = from.trailingSilenceStart;
+  const base = {
+    style: 'smooth' as const,
+    reason: 'fallback' as const,
+    mixIn: to.leadingSilenceEnd,
+    rate: 1,
+    beat: from.beatPeriod,
+    fromBpm: from.bpm,
+    toBpm: to.bpm,
+    filterIn: true,
+  };
+
+  if (endsAbruptly(from)) {
+    const hit = finalHit(from) ?? from.trailingSilenceStart - 0.1;
+    const downbeat = to.downbeats.find(
+      (time) =>
+        time - to.leadingSilenceEnd >= LEAD_IN_MIN &&
+        time - to.leadingSilenceEnd <= LEAD_IN_MAX,
+    );
+    const leadIn = downbeat
+      ? downbeat - to.leadingSilenceEnd
+      : LEAD_IN_DEFAULT;
+    const mixOut = hit - leadIn;
+    if (mixOut < options.earliestMixOut) return null;
+    return { ...base, mixOut, duration: leadIn, holdOutgoing: true };
+  }
+
+  // Fade in under the outro, finishing as the ending dies away
+  const end = Math.min(from.decayPoint + 1, from.trailingSilenceStart);
   let duration = Math.min(
     Math.max(end - from.outroStart, 4),
     options.smoothSeconds,
@@ -344,18 +386,7 @@ const planSmooth = (
     duration = end - mixOut;
   }
   if (duration < 1.5) return null;
-
-  return {
-    style: 'smooth',
-    reason: 'fallback',
-    mixOut,
-    mixIn: to.leadingSilenceEnd,
-    duration,
-    rate: 1,
-    beat: from.beatPeriod,
-    fromBpm: from.bpm,
-    toBpm: to.bpm,
-  };
+  return { ...base, mixOut, duration };
 };
 
 /** Most a song may speed up / slow down at the edge we beat-match on */
@@ -415,10 +446,12 @@ export const planTransition = (
       order = ['smooth'];
       break;
     default:
+      // Something audible every time: beat-matched when the beats allow,
+      // otherwise a filtered fade / lead-in. A plain segue is the last resort
       order =
         djBlend || endingBlend
-          ? ['blend', 'segue', 'smooth']
-          : ['segue', 'smooth'];
+          ? ['blend', 'smooth', 'segue']
+          : ['smooth', 'segue'];
   }
 
   const reasonFor = (style: TransitionStyle): TransitionReason => {
@@ -433,8 +466,7 @@ export const planTransition = (
       return endsAbruptly(from) ? 'cold-ending' : 'natural-ending';
     }
     if (style === 'cut') return 'loud-handover';
-    if (!gridsOk) return 'no-beat';
-    return stretchOk ? 'fallback' : 'tempo-mismatch';
+    return endsAbruptly(from) ? 'cold-lead-in' : 'natural-fade';
   };
 
   for (const style of order) {

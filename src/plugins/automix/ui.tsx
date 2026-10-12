@@ -57,9 +57,12 @@ const describeStyle = (plan: TransitionPlan) => {
           : 'plugins.automix.ui.detail.segue',
       );
     default:
-      return t('plugins.automix.ui.detail.smooth', {
-        seconds: Math.round(plan.duration),
-      });
+      return t(
+        plan.holdOutgoing
+          ? 'plugins.automix.ui.detail.lead-in'
+          : 'plugins.automix.ui.detail.smooth',
+        { seconds: Math.round(plan.duration) },
+      );
   }
 };
 

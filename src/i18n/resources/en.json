@@ -400,13 +400,14 @@
         "blend": "Beat Match",
         "cut": "Beat Cut",
         "segue": "Segue",
-        "smooth": "Smooth Fade"
+        "smooth": "Fade"
       },
       "ui": {
         "detail": {
           "blend": "{{from}} → {{to}} BPM · stretched {{stretch}}%",
           "cut": "Cut on the downbeat · {{bpm}} BPM",
           "keys": "key {{from}} → {{to}}",
+          "lead-in": "{{seconds}} s lead-in, lands on the final hit",
           "segue": "Plays the ending out, next song in as it dies away",
           "segue-cold": "Next song lands right on the final hit",
           "smooth": "{{seconds}} s fade"
@@ -440,6 +441,8 @@
           "ending-blend": "This song stops on the beat, so the next one is beat-matched in underneath its last bars and takes over on the final hit",
           "loud-handover": "This song ends on a hit and the next one starts straight away, so it cuts on the downbeat",
           "natural-ending": "This song has a real ending, so it plays out and the next one comes in as it dies away",
+          "natural-fade": "The beats can't be matched, so the next song fades in underneath this one's outro, filtered at first so they don't clash",
+          "cold-lead-in": "The beats can't be matched, so the next song's intro rises in under this one's last moments and takes over on its final hit",
           "no-beat": "There's no steady beat to lock to, so it fades smoothly",
           "preference": "Chosen in the AutoMix settings",
           "tempo-match": "The tempos are close, so the next song is time-stretched and its beats locked to this one",

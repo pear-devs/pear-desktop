@@ -133,6 +133,8 @@ const CROSSOVER_HZ = 180;
 const SILENT_VOLUME = 0.0001;
 /** How long the final hit of a song that stops on the beat rings out */
 const ENDING_RING = 1.5;
+/** Where the incoming song's high-pass starts when it's filtered in */
+const FILTER_IN_HZ = 500;
 /** Start a no-analysis fade plan this long before the song's audible end */
 const LATE_PLAN_SECONDS = 25;
 
@@ -714,6 +716,14 @@ export class AutoMixEngine {
       }
 
       case 'smooth': {
+        if (plan.holdOutgoing) {
+          // Keep the whole ending; the final hit rings out under the next song
+          const hit = mixAt + duration;
+          dry.gain.setValueAtTime(1, hit + 0.05);
+          dry.gain.setTargetAtTime(0, hit + 0.05, ENDING_RING / 4);
+          chain.source.stop(hit + ENDING_RING + 0.2);
+          break;
+        }
         // Long equal-power fade, the outgoing song slowly drifts behind a lowpass
         dry.gain.setValueCurveAtTime(equalPowerOut, mixAt, duration);
         lowpass.frequency.setValueAtTime(20000, mixAt);
@@ -742,7 +752,23 @@ export class AutoMixEngine {
     gain.gain.value = 0;
     const master = context.createGain();
     master.gain.value = volume;
-    source.connect(gain).connect(master).connect(context.destination);
+    const highpass = context.createBiquadFilter();
+    highpass.type = 'highpass';
+    highpass.Q.value = 0.7;
+    highpass.frequency.value = 20;
+    source
+      .connect(highpass)
+      .connect(gain)
+      .connect(master)
+      .connect(context.destination);
+
+    if (plan.filterIn) {
+      // Thin at first so the two songs don't muddy, opening up fully by the
+      // time the old song is gone (or on its final hit)
+      const openBy = plan.holdOutgoing ? plan.duration : plan.duration * 0.7;
+      highpass.frequency.setValueAtTime(FILTER_IN_HZ, mixAt);
+      highpass.frequency.exponentialRampToValueAtTime(20, mixAt + openBy);
+    }
 
     if (plan.style === 'cut' || plan.style === 'segue') {
       // The incoming song starts as itself: no fade-in on its first note
