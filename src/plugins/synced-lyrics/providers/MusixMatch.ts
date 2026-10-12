@@ -1,23 +1,29 @@
 import * as z from 'zod';
 
 import { LRC } from '../parsers/lrc';
-import { netFetch } from '../renderer';
+import { electronTransport } from '../search/electron-transport';
+import { lyricsHttp, LyricsError } from '../search/http';
+import { variantDigest } from '../search/identity';
 
-import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
+import type {
+  LyricProvider,
+  LyricCandidate,
+  SearchSongInfo,
+  SearchContext,
+} from '../types';
 
 export class MusixMatch implements LyricProvider {
   name = 'MusixMatch';
   baseUrl = 'https://www.musixmatch.com/';
 
-  private api: MusixMatchAPI | undefined;
+  async search(
+    info: SearchSongInfo,
+    context?: SearchContext,
+  ): Promise<LyricCandidate[]> {
+    // Per-search initialization avoids sharing an aborted token request with a new track.
+    const api = await MusixMatchAPI.new(context?.signal);
 
-  async search(info: SearchSongInfo): Promise<LyricResult | null> {
-    // late-init the API, to avoid an electron IPC issue
-    // an added benefit is that if it has an error during init, the user can hit the retry button
-    this.api ??= await MusixMatchAPI.new();
-    await this.api.reinit();
-
-    const data = await this.api.query(Endpoint.getMacroSubtitles, {
+    const data = await api.query(Endpoint.getMacroSubtitles, {
       q_track: info.alternativeTitle || info.title,
       q_artist: info.artist,
       q_duration: info.songDuration.toString(),
@@ -33,54 +39,80 @@ export class MusixMatch implements LyricProvider {
 
     const track = getter('matcher.track.get')?.track;
     const lyrics = getter('track.lyrics.get')?.lyrics?.lyrics_body;
-    const subtitle = getter('track.subtitles.get')?.subtitle_list?.[0];
-
-    // either no track found, or musixmatch's algorithm returned "Coldplay - Paradise" for no reason whatsoever
-    if (!track || track.track_id === 115264642) return null;
-
-    return {
-      title: track.track_name,
-      artists: [track.artist_name],
-      lines: subtitle
-        ? LRC.parse(subtitle.subtitle.subtitle_body).lines.map((l) => ({
-            ...l,
-            status: 'upcoming' as const,
-          }))
-        : undefined,
-      lyrics: lyrics,
-    };
+    const subtitles = getter('track.subtitles.get')?.subtitle_list ?? [];
+    if (!track) return [];
+    const variants = subtitles.length
+      ? subtitles.map(({ subtitle }) => subtitle)
+      : [undefined];
+    const candidates = await Promise.all(
+      variants.map(async (subtitle): Promise<LyricCandidate> => {
+        const synced = subtitle
+          ? LRC.parse(
+              subtitle.subtitle_body,
+              (track.track_length ?? info.songDuration) * 1000,
+            )
+          : undefined;
+        const variantId = subtitle
+          ? String(
+              subtitle.subtitle_id ??
+                (await variantDigest(
+                  `${subtitle.subtitle_language ?? 'unknown'}:${subtitle.subtitle_body}`,
+                )),
+            )
+          : 'plain';
+        return {
+          provider: this.name,
+          sourceId: String(track.track_id),
+          id: `${track.track_id}:${variantId}`,
+          album: track.album_name,
+          durationMs:
+            track.track_length === undefined
+              ? undefined
+              : track.track_length * 1000,
+          language: subtitle?.subtitle_language,
+          result: {
+            title: track.track_name,
+            artists: [track.artist_name],
+            syncLevel: synced?.syncLevel ?? 'plain',
+            lines: synced?.lines,
+            lyrics,
+          },
+        };
+      }),
+    );
+    context?.signal.throwIfAborted();
+    return candidates.filter(
+      (candidate, index) =>
+        candidates.findIndex((other) => other.id === candidate.id) === index,
+    );
   }
 }
 
-// API Implementation, based on https://github.com/Strvm/musicxmatch-api/blob/main/src/musicxmatch_api/main.py
+// API Implementation, based on https://github.com/spicetify/cli/blob/master/CustomApps/lyrics-plus/ProviderMusixmatch.js
 
-const zBoolean = z.union([z.literal(0), z.literal(1)]);
 const Track = z.object({
   track_id: z.number(),
   track_name: z.string(),
   artist_name: z.string(),
+  album_name: z.string().optional(),
+  track_length: z.number().nonnegative().optional(),
 });
 
 const Lyrics = z.object({
-  instrumental: zBoolean,
   lyrics_body: z.string(),
-  lyrics_language: z.string(),
-  lyrics_language_description: z.string(),
 });
 
 const Subtitle = z.object({
   subtitle_body: z.string(),
-  subtitle_length: z.number(),
-  subtitle_language: z.string(),
+  subtitle_id: z.number().optional(),
+  subtitle_language: z.string().optional(),
 });
 
 enum Endpoint {
   getMacroSubtitles = 'macro.subtitles.get',
-  searchTrack = 'track.search',
 }
 
 type Query = {
-  q?: string;
   q_track?: string;
   q_artist?: string;
   q_album?: string;
@@ -92,18 +124,9 @@ type Params = {
     namespace: 'lyrics_richsynched';
     subtitle_format: 'lrc';
   };
-  [Endpoint.searchTrack]: {
-    q: string;
-    f_has_lyrics: 'true' | 'false';
-    page_size: string;
-    page: string;
-  };
 };
 
 const ResponseSchema = {
-  [Endpoint.searchTrack]: z.object({
-    track_list: z.array(z.object({ track: Track })),
-  }),
   [Endpoint.getMacroSubtitles]: z.object({
     macro_calls: z.object({
       'track.lyrics.get': z.object({
@@ -156,28 +179,14 @@ const ResponseSchema = {
 } as const;
 
 class MusixMatchAPI {
-  private initPromise: Promise<void>;
-  private cookie = 'x-mxm-user-id=';
   private token: string | null = null;
 
-  private constructor() {
-    this.initPromise = this.init();
-  }
+  private constructor(private signal?: AbortSignal) {}
 
-  public static async new() {
-    const api = new MusixMatchAPI();
-    await api.initPromise;
+  public static async new(signal?: AbortSignal) {
+    const api = new MusixMatchAPI(signal);
+    await api.init();
     return api;
-  }
-
-  public async reinit() {
-    const [{ status }] = await Promise.allSettled([this.initPromise]);
-    if (status === 'rejected') {
-      this.cookie = 'x-mxm-user-id=';
-      localStorage.removeItem(this.key);
-      this.initPromise = this.init();
-      await this.initPromise;
-    }
   }
 
   // god I love typescript generics, they're so useful
@@ -189,9 +198,9 @@ class MusixMatchAPI {
         ? z.infer<(typeof ResponseSchema)[T]>
         : unknown;
     },
-  >(endpoint: T, params: Params[T]): Promise<R> {
-    await this.initPromise;
-    if (!this.token) throw new Error('Token not initialized');
+  >(endpoint: T, params: Params[T], refreshed = false): Promise<R> {
+    this.signal?.throwIfAborted();
+    if (!this.token) throw new LyricsError('auth', 'Token not initialized');
 
     const url = `${this.baseUrl}${endpoint}`;
 
@@ -206,18 +215,11 @@ class MusixMatchAPI {
       ),
     );
 
-    const [, json, headers] = await netFetch(`${url}?${clonedParams}`, {
-      headers: { Cookie: this.cookie },
+    const response = await lyricsHttp.json<unknown>(`${url}?${clonedParams}`, {
+      headers: this.headers,
+      signal: this.signal,
+      transport: electronTransport,
     });
-
-    const setCookie = Object.entries(headers).find(
-      ([key]) => key.toLowerCase() === 'set-cookie',
-    );
-    if (setCookie) {
-      this.cookie = setCookie[1];
-    }
-
-    const response = JSON.parse(json);
     // prettier-ignore
     if (
       response && typeof response === 'object' &&
@@ -226,8 +228,10 @@ class MusixMatchAPI {
       'status_code' in response.message.header && typeof response.message.header.status_code === 'number' &&
       response.message.header.status_code === 401
     ) {
-      await this.reinit();
-      return this.query(endpoint, params);
+      if (refreshed) throw new LyricsError('auth', 'MusixMatch rejected refreshed token');
+      localStorage.removeItem(this.key);
+      await this.init();
+      return this.query(endpoint, params, true);
     }
 
     const parsed = z
@@ -237,8 +241,10 @@ class MusixMatchAPI {
       .safeParse(response);
 
     if (!parsed.success) {
-      console.error('Malformed response', response, parsed.error);
-      throw new Error('Failed to parse response from MusixMatch API');
+      throw new LyricsError(
+        'parse/schema',
+        'Failed to parse response from MusixMatch API',
+      );
     }
 
     return parsed.data.message as R;
@@ -257,9 +263,17 @@ class MusixMatchAPI {
 
   private key = 'ytm:synced-lyrics:mxm:token';
   private async init() {
-    const { token, expires } = this.savedTokenSchema.parse(
-      JSON.parse(localStorage.getItem(this.key) ?? '{ "token": null }'),
-    );
+    this.signal?.throwIfAborted();
+    let saved: unknown;
+    try {
+      saved = JSON.parse(localStorage.getItem(this.key) ?? '{ "token": null }');
+    } catch {
+      saved = null;
+    }
+    const parsed = this.savedTokenSchema.safeParse(saved);
+    const { token, expires } = parsed.success
+      ? parsed.data
+      : { token: null, expires: undefined };
     if (token && expires > Date.now()) {
       this.token = token;
       return;
@@ -268,11 +282,12 @@ class MusixMatchAPI {
     localStorage.removeItem(this.key);
 
     this.token = await this.getToken();
-    if (!this.token) throw new Error('Failed to get token');
+    this.signal?.throwIfAborted();
+    if (!this.token) throw new LyricsError('auth', 'Failed to get token');
 
     localStorage.setItem(
       this.key,
-      JSON.stringify({ token: this.token, expires: Date.now() + (60 * 1000) }),
+      JSON.stringify({ token: this.token, expires: Date.now() + 60_000 }),
     );
   }
 
@@ -288,29 +303,28 @@ class MusixMatchAPI {
   private async getToken() {
     const endpoint = 'token.get';
     const params = new URLSearchParams({ app_id: this.app_id });
-    const [, json, headers] = await netFetch(
-      `${this.baseUrl}${endpoint}?${params}`,
-      {
-        headers: Object.assign({ Cookie: this.cookie }, this.headers),
-      },
-    );
-
-    const setCookie = Object.entries(headers).find(
-      ([key]) => key.toLowerCase() === 'set-cookie',
-    );
-    if (setCookie) {
-      this.cookie = setCookie[1];
-    }
-
     const {
       message: { body },
-    } = this.tokenSchema.parse(JSON.parse(json));
+    } = await lyricsHttp.json(
+      `${this.baseUrl}${endpoint}?${params}`,
+      {
+        headers: this.headers,
+        signal: this.signal,
+        transport: electronTransport,
+      },
+      (value) => this.tokenSchema.parse(value),
+    );
     return body?.user_token ?? '';
   }
 
-  private readonly baseUrl = 'https://apic-desktop.musixmatch.com/ws/1.1/';
-  private readonly app_id = 'web-desktop-app-v1.0';
+  private readonly baseUrl = 'https://apic-appmobile.musixmatch.com/ws/1.1/';
+  private readonly app_id = 'mac-ios-v2.0';
   private readonly headers = {
-    Authority: 'apic-desktop.musixmatch.com',
-  };
+    'authority': 'apic-appmobile.musixmatch.com',
+    'X-Cookie': 'x-mxm-token-guid=',
+    'x-mxm-app-version': '10.1.1',
+    'X-User-Agent': 'Musixmatch/2025120901 CFNetwork/3860.300.31 Darwin/25.2.0',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept': 'application/json',
+  } as const;
 }

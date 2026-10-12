@@ -1,5 +1,6 @@
 import { t } from '@/i18n';
 
+import { migratePreferredProvider } from './preferences';
 import { providerNames } from './providers';
 
 import type { SyncedLyricsPluginConfig } from './types';
@@ -10,6 +11,10 @@ export const menu = async (
   ctx: MenuContext<SyncedLyricsPluginConfig>,
 ): Promise<MenuItemConstructorOptions[]> => {
   const config = await ctx.getConfig();
+  const preferred = await migratePreferredProvider(
+    config.preferredProvider,
+    ctx.setConfig,
+  );
 
   return [
     {
@@ -23,9 +28,9 @@ export const menu = async (
             'plugins.synced-lyrics.menu.preferred-provider.none.tooltip',
           ),
           type: 'radio',
-          checked: config.preferredProvider === undefined,
+          checked: preferred === 'auto',
           click() {
-            ctx.setConfig({ preferredProvider: undefined });
+            ctx.setConfig({ preferredProvider: 'auto' });
           },
         },
         ...providerNames.map(
@@ -33,7 +38,7 @@ export const menu = async (
             ({
               label: provider,
               type: 'radio',
-              checked: config.preferredProvider === provider,
+              checked: preferred === provider,
               click() {
                 ctx.setConfig({ preferredProvider: provider });
               },

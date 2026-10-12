@@ -12,7 +12,11 @@ import {
 import type { BackendContext } from '@/types/contexts';
 import type { BrowserWindow } from 'electron';
 
-const setWindowTransparency = (window: BrowserWindow, material: MaterialType, opacity: number) => {
+const setWindowTransparency = (
+  window: BrowserWindow,
+  material: MaterialType,
+  opacity: number,
+) => {
   // Background materials are only supported on macOS and Windows
   if (is.windows()) {
     if (WINDOWS_MATERIALS.includes(material)) {

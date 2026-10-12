@@ -1,10 +1,24 @@
-import { createEffect, For, Show, createSignal, createMemo } from 'solid-js';
+import {
+  createEffect,
+  For,
+  Show,
+  createSignal,
+  createMemo,
+  onCleanup,
+} from 'solid-js';
 import { type VirtualizerHandle } from 'virtua/solid';
 
-import { type LineLyrics } from '@/plugins/synced-lyrics/types';
+import { type LyricLine } from '@/plugins/synced-lyrics/types';
 
 import { _ytAPI } from '..';
+import { observeLyricsTask } from '../lifecycle';
 import { config, currentTime } from '../renderer';
+import {
+  blankProgress,
+  formatTimecode,
+  lineDuration,
+  type LineStatus,
+} from '../timing';
 import {
   canonicalize,
   convertChineseCharacter,
@@ -16,8 +30,8 @@ interface SyncedLineProps {
   scroller: VirtualizerHandle;
   index: number;
 
-  line: LineLyrics;
-  status: 'upcoming' | 'current' | 'previous';
+  line: LyricLine;
+  status: LineStatus;
 }
 
 const EmptyLine = (props: SyncedLineProps) => {
@@ -27,10 +41,7 @@ const EmptyLine = (props: SyncedLineProps) => {
   });
 
   const index = createMemo(() => {
-    const progress = currentTime() - props.line.timeInMs;
-    const total = props.line.duration;
-
-    const percentage = Math.min(1, progress / total);
+    const percentage = blankProgress(props.line, currentTime());
     return Math.max(0, Math.floor((states().length - 1) * percentage));
   });
 
@@ -38,7 +49,7 @@ const EmptyLine = (props: SyncedLineProps) => {
     <div
       class={`synced-line ${props.status}`}
       onClick={() => {
-        _ytAPI?.seekTo((props.line.timeInMs + 10) / 1000);
+        _ytAPI?.seekTo(Math.max(0, props.line.startMs + 10) / 1000);
       }}
     >
       <div class="description ytmusic-description-shelf-renderer" dir="auto">
@@ -46,7 +57,9 @@ const EmptyLine = (props: SyncedLineProps) => {
           text={{
             runs: [
               {
-                text: config()?.showTimeCodes ? `[${props.line.time}] ` : '',
+                text: config()?.showTimeCodes
+                  ? `[${formatTimecode(props.line.startMs)}] `
+                  : '',
               },
             ],
           }}
@@ -90,7 +103,8 @@ export const SyncedLine = (props: SyncedLineProps) => {
     if (convertChineseText && convertChineseText !== 'disabled') {
       line = convertChineseCharacter(line, convertChineseText);
     }
-    return line.trim();
+    // Musical-note cues are displayed as spacers, not rewritten in source data.
+    return line.trim() === '♪' ? '' : line.trim();
   });
 
   const [romanization, setRomanization] = createSignal('');
@@ -98,9 +112,11 @@ export const SyncedLine = (props: SyncedLineProps) => {
     const input = canonicalize(text());
     if (!config()?.romanization) return;
 
-    romanize(input).then((result) => {
-      setRomanization(canonicalize(result));
-    });
+    onCleanup(
+      observeLyricsTask(romanize(input), (result) => {
+        setRomanization(canonicalize(result));
+      }),
+    );
   });
 
   return (
@@ -108,7 +124,7 @@ export const SyncedLine = (props: SyncedLineProps) => {
       <div
         class={`synced-line ${props.status}`}
         onClick={() => {
-          _ytAPI?.seekTo((props.line.timeInMs + 10) / 1000);
+          _ytAPI?.seekTo(Math.max(0, props.line.startMs + 10) / 1000);
         }}
       >
         <div class="description ytmusic-description-shelf-renderer" dir="auto">
@@ -116,7 +132,9 @@ export const SyncedLine = (props: SyncedLineProps) => {
             text={{
               runs: [
                 {
-                  text: config()?.showTimeCodes ? `[${props.line.time}] ` : '',
+                  text: config()?.showTimeCodes
+                    ? `[${formatTimecode(props.line.startMs)}] `
+                    : '',
                 },
               ],
             }}
@@ -124,15 +142,14 @@ export const SyncedLine = (props: SyncedLineProps) => {
 
           <div
             class="text-lyrics"
-            ref={(div: HTMLDivElement) => {
-              // TODO: Investigate the animation, even though the duration is properly set, all lines have the same animation duration
-              div.style.setProperty(
-                '--lyrics-duration',
-                `${props.line.duration / 1000}s`,
-                'important',
-              );
+            style={{
+              'display': 'flex',
+              'flex-direction': 'column',
+              '--lyrics-duration':
+                lineDuration(props.line) === undefined
+                  ? undefined
+                  : `${lineDuration(props.line)! / 1000}s`,
             }}
-            style={{ 'display': 'flex', 'flex-direction': 'column' }}
           >
             <span>
               <For each={text().split(' ')}>

@@ -1,34 +1,24 @@
-<div align="center" markdown="1">
-   <sup>Special thanks to:</sup>
-   <br>
-   <br>
-   <a href="https://go.warp.dev/pear-desktop">
-      <img alt="Warp sponsorship" width="400" src="https://github.com/user-attachments/assets/8307ea56-e872-494a-8a9c-de0e296a06ed" />
-   </a>
-
-### [Warp, built for coding with multiple AI agents](https://go.warp.dev/pear-desktop)
-[Available for macOS, Linux, & Windows](https://go.warp.dev/pear-desktop)<br>
-
-</div>
-<hr>
-
 <div align="center">
 
-# :pear: Pear Desktop
+# :pear: Pearum Desktop
 
-[![GitHub release](https://img.shields.io/github/release/pear-devs/pear-desktop.svg?style=for-the-badge)](https://github.com/pear-devs/pear-desktop/releases/)
-[![GitHub license](https://img.shields.io/github/license/pear-devs/pear-desktop.svg?style=for-the-badge)](https://github.com/pear-devs/pear-desktop/blob/master/license)
-[![eslint code style](https://img.shields.io/badge/code_style-eslint-5ed9c7.svg?style=for-the-badge)](https://github.com/pear-devs/pear-desktop/blob/master/eslint.config.mjs)
-[![Build status](https://img.shields.io/github/actions/workflow/status/pear-devs/pear-desktop/build.yml?branch=master&style=for-the-badge)](https://GitHub.com/pear-devs/pear-desktop/releases/)
-[![GitHub All Releases](https://img.shields.io/github/downloads/pear-devs/pear-desktop/total?style=for-the-badge)](https://GitHub.com/pear-devs/pear-desktop/releases/)
-<!--[![AUR](https://img.shields.io/aur/version/pear-desktop-bin?color=blueviolet&style=for-the-badge)](https://aur.archlinux.org/packages/pear-desktop-bin)-->
-[![Known Vulnerabilities](https://snyk.io/test/github/pear-devs/pear-desktop/badge.svg)](https://snyk.io/test/github/pear-devs/pear-desktop)
+**English** | [Русский](README.ru.md)
+
+[![GitHub release](https://img.shields.io/github/release/maseckt/pearum-desktop.svg?style=for-the-badge)](https://github.com/maseckt/pearum-desktop/releases/)
+[![GitHub license](https://img.shields.io/github/license/maseckt/pearum-desktop.svg?style=for-the-badge)](https://github.com/maseckt/pearum-desktop/blob/master/license)
+[![Oxlint code style](https://img.shields.io/badge/code_style-Oxlint-5ed9c7.svg?style=for-the-badge)](https://github.com/maseckt/pearum-desktop/blob/dev/.oxlintrc.json)
+[![Build status](https://img.shields.io/github/actions/workflow/status/maseckt/pearum-desktop/build.yml?branch=master&style=for-the-badge)](https://github.com/maseckt/pearum-desktop/actions/workflows/build.yml)
+[![GitHub All Releases](https://img.shields.io/github/downloads/maseckt/pearum-desktop/total?style=for-the-badge)](https://github.com/maseckt/pearum-desktop/releases/)
 
 </div>
 
 <!--![Screenshot](web/screenshot.png "Screenshot")-->
 
-- Native look & feel extension
+An independent fork of [Pear Desktop](https://github.com/pear-devs/pear-desktop),
+focused on privacy, synced lyrics, and targeted stability improvements while retaining the familiar interface and plugin system.
+
+Development happens on [`dev`](https://github.com/maseckt/pearum-desktop/tree/dev).
+Development changes may not yet be available in published releases.
 
 > [!IMPORTANT]
 > ⚠️ Disclaimer
@@ -50,8 +40,7 @@
 - [Features](#features)
 - [Translation](#translation)
 - [Download](#download)
-  - [Arch Linux](#arch-linux)
-  - [Solus](#solus)
+  - [Linux](#linux)
   - [MacOS](#macos)
   - [Windows](#windows)
     - [How to install without a network connection? (in Windows)](#how-to-install-without-a-network-connection-in-windows)
@@ -66,9 +55,18 @@
 - [License](#license)
 - [FAQ](#faq)
 
+## Features
+
+- Native desktop integration and the existing Pear Desktop plugin system.
+- Synced lyrics improvements: multi-source candidate matching, bounded searches, caching, and stable source selection with the original picker controls.
+- Enhanced Do Not Track profiles: Lite, Balanced, Strict, and optional custom filter lists.
+
+The application retains upstream branding in some menus and package names.
+
 ## Translation
 
-You can help with translation on [Hosted Weblate](https://bit.ly/48n5YF7).
+Upstream translations are maintained on [Hosted Weblate](https://bit.ly/48n5YF7).
+For fork-specific text, submit changes to this repository's `src/i18n/resources/`.
 
 <a href="https://bit.ly/48n5YF7">
   <img src="https://bit.ly/4q83L6S" alt="translation status" />
@@ -77,27 +75,16 @@ You can help with translation on [Hosted Weblate](https://bit.ly/48n5YF7).
 
 ## Download
 
-You can check out the [latest release](https://github.com/pear-devs/pear-desktop/releases/latest) to quickly find the
-latest version.
+Download Pearum Desktop only from this project's [GitHub Releases](https://github.com/maseckt/pearum-desktop/releases/).
+Choose an asset for your operating system and device architecture. If no build is available for your platform, follow the [build instructions](#build).
 
-### Arch Linux
+### Linux
 
-Install the [`pear-desktop`](https://aur.archlinux.org/packages/pear-desktop) package from the AUR. For AUR installation instructions, take a look at
-this [wiki page](https://wiki.archlinux.org/index.php/Arch_User_Repository#Installing_packages).
-
-### [Solus](https://getsol.us/)
-
-```bash
-sudo eopkg install pear-desktop
-```
+Download a Linux build from [GitHub Releases](https://github.com/maseckt/pearum-desktop/releases/) and choose a format supported by your distribution from the available assets.
 
 ### macOS
 
-You can install the app using Homebrew (see the [cask definition](https://github.com/pear-devs/homebrew-pear)):
-
-```bash
-brew install pear-devs/pear/pear-desktop
-```
+Download a macOS build for your device architecture from [GitHub Releases](https://github.com/maseckt/pearum-desktop/releases/).
 
 If you install the app manually and get an error "is damaged and can’t be opened." when launching the app, run the following in the Terminal:
 
@@ -107,28 +94,13 @@ If you install the app manually and get an error "is damaged and can’t be open
 
 ### Windows
 
-You can use the [Scoop package manager](https://scoop.sh) to install the `pear-desktop` package from
-the [`extras` bucket](https://github.com/ScoopInstaller/Extras).
+Download a Windows installer for your device architecture from [GitHub Releases](https://github.com/maseckt/pearum-desktop/releases/) and run it.
 
-```bash
-scoop bucket add extras
-scoop install extras/pear-desktop
-```
-
-Alternately you can use [Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/), Windows 11s
-official CLI package manager to install the `pear-devs.pear-desktop` package.
-
-*Note: Microsoft Defender SmartScreen might block the installation since it is from an "unknown publisher". This is also
-true for the manual installation when trying to run the executable(.exe) after a manual download here on github (same
-file).*
-
-```bash
-winget install pear-devs.pear-desktop
-```
+*Note: Microsoft Defender SmartScreen may flag the installer as coming from an "unknown publisher".*
 
 #### How to install without a network connection? (in Windows)
 
-- Download the `*.nsis.7z` file for _your device architecture_ in [release page](https://github.com/pear-devs/pear-desktop/releases/latest).
+- Download the `*.nsis.7z` file for _your device architecture_ from this fork's [release page](https://github.com/maseckt/pearum-desktop/releases/), if provided.
   - `x64` for 64-bit Windows
   - `ia32` for 32-bit Windows
   - `arm64` for ARM64 Windows
@@ -145,8 +117,8 @@ Some predefined themes are available in https://github.com/kerichdev/themes-for-
 ## Dev
 
 ```bash
-git clone https://github.com/pear-devs/pear-desktop
-cd pear-desktop
+git clone --branch dev https://github.com/maseckt/pearum-desktop.git
+cd pearum-desktop
 pnpm install --frozen-lockfile
 pnpm dev
 ```
@@ -167,6 +139,10 @@ Using plugins, you can:
 Create a folder in `src/plugins/YOUR-PLUGIN-NAME`:
 
 - `index.ts`: the main file of the plugin
+
+<details>
+<summary>Plugin example</summary>
+
 ```typescript
 import style from './style.css?inline'; // import style as inline
 
@@ -232,9 +208,14 @@ export default createPlugin({
 });
 ```
 
+</details>
+
 ### Common use cases
 
 - injecting custom CSS: create a `style.css` file in the same folder then:
+
+<details>
+<summary>Custom CSS example</summary>
 
 ```typescript
 // index.ts
@@ -253,7 +234,12 @@ export default createPlugin({
 });
 ```
 
+</details>
+
 - If you want to change the HTML:
+
+<details>
+<summary>Renderer example</summary>
 
 ```typescript
 import { createPlugin } from '@/utils';
@@ -270,6 +256,8 @@ export default createPlugin({
 });
 ```
 
+</details>
+
 - communicating between the front and back: can be done using the ipcMain module from electron. See `index.ts` file and
   example in `sponsorblock` plugin.
 
@@ -278,7 +266,7 @@ export default createPlugin({
 1. Clone the repo
 2. Follow [this guide](https://pnpm.io/installation) to install `pnpm`
 3. Run `pnpm install --frozen-lockfile` to install dependencies
-4. Run `pnpm build:OS`
+4. Run the appropriate `pnpm dist:*` command below
 
 - `pnpm dist:win` - Windows
 - `pnpm dist:linux` - Linux (amd64)
@@ -295,8 +283,8 @@ using [electron-builder](https://github.com/electron-userland/electron-builder).
 1. Clone the repo;
 2. Open the folder in VS Code;
 3. Reopen in container when prompted;
-4. Run `pnpm build` as above (choosing the desired target);
-5. Collect the built files from the `dist` folder.
+4. Run the appropriate `pnpm dist:*` command above;
+5. Collect the packaged files from the `pack` folder (`dist` contains the compiled application).
 
 Since devcontainer uses a mount for the workspace, the built files will be available on the host system as well.
 
@@ -313,6 +301,9 @@ pnpm test
 ```
 
 Uses [Playwright](https://playwright.dev/) to test the app.
+
+Run `pnpm check` for lint, formatting, and TypeScript checks. Run `pnpm audit` to
+inspect dependency advisories; security updates do not imply an advisory-free dependency tree.
 
 ## License
 

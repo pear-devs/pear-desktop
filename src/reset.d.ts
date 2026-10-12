@@ -20,7 +20,9 @@ declare global {
 
   interface Window {
     trustedTypes?: typeof trustedTypes;
-    ipcRenderer: typeof electronIpcRenderer;
+    ipcRenderer: typeof electronIpcRenderer & {
+      subscribe: (channel: string, listener: (...args: unknown[]) => void) => () => void;
+    };
     mainConfig: typeof config;
     electronIs: typeof is;
     ELECTRON_RENDERER_URL: string | undefined;

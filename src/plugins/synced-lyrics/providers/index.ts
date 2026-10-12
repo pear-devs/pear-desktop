@@ -1,6 +1,6 @@
 import * as z from 'zod';
 
-import type { LyricResult } from '../types';
+import type { LyricCandidate } from '../types';
 
 export enum ProviderNames {
   YTMusic = 'YTMusic',
@@ -16,6 +16,6 @@ export const providerNames = ProviderNameSchema.options;
 
 export type ProviderState = {
   state: 'fetching' | 'done' | 'error';
-  data: LyricResult | null;
+  candidates: LyricCandidate[];
   error: Error | null;
 };
