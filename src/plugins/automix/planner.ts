@@ -114,9 +114,14 @@ const finalHit = (track: TrackAnalysis) => {
     : undefined;
 };
 
-/** Downbeats that start a phrase, counted from the first bar */
+/**
+ * Downbeats that start a phrase. Outros are counted back from the song's
+ * last bar, since phrases end where the song ends.
+ */
 const phraseStarts = (track: TrackAnalysis) =>
-  track.downbeats.filter((_, i) => i % PHRASE_BARS === 0);
+  track.downbeats.filter(
+    (_, i) => (track.downbeats.length - 1 - i) % PHRASE_BARS === 0,
+  );
 
 /** Latest grid point in [min, max] */
 const latestGridPoint = (grid: number[], min: number, max: number) => {
@@ -342,14 +347,27 @@ const planSmooth = (
   };
 };
 
+/** Most a song may speed up / slow down at the edge we beat-match on */
+const MAX_EDGE_DRIFT = 0.03;
+
 export const planTransition = (
-  from: TrackAnalysis,
-  to: TrackAnalysis,
+  outgoing: TrackAnalysis,
+  incoming: TrackAnalysis,
   options: PlannerOptions,
 ): TransitionPlan | null => {
+  // Songs change tempo along the way: mix on the outgoing song's tempo and
+  // grid at its end, and the incoming song's at its start
+  const from: TrackAnalysis = { ...outgoing, ...outgoing.end };
+  const to: TrackAnalysis = { ...incoming, ...incoming.start };
+  const steadyEdges =
+    Math.abs(outgoing.end.drift) <= MAX_EDGE_DRIFT &&
+    Math.abs(incoming.start.drift) <= MAX_EDGE_DRIFT;
+
   const gridsOk = hasBeatGrid(from) && hasBeatGrid(to);
   const stretchOk =
-    gridsOk && Math.abs(tempoRatio(from.bpm, to.bpm) - 1) <= options.maxStretch;
+    gridsOk &&
+    steadyEdges &&
+    Math.abs(tempoRatio(from.bpm, to.bpm) - 1) <= options.maxStretch;
   // DJ-style blends only when the beat keeps going until the ending has
   // died away and the next song comes in on a beat; everything else gets a
   // segue, which is what Apple Music does with songs that really end

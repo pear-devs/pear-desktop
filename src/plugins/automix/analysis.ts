@@ -46,6 +46,10 @@ export interface TrackAnalysis {
   decayPoint: number;
   /** Median loudness of the body of the track, in dBFS */
   bodyLoudness: number;
+  /** Tempo / grid of the start, used when this track comes in */
+  start: TempoSection;
+  /** Tempo / grid of the end, used when this track goes out */
+  end: TempoSection;
 }
 
 const HOP = 128;
@@ -426,27 +430,51 @@ export const computeLoudnessProfile = (
   };
 };
 
-export const analyzeTrack = (bands: AnalysisBands): TrackAnalysis => {
-  const duration = bands.full.length / bands.sampleRate;
-  const { fps, onset, lowOnset, energy } = computeOnsetEnvelope(bands);
-  const loudness = computeLoudnessProfile(energy, fps, duration);
+/** Tempo and beat grid of one stretch of a track */
+export interface TempoSection {
+  bpm: number;
+  beatPeriod: number;
+  tempoConfidence: number;
+  beats: number[];
+  downbeats: number[];
+  /**
+   * How much the tempo of the last (or first) 8 beats differs from the
+   * section's tempo, e.g. -0.06 for a song slowing down 6% into its end
+   */
+  drift: number;
+}
 
-  const empty: TrackAnalysis = {
-    duration,
-    bpm: 0,
-    beatPeriod: 0,
-    tempoConfidence: 0,
-    beats: [],
-    downbeats: [],
-    ...loudness,
-  };
+export const emptySection: TempoSection = {
+  bpm: 0,
+  beatPeriod: 0,
+  tempoConfidence: 0,
+  beats: [],
+  downbeats: [],
+  drift: 0,
+};
+
+/** Seconds analysed at each end of a track for the mixing tempo / grid */
+const SECTION_SECONDS = 45;
+
+const analyzeSection = (
+  envelope: OnsetEnvelope,
+  fromSeconds: number,
+  toSeconds: number,
+  edge: 'start' | 'end',
+): TempoSection => {
+  const { fps } = envelope;
+  const first = Math.max(0, Math.floor(fromSeconds * fps));
+  const last = Math.min(envelope.onset.length, Math.ceil(toSeconds * fps));
+  const onset = envelope.onset.subarray(first, last);
+  const lowOnset = envelope.lowOnset.subarray(first, last);
 
   const tempo = estimateTempo(onset, fps);
-  if (!tempo) return empty;
+  if (!tempo) return emptySection;
 
   const beatFrames = trackBeats(onset, tempo.period);
-  if (beatFrames.length < 8)
-    return { ...empty, bpm: tempo.bpm, beatPeriod: 60 / tempo.bpm };
+  if (beatFrames.length < 8) {
+    return { ...emptySection, bpm: tempo.bpm, beatPeriod: 60 / tempo.bpm };
+  }
 
   // Refine the tempo from the tracked beats: the AC period tells how many
   // beats the tracked span holds, the span itself gives the precise period
@@ -460,15 +488,60 @@ export const analyzeTrack = (bands: AnalysisBands): TrackAnalysis => {
   }
   const period = span / steps;
 
+  // Tempo right at the edge we mix on (a ritardando shows up here)
+  const edgeFrames =
+    edge === 'end' ? beatFrames.slice(-9) : beatFrames.slice(0, 9);
+  const edgeIntervals = edgeFrames
+    .slice(1)
+    .map((frame, i) => frame - edgeFrames[i]);
+  const drift = (period / percentile(edgeIntervals, 0.5)) - 1;
+
   const phase = findDownbeatPhase(beatFrames, lowOnset);
-  const beats = beatFrames.map((f) => f / fps);
+  const beats = beatFrames.map((frame) => (frame + first) / fps);
 
   return {
-    ...empty,
     bpm: (60 * fps) / period,
     beatPeriod: period / fps,
     tempoConfidence: clamp(tempo.strength / 0.3, 0, 1),
     beats,
     downbeats: beats.filter((_, i) => i % 4 === phase),
+    drift: Number.isFinite(drift) ? drift : 0,
+  };
+};
+
+export const analyzeTrack = (bands: AnalysisBands): TrackAnalysis => {
+  const duration = bands.full.length / bands.sampleRate;
+  const envelope = computeOnsetEnvelope(bands);
+  const loudness = computeLoudnessProfile(
+    envelope.energy,
+    envelope.fps,
+    duration,
+  );
+
+  // Tempo can change through a song: mix on the tempo where we actually mix
+  const start = analyzeSection(
+    envelope,
+    loudness.leadingSilenceEnd,
+    loudness.leadingSilenceEnd + SECTION_SECONDS,
+    'start',
+  );
+  const end = analyzeSection(
+    envelope,
+    loudness.trailingSilenceStart - SECTION_SECONDS,
+    loudness.trailingSilenceStart + 0.5,
+    'end',
+  );
+  const whole = analyzeSection(envelope, 0, duration, 'end');
+
+  return {
+    duration,
+    bpm: whole.bpm,
+    beatPeriod: whole.beatPeriod,
+    tempoConfidence: whole.tempoConfidence,
+    beats: whole.beats,
+    downbeats: whole.downbeats,
+    ...loudness,
+    start,
+    end,
   };
 };

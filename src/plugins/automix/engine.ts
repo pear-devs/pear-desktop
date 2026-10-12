@@ -1,8 +1,8 @@
+import { emptySection, type TrackAnalysis } from './analysis';
 import { decodeAndAnalyze, type AnalyzedTrack } from './decoder';
 import { planTransition, type TransitionPlan } from './planner';
 import { getQueueStore, readQueue, type QueueTrack } from './queue';
 
-import type { TrackAnalysis } from './analysis';
 import type { AutoMixPluginConfig } from './config';
 import type { MusicPlayer } from '@/types/music-player';
 
@@ -148,6 +148,8 @@ const unknownTrack: TrackAnalysis = {
   outroStart: Number.POSITIVE_INFINITY,
   decayPoint: Number.POSITIVE_INFINITY,
   bodyLoudness: -20,
+  start: emptySection,
+  end: emptySection,
 };
 
 const clamp = (value: number, min: number, max: number) =>
