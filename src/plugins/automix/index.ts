@@ -1,0 +1,115 @@
+import { t } from '@/i18n';
+import { createPlugin } from '@/utils';
+
+import { backend } from './backend';
+import { defaultConfig, type AutoMixPluginConfig } from './config';
+import { renderer } from './renderer';
+import style from './style.css?inline';
+
+import type { TransitionPreference } from './planner';
+import type { MenuContext } from '@/types/contexts';
+import type { MenuItemConstructorOptions } from 'electron';
+
+export type { AutoMixPluginConfig } from './config';
+
+const radio = <T>(
+  label: string,
+  current: T,
+  choices: [T, string][],
+  apply: (value: T) => void,
+): MenuItemConstructorOptions => ({
+  label,
+  type: 'submenu',
+  submenu: choices.map(([value, choiceLabel]) => ({
+    label: choiceLabel,
+    type: 'radio',
+    checked: current === value,
+    click: () => apply(value),
+  })),
+});
+
+export default createPlugin({
+  name: () => t('plugins.automix.name'),
+  description: () => t('plugins.automix.description'),
+  restartNeeded: false,
+  addedVersion: '3.12.X',
+  config: defaultConfig,
+  stylesheets: [style],
+
+  async menu({
+    getConfig,
+    setConfig,
+  }: MenuContext<AutoMixPluginConfig>): Promise<MenuItemConstructorOptions[]> {
+    const config = await getConfig();
+
+    return [
+      {
+        label: t('plugins.automix.menu.active'),
+        type: 'checkbox',
+        checked: config.active,
+        click: (item) => setConfig({ active: item.checked }),
+      },
+      radio<TransitionPreference>(
+        t('plugins.automix.menu.transition.label'),
+        config.transition,
+        [
+          ['auto', t('plugins.automix.menu.transition.auto')],
+          ['blend', t('plugins.automix.style.blend')],
+          ['cut', t('plugins.automix.style.cut')],
+          ['smooth', t('plugins.automix.style.smooth')],
+        ],
+        (transition) => setConfig({ transition }),
+      ),
+      radio(
+        t('plugins.automix.menu.blend-length'),
+        config.blendBeats,
+        [8, 16, 32].map((beats) => [
+          beats,
+          t('plugins.automix.menu.beats', { beats }),
+        ]),
+        (blendBeats) => setConfig({ blendBeats }),
+      ),
+      radio(
+        t('plugins.automix.menu.tempo-range.label'),
+        config.maxStretch,
+        [
+          [0, t('plugins.automix.menu.tempo-range.off')],
+          ...[0.04, 0.08, 0.12].map(
+            (range) =>
+              [
+                range,
+                t('plugins.automix.menu.tempo-range.value', {
+                  percent: Math.round(range * 100),
+                }),
+              ] as [number, string],
+          ),
+        ],
+        (maxStretch) => setConfig({ maxStretch }),
+      ),
+      radio(
+        t('plugins.automix.menu.fade-length'),
+        config.smoothSeconds,
+        [6, 10, 15].map((seconds) => [
+          seconds,
+          t('plugins.automix.menu.seconds', { seconds }),
+        ]),
+        (smoothSeconds) => setConfig({ smoothSeconds }),
+      ),
+      {
+        label: t('plugins.automix.menu.respect-albums'),
+        type: 'checkbox',
+        checked: config.respectAlbums,
+        click: (item) => setConfig({ respectAlbums: item.checked }),
+      },
+      {
+        label: t('plugins.automix.menu.show-mix-card'),
+        type: 'checkbox',
+        checked: config.showMixCard,
+        click: (item) => setConfig({ showMixCard: item.checked }),
+      },
+    ];
+  },
+
+  backend,
+  renderer,
+});

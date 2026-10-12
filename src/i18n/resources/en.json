@@ -375,6 +375,48 @@
         }
       }
     },
+    "automix": {
+      "description": "DJ-style transitions between songs, like Apple Music AutoMix: analyses tempo and beats, time-stretches and beat-matches the next song, trims silence, and picks a blend, beat cut or smooth fade. Don't use together with Crossfade",
+      "menu": {
+        "active": "AutoMix on",
+        "beats": "{{beats}} beats",
+        "blend-length": "Blend length",
+        "fade-length": "Smooth fade length",
+        "respect-albums": "Play albums without transitions",
+        "seconds": "{{seconds}} seconds",
+        "show-mix-card": "Show \"AutoMixing\" card",
+        "tempo-range": {
+          "label": "Tempo matching",
+          "off": "Off (no time-stretching)",
+          "value": "Up to ±{{percent}}%"
+        },
+        "transition": {
+          "auto": "Automatic (recommended)",
+          "label": "Transition style"
+        }
+      },
+      "name": "AutoMix",
+      "style": {
+        "blend": "Beat Match",
+        "cut": "Beat Cut",
+        "smooth": "Smooth Fade"
+      },
+      "ui": {
+        "detail": {
+          "blend": "{{from}} → {{to}} BPM · stretched {{stretch}}%",
+          "cut": "Cut on the downbeat · {{bpm}} BPM",
+          "smooth": "{{seconds}} s fade"
+        },
+        "mixing": "AutoMixing",
+        "off": "AutoMix off",
+        "tooltip": {
+          "analyzing": "AutoMix is analysing the beats of this song and the next one…",
+          "off": "AutoMix is off - click to turn it on",
+          "ready": "Next: {{style}} into \"{{title}}\" at {{time}} ({{detail}}). Click to turn AutoMix off",
+          "waiting": "AutoMix is on - waiting for a song to mix into. Click to turn it off"
+        }
+      }
+    },
     "blur-nav-bar": {
       "description": "Makes navigation bar transparent and blurry",
       "name": "Blur Navigation Bar"

@@ -1,0 +1,285 @@
+:root {
+  --automix-gradient: linear-gradient(
+    90deg,
+    #fa2d48 0%,
+    #c03cf0 35%,
+    #5b6cff 70%,
+    #fa2d48 100%
+  );
+  --automix-glow: rgba(176, 72, 255, 0.5);
+}
+
+/* ---------- Player bar pill ---------- */
+
+.automix-pill-host {
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+}
+
+.automix-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px 0 9px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
+  font-family: 'YouTube Sans', Roboto, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.25s ease,
+    background 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.4s ease;
+}
+
+.automix-pill:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.automix-pill:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.automix-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.automix-pill[data-phase='inactive'] {
+  color: rgba(255, 255, 255, 0.45);
+  border-style: dashed;
+  background: transparent;
+}
+
+.automix-pill[data-phase='analyzing'] .automix-icon {
+  animation: automix-pulse 1.4s ease-in-out infinite;
+}
+
+.automix-pill[data-phase='ready'] {
+  border-color: transparent;
+  background:
+    linear-gradient(#1d1d1f, #1d1d1f) padding-box,
+    var(--automix-gradient) border-box;
+}
+
+.automix-pill[data-phase='mixing'] {
+  border-color: transparent;
+  color: #fff;
+  background: var(--automix-gradient);
+  background-size: 300% 100%;
+  box-shadow: 0 0 18px var(--automix-glow);
+  animation: automix-flow 3s linear infinite;
+}
+
+/* ---------- Equalizer bars ---------- */
+
+.automix-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  width: 16px;
+  height: 12px;
+}
+
+.automix-bars i {
+  flex: 1;
+  height: 100%;
+  border-radius: 1px;
+  background: currentColor;
+  transform-origin: bottom;
+  animation: automix-bounce 0.9s ease-in-out infinite;
+}
+
+.automix-bars i:nth-child(2) {
+  animation-delay: -0.6s;
+}
+
+.automix-bars i:nth-child(3) {
+  animation-delay: -0.3s;
+}
+
+.automix-bars i:nth-child(4) {
+  animation-delay: -0.75s;
+}
+
+/* ---------- Floating "AutoMixing" card ---------- */
+
+.automix-card {
+  position: fixed;
+  right: 24px;
+  bottom: calc(var(--ytmusic-player-bar-height, 72px) + 16px);
+  z-index: 10000;
+  box-sizing: border-box;
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  padding: 14px 16px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(22, 22, 26, 0.82);
+  backdrop-filter: blur(24px) saturate(1.6);
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.45),
+    0 0 32px -8px var(--automix-glow);
+  color: #fff;
+  font-family: 'YouTube Sans', Roboto, Arial, sans-serif;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(12px) scale(0.98);
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.automix-card-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.automix-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.automix-card-header .automix-bars {
+  color: #e04dff;
+}
+
+.automix-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  background: var(--automix-gradient);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: automix-flow 3s linear infinite;
+}
+
+.automix-card-style {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.automix-card-tracks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.automix-card-from,
+.automix-card-to {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.automix-card-from {
+  opacity: 0.6;
+}
+
+.automix-card-to {
+  font-weight: 600;
+}
+
+.automix-card-arrow {
+  opacity: 0.6;
+}
+
+.automix-card-detail {
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.automix-progress {
+  height: 3px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.automix-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--automix-gradient);
+  background-size: 300% 100%;
+  animation: automix-flow 3s linear infinite;
+  transition: width 0.12s linear;
+}
+
+/* ---------- Player bar glow while mixing ---------- */
+
+ytmusic-player-bar {
+  transition: box-shadow 0.6s ease;
+}
+
+ytmusic-player-bar.automix-mixing {
+  box-shadow:
+    0 -1px 0 0 rgba(192, 60, 240, 0.7),
+    0 -14px 36px -14px var(--automix-glow);
+}
+
+/* ---------- Animations ---------- */
+
+@keyframes automix-flow {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 300% 50%;
+  }
+}
+
+@keyframes automix-bounce {
+  0%,
+  100% {
+    transform: scaleY(0.25);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes automix-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .automix-pill,
+  .automix-bars i,
+  .automix-card-title,
+  .automix-progress-fill,
+  .automix-pill[data-phase='analyzing'] .automix-icon {
+    animation: none;
+  }
+}
