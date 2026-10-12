@@ -376,7 +376,7 @@
       }
     },
     "automix": {
-      "description": "DJ-style transitions between songs, like Apple Music AutoMix: analyses tempo and beats, time-stretches and beat-matches the next song, trims silence, and picks a blend, beat cut or smooth fade. Don't use together with Crossfade",
+      "description": "Transitions between songs like Apple Music AutoMix: lets real endings play out and segues in as they die away, beat-matches songs with a steady beat (time-stretched, phrase aligned), trims silence, and can also do beat cuts or smooth fades. Don't use together with Crossfade",
       "menu": {
         "active": "AutoMix on",
         "beats": "{{beats}} beats",
@@ -399,12 +399,15 @@
       "style": {
         "blend": "Beat Match",
         "cut": "Beat Cut",
+        "segue": "Segue",
         "smooth": "Smooth Fade"
       },
       "ui": {
         "detail": {
           "blend": "{{from}} → {{to}} BPM · stretched {{stretch}}%",
           "cut": "Cut on the downbeat · {{bpm}} BPM",
+          "segue": "Plays the ending out, next song in as it dies away",
+          "segue-cold": "Lets the song stop, next song a beat later",
           "smooth": "{{seconds}} s fade"
         },
         "mixing": "AutoMixing",
@@ -431,7 +434,9 @@
         "why": {
           "fallback": "Not enough room for the preferred mix, so it uses this instead",
           "late-change": "The next song changed too recently to analyse, so it fades smoothly into it",
+          "cold-ending": "This song stops on a hit, so it gets to finish and the next one comes in a beat later",
           "loud-handover": "This song ends on a hit and the next one starts straight away, so it cuts on the downbeat",
+          "natural-ending": "This song has a real ending, so it plays out and the next one comes in as it dies away",
           "no-beat": "There's no steady beat to lock to, so it fades smoothly",
           "preference": "Chosen in the AutoMix settings",
           "tempo-match": "The tempos are close, so the next song is time-stretched and its beats locked to this one",

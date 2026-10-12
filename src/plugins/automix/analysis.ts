@@ -39,6 +39,11 @@ export interface TrackAnalysis {
   introEnd: number;
   /** When the track starts to fade / drop into its outro */
   outroStart: number;
+  /**
+   * When the ending has died away (~16 dB below the body). Apple Music
+   * brings the next song in around here when a song has a real ending.
+   */
+  decayPoint: number;
   /** Median loudness of the body of the track, in dBFS */
   bodyLoudness: number;
 }
@@ -48,6 +53,8 @@ const MIN_BPM = 60;
 const MAX_BPM = 200;
 const PRIOR_BPM = 120;
 const BEAT_TIGHTNESS = 100;
+/** How far below the body an ending has to fall to count as died away */
+const DECAY_DB = 16;
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
@@ -335,6 +342,7 @@ export interface LoudnessProfile {
   trailingSilenceStart: number;
   introEnd: number;
   outroStart: number;
+  decayPoint: number;
   bodyLoudness: number;
 }
 
@@ -352,6 +360,7 @@ export const computeLoudnessProfile = (
       trailingSilenceStart: duration,
       introEnd: 0,
       outroStart: duration,
+      decayPoint: duration,
       bodyLoudness: -20,
     };
   }
@@ -394,14 +403,25 @@ export const computeLoudnessProfile = (
   while (outroWindow > first && smoothDb[outroWindow] < bodyThreshold)
     outroWindow--;
 
+  let decayWindow = outroWindow;
+  while (decayWindow < last && smoothDb[decayWindow] >= bodyLoudness - DECAY_DB)
+    decayWindow++;
+
   const introEnd = Math.min(introWindow * windowSeconds, duration / 2);
-  const outroStart = Math.max((outroWindow + 1) * windowSeconds, duration / 2);
+  const outroStart = Math.min(
+    Math.max((outroWindow + 1) * windowSeconds, duration / 2),
+    trailingSilenceStart,
+  );
 
   return {
     leadingSilenceEnd,
     trailingSilenceStart,
     introEnd: Math.max(introEnd, leadingSilenceEnd),
-    outroStart: Math.min(outroStart, trailingSilenceStart),
+    outroStart,
+    decayPoint: Math.min(
+      Math.max(decayWindow * windowSeconds, outroStart),
+      trailingSilenceStart,
+    ),
     bodyLoudness,
   };
 };

@@ -121,6 +121,7 @@ const unknownTrack: TrackAnalysis = {
   trailingSilenceStart: Number.POSITIVE_INFINITY,
   introEnd: 0,
   outroStart: Number.POSITIVE_INFINITY,
+  decayPoint: Number.POSITIVE_INFINITY,
   bodyLoudness: -20,
 };
 
@@ -631,6 +632,15 @@ export class AutoMixEngine {
         break;
       }
 
+      case 'segue': {
+        // The song has played its ending; let what's left of the tail die
+        // away underneath the next song
+        dry.gain.setValueAtTime(1, mixAt);
+        dry.gain.setTargetAtTime(0, mixAt, duration / 4);
+        chain.source.stop(mixAt + duration + 0.1);
+        break;
+      }
+
       case 'smooth': {
         // Long equal-power fade, the outgoing song slowly drifts behind a lowpass
         dry.gain.setValueCurveAtTime(equalPowerOut, mixAt, duration);
@@ -662,7 +672,8 @@ export class AutoMixEngine {
     master.gain.value = volume;
     source.connect(gain).connect(master).connect(context.destination);
 
-    if (plan.style === 'cut') {
+    if (plan.style === 'cut' || plan.style === 'segue') {
+      // The incoming song starts as itself: no fade-in on its first note
       gain.gain.setValueAtTime(0, mixAt);
       gain.gain.linearRampToValueAtTime(1, mixAt + 0.004);
     } else {
@@ -714,7 +725,7 @@ export class AutoMixEngine {
       to.videoId === next.videoId &&
       plan.style !== 'blend' &&
       Math.abs(plan.rate - 1) < 0.001 &&
-      plan.mixIn + (plan.style === 'cut' ? 0 : plan.duration) + 6 <
+      plan.mixIn + (plan.style === 'smooth' ? plan.duration : 0) + 6 <
         to.head.duration
         ? this.buildIncomingHead(
             context,
@@ -963,7 +974,7 @@ export class AutoMixEngine {
 
     // Incoming level
     const progress = (now - mix.mixAt) / mix.plan.duration;
-    if (mix.plan.style === 'cut') {
+    if (mix.plan.style === 'cut' || mix.plan.style === 'segue') {
       const dropped = incomingPlaying && (mix.cutDone || now >= mix.mixAt);
       this.setIncomingLevel(dropped ? 1 : 0);
       if (!dropped && incomingPlaying && mix.mixAt - now < 0.05) {

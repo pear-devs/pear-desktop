@@ -40,6 +40,12 @@ const describePlan = (plan: TransitionPlan) => {
       });
     case 'cut':
       return t('plugins.automix.ui.detail.cut', { bpm: from });
+    case 'segue':
+      return t(
+        plan.reason === 'cold-ending'
+          ? 'plugins.automix.ui.detail.segue-cold'
+          : 'plugins.automix.ui.detail.segue',
+      );
     default:
       return t('plugins.automix.ui.detail.smooth', {
         seconds: Math.round(plan.duration),

@@ -54,6 +54,7 @@ export default createPlugin({
         config.transition,
         [
           ['auto', t('plugins.automix.menu.transition.auto')],
+          ['segue', t('plugins.automix.style.segue')],
           ['blend', t('plugins.automix.style.blend')],
           ['cut', t('plugins.automix.style.cut')],
           ['smooth', t('plugins.automix.style.smooth')],
