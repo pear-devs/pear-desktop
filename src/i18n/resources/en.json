@@ -396,7 +396,7 @@
           "label": "Transition style"
         }
       },
-      "name": "AutoMix",
+      "name": "AutoMix [Beta]",
       "style": {
         "blend": "Beat Match",
         "cut": "Beat Cut",
