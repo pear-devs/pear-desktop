@@ -28,12 +28,18 @@ type Info =
   | Awaited<ReturnType<Innertube['getBasicInfo']>>
   | Awaited<ReturnType<Innertube['music']['getInfo']>>;
 
+/** Longest one queued download may take before the queue moves on */
+const FETCH_TIMEOUT_MS = 60_000;
+
+/** The track is over MAX_BYTES, the same on every client */
+class TooLargeError extends Error {}
+
 let client: Promise<Innertube> | null = null;
 let queue: Promise<unknown> = Promise.resolve();
 
 const fetchFormat = async (info: Info, options: Types.FormatOptions) => {
   const format = info.chooseFormat(options);
-  if ((format.content_length ?? 0) > MAX_BYTES) throw new Error('Too large');
+  if ((format.content_length ?? 0) > MAX_BYTES) throw new TooLargeError('Too large');
 
   const chunks: Uint8Array[] = [];
   let total = 0;
@@ -42,7 +48,7 @@ const fetchFormat = async (info: Info, options: Types.FormatOptions) => {
   )) {
     chunks.push(chunk);
     total += chunk.length;
-    if (total > MAX_BYTES) throw new Error('Track too large');
+    if (total > MAX_BYTES) throw new TooLargeError('Track too large');
   }
 
   const bytes = new Uint8Array(total);
@@ -87,6 +93,7 @@ const download = async (
       console.info('[AutoMix] audio for', videoId, `(${name}):`, audio.quality);
       return audio;
     } catch (error) {
+      if (error instanceof TooLargeError) return null;
       console.warn('[AutoMix] audio-only fetch failed', videoId, name, error);
     }
   }
@@ -115,11 +122,23 @@ export const backend = {
           client = null;
           throw error;
         });
+        let timer: ReturnType<typeof setTimeout> | undefined;
         try {
-          return await download(await client, videoId);
+          // A stalled stream must not hold up every later download
+          return await Promise.race([
+            client.then((yt) => download(yt, videoId)),
+            new Promise<never>((_, reject) => {
+              timer = setTimeout(
+                () => reject(new Error('Timed out')),
+                FETCH_TIMEOUT_MS,
+              );
+            }),
+          ]);
         } catch (error) {
           console.warn('[AutoMix] could not fetch', videoId, error);
           return null;
+        } finally {
+          clearTimeout(timer);
         }
       });
       queue = result.catch(() => null);

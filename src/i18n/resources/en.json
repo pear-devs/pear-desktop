@@ -416,6 +416,7 @@
         "low-quality": "Only a lower quality stream ({{quality}}) was available for mixing, so the transition may sound duller than normal playback",
         "mixing": "AutoMixing",
         "off": "AutoMix off",
+        "on": "AutoMix",
         "reason": {
           "analysis-failed": "couldn't download or analyse a song",
           "no-next": "nothing queued after this song",

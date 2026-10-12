@@ -169,14 +169,12 @@ const Pill = (props: PillProps) => {
       case 'mixing':
         return t('plugins.automix.ui.mixing');
       default:
-        return t('plugins.automix.name');
+        return t('plugins.automix.ui.on');
     }
   };
 
-  const ariaLabel = createMemo(() => {
-    const hint = hintFor(props.status());
-    return [hint.heading, ...hint.lines].join('. ');
-  });
+  const hint = createMemo(() => hintFor(props.status()));
+  const ariaLabel = () => [hint().heading, ...hint().lines].join('. ');
 
   const show = (event: Event) =>
     props.onHover((event.currentTarget as HTMLElement).getBoundingClientRect());
@@ -204,6 +202,10 @@ const Pill = (props: PillProps) => {
         <MixBars />
       </Show>
       <span class="automix-label">{label()}</span>
+      {/* The hover card is aria-hidden, so announce phase changes here */}
+      <span aria-live="polite" class="automix-sr-only">
+        {hint().heading}
+      </span>
     </button>
   );
 };
@@ -256,7 +258,7 @@ const MixCard = (props: UiProps) => {
       classList={{ 'automix-card-visible': visible() }}
       role="status"
     >
-      <Show when={props.status().plan}>
+      <Show when={visible() && props.status().plan}>
         {(plan) => (
           <>
             <div class="automix-card-header">

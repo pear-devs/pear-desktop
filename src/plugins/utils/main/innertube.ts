@@ -1,3 +1,4 @@
+import { Mutex } from 'async-mutex';
 import { BG, type BgConfig } from 'bgutils-js';
 import { Innertube, Platform, UniversalCache, type Types } from 'youtubei.js';
 
@@ -24,6 +25,9 @@ const evalShim = (
   // oxlint-disable-next-line typescript/no-unsafe-return,typescript/no-implied-eval,typescript/no-unsafe-call
   return new Function(code)();
 };
+
+/** BotGuard runs on globalThis.window / document, one setup at a time */
+const globalsMutex = new Mutex();
 
 export const getCookieFromWindow = async (win: BrowserWindow) => {
   return (
@@ -53,59 +57,61 @@ export const createInnertube = async (win: BrowserWindow) => {
   const visitorData = yt.session.context.client.visitorData;
 
   if (visitorData) {
-    const cleanUp = (context: Partial<typeof globalThis>) => {
-      delete context.window;
-      delete context.document;
-    };
-
-    try {
-      const [width, height] = win.getSize();
-      // emulate jsdom using linkedom
-      const window = new (await import('happy-dom')).Window({
-        width,
-        height,
-        console,
-      });
-      const document = window.document;
-
-      Object.assign(globalThis, {
-        window,
-        document,
-      });
-
-      const bgConfig: BgConfig = {
-        fetch: getNetFetchAsFetch(),
-        globalObj: globalThis,
-        identifier: visitorData,
-        requestKey,
+    await globalsMutex.runExclusive(async () => {
+      const cleanUp = (context: Partial<typeof globalThis>) => {
+        delete context.window;
+        delete context.document;
       };
 
-      const bgChallenge = await BG.Challenge.create(bgConfig);
-      const interpreterJavascript =
-        bgChallenge?.interpreterJavascript
-          .privateDoNotAccessOrElseSafeScriptWrappedValue;
+      try {
+        const [width, height] = win.getSize();
+        // emulate jsdom using linkedom
+        const window = new (await import('happy-dom')).Window({
+          width,
+          height,
+          console,
+        });
+        const document = window.document;
 
-      if (interpreterJavascript) {
-        // This is a workaround to run the interpreterJavascript code
-        // Maybe there is a better way to do this (e.g. https://github.com/Siubaak/sval ?)
-        // oxlint-disable-next-line typescript/no-implied-eval,typescript/no-unsafe-call
-        new Function(interpreterJavascript)();
-
-        const poTokenResult = await BG.PoToken.generate({
-          program: bgChallenge.program,
-          globalName: bgChallenge.globalName,
-          bgConfig,
-        }).finally(() => {
-          cleanUp(globalThis);
+        Object.assign(globalThis, {
+          window,
+          document,
         });
 
-        yt.session.po_token = poTokenResult.poToken;
-      } else {
+        const bgConfig: BgConfig = {
+          fetch: getNetFetchAsFetch(),
+          globalObj: globalThis,
+          identifier: visitorData,
+          requestKey,
+        };
+
+        const bgChallenge = await BG.Challenge.create(bgConfig);
+        const interpreterJavascript =
+          bgChallenge?.interpreterJavascript
+            .privateDoNotAccessOrElseSafeScriptWrappedValue;
+
+        if (interpreterJavascript) {
+          // This is a workaround to run the interpreterJavascript code
+          // Maybe there is a better way to do this (e.g. https://github.com/Siubaak/sval ?)
+          // oxlint-disable-next-line typescript/no-implied-eval,typescript/no-unsafe-call
+          new Function(interpreterJavascript)();
+
+          const poTokenResult = await BG.PoToken.generate({
+            program: bgChallenge.program,
+            globalName: bgChallenge.globalName,
+            bgConfig,
+          }).finally(() => {
+            cleanUp(globalThis);
+          });
+
+          yt.session.po_token = poTokenResult.poToken;
+        } else {
+          cleanUp(globalThis);
+        }
+      } catch {
         cleanUp(globalThis);
       }
-    } catch {
-      cleanUp(globalThis);
-    }
+    });
   }
 
   return yt;
