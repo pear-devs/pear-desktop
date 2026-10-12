@@ -94,12 +94,20 @@ export const readQueue = (playingId: string | null): QueueSnapshot | null => {
     primaryOf(currentItem)?.videoId !== playingId &&
     counterpartOf(currentItem)?.videoId === playingId;
 
+  // With Autoplay on, the player carries on into its suggestions (listed
+  // under the queue) once the queue itself runs out
+  const autoplayItems =
+    state.autoplay && Array.isArray(state.automixItems)
+      ? (state.automixItems as QueueItem[])
+      : [];
+
   const itemAt = (offset: number): QueueItem | undefined => {
     const at = index + offset;
     if (at < state.items.length) return state.items[at];
-    return state.repeatMode === 'ALL'
-      ? state.items[at % state.items.length]
-      : undefined;
+    if (state.repeatMode === 'ALL') {
+      return state.items[at % state.items.length];
+    }
+    return autoplayItems[at - state.items.length];
   };
 
   const pick = (item: QueueItem | undefined) => {
