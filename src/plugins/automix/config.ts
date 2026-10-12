@@ -17,8 +17,6 @@ export type AutoMixPluginConfig = {
   respectAlbums: boolean;
   /** Show the "AutoMixing" card while a transition plays */
   showMixCard: boolean;
-  /** Find beats / downbeats with an AI model (Beat This!, ~100 MB download) */
-  aiBeats: boolean;
 };
 
 export const defaultConfig: AutoMixPluginConfig = {
@@ -31,5 +29,4 @@ export const defaultConfig: AutoMixPluginConfig = {
   beatOnly: false,
   respectAlbums: true,
   showMixCard: true,
-  aiBeats: false,
 };

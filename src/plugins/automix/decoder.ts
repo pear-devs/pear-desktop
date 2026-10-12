@@ -118,22 +118,3 @@ export const decodeAndAnalyze = async (
   const analysis = analyzeTrack(await renderBands(buffer));
   return { videoId, analysis, ...sliceEnds(buffer) };
 };
-
-/** Mono 22,050 Hz audio of part of a buffer, the AI beat tracker's input */
-export const resampleForAi = async (
-  buffer: AudioBuffer,
-  fromSeconds: number,
-  toSeconds: number,
-) => {
-  const sampleRate = 22050;
-  const start = Math.max(0, fromSeconds);
-  const duration = Math.max(0, Math.min(buffer.duration, toSeconds) - start);
-  const length = Math.max(1, Math.round(duration * sampleRate));
-  const context = new OfflineAudioContext(1, length, sampleRate);
-  const source = context.createBufferSource();
-  source.buffer = buffer;
-  source.connect(context.destination);
-  source.start(0, start, duration);
-  const rendered = await context.startRendering();
-  return rendered.getChannelData(0).slice();
-};

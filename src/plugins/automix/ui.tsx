@@ -38,16 +38,8 @@ const describePlan = (plan: TransitionPlan) => {
       }),
     );
   }
-  if (plan.ai) parts.push(t('plugins.automix.ui.detail.ai'));
   return parts.join(' · ');
 };
-
-const describeAi = (status: AutoMixStatus) =>
-  status.ai
-    ? t(`plugins.automix.ui.ai.${status.ai}`, {
-        provider: status.aiProvider === 'webgpu' ? 'GPU' : 'CPU',
-      })
-    : undefined;
 
 const describeStyle = (plan: TransitionPlan) => {
   const from = Math.round(plan.fromBpm);
@@ -129,7 +121,6 @@ const hintFor = (status: AutoMixStatus): Hint => {
             ]
           : []),
         describePlan(plan),
-        ...(describeAi(status) ? [describeAi(status)!] : []),
         ...(status.lowQuality
           ? [
               t('plugins.automix.ui.low-quality', {

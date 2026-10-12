@@ -2,12 +2,7 @@ import { Utils, type Innertube, type Types } from 'youtubei.js';
 
 import { createInnertube } from '@/plugins/utils/main/innertube';
 
-import { loadAiAssets } from './ai-assets';
-import {
-  AI_ASSETS_CHANNEL,
-  FETCH_AUDIO_CHANNEL,
-  type FetchedAudio,
-} from './constants';
+import { FETCH_AUDIO_CHANNEL, type FetchedAudio } from './constants';
 
 import type { AutoMixPluginConfig } from './config';
 import type { BackendContext } from '@/types/contexts';
@@ -130,19 +125,8 @@ export const backend = {
       queue = result.catch(() => null);
       return result;
     });
-
-    // Optional AI beat tracker: only downloaded when the setting is on
-    ipc.handle(AI_ASSETS_CHANNEL, async () => {
-      try {
-        return await loadAiAssets();
-      } catch (error) {
-        console.warn('[AutoMix] AI beat tracker unavailable', error);
-        return null;
-      }
-    });
   },
   stop({ ipc }: BackendContext<AutoMixPluginConfig>) {
     ipc.removeHandler(FETCH_AUDIO_CHANNEL);
-    ipc.removeHandler(AI_ASSETS_CHANNEL);
   },
 };
