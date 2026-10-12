@@ -75,6 +75,9 @@ const PHRASE_BARS = 4;
 /** How far a blend may move earlier to start on a phrase instead of a bar */
 const PHRASE_SNAP_SECONDS = 5;
 
+/** Seconds of run-up the player needs to lock a blend's incoming song */
+const BLEND_RUN_UP = 2;
+
 /** Longest a segue waits for an ending to die away before coming in */
 const SEGUE_MAX_WAIT = 8;
 /** How long the next song's intro may rise in under a song's final hit */
@@ -117,6 +120,19 @@ export const tempoRatio = (fromBpm: number, toBpm: number) => {
   }
   return best;
 };
+
+/**
+ * Where a beat-matched incoming song comes in: a downbeat a couple of
+ * seconds in (usually its second bar), so the player has time to lock onto
+ * the beat silently before it's heard. A song can't be started before its
+ * own beginning, so entering on its very first beat leaves no run-up and
+ * it would come in off the beat. In a blend that first bar would be almost
+ * silent anyway.
+ */
+const blendEntry = (track: TrackAnalysis) =>
+  track.downbeats.find(
+    (time) => time >= track.leadingSilenceEnd + BLEND_RUN_UP,
+  ) ?? entryPoint(track);
 
 /** First downbeat of the incoming track once it's audible */
 const entryPoint = (track: TrackAnalysis) => {
@@ -198,7 +214,7 @@ const planBlend = (
       style: 'blend',
       reason: 'fallback',
       mixOut,
-      mixIn: entryPoint(to),
+      mixIn: blendEntry(to),
       duration,
       rate,
       beat: from.beatPeriod,
@@ -234,7 +250,7 @@ const planEndingBlend = (
       style: 'blend',
       reason: 'fallback',
       mixOut,
-      mixIn: entryPoint(to),
+      mixIn: blendEntry(to),
       duration,
       rate,
       beat: from.beatPeriod,

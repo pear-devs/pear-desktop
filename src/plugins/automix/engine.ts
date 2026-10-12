@@ -10,6 +10,7 @@ import {
 } from './decoder';
 import { planTransition, type TransitionPlan } from './planner';
 import { getQueueStore, readQueue, type QueueTrack } from './queue';
+import { locateCapture } from './sync';
 
 import type { AiBeatTracker } from './ai';
 import type { AutoMixPluginConfig } from './config';
@@ -102,6 +103,10 @@ interface ActiveMix {
   handingOver: boolean;
   /** The player has been on the incoming song at least once */
   sawIncoming: boolean;
+  /** Bars the blend was pushed back waiting for the next song to sync */
+  deferrals: number;
+  /** Track time at which our copy of the outgoing song runs out */
+  outgoingEnd: number;
   /** Follow the beat grid (false once we fell back to a plain fade) */
   follow: boolean;
   seeded: boolean;
@@ -145,6 +150,12 @@ const SEEK_AND_SKIP_KEYS = new Set([
 const IDLE_TICK_MS = 250;
 const FAST_TICK_MS = 20;
 const QUEUE_REFRESH_MS = 2000;
+/** How far the player's real position may be from its reported one */
+const SYNC_SEARCH_SECONDS = 0.35;
+/** Correlation needed to trust a position match */
+const SYNC_MIN_SCORE = 0.6;
+/** Most bars a blend waits for a late-loading next song */
+const MAX_DEFERRALS = 2;
 /** Seconds of a song's end the AI beat tracker looks at */
 const AI_SECTION_SECONDS = 45;
 /** A song-length mismatch has to last this long to count (seeks re-buffer) */
@@ -215,6 +226,14 @@ export class AutoMixEngine {
 
   private config: AutoMixPluginConfig;
   private context: AudioContext | null = null;
+  private source: MediaElementAudioSourceNode | null = null;
+  /** Taps what the player actually plays, to measure its true position */
+  private tap: AnalyserNode | null = null;
+  /**
+   * What the player is really playing minus what its currentTime says, in
+   * seconds; measured from the audio itself at each hand-off
+   */
+  private playerOffset = 0;
 
   private readonly tracks = new Map<string, Promise<AnalyzedTrack | null>>();
   /** Analyses refined by the AI beat tracker, per video id */
@@ -282,6 +301,8 @@ export class AutoMixEngine {
     if (this.mix) this.abort();
     window.clearTimeout(this.timer);
     document.removeEventListener('peard:audio-can-play', this.onAudioCanPlay);
+    this.tap?.disconnect();
+    this.tap = null;
     const video = this.video;
     video?.removeEventListener('volumechange', this.onVolumeChange);
     video?.removeEventListener('seeking', this.onSeeking);
@@ -304,7 +325,53 @@ export class AutoMixEngine {
 
   private readonly onAudioCanPlay = (event: CustomEvent<Compressor>) => {
     this.context = event.detail.audioContext;
+    if (this.source !== event.detail.audioSource) {
+      this.tap?.disconnect();
+      this.tap = null;
+      this.source = event.detail.audioSource;
+    }
+    this.ensureTap();
   };
+
+  private ensureTap() {
+    if (this.tap || !this.context || !this.source) return;
+    const tap = this.context.createAnalyser();
+    tap.fftSize = 32768;
+    this.source.connect(tap);
+    this.tap = tap;
+  }
+
+  /**
+   * Measures where the player really is: matches the last ~0.7 s it played
+   * against our copy of the song. Keeps the previous value if the audio is
+   * too quiet or ambiguous to match.
+   */
+  private measurePlayerOffset(video: HTMLVideoElement, track: AnalyzedTrack) {
+    const tap = this.tap;
+    if (!tap) return;
+    const capture = new Float32Array(tap.fftSize);
+    tap.getFloatTimeDomainData(capture);
+    const reported = video.currentTime;
+
+    const span = capture.length / track.tail.sampleRate;
+    const expected = reported + this.playerOffset - span - track.tailStart;
+    const found = locateCapture(
+      capture,
+      track.tail,
+      expected - SYNC_SEARCH_SECONDS,
+      expected + SYNC_SEARCH_SECONDS,
+    );
+    if (!found || found.score < SYNC_MIN_SCORE) return;
+
+    const offset = track.tailStart + found.time + span - reported;
+    if (Math.abs(offset) > SYNC_SEARCH_SECONDS) return;
+    this.playerOffset = offset;
+    console.info(
+      '[AutoMix] player audio is',
+      `${Math.round(offset * 1000)} ms`,
+      'from its reported position',
+    );
+  }
 
   private schedule(delay: number) {
     if (this.stopped) return;
@@ -979,9 +1046,12 @@ export class AutoMixEngine {
     const next = this.next;
     if (!context || !video || !next) return;
 
+    // Start our copy exactly where the audio graph is, not where the
+    // player's currentTime says it is
+    this.measurePlayerOffset(video, from);
     const lead = 0.05;
     const startAt = context.currentTime + lead;
-    const startOffset = video.currentTime + lead;
+    const startOffset = video.currentTime + this.playerOffset + lead;
     const offsetInTail = startOffset - from.tailStart;
     if (offsetInTail < 0 || plan.mixOut <= startOffset) {
       this.plan = null;
@@ -1036,6 +1106,12 @@ export class AutoMixEngine {
       lockedTicks: 0,
       handingOver: false,
       sawIncoming: false,
+      deferrals: 0,
+      // Only push a blend back while the old song is still playing music
+      outgoingEnd: Math.min(
+        from.tailStart + from.tail.duration,
+        this.analysisOf(from).trailingSilenceStart + plan.beat,
+      ),
       follow: true,
       seeded: false,
       pendingSeeks: 0,
@@ -1262,9 +1338,12 @@ export class AutoMixEngine {
         if (video.currentTime > 0.25) this.seekIncoming(0);
         this.setRate(0.0625);
       } else {
-        const error = video.currentTime - target;
+        // Compare what's actually heard, not the player's reported position
+        const error = video.currentTime + this.playerOffset - target;
         if (!mix.seeded || Math.abs(error) > 0.25) {
-          this.seekIncoming(target + (SEEK_LATENCY * mix.plan.rate));
+          this.seekIncoming(
+            target - this.playerOffset + (SEEK_LATENCY * mix.plan.rate),
+          );
           this.setRate(mix.plan.rate);
           mix.seeded = true;
           mix.error = 0;
@@ -1297,6 +1376,19 @@ export class AutoMixEngine {
     if (mix.head) {
       this.tickHead(mix, mix.head, now, incomingPlaying);
       return;
+    }
+
+    // The next song isn't in step yet (the player was slow to load it):
+    // keep the old song going and start the blend a bar later instead of
+    // bringing the new one in off the beat
+    if (
+      mix.plan.style === 'blend' &&
+      !mix.plan.holdOutgoing &&
+      now >= mix.mixAt - 0.3 &&
+      now < mix.mixAt &&
+      mix.lockedTicks < 5
+    ) {
+      this.deferMix(mix, now);
     }
 
     // Incoming level
@@ -1358,6 +1450,37 @@ export class AutoMixEngine {
       return;
     }
     this.emitMix();
+  }
+
+  private deferMix(mix: ActiveMix, now: number) {
+    const context = this.context;
+    const bar = (mix.plan.beat || 0.5) * 4;
+    if (
+      !context ||
+      mix.deferrals >= MAX_DEFERRALS ||
+      mix.plan.mixOut + bar + mix.plan.duration > mix.outgoingEnd
+    ) {
+      return;
+    }
+
+    const { chain } = mix;
+    for (const param of [
+      chain.dry.gain,
+      chain.lowShelf?.gain,
+      chain.highpass?.frequency,
+      chain.lowpass?.frequency,
+    ]) {
+      if (!param) continue;
+      param.cancelScheduledValues(now);
+      param.setValueAtTime(param.value, now);
+    }
+
+    mix.deferrals++;
+    mix.mixAt += bar;
+    mix.endAt += bar;
+    mix.plan = { ...mix.plan, mixOut: mix.plan.mixOut + bar };
+    this.scheduleOutgoing(context, chain, mix.plan, mix.mixAt);
+    console.info('[AutoMix] next song not in step yet, blending a bar later');
   }
 
   /** How loud the incoming song should be at context time `time` */
