@@ -53,6 +53,15 @@ export const restoreVolumeScript = (volume: number) => `(() => {
   document.addEventListener('play', finish, true);
 })(); 0`;
 
+let onNewSliderChange: ((event: Event) => void) | undefined;
+
+/** Remove the new UI's slider listener (plugin disabled or re-initialized) */
+export const removeNewSliderListener = () => {
+  if (!onNewSliderChange) return;
+  document.removeEventListener('change', onNewSliderChange, true);
+  onNewSliderChange = undefined;
+};
+
 export const onPlayerApiReady = async (
   playerApi: MusicPlayer,
   context: RendererContext<PreciseVolumePluginConfig>,
@@ -186,20 +195,19 @@ export const onPlayerApiReady = async (
 
   /** Save volume when the newer UI's native range slider is manually changed */
   function setupNewSliderListener() {
+    // Re-enabling the plugin calls onPlayerApiReady again; don't stack listeners
+    removeNewSliderListener();
+    onNewSliderChange = (event) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.matches(newSliderSelector)) return;
+
+      const volume = Number((target as HTMLInputElement).value);
+      setTooltip(volume);
+      saveVolume(volume);
+    };
     // The slider is re-rendered inside a hover popup, so listen on the document.
     // Capture phase, in case YTM stops propagation on the slider itself
-    document.addEventListener(
-      'change',
-      (event) => {
-        const target = event.target as HTMLElement | null;
-        if (!target?.matches(newSliderSelector)) return;
-
-        const volume = Number((target as HTMLInputElement).value);
-        setTooltip(volume);
-        saveVolume(volume);
-      },
-      true,
-    );
+    document.addEventListener('change', onNewSliderChange, true);
   }
 
   /** Save volume + Update the volume tooltip when volume-slider is manually changed */

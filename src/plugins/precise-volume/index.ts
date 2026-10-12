@@ -9,6 +9,7 @@ import { overrideListener } from './override';
 import {
   onConfigChange,
   onPlayerApiReady,
+  removeNewSliderListener,
   restoreVolumeScript,
 } from './renderer';
 import hudStyle from './volume-hud.css?inline';
@@ -201,6 +202,9 @@ export default createPlugin({
   renderer: {
     start() {
       overrideListener();
+    },
+    stop() {
+      removeNewSliderListener();
     },
     onPlayerApiReady,
     onConfigChange,
