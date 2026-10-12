@@ -42,6 +42,16 @@ export interface TransitionPlan {
   toBpm: number;
 }
 
+/**
+ * How much earlier than strictly needed a mix may start (to begin at the
+ * outro, or on a phrase). Starting earlier than this cuts songs short.
+ */
+const MAX_EARLY_SECONDS = 12;
+/** Bars per musical phrase; blends prefer to start on a phrase boundary */
+const PHRASE_BARS = 4;
+/** How far a blend may move earlier to start on a phrase instead of a bar */
+const PHRASE_SNAP_SECONDS = 5;
+
 /** Minimum tempo confidence to trust a beat grid */
 export const MIN_TEMPO_CONFIDENCE = 0.35;
 
@@ -82,6 +92,10 @@ const entryPoint = (track: TrackAnalysis) => {
   return grid.find((time) => time >= audible) ?? track.leadingSilenceEnd;
 };
 
+/** Downbeats that start a phrase, counted from the first bar */
+const phraseStarts = (track: TrackAnalysis) =>
+  track.downbeats.filter((_, i) => i % PHRASE_BARS === 0);
+
 /** Latest grid point in [min, max] */
 const latestGridPoint = (grid: number[], min: number, max: number) => {
   for (let i = grid.length - 1; i >= 0; i--) {
@@ -104,13 +118,26 @@ const planBlend = (
     const duration = beats * from.beatPeriod;
     const latestStart = from.trailingSilenceStart - duration;
     // Start in the outro, but never so late that the blend runs past the end
-    const target = Math.min(from.outroStart, latestStart);
+    // and never so early that the song feels cut short
+    const target = Math.max(
+      Math.min(from.outroStart, latestStart),
+      latestStart - MAX_EARLY_SECONDS,
+    );
+    // Allow up to a bar earlier than the target to land on a bar start
+    const earliest = Math.max(
+      options.earliestMixOut,
+      target - (from.beatPeriod * 4) - 0.01,
+    );
+    const slack = from.beatPeriod / 2;
+    // Prefer a phrase boundary close to the target, then any bar, then a beat
     const mixOut =
       latestGridPoint(
-        from.downbeats,
-        options.earliestMixOut,
-        target + (from.beatPeriod / 2),
-      ) ?? latestGridPoint(from.beats, options.earliestMixOut, target);
+        phraseStarts(from),
+        Math.max(earliest, target - PHRASE_SNAP_SECONDS),
+        target + slack,
+      ) ??
+      latestGridPoint(from.downbeats, earliest, target + slack) ??
+      latestGridPoint(from.beats, options.earliestMixOut, target);
     if (
       mixOut === undefined ||
       mixOut + duration > from.trailingSilenceStart + from.beatPeriod
@@ -139,14 +166,19 @@ const planCut = (
   to: TrackAnalysis,
   options: PlannerOptions,
 ): TransitionPlan | null => {
-  // Cut on the last downbeat before the outro fades away
-  const limit = Math.min(
-    from.outroStart + from.beatPeriod,
-    from.trailingSilenceStart - 0.1,
+  // Cut on the last bar before the outro fades away, without throwing away
+  // more than a few seconds of the song
+  const end = from.trailingSilenceStart - 0.1;
+  const limit = Math.max(
+    Math.min(from.outroStart + from.beatPeriod, end),
+    end - MAX_EARLY_SECONDS,
   );
   const mixOut =
-    latestGridPoint(from.downbeats, options.earliestMixOut, limit) ??
-    latestGridPoint(from.beats, options.earliestMixOut, limit);
+    latestGridPoint(
+      from.downbeats,
+      Math.max(options.earliestMixOut, limit - (from.beatPeriod * 4) - 0.01),
+      limit,
+    ) ?? latestGridPoint(from.beats, options.earliestMixOut, limit);
   if (mixOut === undefined) return null;
 
   return {

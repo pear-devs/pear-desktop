@@ -3,6 +3,8 @@ import { analyzeTrack, type TrackAnalysis } from './analysis';
 const ANALYSIS_SAMPLE_RATE = 11025;
 /** How much of the end of each track we keep to play the outgoing side */
 const TAIL_SECONDS = 90;
+/** How much of the start we keep to play the incoming side sample-accurately */
+const HEAD_SECONDS = 30;
 
 export interface AnalyzedTrack {
   videoId: string;
@@ -11,6 +13,8 @@ export interface AnalyzedTrack {
   tail: AudioBuffer;
   /** Track time at which `tail` starts */
   tailStart: number;
+  /** First part of the track, played by AutoMix when it comes in */
+  head: AudioBuffer;
 }
 
 /**
@@ -64,23 +68,35 @@ const renderBands = async (buffer: AudioBuffer) => {
   };
 };
 
-const sliceTail = (buffer: AudioBuffer) => {
-  const startFrame = Math.max(
-    0,
-    buffer.length - Math.round(TAIL_SECONDS * buffer.sampleRate),
-  );
-  const tail = new AudioBuffer({
+const slice = (buffer: AudioBuffer, startFrame: number, endFrame: number) => {
+  const part = new AudioBuffer({
     numberOfChannels: buffer.numberOfChannels,
-    length: buffer.length - startFrame,
+    length: Math.max(1, endFrame - startFrame),
     sampleRate: buffer.sampleRate,
   });
   for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
-    tail.copyToChannel(
-      buffer.getChannelData(channel).subarray(startFrame),
+    part.copyToChannel(
+      buffer.getChannelData(channel).subarray(startFrame, endFrame),
       channel,
     );
   }
-  return { tail, tailStart: startFrame / buffer.sampleRate };
+  return part;
+};
+
+const sliceEnds = (buffer: AudioBuffer) => {
+  const tailStartFrame = Math.max(
+    0,
+    buffer.length - Math.round(TAIL_SECONDS * buffer.sampleRate),
+  );
+  const headEndFrame = Math.min(
+    buffer.length,
+    Math.round(HEAD_SECONDS * buffer.sampleRate),
+  );
+  return {
+    tail: slice(buffer, tailStartFrame, buffer.length),
+    tailStart: tailStartFrame / buffer.sampleRate,
+    head: slice(buffer, 0, headEndFrame),
+  };
 };
 
 /**
@@ -96,5 +112,5 @@ export const decodeAndAnalyze = async (
   // decodeAudioData detaches its input, so hand it a private copy
   const buffer = await decoder.decodeAudioData(bytes.slice().buffer);
   const analysis = analyzeTrack(await renderBands(buffer));
-  return { videoId, analysis, ...sliceTail(buffer) };
+  return { videoId, analysis, ...sliceEnds(buffer) };
 };

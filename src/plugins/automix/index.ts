@@ -74,7 +74,7 @@ export default createPlugin({
         config.maxStretch,
         [
           [0, t('plugins.automix.menu.tempo-range.off')],
-          ...[0.04, 0.08, 0.12].map(
+          ...[0.03, 0.05, 0.08].map(
             (range) =>
               [
                 range,

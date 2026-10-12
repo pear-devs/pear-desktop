@@ -45,6 +45,16 @@ interface OutgoingChain {
   nodes: AudioNode[];
 }
 
+/** AutoMix's own sample-accurate copy of the incoming song's start */
+interface IncomingHead {
+  source: AudioBufferSourceNode;
+  gain: GainNode;
+  master: GainNode;
+  masterTarget: number;
+  /** Context time at which the copy runs out */
+  endAt: number;
+}
+
 interface ActiveMix {
   plan: TransitionPlan;
   fromId: string;
@@ -61,6 +71,12 @@ interface ActiveMix {
   switched: boolean;
   /** The beat cut has dropped the incoming song in */
   cutDone: boolean;
+  /** Set when the incoming side is played from our own copy */
+  head?: IncomingHead;
+  /** Consecutive ticks the player has been in sync with our copy */
+  lockedTicks: number;
+  /** Crossfading from our copy to the player */
+  handingOver: boolean;
   /** Follow the beat grid (false once we fell back to a plain fade) */
   follow: boolean;
   seeded: boolean;
@@ -86,8 +102,10 @@ const QUEUE_REFRESH_MS = 2000;
 const RETRY_FAILED_MS = 120_000;
 /** Media seek takes a moment before audio resumes */
 const SEEK_LATENCY = 0.08;
-const SETTLE_SECONDS = 8;
+/** Tempo glide back to normal after a blend: slow, so it isn't heard */
+const SETTLE_SECONDS = 14;
 const CROSSOVER_HZ = 180;
+const SILENT_VOLUME = 0.0001;
 /** Start a no-analysis fade plan this long before the song's audible end */
 const LATE_PLAN_SECONDS = 25;
 
@@ -112,6 +130,14 @@ const clamp = (value: number, min: number, max: number) =>
 /** Time between taking over the outgoing track and the audible mix */
 export const prerollFor = (plan: TransitionPlan) =>
   clamp((plan.beat * 4) + 0.5, 4, 6);
+
+const equalPowerIn = (() => {
+  const curve = new Float32Array(64);
+  for (let i = 0; i < curve.length; i++) {
+    curve[i] = Math.sin(((i / (curve.length - 1)) * Math.PI) / 2);
+  }
+  return curve;
+})();
 
 const equalPowerOut = (() => {
   const curve = new Float32Array(64);
@@ -490,7 +516,7 @@ export class AutoMixEngine {
       Math.abs(video.playbackRate - 1) < 0.01 &&
       this.context?.state === 'running'
     ) {
-      this.startMix(from, plan);
+      this.startMix(from, plan, to);
       return FAST_TICK_MS;
     }
 
@@ -616,7 +642,48 @@ export class AutoMixEngine {
     }
   }
 
-  private startMix(from: AnalyzedTrack, plan: TransitionPlan) {
+  /**
+   * Plays the start of the incoming song from our decoded copy, scheduled to
+   * the sample, so a beat cut lands exactly on the downbeat however long the
+   * player takes to load and seek. The player is handed over later.
+   */
+  private buildIncomingHead(
+    context: AudioContext,
+    to: AnalyzedTrack,
+    plan: TransitionPlan,
+    mixAt: number,
+    volume: number,
+  ): IncomingHead {
+    const source = context.createBufferSource();
+    source.buffer = to.head;
+    const gain = context.createGain();
+    gain.gain.value = 0;
+    const master = context.createGain();
+    master.gain.value = volume;
+    source.connect(gain).connect(master).connect(context.destination);
+
+    if (plan.style === 'cut') {
+      gain.gain.setValueAtTime(0, mixAt);
+      gain.gain.linearRampToValueAtTime(1, mixAt + 0.004);
+    } else {
+      gain.gain.setValueCurveAtTime(equalPowerIn, mixAt, plan.duration);
+    }
+    source.start(mixAt, plan.mixIn);
+
+    return {
+      source,
+      gain,
+      master,
+      masterTarget: volume,
+      endAt: mixAt + (to.head.duration - plan.mixIn),
+    };
+  }
+
+  private startMix(
+    from: AnalyzedTrack,
+    plan: TransitionPlan,
+    to: AnalyzedTrack | undefined,
+  ) {
     const context = this.context;
     const video = this.video;
     const next = this.next;
@@ -640,6 +707,25 @@ export class AutoMixEngine {
     const mixAt = startAt + (plan.mixOut - startOffset);
     this.scheduleOutgoing(context, chain, plan, mixAt);
 
+    // No time-stretch needed: play the incoming start from our own copy too,
+    // as long as it covers the mix plus a few seconds to hand over
+    const head =
+      to &&
+      to.videoId === next.videoId &&
+      plan.style !== 'blend' &&
+      Math.abs(plan.rate - 1) < 0.001 &&
+      plan.mixIn + (plan.style === 'cut' ? 0 : plan.duration) + 6 <
+        to.head.duration
+        ? this.buildIncomingHead(
+            context,
+            to,
+            plan,
+            mixAt,
+            video.muted ? 0 : video.volume,
+          )
+        : undefined;
+    if (head) chain.nodes.push(head.source, head.gain, head.master);
+
     this.mix = {
       plan,
       fromId: from.videoId,
@@ -652,6 +738,9 @@ export class AutoMixEngine {
       endAt: mixAt + (plan.style === 'cut' ? 0.05 : plan.duration),
       switched: false,
       cutDone: false,
+      head,
+      lockedTicks: 0,
+      handingOver: false,
       follow: true,
       seeded: false,
       pendingSeeks: 0,
@@ -700,9 +789,14 @@ export class AutoMixEngine {
     const mix = this.mix;
     const video = this.video;
     if (!mix || !video) return;
-    const volume = clamp(mix.baseVolume * level, 0, 1);
+    // Never fully 0: Chromium handles a silent element differently and its
+    // timing jumps by ~45 ms when sound resumes, which would knock the
+    // incoming song off the beat. 1e-4 is -80 dB, i.e. inaudible.
+    const volume = clamp(mix.baseVolume * level, SILENT_VOLUME, 1);
     mix.lastWrittenVolume = volume;
-    if (Math.abs(video.volume - volume) > 0.001) video.volume = volume;
+    if (Math.abs(video.volume - volume) > SILENT_VOLUME / 2) {
+      video.volume = volume;
+    }
   }
 
   private setRate(rate: number) {
@@ -739,7 +833,7 @@ export class AutoMixEngine {
     const mix = this.mix;
     const video = this.video;
     if (!mix || !video) return;
-    if (Math.abs(video.volume - mix.lastWrittenVolume) > 0.001) {
+    if (Math.abs(video.volume - mix.lastWrittenVolume) > SILENT_VOLUME / 2) {
       // The player (new song normalisation) or the user changed the volume
       mix.baseVolume = video.volume;
       if (!mix.settleAt) this.tickMix();
@@ -798,6 +892,14 @@ export class AutoMixEngine {
       return;
     }
 
+    if (mix.head) {
+      const headTarget = video.muted ? 0 : mix.baseVolume;
+      if (Math.abs(headTarget - mix.head.masterTarget) > 0.001) {
+        mix.head.masterTarget = headTarget;
+        mix.head.master.gain.setTargetAtTime(headTarget, now, 0.05);
+      }
+    }
+
     const id = this.currentVideoId();
     if (id && id !== mix.toId && id !== mix.fromId) {
       // A different song than planned came up: just fade into it
@@ -815,7 +917,7 @@ export class AutoMixEngine {
     const incomingPlaying =
       id === mix.toId && video.readyState >= 3 && !video.seeking;
 
-    if (incomingPlaying && mix.follow) {
+    if (incomingPlaying && mix.follow && !mix.handingOver) {
       const target = this.targetPosition(mix, now);
       if (target < 0) {
         // Too early for the incoming song: hold it at the very start
@@ -831,14 +933,32 @@ export class AutoMixEngine {
         } else {
           // Phase lock: nudge the tempo until the beats sit on top of each other
           mix.error = (mix.error * 0.7) + (error * 0.3);
-          // Pull in hard while the incoming song is still silent, gently after
-          const pull = now < mix.mixAt ? 0.1 : 0.04;
+          // Pull in hard while the player is still silent, gently after
+          const silent = now < mix.mixAt || Boolean(mix.head);
+          const pull = silent ? 0.1 : 0.04;
+          // Close enough: run at exactly the planned rate. Every rate change
+          // makes the player's position jump a little, so stop nudging early
+          const deadband = mix.head ? 0.01 : 0.006;
           this.setRate(
-            mix.plan.rate *
-              (1 - clamp(mix.error * (now < mix.mixAt ? 2.5 : 1.5), -pull, pull)),
+            Math.abs(mix.error) < deadband
+              ? mix.plan.rate
+              : mix.plan.rate *
+                  (1 - clamp(mix.error * (silent ? 2.5 : 1.5), -pull, pull)),
           );
+          // Only count as in sync while steady at the planned rate
+          mix.lockedTicks =
+            Math.abs(error) < 0.012 &&
+            Math.abs(mix.error) < 0.008 &&
+            Math.abs(video.playbackRate - mix.plan.rate) < 0.0005
+              ? mix.lockedTicks + 1
+              : 0;
         }
       }
+    }
+
+    if (mix.head) {
+      this.tickHead(mix, mix.head, now, incomingPlaying);
+      return;
     }
 
     // Incoming level
@@ -877,6 +997,61 @@ export class AutoMixEngine {
     this.emitMix();
   }
 
+  /**
+   * While our copy of the incoming song plays, keep the player silent and
+   * following along; once the mix is over and the player is in sync, cross
+   * over to it (same audio, so the switch is inaudible).
+   */
+  private tickHead(
+    mix: ActiveMix,
+    head: IncomingHead,
+    now: number,
+    incomingPlaying: boolean,
+  ) {
+    if (mix.handingOver) return;
+    this.setIncomingLevel(0);
+
+    const synced = mix.lockedTicks >= 8;
+    const runningOut = now >= head.endAt - 1.5;
+    if (now >= mix.endAt && incomingPlaying && (synced || runningOut)) {
+      this.handOver(mix, head, now);
+    } else if (now >= head.endAt - 0.2) {
+      // The player never caught up: don't leave it muted
+      this.abort();
+      return;
+    }
+    this.emitMix();
+  }
+
+  private handOver(mix: ActiveMix, head: IncomingHead, now: number) {
+    const video = this.video;
+    mix.handingOver = true;
+    const at = now + 0.03;
+    const fade = 0.06;
+
+    // Our copy plays at normal speed: drop the catch-up nudging while the
+    // player is still silent, so there's nothing to glide back afterwards
+    this.setRate(1);
+
+    head.gain.gain.cancelScheduledValues(at);
+    head.gain.gain.setValueAtTime(1, at);
+    head.gain.gain.linearRampToValueAtTime(0, at + fade);
+    head.source.stop(at + fade + 0.05);
+
+    // Element volume can't be automated, so step it up against the ramp
+    for (const step of [1, 2, 3, 4]) {
+      this.at(at + ((fade * step) / 4), () => {
+        if (this.mix === mix) this.setIncomingLevel(step / 4);
+      });
+    }
+    this.at(at + fade + 0.02, () => {
+      if (this.mix !== mix || !video) return;
+      mix.head = undefined;
+      mix.settleAt = this.context?.currentTime ?? now;
+      mix.settleFrom = 1;
+    });
+  }
+
   /** Start analysing the song after the incoming one while we mix */
   private prefetchAfter(mix: ActiveMix) {
     if (Date.now() - this.lastQueueRead < QUEUE_REFRESH_MS) return;
@@ -903,6 +1078,13 @@ export class AutoMixEngine {
   /** Replace whatever is scheduled with a plain fade starting now */
   private fallBackToFade(mix: ActiveMix, now: number) {
     const { chain } = mix;
+    if (mix.head) {
+      // Our copy is of the song we planned, not the one that came up
+      mix.head.gain.gain.cancelScheduledValues(now);
+      mix.head.gain.gain.setTargetAtTime(0, now, 0.03);
+      mix.head.source.stop(now + 0.2);
+      mix.head = undefined;
+    }
     const start = Math.max(now, mix.mixAt);
     const remaining = Math.max(1.5, Math.min(6, mix.endAt - start));
     for (const node of chain.nodes) {
@@ -964,6 +1146,15 @@ export class AutoMixEngine {
       mix.chain.source.stop(now + fadeSeconds);
     } catch {
       // Already stopped
+    }
+    if (mix.head) {
+      mix.head.gain.gain.cancelScheduledValues(now);
+      mix.head.gain.gain.setTargetAtTime(0, now, fadeSeconds / 4);
+      try {
+        mix.head.source.stop(now + fadeSeconds);
+      } catch {
+        // Already stopped
+      }
     }
     // Let echo tails ring out before tearing the graph down
     window.setTimeout(

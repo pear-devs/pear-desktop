@@ -7,7 +7,7 @@ export type AutoMixPluginConfig = {
   transition: TransitionPreference;
   /** Length of a beat-matched blend, in beats */
   blendBeats: number;
-  /** Max time-stretch of the incoming song to match tempos (0.08 = ±8%) */
+  /** Max time-stretch of the incoming song to match tempos (0.05 = ±5%) */
   maxStretch: number;
   /** Max length of a smooth fade, in seconds */
   smoothSeconds: number;
@@ -22,7 +22,7 @@ export const defaultConfig: AutoMixPluginConfig = {
   active: true,
   transition: 'auto',
   blendBeats: 16,
-  maxStretch: 0.08,
+  maxStretch: 0.05,
   smoothSeconds: 10,
   respectAlbums: true,
   showMixCard: true,
