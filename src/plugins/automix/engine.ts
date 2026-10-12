@@ -77,6 +77,8 @@ interface ActiveMix {
   lockedTicks: number;
   /** Crossfading from our copy to the player */
   handingOver: boolean;
+  /** The player has been on the incoming song at least once */
+  sawIncoming: boolean;
   /** Follow the beat grid (false once we fell back to a plain fade) */
   follow: boolean;
   seeded: boolean;
@@ -95,6 +97,27 @@ interface ActiveMix {
   settleAt?: number;
   timers: number[];
 }
+
+/** Player controls that seek or change the song; touching one cancels a mix */
+const SEEK_AND_SKIP_CONTROLS = [
+  'ytmusic-player-bar #progress-bar',
+  'ytmusic-player-bar .next-button',
+  'ytmusic-player-bar .previous-button',
+  'ytmusic-player-queue-item',
+  'ytmusic-play-button-renderer',
+].join(', ');
+
+/** The player's seek / next / previous keyboard shortcuts */
+const SEEK_AND_SKIP_KEYS = new Set([
+  'ArrowLeft',
+  'ArrowRight',
+  'j',
+  'l',
+  'J',
+  'L',
+  'N',
+  'P',
+]);
 
 const IDLE_TICK_MS = 250;
 const FAST_TICK_MS = 20;
@@ -194,6 +217,8 @@ export class AutoMixEngine {
     video?.addEventListener('volumechange', this.onVolumeChange);
     video?.addEventListener('seeking', this.onSeeking);
     video?.addEventListener('pause', this.onPause);
+    document.addEventListener('pointerdown', this.onUserInput, true);
+    document.addEventListener('keydown', this.onUserInput, true);
 
     this.schedule(0);
   }
@@ -219,6 +244,8 @@ export class AutoMixEngine {
     video?.removeEventListener('volumechange', this.onVolumeChange);
     video?.removeEventListener('seeking', this.onSeeking);
     video?.removeEventListener('pause', this.onPause);
+    document.removeEventListener('pointerdown', this.onUserInput, true);
+    document.removeEventListener('keydown', this.onUserInput, true);
     this.unsubscribeQueue?.();
     this.unsubscribeQueue = null;
     this.tracks.clear();
@@ -770,6 +797,7 @@ export class AutoMixEngine {
       head,
       lockedTicks: 0,
       handingOver: false,
+      sawIncoming: false,
       follow: true,
       seeded: false,
       pendingSeeks: 0,
@@ -881,13 +909,42 @@ export class AutoMixEngine {
       return;
     }
     // The user scrubbed the song we were mixing: get out of the way
-    if (!mix.switched || mix.seeded) this.abort();
+    if (!mix.switched || mix.seeded) this.cancel('seeked');
   };
 
   private readonly onPause = () => {
     const mix = this.mix;
-    if (mix && (!mix.switched || mix.seeded)) this.abort();
+    if (mix && (!mix.switched || mix.seeded)) this.cancel('paused');
   };
+
+  /**
+   * Seeking or changing the song while a mix plays cancels it on the spot.
+   * The player's own events can't tell our seeks / skips from the user's in
+   * every case, so watch the controls the user actually touches as well.
+   */
+  private readonly onUserInput = (event: Event) => {
+    if (!this.mix) return;
+    const target = event.target instanceof Element ? event.target : null;
+
+    if (event instanceof KeyboardEvent) {
+      if (
+        target?.closest('input, textarea, [contenteditable="true"]') ||
+        !SEEK_AND_SKIP_KEYS.has(event.key)
+      ) {
+        return;
+      }
+      this.cancel(`key ${event.key}`);
+      return;
+    }
+
+    if (target?.closest(SEEK_AND_SKIP_CONTROLS)) this.cancel('player control');
+  };
+
+  private cancel(reason: string) {
+    if (!this.mix) return;
+    console.info('[AutoMix] mix cancelled:', reason);
+    this.abort();
+  }
 
   /** Incoming track position we want at context time `now` */
   private targetPosition(mix: ActiveMix, now: number) {
@@ -915,6 +972,12 @@ export class AutoMixEngine {
     }
 
     if (!mix.switched) {
+      // Changed the song before we even skipped: the mix is off
+      const id = this.currentVideoId();
+      if (id && id !== mix.fromId) {
+        this.cancel('song changed');
+        return;
+      }
       // Our copy is playing: keep the player itself silent
       if (now >= mix.startAt + 0.015) this.setIncomingLevel(0);
       this.emitMix();
@@ -930,10 +993,18 @@ export class AutoMixEngine {
     }
 
     const id = this.currentVideoId();
-    if (id && id !== mix.toId && id !== mix.fromId) {
-      // A different song than planned came up: just fade into it
-      mix.toId = id;
-      this.fallBackToFade(mix, now);
+    if (id === mix.toId) mix.sawIncoming = true;
+    if (id && id !== mix.toId && (id !== mix.fromId || mix.sawIncoming)) {
+      if (!mix.sawIncoming && readQueue(mix.fromId)?.next?.videoId === id) {
+        // The queue changed under our skip: fade into the song that came up
+        mix.toId = id;
+        mix.sawIncoming = true;
+        this.fallBackToFade(mix, now);
+      } else {
+        // The user (or a media key) changed the song: step aside
+        this.cancel('song changed');
+        return;
+      }
     }
 
     if (id === mix.toId) this.prefetchAfter(mix);
