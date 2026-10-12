@@ -15,6 +15,10 @@ export interface AnalyzedTrack {
   tailStart: number;
   /** First part of the track, played by AutoMix when it comes in */
   head: AudioBuffer;
+  /** Stream AutoMix's copy was decoded from, e.g. "opus 160 kbps" */
+  quality?: string;
+  /** The copy is noticeably worse than what the player streams */
+  lowQuality?: boolean;
 }
 
 /**

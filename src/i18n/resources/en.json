@@ -420,6 +420,7 @@
           "loading": "Downloading / starting the AI beat detection model…",
           "ready": "Beats found by AI (Beat This! on {{provider}})"
         },
+        "low-quality": "Only a lower quality stream ({{quality}}) was available for mixing, so the transition may sound duller than normal playback",
         "mixing": "AutoMixing",
         "off": "AutoMix off",
         "reason": {

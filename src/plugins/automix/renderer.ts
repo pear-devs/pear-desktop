@@ -4,7 +4,11 @@ import { createSignal } from 'solid-js';
 
 import { AiBeatTracker } from './ai';
 import { defaultConfig, type AutoMixPluginConfig } from './config';
-import { AI_ASSETS_CHANNEL, FETCH_AUDIO_CHANNEL } from './constants';
+import {
+  AI_ASSETS_CHANNEL,
+  FETCH_AUDIO_CHANNEL,
+  type FetchedAudio,
+} from './constants';
 import { AutoMixEngine, type AutoMixStatus } from './engine';
 import { mountUi } from './ui';
 
@@ -133,7 +137,7 @@ export const renderer = {
           context.ipc.invoke(
             FETCH_AUDIO_CHANNEL,
             videoId,
-          ) as Promise<Uint8Array | null>,
+          ) as Promise<FetchedAudio | null>,
         onStatus: setStatus,
       },
       config(),

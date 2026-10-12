@@ -13,6 +13,7 @@ import { getQueueStore, readQueue, type QueueTrack } from './queue';
 
 import type { AiBeatTracker } from './ai';
 import type { AutoMixPluginConfig } from './config';
+import type { FetchedAudio } from './constants';
 import type { MusicPlayer } from '@/types/music-player';
 
 export type AutoMixPhase =
@@ -43,13 +44,15 @@ export interface AutoMixStatus {
   ai?: AiState;
   /** Where the AI model runs ("webgpu" or "wasm") */
   aiProvider?: string;
+  /** Stream quality of AutoMix's copy, when it's noticeably worse */
+  lowQuality?: string;
 }
 
 export type AiState = 'loading' | 'analysing' | 'ready' | 'failed';
 
 interface EngineOptions {
   api: MusicPlayer;
-  fetchAudio: (videoId: string) => Promise<Uint8Array | null>;
+  fetchAudio: (videoId: string) => Promise<FetchedAudio | null>;
   onStatus: (status: AutoMixStatus) => void;
 }
 
@@ -57,6 +60,11 @@ interface OutgoingChain {
   source: AudioBufferSourceNode;
   dry: GainNode;
   master: GainNode;
+  highpass?: BiquadFilterNode;
+  lowShelf?: BiquadFilterNode;
+  lowpass?: BiquadFilterNode;
+  /** Last node before the dry gain (where an echo send taps in) */
+  tap: AudioNode;
   nodes: AudioNode[];
 }
 
@@ -175,6 +183,10 @@ const unknownTrack: TrackAnalysis = {
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
+
+/** When a filtered-in incoming song has fully opened up, after the mix */
+const filterOpenBy = (plan: TransitionPlan) =>
+  plan.holdOutgoing ? plan.duration : plan.duration * 0.7;
 
 /** Time between taking over the outgoing track and the audible mix */
 export const prerollFor = (plan: TransitionPlan) =>
@@ -347,13 +359,14 @@ export class AutoMixEngine {
     if (this.tracks.has(videoId)) return;
 
     const promise = (async () => {
-      const bytes = await this.fetchAudio(videoId);
-      if (!bytes || this.stopped) return null;
-      return decodeAndAnalyze(
+      const audio = await this.fetchAudio(videoId);
+      if (!audio || this.stopped) return null;
+      const track = await decodeAndAnalyze(
         videoId,
-        bytes,
+        audio.bytes,
         this.context?.sampleRate ?? 48000,
       );
+      return { ...track, quality: audio.quality, lowQuality: audio.lowQuality };
     })()
       .catch((error: unknown) => {
         console.warn('[AutoMix] analysis failed', videoId, error);
@@ -726,6 +739,10 @@ export class AutoMixEngine {
       fromTitle: this.currentTitle,
       toTitle: this.next?.title,
       ...this.aiStatus([id, nextId]),
+      lowQuality: [from, to]
+        .filter((track) => track?.lowQuality)
+        .map((track) => track?.quality)
+        .join(', ') || undefined,
     });
 
     const remaining = plan.mixOut - prerollFor(plan) - video.currentTime;
@@ -748,45 +765,57 @@ export class AutoMixEngine {
   /* The mix                                                             */
   /* ------------------------------------------------------------------ */
 
+  /**
+   * The outgoing copy's audio chain. Only the filters this transition
+   * sweeps are inserted, so the rest of the time the copy plays untouched.
+   */
   private buildOutgoing(
     context: AudioContext,
     from: AnalyzedTrack,
+    plan: TransitionPlan,
   ): OutgoingChain {
     const source = context.createBufferSource();
     source.buffer = from.tail;
 
-    const highpass = context.createBiquadFilter();
-    highpass.type = 'highpass';
-    highpass.frequency.value = 20;
-    highpass.Q.value = 0.9;
+    const filter = (type: BiquadFilterType, frequency: number, q = 0.7) => {
+      const node = context.createBiquadFilter();
+      node.type = type;
+      node.frequency.value = frequency;
+      node.Q.value = q;
+      return node;
+    };
 
-    const lowShelf = context.createBiquadFilter();
-    lowShelf.type = 'lowshelf';
-    lowShelf.frequency.value = CROSSOVER_HZ;
-    lowShelf.gain.value = 0;
-
-    const lowpass = context.createBiquadFilter();
-    lowpass.type = 'lowpass';
-    lowpass.frequency.value = 20000;
-    lowpass.Q.value = 0.7;
+    const sweepsHighpass =
+      plan.style === 'cut' || (plan.style === 'blend' && !plan.holdOutgoing);
+    const highpass = sweepsHighpass ? filter('highpass', 20, 0.9) : undefined;
+    const lowShelf =
+      plan.style === 'blend' ? filter('lowshelf', CROSSOVER_HZ) : undefined;
+    if (lowShelf) lowShelf.gain.value = 0;
+    const lowpass =
+      plan.style === 'smooth' && !plan.holdOutgoing
+        ? filter('lowpass', context.sampleRate / 2)
+        : undefined;
 
     const dry = context.createGain();
     dry.gain.value = 0;
     const master = context.createGain();
 
-    source
-      .connect(highpass)
-      .connect(lowShelf)
-      .connect(lowpass)
-      .connect(dry)
-      .connect(master)
-      .connect(context.destination);
+    const filters = [highpass, lowShelf, lowpass].filter(
+      (node): node is BiquadFilterNode => Boolean(node),
+    );
+    let tap: AudioNode = source;
+    for (const node of filters) tap = tap.connect(node);
+    tap.connect(dry).connect(master).connect(context.destination);
 
     return {
       source,
       dry,
       master,
-      nodes: [source, highpass, lowShelf, lowpass, dry, master],
+      highpass,
+      lowShelf,
+      lowpass,
+      tap,
+      nodes: [source, ...filters, dry, master],
     };
   }
 
@@ -797,13 +826,7 @@ export class AutoMixEngine {
     plan: TransitionPlan,
     mixAt: number,
   ) {
-    const [, highpass, lowShelf, lowpass] = chain.nodes as [
-      AudioBufferSourceNode,
-      BiquadFilterNode,
-      BiquadFilterNode,
-      BiquadFilterNode,
-    ];
-    const { dry } = chain;
+    const { dry, highpass, lowShelf, lowpass } = chain;
     const duration = plan.duration;
 
     switch (plan.style) {
@@ -813,8 +836,8 @@ export class AutoMixEngine {
           // which rings out briefly under the next song
           const hit = mixAt + duration;
           const beat = plan.beat || 0.5;
-          lowShelf.gain.setValueAtTime(0, hit - (beat / 2));
-          lowShelf.gain.linearRampToValueAtTime(-30, hit);
+          lowShelf?.gain.setValueAtTime(0, hit - (beat / 2));
+          lowShelf?.gain.linearRampToValueAtTime(-30, hit);
           dry.gain.setValueAtTime(1, hit + 0.05);
           dry.gain.setTargetAtTime(0, hit + 0.05, ENDING_RING / 4);
           chain.source.stop(hit + ENDING_RING + 0.2);
@@ -822,10 +845,10 @@ export class AutoMixEngine {
         }
         // Equal-power crossfade with a DJ style bass swap halfway through
         dry.gain.setValueCurveAtTime(equalPowerOut, mixAt, duration);
-        lowShelf.gain.setValueAtTime(0, mixAt + (duration * 0.45));
-        lowShelf.gain.linearRampToValueAtTime(-30, mixAt + (duration * 0.55));
-        highpass.frequency.setValueAtTime(20, mixAt + (duration * 0.55));
-        highpass.frequency.exponentialRampToValueAtTime(400, mixAt + duration);
+        lowShelf?.gain.setValueAtTime(0, mixAt + (duration * 0.45));
+        lowShelf?.gain.linearRampToValueAtTime(-30, mixAt + (duration * 0.55));
+        highpass?.frequency.setValueAtTime(20, mixAt + (duration * 0.55));
+        highpass?.frequency.exponentialRampToValueAtTime(400, mixAt + duration);
         chain.source.stop(mixAt + duration + 0.1);
         break;
       }
@@ -834,8 +857,8 @@ export class AutoMixEngine {
         // Filter build-up over the last bar, an echo throw, then a hard cut
         const beat = plan.beat || 0.5;
         const buildFrom = Math.max(context.currentTime, mixAt - (beat * 4));
-        highpass.frequency.setValueAtTime(20, buildFrom);
-        highpass.frequency.exponentialRampToValueAtTime(900, mixAt);
+        highpass?.frequency.setValueAtTime(20, buildFrom);
+        highpass?.frequency.exponentialRampToValueAtTime(900, mixAt);
 
         const send = context.createGain();
         send.gain.value = 0;
@@ -847,7 +870,7 @@ export class AutoMixEngine {
         echoFilter.type = 'highpass';
         echoFilter.frequency.value = 350;
 
-        lowpass.connect(send).connect(delay).connect(echoFilter);
+        chain.tap.connect(send).connect(delay).connect(echoFilter);
         delay.connect(feedback).connect(delay);
         echoFilter.connect(chain.master);
         chain.nodes.push(send, delay, feedback, echoFilter);
@@ -884,8 +907,8 @@ export class AutoMixEngine {
         }
         // Long equal-power fade, the outgoing song slowly drifts behind a lowpass
         dry.gain.setValueCurveAtTime(equalPowerOut, mixAt, duration);
-        lowpass.frequency.setValueAtTime(20000, mixAt);
-        lowpass.frequency.exponentialRampToValueAtTime(700, mixAt + duration);
+        lowpass?.frequency.setValueAtTime(20000, mixAt);
+        lowpass?.frequency.exponentialRampToValueAtTime(700, mixAt + duration);
         chain.source.stop(mixAt + duration + 0.1);
         break;
       }
@@ -910,23 +933,22 @@ export class AutoMixEngine {
     gain.gain.value = 0;
     const master = context.createGain();
     master.gain.value = volume;
-    const highpass = context.createBiquadFilter();
-    highpass.type = 'highpass';
-    highpass.Q.value = 0.7;
-    highpass.frequency.value = 20;
-    source
-      .connect(highpass)
-      .connect(gain)
-      .connect(master)
-      .connect(context.destination);
-
     if (plan.filterIn) {
       // Thin at first so the two songs don't muddy, opening up fully by the
       // time the old song is gone (or on its final hit)
-      const openBy = plan.holdOutgoing ? plan.duration : plan.duration * 0.7;
+      const highpass = context.createBiquadFilter();
+      highpass.type = 'highpass';
+      highpass.Q.value = 0.7;
       highpass.frequency.setValueAtTime(FILTER_IN_HZ, mixAt);
-      highpass.frequency.exponentialRampToValueAtTime(20, mixAt + openBy);
+      highpass.frequency.exponentialRampToValueAtTime(
+        20,
+        mixAt + filterOpenBy(plan),
+      );
+      source.connect(highpass).connect(gain);
+    } else {
+      source.connect(gain);
     }
+    gain.connect(master).connect(context.destination);
 
     if (plan.style === 'cut' || plan.style === 'segue') {
       // The incoming song starts as itself: no fade-in on its first note
@@ -965,7 +987,7 @@ export class AutoMixEngine {
       return;
     }
 
-    const chain = this.buildOutgoing(context, from);
+    const chain = this.buildOutgoing(context, from, plan);
     chain.master.gain.value = video.muted ? 0 : video.volume;
     chain.source.start(startAt, offsetInTail);
     chain.dry.gain.setValueAtTime(0, startAt);
@@ -1277,7 +1299,6 @@ export class AutoMixEngine {
     }
 
     // Incoming level
-    const progress = (now - mix.mixAt) / mix.plan.duration;
     if (mix.plan.style === 'cut' || mix.plan.style === 'segue') {
       const dropped = incomingPlaying && (mix.cutDone || now >= mix.mixAt);
       this.setIncomingLevel(dropped ? 1 : 0);
@@ -1290,13 +1311,9 @@ export class AutoMixEngine {
         });
       }
     } else {
-      const level =
-        progress <= 0
-          ? 0
-          : progress >= 1
-            ? 1
-            : Math.sin((progress * Math.PI) / 2);
-      this.setIncomingLevel(incomingPlaying ? level : 0);
+      this.setIncomingLevel(
+        incomingPlaying ? this.incomingLevel(mix, now) : 0,
+      );
     }
 
     if (now >= mix.endAt && incomingPlaying) {
@@ -1326,9 +1343,13 @@ export class AutoMixEngine {
     if (mix.handingOver) return;
     this.setIncomingLevel(0);
 
+    // Hand the song to the player (full quality) as soon as our copy has
+    // nothing left to do that the player can't: once any filter has opened
+    const canHandOver =
+      now >= mix.mixAt + (mix.plan.filterIn ? filterOpenBy(mix.plan) : 0.3);
     const synced = mix.lockedTicks >= 8;
     const runningOut = now >= head.endAt - 1.5;
-    if (now >= mix.endAt && incomingPlaying && (synced || runningOut)) {
+    if (canHandOver && incomingPlaying && (synced || runningOut)) {
       this.handOver(mix, head, now);
     } else if (now >= head.endAt - 0.2) {
       // The player never caught up: don't leave it muted
@@ -1336,6 +1357,17 @@ export class AutoMixEngine {
       return;
     }
     this.emitMix();
+  }
+
+  /** How loud the incoming song should be at context time `time` */
+  private incomingLevel(mix: ActiveMix, time: number) {
+    if (mix.plan.style === 'cut' || mix.plan.style === 'segue') {
+      return time >= mix.mixAt ? 1 : 0;
+    }
+    const progress = (time - mix.mixAt) / mix.plan.duration;
+    if (progress <= 0) return 0;
+    if (progress >= 1) return 1;
+    return Math.sin((progress * Math.PI) / 2);
   }
 
   private handOver(mix: ActiveMix, head: IncomingHead, now: number) {
@@ -1348,22 +1380,30 @@ export class AutoMixEngine {
     // player is still silent, so there's nothing to glide back afterwards
     this.setRate(1);
 
+    // Cross over at whatever level the fade-in has reached by then
+    const level = this.incomingLevel(mix, at);
     head.gain.gain.cancelScheduledValues(at);
-    head.gain.gain.setValueAtTime(1, at);
+    head.gain.gain.setValueAtTime(level, at);
     head.gain.gain.linearRampToValueAtTime(0, at + fade);
     head.source.stop(at + fade + 0.05);
 
     // Element volume can't be automated, so step it up against the ramp
     for (const step of [1, 2, 3, 4]) {
-      this.at(at + ((fade * step) / 4), () => {
-        if (this.mix === mix) this.setIncomingLevel(step / 4);
+      const time = at + ((fade * step) / 4);
+      this.at(time, () => {
+        if (this.mix === mix) {
+          this.setIncomingLevel((this.incomingLevel(mix, time) * step) / 4);
+        }
       });
     }
+    // The player carries on with the rest of the fade-in itself
     this.at(at + fade + 0.02, () => {
       if (this.mix !== mix || !video) return;
       mix.head = undefined;
-      mix.settleAt = this.context?.currentTime ?? now;
-      mix.settleFrom = 1;
+      mix.handingOver = false;
+      // Nothing to stay locked to any more (the old song is only a fading
+      // tail), and nudging the now audible player's speed would be heard
+      mix.follow = false;
     });
   }
 

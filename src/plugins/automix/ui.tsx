@@ -130,6 +130,13 @@ const hintFor = (status: AutoMixStatus): Hint => {
           : []),
         describePlan(plan),
         ...(describeAi(status) ? [describeAi(status)!] : []),
+        ...(status.lowQuality
+          ? [
+              t('plugins.automix.ui.low-quality', {
+                quality: status.lowQuality,
+              }),
+            ]
+          : []),
       ],
       footer,
     };
