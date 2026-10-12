@@ -407,7 +407,7 @@
           "blend": "{{from}} → {{to}} BPM · stretched {{stretch}}%",
           "cut": "Cut on the downbeat · {{bpm}} BPM",
           "segue": "Plays the ending out, next song in as it dies away",
-          "segue-cold": "Lets the song stop, next song a beat later",
+          "segue-cold": "Next song lands right on the final hit",
           "smooth": "{{seconds}} s fade"
         },
         "mixing": "AutoMixing",
@@ -434,7 +434,8 @@
         "why": {
           "fallback": "Not enough room for the preferred mix, so it uses this instead",
           "late-change": "The next song changed too recently to analyse, so it fades smoothly into it",
-          "cold-ending": "This song stops on a hit, so it gets to finish and the next one comes in a beat later",
+          "cold-ending": "This song stops on a hit, so it gets to finish and the next song lands right on that hit",
+          "ending-blend": "This song stops on the beat, so the next one is beat-matched in underneath its last bars and takes over on the final hit",
           "loud-handover": "This song ends on a hit and the next one starts straight away, so it cuts on the downbeat",
           "natural-ending": "This song has a real ending, so it plays out and the next one comes in as it dies away",
           "no-beat": "There's no steady beat to lock to, so it fades smoothly",

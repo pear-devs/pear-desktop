@@ -106,6 +106,8 @@ const SEEK_LATENCY = 0.08;
 const SETTLE_SECONDS = 14;
 const CROSSOVER_HZ = 180;
 const SILENT_VOLUME = 0.0001;
+/** How long the final hit of a song that stops on the beat rings out */
+const ENDING_RING = 1.5;
 /** Start a no-analysis fade plan this long before the song's audible end */
 const LATE_PLAN_SECONDS = 25;
 
@@ -588,6 +590,18 @@ export class AutoMixEngine {
 
     switch (plan.style) {
       case 'blend': {
+        if (plan.holdOutgoing) {
+          // The old song keeps its full ending; bass swaps on its final hit,
+          // which rings out briefly under the next song
+          const hit = mixAt + duration;
+          const beat = plan.beat || 0.5;
+          lowShelf.gain.setValueAtTime(0, hit - (beat / 2));
+          lowShelf.gain.linearRampToValueAtTime(-30, hit);
+          dry.gain.setValueAtTime(1, hit + 0.05);
+          dry.gain.setTargetAtTime(0, hit + 0.05, ENDING_RING / 4);
+          chain.source.stop(hit + ENDING_RING + 0.2);
+          break;
+        }
         // Equal-power crossfade with a DJ style bass swap halfway through
         dry.gain.setValueCurveAtTime(equalPowerOut, mixAt, duration);
         lowShelf.gain.setValueAtTime(0, mixAt + (duration * 0.45));
@@ -746,7 +760,11 @@ export class AutoMixEngine {
       chain,
       startAt,
       mixAt,
-      endAt: mixAt + (plan.style === 'cut' ? 0.05 : plan.duration),
+      endAt:
+        mixAt +
+        (plan.style === 'cut'
+          ? 0.05
+          : plan.duration + (plan.holdOutgoing ? ENDING_RING : 0)),
       switched: false,
       cutDone: false,
       head,

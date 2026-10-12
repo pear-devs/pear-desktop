@@ -6,6 +6,7 @@ export type TransitionPreference = 'auto' | TransitionStyle;
 /** Why a style was picked, so the UI can explain it */
 export type TransitionReason =
   | 'tempo-match'
+  | 'ending-blend'
   | 'natural-ending'
   | 'cold-ending'
   | 'loud-handover'
@@ -42,6 +43,11 @@ export interface TransitionPlan {
   beat: number;
   fromBpm: number;
   toBpm: number;
+  /**
+   * Keep the outgoing song at full volume through the blend and let its
+   * final hit ring out, instead of fading it across the blend
+   */
+  holdOutgoing?: boolean;
 }
 
 /**
@@ -98,6 +104,14 @@ const entryPoint = (track: TrackAnalysis) => {
   const audible = track.leadingSilenceEnd - 0.05;
   const grid = track.downbeats.length > 0 ? track.downbeats : track.beats;
   return grid.find((time) => time >= audible) ?? track.leadingSilenceEnd;
+};
+
+/** The last hit of a song that stops on the beat, if the grid reaches it */
+const finalHit = (track: TrackAnalysis) => {
+  const last = track.beats.at(-1);
+  return last !== undefined && last >= track.trailingSilenceStart - 4
+    ? last
+    : undefined;
 };
 
 /** Downbeats that start a phrase, counted from the first bar */
@@ -169,6 +183,40 @@ const planBlend = (
   return null;
 };
 
+/**
+ * For a song that stops on the beat: beat-match the next song in underneath
+ * its last bars, keep the old song at full volume, and land the next song's
+ * downbeat exactly on the final hit. Nothing of the ending is cut.
+ */
+const planEndingBlend = (
+  from: TrackAnalysis,
+  to: TrackAnalysis,
+  options: PlannerOptions,
+): TransitionPlan | null => {
+  const rate = tempoRatio(from.bpm, to.bpm);
+  const hit = finalHit(from);
+  if (!Number.isFinite(rate) || hit === undefined) return null;
+
+  for (let beats = Math.min(options.blendBeats, 8); beats >= 4; beats /= 2) {
+    const duration = beats * from.beatPeriod;
+    const mixOut = hit - duration;
+    if (mixOut < options.earliestMixOut) continue;
+    return {
+      style: 'blend',
+      reason: 'fallback',
+      mixOut,
+      mixIn: entryPoint(to),
+      duration,
+      rate,
+      beat: from.beatPeriod,
+      fromBpm: from.bpm,
+      toBpm: to.bpm,
+      holdOutgoing: true,
+    };
+  }
+  return null;
+};
+
 const planCut = (
   from: TrackAnalysis,
   to: TrackAnalysis,
@@ -218,16 +266,22 @@ const planSegue = (
   let mixOut: number;
   let duration: number;
 
+  let mixIn = to.leadingSilenceEnd;
+
   if (endsAbruptly(from)) {
-    // A beat of space after the last hit, on the song's own beat grid
-    const lastBeat = from.beats.at(-1);
-    mixOut = end + 0.5;
-    if (grid && lastBeat !== undefined) {
-      const beats = Math.ceil((end + 0.35 - lastBeat) / from.beatPeriod);
-      const onGrid = lastBeat + (beats * from.beatPeriod);
-      if (onGrid <= end + 1) mixOut = onGrid;
+    // The song stops on a hit: the next song's first downbeat lands right on
+    // that hit (its pickup, if any, plays just before), and the hit rings
+    // out underneath
+    const hit = finalHit(from) ?? end;
+    const firstDownbeat = entryPoint(to);
+    const pickup = firstDownbeat - to.leadingSilenceEnd;
+    mixOut = hit;
+    if (pickup > 0 && pickup <= 2) {
+      mixOut = hit - pickup;
+    } else {
+      mixIn = firstDownbeat;
     }
-    duration = 0.5;
+    duration = 1.5;
   } else {
     // Let the ending play out and come in as it dies away, without waiting
     // forever on a long fade or a ringing last note
@@ -249,7 +303,7 @@ const planSegue = (
     style: 'segue',
     reason: 'fallback',
     mixOut,
-    mixIn: to.leadingSilenceEnd,
+    mixIn,
     duration,
     rate: 1,
     beat: from.beatPeriod,
@@ -308,6 +362,12 @@ export const planTransition = (
     from.tempoConfidence >= DJ_TEMPO_CONFIDENCE &&
     to.tempoConfidence >= DJ_TEMPO_CONFIDENCE;
   const djBlend = stretchOk && steadyBeat && beatToTheEnd && beatFromTheStart;
+  // Songs that stop on the beat: blend into the ending when tempos match
+  const endingBlend =
+    stretchOk &&
+    endsAbruptly(from) &&
+    finalHit(from) !== undefined &&
+    beatFromTheStart;
 
   let order: TransitionStyle[];
   switch (options.preference) {
@@ -324,14 +384,19 @@ export const planTransition = (
       order = ['smooth'];
       break;
     default:
-      order = djBlend ? ['blend', 'segue', 'smooth'] : ['segue', 'smooth'];
+      order =
+        djBlend || endingBlend
+          ? ['blend', 'segue', 'smooth']
+          : ['segue', 'smooth'];
   }
 
   const reasonFor = (style: TransitionStyle): TransitionReason => {
     if (options.preference !== 'auto') {
       return style === options.preference ? 'preference' : 'fallback';
     }
-    if (style === 'blend') return 'tempo-match';
+    if (style === 'blend') {
+      return endsAbruptly(from) ? 'ending-blend' : 'tempo-match';
+    }
     if (style === 'segue') {
       return endsAbruptly(from) ? 'cold-ending' : 'natural-ending';
     }
@@ -343,7 +408,10 @@ export const planTransition = (
   for (const style of order) {
     const plan =
       style === 'blend'
-        ? planBlend(from, to, options)
+        ? endsAbruptly(from)
+          ? (planEndingBlend(from, to, options) ??
+            planBlend(from, to, options))
+          : planBlend(from, to, options)
         : style === 'segue'
           ? planSegue(from, to, options)
           : style === 'cut'

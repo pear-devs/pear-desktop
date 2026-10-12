@@ -4,6 +4,11 @@
  */
 :root {
   --automix-accent: 255, 255, 255;
+  /* Fixed, high-contrast text on the floating cards. Theme variables are
+     re-tinted by other plugins (e.g. album colour themes) and got unreadable */
+  --automix-surface: rgba(24, 24, 26, 0.97);
+  --automix-text: #fff;
+  --automix-text-dim: rgba(255, 255, 255, 0.78);
 }
 
 /* ---------- Player bar pill ---------- */
@@ -141,9 +146,9 @@
   box-sizing: border-box;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
-  background: var(--yt-spec-menu-background, #282828);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
-  color: var(--ytmusic-text-primary, #fff);
+  background: var(--automix-surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  color: var(--automix-text);
   font-family: 'YouTube Sans', Roboto, Arial, sans-serif;
   opacity: 0;
   pointer-events: none;
@@ -174,22 +179,23 @@
 
 .automix-hint-line {
   margin-top: 6px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--ytmusic-text-primary, rgba(255, 255, 255, 0.9));
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--automix-text);
 }
 
 .automix-hint-line + .automix-hint-line {
   margin-top: 4px;
-  color: var(--ytmusic-text-secondary, rgba(255, 255, 255, 0.6));
+  font-size: 12.5px;
+  color: var(--automix-text-dim);
 }
 
 .automix-hint-footer {
   margin-top: 10px;
   padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 11px;
-  color: var(--ytmusic-text-secondary, rgba(255, 255, 255, 0.6));
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  color: var(--automix-text-dim);
 }
 
 /* ---------- "AutoMixing" card ---------- */
@@ -241,7 +247,8 @@
   align-items: center;
   gap: 8px;
   margin-top: 10px;
-  font-size: 13px;
+  font-size: 14px;
+  color: var(--automix-text);
 }
 
 .automix-card-from,
@@ -253,7 +260,7 @@
 
 .automix-card-from,
 .automix-card-arrow {
-  color: var(--ytmusic-text-secondary, rgba(255, 255, 255, 0.6));
+  color: var(--automix-text-dim);
 }
 
 .automix-card-to {
@@ -261,9 +268,10 @@
 }
 
 .automix-card-detail {
-  margin-top: 4px;
-  font-size: 11px;
-  color: var(--ytmusic-text-secondary, rgba(255, 255, 255, 0.6));
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--automix-text-dim);
 }
 
 .automix-progress {
