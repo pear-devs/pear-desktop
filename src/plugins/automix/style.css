@@ -1,12 +1,9 @@
+/*
+ * --automix-accent is set from the playing song's artwork (toned down by the
+ * renderer). Without artwork everything falls back to the player's own whites.
+ */
 :root {
-  --automix-gradient: linear-gradient(
-    90deg,
-    #fa2d48 0%,
-    #c03cf0 35%,
-    #5b6cff 70%,
-    #fa2d48 100%
-  );
-  --automix-glow: rgba(176, 72, 255, 0.5);
+  --automix-accent: 255, 255, 255;
 }
 
 /* ---------- Player bar pill ---------- */
@@ -18,15 +15,17 @@
 }
 
 .automix-pill {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   height: 28px;
   padding: 0 12px 0 9px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ytmusic-text-primary, rgba(255, 255, 255, 0.9));
   font-family: 'YouTube Sans', Roboto, Arial, sans-serif;
   font-size: 12px;
   font-weight: 500;
@@ -34,18 +33,18 @@
   white-space: nowrap;
   cursor: pointer;
   transition:
-    color 0.25s ease,
-    background 0.25s ease,
-    border-color 0.25s ease,
-    box-shadow 0.4s ease;
+    color 0.6s ease,
+    background-color 0.6s ease,
+    border-color 0.6s ease,
+    box-shadow 0.6s ease;
 }
 
 .automix-pill:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 .automix-pill:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid rgba(var(--automix-accent), 0.9);
   outline-offset: 2px;
 }
 
@@ -59,29 +58,47 @@
 }
 
 .automix-pill[data-phase='inactive'] {
-  color: rgba(255, 255, 255, 0.45);
   border-style: dashed;
   background: transparent;
+  color: var(--ytmusic-text-secondary, rgba(255, 255, 255, 0.5));
 }
 
 .automix-pill[data-phase='analyzing'] .automix-icon {
-  animation: automix-pulse 1.4s ease-in-out infinite;
+  animation: automix-pulse 1.6s ease-in-out infinite;
 }
 
 .automix-pill[data-phase='ready'] {
-  border-color: transparent;
-  background:
-    linear-gradient(#1d1d1f, #1d1d1f) padding-box,
-    var(--automix-gradient) border-box;
+  border-color: rgba(var(--automix-accent), 0.5);
+}
+
+.automix-pill[data-phase='ready'] .automix-icon {
+  color: rgb(var(--automix-accent));
 }
 
 .automix-pill[data-phase='mixing'] {
-  border-color: transparent;
-  color: #fff;
-  background: var(--automix-gradient);
-  background-size: 300% 100%;
-  box-shadow: 0 0 18px var(--automix-glow);
-  animation: automix-flow 3s linear infinite;
+  border-color: rgba(var(--automix-accent), 0.6);
+  background-color: rgba(var(--automix-accent), 0.16);
+  box-shadow: 0 0 14px rgba(var(--automix-accent), 0.18);
+}
+
+/* A slow, soft sheen moving across the pill while mixing */
+.automix-pill[data-phase='mixing']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(var(--automix-accent), 0.22) 50%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  animation: automix-sheen 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.automix-pill[data-phase='mixing'] .automix-bars {
+  color: rgb(var(--automix-accent));
 }
 
 /* ---------- Equalizer bars ---------- */
@@ -100,47 +117,90 @@
   border-radius: 1px;
   background: currentColor;
   transform-origin: bottom;
-  animation: automix-bounce 0.9s ease-in-out infinite;
+  animation: automix-bounce 1.1s ease-in-out infinite;
 }
 
 .automix-bars i:nth-child(2) {
-  animation-delay: -0.6s;
+  animation-delay: -0.7s;
 }
 
 .automix-bars i:nth-child(3) {
-  animation-delay: -0.3s;
+  animation-delay: -0.35s;
 }
 
 .automix-bars i:nth-child(4) {
-  animation-delay: -0.75s;
+  animation-delay: -0.9s;
 }
 
-/* ---------- Floating "AutoMixing" card ---------- */
+/* ---------- Shared floating surface (card + hover card) ---------- */
 
-.automix-card {
+.automix-card,
+.automix-hint {
   position: fixed;
-  right: 24px;
-  bottom: calc(var(--ytmusic-player-bar-height, 72px) + 16px);
   z-index: 10000;
   box-sizing: border-box;
-  width: 320px;
-  max-width: calc(100vw - 48px);
-  padding: 14px 16px 16px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  background: rgba(22, 22, 26, 0.82);
-  backdrop-filter: blur(24px) saturate(1.6);
-  box-shadow:
-    0 18px 48px rgba(0, 0, 0, 0.45),
-    0 0 32px -8px var(--automix-glow);
-  color: #fff;
+  border-radius: 12px;
+  background: var(--yt-spec-menu-background, #282828);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  color: var(--ytmusic-text-primary, #fff);
   font-family: 'YouTube Sans', Roboto, Arial, sans-serif;
   opacity: 0;
   pointer-events: none;
-  transform: translateY(12px) scale(0.98);
   transition:
-    opacity 0.35s ease,
-    transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+/* ---------- Hover card ---------- */
+
+.automix-hint {
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  padding: 12px 14px;
+  transform: translateY(4px);
+}
+
+.automix-hint-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.automix-hint-heading {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--automix-accent));
+}
+
+.automix-hint-line {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ytmusic-text-primary, rgba(255, 255, 255, 0.9));
+}
+
+.automix-hint-line + .automix-hint-line {
+  margin-top: 4px;
+  color: var(--ytmusic-text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.automix-hint-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  color: var(--ytmusic-text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+/* ---------- "AutoMixing" card ---------- */
+
+.automix-card {
+  right: 24px;
+  bottom: calc(var(--ytmusic-player-bar-height, 72px) + 16px);
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  padding: 14px 16px 16px;
+  transform: translateY(10px);
 }
 
 .automix-card-visible {
@@ -155,25 +215,20 @@
 }
 
 .automix-card-header .automix-bars {
-  color: #e04dff;
+  color: rgb(var(--automix-accent));
 }
 
 .automix-card-title {
   font-size: 14px;
-  font-weight: 700;
-  background: var(--automix-gradient);
-  background-size: 300% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: automix-flow 3s linear infinite;
+  font-weight: 600;
 }
 
 .automix-card-style {
   margin-left: auto;
   padding: 3px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--automix-accent), 0.14);
+  color: rgb(var(--automix-accent));
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -196,22 +251,19 @@
   white-space: nowrap;
 }
 
-.automix-card-from {
-  opacity: 0.6;
+.automix-card-from,
+.automix-card-arrow {
+  color: var(--ytmusic-text-secondary, rgba(255, 255, 255, 0.6));
 }
 
 .automix-card-to {
   font-weight: 600;
 }
 
-.automix-card-arrow {
-  opacity: 0.6;
-}
-
 .automix-card-detail {
   margin-top: 4px;
   font-size: 11px;
-  opacity: 0.6;
+  color: var(--ytmusic-text-secondary, rgba(255, 255, 255, 0.6));
 }
 
 .automix-progress {
@@ -219,45 +271,41 @@
   margin-top: 12px;
   overflow: hidden;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .automix-progress-fill {
   height: 100%;
   border-radius: 2px;
-  background: var(--automix-gradient);
-  background-size: 300% 100%;
-  animation: automix-flow 3s linear infinite;
+  background: rgb(var(--automix-accent));
   transition: width 0.12s linear;
 }
 
-/* ---------- Player bar glow while mixing ---------- */
+/* ---------- Player bar while mixing ---------- */
 
 ytmusic-player-bar {
-  transition: box-shadow 0.6s ease;
+  transition: box-shadow 0.8s ease;
 }
 
 ytmusic-player-bar.automix-mixing {
-  box-shadow:
-    0 -1px 0 0 rgba(192, 60, 240, 0.7),
-    0 -14px 36px -14px var(--automix-glow);
+  box-shadow: 0 -1px 0 0 rgba(var(--automix-accent), 0.45);
 }
 
 /* ---------- Animations ---------- */
 
-@keyframes automix-flow {
+@keyframes automix-sheen {
   from {
-    background-position: 0% 50%;
+    background-position: 125% 0;
   }
   to {
-    background-position: 300% 50%;
+    background-position: -125% 0;
   }
 }
 
 @keyframes automix-bounce {
   0%,
   100% {
-    transform: scaleY(0.25);
+    transform: scaleY(0.3);
   }
   50% {
     transform: scaleY(1);
@@ -270,15 +318,13 @@ ytmusic-player-bar.automix-mixing {
     opacity: 1;
   }
   50% {
-    opacity: 0.35;
+    opacity: 0.4;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .automix-pill,
+  .automix-pill[data-phase='mixing']::after,
   .automix-bars i,
-  .automix-card-title,
-  .automix-progress-fill,
   .automix-pill[data-phase='analyzing'] .automix-icon {
     animation: none;
   }

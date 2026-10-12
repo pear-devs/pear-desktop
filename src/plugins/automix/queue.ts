@@ -47,6 +47,8 @@ const toTrack = (renderer: TrackRenderer | undefined): QueueTrack | null => {
 export interface QueueSnapshot {
   current: QueueTrack | null;
   next: QueueTrack | null;
+  /** The song after `next`, analysed ahead so queue edits are covered */
+  afterNext: QueueTrack | null;
   repeatMode: RepeatMode;
 }
 
@@ -55,15 +57,35 @@ export interface QueueSnapshot {
  * When the player is on the "video" side of a song, the next track's
  * video counterpart is returned too, since that's what will play.
  */
+export const getQueueStore = () =>
+  document.querySelector<QueueElement>('#queue')?.queue?.store?.store;
+
 export const readQueue = (playingId: string | null): QueueSnapshot | null => {
-  const state = document
-    .querySelector<QueueElement>('#queue')
-    ?.queue?.store?.store?.getState()?.queue;
+  const state = getQueueStore()?.getState()?.queue;
   if (!state?.items?.length) return null;
 
-  const index = state.items.findIndex(
+  const selected = state.items.findIndex(
     (item) => primaryOf(item)?.selected || counterpartOf(item)?.selected,
   );
+
+  // Trust the song that's actually playing over the "selected" flag, which
+  // can lag behind after a programmatic skip. If the same song is queued
+  // more than once, take the copy closest to the selected one.
+  let index = -1;
+  if (playingId !== null) {
+    state.items.forEach((item, i) => {
+      if (
+        (primaryOf(item)?.videoId === playingId ||
+          counterpartOf(item)?.videoId === playingId) &&
+        (index < 0 ||
+          Math.abs(i - Math.max(selected, 0)) <
+            Math.abs(index - Math.max(selected, 0)))
+      ) {
+        index = i;
+      }
+    });
+  }
+  if (index < 0) index = selected;
   if (index < 0) return null;
 
   const currentItem = state.items[index];
@@ -72,8 +94,13 @@ export const readQueue = (playingId: string | null): QueueSnapshot | null => {
     primaryOf(currentItem)?.videoId !== playingId &&
     counterpartOf(currentItem)?.videoId === playingId;
 
-  let nextItem: QueueItem | undefined = state.items[index + 1];
-  if (!nextItem && state.repeatMode === 'ALL') nextItem = state.items[0];
+  const itemAt = (offset: number): QueueItem | undefined => {
+    const at = index + offset;
+    if (at < state.items.length) return state.items[at];
+    return state.repeatMode === 'ALL'
+      ? state.items[at % state.items.length]
+      : undefined;
+  };
 
   const pick = (item: QueueItem | undefined) => {
     if (!item) return undefined;
@@ -82,7 +109,8 @@ export const readQueue = (playingId: string | null): QueueSnapshot | null => {
 
   return {
     current: toTrack(pick(currentItem)),
-    next: toTrack(pick(nextItem)),
+    next: toTrack(pick(itemAt(1))),
+    afterNext: toTrack(pick(itemAt(2))),
     repeatMode: state.repeatMode,
   };
 };

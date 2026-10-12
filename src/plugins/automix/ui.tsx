@@ -1,4 +1,11 @@
-import { createEffect, createMemo, Show, type Accessor } from 'solid-js';
+import {
+  createEffect,
+  createMemo,
+  createSignal,
+  For,
+  Show,
+  type Accessor,
+} from 'solid-js';
 import { render } from 'solid-js/web';
 
 import { t } from '@/i18n';
@@ -55,7 +62,72 @@ const MixBars = () => (
   </span>
 );
 
-const Pill = (props: UiProps) => {
+interface Hint {
+  heading: string;
+  lines: string[];
+  footer: string;
+}
+
+/** What the hover card says: which method comes next, and why */
+const hintFor = (status: AutoMixStatus): Hint => {
+  const { plan, phase, reason, toTitle } = status;
+  const footer = t(
+    phase === 'inactive'
+      ? 'plugins.automix.ui.hint.click-on'
+      : 'plugins.automix.ui.hint.click-off',
+  );
+
+  if ((phase === 'ready' || phase === 'mixing') && plan) {
+    return {
+      heading: t(
+        phase === 'mixing'
+          ? 'plugins.automix.ui.hint.now'
+          : 'plugins.automix.ui.hint.next',
+        { style: styleName(plan) },
+      ),
+      lines: [
+        t(`plugins.automix.ui.why.${plan.reason}`),
+        ...(phase === 'ready'
+          ? [
+              t('plugins.automix.ui.hint.when', {
+                title: toTitle ?? '',
+                time: formatTime(plan.mixOut),
+              }),
+            ]
+          : []),
+        describePlan(plan),
+      ],
+      footer,
+    };
+  }
+
+  switch (phase) {
+    case 'inactive':
+      return {
+        heading: t('plugins.automix.ui.hint.off-heading'),
+        lines: [],
+        footer,
+      };
+    case 'analyzing':
+      return {
+        heading: t('plugins.automix.ui.hint.analyzing-heading'),
+        lines: [t('plugins.automix.ui.hint.analyzing')],
+        footer,
+      };
+    default:
+      return {
+        heading: t('plugins.automix.ui.hint.waiting-heading'),
+        lines: reason ? [t(`plugins.automix.ui.reason.${reason}`)] : [],
+        footer,
+      };
+  }
+};
+
+interface PillProps extends UiProps {
+  onHover: (anchor: DOMRect | null) => void;
+}
+
+const Pill = (props: PillProps) => {
   const phase = () => props.status().phase;
 
   const label = () => {
@@ -69,42 +141,29 @@ const Pill = (props: UiProps) => {
     }
   };
 
-  const tooltip = createMemo(() => {
-    const { plan, toTitle } = props.status();
-    switch (phase()) {
-      case 'inactive':
-        return t('plugins.automix.ui.tooltip.off');
-      case 'analyzing':
-        return t('plugins.automix.ui.tooltip.analyzing');
-      case 'ready':
-        return plan
-          ? t('plugins.automix.ui.tooltip.ready', {
-              style: styleName(plan),
-              time: formatTime(plan.mixOut),
-              title: toTitle ?? '',
-              detail: describePlan(plan),
-            })
-          : t('plugins.automix.ui.tooltip.waiting');
-      case 'mixing':
-        return plan
-          ? `${styleName(plan)} · ${describePlan(plan)}`
-          : t('plugins.automix.ui.mixing');
-      default:
-        return t('plugins.automix.ui.tooltip.waiting');
-    }
+  const ariaLabel = createMemo(() => {
+    const hint = hintFor(props.status());
+    return [hint.heading, ...hint.lines].join('. ');
   });
+
+  const show = (event: Event) =>
+    props.onHover((event.currentTarget as HTMLElement).getBoundingClientRect());
+  const hide = () => props.onHover(null);
 
   return (
     <button
-      aria-label={tooltip()}
+      aria-label={ariaLabel()}
       aria-pressed={phase() !== 'inactive'}
       class="automix-pill"
       data-phase={phase()}
+      onBlur={hide}
       onClick={(event) => {
         event.stopPropagation();
         props.onToggle();
       }}
-      title={tooltip()}
+      onFocus={show}
+      onMouseEnter={show}
+      onMouseLeave={hide}
       type="button"
     >
       <Show fallback={<AutoMixIcon />} when={phase() === 'mixing'}>
@@ -112,6 +171,36 @@ const Pill = (props: UiProps) => {
       </Show>
       <span class="automix-label">{label()}</span>
     </button>
+  );
+};
+
+const HoverCard = (props: {
+  status: Accessor<AutoMixStatus>;
+  anchor: Accessor<DOMRect | null>;
+}) => {
+  const hint = createMemo(() => hintFor(props.status()));
+  const position = () => {
+    const anchor = props.anchor();
+    if (!anchor) return {};
+    return {
+      right: `${Math.max(8, window.innerWidth - anchor.right)}px`,
+      bottom: `${window.innerHeight - anchor.top + 10}px`,
+    };
+  };
+
+  return (
+    <div
+      aria-hidden="true"
+      class="automix-hint"
+      classList={{ 'automix-hint-visible': props.anchor() !== null }}
+      style={position()}
+    >
+      <div class="automix-hint-heading">{hint().heading}</div>
+      <For each={hint().lines}>
+        {(line) => <div class="automix-hint-line">{line}</div>}
+      </For>
+      <div class="automix-hint-footer">{hint().footer}</div>
+    </div>
   );
 };
 
@@ -172,9 +261,19 @@ export const mountUi = (props: UiProps) => {
   cardHost.className = 'automix-card-host';
   document.body.append(cardHost);
 
+  const [anchor, setAnchor] = createSignal<DOMRect | null>(null);
+
   const disposers = [
-    render(() => <Pill {...props} />, pillHost),
-    render(() => <MixCard {...props} />, cardHost),
+    render(() => <Pill {...props} onHover={setAnchor} />, pillHost),
+    render(
+      () => (
+        <>
+          <MixCard {...props} />
+          <HoverCard anchor={anchor} status={props.status} />
+        </>
+      ),
+      cardHost,
+    ),
   ];
 
   // The player bar can be re-rendered, keep the pill attached to it

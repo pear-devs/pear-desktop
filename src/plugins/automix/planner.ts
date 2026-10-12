@@ -3,6 +3,16 @@ import type { TrackAnalysis } from './analysis';
 export type TransitionStyle = 'blend' | 'cut' | 'smooth';
 export type TransitionPreference = 'auto' | TransitionStyle;
 
+/** Why a style was picked, so the UI can explain it */
+export type TransitionReason =
+  | 'tempo-match'
+  | 'loud-handover'
+  | 'tempo-mismatch'
+  | 'no-beat'
+  | 'preference'
+  | 'fallback'
+  | 'late-change';
+
 export interface PlannerOptions {
   preference: TransitionPreference;
   /** Length of a beat-matched blend, in beats of the outgoing track */
@@ -17,6 +27,7 @@ export interface PlannerOptions {
 
 export interface TransitionPlan {
   style: TransitionStyle;
+  reason: TransitionReason;
   /** Outgoing track time where the incoming track enters */
   mixOut: number;
   /** Incoming track time at that same moment */
@@ -109,6 +120,7 @@ const planBlend = (
 
     return {
       style: 'blend',
+      reason: 'fallback',
       mixOut,
       mixIn: entryPoint(to),
       duration,
@@ -139,6 +151,7 @@ const planCut = (
 
   return {
     style: 'cut',
+    reason: 'fallback',
     mixOut,
     mixIn: entryPoint(to),
     duration: from.beatPeriod,
@@ -168,6 +181,7 @@ const planSmooth = (
 
   return {
     style: 'smooth',
+    reason: 'fallback',
     mixOut,
     mixIn: to.leadingSilenceEnd,
     duration,
@@ -206,6 +220,16 @@ export const planTransition = (
       else order = ['smooth'];
   }
 
+  const reasonFor = (style: TransitionStyle): TransitionReason => {
+    if (options.preference !== 'auto') {
+      return style === options.preference ? 'preference' : 'fallback';
+    }
+    if (style === 'cut') return 'loud-handover';
+    if (style === 'blend') return 'tempo-match';
+    if (!gridsOk) return 'no-beat';
+    return stretchOk ? 'fallback' : 'tempo-mismatch';
+  };
+
   for (const style of order) {
     const plan =
       style === 'blend'
@@ -213,7 +237,7 @@ export const planTransition = (
         : style === 'cut'
           ? planCut(from, to, options)
           : planSmooth(from, to, options);
-    if (plan) return plan;
+    if (plan) return { ...plan, reason: reasonFor(style) };
   }
   return null;
 };

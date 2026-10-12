@@ -1,7 +1,8 @@
 import { decodeAndAnalyze, type AnalyzedTrack } from './decoder';
 import { planTransition, type TransitionPlan } from './planner';
-import { readQueue, type QueueTrack } from './queue';
+import { getQueueStore, readQueue, type QueueTrack } from './queue';
 
+import type { TrackAnalysis } from './analysis';
 import type { AutoMixPluginConfig } from './config';
 import type { MusicPlayer } from '@/types/music-player';
 
@@ -12,8 +13,18 @@ export type AutoMixPhase =
   | 'ready'
   | 'mixing';
 
+/** Why AutoMix won't mix the current song into the next one */
+export type AutoMixWaitReason =
+  | 'no-next'
+  | 'repeat-one'
+  | 'same-album'
+  | 'analysis-failed'
+  | 'version-mismatch'
+  | 'no-room';
+
 export interface AutoMixStatus {
   phase: AutoMixPhase;
+  reason?: AutoMixWaitReason;
   plan?: TransitionPlan;
   fromTitle?: string;
   toTitle?: string;
@@ -77,6 +88,23 @@ const RETRY_FAILED_MS = 120_000;
 const SEEK_LATENCY = 0.08;
 const SETTLE_SECONDS = 8;
 const CROSSOVER_HZ = 180;
+/** Start a no-analysis fade plan this long before the song's audible end */
+const LATE_PLAN_SECONDS = 25;
+
+/** Stand-in for a next song we couldn't analyse in time: fade into its start */
+const unknownTrack: TrackAnalysis = {
+  duration: Number.POSITIVE_INFINITY,
+  bpm: 0,
+  beatPeriod: 0,
+  tempoConfidence: 0,
+  beats: [],
+  downbeats: [],
+  leadingSilenceEnd: 0,
+  trailingSilenceStart: Number.POSITIVE_INFINITY,
+  introEnd: 0,
+  outroStart: Number.POSITIVE_INFINITY,
+  bodyLoudness: -20,
+};
 
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
@@ -107,6 +135,9 @@ export class AutoMixEngine {
 
   private currentId: string | null = null;
   private next: QueueTrack | null = null;
+  private afterNext: QueueTrack | null = null;
+  private queueStore: ReturnType<typeof getQueueStore> = undefined;
+  private unsubscribeQueue: (() => void) | null = null;
   private currentTitle = '';
   private repeatOne = false;
   private sameAlbum = false;
@@ -119,6 +150,7 @@ export class AutoMixEngine {
   private timer: number | undefined;
   private stopped = false;
   private lastStatus = '';
+  private lastSummary = '';
 
   constructor(options: EngineOptions, config: AutoMixPluginConfig) {
     this.api = options.api;
@@ -158,6 +190,8 @@ export class AutoMixEngine {
     video?.removeEventListener('volumechange', this.onVolumeChange);
     video?.removeEventListener('seeking', this.onSeeking);
     video?.removeEventListener('pause', this.onPause);
+    this.unsubscribeQueue?.();
+    this.unsubscribeQueue = null;
     this.tracks.clear();
     this.ready.clear();
   }
@@ -197,6 +231,15 @@ export class AutoMixEngine {
     });
     if (key === this.lastStatus) return;
     this.lastStatus = key;
+
+    const summary = [status.phase, status.reason, status.plan?.style]
+      .filter(Boolean)
+      .join(' ');
+    if (summary !== this.lastSummary) {
+      this.lastSummary = summary;
+      console.info('[AutoMix]', summary, status.plan ?? '');
+    }
+
     this.onStatus(status);
   }
 
@@ -274,12 +317,54 @@ export class AutoMixEngine {
     }
   }
 
+  /**
+   * React to queue edits ("Play next", drag and drop, removals) right away
+   * instead of waiting for the next poll. The player can swap the queue
+   * store when a new queue starts, so this re-subscribes when it changes.
+   */
+  private watchQueue() {
+    const store = getQueueStore();
+    if (store === this.queueStore) return;
+    this.unsubscribeQueue?.();
+    this.unsubscribeQueue = null;
+    this.queueStore = store;
+    if (!store) return;
+
+    const unsubscribe = store.subscribe(this.onQueueChanged);
+    this.unsubscribeQueue =
+      typeof unsubscribe === 'function' ? (unsubscribe as () => void) : null;
+  }
+
+  private readonly onQueueChanged = () => {
+    if (this.mix) {
+      // Re-read soon so the song after the incoming one gets prefetched
+      this.lastQueueRead = 0;
+      return;
+    }
+    const queue = readQueue(this.currentId);
+    if (
+      queue?.next?.videoId !== this.next?.videoId ||
+      queue?.afterNext?.videoId !== this.afterNext?.videoId ||
+      (queue?.repeatMode === 'ONE') !== this.repeatOne
+    ) {
+      this.lastQueueRead = 0;
+      this.schedule(0);
+    }
+  };
+
   private refreshQueue(force = false) {
     if (!force && Date.now() - this.lastQueueRead < QUEUE_REFRESH_MS) return;
     this.lastQueueRead = Date.now();
 
     const queue = readQueue(this.currentId);
+    if (this.next && queue?.next?.videoId !== this.next.videoId) {
+      console.info(
+        '[AutoMix] next song changed:',
+        queue?.next?.title ?? 'nothing',
+      );
+    }
     this.next = queue?.next ?? null;
+    this.afterNext = queue?.afterNext ?? null;
     this.currentTitle = queue?.current?.title ?? this.currentTitle;
     this.repeatOne = queue?.repeatMode === 'ONE';
     this.sameAlbum = Boolean(
@@ -306,18 +391,23 @@ export class AutoMixEngine {
       this.refreshQueue();
     }
 
-    const nextId = this.next?.videoId;
-    this.pruneTracks([id, nextId]);
+    this.watchQueue();
 
-    if (
-      !nextId ||
-      nextId === id ||
-      this.repeatOne ||
-      video.loop ||
-      (this.config.respectAlbums && this.sameAlbum)
-    ) {
+    const nextId = this.next?.videoId;
+    const afterNextId = this.afterNext?.videoId;
+    this.pruneTracks([id, nextId, afterNextId]);
+
+    const blocked: AutoMixWaitReason | null =
+      !nextId || nextId === id
+        ? 'no-next'
+        : this.repeatOne || video.loop
+          ? 'repeat-one'
+          : this.config.respectAlbums && this.sameAlbum
+            ? 'same-album'
+            : null;
+    if (blocked || !nextId) {
       this.plan = null;
-      this.emit({ phase: 'waiting' });
+      this.emit({ phase: 'waiting', reason: blocked ?? 'no-next' });
       return IDLE_TICK_MS;
     }
 
@@ -325,10 +415,30 @@ export class AutoMixEngine {
     this.ensureTrack(nextId);
 
     const from = this.ready.get(id);
+    if (!from) {
+      this.emit(
+        this.tracks.has(id)
+          ? { phase: 'analyzing' }
+          : { phase: 'waiting', reason: 'analysis-failed' },
+      );
+      return IDLE_TICK_MS;
+    }
+
+    // Look one song further so reordering the queue is usually covered
     const to = this.ready.get(nextId);
-    if (!from || !to) {
-      const pending = this.tracks.has(id) || this.tracks.has(nextId);
-      this.emit({ phase: pending ? 'analyzing' : 'waiting' });
+    if (to && afterNextId && afterNextId !== id) this.ensureTrack(afterNextId);
+
+    // The next song changed too late (or couldn't be analysed): rather than
+    // stopping dead, fade into it once the end of this song gets close
+    const late =
+      video.currentTime >
+      from.analysis.trailingSilenceStart - LATE_PLAN_SECONDS;
+    if (!to && !late) {
+      this.emit(
+        this.tracks.has(nextId)
+          ? { phase: 'analyzing' }
+          : { phase: 'waiting', reason: 'analysis-failed' },
+      );
       return IDLE_TICK_MS;
     }
 
@@ -338,28 +448,29 @@ export class AutoMixEngine {
       Math.abs(video.duration - from.analysis.duration) > 2
     ) {
       this.plan = null;
-      this.emit({ phase: 'waiting' });
+      this.emit({ phase: 'waiting', reason: 'version-mismatch' });
       return IDLE_TICK_MS;
     }
 
-    const key = JSON.stringify([id, nextId, this.config]);
+    const key = JSON.stringify([id, nextId, Boolean(to), this.config]);
     const tooLate =
       this.plan &&
       video.currentTime > this.plan.mixOut - prerollFor(this.plan) + 0.5;
     if (key !== this.planKey || tooLate) {
       this.planKey = key;
-      this.plan = planTransition(from.analysis, to.analysis, {
-        preference: this.config.transition,
+      const plan = planTransition(from.analysis, to?.analysis ?? unknownTrack, {
+        preference: to ? this.config.transition : 'smooth',
         blendBeats: this.config.blendBeats,
         maxStretch: this.config.maxStretch,
         smoothSeconds: this.config.smoothSeconds,
         earliestMixOut: Math.max(video.currentTime + 6.5, from.tailStart + 6.5),
       });
+      this.plan = plan && !to ? { ...plan, reason: 'late-change' } : plan;
     }
 
     const plan = this.plan;
     if (!plan) {
-      this.emit({ phase: 'waiting' });
+      this.emit({ phase: 'waiting', reason: 'no-room' });
       return IDLE_TICK_MS;
     }
 
@@ -562,10 +673,19 @@ export class AutoMixEngine {
     this.at(startAt + 0.2, () => {
       if (!this.mix) return;
       this.mix.switched = true;
-      this.api.nextVideo();
+      this.skipToNext();
     });
 
     this.emitMix();
+  }
+
+  /** Same path as the user pressing Next, so the queue follows along */
+  private skipToNext() {
+    const button = document.querySelector<HTMLElement>(
+      'ytmusic-player-bar .next-button',
+    );
+    if (button) button.click();
+    else this.api.nextVideo();
   }
 
   private sliderVolume() {
@@ -685,6 +805,8 @@ export class AutoMixEngine {
       this.fallBackToFade(mix, now);
     }
 
+    if (id === mix.toId) this.prefetchAfter(mix);
+
     if (mix.settleAt !== undefined) {
       this.tickSettle(mix, now);
       return;
@@ -755,6 +877,14 @@ export class AutoMixEngine {
     this.emitMix();
   }
 
+  /** Start analysing the song after the incoming one while we mix */
+  private prefetchAfter(mix: ActiveMix) {
+    if (Date.now() - this.lastQueueRead < QUEUE_REFRESH_MS) return;
+    this.lastQueueRead = Date.now();
+    const upcoming = readQueue(mix.toId)?.next?.videoId;
+    if (upcoming && upcoming !== mix.toId) this.ensureTrack(upcoming);
+  }
+
   /** Glide the incoming song back to its own tempo after the mix */
   private tickSettle(mix: ActiveMix, now: number) {
     const from = mix.settleFrom ?? 1;
@@ -791,7 +921,13 @@ export class AutoMixEngine {
       // Already scheduled to stop
     }
 
-    mix.plan = { ...mix.plan, style: 'smooth', rate: 1, duration: remaining };
+    mix.plan = {
+      ...mix.plan,
+      style: 'smooth',
+      reason: 'fallback',
+      rate: 1,
+      duration: remaining,
+    };
     mix.mixAt = start;
     mix.endAt = start + remaining;
     mix.follow = false;
@@ -838,10 +974,19 @@ export class AutoMixEngine {
     );
   }
 
+  /** A mix only starts at normal speed, so always hand that back */
+  private restoreRate() {
+    const video = this.video;
+    if (video && Math.abs(video.playbackRate - 1) > 0.0005) {
+      video.playbackRate = 1;
+    }
+  }
+
   private finish() {
     const mix = this.mix;
     if (!mix) return;
     this.cleanup(mix, 0.2);
+    this.restoreRate();
     this.mix = null;
     this.plan = null;
     this.planKey = '';
@@ -854,10 +999,8 @@ export class AutoMixEngine {
     const video = this.video;
     if (!mix) return;
     this.cleanup(mix, 0.3);
-    if (video) {
-      video.volume = mix.baseVolume;
-      if (!mix.rateLocked && mix.lastRate !== 1) video.playbackRate = 1;
-    }
+    if (video) video.volume = mix.baseVolume;
+    this.restoreRate();
     this.mix = null;
     this.plan = null;
     this.planKey = '';

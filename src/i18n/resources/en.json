@@ -409,11 +409,33 @@
         },
         "mixing": "AutoMixing",
         "off": "AutoMix off",
-        "tooltip": {
-          "analyzing": "AutoMix is analysing the beats of this song and the next one…",
-          "off": "AutoMix is off - click to turn it on",
-          "ready": "Next: {{style}} into \"{{title}}\" at {{time}} ({{detail}}). Click to turn AutoMix off",
-          "waiting": "AutoMix is on - waiting for a song to mix into. Click to turn it off"
+        "reason": {
+          "analysis-failed": "couldn't download or analyse a song",
+          "no-next": "nothing queued after this song",
+          "no-room": "no good mix point left in this song",
+          "repeat-one": "repeat one is on",
+          "same-album": "next song is from the same album",
+          "version-mismatch": "the playing version doesn't match the analysed audio"
+        },
+        "hint": {
+          "analyzing": "Analysing the beats of this song and the next one",
+          "analyzing-heading": "Picking a transition…",
+          "click-off": "Click to turn AutoMix off",
+          "click-on": "Click to turn AutoMix on",
+          "next": "Next: {{style}}",
+          "now": "Mixing now: {{style}}",
+          "off-heading": "AutoMix is off",
+          "waiting-heading": "No transition planned",
+          "when": "Into \"{{title}}\" at {{time}}"
+        },
+        "why": {
+          "fallback": "Not enough room for the preferred mix, so it uses this instead",
+          "late-change": "The next song changed too recently to analyse, so it fades smoothly into it",
+          "loud-handover": "This song ends on a hit and the next one starts straight away, so it cuts on the downbeat",
+          "no-beat": "There's no steady beat to lock to, so it fades smoothly",
+          "preference": "Chosen in the AutoMix settings",
+          "tempo-match": "The tempos are close, so the next song is time-stretched and its beats locked to this one",
+          "tempo-mismatch": "The tempos are too far apart to beat-match, so it fades smoothly"
         }
       }
     },
