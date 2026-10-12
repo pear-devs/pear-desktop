@@ -122,6 +122,8 @@ const SEEK_AND_SKIP_KEYS = new Set([
 const IDLE_TICK_MS = 250;
 const FAST_TICK_MS = 20;
 const QUEUE_REFRESH_MS = 2000;
+/** A song-length mismatch has to last this long to count (seeks re-buffer) */
+const MISMATCH_GRACE_MS = 3000;
 const RETRY_FAILED_MS = 120_000;
 /** Media seek takes a moment before audio resumes */
 const SEEK_LATENCY = 0.08;
@@ -430,6 +432,34 @@ export class AutoMixEngine {
     );
   }
 
+  private mismatchSince: number | null = null;
+
+  private playingDuration(video: HTMLVideoElement) {
+    try {
+      const duration = this.api.getDuration();
+      if (Number.isFinite(duration) && duration > 0) return duration;
+    } catch {
+      // Fall back to the element
+    }
+    return video.duration;
+  }
+
+  private isOtherVersion(video: HTMLVideoElement, from: AnalyzedTrack) {
+    const duration = this.playingDuration(video);
+    const differs =
+      !video.seeking &&
+      video.readyState >= 1 &&
+      Number.isFinite(duration) &&
+      duration > 0 &&
+      Math.abs(duration - from.analysis.duration) > 2;
+    if (!differs) {
+      this.mismatchSince = null;
+      return false;
+    }
+    this.mismatchSince ??= Date.now();
+    return Date.now() - this.mismatchSince > MISMATCH_GRACE_MS;
+  }
+
   private tickIdle(): number {
     const video = this.video;
     const id = this.currentVideoId();
@@ -441,6 +471,7 @@ export class AutoMixEngine {
 
     if (id !== this.currentId) {
       this.currentId = id;
+      this.mismatchSince = null;
       this.currentTitle = this.api.getVideoData()?.title ?? '';
       this.plan = null;
       this.planKey = '';
@@ -500,12 +531,10 @@ export class AutoMixEngine {
       return IDLE_TICK_MS;
     }
 
-    // The decoded audio must be the stream that's actually playing
-    if (
-      Number.isFinite(video.duration) &&
-      Math.abs(video.duration - from.analysis.duration) > 2
-    ) {
-      this.plan = null;
+    // The decoded audio must be the stream that's actually playing. The
+    // element's duration wobbles while it seeks / re-buffers, so ask the
+    // player first and only believe a mismatch that lasts
+    if (this.isOtherVersion(video, from)) {
       this.emit({ phase: 'waiting', reason: 'version-mismatch' });
       return IDLE_TICK_MS;
     }

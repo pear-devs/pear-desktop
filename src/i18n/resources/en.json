@@ -434,7 +434,7 @@
         },
         "why": {
           "fallback": "Not enough room for the preferred mix, so it uses this instead",
-          "key-clash": "The tempos would match, but the keys clash ({{from}} vs {{to}}), so the songs aren't overlapped",
+          "key-clash": "The beats match but the keys clash ({{from}} vs {{to}}), so the overlap is kept short",
           "late-change": "The next song changed too recently to analyse, so it fades smoothly into it",
           "cold-ending": "This song stops on a hit, so it gets to finish and the next song lands right on that hit",
           "ending-blend": "This song stops on the beat, so the next one is beat-matched in underneath its last bars and takes over on the final hit",

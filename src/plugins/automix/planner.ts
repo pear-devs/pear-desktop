@@ -70,7 +70,7 @@ const PHRASE_SNAP_SECONDS = 5;
 const SEGUE_MAX_WAIT = 8;
 
 /** Both songs need a clearly steady beat before they get a DJ-style blend */
-const DJ_TEMPO_CONFIDENCE = 0.6;
+const DJ_TEMPO_CONFIDENCE = 0.45;
 
 /** Minimum tempo confidence to trust a beat grid */
 export const MIN_TEMPO_CONFIDENCE = 0.35;
@@ -142,12 +142,15 @@ const planBlend = (
   from: TrackAnalysis,
   to: TrackAnalysis,
   options: PlannerOptions,
+  clash = false,
 ): TransitionPlan | null => {
   const rate = tempoRatio(from.bpm, to.bpm);
   if (!Number.isFinite(rate)) return null;
 
-  // Try the requested length first, then shorter blends if we're out of room
-  for (let beats = options.blendBeats; beats >= 4; beats /= 2) {
+  // Try the requested length first, then shorter blends if we're out of
+  // room. Clashing keys get a short overlap
+  const longest = clash ? Math.min(options.blendBeats, 8) : options.blendBeats;
+  for (let beats = longest; beats >= 4; beats /= 2) {
     const duration = beats * from.beatPeriod;
     const latestStart = from.trailingSilenceStart - duration;
     // Start in the outro, but never so late that the blend runs past the end
@@ -203,12 +206,14 @@ const planEndingBlend = (
   from: TrackAnalysis,
   to: TrackAnalysis,
   options: PlannerOptions,
+  clash = false,
 ): TransitionPlan | null => {
   const rate = tempoRatio(from.bpm, to.bpm);
   const hit = finalHit(from);
   if (!Number.isFinite(rate) || hit === undefined) return null;
 
-  for (let beats = Math.min(options.blendBeats, 8); beats >= 4; beats /= 2) {
+  const longest = Math.min(options.blendBeats, clash ? 4 : 8);
+  for (let beats = longest; beats >= 4; beats /= 2) {
     const duration = beats * from.beatPeriod;
     const mixOut = hit - duration;
     if (mixOut < options.earliestMixOut) continue;
@@ -354,7 +359,7 @@ const planSmooth = (
 };
 
 /** Most a song may speed up / slow down at the edge we beat-match on */
-const MAX_EDGE_DRIFT = 0.03;
+const MAX_EDGE_DRIFT = 0.04;
 
 export const planTransition = (
   outgoing: TrackAnalysis,
@@ -383,16 +388,14 @@ export const planTransition = (
   const beatToTheEnd =
     !endsAbruptly(from) && lastBeat >= from.decayPoint - 1;
   const beatFromTheStart =
-    (to.beats[0] ?? Number.POSITIVE_INFINITY) <= to.leadingSilenceEnd + 1.5;
+    (to.beats[0] ?? Number.POSITIVE_INFINITY) <= to.leadingSilenceEnd + 3;
   const steadyBeat =
     from.tempoConfidence >= DJ_TEMPO_CONFIDENCE &&
     to.tempoConfidence >= DJ_TEMPO_CONFIDENCE;
-  const djBlend =
-    stretchOk && steadyBeat && beatToTheEnd && beatFromTheStart && !clash;
+  const djBlend = stretchOk && steadyBeat && beatToTheEnd && beatFromTheStart;
   // Songs that stop on the beat: blend into the ending when tempos match
   const endingBlend =
     stretchOk &&
-    !clash &&
     endsAbruptly(from) &&
     finalHit(from) !== undefined &&
     beatFromTheStart;
@@ -423,17 +426,10 @@ export const planTransition = (
       return style === options.preference ? 'preference' : 'fallback';
     }
     if (style === 'blend') {
+      if (clash) return 'key-clash';
       return endsAbruptly(from) ? 'ending-blend' : 'tempo-match';
     }
     if (style === 'segue') {
-      // Say so when only the keys stopped a beat-matched blend
-      const wouldBlend =
-        stretchOk &&
-        beatFromTheStart &&
-        (endsAbruptly(from)
-          ? finalHit(from) !== undefined
-          : steadyBeat && beatToTheEnd);
-      if (clash && wouldBlend) return 'key-clash';
       return endsAbruptly(from) ? 'cold-ending' : 'natural-ending';
     }
     if (style === 'cut') return 'loud-handover';
@@ -445,9 +441,9 @@ export const planTransition = (
     const plan =
       style === 'blend'
         ? endsAbruptly(from)
-          ? (planEndingBlend(from, to, options) ??
-            planBlend(from, to, options))
-          : planBlend(from, to, options)
+          ? (planEndingBlend(from, to, options, clash) ??
+            planBlend(from, to, options, clash))
+          : planBlend(from, to, options, clash)
         : style === 'segue'
           ? planSegue(from, to, options)
           : style === 'cut'
