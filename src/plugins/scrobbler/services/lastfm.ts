@@ -255,6 +255,13 @@ const createToken = async ({
 let authWindowOpened = false;
 let latestAuthResult = false;
 
+/**
+ * Opens a modal authentication window to authorize the application with Last.fm OAuth.
+ *
+ * @param config - The scrobbler plugin configuration containing API keys and session tokens.
+ * @param mainWindow - The parent BrowserWindow to attach the modal authentication dialog to.
+ * @returns A promise resolving to true if authentication succeeded, false otherwise.
+ */
 const authenticate = async (
   config: ScrobblerPluginConfig,
   mainWindow: BrowserWindow,
@@ -269,6 +276,7 @@ const authenticate = async (
         show: false,
         webPreferences: {
           nodeIntegration: false,
+          contextIsolation: true,
         },
         autoHideMenuBar: true,
         parent: mainWindow,
