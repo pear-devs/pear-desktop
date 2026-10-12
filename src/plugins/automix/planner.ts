@@ -19,7 +19,8 @@ export type TransitionReason =
   | 'preference'
   | 'fallback'
   | 'late-change'
-  | 'key-clash';
+  | 'key-clash'
+  | 'beat-only-cut';
 
 export interface PlannerOptions {
   preference: TransitionPreference;
@@ -29,6 +30,8 @@ export interface PlannerOptions {
   maxStretch: number;
   /** Maximum length of a smooth fade, in seconds */
   smoothSeconds: number;
+  /** Never segue: beat-match when tempos allow, otherwise cut on the beat */
+  beatOnly?: boolean;
   /** Mix points before this time (outgoing timeline) can't be used */
   earliestMixOut: number;
 }
@@ -448,12 +451,21 @@ export const planTransition = (
       order = ['smooth'];
       break;
     default:
+      if (options.beatOnly) {
+        // Beat-matched whenever the tempos allow, otherwise a cut on the
+        // downbeat; a filtered fade only if there's no beat to cut on
+        order = stretchOk ? ['blend', 'cut', 'smooth'] : ['cut', 'smooth'];
+        break;
+      }
       // Something audible every time: beat-matched when the beats allow,
       // otherwise a filtered fade / lead-in. A plain segue is the last resort
       order =
         djBlend || endingBlend
           ? ['blend', 'smooth', 'segue']
           : ['smooth', 'segue'];
+  }
+  if (options.beatOnly && options.preference !== 'segue') {
+    order = order.filter((style) => style !== 'segue');
   }
 
   const reasonFor = (style: TransitionStyle): TransitionReason => {
@@ -467,7 +479,9 @@ export const planTransition = (
     if (style === 'segue') {
       return endsAbruptly(from) ? 'cold-ending' : 'natural-ending';
     }
-    if (style === 'cut') return 'loud-handover';
+    if (style === 'cut') {
+      return options.beatOnly ? 'beat-only-cut' : 'loud-handover';
+    }
     return endsAbruptly(from) ? 'cold-lead-in' : 'natural-fade';
   };
 

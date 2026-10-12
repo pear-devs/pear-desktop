@@ -380,6 +380,7 @@
       "menu": {
         "active": "AutoMix on",
         "ai-beats": "AI beat detection (Beat This!, downloads ~100 MB once)",
+        "beat-only": "Only beat-matched transitions (Beat Match or Beat Cut, no segues)",
         "beats": "{{beats}} beats",
         "blend-length": "Blend length",
         "fade-length": "Smooth fade length",
@@ -446,6 +447,7 @@
           "fallback": "Not enough room for the preferred mix, so it uses this instead",
           "key-clash": "The beats match but the keys clash ({{from}} vs {{to}}), so the overlap is kept short",
           "late-change": "The next song changed too recently to analyse, so it fades smoothly into it",
+          "beat-only-cut": "A beat-matched blend isn't possible here (tempos too far apart, or no room), so it cuts on the downbeat instead (beat-matched transitions only)",
           "cold-ending": "This song stops on a hit, so it gets to finish and the next song lands right on that hit",
           "ending-blend": "This song stops on the beat, so the next one is beat-matched in underneath its last bars and takes over on the final hit",
           "loud-handover": "This song ends on a hit and the next one starts straight away, so it cuts on the downbeat",

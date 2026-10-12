@@ -716,6 +716,7 @@ export class AutoMixEngine {
         blendBeats: this.config.blendBeats,
         maxStretch: this.config.maxStretch,
         smoothSeconds: this.config.smoothSeconds,
+        beatOnly: this.config.beatOnly,
         earliestMixOut: Math.max(video.currentTime + 6.5, from.tailStart + 6.5),
       });
       this.plan =

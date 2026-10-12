@@ -11,6 +11,8 @@ export type AutoMixPluginConfig = {
   maxStretch: number;
   /** Max length of a smooth fade, in seconds */
   smoothSeconds: number;
+  /** Never segue: always beat-match, or cut on the beat */
+  beatOnly: boolean;
   /** Play consecutive songs from the same album without transitions */
   respectAlbums: boolean;
   /** Show the "AutoMixing" card while a transition plays */
@@ -26,6 +28,7 @@ export const defaultConfig: AutoMixPluginConfig = {
   blendBeats: 16,
   maxStretch: 0.05,
   smoothSeconds: 10,
+  beatOnly: false,
   respectAlbums: true,
   showMixCard: true,
   aiBeats: false,

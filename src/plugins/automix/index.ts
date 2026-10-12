@@ -61,6 +61,12 @@ export default createPlugin({
         ],
         (transition) => setConfig({ transition }),
       ),
+      {
+        label: t('plugins.automix.menu.beat-only'),
+        type: 'checkbox',
+        checked: config.beatOnly,
+        click: (item) => setConfig({ beatOnly: item.checked }),
+      },
       radio(
         t('plugins.automix.menu.blend-length'),
         config.blendBeats,
