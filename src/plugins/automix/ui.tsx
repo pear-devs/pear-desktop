@@ -29,6 +29,16 @@ const styleName = (plan: TransitionPlan) =>
   t(`plugins.automix.style.${plan.style}`);
 
 const describePlan = (plan: TransitionPlan) => {
+  const detail = describeStyle(plan);
+  return plan.fromKey && plan.toKey
+    ? `${detail} · ${t('plugins.automix.ui.detail.keys', {
+        from: plan.fromKey,
+        to: plan.toKey,
+      })}`
+    : detail;
+};
+
+const describeStyle = (plan: TransitionPlan) => {
   const from = Math.round(plan.fromBpm);
   const to = Math.round(plan.toBpm);
   switch (plan.style) {
@@ -92,7 +102,10 @@ const hintFor = (status: AutoMixStatus): Hint => {
         { style: styleName(plan) },
       ),
       lines: [
-        t(`plugins.automix.ui.why.${plan.reason}`),
+        t(`plugins.automix.ui.why.${plan.reason}`, {
+          from: plan.fromKey ?? '?',
+          to: plan.toKey ?? '?',
+        }),
         ...(phase === 'ready'
           ? [
               t('plugins.automix.ui.hint.when', {

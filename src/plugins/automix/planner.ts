@@ -1,3 +1,5 @@
+import { keysClash } from './key';
+
 import type { TrackAnalysis } from './analysis';
 
 export type TransitionStyle = 'blend' | 'segue' | 'cut' | 'smooth';
@@ -14,7 +16,8 @@ export type TransitionReason =
   | 'no-beat'
   | 'preference'
   | 'fallback'
-  | 'late-change';
+  | 'late-change'
+  | 'key-clash';
 
 export interface PlannerOptions {
   preference: TransitionPreference;
@@ -48,6 +51,9 @@ export interface TransitionPlan {
    * final hit ring out, instead of fading it across the blend
    */
   holdOutgoing?: boolean;
+  /** Camelot keys at the mix point, when detected (e.g. "8A") */
+  fromKey?: string;
+  toKey?: string;
 }
 
 /**
@@ -362,6 +368,8 @@ export const planTransition = (
   const steadyEdges =
     Math.abs(outgoing.end.drift) <= MAX_EDGE_DRIFT &&
     Math.abs(incoming.start.drift) <= MAX_EDGE_DRIFT;
+  // Overlapping clashing keys sounds wrong however good the beat match is
+  const clash = keysClash(outgoing.end.key, incoming.start.key);
 
   const gridsOk = hasBeatGrid(from) && hasBeatGrid(to);
   const stretchOk =
@@ -379,10 +387,12 @@ export const planTransition = (
   const steadyBeat =
     from.tempoConfidence >= DJ_TEMPO_CONFIDENCE &&
     to.tempoConfidence >= DJ_TEMPO_CONFIDENCE;
-  const djBlend = stretchOk && steadyBeat && beatToTheEnd && beatFromTheStart;
+  const djBlend =
+    stretchOk && steadyBeat && beatToTheEnd && beatFromTheStart && !clash;
   // Songs that stop on the beat: blend into the ending when tempos match
   const endingBlend =
     stretchOk &&
+    !clash &&
     endsAbruptly(from) &&
     finalHit(from) !== undefined &&
     beatFromTheStart;
@@ -416,6 +426,14 @@ export const planTransition = (
       return endsAbruptly(from) ? 'ending-blend' : 'tempo-match';
     }
     if (style === 'segue') {
+      // Say so when only the keys stopped a beat-matched blend
+      const wouldBlend =
+        stretchOk &&
+        beatFromTheStart &&
+        (endsAbruptly(from)
+          ? finalHit(from) !== undefined
+          : steadyBeat && beatToTheEnd);
+      if (clash && wouldBlend) return 'key-clash';
       return endsAbruptly(from) ? 'cold-ending' : 'natural-ending';
     }
     if (style === 'cut') return 'loud-handover';
@@ -435,7 +453,14 @@ export const planTransition = (
           : style === 'cut'
             ? planCut(from, to, options)
             : planSmooth(from, to, options);
-    if (plan) return { ...plan, reason: reasonFor(style) };
+    if (plan) {
+      return {
+        ...plan,
+        reason: reasonFor(style),
+        fromKey: outgoing.end.key?.camelot,
+        toKey: incoming.start.key?.camelot,
+      };
+    }
   }
   return null;
 };

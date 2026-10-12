@@ -6,6 +6,8 @@
  * (renderer, worker, or Node for testing).
  */
 
+import { detectKey, type MusicalKey } from './key';
+
 export interface AnalysisBands {
   sampleRate: number;
   /** Mono full-band signal */
@@ -430,8 +432,10 @@ export const computeLoudnessProfile = (
   };
 };
 
-/** Tempo and beat grid of one stretch of a track */
+/** Tempo, beat grid and key of one stretch of a track */
 export interface TempoSection {
+  /** Musical key, when it's clear enough to detect */
+  key: MusicalKey | null;
   bpm: number;
   beatPeriod: number;
   tempoConfidence: number;
@@ -445,6 +449,7 @@ export interface TempoSection {
 }
 
 export const emptySection: TempoSection = {
+  key: null,
   bpm: 0,
   beatPeriod: 0,
   tempoConfidence: 0,
@@ -457,23 +462,30 @@ export const emptySection: TempoSection = {
 const SECTION_SECONDS = 45;
 
 const analyzeSection = (
+  bands: AnalysisBands,
   envelope: OnsetEnvelope,
   fromSeconds: number,
   toSeconds: number,
   edge: 'start' | 'end',
 ): TempoSection => {
   const { fps } = envelope;
+  const key = detectKey(bands.full, bands.sampleRate, fromSeconds, toSeconds);
   const first = Math.max(0, Math.floor(fromSeconds * fps));
   const last = Math.min(envelope.onset.length, Math.ceil(toSeconds * fps));
   const onset = envelope.onset.subarray(first, last);
   const lowOnset = envelope.lowOnset.subarray(first, last);
 
   const tempo = estimateTempo(onset, fps);
-  if (!tempo) return emptySection;
+  if (!tempo) return { ...emptySection, key };
 
   const beatFrames = trackBeats(onset, tempo.period);
   if (beatFrames.length < 8) {
-    return { ...emptySection, bpm: tempo.bpm, beatPeriod: 60 / tempo.bpm };
+    return {
+      ...emptySection,
+      key,
+      bpm: tempo.bpm,
+      beatPeriod: 60 / tempo.bpm,
+    };
   }
 
   // Refine the tempo from the tracked beats: the AC period tells how many
@@ -500,6 +512,7 @@ const analyzeSection = (
   const beats = beatFrames.map((frame) => (frame + first) / fps);
 
   return {
+    key,
     bpm: (60 * fps) / period,
     beatPeriod: period / fps,
     tempoConfidence: clamp(tempo.strength / 0.3, 0, 1),
@@ -520,18 +533,27 @@ export const analyzeTrack = (bands: AnalysisBands): TrackAnalysis => {
 
   // Tempo can change through a song: mix on the tempo where we actually mix
   const start = analyzeSection(
+    bands,
     envelope,
     loudness.leadingSilenceEnd,
     loudness.leadingSilenceEnd + SECTION_SECONDS,
     'start',
   );
   const end = analyzeSection(
+    bands,
     envelope,
     loudness.trailingSilenceStart - SECTION_SECONDS,
     loudness.trailingSilenceStart + 0.5,
     'end',
   );
-  const whole = analyzeSection(envelope, 0, duration, 'end');
+  // Whole-song tempo only (the key is per section)
+  const whole = analyzeSection(
+    { ...bands, full: new Float32Array(0) },
+    envelope,
+    0,
+    duration,
+    'end',
+  );
 
   return {
     duration,
