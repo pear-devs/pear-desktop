@@ -728,6 +728,13 @@
         "button": "Speed"
       }
     },
+    "playlist-indicator": {
+      "description": "Shows an icon on songs that are in one of your playlists; click it to see which ones",
+      "name": "Playlist Indicator",
+      "popup-title": "In your playlists",
+      "refresh": "Refresh playlists",
+      "tooltip": "In {{count}} of your playlists"
+    },
     "precise-volume": {
       "description": "Control the volume precisely using mousewheel/hotkeys, with a custom HUD and customizable volume steps",
       "menu": {
