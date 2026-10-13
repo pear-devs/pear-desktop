@@ -9,14 +9,25 @@ import { registerMPRIS } from './mpris';
 import type { ShortcutMappingType, ShortcutsPluginConfig } from './index';
 import type { BackendContext } from '@/types/contexts';
 
+const DOUBLE_PRESS_THRESHOLD_MS = 400;
+
 function _registerGlobalShortcut(
   webContents: Electron.WebContents,
   shortcut: string,
   action: (webContents: Electron.WebContents) => void,
 ) {
-  globalShortcut.register(shortcut, () => {
-    action(webContents);
-  });
+  try {
+    const registered = globalShortcut.register(shortcut, () => {
+      action(webContents);
+    });
+    if (!registered) {
+      console.warn(
+        `Global shortcut "${shortcut}" is already in use by another app or the system, could not register it`,
+      );
+    }
+  } catch (error) {
+    console.warn(`Failed to register global shortcut "${shortcut}"`, error);
+  }
 }
 
 function _registerLocalShortcut(
@@ -24,9 +35,36 @@ function _registerLocalShortcut(
   shortcut: string,
   action: (webContents: Electron.WebContents) => void,
 ) {
-  registerElectronLocalShortcut(win, shortcut, () => {
-    action(win.webContents);
-  });
+  try {
+    registerElectronLocalShortcut(win, shortcut, () => {
+      action(win.webContents);
+    });
+  } catch (error) {
+    console.warn(`Failed to register local shortcut "${shortcut}"`, error);
+  }
+}
+
+function _createPlayPauseHandler(win: BrowserWindow, playPause: () => void) {
+  let lastPressTime = 0;
+
+  return () => {
+    const now = Date.now();
+    if (now - lastPressTime < DOUBLE_PRESS_THRESHOLD_MS) {
+      lastPressTime = 0;
+
+      if (win.isMinimized()) {
+        win.restore();
+      }
+      if (!win.isVisible()) {
+        win.show();
+      }
+      win.focus();
+      return;
+    }
+
+    lastPressTime = now;
+    playPause();
+  };
 }
 
 export const onMainLoad = async ({
@@ -36,10 +74,18 @@ export const onMainLoad = async ({
   const config = await getConfig();
 
   const songControls = getSongControls(window);
-  const { playPause, next, previous } = songControls;
+  const { playPause, next, previous, goForward, goBack } = songControls;
+
+  const playPauseAction = config.focusWindowOnDoublePlayPause
+    ? _createPlayPauseHandler(window, playPause)
+    : playPause;
 
   if (config.overrideMediaKeys) {
-    _registerGlobalShortcut(window.webContents, 'MediaPlayPause', playPause);
+    _registerGlobalShortcut(
+      window.webContents,
+      'MediaPlayPause',
+      playPauseAction,
+    );
     _registerGlobalShortcut(window.webContents, 'MediaNextTrack', next);
     _registerGlobalShortcut(window.webContents, 'MediaPreviousTrack', previous);
   }
@@ -73,7 +119,8 @@ export const onMainLoad = async ({
         ':',
         action,
       );
-      const actionCallback: () => void = songControls[action];
+      const actionCallback: () => void =
+        action === 'playPause' ? playPauseAction : songControls[action];
       if (typeof actionCallback !== 'function') {
         console.warn('Invalid action', action);
         continue;
@@ -90,5 +137,22 @@ export const onMainLoad = async ({
         _registerLocalShortcut(window, local[action], actionCallback);
       }
     }
+  }
+
+  const { seekSeconds, seekGlobalShortcuts } = config;
+
+  if (seekGlobalShortcuts.forward) {
+    _registerGlobalShortcut(
+      window.webContents,
+      seekGlobalShortcuts.forward,
+      () => goForward(seekSeconds),
+    );
+  }
+  if (seekGlobalShortcuts.backward) {
+    _registerGlobalShortcut(
+      window.webContents,
+      seekGlobalShortcuts.backward,
+      () => goBack(seekSeconds),
+    );
   }
 };
