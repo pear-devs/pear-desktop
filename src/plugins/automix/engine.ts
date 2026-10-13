@@ -51,8 +51,6 @@ interface OutgoingChain {
   highpass?: BiquadFilterNode;
   lowShelf?: BiquadFilterNode;
   lowpass?: BiquadFilterNode;
-  /** Last node before the dry gain (where an echo send taps in) */
-  tap: AudioNode;
   nodes: AudioNode[];
 }
 
@@ -750,9 +748,9 @@ export class AutoMixEngine {
     const filters = [highpass, lowShelf, lowpass].filter(
       (node): node is BiquadFilterNode => Boolean(node),
     );
-    let tap: AudioNode = source;
-    for (const node of filters) tap = tap.connect(node);
-    tap.connect(dry).connect(master).connect(context.destination);
+    let last: AudioNode = source;
+    for (const node of filters) last = last.connect(node);
+    last.connect(dry).connect(master).connect(context.destination);
 
     return {
       source,
@@ -761,7 +759,6 @@ export class AutoMixEngine {
       highpass,
       lowShelf,
       lowpass,
-      tap,
       nodes: [source, ...filters, dry, master],
     };
   }
@@ -801,32 +798,11 @@ export class AutoMixEngine {
       }
 
       case 'cut': {
-        // Filter build-up over the last bar, an echo throw, then a hard cut
+        // Filter build-up over the last bar, then a clean cut on the downbeat
         const beat = plan.beat || 0.5;
         const buildFrom = Math.max(context.currentTime, mixAt - (beat * 4));
         highpass?.frequency.setValueAtTime(20, buildFrom);
         highpass?.frequency.exponentialRampToValueAtTime(900, mixAt);
-
-        const send = context.createGain();
-        send.gain.value = 0;
-        const delay = context.createDelay(2);
-        delay.delayTime.value = Math.min(1.9, beat * 0.75);
-        const feedback = context.createGain();
-        feedback.gain.value = 0.45;
-        const echoFilter = context.createBiquadFilter();
-        echoFilter.type = 'highpass';
-        echoFilter.frequency.value = 350;
-
-        chain.tap.connect(send).connect(delay).connect(echoFilter);
-        delay.connect(feedback).connect(delay);
-        echoFilter.connect(chain.master);
-        chain.nodes.push(send, delay, feedback, echoFilter);
-
-        send.gain.setValueAtTime(0, mixAt - beat);
-        send.gain.linearRampToValueAtTime(0.6, mixAt - 0.01);
-        send.gain.linearRampToValueAtTime(0, mixAt + 0.02);
-        feedback.gain.setValueAtTime(0.45, mixAt + (beat * 4));
-        feedback.gain.linearRampToValueAtTime(0, mixAt + (beat * 6));
 
         dry.gain.setValueAtTime(1, mixAt - 0.01);
         dry.gain.linearRampToValueAtTime(0, mixAt + 0.04);
@@ -1644,7 +1620,7 @@ export class AutoMixEngine {
         // Already stopped
       }
     }
-    // Let echo tails ring out before tearing the graph down
+    // Let the fades and any ending ring out before tearing the graph down
     window.setTimeout(
       () => {
         for (const node of mix.chain.nodes) node.disconnect();
