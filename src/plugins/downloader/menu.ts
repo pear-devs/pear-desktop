@@ -212,5 +212,16 @@ export const onMenu = async ({
         setConfig({ skipExisting: item.checked });
       },
     },
+    {
+      label: t('plugins.downloader.menu.max-parallel-downloads'),
+      submenu: [1, 2, 3, 4, 5].map((num) => ({
+        label: String(num),
+        type: 'radio',
+        checked: (config.maxParallelDownloads ?? 1) === num,
+        click() {
+          setConfig({ maxParallelDownloads: num });
+        },
+      })),
+    },
   ];
 };

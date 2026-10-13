@@ -233,19 +233,35 @@ export async function downloadSong(
   playlistFolder?: string ,
   trackId?: string ,
   increasePlaylistProgress: (value: number) => void = () => {},
+  skipErrorDialog = false,
 ) {
   let resolvedName;
-  try {
-    await downloadSongUnsafe(
-      false,
-      url,
-      (name: string) => (resolvedName = name),
-      playlistFolder,
-      trackId,
-      increasePlaylistProgress,
-    );
-  } catch (error: unknown) {
-    sendError(error as Error, resolvedName || url);
+  let attempts = 0;
+  const maxAttempts = 3;
+  while (attempts < maxAttempts) {
+    try {
+      attempts++;
+      await downloadSongUnsafe(
+        false,
+        url,
+        (name: string) => (resolvedName = name),
+        playlistFolder,
+        trackId,
+        increasePlaylistProgress,
+      );
+      return;
+    } catch (error: unknown) {
+      if (attempts >= maxAttempts) {
+        if (!skipErrorDialog) {
+          sendError(error as Error, resolvedName || url);
+        } else {
+          throw error;
+        }
+      } else {
+        console.warn(`[Downloader] Attempt ${attempts} failed for ${url}. Retrying... Error:`, error);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
   }
 }
 
@@ -254,19 +270,35 @@ export async function downloadSongFromId(
   playlistFolder?: string ,
   trackId?: string ,
   increasePlaylistProgress: (value: number) => void = () => {},
+  skipErrorDialog = false,
 ) {
   let resolvedName;
-  try {
-    await downloadSongUnsafe(
-      true,
-      id,
-      (name: string) => (resolvedName = name),
-      playlistFolder,
-      trackId,
-      increasePlaylistProgress,
-    );
-  } catch (error: unknown) {
-    sendError(error as Error, resolvedName || id);
+  let attempts = 0;
+  const maxAttempts = 3;
+  while (attempts < maxAttempts) {
+    try {
+      attempts++;
+      await downloadSongUnsafe(
+        true,
+        id,
+        (name: string) => (resolvedName = name),
+        playlistFolder,
+        trackId,
+        increasePlaylistProgress,
+      );
+      return;
+    } catch (error: unknown) {
+      if (attempts >= maxAttempts) {
+        if (!skipErrorDialog) {
+          sendError(error as Error, resolvedName || id);
+        } else {
+          throw error;
+        }
+      } else {
+        console.warn(`[Downloader] Attempt ${attempts} failed for ${id}. Retrying... Error:`, error);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
   }
 }
 
@@ -436,8 +468,9 @@ async function downloadSongUnsafe(
   }
   const filePath = join(dir, filename);
 
-  if (config.skipExisting && existsSync(filePath)) {
+  if (existsSync(filePath)) {
     sendFeedback(null, -1);
+    increasePlaylistProgress(1.0);
     return;
   }
 
@@ -770,56 +803,136 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
     );
   }
 
-  win.setProgressBar(2); // Starts with indefinite bar
-
-  setBadge(items.length);
-
-  let counter = 1;
-
-  const progressStep = 1 / items.length;
-
-  const increaseProgress = (itemPercentage: number) => {
-    const currentProgress = (counter - 1) / (items.length ?? 1);
-    const newProgress = currentProgress + (progressStep * itemPercentage);
-    win.setProgressBar(newProgress);
-  };
+  const playlistItems: PlaylistItem[] = items.map((item, index) => ({
+    id: item.id!,
+    title: item.title || 'Unknown Title',
+    authorName: item.author?.name || 'Unknown Artist',
+    originalIndex: index + 1,
+  }));
 
   try {
-    for (const song of items) {
-      sendFeedback(
-        t('plugins.downloader.backend.feedback.downloading-counter', {
-          current: counter,
-          total: items.length,
-        }),
-      );
-      const trackId = isAlbum ? counter : undefined;
-      await downloadSongFromId(
-        song.id!,
-        playlistFolder,
-        trackId?.toString(),
-        increaseProgress,
-      ).catch((error) =>
-        sendError(
-          new Error(
-            t('plugins.downloader.backend.feedback.error-while-downloading', {
-              author: song.author!.name,
-              title: song.title!,
-              error: String(error),
-            }),
-          ),
-        ),
-      );
-
-      win.setProgressBar(counter / items.length);
-      setBadge(items.length - counter);
-      counter++;
-    }
+    await downloadPlaylistItems(playlistItems, playlistFolder, isAlbum);
   } catch (error: unknown) {
     sendError(error as Error);
-  } finally {
-    win.setProgressBar(-1); // Close progress bar
-    setBadge(0); // Close badge counter
-    sendFeedback(); // Clear feedback
+  }
+}
+
+interface PlaylistItem {
+  id: string;
+  title: string;
+  authorName: string;
+  originalIndex?: number;
+}
+
+async function runWithConcurrencyLimit<T>(
+  limit: number,
+  items: T[],
+  fn: (item: T, index: number) => Promise<void>,
+) {
+  let index = 0;
+  const promises: Promise<void>[] = [];
+
+  const runNext = async (): Promise<void> => {
+    if (index >= items.length) {
+      return;
+    }
+    const currentIndex = index++;
+    const item = items[currentIndex];
+    try {
+      await fn(item, currentIndex);
+    } catch (e) {
+      console.error('Error in concurrent task:', e);
+    }
+    return runNext();
+  };
+
+  for (let i = 0; i < Math.min(limit, items.length); i++) {
+    promises.push(runNext());
+  }
+
+  await Promise.all(promises);
+}
+
+async function downloadPlaylistItems(
+  items: PlaylistItem[],
+  playlistFolder: string,
+  isAlbum: boolean,
+) {
+  win.setProgressBar(2); // Starts with indefinite bar
+  setBadge(items.length);
+
+  let completedCount = 0;
+  const failedSongs: PlaylistItem[] = [];
+  const itemProgresses = new Array(items.length).fill(0);
+
+  const updateGlobalProgress = () => {
+    const totalProgress = itemProgresses.reduce((sum, p) => sum + p, 0) / items.length;
+    win.setProgressBar(totalProgress);
+  };
+
+  const updateFeedback = () => {
+    const current = Math.min(completedCount + 1, items.length);
+    sendFeedback_(
+      win,
+      t('plugins.downloader.backend.feedback.downloading-counter', {
+        current,
+        total: items.length,
+      }),
+    );
+  };
+
+  updateFeedback();
+
+  const maxParallel = Math.max(1, config.maxParallelDownloads ?? 1);
+
+  await runWithConcurrencyLimit(
+    maxParallel,
+    items,
+    async (song, index) => {
+      const trackId = isAlbum ? song.originalIndex : undefined;
+      const increaseProgress = (itemPercentage: number) => {
+        itemProgresses[index] = itemPercentage;
+        updateGlobalProgress();
+      };
+
+      try {
+        await downloadSongFromId(
+          song.id,
+          playlistFolder,
+          trackId?.toString(),
+          increaseProgress,
+          true, // skipErrorDialog
+        );
+      } catch (error) {
+        console.error(`Song failed after 3 attempts: ${song.title}`, error);
+        failedSongs.push(song);
+      } finally {
+        itemProgresses[index] = 1.0;
+        completedCount++;
+        setBadge(items.length - completedCount);
+        updateFeedback();
+        updateGlobalProgress();
+      }
+    },
+  );
+
+  win.setProgressBar(-1); // Close progress bar
+  setBadge(0); // Close badge counter
+  sendFeedback_(win); // Clear feedback
+
+  if (failedSongs.length > 0) {
+    const failedListText = failedSongs.map(s => `- ${s.authorName} - ${s.title}`).join('\n');
+    const response = dialog.showMessageBoxSync(win, {
+      type: 'warning',
+      buttons: ['Reintentar', 'Cancelar'],
+      defaultId: 0,
+      title: 'Descargas fallidas',
+      message: `Las siguientes canciones fallaron después de 3 intentos:`,
+      detail: `${failedListText}\n\n¿Desea reintentar la descarga de estas canciones?`,
+    });
+    if (response === 0) {
+      await downloadPlaylistItems(failedSongs, playlistFolder, isAlbum);
+    }
   }
 }
 
