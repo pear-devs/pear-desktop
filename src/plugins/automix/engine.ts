@@ -372,11 +372,18 @@ export class AutoMixEngine {
    * against our copy of the song. Keeps the previous value if the audio is
    * too quiet or ambiguous to match.
    */
+  /**
+   * Returns where the player's audio is in the song at a context time,
+   * read from the audio itself, so it holds however long this takes and
+   * however stale the player's currentTime is
+   */
   private measurePlayerOffset(video: HTMLVideoElement, track: AnalyzedTrack) {
     const tap = this.tap;
-    if (!tap) return;
+    const context = this.context;
+    if (!tap || !context) return null;
     const capture = new Float32Array(tap.fftSize);
     tap.getFloatTimeDomainData(capture);
+    const capturedAt = context.currentTime;
     const reported = video.currentTime;
 
     const span = capture.length / track.tail.sampleRate;
@@ -387,11 +394,13 @@ export class AutoMixEngine {
       expected - SYNC_SEARCH_SECONDS,
       expected + SYNC_SEARCH_SECONDS,
     );
-    if (!found || found.score < SYNC_MIN_SCORE) return;
+    if (!found || found.score < SYNC_MIN_SCORE) return null;
 
-    const offset = track.tailStart + found.time + span - reported;
-    if (Math.abs(offset) > SYNC_SEARCH_SECONDS) return;
+    const position = track.tailStart + found.time + span;
+    const offset = position - reported;
+    if (Math.abs(offset) > SYNC_SEARCH_SECONDS) return null;
     this.playerOffset = offset;
+    return { position, at: capturedAt };
   }
 
   private schedule(delay: number) {
@@ -1000,11 +1009,13 @@ export class AutoMixEngine {
     const next = this.next;
     if (!context || !video || !next) return;
 
-    // Start our copy exactly where the audio graph is, not where the
-    // player's currentTime says it is
-    this.measurePlayerOffset(video, from);
+    // Start our copy exactly where the player's audio is: from what it
+    // played at a known context time, not from its currentTime
+    const heard = this.measurePlayerOffset(video, from);
     const startAt = context.currentTime;
-    const startOffset = video.currentTime + this.playerOffset;
+    const startOffset = heard
+      ? heard.position + ((startAt - heard.at) * video.playbackRate)
+      : video.currentTime + this.playerOffset;
     const offsetInTail = startOffset - from.tailStart;
     if (offsetInTail < 0 || plan.mixOut <= startOffset) {
       this.plan = null;
