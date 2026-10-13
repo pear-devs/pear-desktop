@@ -4,6 +4,7 @@ import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 
 import { backend } from './main';
+import { preload, onRendererLoad } from './preload';
 import { onMenu } from './menu';
 
 export type DiscordPluginConfig = {
@@ -40,6 +41,12 @@ export type DiscordPluginConfig = {
    * Controls which field is displayed in the Discord status text
    */
   'statusDisplayType': (typeof StatusDisplayType)[keyof typeof StatusDisplayType];
+  /**
+   * Show application user avatar and username in Discord Rich Presence
+   *
+   * @default true
+   */
+  'showApplicationUser': boolean;
 };
 
 export default createPlugin({
@@ -55,7 +62,12 @@ export default createPlugin({
     'hideGitHubButton': false,
     'hideDurationLeft': false,
     'statusDisplayType': StatusDisplayType.Details,
+    'showApplicationUser': true,
   } as DiscordPluginConfig,
   menu: onMenu,
   backend,
+  preload,
+  renderer: {
+    start: onRendererLoad,
+  },
 });
