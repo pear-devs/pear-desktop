@@ -5,6 +5,10 @@ import 'mdui';
 
 import { loadI18n, setLanguage, t as i18t } from '@/i18n';
 import {
+  sliceQueueDatasFromVideo,
+  type QueueDataLike,
+} from '@/providers/queue-playlist';
+import {
   defaultTrustedTypePolicy,
   registerWindowDefaultTrustedTypePolicy,
 } from '@/utils/trusted-types';
@@ -24,7 +28,7 @@ import type { MusicPlayer } from '@/types/music-player';
 import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';
 import type { PluginConfig } from '@/types/plugins';
-import type { QueueElement } from '@/types/queue';
+import type { QueueElement, Store } from '@/types/queue';
 import type { SearchBoxElement } from '@/types/search-box-element';
 
 setTheme('dark');
@@ -188,6 +192,62 @@ async function onApiLoaded() {
     } satisfies QueueResponse);
   });
 
+  const fetchQueueDatas = (
+    app: MusicPlayerAppElement,
+    store: Store,
+    data: Record<string, unknown>,
+  ) =>
+    app.networkManager
+      .fetch<unknown, Record<string, unknown>>('/music/get_queue', {
+        queueContextParams: store.getState().queue.queueContextParams,
+        ...data,
+      })
+      .then((result) => {
+        if (
+          result &&
+          typeof result === 'object' &&
+          'queueDatas' in result &&
+          Array.isArray(result.queueDatas)
+        ) {
+          return result.queueDatas;
+        }
+        return null;
+      });
+
+  const addQueueDatasToQueue = (
+    queue: QueueElement | null,
+    store: Store,
+    queueInsertPosition: string,
+    queueDatas: unknown[],
+  ) => {
+    const queueItems = store.getState().queue.items;
+    const queueItemsLength = queueItems.length ?? 0;
+    queue?.dispatch({
+      type: 'ADD_ITEMS',
+      payload: {
+        nextQueueItemId: store.getState().queue.nextQueueItemId,
+        index:
+          queueInsertPosition === 'INSERT_AFTER_CURRENT_VIDEO'
+            ? queueItems.findIndex(
+                (it) =>
+                  (
+                    it.playlistPanelVideoRenderer ||
+                    it.playlistPanelVideoWrapperRenderer?.primaryRenderer
+                      .playlistPanelVideoRenderer
+                  )?.selected,
+              ) + 1 || queueItemsLength
+            : queueItemsLength,
+        items: queueDatas
+          .map((it) =>
+            typeof it === 'object' && it && 'content' in it ? it.content : null,
+          )
+          .filter(Boolean),
+        shuffleEnabled: false,
+        shouldAssignIds: true,
+      },
+    });
+  };
+
   window.ipcRenderer.on(
     'peard:add-to-queue',
     (_, videoId: string, queueInsertPosition: string) => {
@@ -198,49 +258,45 @@ async function onApiLoaded() {
       const store = queue?.queue.store.store;
       if (!store) return;
 
-      app.networkManager
-        .fetch('/music/get_queue', {
-          queueContextParams: store.getState().queue.queueContextParams,
-          queueInsertPosition,
-          videoIds: [videoId],
-        })
-        .then((result) => {
-          if (
-            result &&
-            typeof result === 'object' &&
-            'queueDatas' in result &&
-            Array.isArray(result.queueDatas)
-          ) {
-            const queueItems = store.getState().queue.items;
-            const queueItemsLength = queueItems.length ?? 0;
-            queue?.dispatch({
-              type: 'ADD_ITEMS',
-              payload: {
-                nextQueueItemId: store.getState().queue.nextQueueItemId,
-                index:
-                  queueInsertPosition === 'INSERT_AFTER_CURRENT_VIDEO'
-                    ? queueItems.findIndex(
-                        (it) =>
-                          (
-                            it.playlistPanelVideoRenderer ||
-                            it.playlistPanelVideoWrapperRenderer
-                              ?.primaryRenderer.playlistPanelVideoRenderer
-                          )?.selected,
-                      ) + 1 || queueItemsLength
-                    : queueItemsLength,
-                items: result.queueDatas
-                  .map((it) =>
-                    typeof it === 'object' && it && 'content' in it
-                      ? it.content
-                      : null,
-                  )
-                  .filter(Boolean),
-                shuffleEnabled: false,
-                shouldAssignIds: true,
-              },
-            });
-          }
-        });
+      fetchQueueDatas(app, store, {
+        queueInsertPosition,
+        videoIds: [videoId],
+      }).then((queueDatas) => {
+        if (queueDatas) {
+          addQueueDatasToQueue(queue, store, queueInsertPosition, queueDatas);
+        }
+      });
+    },
+  );
+
+  window.ipcRenderer.on(
+    'peard:add-playlist-to-queue',
+    (
+      _,
+      playlistId: string,
+      videoId: string | undefined,
+      queueInsertPosition: string,
+    ) => {
+      const queue = document.querySelector<QueueElement>('#queue');
+      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+      if (!app) return;
+
+      const store = queue?.queue.store.store;
+      if (!store) return;
+
+      fetchQueueDatas(app, store, { playlistId }).then((queueDatas) => {
+        if (!queueDatas) return;
+
+        if (videoId) {
+          // the server returns the playlist in order; start at the requested track
+          queueDatas = sliceQueueDatasFromVideo(
+            queueDatas as QueueDataLike[],
+            videoId,
+          );
+        }
+
+        addQueueDatasToQueue(queue, store, queueInsertPosition, queueDatas);
+      });
     },
   );
   window.ipcRenderer.on(
