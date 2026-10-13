@@ -4,7 +4,7 @@ const ANALYSIS_SAMPLE_RATE = 11025;
 /** How much of the end of each track we keep to play the outgoing side */
 const TAIL_SECONDS = 90;
 /** How much of the start we keep to play the incoming side sample-accurately */
-const HEAD_SECONDS = 30;
+const HEAD_SECONDS = 60;
 
 export interface AnalyzedTrack {
   videoId: string;

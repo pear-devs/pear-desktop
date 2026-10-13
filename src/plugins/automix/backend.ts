@@ -89,26 +89,16 @@ const download = async (
       const info = await getInfo();
       if (info.playability_status?.status !== 'OK') continue;
       if (name === 'music') musicInfo = info;
-      const audio = await fetchFormat(info, AUDIO_ONLY);
-      console.info('[AutoMix] audio for', videoId, `(${name}):`, audio.quality);
-      return audio;
+      return await fetchFormat(info, AUDIO_ONLY);
     } catch (error) {
       if (error instanceof TooLargeError) return null;
-      console.warn('[AutoMix] audio-only fetch failed', videoId, name, error);
     }
   }
 
   if (!musicInfo) return null;
   try {
-    const audio = await fetchFormat(musicInfo, MUXED);
-    console.warn(
-      '[AutoMix] only a low quality stream was available for',
-      videoId,
-      audio.quality,
-    );
-    return audio;
-  } catch (error) {
-    console.warn('[AutoMix] audio fetch failed', videoId, error);
+    return await fetchFormat(musicInfo, MUXED);
+  } catch {
     return null;
   }
 };
@@ -134,8 +124,7 @@ export const backend = {
               );
             }),
           ]);
-        } catch (error) {
-          console.warn('[AutoMix] could not fetch', videoId, error);
+        } catch {
           return null;
         } finally {
           clearTimeout(timer);
