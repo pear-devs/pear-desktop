@@ -1,6 +1,7 @@
 import { LikeType, type GetState } from '@/types/datahost-get-state';
 
 import { singleton } from './decorators';
+import { getLikeStatus, getRepeatMode, watchPlayerState } from './player-ui';
 
 import type { SongInfo } from './song-info';
 import type { MusicPlayer } from '@/types/music-player';
@@ -46,10 +47,33 @@ export const setupTimeChangedListener = singleton(() => {
   const progressBar = document.querySelector('#progress-bar');
   if (progressBar) {
     progressObserver.observe(progressBar, { attributeFilter: ['value'] });
+    return;
   }
+
+  // New player UI has no #progress-bar; follow the video element instead.
+  let lastSecond = -1;
+  document.querySelector('video')?.addEventListener('timeupdate', (e) => {
+    const second = Math.floor((e.target as HTMLVideoElement).currentTime);
+    if (second === lastSecond) return;
+    lastSecond = second;
+    window.ipcRenderer.send('peard:time-changed', second);
+    songInfo.elapsedSeconds = second;
+  });
 });
 
 export const setupRepeatChangedListener = singleton(() => {
+  const repeatButton = document.querySelector('#right-controls .repeat');
+  if (!repeatButton) {
+    watchPlayerState(
+      document,
+      (state) => state.queue.repeatMode,
+      (repeatMode) =>
+        window.ipcRenderer.send('peard:repeat-changed', repeatMode),
+    );
+    window.ipcRenderer.send('peard:repeat-changed', getRepeatMode());
+    return;
+  }
+
   const repeatObserver = new MutationObserver((mutations) => {
     // provided by App
     window.ipcRenderer.send(
@@ -63,7 +87,7 @@ export const setupRepeatChangedListener = singleton(() => {
       ).__dataHost.getState().queue.repeatMode,
     );
   });
-  repeatObserver.observe(document.querySelector('#right-controls .repeat')!, {
+  repeatObserver.observe(repeatButton, {
     attributeFilter: ['title'],
   });
 
@@ -111,7 +135,16 @@ export const setupLikeChangedListener = singleton(() => {
       'peard:like-changed',
       mapLikeStatus(likeButtonRenderer.getAttribute?.(LIKE_STATUS_ATTRIBUTE)),
     );
+    return;
   }
+
+  // New player UI: like status lives in the store, keyed by video id.
+  watchPlayerState(
+    document,
+    () => getLikeStatus(),
+    (status) => window.ipcRenderer.send('peard:like-changed', status),
+  );
+  window.ipcRenderer.send('peard:like-changed', getLikeStatus());
 });
 
 export const setupVolumeChangedListener = singleton((api: MusicPlayer) => {
@@ -133,7 +166,15 @@ export const setupShuffleChangedListener = singleton(() => {
   const playerBar = document.querySelector('ytmusic-player-bar');
 
   if (!playerBar) {
-    window.ipcRenderer.send('peard:shuffle-changed-supported', false);
+    const supported = watchPlayerState(
+      document,
+      (state) => state.queue.shuffleEnabled,
+      (shuffleEnabled) =>
+        window.ipcRenderer.send('peard:shuffle-changed', shuffleEnabled),
+    );
+    if (!supported) {
+      window.ipcRenderer.send('peard:shuffle-changed-supported', false);
+    }
     return;
   }
 

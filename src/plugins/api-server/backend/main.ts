@@ -5,6 +5,7 @@ import { createServer as createHttpsServer } from 'node:https';
 import { serve, upgradeWebSocket } from '@hono/node-server';
 import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono as Hono } from '@hono/zod-openapi';
+import { ipcMain } from 'electron';
 import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt';
 import { WebSocketServer } from 'ws';
@@ -133,9 +134,13 @@ export const backend = createBackend<BackendType, APIServerConfig>({
       () => this.songInfo,
       () => this.currentRepeatMode,
       () =>
-        backendCtx.window.webContents.executeJavaScript(
-          'document.querySelector("#like-button-renderer")?.likeStatus',
-        ) as Promise<LikeType>,
+        new Promise<LikeType>((resolve) => {
+          ipcMain.once(
+            'peard:get-like-status-response',
+            (_, status: LikeType) => resolve(status),
+          );
+          backendCtx.window.webContents.send('peard:get-like-status');
+        }),
       () => this.volumeState,
     );
     registerAuth(this.app, backendCtx);
