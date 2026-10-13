@@ -24,7 +24,8 @@ import { t } from '@/i18n';
 import { getNetFetchAsFetch } from '@/plugins/utils/main';
 import {
   registerCallback,
-  cleanupName,
+  cleanupTitle,
+  cleanupArtist,
   getImage,
   MediaType,
   type SongInfo,
@@ -857,8 +858,8 @@ const getVideoId = (url: URL | string): string | null => {
 
 const getMetadata = (info: YTMusic.TrackInfo): CustomSongInfo => ({
   videoId: info.basic_info.id!,
-  title: cleanupName(info.basic_info.title!),
-  artist: cleanupName(info.basic_info.author!),
+  title: cleanupTitle(info.basic_info.title!),
+  artist: cleanupArtist(info.basic_info.author!),
   album: info.player_overlays?.browser_media_session?.as(
     YTNodes.BrowserMediaSession,
   ).album?.text,
