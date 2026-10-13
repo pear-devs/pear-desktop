@@ -808,7 +808,11 @@
       "description": "Allows setting global hotkeys for playback (play/pause/next/previous) and turning off media OSD by overriding media keys, turning on Ctrl/CMD + F to search, turning on Linux MPRIS support for media keys, and custom hotkeys for advanced users",
       "menu": {
         "override-media-keys": "Override Media Keys",
-        "set-keybinds": "Set Global Song Controls"
+        "set-keybinds": "Set Global Song Controls",
+        "set-podcast-seek-backward-seconds": "Skip backward seconds (podcasts): {{seconds}}",
+        "set-podcast-seek-forward-seconds": "Skip forward seconds (podcasts): {{seconds}}",
+        "set-seek-backward-seconds": "Skip backward seconds: {{seconds}}",
+        "set-seek-forward-seconds": "Skip forward seconds: {{seconds}}"
       },
       "name": "Shortcuts (& MPRIS)",
       "prompt": {
@@ -816,10 +820,20 @@
           "keybind-options": {
             "next": "Next",
             "play-pause": "Play / Pause",
-            "previous": "Previous"
+            "previous": "Previous",
+            "seek-backward": "Skip Backward",
+            "seek-forward": "Skip Forward"
           },
           "label": "Choose Global Keybinds for Songs Control:",
           "title": "Global Keybinds"
+        },
+        "seek-backward-seconds": {
+          "label": "How many seconds to skip backward:",
+          "title": "Skip Backward"
+        },
+        "seek-forward-seconds": {
+          "label": "How many seconds to skip forward:",
+          "title": "Skip Forward"
         }
       }
     },
