@@ -96,6 +96,12 @@ interface ActiveMix {
   cutDone: boolean;
   /** Set when the incoming side is played from our own copy */
   head?: IncomingHead;
+  /**
+   * The player's own audio, inverted: while it's on, whatever the player
+   * plays is cancelled out exactly, so muting or unmuting the element can
+   * land whenever it likes without being heard
+   */
+  cancel?: GainNode;
   /** Consecutive ticks the player has been in sync with our copy */
   lockedTicks: number;
   /** The player has been on the incoming song at least once */
@@ -1026,10 +1032,18 @@ export class AutoMixEngine {
     const chain = this.buildOutgoing(context, from, plan);
     chain.master.gain.value = video.muted ? 0 : baseVolume;
     chain.source.start(startAt, offsetInTail);
+    // Same audio, lined up to the sample: switch over in one go. From
+    // that sample on the player is cancelled out, so it doesn't matter
+    // when muting the element (below) actually takes effect
     chain.dry.gain.setValueAtTime(0, startAt);
-    chain.dry.gain.linearRampToValueAtTime(1, startAt + 0.005);
-    // Silence the player in the same instant our copy takes over. Not on a
-    // timer: a busy page delays those, and both would play at once
+    chain.dry.gain.setValueAtTime(1, startAt);
+    let cancel: GainNode | undefined;
+    if (this.source) {
+      cancel = context.createGain();
+      cancel.gain.value = 0;
+      cancel.gain.setValueAtTime(-1, startAt);
+      this.source.connect(cancel).connect(context.destination);
+    }
     setRealVolume(video, SILENT_VOLUME);
 
     const mixAt = startAt + (plan.mixOut - startOffset);
@@ -1054,6 +1068,12 @@ export class AutoMixEngine {
           )
         : undefined;
     if (head) chain.nodes.push(head.source, head.gain, head.master);
+    if (cancel && !head) {
+      // The player itself brings the next song in: stop cancelling it once
+      // it's surely muted
+      cancel.gain.setValueAtTime(-1, startAt + 0.1);
+      cancel.gain.linearRampToValueAtTime(0, startAt + 0.12);
+    }
 
     const mix: ActiveMix = {
       plan,
@@ -1068,6 +1088,7 @@ export class AutoMixEngine {
       switched: false,
       cutDone: false,
       head,
+      cancel,
       lockedTicks: 0,
       sawIncoming: false,
       deferrals: 0,
@@ -1510,14 +1531,21 @@ export class AutoMixEngine {
     // Our copy plays at normal speed by now; make sure the player does too
     this.setRate(1);
 
-    // Swap in one go: drop our copy and unmute the player in the same
-    // instant (same audio, in sync, so the swap can't be heard)
-    const level = this.incomingLevel(mix, now);
-    head.gain.gain.cancelScheduledValues(now);
-    head.gain.gain.setValueAtTime(level, now);
-    head.gain.gain.linearRampToValueAtTime(0, now + 0.005);
-    head.source.stop(now + 0.05);
+    // Unmute the player first, while it's still cancelled out; once that
+    // has surely landed, fade our copy and the cancelling out together.
+    // Same audio, in sync: the sum stays the same throughout
+    const at = now + 0.02;
+    const level = this.incomingLevel(mix, at);
     this.setIncomingLevel(level);
+    head.gain.gain.cancelScheduledValues(at);
+    head.gain.gain.setValueAtTime(level, at);
+    head.gain.gain.linearRampToValueAtTime(0, at + 0.005);
+    head.source.stop(at + 0.05);
+    if (mix.cancel) {
+      mix.cancel.gain.cancelScheduledValues(at);
+      mix.cancel.gain.setValueAtTime(-1, at);
+      mix.cancel.gain.linearRampToValueAtTime(0, at + 0.005);
+    }
 
     // The player carries on with the rest of the fade-in itself
     mix.head = undefined;
@@ -1559,6 +1587,7 @@ export class AutoMixEngine {
       mix.head.source.stop(now + 0.2);
       mix.head = undefined;
     }
+    this.stopCancelling(mix, now);
     const start = Math.max(now, mix.mixAt);
     const remaining = Math.max(1.5, Math.min(6, mix.endAt - start));
     for (const node of chain.nodes) {
@@ -1615,6 +1644,7 @@ export class AutoMixEngine {
     if (!context) return;
 
     const now = context.currentTime;
+    this.stopCancelling(mix, now);
     mix.chain.dry.gain.cancelScheduledValues(now);
     mix.chain.dry.gain.setTargetAtTime(0, now, fadeSeconds / 4);
     try {
@@ -1635,9 +1665,24 @@ export class AutoMixEngine {
     window.setTimeout(
       () => {
         for (const node of mix.chain.nodes) node.disconnect();
+        if (mix.cancel) {
+          mix.cancel.disconnect();
+          try {
+            this.source?.disconnect(mix.cancel);
+          } catch {
+            // The player's source changed meanwhile
+          }
+        }
       },
       (fadeSeconds + 6) * 1000,
     );
+  }
+
+  /** Let the player be heard again (it's fading back in on its own) */
+  private stopCancelling(mix: ActiveMix, now: number) {
+    if (!mix.cancel) return;
+    mix.cancel.gain.cancelScheduledValues(now);
+    mix.cancel.gain.setTargetAtTime(0, now, 0.01);
   }
 
   /** A mix only starts at normal speed, so always hand that back */
