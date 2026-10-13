@@ -4,6 +4,10 @@ import type { SongInfo } from '@/providers/song-info';
 export type SyncedLyricsPluginConfig = {
   enabled: boolean;
   preferredProvider?: ProviderName;
+  /** MusixMatch user token captured after the user logged in (see musixmatch-login.ts) */
+  musixmatchToken?: string;
+  /** app id the captured MusixMatch token belongs to (defaults to the desktop app id) */
+  musixmatchAppId?: string;
   preciseTiming: boolean;
   showTimeCodes: boolean;
   defaultTextString: string | string[];
