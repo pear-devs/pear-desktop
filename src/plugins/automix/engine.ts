@@ -100,8 +100,6 @@ interface ActiveMix {
   head?: IncomingHead;
   /** Consecutive ticks the player has been in sync with our copy */
   lockedTicks: number;
-  /** Crossfading from our copy to the player */
-  handingOver: boolean;
   /** The player has been on the incoming song at least once */
   sawIncoming: boolean;
   /** Bars the blend was pushed back waiting for the next song to sync */
@@ -115,7 +113,8 @@ interface ActiveMix {
   error: number;
   /** Element volume YouTube Music wants (user volume × normalisation) */
   baseVolume: number;
-  lastWrittenVolume: number;
+  /** How loud the player itself should be, 0..1 of baseVolume */
+  level: number;
   handoffVolume: number;
   handoffSliderVolume: number;
   masterTarget: number;
@@ -169,6 +168,18 @@ const GLIDE_SECONDS = 8;
 const GLIDE_STEP = 0.5;
 const CROSSOVER_HZ = 180;
 const SILENT_VOLUME = 0.0001;
+/** Log wanted vs actual levels 5x a second while mixing (opt in) */
+const DEBUG_KEY = 'automix-debug';
+
+/** The element's own volume, past the override AutoMix puts on it */
+const volumeProperty = Object.getOwnPropertyDescriptor(
+  HTMLMediaElement.prototype,
+  'volume',
+)!;
+const realVolume = (video: HTMLMediaElement) =>
+  volumeProperty.get!.call(video) as number;
+const setRealVolume = (video: HTMLMediaElement, volume: number) =>
+  volumeProperty.set!.call(video, volume);
 /** How long the final hit of a song that stops on the beat rings out */
 const ENDING_RING = 1.5;
 /** Where the incoming song's high-pass starts when it's filtered in */
@@ -261,6 +272,7 @@ export class AutoMixEngine {
 
   private timer: number | undefined;
   private stopped = false;
+  private lastDebug = 0;
   private lastStatus = '';
 
   constructor(options: EngineOptions, config: AutoMixPluginConfig) {
@@ -273,7 +285,6 @@ export class AutoMixEngine {
       passive: true,
     });
     const video = this.video;
-    video?.addEventListener('volumechange', this.onVolumeChange);
     video?.addEventListener('seeking', this.onSeeking);
     video?.addEventListener('pause', this.onPause);
     document.addEventListener('pointerdown', this.onUserInput, true);
@@ -306,7 +317,6 @@ export class AutoMixEngine {
     this.stretch = null;
     this.stretchContext = null;
     const video = this.video;
-    video?.removeEventListener('volumechange', this.onVolumeChange);
     video?.removeEventListener('seeking', this.onSeeking);
     video?.removeEventListener('pause', this.onPause);
     document.removeEventListener('pointerdown', this.onUserInput, true);
@@ -1017,20 +1027,23 @@ export class AutoMixEngine {
     // Start our copy exactly where the audio graph is, not where the
     // player's currentTime says it is
     this.measurePlayerOffset(video, from);
-    const lead = 0.05;
-    const startAt = context.currentTime + lead;
-    const startOffset = video.currentTime + this.playerOffset + lead;
+    const startAt = context.currentTime;
+    const startOffset = video.currentTime + this.playerOffset;
     const offsetInTail = startOffset - from.tailStart;
     if (offsetInTail < 0 || plan.mixOut <= startOffset) {
       this.plan = null;
       return;
     }
 
+    const baseVolume = video.volume;
     const chain = this.buildOutgoing(context, from, plan);
-    chain.master.gain.value = video.muted ? 0 : video.volume;
+    chain.master.gain.value = video.muted ? 0 : baseVolume;
     chain.source.start(startAt, offsetInTail);
     chain.dry.gain.setValueAtTime(0, startAt);
-    chain.dry.gain.linearRampToValueAtTime(1, startAt + 0.03);
+    chain.dry.gain.linearRampToValueAtTime(1, startAt + 0.005);
+    // Silence the player in the same instant our copy takes over. Not on a
+    // timer: a busy page delays those, and both would play at once
+    setRealVolume(video, SILENT_VOLUME);
 
     const mixAt = startAt + (plan.mixOut - startOffset);
     this.scheduleOutgoing(context, chain, plan, mixAt);
@@ -1050,12 +1063,12 @@ export class AutoMixEngine {
             plan,
             mixAt,
             mixEnd,
-            video.muted ? 0 : video.volume,
+            video.muted ? 0 : baseVolume,
           )
         : undefined;
     if (head) chain.nodes.push(head.source, head.gain, head.master);
 
-    this.mix = {
+    const mix: ActiveMix = {
       plan,
       fromId: from.videoId,
       toId: next.videoId,
@@ -1069,7 +1082,6 @@ export class AutoMixEngine {
       cutDone: false,
       head,
       lockedTicks: 0,
-      handingOver: false,
       sawIncoming: false,
       deferrals: 0,
       // Only push a blend back while the old song is still playing music
@@ -1081,9 +1093,9 @@ export class AutoMixEngine {
       seeded: false,
       pendingSeeks: 0,
       error: 0,
-      baseVolume: video.volume,
-      lastWrittenVolume: video.volume,
-      handoffVolume: video.volume,
+      baseVolume,
+      level: 0,
+      handoffVolume: baseVolume,
       handoffSliderVolume: this.sliderVolume(),
       masterTarget: chain.master.gain.value,
       lastRate: 1,
@@ -1092,9 +1104,9 @@ export class AutoMixEngine {
       timers: [],
     };
 
-    // The player goes quiet the instant our copy takes over…
-    this.at(startAt + 0.015, () => this.setIncomingLevel(0));
-    // …then moves on to the next song while we keep the old one playing
+    this.mix = mix;
+    this.holdVolume(video, mix);
+    // The player moves on to the next song while we keep the old one playing
     this.at(startAt + 0.2, () => {
       if (!this.mix) return;
       this.mix.switched = true;
@@ -1125,14 +1137,41 @@ export class AutoMixEngine {
     const mix = this.mix;
     const video = this.video;
     if (!mix || !video) return;
+    mix.level = level;
+    this.applyLevel(video, mix);
+  }
+
+  private applyLevel(video: HTMLMediaElement, mix: ActiveMix) {
     // Never fully 0: Chromium handles a silent element differently and its
     // timing jumps by ~45 ms when sound resumes, which would knock the
     // incoming song off the beat. 1e-4 is -80 dB, i.e. inaudible.
-    const volume = clamp(mix.baseVolume * level, SILENT_VOLUME, 1);
-    mix.lastWrittenVolume = volume;
-    if (Math.abs(video.volume - volume) > SILENT_VOLUME / 2) {
-      video.volume = volume;
+    const volume = clamp(mix.baseVolume * mix.level, SILENT_VOLUME, 1);
+    if (Math.abs(realVolume(video) - volume) > SILENT_VOLUME / 2) {
+      setRealVolume(video, volume);
     }
+  }
+
+  /**
+   * While mixing, the player's volume is AutoMix's: what YouTube Music sets
+   * (the volume slider, or loudness normalisation when the next song loads)
+   * becomes the level to mix at, instead of unmuting the player mid-mix
+   */
+  private holdVolume(video: HTMLMediaElement, mix: ActiveMix) {
+    Object.defineProperty(video, 'volume', {
+      configurable: true,
+      get: () => mix.baseVolume,
+      set: (volume: number) => {
+        mix.baseVolume = clamp(volume, 0, 1);
+        if (this.mix === mix) this.applyLevel(video, mix);
+      },
+    });
+  }
+
+  private releaseVolume(mix: ActiveMix) {
+    const video = this.video;
+    if (!video) return;
+    Reflect.deleteProperty(video, 'volume');
+    setRealVolume(video, mix.baseVolume);
   }
 
   private setRate(rate: number) {
@@ -1164,17 +1203,6 @@ export class AutoMixEngine {
     mix.pendingSeeks++;
     video.currentTime = Math.max(0, time);
   }
-
-  private readonly onVolumeChange = () => {
-    const mix = this.mix;
-    const video = this.video;
-    if (!mix || !video) return;
-    if (Math.abs(video.volume - mix.lastWrittenVolume) > SILENT_VOLUME / 2) {
-      // The player (new song normalisation) or the user changed the volume
-      mix.baseVolume = video.volume;
-      if (!mix.settleAt) this.tickMix();
-    }
-  };
 
   private readonly onSeeking = () => {
     const mix = this.mix;
@@ -1224,6 +1252,32 @@ export class AutoMixEngine {
     this.abort();
   }
 
+  /**
+   * Wanted vs actual levels, 5x a second while mixing. Opt in from the
+   * DevTools console: localStorage.setItem('automix-debug', '1')
+   */
+  private debugLevels(mix: ActiveMix, video: HTMLVideoElement, now: number) {
+    if (now - this.lastDebug < 0.2) return;
+    try {
+      if (localStorage.getItem(DEBUG_KEY) !== '1') return;
+    } catch {
+      return;
+    }
+    this.lastDebug = now;
+    const want = clamp(mix.baseVolume * mix.level, SILENT_VOLUME, 1);
+    const { chain, head } = mix;
+    console.log(
+      '[AutoMix debug]',
+      `t=${(now - mix.mixAt).toFixed(2)}s from mix point`,
+      `| player want=${want.toFixed(4)} real=${realVolume(video).toFixed(4)}`,
+      `rate=${video.playbackRate.toFixed(3)}`,
+      `| old song copy=${(chain.dry.gain.value * chain.master.gain.value).toFixed(3)}`,
+      `| new song copy=${
+        head ? (head.gain.gain.value * head.master.gain.value).toFixed(3) : '-'
+      }`,
+    );
+  }
+
   /** Incoming track position we want at context time `now` */
   private targetPosition(mix: ActiveMix, now: number) {
     if (mix.head) return mix.head.position(now);
@@ -1242,6 +1296,7 @@ export class AutoMixEngine {
     if (!mix || !context || !video) return;
 
     const now = context.currentTime;
+    this.debugLevels(mix, video, now);
 
     // Keep the outgoing copy in step with the volume slider / mute button
     const slider = this.sliderVolume();
@@ -1301,7 +1356,7 @@ export class AutoMixEngine {
     const incomingPlaying =
       id === mix.toId && video.readyState >= 3 && !video.seeking;
 
-    if (incomingPlaying && mix.follow && !mix.handingOver) {
+    if (incomingPlaying && mix.follow) {
       const target = this.targetPosition(mix, now);
       const rate = this.targetRate(mix, now);
       if (target < 0) {
@@ -1405,7 +1460,6 @@ export class AutoMixEngine {
     incomingPlaying: boolean,
   ) {
     head.advance?.(now);
-    if (mix.handingOver) return;
     this.setIncomingLevel(0);
 
     // Hand the song to the player (full quality) as soon as our copy has
@@ -1466,40 +1520,23 @@ export class AutoMixEngine {
   }
 
   private handOver(mix: ActiveMix, head: IncomingHead, now: number) {
-    const video = this.video;
-    mix.handingOver = true;
-    const at = now + 0.03;
-    const fade = 0.06;
-
-    // Our copy plays at normal speed: drop the catch-up nudging while the
-    // player is still silent, so there's nothing to glide back afterwards
+    // Our copy plays at normal speed by now; make sure the player does too
     this.setRate(1);
 
-    // Cross over at whatever level the fade-in has reached by then
-    const level = this.incomingLevel(mix, at);
-    head.gain.gain.cancelScheduledValues(at);
-    head.gain.gain.setValueAtTime(level, at);
-    head.gain.gain.linearRampToValueAtTime(0, at + fade);
-    head.source.stop(at + fade + 0.05);
+    // Swap in one go: drop our copy and unmute the player in the same
+    // instant (same audio, in sync, so the swap can't be heard)
+    const level = this.incomingLevel(mix, now);
+    head.gain.gain.cancelScheduledValues(now);
+    head.gain.gain.setValueAtTime(level, now);
+    head.gain.gain.linearRampToValueAtTime(0, now + 0.005);
+    head.source.stop(now + 0.05);
+    this.setIncomingLevel(level);
 
-    // Element volume can't be automated, so step it up against the ramp
-    for (const step of [1, 2, 3, 4]) {
-      const time = at + ((fade * step) / 4);
-      this.at(time, () => {
-        if (this.mix === mix) {
-          this.setIncomingLevel((this.incomingLevel(mix, time) * step) / 4);
-        }
-      });
-    }
     // The player carries on with the rest of the fade-in itself
-    this.at(at + fade + 0.02, () => {
-      if (this.mix !== mix || !video) return;
-      mix.head = undefined;
-      mix.handingOver = false;
-      // Nothing to stay locked to any more (the old song is only a fading
-      // tail), and nudging the now audible player's speed would be heard
-      mix.follow = false;
-    });
+    mix.head = undefined;
+    // Nothing to stay locked to any more (the old song is only a fading
+    // tail), and nudging the now audible player's speed would be heard
+    mix.follow = false;
   }
 
   /** Start analysing the song after the incoming one while we mix */
@@ -1587,6 +1624,7 @@ export class AutoMixEngine {
     const context = this.context;
     for (const timer of mix.timers) window.clearTimeout(timer);
     mix.timers = [];
+    this.releaseVolume(mix);
     if (!context) return;
 
     const now = context.currentTime;
@@ -1637,10 +1675,8 @@ export class AutoMixEngine {
 
   private abort() {
     const mix = this.mix;
-    const video = this.video;
     if (!mix) return;
     this.cleanup(mix, 0.3);
-    if (video) video.volume = mix.baseVolume;
     this.restoreRate();
     this.mix = null;
     this.plan = null;
