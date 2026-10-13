@@ -8,3 +8,4 @@ export * from './set-volume';
 export * from './set-fullscreen';
 export * from './queue';
 export * from './search';
+export * from './playlist';
