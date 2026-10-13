@@ -134,6 +134,17 @@ export default createPlugin({
     },
   } as VisualizerPluginConfig,
   stylesheets: [emptyStyle],
+  settings: [
+    {
+      type: 'select',
+      key: 'type',
+      label: () => t('plugins.visualizer.menu.visualizer-type'),
+      options: (['butterchurn', 'vudio', 'wave'] as const).map((value) => ({
+        value,
+        label: () => value,
+      })),
+    },
+  ],
   menu: async ({ getConfig, setConfig }) => {
     const config = await getConfig();
     const visualizerTypes = ['butterchurn', 'vudio', 'wave'] as const; // For bundling

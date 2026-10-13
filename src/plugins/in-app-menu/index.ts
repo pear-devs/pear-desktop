@@ -1,4 +1,5 @@
 import { t } from '@/i18n';
+import { Platform } from '@/types/plugins';
 import { createPlugin } from '@/utils';
 
 import { defaultInAppMenuConfig } from './constants';
@@ -13,6 +14,14 @@ export default createPlugin({
   restartNeeded: true,
   config: defaultInAppMenuConfig,
   stylesheets: [titlebarStyle],
+  settings: [
+    {
+      type: 'switch',
+      key: 'hideDOMWindowControls',
+      label: () => t('plugins.in-app-menu.menu.hide-dom-window-controls'),
+      platform: Platform.Linux,
+    },
+  ],
   menu: onMenu,
 
   backend: onMainLoad,
