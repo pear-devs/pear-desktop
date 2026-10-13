@@ -460,6 +460,88 @@ export const emptySection: TempoSection = {
 
 /** Seconds analysed at each end of a track for the mixing tempo / grid */
 const SECTION_SECONDS = 45;
+/** Beats per window when judging whether the steady beat has started */
+const GROOVE_WINDOW = 8;
+/**
+ * Pulse strength a window needs to count as the steady beat: half the
+ * song's typical pulse, within these bounds. Beatless intros measure
+ * ~0-0.08, a clear groove 0.3+, and some songs' soft beat ~0.2 throughout
+ */
+const GROOVE_MIN_STRENGTH = 0.1;
+const GROOVE_MAX_STRENGTH = 0.2;
+/** Longest beatless intro skipped to come in where the beat starts */
+const MAX_INTRO_SKIP = 20;
+
+/**
+ * How strongly the onsets repeat at the beat period over a stretch of
+ * frames (normalised autocorrelation, like the tempo estimate). A steady
+ * groove scores high; speech, ambience or a free-time intro scores low,
+ * even where the beat tracker has laid evenly spaced beats over it.
+ */
+export const localPulse = (
+  onset: Float32Array,
+  period: number,
+  from: number,
+  to: number,
+) => {
+  const lag = Math.round(period);
+  const start = Math.max(0, Math.floor(from));
+  const end = Math.min(onset.length, Math.ceil(to));
+  if (end - start <= lag * 2) return 0;
+  let mean = 0;
+  for (let i = start; i < end; i++) mean += onset[i];
+  mean /= end - start;
+  let zero = 0;
+  let atLag = 0;
+  for (let i = start; i < end; i++) {
+    const v = onset[i] - mean;
+    zero += v * v;
+    if (i - lag >= start) atLag += v * (onset[i - lag] - mean);
+  }
+  if (zero <= 0) return 0;
+  return clamp(
+    (atLag / (end - start - lag)) / (zero / (end - start)),
+    0,
+    1,
+  );
+};
+
+/**
+ * Index of the first beat from which the steady beat has really started:
+ * two overlapping windows in a row with a clear pulse for this song. Null
+ * if it doesn't start within MAX_INTRO_SKIP of the section's start.
+ */
+const grooveStart = (
+  beatFrames: number[],
+  onset: Float32Array,
+  period: number,
+  fps: number,
+) => {
+  const pulseAt = (i: number) =>
+    i + GROOVE_WINDOW < beatFrames.length
+      ? localPulse(
+          onset,
+          period,
+          beatFrames[i],
+          beatFrames[i + GROOVE_WINDOW],
+        )
+      : 0;
+  const levels: number[] = [];
+  for (let i = 0; i + GROOVE_WINDOW < beatFrames.length; i += 4) {
+    levels.push(pulseAt(i));
+  }
+  if (levels.length === 0) return null;
+  const threshold = clamp(
+    percentile(levels, 0.5) / 2,
+    GROOVE_MIN_STRENGTH,
+    GROOVE_MAX_STRENGTH,
+  );
+  for (let i = 0; i + GROOVE_WINDOW + 4 < beatFrames.length; i++) {
+    if (beatFrames[i] / fps > MAX_INTRO_SKIP) return null;
+    if (pulseAt(i) >= threshold && pulseAt(i + 4) >= threshold) return i;
+  }
+  return null;
+};
 
 const analyzeSection = (
   bands: AnalysisBands,
@@ -478,7 +560,14 @@ const analyzeSection = (
   const tempo = estimateTempo(onset, fps);
   if (!tempo) return { ...emptySection, key };
 
-  const beatFrames = trackBeats(onset, tempo.period);
+  let beatFrames = trackBeats(onset, tempo.period);
+  // At a song's start, skip a beatless intro (speech, ambience, a free-time
+  // build): the beat tracker lays evenly spaced beats over it anyway, and
+  // coming in there would match or cut to beats that aren't there
+  if (edge === 'start') {
+    const groove = grooveStart(beatFrames, onset, tempo.period, fps);
+    beatFrames = groove === null ? [] : beatFrames.slice(groove);
+  }
   if (beatFrames.length < 8) {
     return {
       ...emptySection,
