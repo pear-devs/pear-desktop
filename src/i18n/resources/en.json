@@ -380,6 +380,7 @@
       "menu": {
         "active": "AutoMix on",
         "beat-only": "Only beat-matched transitions (Beat Match or Beat Cut, no segues)",
+        "cut-echo": "Echo the old song's last beat on Beat Cuts",
         "beats": "{{beats}} beats",
         "blend-length": "Blend length",
         "fade-length": "Smooth fade length",

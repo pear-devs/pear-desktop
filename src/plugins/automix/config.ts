@@ -13,6 +13,8 @@ export type AutoMixPluginConfig = {
   smoothSeconds: number;
   /** Never segue: always beat-match, or cut on the beat */
   beatOnly: boolean;
+  /** Echo the old song's last beat under the next one on a beat cut */
+  cutEcho: boolean;
   /** Play consecutive songs from the same album without transitions */
   respectAlbums: boolean;
   /** Show the "AutoMixing" card while a transition plays */
@@ -27,6 +29,7 @@ export const defaultConfig: AutoMixPluginConfig = {
   maxStretch: 0.05,
   smoothSeconds: 10,
   beatOnly: false,
+  cutEcho: false,
   respectAlbums: true,
   showMixCard: true,
 };

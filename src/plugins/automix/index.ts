@@ -67,6 +67,12 @@ export default createPlugin({
         checked: config.beatOnly,
         click: (item) => setConfig({ beatOnly: item.checked }),
       },
+      {
+        label: t('plugins.automix.menu.cut-echo'),
+        type: 'checkbox',
+        checked: config.cutEcho,
+        click: (item) => setConfig({ cutEcho: item.checked }),
+      },
       radio(
         t('plugins.automix.menu.blend-length'),
         config.blendBeats,
