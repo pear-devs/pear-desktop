@@ -103,6 +103,11 @@ const isPremium = async () => {
   )) as boolean;
 };
 
+/**
+ * Routes downloader errors to notification without stealing window focus.
+ * @param error The error encountered during download
+ * @param source Optional identifier describing what was being downloaded
+ */
 const sendError = (error: Error, source?: string) => {
   sendError_(win, error, source);
 };
@@ -208,6 +213,13 @@ export const onConfigChange = (newConfig: DownloaderPluginConfig) => {
   config = newConfig;
 };
 
+/**
+ * Downloads a song given its YouTube or YouTube Music URL.
+ * @param url Full song or video URL
+ * @param playlistFolder Optional destination folder for playlist tracks
+ * @param trackId Optional track index or number for metadata tags
+ * @param increasePlaylistProgress Optional progress reporting callback
+ */
 export async function downloadSong(
   url: string,
   playlistFolder?: string,
@@ -229,6 +241,13 @@ export async function downloadSong(
   }
 }
 
+/**
+ * Downloads a song given its YouTube video identifier.
+ * @param id Unique video or track ID
+ * @param playlistFolder Optional destination folder for playlist tracks
+ * @param trackId Optional track index or number for metadata tags
+ * @param increasePlaylistProgress Optional progress reporting callback
+ */
 export async function downloadSongFromId(
   id: string,
   playlistFolder?: string,
@@ -305,6 +324,15 @@ function downloadSongOnFinishSetup({
   });
 }
 
+/**
+ * Internal worker function to download and convert a song by ID or URL.
+ * @param isId Whether idOrUrl is a video ID (true) or URL (false)
+ * @param idOrUrl Video ID or URL string
+ * @param setName Callback to communicate resolved song name back to caller
+ * @param playlistFolder Optional folder to save playlist tracks into
+ * @param trackId Optional track number for metadata
+ * @param increasePlaylistProgress Optional progress callback for playlist downloads
+ */
 async function downloadSongUnsafe(
   isId: boolean,
   idOrUrl: string,
@@ -467,6 +495,14 @@ async function downloadSongUnsafe(
   );
 }
 
+/**
+ * Reads an async stream of audio chunks and reports progressive download percentage.
+ * @param stream Async generator stream yielding chunks of Uint8Array
+ * @param contentLength Total size in bytes of the audio stream
+ * @param sendFeedback Callback to update frontend progress and status
+ * @param increasePlaylistProgress Optional progress step callback for playlists
+ * @returns Array of downloaded Uint8Array chunks
+ */
 async function downloadChunks(
   stream: AsyncGenerator<Uint8Array, void>,
   contentLength: number,
@@ -493,6 +529,17 @@ async function downloadChunks(
   return chunks;
 }
 
+/**
+ * Converts downloaded audio stream using FFmpeg and writes audio metadata tags.
+ * @param stream Async generator stream yielding chunks of audio data
+ * @param extension Target audio file format extension
+ * @param metadata Song metadata and cover artwork
+ * @param presetFfmpegArgs FFmpeg configuration flags for audio encoding
+ * @param contentLength Total expected stream length in bytes
+ * @param sendFeedback Feedback notification callback
+ * @param increasePlaylistProgress Optional callback for playlist download progress
+ * @returns Encoded audio buffer or null on error
+ */
 async function iterableStreamToProcessedUint8Array(
   stream: AsyncGenerator<Uint8Array, void>,
   extension: string,
@@ -536,7 +583,7 @@ async function iterableStreamToProcessedUint8Array(
           }),
           ratio,
         );
-        increasePlaylistProgress(0.15 + ratio * 0.85);
+        increasePlaylistProgress(0.15 + (ratio * 0.85));
       });
 
       const safeVideoNameWithExtension = `${safeVideoName}.${extension}`;
@@ -611,6 +658,10 @@ async function writeID3(
   }
 }
 
+/**
+ * Downloads all songs from a playlist or album URL.
+ * @param givenUrl Optional playlist URL; defaults to currently playing URL or active webContents URL
+ */
 export async function downloadPlaylist(givenUrl?: string | URL) {
   try {
     givenUrl = new URL(givenUrl ?? '');
@@ -760,7 +811,7 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
 
   const increaseProgress = (itemPercentage: number) => {
     const currentProgress = (counter - 1) / (items.length ?? 1);
-    const newProgress = currentProgress + progressStep * itemPercentage;
+    const newProgress = currentProgress + (progressStep * itemPercentage);
     win.setProgressBar(newProgress);
   };
 
