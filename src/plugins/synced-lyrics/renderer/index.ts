@@ -3,10 +3,8 @@ import { waitForElement } from '@/utils/wait-for-element';
 
 import { disposeReactiveRoot } from './reactive-root';
 import { config, setConfig, setCurrentTime } from './renderer';
-import { fetchLyrics, refreshProvider } from './store';
+import { fetchLyrics, refreshLyrics } from './store';
 import { selectors, tabStates } from './utils';
-
-import { ProviderNames } from '../providers';
 
 import type { NetFetchInit, SyncedLyricsPluginConfig } from '../types';
 import type { SongInfo } from '@/providers/song-info';
@@ -29,12 +27,16 @@ export const renderer = createRenderer<
   SyncedLyricsPluginConfig
 >({
   onConfigChange(newConfig) {
-    const previousToken = config()?.musixmatchToken;
+    const previous = config();
     setConfig(newConfig);
 
-    // logged in/out: results cached from before the change are no longer valid
-    if ((previousToken || '') !== (newConfig.musixmatchToken || '')) {
-      refreshProvider(ProviderNames.MusixMatch);
+    // Logged in/out, or switched to a token of another app id: results cached from before
+    // the change are no longer valid. The login saves both values in one config update.
+    const changed =
+      (previous?.musixmatchToken || '') !== (newConfig.musixmatchToken || '') ||
+      (previous?.musixmatchAppId || '') !== (newConfig.musixmatchAppId || '');
+    if (changed) {
+      refreshLyrics();
     }
   },
 
