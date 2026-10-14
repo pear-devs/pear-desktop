@@ -34,6 +34,7 @@ import {
 import {
   cropMaxWidth,
   getFolder,
+  sendError as sendError_,
   sendFeedback as sendFeedback_,
   setBadge,
 } from './utils';
@@ -103,28 +104,7 @@ const isPremium = async () => {
 };
 
 const sendError = (error: Error, source?: string) => {
-  win.setProgressBar(-1); // Close progress bar
-  setBadge(0); // Close badge
-  sendFeedback_(win); // Reset feedback
-
-  const songNameMessage = source ? `\nin ${source}` : '';
-  const cause = error.cause
-    ? `\n\n${
-        // oxlint-disable-next-line typescript/no-base-to-string,typescript/restrict-template-expressions
-        error.cause instanceof Error ? error.cause.toString() : error.cause
-      }`
-    : '';
-  const message = `${error.toString()}${songNameMessage}${cause}`;
-
-  console.error(message);
-  console.trace(error);
-  dialog.showMessageBox(win, {
-    type: 'info',
-    buttons: [t('plugins.downloader.backend.dialog.error.buttons.ok')],
-    title: t('plugins.downloader.backend.dialog.error.title'),
-    message: t('plugins.downloader.backend.dialog.error.message'),
-    detail: message,
-  });
+  sendError_(win, error, source);
 };
 
 export const getCookieFromWindow = async (win: BrowserWindow) => {
@@ -230,8 +210,8 @@ export const onConfigChange = (newConfig: DownloaderPluginConfig) => {
 
 export async function downloadSong(
   url: string,
-  playlistFolder?: string ,
-  trackId?: string ,
+  playlistFolder?: string,
+  trackId?: string,
   increasePlaylistProgress: (value: number) => void = () => {},
 ) {
   let resolvedName;
@@ -251,8 +231,8 @@ export async function downloadSong(
 
 export async function downloadSongFromId(
   id: string,
-  playlistFolder?: string ,
-  trackId?: string ,
+  playlistFolder?: string,
+  trackId?: string,
   increasePlaylistProgress: (value: number) => void = () => {},
 ) {
   let resolvedName;
@@ -329,8 +309,8 @@ async function downloadSongUnsafe(
   isId: boolean,
   idOrUrl: string,
   setName: (name: string) => void,
-  playlistFolder?: string ,
-  trackId?: string ,
+  playlistFolder?: string,
+  trackId?: string,
   increasePlaylistProgress: (value: number) => void = () => {},
 ) {
   const sendFeedback = (message: unknown, progress?: number) => {
@@ -556,7 +536,7 @@ async function iterableStreamToProcessedUint8Array(
           }),
           ratio,
         );
-        increasePlaylistProgress(0.15 + (ratio * 0.85));
+        increasePlaylistProgress(0.15 + ratio * 0.85);
       });
 
       const safeVideoNameWithExtension = `${safeVideoName}.${extension}`;
@@ -780,7 +760,7 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
 
   const increaseProgress = (itemPercentage: number) => {
     const currentProgress = (counter - 1) / (items.length ?? 1);
-    const newProgress = currentProgress + (progressStep * itemPercentage);
+    const newProgress = currentProgress + progressStep * itemPercentage;
     win.setProgressBar(newProgress);
   };
 
