@@ -2,237 +2,255 @@ import * as z from 'zod';
 
 import { LRC } from '../parsers/lrc';
 import { netFetch } from '../renderer';
+import { config } from '../renderer/renderer';
 
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
+
+// How far (in seconds) the duration of a MusixMatch track may differ from the playing song.
+const DURATION_TOLERANCE = 10;
+
+// How long the signing key is cached (6 hours)
+const SECRET_TTL = 6 * 3_600_000;
+
+// MusixMatch honeypot/fallback tracks
+// 115264642: Coldplay - Paradise
+// 226291677: Drake - NOKIA (honeypot dummy lyrics)
+const HONEYPOT_TRACKS = new Set([115264642, 226291677]);
 
 export class MusixMatch implements LyricProvider {
   name = 'MusixMatch';
   baseUrl = 'https://www.musixmatch.com/';
 
-  private api: MusixMatchAPI | undefined;
+  private api = new MusixMatchAPI();
 
   async search(info: SearchSongInfo): Promise<LyricResult | null> {
-    // late-init the API, to avoid an electron IPC issue
-    // an added benefit is that if it has an error during init, the user can hit the retry button
-    this.api ??= await MusixMatchAPI.new();
-    await this.api.reinit();
+    if (!config()?.musixmatchToken) {
+      throw new Error(
+        'MusixMatch needs a login. Open the synced-lyrics plugin menu > MusixMatch account > Log in...',
+      );
+    }
 
-    const data = await this.api.query(Endpoint.getMacroSubtitles, {
+    const tracks = await this.api.searchTracks({
       q_track: info.alternativeTitle || info.title,
       q_artist: info.artist,
-      q_duration: info.songDuration.toString(),
-      ...(info.album ? { q_album: info.album } : {}),
-      namespace: 'lyrics_richsynched',
-      subtitle_format: 'lrc',
     });
 
-    const { macro_calls: macroCalls } = data.body;
+    const track = pickTrack(tracks, info.songDuration);
+    if (!track) return null;
 
-    // prettier-ignore
-    const getter = <T extends keyof typeof macroCalls>(key: T): typeof macroCalls[T]['message']['body'] => macroCalls[key].message.body;
+    const [subtitle, lyrics] = await Promise.all([
+      track.has_subtitles
+        ? this.api.getSubtitle(track.track_id)
+        : Promise.resolve(undefined),
+      track.has_lyrics
+        ? this.api.getLyrics(track.track_id)
+        : Promise.resolve(undefined),
+    ]);
 
-    const track = getter('matcher.track.get')?.track;
-    const lyrics = getter('track.lyrics.get')?.lyrics?.lyrics_body;
-    const subtitle = getter('track.subtitles.get')?.subtitle_list?.[0];
-
-    // either no track found, or musixmatch's algorithm returned "Coldplay - Paradise" for no reason whatsoever
-    if (!track || track.track_id === 115264642) return null;
+    if (!subtitle && !lyrics) return null;
 
     return {
       title: track.track_name,
       artists: [track.artist_name],
       lines: subtitle
-        ? LRC.parse(subtitle.subtitle.subtitle_body).lines.map((l) => ({
+        ? LRC.parse(subtitle).lines.map((l) => ({
             ...l,
             status: 'upcoming' as const,
           }))
         : undefined,
-      lyrics: lyrics,
+      lyrics,
     };
   }
 }
 
-// API Implementation, based on https://github.com/Strvm/musicxmatch-api/blob/main/src/musicxmatch_api/main.py
-
-const zBoolean = z.union([z.literal(0), z.literal(1)]);
 const Track = z.object({
   track_id: z.number(),
   track_name: z.string(),
   artist_name: z.string(),
+  track_length: z.number().optional(),
+  instrumental: z.number().optional(),
+  has_lyrics: z.number().optional(),
+  has_subtitles: z.number().optional(),
 });
+type Track = z.infer<typeof Track>;
 
-const Lyrics = z.object({
-  instrumental: zBoolean,
-  lyrics_body: z.string(),
-  lyrics_language: z.string(),
-  lyrics_language_description: z.string(),
-});
+const pickTrack = (tracks: Track[], duration: number): Track | undefined => {
+  const candidates = tracks
+    .filter(
+      (t) =>
+        !HONEYPOT_TRACKS.has(t.track_id) &&
+        !t.instrumental &&
+        (t.has_lyrics || t.has_subtitles),
+    )
+    .map((track) => ({
+      track,
+      diff:
+        duration > 0 && track.track_length
+          ? Math.abs(track.track_length - duration)
+          : 0,
+    }))
+    .filter(({ diff }) => diff <= DURATION_TOLERANCE)
+    // synced lyrics first, then the closest duration
+    .sort(
+      (a, b) =>
+        Number(!!b.track.has_subtitles) - Number(!!a.track.has_subtitles) ||
+        a.diff - b.diff,
+    );
 
-const Subtitle = z.object({
-  subtitle_body: z.string(),
-  subtitle_length: z.number(),
-  subtitle_language: z.string(),
-});
-
-enum Endpoint {
-  getMacroSubtitles = 'macro.subtitles.get',
-  searchTrack = 'track.search',
-}
-
-type Query = {
-  q?: string;
-  q_track?: string;
-  q_artist?: string;
-  q_album?: string;
-  q_duration?: string;
+  return candidates[0]?.track;
 };
 
-type Params = {
-  [Endpoint.getMacroSubtitles]: Query & {
-    namespace: 'lyrics_richsynched';
-    subtitle_format: 'lrc';
-  };
-  [Endpoint.searchTrack]: {
-    q: string;
-    f_has_lyrics: 'true' | 'false';
-    page_size: string;
-    page: string;
-  };
+// API Implementation, based on https://github.com/Strvm/musicxmatch-api/blob/main/src/musicxmatch_api/main.py
+// Requests are signed (HMAC-SHA256) with a key that is shipped inside the website's own javascript.
+
+const USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+
+const REQUEST_TIMEOUT = 20_000;
+
+const withTimeout = <T>(promise: Promise<T>, ms: number, message: string) =>
+  new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), ms);
+    promise.then(resolve, reject).finally(() => clearTimeout(timer));
+  });
+
+/**
+ * Sends a request through the main process.
+ *
+ * An AbortSignal cannot cross the IPC bridge, so the main process aborts the request itself
+ * after `REQUEST_TIMEOUT` (see `backend.ts`). The timer here is only a backstop for when the
+ * main process does not answer at all: when it fires, the underlying request is NOT cancelled
+ * and may keep running in the background until the main process finishes with it.
+ */
+const request = async (
+  url: string,
+  init: RequestInit,
+  timeoutMessage: string,
+) => {
+  try {
+    return await withTimeout(
+      netFetch(url, { ...init, timeout: REQUEST_TIMEOUT }),
+      REQUEST_TIMEOUT + 5_000,
+      timeoutMessage,
+    );
+  } catch (error) {
+    // aborted by the main process (the IPC error message contains the original one)
+    if (error instanceof Error && /TimeoutError|aborted/i.test(error.message)) {
+      throw new Error(timeoutMessage, { cause: error });
+    }
+    throw error;
+  }
 };
 
-const ResponseSchema = {
-  [Endpoint.searchTrack]: z.object({
-    track_list: z.array(z.object({ track: Track })),
-  }),
-  [Endpoint.getMacroSubtitles]: z.object({
-    macro_calls: z.object({
-      'track.lyrics.get': z.object({
-        message: z.object({
-          body: z
-            .object({ lyrics: Lyrics })
-            .or(
-              z
-                .instanceof(Array)
-                .describe('default response for 404 status')
-                .transform(() => undefined)
-                .or(z.string().transform(() => undefined)),
-            )
-            .optional(),
-        }),
-      }),
-      'track.subtitles.get': z.object({
-        message: z.object({
-          body: z
-            .object({
-              subtitle_list: z.array(z.object({ subtitle: Subtitle })),
-            })
-            .or(
-              z
-                .instanceof(Array)
-                .describe('default response for 404 status')
-                .transform(() => undefined)
-                .or(z.string().transform(() => undefined)),
-            )
+const savedSecretSchema = z.object({
+  secret: z.string(),
+  version: z.string().optional(),
+  expires: z.number(),
+});
 
-            .optional(),
-        }),
-      }),
-      'matcher.track.get': z.object({
-        message: z.object({
-          body: z
-            .object({ track: Track })
-            .or(
-              z
-                .instanceof(Array)
-                .describe('default response for 404 status')
-                .transform(() => undefined)
-                .or(z.string().transform(() => undefined)),
-            )
-            .optional(),
-        }),
-      }),
-    }),
-  }),
-} as const;
+/**
+ * The key used to sign requests.
+ * `refreshed` is set when it was fetched because the previous one got rejected, such a key is not
+ * replaced again before the api accepted it once (see `refreshSecret`).
+ */
+type Secret = { secret: string; version?: string; refreshed: boolean };
 
 class MusixMatchAPI {
-  private initPromise: Promise<void>;
-  private cookie = 'x-mxm-user-id=';
-  private token: string | null = null;
+  private readonly baseUrl = 'https://www.musixmatch.com/ws/1.1/';
+  private readonly defaultAppId = 'mxm-com-v1.0';
+  private readonly secretKey = 'ytm:synced-lyrics:mxm:secret';
 
-  private constructor() {
-    this.initPromise = this.init();
+  private secret: Secret | null = null;
+  private secretPromise: Promise<Secret> | null = null;
+
+  public async searchTracks(query: { q_track: string; q_artist: string }) {
+    const body = await this.query(
+      'track.search',
+      {
+        ...query,
+        f_has_lyrics: 'true',
+        s_track_rating: 'desc',
+        page_size: '10',
+        page: '1',
+      },
+      z.object({ track_list: z.array(z.object({ track: Track })) }),
+    );
+
+    return body?.track_list.map((t) => t.track) ?? [];
   }
 
-  public static async new() {
-    const api = new MusixMatchAPI();
-    await api.initPromise;
-    return api;
+  public async getSubtitle(trackId: number) {
+    const body = await this.query(
+      'track.subtitles.get',
+      { track_id: trackId.toString(), subtitle_format: 'lrc' },
+      z.object({
+        subtitle_list: z.array(
+          z.object({ subtitle: z.object({ subtitle_body: z.string() }) }),
+        ),
+      }),
+    );
+
+    return body?.subtitle_list[0]?.subtitle.subtitle_body || undefined;
   }
 
-  public async reinit() {
-    const [{ status }] = await Promise.allSettled([this.initPromise]);
-    if (status === 'rejected') {
-      this.cookie = 'x-mxm-user-id=';
-      localStorage.removeItem(this.key);
-      this.initPromise = this.init();
-      await this.initPromise;
-    }
+  public async getLyrics(trackId: number) {
+    const body = await this.query(
+      'track.lyrics.get',
+      { track_id: trackId.toString() },
+      z.object({ lyrics: z.object({ lyrics_body: z.string() }) }),
+    );
+
+    return body?.lyrics.lyrics_body || undefined;
   }
 
-  // god I love typescript generics, they're so useful
-  public async query<
-    T extends Endpoint,
-    R = {
-      header: { status_code: number };
-      body: T extends keyof typeof ResponseSchema
-        ? z.infer<(typeof ResponseSchema)[T]>
-        : unknown;
-    },
-  >(endpoint: T, params: Params[T]): Promise<R> {
-    await this.initPromise;
-    if (!this.token) throw new Error('Token not initialized');
+  private async query<S extends z.ZodType>(
+    endpoint: string,
+    params: Record<string, string>,
+    schema: S,
+    retryWith?: Secret,
+  ): Promise<z.infer<S> | undefined> {
+    const used = retryWith ?? (await this.getSecret());
+    const { secret, version } = used;
 
-    const url = `${this.baseUrl}${endpoint}`;
+    const token = config()?.musixmatchToken;
+    const url = `${this.baseUrl}${endpoint}?${new URLSearchParams({
+      app_id: config()?.musixmatchAppId || this.defaultAppId,
+      ...(token ? { usertoken: token } : {}),
+      format: 'json',
+      ...params,
+    })}`;
 
-    const clonedParams = new URLSearchParams(
-      Object.assign(
-        {
-          app_id: this.app_id,
-          format: 'json',
-          usertoken: this.token,
+    const signedUrl = `${url}&signature=${encodeURIComponent(
+      await sign(url, secret),
+    )}&signature_protocol=sha256`;
+
+    const [status, json] = await request(
+      signedUrl,
+      {
+        headers: {
+          'User-Agent': USER_AGENT,
+          'Referer': this.baseUrl.replace('ws/1.1/', ''),
+          ...(version ? { 'x-mxm-app-version': version } : {}),
         },
-        <Record<string, string>>params,
-      ),
+      },
+      'MusixMatch request timed out',
     );
 
-    const [, json, headers] = await netFetch(`${url}?${clonedParams}`, {
-      headers: { Cookie: this.cookie },
-    });
-
-    const setCookie = Object.entries(headers).find(
-      ([key]) => key.toLowerCase() === 'set-cookie',
-    );
-    if (setCookie) {
-      this.cookie = setCookie[1];
-    }
-
-    const response = JSON.parse(json);
-    // prettier-ignore
-    if (
-      response && typeof response === 'object' &&
-      'message' in response && response.message && typeof response.message === 'object' &&
-      'header' in response.message && response.message.header && typeof response.message.header === 'object' &&
-      'status_code' in response.message.header && typeof response.message.header.status_code === 'number' &&
-      response.message.header.status_code === 401
-    ) {
-      await this.reinit();
-      return this.query(endpoint, params);
+    let response: unknown;
+    try {
+      response = JSON.parse(json);
+    } catch {
+      throw new Error(
+        `MusixMatch returned an invalid response (HTTP ${status})`,
+      );
     }
 
     const parsed = z
       .object({
-        message: z.object({ body: ResponseSchema[endpoint] }),
+        message: z.object({
+          header: z.object({ status_code: z.number() }),
+          body: z.unknown(),
+        }),
       })
       .safeParse(response);
 
@@ -241,76 +259,133 @@ class MusixMatchAPI {
       throw new Error('Failed to parse response from MusixMatch API');
     }
 
-    return parsed.data.message as R;
-  }
+    const { header, body } = parsed.data.message;
+    if (header.status_code === 401 || header.status_code === 403) {
+      // The status alone does not say what was rejected: the signing key, the app id or the
+      // user token could each be the cause, so the saved token is never touched here.
+      const next = await this.refreshSecret(used);
+      if (next) return this.query(endpoint, params, schema, next);
 
-  private savedTokenSchema = z.union([
-    z.object({
-      token: z.literal(null),
-      expires: z.number().optional(),
-    }),
-    z.object({
-      token: z.string(),
-      expires: z.number(),
-    }),
-  ]);
-
-  private key = 'ytm:synced-lyrics:mxm:token';
-  private async init() {
-    const { token, expires } = this.savedTokenSchema.parse(
-      JSON.parse(localStorage.getItem(this.key) ?? '{ "token": null }'),
-    );
-    if (token && expires > Date.now()) {
-      this.token = token;
-      return;
+      throw new Error(
+        `MusixMatch rejected the request (status ${header.status_code}). The signing key, app id or login token may be the cause. If this keeps happening, try logging in again from the synced-lyrics plugin menu.`,
+      );
     }
 
-    localStorage.removeItem(this.key);
+    // the secret was accepted, a later rejection may be a real key rotation again
+    used.refreshed = false;
 
-    this.token = await this.getToken();
-    if (!this.token) throw new Error('Failed to get token');
+    // 404 and friends: nothing found
+    if (header.status_code !== 200) return undefined;
 
-    localStorage.setItem(
-      this.key,
-      JSON.stringify({ token: this.token, expires: Date.now() + (60 * 1000) }),
-    );
+    const data = schema.safeParse(body);
+    // the api answers with an empty array/string when there is no data
+    if (!data.success) return undefined;
+    return data.data;
   }
 
-  private tokenSchema = z.object({
-    message: z.object({
-      body: z
-        .object({
-          user_token: z.string(),
-        })
-        .optional(),
-    }),
-  });
-  private async getToken() {
-    const endpoint = 'token.get';
-    const params = new URLSearchParams({ app_id: this.app_id });
-    const [, json, headers] = await netFetch(
-      `${this.baseUrl}${endpoint}?${params}`,
-      {
-        headers: Object.assign({ Cookie: this.cookie }, this.headers),
+  /**
+   * Called when `rejected` was refused by the api. Fetches a new signing key, at most once per
+   * generation: a key that was itself fetched because of a rejection is not refreshed again until
+   * it has been accepted at least once, so a persistent rejection does not repeat the downloads.
+   * Returns the secret to retry with, or `undefined` when the request should not be retried.
+   */
+  private refreshSecret(rejected: Secret): Promise<Secret | undefined> {
+    if (rejected.refreshed) return Promise.resolve(undefined);
+
+    if (this.secret === rejected) {
+      this.secret = null;
+      this.secretPromise = null;
+      localStorage.removeItem(this.secretKey);
+      return this.getSecret(true);
+    }
+
+    // another request already replaced the key (or is loading a new one right now)
+    return this.getSecret();
+  }
+
+  private getSecret(force = false) {
+    if (this.secret) return Promise.resolve(this.secret);
+
+    this.secretPromise ??= this.loadSecret(force).then(
+      (secret) => (this.secret = secret),
+      (error) => {
+        this.secretPromise = null;
+        throw error;
       },
     );
-
-    const setCookie = Object.entries(headers).find(
-      ([key]) => key.toLowerCase() === 'set-cookie',
-    );
-    if (setCookie) {
-      this.cookie = setCookie[1];
-    }
-
-    const {
-      message: { body },
-    } = this.tokenSchema.parse(JSON.parse(json));
-    return body?.user_token ?? '';
+    return this.secretPromise;
   }
 
-  private readonly baseUrl = 'https://apic-desktop.musixmatch.com/ws/1.1/';
-  private readonly app_id = 'web-desktop-app-v1.0';
-  private readonly headers = {
-    Authority: 'apic-desktop.musixmatch.com',
-  };
+  private async loadSecret(force: boolean): Promise<Secret> {
+    if (!force) {
+      try {
+        const saved = savedSecretSchema.parse(
+          JSON.parse(localStorage.getItem(this.secretKey) ?? 'null'),
+        );
+        if (saved.expires > Date.now()) {
+          return {
+            secret: saved.secret,
+            version: saved.version,
+            refreshed: false,
+          };
+        }
+      } catch {
+        // nothing saved, or invalid
+      }
+    }
+    const [, html] = await request(
+      'https://www.musixmatch.com/search',
+      { headers: { 'User-Agent': USER_AGENT, 'Cookie': 'mxm_bab=AB' } },
+      'MusixMatch initialization timed out',
+    );
+
+    const appPath = [
+      ...html.matchAll(
+        /src="([^"]*\/_next\/static\/chunks\/pages\/_app-[^"]+\.js)"/g,
+      ),
+    ].at(-1)?.[1];
+    if (!appPath) throw new Error('MusixMatch: could not find the app script');
+
+    const appUrl = new URL(appPath, 'https://www.musixmatch.com/').toString();
+    const [, js] = await request(
+      appUrl,
+      { headers: { 'User-Agent': USER_AGENT } },
+      'MusixMatch initialization timed out',
+    );
+
+    const encoded = /from\(\s*"(.*?)"\s*\.split/.exec(js)?.[1];
+    if (!encoded) throw new Error('MusixMatch: could not find the signing key');
+
+    const secret = atob(encoded.split('').reverse().join(''));
+    const version = /\/prod\/([\d.]+)\//.exec(appUrl)?.[1];
+
+    const result = {
+      secret,
+      version,
+      expires: Date.now() + SECRET_TTL,
+    };
+    localStorage.setItem(this.secretKey, JSON.stringify(result));
+    return { secret, version, refreshed: force };
+  }
 }
+
+const sign = async (url: string, secret: string) => {
+  const now = new Date();
+  const date = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign(
+    'HMAC',
+    key,
+    encoder.encode(url + date),
+  );
+
+  return btoa(String.fromCharCode(...new Uint8Array(signature)));
+};
