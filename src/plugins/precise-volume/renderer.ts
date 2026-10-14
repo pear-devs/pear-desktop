@@ -90,6 +90,9 @@ export const onPlayerApiReady = async (
 
       if (api.getVolume() !== options.savedVolume) {
         setVolume(options.savedVolume);
+      } else {
+        // Already applied by the preload, but the new UI's slider still shows YTM's default
+        updateVolumeSlider();
       }
     }
 
