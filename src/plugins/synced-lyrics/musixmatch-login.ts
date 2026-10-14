@@ -1,4 +1,10 @@
-import { BrowserWindow, session, type Session } from 'electron';
+import {
+  BrowserWindow,
+  session,
+  type Session,
+  type WebContents,
+  type WebPreferences,
+} from 'electron';
 
 // Workaround for MusixMatch refusing to hand out anonymous tokens (token.get).
 // The user logs in on musixmatch.com inside an isolated window, and we capture the
@@ -9,6 +15,14 @@ import { BrowserWindow, session, type Session } from 'electron';
 //   2. the `userToken` embedded in the website's HTML (`__NEXT_DATA__`)
 
 const PARTITION = 'persist:synced-lyrics-musixmatch';
+
+// Shared by the login window and every popup it opens (e.g. OAuth providers)
+const LOGIN_WEB_PREFERENCES: WebPreferences = {
+  partition: PARTITION,
+  nodeIntegration: false,
+  contextIsolation: true,
+  sandbox: true,
+};
 const HOME_URL = 'https://www.musixmatch.com/';
 const COOKIE_NAME = 'musixmatchUserToken';
 const DEFAULT_APP_ID = 'web-desktop-app-v1.0';
@@ -153,11 +167,16 @@ const describeCookies = async (ses: Session) => {
 
 let loginWindow: BrowserWindow | null = null;
 let pendingLogin: Promise<MusixMatchLoginResult> | null = null;
+// Bumped by `logoutFromMusixMatch`, every login attempt remembers the value it started with
+// and must not hand out or keep credentials once it no longer matches.
+let loginGeneration = 0;
 
 export interface MusixMatchLoginResult {
   login: MusixMatchLogin | null;
   /** cookie names seen on musixmatch.com, for diagnostics */
   cookieNames: string[];
+  /** the attempt was invalidated by a logout, so there is nothing to report to the user */
+  cancelled?: boolean;
 }
 
 /**
@@ -173,10 +192,21 @@ export const loginToMusixMatch = (
     return pendingLogin;
   }
 
+  const generation = loginGeneration;
+  const isCurrent = () => generation === loginGeneration;
+  const cancelledResult = (): MusixMatchLoginResult => ({
+    login: null,
+    cookieNames: [],
+    cancelled: true,
+  });
+
   pendingLogin = (async () => {
     // start from a clean session, otherwise a stale cookie from an earlier login
     // would be detected immediately and the window would close while still loading
     await session.fromPartition(PARTITION).clearStorageData();
+
+    // logged out while the session was being cleared
+    if (!isCurrent()) return cancelledResult();
 
     return new Promise<MusixMatchLoginResult>((resolve) => {
       const ses = session.fromPartition(PARTITION);
@@ -188,12 +218,7 @@ export const loginToMusixMatch = (
         parent,
         title: 'MusixMatch login',
         autoHideMenuBar: true,
-        webPreferences: {
-          partition: PARTITION,
-          nodeIntegration: false,
-          contextIsolation: true,
-          sandbox: true,
-        },
+        webPreferences: { ...LOGIN_WEB_PREFERENCES },
       });
       loginWindow = win;
 
@@ -205,17 +230,27 @@ export const loginToMusixMatch = (
         ses.cookies.removeListener('changed', check);
 
         let cookieNames: string[] = [];
-        try {
-          // closing from the user side: try the remaining sources
-          login ??= (await readCookie(ses)) ?? (await readEmbeddedToken(ses));
-          cookieNames = await describeCookies(ses);
-        } catch (error) {
-          console.error('[synced-lyrics] MusixMatch login failed', error);
+        if (isCurrent()) {
+          try {
+            // closing from the user side: try the remaining sources
+            login ??= (await readCookie(ses)) ?? (await readEmbeddedToken(ses));
+            cookieNames = await describeCookies(ses);
+          } catch (error) {
+            console.error('[synced-lyrics] MusixMatch login failed', error);
+          }
         }
 
-        loginWindow = null;
+        // a logout may have happened while the reads above were in flight,
+        // in that case whatever was read belongs to a session that no longer exists
+        const cancelled = !isCurrent();
+        if (cancelled) {
+          login = null;
+          cookieNames = [];
+        }
+
+        if (loginWindow === win) loginWindow = null;
         if (!win.isDestroyed()) win.destroy();
-        resolve({ login, cookieNames });
+        resolve({ login, cookieNames, cancelled });
       };
 
       // cookie, set by the website once the user is logged in
@@ -232,16 +267,32 @@ export const loginToMusixMatch = (
       const poll = setInterval(check, 2000);
 
       // Google/other OAuth providers reject user agents that contain "Electron".
-      win.webContents.setUserAgent(
-        win.webContents.userAgent.replace(
-          /\s(Electron|pear-desktop)\/\S+/gi,
-          '',
-        ),
+      const userAgent = win.webContents.userAgent.replace(
+        /\s(Electron|pear-desktop)\/\S+/gi,
+        '',
       );
 
-      win.webContents.setWindowOpenHandler(({ url }) =>
-        url.startsWith('https://') ? { action: 'allow' } : { action: 'deny' },
-      );
+      // Popups (e.g. the OAuth window) get the same hardened options as the login
+      // window and are children of it, so they are closed together with it.
+      const hardenPopups = (contents: WebContents, owner: BrowserWindow) => {
+        contents.setUserAgent(userAgent);
+        contents.setWindowOpenHandler(({ url }) =>
+          url.startsWith('https://')
+            ? {
+                action: 'allow',
+                overrideBrowserWindowOptions: {
+                  parent: owner,
+                  autoHideMenuBar: true,
+                  webPreferences: { ...LOGIN_WEB_PREFERENCES },
+                },
+              }
+            : { action: 'deny' },
+        );
+        contents.on('did-create-window', (popup) =>
+          hardenPopups(popup.webContents, popup),
+        );
+      };
+      hardenPopups(win.webContents, win);
 
       // Keep the title stable, the page title would replace it.
       win.on('page-title-updated', (event) => event.preventDefault());
@@ -265,8 +316,17 @@ export const loginToMusixMatch = (
   return pendingLogin;
 };
 
-/** Removes the cookies/storage of the isolated MusixMatch login session. */
+/**
+ * Cancels a pending login (if any) and removes the cookies/storage of the isolated session.
+ * The pending attempt is closed through the window's own close path and resolves without
+ * credentials, the storage is only cleared once it has settled.
+ */
 export const logoutFromMusixMatch = async () => {
-  if (loginWindow && !loginWindow.isDestroyed()) loginWindow.destroy();
+  loginGeneration++;
+
+  const pending = pendingLogin;
+  if (loginWindow && !loginWindow.isDestroyed()) loginWindow.close();
+  await pending?.catch(() => {});
+
   await session.fromPartition(PARTITION).clearStorageData();
 };

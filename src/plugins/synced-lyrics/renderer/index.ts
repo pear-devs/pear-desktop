@@ -2,11 +2,13 @@ import { createRenderer } from '@/utils';
 import { waitForElement } from '@/utils/wait-for-element';
 
 import { disposeReactiveRoot } from './reactive-root';
-import { setConfig, setCurrentTime } from './renderer';
-import { fetchLyrics } from './store';
+import { config, setConfig, setCurrentTime } from './renderer';
+import { fetchLyrics, refreshProvider } from './store';
 import { selectors, tabStates } from './utils';
 
-import type { SyncedLyricsPluginConfig } from '../types';
+import { ProviderNames } from '../providers';
+
+import type { NetFetchInit, SyncedLyricsPluginConfig } from '../types';
 import type { SongInfo } from '@/providers/song-info';
 import type { RendererContext } from '@/types/contexts';
 import type { MusicPlayer } from '@/types/music-player';
@@ -14,7 +16,7 @@ import type { MusicPlayer } from '@/types/music-player';
 export let _ytAPI: MusicPlayer | null = null;
 export let netFetch: (
   url: string,
-  init?: RequestInit,
+  init?: NetFetchInit,
 ) => Promise<[number, string, Record<string, string>]>;
 
 export const renderer = createRenderer<
@@ -27,7 +29,13 @@ export const renderer = createRenderer<
   SyncedLyricsPluginConfig
 >({
   onConfigChange(newConfig) {
+    const previousToken = config()?.musixmatchToken;
     setConfig(newConfig);
+
+    // logged in/out: results cached from before the change are no longer valid
+    if ((previousToken || '') !== (newConfig.musixmatchToken || '')) {
+      refreshProvider(ProviderNames.MusixMatch);
+    }
   },
 
   observerCallback(mutations: MutationRecord[]) {

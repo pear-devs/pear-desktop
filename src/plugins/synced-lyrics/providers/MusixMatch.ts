@@ -106,11 +106,41 @@ const pickTrack = (tracks: Track[], duration: number): Track | undefined => {
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
 
+const REQUEST_TIMEOUT = 20_000;
+
 const withTimeout = <T>(promise: Promise<T>, ms: number, message: string) =>
   new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(message)), ms);
     promise.then(resolve, reject).finally(() => clearTimeout(timer));
   });
+
+/**
+ * Sends a request through the main process.
+ *
+ * An AbortSignal cannot cross the IPC bridge, so the main process aborts the request itself
+ * after `REQUEST_TIMEOUT` (see `backend.ts`). The timer here is only a backstop for when the
+ * main process does not answer at all: when it fires, the underlying request is NOT cancelled
+ * and may keep running in the background until the main process finishes with it.
+ */
+const request = async (
+  url: string,
+  init: RequestInit,
+  timeoutMessage: string,
+) => {
+  try {
+    return await withTimeout(
+      netFetch(url, { ...init, timeout: REQUEST_TIMEOUT }),
+      REQUEST_TIMEOUT + 5_000,
+      timeoutMessage,
+    );
+  } catch (error) {
+    // aborted by the main process (the IPC error message contains the original one)
+    if (error instanceof Error && /TimeoutError|aborted/i.test(error.message)) {
+      throw new Error(timeoutMessage, { cause: error });
+    }
+    throw error;
+  }
+};
 
 const savedSecretSchema = z.object({
   secret: z.string(),
@@ -118,14 +148,20 @@ const savedSecretSchema = z.object({
   expires: z.number(),
 });
 
+/**
+ * The key used to sign requests.
+ * `refreshed` is set when it was fetched because the previous one got rejected, such a key is not
+ * replaced again before the api accepted it once (see `refreshSecret`).
+ */
+type Secret = { secret: string; version?: string; refreshed: boolean };
+
 class MusixMatchAPI {
   private readonly baseUrl = 'https://www.musixmatch.com/ws/1.1/';
   private readonly defaultAppId = 'mxm-com-v1.0';
   private readonly secretKey = 'ytm:synced-lyrics:mxm:secret';
 
-  private secret: { secret: string; version?: string } | null = null;
-  private secretPromise: Promise<{ secret: string; version?: string }> | null =
-    null;
+  private secret: Secret | null = null;
+  private secretPromise: Promise<Secret> | null = null;
 
   public async searchTracks(query: { q_track: string; q_artist: string }) {
     const body = await this.query(
@@ -171,9 +207,10 @@ class MusixMatchAPI {
     endpoint: string,
     params: Record<string, string>,
     schema: S,
-    retry = true,
+    retryWith?: Secret,
   ): Promise<z.infer<S> | undefined> {
-    const { secret, version } = await this.getSecret();
+    const used = retryWith ?? (await this.getSecret());
+    const { secret, version } = used;
 
     const token = config()?.musixmatchToken;
     const url = `${this.baseUrl}${endpoint}?${new URLSearchParams({
@@ -187,15 +224,15 @@ class MusixMatchAPI {
       await sign(url, secret),
     )}&signature_protocol=sha256`;
 
-    const [status, json] = await withTimeout(
-      netFetch(signedUrl, {
+    const [status, json] = await request(
+      signedUrl,
+      {
         headers: {
           'User-Agent': USER_AGENT,
           'Referer': this.baseUrl.replace('ws/1.1/', ''),
           ...(version ? { 'x-mxm-app-version': version } : {}),
         },
-      }),
-      20_000,
+      },
       'MusixMatch request timed out',
     );
 
@@ -224,18 +261,18 @@ class MusixMatchAPI {
 
     const { header, body } = parsed.data.message;
     if (header.status_code === 401 || header.status_code === 403) {
-      if (retry) {
-        // the signing key might have been rotated, fetch it again once
-        this.secret = null;
-        this.secretPromise = null;
-        localStorage.removeItem(this.secretKey);
-        return this.query(endpoint, params, schema, false);
-      }
+      // The status alone does not say what was rejected: the signing key, the app id or the
+      // user token could each be the cause, so the saved token is never touched here.
+      const next = await this.refreshSecret(used);
+      if (next) return this.query(endpoint, params, schema, next);
 
       throw new Error(
-        `MusixMatch rejected the request (status ${header.status_code}). If this keeps happening, log in again from the synced-lyrics plugin menu.`,
+        `MusixMatch rejected the request (status ${header.status_code}). The signing key, app id or login token may be the cause. If this keeps happening, try logging in again from the synced-lyrics plugin menu.`,
       );
     }
+
+    // the secret was accepted, a later rejection may be a real key rotation again
+    used.refreshed = false;
 
     // 404 and friends: nothing found
     if (header.status_code !== 200) return undefined;
@@ -246,10 +283,30 @@ class MusixMatchAPI {
     return data.data;
   }
 
-  private getSecret() {
+  /**
+   * Called when `rejected` was refused by the api. Fetches a new signing key, at most once per
+   * generation: a key that was itself fetched because of a rejection is not refreshed again until
+   * it has been accepted at least once, so a persistent rejection does not repeat the downloads.
+   * Returns the secret to retry with, or `undefined` when the request should not be retried.
+   */
+  private refreshSecret(rejected: Secret): Promise<Secret | undefined> {
+    if (rejected.refreshed) return Promise.resolve(undefined);
+
+    if (this.secret === rejected) {
+      this.secret = null;
+      this.secretPromise = null;
+      localStorage.removeItem(this.secretKey);
+      return this.getSecret(true);
+    }
+
+    // another request already replaced the key (or is loading a new one right now)
+    return this.getSecret();
+  }
+
+  private getSecret(force = false) {
     if (this.secret) return Promise.resolve(this.secret);
 
-    this.secretPromise ??= this.loadSecret().then(
+    this.secretPromise ??= this.loadSecret(force).then(
       (secret) => (this.secret = secret),
       (error) => {
         this.secretPromise = null;
@@ -259,21 +316,26 @@ class MusixMatchAPI {
     return this.secretPromise;
   }
 
-  private async loadSecret() {
-    try {
-      const saved = savedSecretSchema.parse(
-        JSON.parse(localStorage.getItem(this.secretKey) ?? 'null'),
-      );
-      if (saved.expires > Date.now()) return saved;
-    } catch {
-      // nothing saved, or invalid
+  private async loadSecret(force: boolean): Promise<Secret> {
+    if (!force) {
+      try {
+        const saved = savedSecretSchema.parse(
+          JSON.parse(localStorage.getItem(this.secretKey) ?? 'null'),
+        );
+        if (saved.expires > Date.now()) {
+          return {
+            secret: saved.secret,
+            version: saved.version,
+            refreshed: false,
+          };
+        }
+      } catch {
+        // nothing saved, or invalid
+      }
     }
-
-    const [, html] = await withTimeout(
-      netFetch('https://www.musixmatch.com/search', {
-        headers: { 'User-Agent': USER_AGENT, 'Cookie': 'mxm_bab=AB' },
-      }),
-      20_000,
+    const [, html] = await request(
+      'https://www.musixmatch.com/search',
+      { headers: { 'User-Agent': USER_AGENT, 'Cookie': 'mxm_bab=AB' } },
       'MusixMatch initialization timed out',
     );
 
@@ -285,9 +347,9 @@ class MusixMatchAPI {
     if (!appPath) throw new Error('MusixMatch: could not find the app script');
 
     const appUrl = new URL(appPath, 'https://www.musixmatch.com/').toString();
-    const [, js] = await withTimeout(
-      netFetch(appUrl, { headers: { 'User-Agent': USER_AGENT } }),
-      20_000,
+    const [, js] = await request(
+      appUrl,
+      { headers: { 'User-Agent': USER_AGENT } },
       'MusixMatch initialization timed out',
     );
 
@@ -303,7 +365,7 @@ class MusixMatchAPI {
       expires: Date.now() + SECRET_TTL,
     };
     localStorage.setItem(this.secretKey, JSON.stringify(result));
-    return result;
+    return { secret, version, refreshed: force };
   }
 }
 

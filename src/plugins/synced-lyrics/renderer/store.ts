@@ -144,6 +144,20 @@ export const fetchLyrics = (info: SongInfo) => {
   });
 };
 
+/**
+ * Drops the cached results and searches the current song again for one provider.
+ * Needed when something the provider depends on changes (e.g. the MusixMatch login),
+ * otherwise results fetched before the change stay on screen until the app restarts.
+ */
+export const refreshProvider = (provider: ProviderName) => {
+  for (const [videoId, cache] of searchCache) {
+    if (cache.state === 'done') searchCache.delete(videoId);
+  }
+
+  const info = getSongInfo();
+  if (info?.videoId) retrySearch(provider, info);
+};
+
 export const retrySearch = (provider: ProviderName, info: SongInfo) => {
   setLyricsStore('lyrics', (old) => {
     const pCache = {

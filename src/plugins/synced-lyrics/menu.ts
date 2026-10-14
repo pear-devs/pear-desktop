@@ -56,14 +56,16 @@ export const menu = async (
           toolTip:
             'Opens musixmatch.com. Log in there, the window closes automatically once the login is detected.',
           async click() {
-            const { login, cookieNames } = await loginToMusixMatch(ctx.window);
+            const { login, cookieNames, cancelled } = await loginToMusixMatch(
+              ctx.window,
+            );
             if (login) {
               await ctx.setConfig({
                 musixmatchToken: login.token,
-                musixmatchAppId: login.appId,
+                musixmatchAppId: login.appId ?? '',
               });
               await ctx.refresh();
-            } else {
+            } else if (!cancelled) {
               dialog.showErrorBox(
                 'MusixMatch login',
                 `No login token was found.\n\nMake sure you are logged in before closing the window.\nCookies seen on musixmatch.com: ${cookieNames.join(', ') || 'none'}`,
@@ -76,9 +78,11 @@ export const menu = async (
           enabled: !!config.musixmatchToken,
           async click() {
             await logoutFromMusixMatch();
+            // `undefined` would be ignored by the config merge (the old value would stay),
+            // so the values are cleared with an empty string instead
             await ctx.setConfig({
-              musixmatchToken: undefined,
-              musixmatchAppId: undefined,
+              musixmatchToken: '',
+              musixmatchAppId: '',
             });
             await ctx.refresh();
           },
