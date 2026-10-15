@@ -1,4 +1,5 @@
 import type { TransitionPreference } from './planner';
+import type { ReorderShape } from './reorder';
 
 export type AutoMixPluginConfig = {
   enabled: boolean;
@@ -19,6 +20,8 @@ export type AutoMixPluginConfig = {
   respectAlbums: boolean;
   /** Show the "AutoMixing" card while a transition plays */
   showMixCard: boolean;
+  /** How Reorder shapes the set: smoothest, building up, or steady */
+  reorderShape: ReorderShape;
 };
 
 export const defaultConfig: AutoMixPluginConfig = {
@@ -32,4 +35,5 @@ export const defaultConfig: AutoMixPluginConfig = {
   cutEcho: false,
   respectAlbums: true,
   showMixCard: true,
+  reorderShape: 'smooth',
 };

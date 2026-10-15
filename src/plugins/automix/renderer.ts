@@ -108,6 +108,7 @@ export const renderer = {
           summaryOf: (videoId) => current.summaryOf(videoId),
           maxStretch: config().maxStretch,
           keepAlbums: config().respectAlbums,
+          shape: config().reorderShape,
           onProgress,
         });
       },

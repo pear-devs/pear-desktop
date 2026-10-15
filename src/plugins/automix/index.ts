@@ -114,6 +114,16 @@ export default createPlugin({
         checked: config.respectAlbums,
         click: (item) => setConfig({ respectAlbums: item.checked }),
       },
+      radio<AutoMixPluginConfig['reorderShape']>(
+        t('plugins.automix.menu.reorder-shape.label'),
+        config.reorderShape,
+        [
+          ['smooth', t('plugins.automix.menu.reorder-shape.smooth')],
+          ['build', t('plugins.automix.menu.reorder-shape.build')],
+          ['steady', t('plugins.automix.menu.reorder-shape.steady')],
+        ],
+        (reorderShape) => setConfig({ reorderShape }),
+      ),
       {
         label: t('plugins.automix.menu.show-mix-card'),
         type: 'checkbox',

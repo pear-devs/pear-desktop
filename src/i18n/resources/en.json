@@ -381,6 +381,12 @@
         "active": "AutoMix on",
         "beat-only": "Only beat-matched transitions (Beat Match or Beat Cut, no segues)",
         "cut-echo": "Echo the old song's last beat on Beat Cuts",
+        "reorder-shape": {
+          "build": "Build up the energy",
+          "label": "Reorder the queue for",
+          "smooth": "Smoothest transitions",
+          "steady": "Keep the energy steady"
+        },
         "beats": "{{beats}} beats",
         "blend-length": "Blend length",
         "fade-length": "Smooth fade length",

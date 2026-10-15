@@ -22,7 +22,22 @@ export interface EdgeSummary {
 export interface TrackSummary {
   start: EdgeSummary;
   end: EdgeSummary;
+  /** Typical loudness of the song's body (dB) */
+  loudness: number;
+  /** Whole-song tempo, folded into 90-180 BPM (65 counts as 130) */
+  tempo: number;
 }
+
+/** How Reorder shapes the set, beyond smooth transitions */
+export type ReorderShape = 'smooth' | 'build' | 'steady';
+
+const foldTempo = (bpm: number) => {
+  if (!(bpm > 0)) return 0;
+  let folded = bpm;
+  while (folded < 90) folded *= 2;
+  while (folded > 180) folded /= 2;
+  return folded;
+};
 
 const edge = (section: TempoSection): EdgeSummary => ({
   bpm: section.bpm,
@@ -34,6 +49,8 @@ const edge = (section: TempoSection): EdgeSummary => ({
 export const summarize = (analysis: TrackAnalysis): TrackSummary => ({
   start: edge(analysis.start),
   end: edge(analysis.end),
+  loudness: analysis.bodyLoudness,
+  tempo: foldTempo(analysis.bpm),
 });
 
 const steady = (side: EdgeSummary) =>
@@ -91,6 +108,33 @@ export interface OrderItem {
 }
 
 /**
+ * Each song's energy, 0..1 relative to the others: half how loud its body
+ * is, half how fast it is. Null when the song couldn't be analysed
+ */
+const energies = (summaries: (TrackSummary | null)[]) => {
+  const known = summaries.filter((s): s is TrackSummary => s !== null);
+  const range = (values: number[]) => {
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    return (value: number) => (max > min ? (value - min) / (max - min) : 0.5);
+  };
+  const loud = range(known.map((s) => s.loudness));
+  const fast = range(known.map((s) => s.tempo));
+  return summaries.map((s) =>
+    s ? (loud(s.loudness) + fast(s.tempo)) / 2 : null,
+  );
+};
+
+/** What a shape adds to a transition's cost, from one energy to the next */
+const shapeCost = (shape: ReorderShape, from: number | null, to: number | null) => {
+  if (shape === 'smooth' || from === null || to === null) return 0;
+  // Build: keep climbing, a drop costs as much as a missed beat match
+  if (shape === 'build') return Math.max(0, from - to) * 2;
+  // Steady: stay at a similar energy either way
+  return Math.abs(to - from);
+};
+
+/**
  * Best order (as indices into `items`) to play `items` in after `current`.
  * A greedy chain, then songs (or album runs) moved wherever that lowers
  * the total cost, until nothing improves.
@@ -98,8 +142,14 @@ export interface OrderItem {
 export const planOrder = (
   current: TrackSummary | null,
   items: OrderItem[],
-  { maxStretch, keepAlbums }: { maxStretch: number; keepAlbums: boolean },
+  {
+    maxStretch,
+    keepAlbums,
+    shape = 'smooth',
+  }: { maxStretch: number; keepAlbums: boolean; shape?: ReorderShape },
 ): number[] => {
+  // energy[0] is the playing song, energy[i + 1] is items[i]
+  const energy = energies([current, ...items.map((item) => item.summary)]);
   // Album runs move as one block
   const blocks: number[][] = [];
   items.forEach((item, i) => {
@@ -115,21 +165,28 @@ export const planOrder = (
       blocks.push([i]);
     }
   });
-  const startOf = (block: number[]) => items[block[0]].summary;
-  const endOf = (block: number[]) => items[block.at(-1)!].summary;
-  const cost = (from: TrackSummary | null, block: number[]) =>
-    transitionCost(from, startOf(block), maxStretch);
+  // A block is the playing song (null) or a run of item indices
+  const cost = (from: number[] | null, block: number[]) =>
+    transitionCost(
+      from ? items[from.at(-1)!].summary : current,
+      items[block[0]].summary,
+      maxStretch,
+    ) +
+    shapeCost(
+      shape,
+      energy[from ? from.at(-1)! + 1 : 0],
+      energy[block[0] + 1],
+    );
   const total = (order: number[][]) =>
     order.reduce(
-      (sum, block, i) =>
-        sum + cost(i === 0 ? current : endOf(order[i - 1]), block),
+      (sum, block, i) => sum + cost(i === 0 ? null : order[i - 1], block),
       0,
     );
 
   // Greedy: always the best next block (ties keep the queue's order)
   const remaining = [...blocks];
   let order: number[][] = [];
-  let last = current;
+  let last: number[] | null = null;
   while (remaining.length > 0) {
     let best = 0;
     for (let i = 1; i < remaining.length; i++) {
@@ -139,7 +196,7 @@ export const planOrder = (
     }
     const [block] = remaining.splice(best, 1);
     order.push(block);
-    last = endOf(block);
+    last = block;
   }
 
   // Move single blocks to better places until that stops helping
@@ -167,7 +224,7 @@ export const planOrder = (
 };
 
 /** Where song summaries are kept between sessions, and how many */
-const STORE_KEY = 'automix-summaries-v1';
+const STORE_KEY = 'automix-summaries-v2';
 const STORE_MAX = 1000;
 
 /** Song summaries saved by earlier sessions, oldest first */
@@ -243,12 +300,14 @@ export const reorderQueue = async ({
   summaryOf,
   maxStretch,
   keepAlbums,
+  shape,
   onProgress,
 }: {
   playingId: string | null;
   summaryOf: (videoId: string) => Promise<TrackSummary | null>;
   maxStretch: number;
   keepAlbums: boolean;
+  shape: ReorderShape;
   onProgress: (done: number, total: number) => void;
 }): Promise<ReorderResult | null> => {
   const snapshot = readUpcoming(playingId, REORDER_LIMIT);
@@ -271,7 +330,7 @@ export const reorderQueue = async ({
       summary: summaries[i],
       albumId: entry.track.albumId,
     })),
-    { maxStretch, keepAlbums },
+    { maxStretch, keepAlbums, shape },
   );
   const wanted = order.map((i) => before[i]);
   if (!applyOrder(playingId, before, wanted)) return null;
