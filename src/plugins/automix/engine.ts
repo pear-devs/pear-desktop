@@ -479,7 +479,8 @@ export class AutoMixEngine {
         // Unknown songs are ordered as neutral
       }
     }
-    this.summaries.set(videoId, summary);
+    // Only keep what worked, so a failed download is retried next time
+    if (summary) this.summaries.set(videoId, summary);
     return summary;
   }
 

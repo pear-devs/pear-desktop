@@ -509,7 +509,8 @@ export const localPulse = (
 /**
  * Index of the first beat from which the steady beat has really started:
  * two overlapping windows in a row with a clear pulse for this song. Null
- * if it doesn't start within MAX_INTRO_SKIP of the section's start.
+ * if it doesn't start within MAX_INTRO_SKIP of the section's start; 0 if
+ * there are too few beats to tell.
  */
 const grooveStart = (
   beatFrames: number[],
@@ -526,11 +527,12 @@ const grooveStart = (
           beatFrames[i + GROOVE_WINDOW],
         )
       : 0;
+  // Too few beats to judge two windows: keep them all, as before
+  if (beatFrames.length <= GROOVE_WINDOW + 4) return 0;
   const levels: number[] = [];
   for (let i = 0; i + GROOVE_WINDOW < beatFrames.length; i += 4) {
     levels.push(pulseAt(i));
   }
-  if (levels.length === 0) return null;
   const threshold = clamp(
     percentile(levels, 0.5) / 2,
     GROOVE_MIN_STRENGTH,
