@@ -5,6 +5,7 @@ import { createSignal } from 'solid-js';
 import { defaultConfig, type AutoMixPluginConfig } from './config';
 import { FETCH_AUDIO_CHANNEL, type FetchedAudio } from './constants';
 import { AutoMixEngine, type AutoMixStatus } from './engine';
+import { reorderQueue } from './reorder';
 import { mountUi } from './ui';
 
 import type { RendererContext } from '@/types/contexts';
@@ -98,6 +99,17 @@ export const renderer = {
         Promise.resolve(context.setConfig({ active: !config().active })).catch(
           console.error,
         );
+      },
+      reorder: async (onProgress) => {
+        const current = engine;
+        if (!current) return null;
+        return reorderQueue({
+          playingId: current.playingVideoId(),
+          summaryOf: (videoId) => current.summaryOf(videoId),
+          maxStretch: config().maxStretch,
+          keepAlbums: config().respectAlbums,
+          onProgress,
+        });
       },
     });
   },

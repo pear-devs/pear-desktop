@@ -44,6 +44,20 @@
     box-shadow 0.6s ease;
 }
 
+.automix-reorder {
+  margin-left: 6px;
+  padding: 0 11px 0 8px;
+}
+
+.automix-reorder[data-state='busy'] .automix-icon {
+  animation: automix-pulse 1.6s ease-in-out infinite;
+}
+
+.automix-reorder[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .automix-pill:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }

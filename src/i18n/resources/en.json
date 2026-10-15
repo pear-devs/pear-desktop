@@ -418,6 +418,19 @@
         "mixing": "AutoMixing",
         "off": "AutoMix off",
         "on": "AutoMix",
+        "reorder": {
+          "already": "Already in the best order",
+          "busy": "Analysing {{done}}/{{total}}",
+          "changed": "The queue changed, can't undo",
+          "failed": "Couldn't reorder",
+          "label": "Reorder",
+          "mixing": "Wait for the transition to finish",
+          "nothing": "Nothing to reorder",
+          "title": "Reorder the upcoming songs for the smoothest AutoMix transitions",
+          "undo": "Undo",
+          "undo-title": "Moved {{moved}} songs. Click to put the queue back",
+          "undone": "Order restored"
+        },
         "reason": {
           "analysis-failed": "couldn't download or analyse a song",
           "no-next": "nothing queued after this song",

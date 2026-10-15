@@ -3,6 +3,7 @@ import {
   createMemo,
   createSignal,
   For,
+  onCleanup,
   Show,
   type Accessor,
 } from 'solid-js';
@@ -13,11 +14,16 @@ import { t } from '@/i18n';
 import type { AutoMixPluginConfig } from './config';
 import type { AutoMixStatus } from './engine';
 import type { TransitionPlan } from './planner';
+import type { ReorderResult } from './reorder';
 
 interface UiProps {
   status: Accessor<AutoMixStatus>;
   config: Accessor<AutoMixPluginConfig>;
   onToggle: () => void;
+  /** Reorders the upcoming songs for the best transitions */
+  reorder: (
+    onProgress: (done: number, total: number) => void,
+  ) => Promise<ReorderResult | null>;
 }
 
 const formatTime = (seconds: number) => {
@@ -72,6 +78,12 @@ const describeStyle = (plan: TransitionPlan) => {
 const AutoMixIcon = () => (
   <svg aria-hidden="true" class="automix-icon" viewBox="0 0 24 24">
     <path d="M3 12c0-2.5 1.9-4.5 4.3-4.5 3.4 0 6 9 9.4 9 2.4 0 4.3-2 4.3-4.5s-1.9-4.5-4.3-4.5c-3.4 0-6 9-9.4 9C4.9 16.5 3 14.5 3 12z" />
+  </svg>
+);
+
+const ReorderIcon = () => (
+  <svg aria-hidden="true" class="automix-icon" viewBox="0 0 24 24">
+    <path d="M7 4v15M4 16l3 3 3-3M17 20V5M14 8l3-3 3 3" />
   </svg>
 );
 
@@ -210,6 +222,121 @@ const Pill = (props: PillProps) => {
   );
 };
 
+type ReorderState =
+  | { kind: 'idle' }
+  | { kind: 'busy'; done: number; total: number }
+  | { kind: 'undo'; moved: number; undo: () => boolean }
+  | { kind: 'note'; text: string };
+
+/** Next to the pill: reorder the upcoming songs, then offer to undo it */
+const ReorderButton = (props: UiProps) => {
+  const [state, setState] = createSignal<ReorderState>({ kind: 'idle' });
+  let timer: number | undefined;
+  const settle = (next: ReorderState, ms: number) => {
+    setState(next);
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => setState({ kind: 'idle' }), ms);
+  };
+  onCleanup(() => window.clearTimeout(timer));
+
+  // Moving songs mid-transition would pull the incoming one away
+  const mixing = () => props.status().phase === 'mixing';
+
+  const run = async () => {
+    const current = state();
+    if (current.kind === 'busy' || mixing()) return;
+    if (current.kind === 'undo') {
+      settle(
+        {
+          kind: 'note',
+          text: current.undo()
+            ? t('plugins.automix.ui.reorder.undone')
+            : t('plugins.automix.ui.reorder.changed'),
+        },
+        3000,
+      );
+      return;
+    }
+    window.clearTimeout(timer);
+    setState({ kind: 'busy', done: 0, total: 0 });
+    try {
+      const result = await props.reorder((done, total) =>
+        setState({ kind: 'busy', done, total }),
+      );
+      if (!result) {
+        settle(
+          { kind: 'note', text: t('plugins.automix.ui.reorder.nothing') },
+          3000,
+        );
+      } else if (result.moved === 0) {
+        settle(
+          { kind: 'note', text: t('plugins.automix.ui.reorder.already') },
+          3000,
+        );
+      } else {
+        settle(
+          { kind: 'undo', moved: result.moved, undo: result.undo },
+          60_000,
+        );
+      }
+    } catch {
+      settle(
+        { kind: 'note', text: t('plugins.automix.ui.reorder.failed') },
+        3000,
+      );
+    }
+  };
+
+  const label = () => {
+    const current = state();
+    switch (current.kind) {
+      case 'busy':
+        return current.total
+          ? t('plugins.automix.ui.reorder.busy', {
+              done: current.done,
+              total: current.total,
+            })
+          : t('plugins.automix.ui.reorder.label');
+      case 'undo':
+        return t('plugins.automix.ui.reorder.undo');
+      case 'note':
+        return current.text;
+      default:
+        return t('plugins.automix.ui.reorder.label');
+    }
+  };
+  const title = () => {
+    const current = state();
+    if (mixing()) return t('plugins.automix.ui.reorder.mixing');
+    if (current.kind === 'undo') {
+      return t('plugins.automix.ui.reorder.undo-title', {
+        moved: current.moved,
+      });
+    }
+    return t('plugins.automix.ui.reorder.title');
+  };
+
+  return (
+    <button
+      aria-busy={state().kind === 'busy'}
+      aria-disabled={mixing()}
+      aria-label={`${label()}. ${title()}`}
+      class="automix-pill automix-reorder"
+      data-state={state().kind}
+      // Own listener: the player bar stops clicks reaching delegated ones
+      on:click={(event) => {
+        event.stopPropagation();
+        run().catch(console.error);
+      }}
+      title={title()}
+      type="button"
+    >
+      <ReorderIcon />
+      <span class="automix-label">{label()}</span>
+    </button>
+  );
+};
+
 const HoverCard = (props: {
   status: Accessor<AutoMixStatus>;
   anchor: Accessor<DOMRect | null>;
@@ -300,7 +427,15 @@ export const mountUi = (props: UiProps) => {
   const [anchor, setAnchor] = createSignal<DOMRect | null>(null);
 
   const disposers = [
-    render(() => <Pill {...props} onHover={setAnchor} />, pillHost),
+    render(
+      () => (
+        <>
+          <Pill {...props} onHover={setAnchor} />
+          <ReorderButton {...props} />
+        </>
+      ),
+      pillHost,
+    ),
     render(
       () => (
         <>

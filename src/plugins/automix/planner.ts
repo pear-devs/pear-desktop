@@ -84,7 +84,7 @@ const LEAD_IN_MAX = 5;
 const LEAD_IN_DEFAULT = 3;
 
 /** Both songs need a clearly steady beat before they get a DJ-style blend */
-const DJ_TEMPO_CONFIDENCE = 0.45;
+export const DJ_TEMPO_CONFIDENCE = 0.45;
 
 /** Minimum tempo confidence to trust a beat grid */
 export const MIN_TEMPO_CONFIDENCE = 0.35;

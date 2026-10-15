@@ -60,10 +60,12 @@ export interface QueueSnapshot {
 export const getQueueStore = () =>
   document.querySelector<QueueElement>('#queue')?.queue?.store?.store;
 
-export const readQueue = (playingId: string | null): QueueSnapshot | null => {
-  const state = getQueueStore()?.getState()?.queue;
-  if (!state?.items?.length) return null;
+type QueueState = NonNullable<
+  ReturnType<NonNullable<ReturnType<typeof getQueueStore>>['getState']>
+>['queue'];
 
+/** Index of the playing item, and whether it plays the item's counterpart */
+const locate = (state: QueueState, playingId: string | null) => {
   const selected = state.items.findIndex(
     (item) => primaryOf(item)?.selected || counterpartOf(item)?.selected,
   );
@@ -93,6 +95,16 @@ export const readQueue = (playingId: string | null): QueueSnapshot | null => {
     playingId !== null &&
     primaryOf(currentItem)?.videoId !== playingId &&
     counterpartOf(currentItem)?.videoId === playingId;
+  return { index, onCounterpart };
+};
+
+export const readQueue = (playingId: string | null): QueueSnapshot | null => {
+  const state = getQueueStore()?.getState()?.queue;
+  if (!state?.items?.length) return null;
+  const located = locate(state, playingId);
+  if (!located) return null;
+  const { index, onCounterpart } = located;
+  const currentItem = state.items[index];
 
   // With Autoplay on, the player carries on into its suggestions (listed
   // under the queue) once the queue itself runs out
@@ -121,4 +133,45 @@ export const readQueue = (playingId: string | null): QueueSnapshot | null => {
     afterNext: toTrack(pick(itemAt(2))),
     repeatMode: state.repeatMode,
   };
+};
+
+export interface QueueEntry {
+  /** Position in the queue */
+  index: number;
+  track: QueueTrack;
+}
+
+/**
+ * The playing song and up to `limit` queued songs after it (not Autoplay
+ * suggestions), as the player will play them
+ */
+export const readUpcoming = (playingId: string | null, limit: number) => {
+  const state = getQueueStore()?.getState()?.queue;
+  if (!state?.items?.length) return null;
+  const located = locate(state, playingId);
+  if (!located) return null;
+  const { index, onCounterpart } = located;
+  const trackAt = (i: number) => {
+    const item = state.items[i];
+    return toTrack((onCounterpart && counterpartOf(item)) || primaryOf(item));
+  };
+  const current = trackAt(index);
+  if (!current) return null;
+  const upcoming: QueueEntry[] = [];
+  for (
+    let i = index + 1;
+    i < state.items.length && upcoming.length < limit;
+    i++
+  ) {
+    const track = trackAt(i);
+    if (track) upcoming.push({ index: i, track });
+  }
+  return { current, upcoming };
+};
+
+/** Moves a queue item, the way the player's own drag and drop does */
+export const moveQueueItem = (fromIndex: number, toIndex: number) => {
+  document
+    .querySelector<QueueElement>('#queue')
+    ?.dispatch({ type: 'MOVE_ITEM', payload: { fromIndex, toIndex } });
 };

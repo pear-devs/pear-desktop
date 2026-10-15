@@ -4,6 +4,7 @@ import { emptySection, type TrackAnalysis } from './analysis';
 import { decodeAndAnalyze, type AnalyzedTrack } from './decoder';
 import { planTransition, type TransitionPlan } from './planner';
 import { getQueueStore, readQueue, type QueueTrack } from './queue';
+import { summarize, type TrackSummary } from './reorder';
 import { locateCapture } from './sync';
 
 import type { AutoMixPluginConfig } from './config';
@@ -260,6 +261,8 @@ export class AutoMixEngine {
 
   private readonly tracks = new Map<string, Promise<AnalyzedTrack | null>>();
   private readonly ready = new Map<string, AnalyzedTrack>();
+  /** Tempo / key summaries for reordering the queue, by video id */
+  private readonly summaries = new Map<string, TrackSummary | null>();
   private readonly failedAt = new Map<string, number>();
 
   private currentId: string | null = null;
@@ -449,6 +452,46 @@ export class AutoMixEngine {
   /* ------------------------------------------------------------------ */
   /* Analysis cache                                                      */
   /* ------------------------------------------------------------------ */
+
+  /**
+   * Tempo / key summary of a song, for reordering the queue. Analyses the
+   * song if AutoMix hasn't yet, keeping only the summary (not the audio)
+   */
+  async summaryOf(videoId: string): Promise<TrackSummary | null> {
+    const cached = this.summaries.get(videoId);
+    if (cached !== undefined) return cached;
+    let summary: TrackSummary | null = null;
+    const known = this.ready.get(videoId);
+    if (known) {
+      summary = summarize(known.analysis);
+    } else {
+      try {
+        const audio = await this.fetchAudio(videoId);
+        if (audio && !this.stopped) {
+          const track = await decodeAndAnalyze(
+            videoId,
+            audio.bytes,
+            this.context?.sampleRate ?? 48000,
+          );
+          summary = summarize(track.analysis);
+        }
+      } catch {
+        // Unknown songs are ordered as neutral
+      }
+    }
+    this.summaries.set(videoId, summary);
+    return summary;
+  }
+
+  /** The song the player is on */
+  playingVideoId() {
+    return this.currentVideoId();
+  }
+
+  /** A transition is playing right now */
+  get mixing() {
+    return this.mix !== null;
+  }
 
   private ensureTrack(videoId: string) {
     const failed = this.failedAt.get(videoId);
