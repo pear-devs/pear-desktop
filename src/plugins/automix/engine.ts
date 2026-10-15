@@ -1059,48 +1059,41 @@ export class AutoMixEngine {
     const chain = this.buildOutgoing(context, from, plan);
     chain.master.gain.value = video.muted ? 0 : baseVolume;
     chain.source.start(startAt, offsetInTail);
-    // Same audio, lined up to the sample: switch over in one go. From
-    // that sample on the player is cancelled out, so it doesn't matter
-    // when muting the element (below) actually takes effect
+    // Same audio, lined up to the sample: switch over in one go. The player
+    // is silenced in this same task, once the mix is registered (below)
     chain.dry.gain.setValueAtTime(0, startAt);
     chain.dry.gain.setValueAtTime(1, startAt);
-    let cancel: GainNode | undefined;
-    if (this.source) {
-      cancel = context.createGain();
-      cancel.gain.value = 0;
-      cancel.gain.setValueAtTime(-1, startAt);
-      this.source.connect(cancel).connect(context.destination);
-    }
-    setRealVolume(video, SILENT_VOLUME);
 
     const mixAt = startAt + (plan.mixOut - startOffset);
-    this.scheduleOutgoing(context, chain, plan, mixAt);
-
     const mixEnd =
       mixAt +
       (plan.style === 'cut'
         ? 0.05
         : plan.duration + (plan.holdOutgoing ? ENDING_RING : 0));
 
-    // Play the incoming start from our own copy too, sample accurately
-    const head =
-      to && to.videoId === next.videoId
-        ? this.buildIncomingHead(
-            context,
-            to,
-            plan,
-            mixAt,
-            mixEnd,
-            video.muted ? 0 : baseVolume,
-          )
-        : undefined;
-    if (head) chain.nodes.push(head.source, head.gain, head.master);
-    if (cancel && !head) {
-      // The player itself brings the next song in: stop cancelling it once
-      // it's surely muted
-      cancel.gain.setValueAtTime(-1, startAt + 0.1);
-      cancel.gain.linearRampToValueAtTime(0, startAt + 0.12);
+    let head: IncomingHead | undefined;
+    try {
+      this.scheduleOutgoing(context, chain, plan, mixAt);
+      // Play the incoming start from our own copy too, sample accurately
+      head =
+        to && to.videoId === next.videoId
+          ? this.buildIncomingHead(
+              context,
+              to,
+              plan,
+              mixAt,
+              mixEnd,
+              video.muted ? 0 : baseVolume,
+            )
+          : undefined;
+    } catch (error) {
+      // Web Audio refused some automation: don't leave our copy playing
+      // over the player, which hasn't been touched yet
+      chain.source.stop();
+      for (const node of chain.nodes) node.disconnect();
+      throw error;
     }
+    if (head) chain.nodes.push(head.source, head.gain, head.master);
 
     const mix: ActiveMix = {
       plan,
@@ -1115,7 +1108,6 @@ export class AutoMixEngine {
       switched: false,
       cutDone: false,
       head,
-      cancel,
       lockedTicks: 0,
       sawIncoming: false,
       deferrals: 0,
@@ -1139,8 +1131,25 @@ export class AutoMixEngine {
       timers: [],
     };
 
+    // Registered first, so abort() can always undo what follows
     this.mix = mix;
     this.holdVolume(video, mix);
+    // From the copy's first sample the player is cancelled out, so it doesn't
+    // matter when muting the element actually takes effect
+    if (this.source) {
+      const cancel = context.createGain();
+      cancel.gain.value = 0;
+      cancel.gain.setValueAtTime(-1, startAt);
+      if (!head) {
+        // The player itself brings the next song in: stop cancelling it
+        // once it's surely muted
+        cancel.gain.setValueAtTime(-1, startAt + 0.1);
+        cancel.gain.linearRampToValueAtTime(0, startAt + 0.12);
+      }
+      this.source.connect(cancel).connect(context.destination);
+      mix.cancel = cancel;
+    }
+    this.applyLevel(video, mix);
     // The player moves on to the next song while we keep the old one playing
     this.at(startAt + 0.2, () => {
       if (!this.mix) return;
