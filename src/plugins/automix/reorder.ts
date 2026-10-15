@@ -227,16 +227,52 @@ export const planOrder = (
 const STORE_KEY = 'automix-summaries-v2';
 const STORE_MAX = 1000;
 
-/** Song summaries saved by earlier sessions, oldest first */
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isKey = (value: unknown) =>
+  value === null ||
+  (isRecord(value) &&
+    typeof value.camelot === 'string' &&
+    typeof value.pitchClass === 'number' &&
+    (value.mode === 'major' || value.mode === 'minor'));
+
+const isEdge = (value: unknown) =>
+  isRecord(value) &&
+  typeof value.bpm === 'number' &&
+  typeof value.confidence === 'number' &&
+  typeof value.hasBeats === 'boolean' &&
+  isKey(value.key);
+
+const isSummary = (value: unknown): value is TrackSummary =>
+  isRecord(value) &&
+  isEdge(value.start) &&
+  isEdge(value.end) &&
+  typeof value.loudness === 'number' &&
+  typeof value.tempo === 'number';
+
+/**
+ * Song summaries saved by earlier sessions, oldest first. Anything that
+ * isn't a well-formed summary is skipped, and at most STORE_MAX are kept
+ */
 export const loadSummaries = () => {
+  const summaries = new Map<string, TrackSummary>();
   try {
-    const raw = localStorage.getItem(STORE_KEY);
-    return new Map<string, TrackSummary>(
-      raw ? (JSON.parse(raw) as [string, TrackSummary][]) : [],
-    );
+    const parsed: unknown = JSON.parse(localStorage.getItem(STORE_KEY) ?? '[]');
+    if (!Array.isArray(parsed)) return summaries;
+    for (const entry of parsed.slice(-STORE_MAX)) {
+      if (
+        Array.isArray(entry) &&
+        typeof entry[0] === 'string' &&
+        isSummary(entry[1])
+      ) {
+        summaries.set(entry[0], entry[1]);
+      }
+    }
   } catch {
-    return new Map<string, TrackSummary>();
+    // Unreadable: start afresh
   }
+  return summaries;
 };
 
 /** Keeps the most recently used summaries for the next session */
