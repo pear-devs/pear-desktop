@@ -106,7 +106,7 @@ export const renderer = {
         return reorderQueue({
           playingId: current.playingVideoId(),
           summaryOf: (videoId) => current.summaryOf(videoId),
-          maxStretch: config().maxStretch,
+          maxStretch: current.stretchRange(config().maxStretch),
           keepAlbums: config().respectAlbums,
           shape: config().reorderShape,
           onProgress,

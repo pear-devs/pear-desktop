@@ -26,8 +26,13 @@ export interface PlannerOptions {
   preference: TransitionPreference;
   /** Length of a beat-matched blend, in beats of the outgoing track */
   blendBeats: number;
-  /** Maximum relative time-stretch applied to the incoming track (0.08 = ±8%) */
+  /** Maximum relative time-stretch applied to a track (0.08 = ±8%) */
   maxStretch: number;
+  /**
+   * Both songs can be stretched half way each, so a blend can bridge twice
+   * the tempo gap with each song within maxStretch
+   */
+  splitStretch?: boolean;
   /** Maximum length of a smooth fade, in seconds */
   smoothSeconds: number;
   /** Never segue: beat-match when tempos allow, otherwise cut on the beat */
@@ -430,7 +435,10 @@ export const planTransition = (
   const stretchOk =
     gridsOk &&
     steadyEdges &&
-    Math.abs(tempoRatio(from.bpm, to.bpm) - 1) <= options.maxStretch;
+    (options.splitStretch
+      ? Math.abs(Math.log(tempoRatio(from.bpm, to.bpm))) <=
+        2 * Math.log(1 + options.maxStretch)
+      : Math.abs(tempoRatio(from.bpm, to.bpm) - 1) <= options.maxStretch);
   // DJ-style blends only when the beat keeps going until the ending has
   // died away and the next song comes in on a beat; everything else gets a
   // segue, which is what Apple Music does with songs that really end

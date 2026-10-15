@@ -52,6 +52,10 @@ interface EngineOptions {
 
 interface OutgoingChain {
   source: AudioBufferSourceNode;
+  /** The plain copy's level into `input` (a stretched copy can take over) */
+  sourceGain: GainNode;
+  /** Where the copy enters the filters */
+  input: GainNode;
   dry: GainNode;
   master: GainNode;
   highpass?: BiquadFilterNode;
@@ -104,6 +108,10 @@ interface ActiveMix {
   cutDone: boolean;
   /** Set when the incoming side is played from our own copy */
   head?: IncomingHead;
+  /** Stretcher playing the outgoing copy, when a blend splits the stretch */
+  outStretch?: StretchNode;
+  /** Sends the outgoing stretcher its next tempo change when it's due */
+  outAdvance?: (now: number) => void;
   /**
    * The player's own audio, inverted: while it's on, whatever the player
    * plays is cancelled out exactly, so muting or unmuting the element can
@@ -178,6 +186,10 @@ const SETTLE_SECONDS = 14;
 /** Same glide for a stretched copy of the incoming song, in steps */
 const GLIDE_SECONDS = 8;
 const GLIDE_STEP = 0.5;
+/** The outgoing song's glide to the shared tempo, before the mix point */
+const OUT_GLIDE_SECONDS = 2;
+/** When the stretched outgoing copy takes over from the plain one */
+const OUT_HANDOFF = 0.5;
 const CROSSOVER_HZ = 180;
 const SILENT_VOLUME = 0.0001;
 /** Log wanted vs actual levels 5x a second while mixing (opt in) */
@@ -276,9 +288,12 @@ export class AutoMixEngine {
    */
   private playerOffset = 0;
 
-  /** Time-stretches our copy of the incoming song (one node, reused) */
+  /** Time-stretch our copies of the incoming / outgoing song (reused) */
   private stretch: StretchNode | null = null;
+  private stretchOut: StretchNode | null = null;
   private stretchContext: AudioContext | null = null;
+  /** Song pair (from>to) that couldn't split its stretch: plan it without */
+  private noSplitFor = '';
 
   private readonly tracks = new Map<string, Promise<AnalyzedTrack | null>>();
   private readonly ready = new Map<string, AnalyzedTrack>();
@@ -348,6 +363,8 @@ export class AutoMixEngine {
     this.tap = null;
     this.stretch?.disconnect();
     this.stretch = null;
+    this.stretchOut?.disconnect();
+    this.stretchOut = null;
     this.stretchContext = null;
     const video = this.video;
     video?.removeEventListener('seeking', this.onSeeking);
@@ -384,14 +401,27 @@ export class AutoMixEngine {
     if (!context || this.stretchContext === context) return;
     this.stretchContext = context;
     this.stretch = null;
-    // Without it, the player stretches the incoming song itself (rougher)
-    SignalsmithStretch(context)
-      .then((node) => {
+    this.stretchOut = null;
+    // Without them, the player stretches the incoming song itself (rougher)
+    // and the outgoing one isn't stretched at all
+    Promise.all([SignalsmithStretch(context), SignalsmithStretch(context)])
+      .then(([incoming, outgoing]) => {
         if (this.stretchContext === context && !this.stopped) {
-          this.stretch = node;
+          this.stretch = incoming;
+          this.stretchOut = outgoing;
         }
       })
       .catch(() => {});
+  }
+
+  /** Both songs of a blend can be stretched half way each */
+  private canSplit() {
+    return Boolean(this.stretch && this.stretchOut);
+  }
+
+  /** The tempo gap a blend can bridge with each song within `maxStretch` */
+  stretchRange(maxStretch: number) {
+    return this.canSplit() ? ((1 + maxStretch) ** 2) - 1 : maxStretch;
   }
 
   private ensureTap() {
@@ -751,10 +781,13 @@ export class AutoMixEngine {
 
     const fromAnalysis = from.analysis;
     const toAnalysis = to ? to.analysis : unknownTrack;
+    const splitStretch =
+      this.canSplit() && this.noSplitFor !== `${id}>${nextId}`;
     const key = JSON.stringify([
       id,
       nextId,
       Boolean(to),
+      splitStretch,
       this.config,
     ]);
     const tooLate =
@@ -766,6 +799,7 @@ export class AutoMixEngine {
         preference: to ? this.config.transition : 'smooth',
         blendBeats: this.config.blendBeats,
         maxStretch: this.config.maxStretch,
+        splitStretch,
         smoothSeconds: this.config.smoothSeconds,
         beatOnly: this.config.beatOnly,
         earliestMixOut: Math.max(video.currentTime + 6.5, from.tailStart + 6.5),
@@ -848,19 +882,24 @@ export class AutoMixEngine {
     const filters = [highpass, lowShelf, lowpass].filter(
       (node): node is BiquadFilterNode => Boolean(node),
     );
-    let tap: AudioNode = source;
+    const sourceGain = context.createGain();
+    const input = context.createGain();
+    source.connect(sourceGain).connect(input);
+    let tap: AudioNode = input;
     for (const node of filters) tap = tap.connect(node);
     tap.connect(dry).connect(master).connect(context.destination);
 
     return {
       source,
+      sourceGain,
+      input,
       dry,
       master,
       highpass,
       lowShelf,
       lowpass,
       tap,
-      nodes: [source, ...filters, dry, master],
+      nodes: [source, sourceGain, input, ...filters, dry, master],
     };
   }
 
@@ -1155,8 +1194,71 @@ export class AutoMixEngine {
       return;
     }
 
+    // A blend's tempo change is split between both songs when both copies
+    // can be stretched: each moves half way, to the tempo in between
+    const pair = `${from.videoId}>${next.videoId}`;
+    const outStretch = this.stretchOut;
+    const split =
+      plan.style === 'blend' &&
+      Math.abs(plan.rate - 1) >= 0.001 &&
+      Boolean(outStretch && this.stretch) &&
+      to?.videoId === next.videoId;
+    const refuseSplit = () => {
+      // Too far apart for one song alone: plan this pair again without it
+      this.noSplitFor = pair;
+      this.plan = null;
+      this.planKey = '';
+    };
+    if (Math.abs(plan.rate - 1) > this.config.maxStretch + 1e-6 && !split) {
+      refuseSplit();
+      return;
+    }
+    const outRate = split ? 1 / Math.sqrt(plan.rate) : 1;
+    // The plan in real seconds once the old song runs at outRate, with the
+    // new song at its half of the stretch
+    const timed: TransitionPlan = split
+      ? {
+          ...plan,
+          rate: Math.sqrt(plan.rate),
+          duration: plan.duration / outRate,
+          beat: plan.beat / outRate,
+        }
+      : plan;
+
+    // The old song's tempo over time: 1x at the hand-off, then a glide to
+    // outRate shortly after the stretched copy has taken over
+    const outSteps: RateStep[] = [{ at: startAt, rate: 1 }];
+    if (split) {
+      const glideFrom = startAt + OUT_HANDOFF + 0.1;
+      for (let t = GLIDE_STEP / 2; t <= OUT_GLIDE_SECONDS; t += GLIDE_STEP / 2) {
+        const x = t / OUT_GLIDE_SECONDS;
+        const eased = x * x * (3 - (2 * x));
+        outSteps.push({
+          at: glideFrom + t - (GLIDE_STEP / 2),
+          rate: 1 + ((outRate - 1) * eased),
+        });
+      }
+    }
+    const outPosition = (time: number) => {
+      let at = startAt;
+      let pos = startOffset;
+      for (let i = 0; i < outSteps.length; i++) {
+        const until = Math.min(time, outSteps[i + 1]?.at ?? time);
+        pos += outSteps[i].rate * (until - at);
+        at = until;
+        if (until >= time) break;
+      }
+      return pos;
+    };
+    const glided = outSteps[outSteps.length - 1];
+    if (split && plan.mixOut - outPosition(glided.at) < 0.5) {
+      // No room to glide before the mix point
+      refuseSplit();
+      return;
+    }
+
     const baseVolume = video.volume;
-    const chain = this.buildOutgoing(context, from, plan);
+    const chain = this.buildOutgoing(context, from, timed);
     chain.master.gain.value = video.muted ? 0 : baseVolume;
     chain.source.start(startAt, offsetInTail);
     // Same audio, lined up to the sample: switch over in one go. The player
@@ -1164,39 +1266,103 @@ export class AutoMixEngine {
     chain.dry.gain.setValueAtTime(0, startAt);
     chain.dry.gain.setValueAtTime(1, startAt);
 
-    const mixAt = startAt + (plan.mixOut - startOffset);
+    // When the old song reaches its mix point, at the tempo it runs at
+    const mixAt = split
+      ? glided.at + ((plan.mixOut - outPosition(glided.at)) / outRate)
+      : startAt + (plan.mixOut - startOffset);
     const mixEnd =
       mixAt +
       (plan.style === 'cut'
         ? 0.05
-        : plan.duration + (plan.holdOutgoing ? ENDING_RING : 0));
+        : timed.duration + (plan.holdOutgoing ? ENDING_RING : 0));
 
     let head: IncomingHead | undefined;
     try {
-      this.scheduleOutgoing(context, chain, plan, mixAt);
+      this.scheduleOutgoing(context, chain, timed, mixAt);
       // Play the incoming start from our own copy too, sample accurately
       head =
         to && to.videoId === next.videoId
           ? this.buildIncomingHead(
               context,
               to,
-              plan,
+              timed,
               mixAt,
               mixEnd,
               video.muted ? 0 : baseVolume,
             )
           : undefined;
+      if (split && !head) throw new Error('no stretched copy to split with');
     } catch (error) {
       // Web Audio refused some automation: don't leave our copy playing
       // over the player, which hasn't been touched yet
       chain.source.stop();
       for (const node of chain.nodes) node.disconnect();
+      if (split) {
+        refuseSplit();
+        return;
+      }
       throw error;
     }
     if (head) chain.nodes.push(head.source, head.gain, head.master);
 
+    // The stretched copy of the old song takes over from the plain one once
+    // it has settled (same audio, in step), then glides to the shared tempo
+    let outAdvance: ActiveMix['outAdvance'];
+    if (split && outStretch) {
+      const channels = Array.from(
+        { length: from.tail.numberOfChannels },
+        (_, c) => from.tail.getChannelData(c).slice(),
+      );
+      Promise.all([
+        outStretch.dropBuffers(),
+        outStretch.addBuffers(
+          channels,
+          channels.map((channel) => channel.buffer),
+        ),
+        outStretch.schedule({
+          outputTime: context.currentTime,
+          output: startAt,
+          active: true,
+          input: startOffset - from.tailStart,
+          rate: 1,
+        }),
+      ]).catch(() => {});
+      const stretchedGain = context.createGain();
+      stretchedGain.gain.value = 0;
+      outStretch.connect(stretchedGain).connect(chain.input);
+      const handoff = startAt + OUT_HANDOFF;
+      chain.sourceGain.gain.setValueAtTime(1, handoff);
+      chain.sourceGain.gain.linearRampToValueAtTime(0, handoff + 0.03);
+      stretchedGain.gain.setValueAtTime(0, handoff);
+      stretchedGain.gain.linearRampToValueAtTime(1, handoff + 0.03);
+      // Last stop call wins: the plain copy is done after the hand-off
+      chain.source.stop(handoff + 0.1);
+      chain.nodes.push(outStretch, stretchedGain);
+
+      // The stretcher keeps only one change ahead: send each step once the
+      // one before it has started, then stop it once the blend is over
+      let sent = 1;
+      let stopped = false;
+      outAdvance = (now) => {
+        while (sent < outSteps.length && now >= outSteps[sent - 1].at) {
+          outStretch
+            .schedule({
+              outputTime: outSteps[sent - 1].at + 0.001,
+              output: outSteps[sent].at,
+              rate: outSteps[sent].rate,
+            })
+            .catch(() => {});
+          sent++;
+        }
+        if (!stopped && sent >= outSteps.length && now >= glided.at) {
+          stopped = true;
+          outStretch.stop(mixEnd + 0.1).catch(() => {});
+        }
+      };
+    }
+
     const mix: ActiveMix = {
-      plan,
+      plan: timed,
       fromId: from.videoId,
       toId: next.videoId,
       fromTitle: this.currentTitle,
@@ -1208,6 +1374,8 @@ export class AutoMixEngine {
       switched: false,
       cutDone: false,
       head,
+      outStretch: split ? (outStretch ?? undefined) : undefined,
+      outAdvance,
       lockedTicks: 0,
       sawIncoming: false,
       deferrals: 0,
@@ -1231,6 +1399,17 @@ export class AutoMixEngine {
       timers: [],
     };
 
+    if (this.debugEnabled()) {
+      console.log(
+        '[AutoMix debug] mix:',
+        plan.style,
+        `${(Math.abs(plan.rate - 1) * 100).toFixed(1)}% tempo gap`,
+        split
+          ? `split: old song x${outRate.toFixed(3)}, new song x${timed.rate.toFixed(3)}`
+          : `new song x${plan.rate.toFixed(3)}`,
+        `| mix point in ${(mixAt - startAt).toFixed(2)}s`,
+      );
+    }
     // Registered first, so abort() can always undo what follows
     this.mix = mix;
     this.holdVolume(video, mix);
@@ -1400,13 +1579,16 @@ export class AutoMixEngine {
    * Wanted vs actual levels, 5x a second while mixing. Opt in from the
    * DevTools console: localStorage.setItem('automix-debug', '1')
    */
-  private debugLevels(mix: ActiveMix, video: HTMLVideoElement, now: number) {
-    if (now - this.lastDebug < 0.2) return;
+  private debugEnabled() {
     try {
-      if (localStorage.getItem(DEBUG_KEY) !== '1') return;
+      return localStorage.getItem(DEBUG_KEY) === '1';
     } catch {
-      return;
+      return false;
     }
+  }
+
+  private debugLevels(mix: ActiveMix, video: HTMLVideoElement, now: number) {
+    if (now - this.lastDebug < 0.2 || !this.debugEnabled()) return;
     this.lastDebug = now;
     const want = clamp(mix.baseVolume * mix.level, SILENT_VOLUME, 1);
     const { chain, head } = mix;
@@ -1440,6 +1622,7 @@ export class AutoMixEngine {
     if (!mix || !context || !video) return;
 
     const now = context.currentTime;
+    mix.outAdvance?.(now);
     this.debugLevels(mix, video, now);
 
     // Keep the outgoing copy in step with the volume slider / mute button
@@ -1781,6 +1964,8 @@ export class AutoMixEngine {
 
     const now = context.currentTime;
     this.stopCancelling(mix, now);
+    mix.outAdvance = undefined;
+    mix.outStretch?.stop(now + fadeSeconds).catch(() => {});
     mix.chain.dry.gain.cancelScheduledValues(now);
     mix.chain.dry.gain.setTargetAtTime(0, now, fadeSeconds / 4);
     try {
