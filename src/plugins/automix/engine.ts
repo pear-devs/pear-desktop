@@ -215,6 +215,22 @@ const unknownTrack: TrackAnalysis = {
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
 
+/**
+ * When a blend swaps the basslines over: the outgoing bass goes out as the
+ * incoming bass comes in, so two basslines never play at once
+ */
+const bassSwap = (plan: TransitionPlan, mixAt: number) => {
+  if (plan.holdOutgoing) {
+    // On the old song's final hit
+    const hit = mixAt + plan.duration;
+    return { from: hit - ((plan.beat || 0.5) / 2), to: hit };
+  }
+  return {
+    from: mixAt + (plan.duration * 0.45),
+    to: mixAt + (plan.duration * 0.55),
+  };
+};
+
 /** When a filtered-in incoming song has fully opened up, after the mix */
 const filterOpenBy = (plan: TransitionPlan) =>
   plan.holdOutgoing ? plan.duration : plan.duration * 0.7;
@@ -841,9 +857,9 @@ export class AutoMixEngine {
           // The old song keeps its full ending; bass swaps on its final hit,
           // which rings out briefly under the next song
           const hit = mixAt + duration;
-          const beat = plan.beat || 0.5;
-          lowShelf?.gain.setValueAtTime(0, hit - (beat / 2));
-          lowShelf?.gain.linearRampToValueAtTime(-30, hit);
+          const swap = bassSwap(plan, mixAt);
+          lowShelf?.gain.setValueAtTime(0, swap.from);
+          lowShelf?.gain.linearRampToValueAtTime(-30, swap.to);
           dry.gain.setValueAtTime(1, hit + 0.05);
           dry.gain.setTargetAtTime(0, hit + 0.05, ENDING_RING / 4);
           chain.source.stop(hit + ENDING_RING + 0.2);
@@ -851,8 +867,9 @@ export class AutoMixEngine {
         }
         // Equal-power crossfade with a DJ style bass swap halfway through
         dry.gain.setValueCurveAtTime(equalPowerOut, mixAt, duration);
-        lowShelf?.gain.setValueAtTime(0, mixAt + (duration * 0.45));
-        lowShelf?.gain.linearRampToValueAtTime(-30, mixAt + (duration * 0.55));
+        const swap = bassSwap(plan, mixAt);
+        lowShelf?.gain.setValueAtTime(0, swap.from);
+        lowShelf?.gain.linearRampToValueAtTime(-30, swap.to);
         highpass?.frequency.setValueAtTime(20, mixAt + (duration * 0.55));
         highpass?.frequency.exponentialRampToValueAtTime(400, mixAt + duration);
         chain.source.stop(mixAt + duration + 0.1);
@@ -983,9 +1000,14 @@ export class AutoMixEngine {
       return pos;
     };
 
-    const handOverFrom = stretched
-      ? steady + 0.25
-      : mixAt + (plan.filterIn ? filterOpenBy(plan) : 0.3);
+    // A blend's bass swap needs our copy (the player can't be EQ'd), so the
+    // player only takes over once the swap is done
+    const handOverFrom = Math.max(
+      stretched
+        ? steady + 0.25
+        : mixAt + (plan.filterIn ? filterOpenBy(plan) : 0.3),
+      plan.style === 'blend' ? bassSwap(plan, mixAt).to + 0.1 : 0,
+    );
     // Room for the player to catch up before the copy runs out
     if (position(handOverFrom) + 6 > to.head.duration) return undefined;
 
@@ -1038,6 +1060,7 @@ export class AutoMixEngine {
       source = buffer;
     }
 
+    let last: AudioNode = source;
     if (plan.filterIn) {
       // Thin at first so the two songs don't muddy, opening up fully by the
       // time the old song is gone (or on its final hit)
@@ -1049,11 +1072,21 @@ export class AutoMixEngine {
         20,
         mixAt + filterOpenBy(plan),
       );
-      source.connect(highpass).connect(gain);
-    } else {
-      source.connect(gain);
+      last = last.connect(highpass);
     }
-    gain.connect(master).connect(context.destination);
+    if (plan.style === 'blend') {
+      // The other half of the bass swap: no incoming bass until the old
+      // song's bass goes out
+      const lowShelf = context.createBiquadFilter();
+      lowShelf.type = 'lowshelf';
+      lowShelf.frequency.value = CROSSOVER_HZ;
+      lowShelf.gain.value = -30;
+      const swap = bassSwap(plan, mixAt);
+      lowShelf.gain.setValueAtTime(-30, swap.from);
+      lowShelf.gain.linearRampToValueAtTime(0, swap.to);
+      last = last.connect(lowShelf);
+    }
+    last.connect(gain).connect(master).connect(context.destination);
 
     if (plan.style === 'cut' || plan.style === 'segue') {
       // The incoming song starts as itself: no fade-in on its first note
