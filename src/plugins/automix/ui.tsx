@@ -225,7 +225,7 @@ const Pill = (props: PillProps) => {
 type ReorderState =
   | { kind: 'idle' }
   | { kind: 'busy'; done: number; total: number }
-  | { kind: 'undo'; moved: number; undo: () => boolean }
+  | { kind: 'undo'; result: ReorderResult }
   | { kind: 'note'; text: string };
 
 /** Next to the pill: reorder the upcoming songs, then offer to undo it */
@@ -249,7 +249,7 @@ const ReorderButton = (props: UiProps) => {
       settle(
         {
           kind: 'note',
-          text: current.undo()
+          text: current.result.undo()
             ? t('plugins.automix.ui.reorder.undone')
             : t('plugins.automix.ui.reorder.changed'),
         },
@@ -274,10 +274,7 @@ const ReorderButton = (props: UiProps) => {
           3000,
         );
       } else {
-        settle(
-          { kind: 'undo', moved: result.moved, undo: result.undo },
-          60_000,
-        );
+        settle({ kind: 'undo', result }, 60_000);
       }
     } catch {
       settle(
@@ -309,8 +306,13 @@ const ReorderButton = (props: UiProps) => {
     const current = state();
     if (mixing()) return t('plugins.automix.ui.reorder.mixing');
     if (current.kind === 'undo') {
+      const { moved, before, after } = current.result;
       return t('plugins.automix.ui.reorder.undo-title', {
-        moved: current.moved,
+        moved,
+        matched: after.matched,
+        transitions: after.transitions,
+        was: before.matched,
+        clashes: after.clashes,
       });
     }
     return t('plugins.automix.ui.reorder.title');

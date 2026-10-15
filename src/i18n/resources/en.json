@@ -428,7 +428,7 @@
           "nothing": "Nothing to reorder",
           "title": "Reorder the upcoming songs for the smoothest AutoMix transitions",
           "undo": "Undo",
-          "undo-title": "Moved {{moved}} songs. Click to put the queue back",
+          "undo-title": "Moved {{moved}} songs · beat-matched {{matched}} of {{transitions}} (was {{was}}) · {{clashes}} key clashes. Click to put the queue back",
           "undone": "Order restored"
         },
         "reason": {

@@ -58,6 +58,32 @@ export const transitionCost = (
   return 1 + clash;
 };
 
+/** How a run of songs will mix, transition by transition */
+export interface OrderStats {
+  transitions: number;
+  /** Can be beat-matched (steady beat both sides, tempo within reach) */
+  matched: number;
+  /** Keys that clash (AutoMix keeps those overlaps short) */
+  clashes: number;
+}
+
+export const orderStats = (
+  current: TrackSummary | null,
+  sequence: (TrackSummary | null)[],
+  maxStretch: number,
+): OrderStats => {
+  const stats = { transitions: sequence.length, matched: 0, clashes: 0 };
+  let previous = current;
+  for (const next of sequence) {
+    if (previous && next) {
+      if (transitionCost(previous, next, maxStretch) < 1) stats.matched++;
+      if (keysClash(previous.end.key, next.start.key)) stats.clashes++;
+    }
+    previous = next;
+  }
+  return stats;
+};
+
 export interface OrderItem {
   summary: TrackSummary | null;
   /** Consecutive songs from one album stay together when this is set */
@@ -176,6 +202,9 @@ const applyOrder = (
 export interface ReorderResult {
   /** Songs that changed place */
   moved: number;
+  /** How the upcoming songs mixed before, and how they mix now */
+  before: OrderStats;
+  after: OrderStats;
   /** Puts the queue back the way it was, if it hasn't changed since */
   undo: () => boolean;
 }
@@ -221,6 +250,12 @@ export const reorderQueue = async ({
 
   return {
     moved: wanted.filter((id, i) => id !== before[i]).length,
+    before: orderStats(current, summaries, maxStretch),
+    after: orderStats(
+      current,
+      order.map((i) => summaries[i]),
+      maxStretch,
+    ),
     undo: () => applyOrder(playingId, wanted, before),
   };
 };
