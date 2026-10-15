@@ -11,12 +11,14 @@
   --automix-text-dim: rgba(255, 255, 255, 0.78);
 }
 
-/* ---------- Player bar pill ---------- */
+/* ---------- Top bar buttons ---------- */
 
 .automix-pill-host {
   display: flex;
   align-items: center;
-  margin-right: 8px;
+  margin-right: 12px;
+  /* The top bar doubles as the window's drag area */
+  -webkit-app-region: no-drag;
 }
 
 .automix-pill {

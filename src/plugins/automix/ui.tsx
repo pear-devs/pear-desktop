@@ -345,10 +345,11 @@ const HoverCard = (props: {
   const position = () => {
     const anchor = props.anchor();
     if (!anchor) return {};
-    return {
-      right: `${Math.max(8, window.innerWidth - anchor.right)}px`,
-      bottom: `${window.innerHeight - anchor.top + 10}px`,
-    };
+    const right = `${Math.max(8, window.innerWidth - anchor.right)}px`;
+    // Open away from the window edge the button sits at
+    return anchor.top < window.innerHeight / 2
+      ? { right, top: `${anchor.bottom + 10}px` }
+      : { right, bottom: `${window.innerHeight - anchor.top + 10}px` };
   };
 
   return (
@@ -416,7 +417,7 @@ const MixCard = (props: UiProps) => {
   );
 };
 
-/** Mounts the player bar pill and the floating mix card */
+/** Mounts the AutoMix and Reorder buttons (top bar) and the floating cards */
 export const mountUi = (props: UiProps) => {
   const pillHost = document.createElement('div');
   pillHost.className = 'automix-pill-host';
@@ -447,20 +448,24 @@ export const mountUi = (props: UiProps) => {
     ),
   ];
 
-  // The player bar can be re-rendered, keep the pill attached to it
+  // Top right, just left of the account picture. The top bar can be
+  // re-rendered, so keep the buttons attached to it
   const attach = () => {
-    const controls = document.querySelector(
-      'ytmusic-player-bar .right-controls-buttons',
-    );
-    if (controls && pillHost.parentElement !== controls) {
-      controls.prepend(pillHost);
+    const right = document.querySelector('ytmusic-nav-bar .right-content');
+    if (!right) return;
+    const account = right.querySelector(':scope > ytmusic-settings-button');
+    if (account) {
+      if (account.previousElementSibling !== pillHost) {
+        right.insertBefore(pillHost, account);
+      }
+    } else if (pillHost.parentElement !== right) {
+      right.append(pillHost);
     }
   };
   attach();
-  const playerBar = document.querySelector('ytmusic-player-bar');
+  const navBar = document.querySelector('ytmusic-nav-bar');
   const observer = new MutationObserver(attach);
-  if (playerBar)
-    observer.observe(playerBar, { childList: true, subtree: true });
+  if (navBar) observer.observe(navBar, { childList: true, subtree: true });
 
   return () => {
     observer.disconnect();
