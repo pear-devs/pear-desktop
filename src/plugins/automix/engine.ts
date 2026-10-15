@@ -64,6 +64,11 @@ interface OutgoingChain {
   /** Last node before the dry gain (where an echo send taps in) */
   tap: AudioNode;
   nodes: AudioNode[];
+  /**
+   * Connections out of nodes shared between mixes (the stretchers): only
+   * these are undone on teardown, a newer mix may use the node already
+   */
+  shared: [AudioNode, AudioNode][];
 }
 
 /** AutoMix's own sample-accurate copy of the incoming song's start */
@@ -80,6 +85,8 @@ interface IncomingHead {
   position: (time: number) => number;
   /** The copy's playback rate at a context time */
   rate: (time: number) => number;
+  /** The node `source` feeds (to undo just that from a shared stretcher) */
+  entry: AudioNode;
   /** Sends a stretched copy its next tempo change when it's due */
   advance?: (now: number) => void;
 }
@@ -922,6 +929,7 @@ export class AutoMixEngine {
       lowpass,
       tap,
       nodes: [source, sourceGain, input, ...filters, dry, master],
+      shared: [],
     };
   }
 
@@ -1144,7 +1152,7 @@ export class AutoMixEngine {
       source = buffer;
     }
 
-    let last: AudioNode = source;
+    const stages: AudioNode[] = [];
     if (plan.filterIn) {
       // Thin at first so the two songs don't muddy, opening up fully by the
       // time the old song is gone (or on its final hit)
@@ -1156,7 +1164,7 @@ export class AutoMixEngine {
         20,
         mixAt + filterOpenBy(plan),
       );
-      last = last.connect(highpass);
+      stages.push(highpass);
     }
     if (plan.style === 'blend') {
       // The other half of the bass swap: no incoming bass until the old
@@ -1168,9 +1176,13 @@ export class AutoMixEngine {
       const swap = bassSwap(plan, mixAt);
       lowShelf.gain.setValueAtTime(-30, swap.from);
       lowShelf.gain.linearRampToValueAtTime(0, swap.to);
-      last = last.connect(lowShelf);
+      stages.push(lowShelf);
     }
-    last.connect(gain).connect(master).connect(context.destination);
+    stages.push(gain);
+    stages
+      .reduce<AudioNode>((from, node) => from.connect(node), source)
+      .connect(master)
+      .connect(context.destination);
 
     if (plan.style === 'cut' || plan.style === 'segue') {
       // The incoming song starts as itself: no fade-in on its first note
@@ -1190,6 +1202,7 @@ export class AutoMixEngine {
       position,
       rate,
       advance,
+      entry: stages[0],
     };
   }
 
@@ -1329,7 +1342,14 @@ export class AutoMixEngine {
       }
       throw error;
     }
-    if (head) chain.nodes.push(head.source, head.gain, head.master);
+    if (head) {
+      chain.nodes.push(head.gain, head.master);
+      if (head.source instanceof AudioBufferSourceNode) {
+        chain.nodes.push(head.source);
+      } else {
+        chain.shared.push([head.source, head.entry]);
+      }
+    }
 
     // The stretched copy of the old song takes over from the plain one once
     // it has settled (same audio, in step), then glides to the shared tempo
@@ -1363,7 +1383,8 @@ export class AutoMixEngine {
       stretchedGain.gain.linearRampToValueAtTime(1, handoff + 0.03);
       // Last stop call wins: the plain copy is done after the hand-off
       chain.source.stop(handoff + 0.1);
-      chain.nodes.push(outStretch, stretchedGain);
+      chain.nodes.push(stretchedGain);
+      chain.shared.push([outStretch, stretchedGain]);
 
       // The stretcher keeps only one change ahead: send each step once the
       // one before it has started, then stop it once the blend is over
@@ -2011,6 +2032,13 @@ export class AutoMixEngine {
     window.setTimeout(
       () => {
         for (const node of mix.chain.nodes) node.disconnect();
+        for (const [node, target] of mix.chain.shared) {
+          try {
+            node.disconnect(target);
+          } catch {
+            // Already disconnected
+          }
+        }
         if (mix.cancel) {
           mix.cancel.disconnect();
           try {
