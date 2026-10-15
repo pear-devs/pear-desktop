@@ -321,6 +321,12 @@ export class AutoMixEngine {
   private timer: number | undefined;
   private stopped = false;
   private lastDebug = 0;
+  /** Song pair (from>to) whose audio was last brought back into memory */
+  private warmedFor = '';
+  /** A transition starts within the next few seconds */
+  private mixSoon = false;
+  /** Read results, so warming up buffers isn't optimised away */
+  private warmSink = 0;
   private lastStatus = '';
 
   constructor(options: EngineOptions, config: AutoMixPluginConfig) {
@@ -524,6 +530,10 @@ export class AutoMixEngine {
     if (known) {
       summary = summarize(known.analysis);
     } else {
+      // Downloading and decoding is heavy: keep it away from transitions
+      while ((this.mix || this.mixSoon) && !this.stopped) {
+        await new Promise((resolve) => window.setTimeout(resolve, 1000));
+      }
       try {
         const audio = await this.fetchAudio(videoId);
         if (audio && !this.stopped) {
@@ -701,6 +711,8 @@ export class AutoMixEngine {
   }
 
   private tickIdle(): number {
+    // Set again below while a transition is close
+    this.mixSoon = false;
     const video = this.video;
     const id = this.currentVideoId();
 
@@ -825,6 +837,16 @@ export class AutoMixEngine {
     });
 
     const remaining = plan.mixOut - prerollFor(plan) - video.currentTime;
+    this.mixSoon = remaining < 15;
+    // The audio a transition plays was decoded minutes ago and may have been
+    // paged out to disk since; reading it back in on the audio thread when
+    // the transition starts makes it miss its deadline (a stutter)
+    const pair = `${from.videoId}>${to?.videoId ?? ''}`;
+    if (remaining < 8 && this.warmedFor !== pair) {
+      this.warmedFor = pair;
+      this.warm(from.tail);
+      if (to) this.warm(to.head);
+    }
     if (
       remaining <= 0.03 &&
       remaining > -0.5 &&
@@ -1443,6 +1465,15 @@ export class AutoMixEngine {
     this.emitMix();
   }
 
+  /** Touches every memory page of a buffer so it's resident again */
+  private warm(buffer: AudioBuffer) {
+    for (let c = 0; c < buffer.numberOfChannels; c++) {
+      const data = buffer.getChannelData(c);
+      // One float per 4 KB page
+      for (let i = 0; i < data.length; i += 1024) this.warmSink += data[i];
+    }
+  }
+
   /** Same path as the user pressing Next, so the queue follows along */
   private skipToNext() {
     const button = document.querySelector<HTMLElement>(
@@ -1677,8 +1708,6 @@ export class AutoMixEngine {
       }
     }
 
-    if (id === mix.toId) this.prefetchAfter(mix);
-
     if (mix.settleAt !== undefined) {
       this.tickSettle(mix, now);
       return;
@@ -1875,14 +1904,6 @@ export class AutoMixEngine {
     // Nothing to stay locked to any more (the old song is only a fading
     // tail), and nudging the now audible player's speed would be heard
     mix.follow = false;
-  }
-
-  /** Start analysing the song after the incoming one while we mix */
-  private prefetchAfter(mix: ActiveMix) {
-    if (Date.now() - this.lastQueueRead < QUEUE_REFRESH_MS) return;
-    this.lastQueueRead = Date.now();
-    const upcoming = readQueue(mix.toId)?.next?.videoId;
-    if (upcoming && upcoming !== mix.toId) this.ensureTrack(upcoming);
   }
 
   /** Glide the incoming song back to its own tempo after the mix */
