@@ -692,9 +692,9 @@ export class AutoMixEngine {
   private mismatchSince: number | null = null;
   /**
    * Song (video id) whose playing version already matched the analysed
-   * audio. In a song's last ~10 s YouTube Music loads the next song into the
-   * player and its duration jumps to the next song's, so it's only checked
-   * until it has matched once
+   * audio, for this play of it. In a song's last ~10 s YouTube Music loads
+   * the next song into the player and its duration jumps to the next
+   * song's, so it's only checked until it has matched once per play
    */
   private versionMatched: string | null = null;
 
@@ -742,6 +742,8 @@ export class AutoMixEngine {
     if (id !== this.currentId) {
       this.currentId = id;
       this.mismatchSince = null;
+      // Every play of a song is checked again (it may be a different stream)
+      this.versionMatched = null;
       this.currentTitle = this.api.getVideoData()?.title ?? '';
       this.plan = null;
       this.planKey = '';
