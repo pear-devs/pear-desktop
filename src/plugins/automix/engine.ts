@@ -4,7 +4,12 @@ import { emptySection, type TrackAnalysis } from './analysis';
 import { decodeAndAnalyze, type AnalyzedTrack } from './decoder';
 import { planTransition, type TransitionPlan } from './planner';
 import { getQueueStore, readQueue, type QueueTrack } from './queue';
-import { summarize, type TrackSummary } from './reorder';
+import {
+  loadSummaries,
+  saveSummaries,
+  summarize,
+  type TrackSummary,
+} from './reorder';
 import { locateCapture } from './sync';
 
 import type { AutoMixPluginConfig } from './config';
@@ -277,8 +282,11 @@ export class AutoMixEngine {
 
   private readonly tracks = new Map<string, Promise<AnalyzedTrack | null>>();
   private readonly ready = new Map<string, AnalyzedTrack>();
-  /** Tempo / key summaries for reordering the queue, by video id */
-  private readonly summaries = new Map<string, TrackSummary | null>();
+  /**
+   * Tempo / key summaries for reordering the queue, by video id, most
+   * recently used last. Saved between sessions
+   */
+  private readonly summaries = loadSummaries();
   private readonly failedAt = new Map<string, number>();
 
   private currentId: string | null = null;
@@ -475,7 +483,12 @@ export class AutoMixEngine {
    */
   async summaryOf(videoId: string): Promise<TrackSummary | null> {
     const cached = this.summaries.get(videoId);
-    if (cached !== undefined) return cached;
+    if (cached) {
+      // Most recently used last, so it's kept when the store is trimmed
+      this.summaries.delete(videoId);
+      this.summaries.set(videoId, cached);
+      return cached;
+    }
     let summary: TrackSummary | null = null;
     const known = this.ready.get(videoId);
     if (known) {
@@ -496,8 +509,14 @@ export class AutoMixEngine {
       }
     }
     // Only keep what worked, so a failed download is retried next time
-    if (summary) this.summaries.set(videoId, summary);
+    if (summary) this.remember(videoId, summary);
     return summary;
+  }
+
+  private remember(videoId: string, summary: TrackSummary) {
+    this.summaries.delete(videoId);
+    this.summaries.set(videoId, summary);
+    saveSummaries(this.summaries);
   }
 
   /** The song the player is on */
@@ -531,6 +550,10 @@ export class AutoMixEngine {
         if (track) {
           this.ready.set(videoId, track);
           this.failedAt.delete(videoId);
+          // Songs AutoMix plays are remembered for Reorder too
+          if (!this.summaries.has(videoId)) {
+            this.remember(videoId, summarize(track.analysis));
+          }
         } else {
           this.tracks.delete(videoId);
           this.failedAt.set(videoId, Date.now());

@@ -166,6 +166,34 @@ export const planOrder = (
   return order.flat();
 };
 
+/** Where song summaries are kept between sessions, and how many */
+const STORE_KEY = 'automix-summaries-v1';
+const STORE_MAX = 1000;
+
+/** Song summaries saved by earlier sessions, oldest first */
+export const loadSummaries = () => {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    return new Map<string, TrackSummary>(
+      raw ? (JSON.parse(raw) as [string, TrackSummary][]) : [],
+    );
+  } catch {
+    return new Map<string, TrackSummary>();
+  }
+};
+
+/** Keeps the most recently used summaries for the next session */
+export const saveSummaries = (summaries: Map<string, TrackSummary>) => {
+  try {
+    localStorage.setItem(
+      STORE_KEY,
+      JSON.stringify([...summaries].slice(-STORE_MAX)),
+    );
+  } catch {
+    // Storage full or unavailable: they'll be measured again next time
+  }
+};
+
 /** Most upcoming songs looked at (each one is downloaded and analysed) */
 export const REORDER_LIMIT = 20;
 
