@@ -1194,13 +1194,17 @@ export class AutoMixEngine {
       return;
     }
 
-    // A blend's tempo change is split between both songs when both copies
-    // can be stretched: each moves half way, to the tempo in between
+    // Only when the tempos are too far apart for the new song alone, a
+    // blend's tempo change is split between both songs: each moves half way.
+    // Otherwise the old song is left alone (slowing it down or speeding it
+    // up as the transition starts can be heard)
     const pair = `${from.videoId}>${next.videoId}`;
     const outStretch = this.stretchOut;
+    const needsSplit =
+      Math.abs(plan.rate - 1) > this.config.maxStretch + 1e-6;
     const split =
+      needsSplit &&
       plan.style === 'blend' &&
-      Math.abs(plan.rate - 1) >= 0.001 &&
       Boolean(outStretch && this.stretch) &&
       to?.videoId === next.videoId;
     const refuseSplit = () => {
@@ -1209,7 +1213,7 @@ export class AutoMixEngine {
       this.plan = null;
       this.planKey = '';
     };
-    if (Math.abs(plan.rate - 1) > this.config.maxStretch + 1e-6 && !split) {
+    if (needsSplit && !split) {
       refuseSplit();
       return;
     }
