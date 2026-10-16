@@ -28,13 +28,40 @@ type PlayerBar = HTMLElement & {
   };
 };
 
+/**
+ * Lists every video a queue item can play: the plain row, or a wrapped row's
+ * primary video and its counterparts (for example, the audio and music video
+ * versions of a song).
+ */
+const videosOf = (item?: QueueItem) => {
+  const wrapper = item?.playlistPanelVideoWrapperRenderer;
+  return [
+    item?.playlistPanelVideoRenderer,
+    wrapper?.primaryRenderer?.playlistPanelVideoRenderer,
+    ...(wrapper?.counterpart?.map(
+      (entry) => entry.counterpartRenderer?.playlistPanelVideoRenderer,
+    ) ?? []),
+  ];
+};
+
+/**
+ * Skips songs marked Explicit by YouTube Music and blocks selecting them.
+ *
+ * Pauses an explicit song as soon as its queue metadata is available, then
+ * advances the queue. Stays paused if an all-explicit queue wraps around.
+ *
+ * @param api The YouTube Music player API.
+ * @returns A function that removes all listeners and timers.
+ */
 export function startSfwMusic(api: MusicPlayer): () => void {
+  let currentQueue: string | undefined;
   let currentEntry: string | undefined;
   let handled = false;
   let blockedVideoId: string | undefined;
   let pendingCheck: ReturnType<typeof setTimeout> | undefined;
   const skipped = new Set<string>();
 
+  /** Cancels clicks on a play control in a row with an Explicit badge. */
   const blockExplicitSelection = (event: Event) => {
     const target = event.target as Element | null;
     const playbackControl = target?.closest?.(
@@ -68,6 +95,7 @@ export function startSfwMusic(api: MusicPlayer): () => void {
     }
   };
 
+  /** Pauses and skips the playing song if its queue entry is Explicit. */
   const check = () => {
     const videoId = api.getVideoData()?.video_id;
     if (!videoId) return;
@@ -79,16 +107,21 @@ export function startSfwMusic(api: MusicPlayer): () => void {
     const bar = document.querySelector<PlayerBar>('ytmusic-player-bar');
     const queue = bar?.getState?.()?.queue;
     const items = queue?.items ?? [];
-    const findVideo = (item?: QueueItem) => {
-      const wrapper = item?.playlistPanelVideoWrapperRenderer;
-      return [
-        item?.playlistPanelVideoRenderer,
-        wrapper?.primaryRenderer?.playlistPanelVideoRenderer,
-        ...(wrapper?.counterpart?.map(
-          (entry) => entry.counterpartRenderer?.playlistPanelVideoRenderer,
-        ) ?? []),
-      ].find((entry) => entry?.videoId === videoId);
-    };
+    // A new queue can reuse an index and video that were already handled.
+    const queueKey = items
+      .map((item) =>
+        videosOf(item)
+          .map((entry) => entry?.videoId)
+          .join('/'),
+      )
+      .join();
+    if (queueKey !== currentQueue) {
+      currentQueue = queueKey;
+      currentEntry = undefined;
+      skipped.clear();
+    }
+    const findVideo = (item?: QueueItem) =>
+      videosOf(item).find((entry) => entry?.videoId === videoId);
     // Direct song selections can leave the queue index pointing at another song.
     let index = queue?.selectedItemIndex ?? -1;
     let video = findVideo(items[index]);

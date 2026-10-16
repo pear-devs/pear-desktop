@@ -9,6 +9,7 @@ const explicitBadges = [
   { musicInlineBadgeRenderer: { icon: { iconType: 'MUSIC_EXPLICIT_BADGE' } } },
 ];
 
+/** Builds a fake player, player bar, and queue in a happy-dom document. */
 function setup() {
   const window = new Window();
   const document = window.document;
@@ -33,6 +34,14 @@ function setup() {
     dispatch: ({ payload }: { payload: number }) => {
       queueSelections.push(payload);
       skips++;
+      selectedItemIndex = payload;
+      videoId =
+        (
+          items[payload] as {
+            playlistPanelVideoRenderer?: { videoId?: string };
+          }
+        )?.playlistPanelVideoRenderer?.videoId ?? videoId;
+      listeners.get('videodatachange')?.forEach((listener) => listener());
     },
   });
   const api = {
@@ -201,6 +210,28 @@ test('stops at a repeated explicit song in an all-explicit queue', async () => {
   await fixture.play('explicit');
   expect(fixture.skips).toBe(2);
   expect(fixture.pauses).toBe(3);
+});
+
+test('stops when repeat all wraps back to an already skipped song', async () => {
+  fixture.setItems([fixture.song('first'), fixture.song('second')]);
+  fixture.repeatAll();
+  stop = startSfwMusic(fixture.api);
+  await fixture.play('first', 0);
+  // Direct selection leaves the index on "first", so the skip wraps there.
+  await fixture.play('second', 0);
+  await fixture.resume();
+  expect(fixture.queueSelections).toEqual([0]);
+  expect(fixture.skips).toBe(2);
+  expect(fixture.state).toBe(2);
+});
+
+test('skips again when a new queue starts with an already skipped song', async () => {
+  stop = startSfwMusic(fixture.api);
+  await fixture.play('explicit');
+  expect(fixture.skips).toBe(1);
+  fixture.setItems([fixture.song('explicit'), fixture.song('clean', false)]);
+  await fixture.play('explicit');
+  expect(fixture.skips).toBe(2);
 });
 
 test('can skip the same song again after a clean song plays', async () => {
