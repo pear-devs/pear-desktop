@@ -32,6 +32,13 @@ const FINE_STEPS = 80;
 const MIN_FIT_MARGIN = 0.25;
 /** How far off the loudness-based shift can be and still pick between beats */
 const MAX_COARSE_ERROR = 0.15;
+/**
+ * How far our tempo may be from Apple's (or from twice / half of it) and
+ * still be the same pulse. Further off, our tracker has locked onto another
+ * layer of the rhythm (e.g. a 4:3 one over a hip-hop beat) and Apple's grid,
+ * taken from the master, is the song's beat
+ */
+const SAME_PULSE = 0.04;
 /** Apple's structure scores: 600+ starts a 4-bar phrase */
 const PHRASE_SCORE = 600;
 /** Shortest fade-out that counts as the song fading rather than stopping */
@@ -141,6 +148,21 @@ export const alignApple = (
     candidates.push({ offset, fit: beatShare + barShare });
   }
   if (candidates.length === 0) {
+    const ours = periodOf(beats) > 0 ? 60 / periodOf(beats) : 0;
+    const ratio = apple.bpm.main > 0 ? ours / apple.bpm.main : 0;
+    const samePulse = [0.5, 1, 2].some(
+      (k) => Math.abs(ratio - k) <= k * SAME_PULSE,
+    );
+    if (ours > 0 && ratio > 0 && !samePulse) {
+      // Our beats sit on another pulse: Apple's grid, placed by the loudness
+      // (or the beats the two pulses share, when they agree with it)
+      const shared = Math.abs(bestBeatShare.offset - coarse) <= MAX_COARSE_ERROR;
+      return {
+        offset: shared ? bestBeatShare.offset : coarse,
+        gridOk: true,
+        detail: `our ${ours.toFixed(1)} BPM is another pulse than Apple's ${apple.bpm.main}: Apple's grid at ${(shared ? bestBeatShare.offset : coarse).toFixed(3)}s`,
+      };
+    }
     return {
       offset: coarse,
       gridOk: false,
