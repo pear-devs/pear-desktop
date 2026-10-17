@@ -1,4 +1,9 @@
-import { pickCrossfadeReverb, pickEffect, CROSSFADE_REVERB } from './effects';
+import {
+  pickCrossfadeReverb,
+  pickEffect,
+  pickSpotifyEffect,
+  CROSSFADE_REVERB,
+} from './effects';
 import { keysClash } from './key';
 
 import type { TempoSection, TrackAnalysis } from './analysis';
@@ -43,6 +48,12 @@ export interface PlannerOptions {
   /** Dress beat-matched blends in one of Apple Music's effect styles */
   effects?: boolean;
   /**
+   * Mix like Spotify: blends get one of its presets (bass swap at the
+   * midpoint, filter sweeps) and come in where the two songs' vocals clash
+   * least, when there's no vocal line to land on
+   */
+  spotifyStyle?: boolean;
+  /**
    * Mix now (by hand): start at the first bar from earliestMixOut on (a
    * phrase if one is close) instead of waiting for the outro
    */
@@ -78,8 +89,10 @@ export interface TransitionPlan {
   landsOnVocal?: number;
   /** Apple Music's analysis of either song was used to plan this */
   appleAnalysis?: boolean;
-  /** Apple effect style id the blend is dressed in (see effects.ts) */
+  /** Effect style id the blend is dressed in (see effects.ts) */
   effect?: number;
+  /** Share of the blend where both songs sing at once (Spotify's vocal score), when known */
+  vocalClash?: number;
   /**
    * How tonal both songs are at once through a blend (0..1): clashing keys
    * are only heard where both play chords, melody or vocals
@@ -234,6 +247,77 @@ const vocalLanding = (track: TrackAnalysis, plan: TransitionPlan) => {
       region.start >= Math.max(plan.mixIn, end - (2 * bar)) &&
       region.start <= end + bar,
   )?.start;
+};
+
+/** Spotify splits a blend into this many slices to score vocal clashes */
+const VOCAL_BINS = 32;
+/** A slice counts as sung when vocals cover this much of it */
+const VOCAL_BIN_SHARE = 0.2;
+
+/** How much of [start, end) a song's vocal regions cover */
+const vocalShare = (track: TrackAnalysis, start: number, end: number) => {
+  let covered = 0;
+  for (const region of track.vocals ?? []) {
+    covered += Math.max(0, Math.min(end, region.end) - Math.max(start, region.start));
+  }
+  return end > start ? covered / (end - start) : 0;
+};
+
+/**
+ * Spotify's vocal score: the share of the blend's slices where both songs
+ * sing (the incoming song runs at `rate`). Undefined without vocals for both.
+ */
+export const vocalClash = (
+  from: TrackAnalysis,
+  to: TrackAnalysis,
+  mixOut: number,
+  mixIn: number,
+  duration: number,
+  rate: number,
+) => {
+  if (!from.vocals || !to.vocals) return undefined;
+  const slice = duration / VOCAL_BINS;
+  let clashes = 0;
+  for (let i = 0; i < VOCAL_BINS; i++) {
+    const out = mixOut + (i * slice);
+    const into = mixIn + (i * slice * rate);
+    if (
+      vocalShare(from, out, out + slice) >= VOCAL_BIN_SHARE &&
+      vocalShare(to, into, into + (slice * rate)) >= VOCAL_BIN_SHARE
+    ) {
+      clashes++;
+    }
+  }
+  return clashes / VOCAL_BINS;
+};
+
+/**
+ * The incoming entry (a phrase, else a bar, in the song's first stretch)
+ * whose blend has the fewest vocal clashes, if it beats `current`
+ */
+const leastClashingEntry = (
+  from: TrackAnalysis,
+  to: TrackAnalysis,
+  mixOut: number,
+  current: number,
+  duration: number,
+  rate: number,
+) => {
+  const span = glidedSpan(duration, rate);
+  const score = (mixIn: number) =>
+    vocalClash(from, to, mixOut, mixIn, duration, rate) ?? 0;
+  let best = current;
+  let bestScore = score(current);
+  const starts = to.phrases?.length ? to.phrases : to.downbeats;
+  for (const start of starts) {
+    if (start < current || start + span > VOCAL_ENTRY_LIMIT) continue;
+    const value = score(start);
+    if (value < bestScore) {
+      best = start;
+      bestScore = value;
+    }
+  }
+  return best;
 };
 
 /** Lands the first vocal line once the song is in full swing on the transition's end */
@@ -395,11 +479,16 @@ const planBlend = (
       continue;
     }
 
+    const landing = vocalEntry(to, blendEntry(to), glidedSpan(duration, rate));
     const plan: TransitionPlan = {
       style: 'blend',
       reason: 'fallback',
       mixOut,
-      mixIn: vocalEntry(to, blendEntry(to), glidedSpan(duration, rate)) ?? blendEntry(to),
+      mixIn:
+        landing ??
+        (options.spotifyStyle
+          ? leastClashingEntry(from, to, mixOut, blendEntry(to), duration, rate)
+          : blendEntry(to)),
       duration,
       rate,
       beat: from.beatPeriod,
@@ -764,7 +853,12 @@ export const planTransition = (
     if (plan) {
       const seed = `${outgoing.appleId ?? outgoing.duration}|${incoming.appleId ?? incoming.duration}`;
       let effect: number | undefined;
-      if (options.effects && plan.style === 'blend' && !plan.holdOutgoing) {
+      if (options.spotifyStyle && plan.style === 'blend' && !plan.holdOutgoing) {
+        effect = pickSpotifyEffect(
+          plan.duration / ((plan.beat || 0.5) * 4),
+          seed,
+        ).id;
+      } else if (options.effects && plan.style === 'blend' && !plan.holdOutgoing) {
         effect = pickEffect(
           outgoing.genre,
           incoming.genre,
@@ -783,6 +877,10 @@ export const planTransition = (
         effect,
         reason: reasonFor(plan),
         tonalOverlap: style === 'blend' ? overlap(plan) : undefined,
+        vocalClash:
+          style === 'blend'
+            ? vocalClash(from, to, plan.mixOut, plan.mixIn, plan.duration, plan.rate)
+            : undefined,
         fromKey: outgoing.end.key?.camelot,
         toKey: incoming.start.key?.camelot,
         landsOnVocal: vocalLanding(to, plan),

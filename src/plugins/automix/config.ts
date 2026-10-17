@@ -18,6 +18,11 @@ export type AutoMixPluginConfig = {
   cutEcho: boolean;
   /** Dress beat-matched blends in Apple Music's effect styles (filters, echoes, reverb) */
   effects: boolean;
+  /**
+   * Mix like Spotify: blends use its presets (bass swap at the midpoint,
+   * filter sweeps) and avoid overlapping two singers. Overrides `effects`.
+   */
+  spotifyStyle: boolean;
   /** Play consecutive songs from the same album without transitions */
   respectAlbums: boolean;
   /** Show the "AutoMixing" card while a transition plays */
@@ -41,6 +46,7 @@ export const defaultConfig: AutoMixPluginConfig = {
   beatOnly: false,
   cutEcho: false,
   effects: true,
+  spotifyStyle: false,
   respectAlbums: true,
   showMixCard: true,
   appleAnalysis: true,

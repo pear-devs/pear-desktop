@@ -11,7 +11,7 @@ import { render } from 'solid-js/web';
 
 import { t } from '@/i18n';
 
-import { effectName } from './effects';
+import { effectById, effectName } from './effects';
 
 import type { AutoMixPluginConfig } from './config';
 import type { AutoMixStatus } from './engine';
@@ -154,9 +154,12 @@ const hintFor = (status: AutoMixStatus): Hint => {
             }),
         ...(effectName(plan.effect)
           ? [
-              t('plugins.automix.ui.detail.effect', {
-                name: effectName(plan.effect),
-              }),
+              t(
+                effectById(plan.effect)?.family === 'spotify'
+                  ? 'plugins.automix.ui.detail.spotify-effect'
+                  : 'plugins.automix.ui.detail.effect',
+                { name: effectName(plan.effect) },
+              ),
             ]
           : []),
         ...(plan.appleAnalysis

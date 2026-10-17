@@ -383,6 +383,7 @@
         "beat-only": "Only beat-matched transitions (Beat Match or Beat Cut, no segues)",
         "cut-echo": "Echo the old song's last beat on Beat Cuts",
         "effects": "Apple Music effects on blends (filter sweeps, echoes, reverb)",
+        "spotify-style": "Spotify-style blends (bass swap at the midpoint, filters, no vocal clashes)",
         "reorder-shape": {
           "build": "Build up the energy",
           "label": "Reorder the queue for",
@@ -420,6 +421,7 @@
           "entry-vocal": "Comes into the next song at {{time}}, finishing as its vocals start at {{vocal}}",
           "cut": "Cut on the downbeat · {{bpm}} BPM",
           "effect": "Apple Music effect: {{name}}",
+          "spotify-effect": "Spotify transition: {{name}}",
           "keys": "key {{from}} → {{to}}",
           "lead-in": "{{seconds}} s lead-in, lands on the final hit",
           "segue": "Plays the ending out, next song in as it dies away",

@@ -79,6 +79,12 @@ export default createPlugin({
         checked: config.effects,
         click: (item) => setConfig({ effects: item.checked }),
       },
+      {
+        label: t('plugins.automix.menu.spotify-style'),
+        type: 'checkbox',
+        checked: config.spotifyStyle,
+        click: (item) => setConfig({ spotifyStyle: item.checked }),
+      },
       radio(
         t('plugins.automix.menu.blend-length'),
         config.blendBeats,

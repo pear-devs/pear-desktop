@@ -1036,6 +1036,7 @@ export class AutoMixEngine {
         blendBeats: this.config.blendBeats,
         maxStretch: this.config.maxStretch,
         effects: this.config.effects,
+        spotifyStyle: this.config.spotifyStyle,
         asap: Boolean(rushed),
         splitStretch,
         smoothSeconds: this.config.smoothSeconds,

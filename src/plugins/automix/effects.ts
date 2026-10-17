@@ -31,9 +31,11 @@ export type EffectParam =
 /**
  * Apple's curve names: "ease-out-p" is x^p and "ease-in-p" is
  * 1 - (1 - x)^p (the constant-power cross-fade uses ease-in-0.5 to fade out
- * and ease-out-0.5 to fade in, which only works out this way round)
+ * and ease-out-0.5 to fade in, which only works out this way round).
+ * "log" moves geometrically (equal steps per octave), like Spotify's filter
+ * knob.
  */
-type Curve = 'linear' | `in-${number}` | `out-${number}`;
+type Curve = 'linear' | 'log' | `in-${number}` | `out-${number}`;
 
 /** A point in the window: a fraction of it, optionally plus seconds */
 type At = number | [fraction: number, seconds: number];
@@ -49,7 +51,7 @@ export interface Lane {
   place: [At, At];
 }
 
-export type EffectFamily = 'filter' | 'hiphop' | 'pop';
+export type EffectFamily = 'filter' | 'hiphop' | 'pop' | 'spotify';
 
 export interface EffectStyle {
   /** Apple's style id */
@@ -219,6 +221,161 @@ export const EFFECT_STYLES: EffectStyle[] = [
   },
 ];
 
+/*
+ * Spotify's playlist-mix presets (desktop 1.305, decompiled from Spotify.dll
+ * and its style catalog). A preset is a volume shape, a 3-band EQ move and a
+ * one-knob DJ filter, all over the whole overlap. Most keep both songs at
+ * full level and swap the bass at the midpoint over 1/64 of the window.
+ * The bass kill is a high-pass at the crossover; Spotify's filter knob is
+ * geometric (low-pass 120 Hz to 16 kHz, high-pass 20 Hz to 9 kHz).
+ * Style id = 100 + Spotify's preset id.
+ */
+const BASS_HZ = 180;
+const SWAP: [At, At] = [0.484, 0.5];
+const SWAP_AT_END: [At, At] = [0.984, 1];
+/** Hard volume steps get a short ramp so they don't click */
+const STEP = 0.02;
+const step = (param: EffectParam, from: number, to: number, at: number) =>
+  lane(param, from, to, 'linear', [0, 1], [at, [at, STEP]]);
+
+type Side = { outgoing: Lane[]; incoming: Lane[] };
+
+const volume = {
+  /** Both songs at full level; the old one stops at the end */
+  fullOverlap: {
+    outgoing: [step('gain', 1, 0, 1 - (STEP / 4))],
+    incoming: [step('gain', 0, 1, 0)],
+  },
+  /** The old song until 60 %, the new one from 40 % */
+  crossShape: {
+    outgoing: [step('gain', 1, 0, 0.6)],
+    incoming: [step('gain', 0, 1, 0.4)],
+  },
+  slowInSlowOut: {
+    outgoing: [lane('gain', 1, 0, 'linear', [0, 1], [0.5, 1])],
+    incoming: [lane('gain', 0, 1, 'linear', [0, 1], [0, 0.5])],
+  },
+  slowInFastOutAtEnd: {
+    outgoing: [step('gain', 1, 0, 1 - (STEP / 4))],
+    incoming: [lane('gain', 0, 1, 'linear', [0, 1], [0, 0.5])],
+  },
+  fastInAtStartSlowOut: {
+    outgoing: [lane('gain', 1, 0, 'linear', [0, 1], [0.5, 1])],
+    incoming: [step('gain', 0, 1, 0)],
+  },
+} satisfies Record<string, Side>;
+
+/** Bass out of the old song and into the new one at the midpoint */
+const bassSwap = (at: [At, At] = SWAP): Side => ({
+  outgoing: [lane('highpass', 10, BASS_HZ, 'log', [0, 1], at)],
+  incoming: [
+    set('highpass', BASS_HZ),
+    lane('highpass', BASS_HZ, 10, 'log', [0, 1], at),
+  ],
+});
+
+/** The new song opens from a 120 Hz low-pass over the first half */
+const lowpassIn: Side = {
+  outgoing: [],
+  incoming: [
+    lane('lowpass', 120, 16_000, 'log', [0, 1], [0, 0.5]),
+    set('lowpass', 20_000, 0.5),
+  ],
+};
+/** The old song closes down to a 120 Hz low-pass over the second half */
+const lowpassOut: Side = {
+  outgoing: [lane('lowpass', 16_000, 120, 'log', [0, 1], [0.5, 1])],
+  incoming: [],
+};
+/**
+ * High-pass sweeps, merged with the bass swap on the same filter: the new
+ * song's sweep from 9 kHz meets the bass kill 64 % of the way down, the old
+ * song's sweep up from 20 Hz passes it 36 % of the way in
+ */
+const highpassIn: Side = {
+  outgoing: [],
+  incoming: [
+    lane('highpass', 9000, BASS_HZ, 'log', [0, 1], [0, 0.32]),
+    lane('highpass', BASS_HZ, 10, 'log', [0, 1], SWAP),
+  ],
+};
+const highpassOut: Side = {
+  outgoing: [
+    lane('highpass', 10, BASS_HZ, 'log', [0, 1], SWAP),
+    lane('highpass', BASS_HZ, 9000, 'log', [0, 1], [0.68, 1]),
+  ],
+  incoming: [],
+};
+/** Rise's sweep runs from 20 Hz, and its bass swap waits for the end */
+const highpassOutFull: Side = {
+  outgoing: [lane('highpass', 20, 9000, 'log', [0, 1], [0.5, 1])],
+  incoming: [],
+};
+
+/** Parts later in the list replace earlier ones on the same parameter */
+const compose = (...sides: Side[]): Side => {
+  const merge = (pick: (side: Side) => Lane[]) =>
+    sides.reduce<Lane[]>((lanes, side) => {
+      const next = pick(side);
+      const params = new Set(next.map((item) => item.param));
+      return [...lanes.filter((item) => !params.has(item.param)), ...next];
+    }, []);
+  return {
+    outgoing: merge((side) => side.outgoing),
+    incoming: merge((side) => side.incoming),
+  };
+};
+
+const spotify = (id: number, name: string, side: Side): EffectStyle => ({
+  id: 100 + id,
+  name,
+  family: 'spotify',
+  bars: 4,
+  ...side,
+});
+
+/**
+ * The presets Spotify's planner picks from by itself (its EQ-only "Blend"
+ * is left out, and two pairs of presets that sound the same are kept once)
+ */
+export const SPOTIFY_STYLES: EffectStyle[] = [
+  spotify(1, 'Fade', compose(volume.crossShape, bassSwap())),
+  spotify(
+    3,
+    'Rise',
+    compose(volume.fullOverlap, bassSwap(SWAP_AT_END), lowpassIn, highpassOutFull),
+  ),
+  spotify(
+    4,
+    'Melt',
+    compose(volume.slowInSlowOut, bassSwap(), highpassIn, highpassOut),
+  ),
+  spotify(
+    5,
+    'Filter out',
+    compose(volume.slowInFastOutAtEnd, bassSwap(), highpassOut),
+  ),
+  spotify(
+    9,
+    'Filter in',
+    compose(volume.fastInAtStartSlowOut, bassSwap(), highpassIn),
+  ),
+  spotify(
+    10,
+    'Filter in and out',
+    compose(volume.fullOverlap, bassSwap(), highpassIn, highpassOut),
+  ),
+  spotify(17, 'Wave', compose(volume.fullOverlap, bassSwap(), lowpassIn, lowpassOut)),
+  spotify(
+    18,
+    'Low-pass out',
+    compose(volume.slowInFastOutAtEnd, bassSwap(), lowpassOut),
+  ),
+];
+
+/** Spotify only uses these three on its 2-bar blends */
+const SHORT_SPOTIFY_STYLES = [101, 110, 117];
+
 /** Neutral value of each parameter, where a style doesn't touch it */
 export const EFFECT_DEFAULTS: Record<EffectParam, number> = {
   gain: 1,
@@ -235,10 +392,16 @@ export const EFFECT_DEFAULTS: Record<EffectParam, number> = {
 };
 
 export const ease = (curve: Curve, x: number) => {
-  if (curve === 'linear') return x;
+  if (curve === 'linear' || curve === 'log') return x;
   const power = Number(curve.slice(curve.indexOf('-') + 1));
   return curve.startsWith('out') ? x ** power : 1 - ((1 - x) ** power);
 };
+
+/** A lane's value a fraction `x` of the way through its ramp */
+export const laneValue = (item: Lane, x: number) =>
+  item.curve === 'log' && item.from > 0 && item.to > 0
+    ? item.from * ((item.to / item.from) ** x)
+    : item.from + ((item.to - item.from) * ease(item.curve, x));
 
 const resolve = (at: At, start: number, length: number) =>
   typeof at === 'number'
@@ -316,7 +479,7 @@ export const scheduleLanes = (
       for (let k = 1; k <= RAMP_POINTS; k++) {
         const x = k / RAMP_POINTS;
         param.linearRampToValueAtTime(
-          clamp(item.from + ((item.to - item.from) * ease(item.curve, x))),
+          clamp(laneValue(item, x)),
           from + ((to - from) * x),
         );
       }
@@ -386,8 +549,21 @@ export const CROSSFADE_REVERB = {
 /** Half of the pairs get the reverb, like Apple's pick between 4 and 44 */
 export const pickCrossfadeReverb = (seed: string) => djb2(seed) % 2 === 0;
 
+/**
+ * Spotify's pick for a beat-matched blend of `bars` bars: one of its presets,
+ * the same one every time for a pair (Spotify's choice is a fixed function
+ * of the pair too)
+ */
+export const pickSpotifyEffect = (bars: number, seed: string): EffectStyle => {
+  const candidates =
+    bars <= 2
+      ? SPOTIFY_STYLES.filter((style) => SHORT_SPOTIFY_STYLES.includes(style.id))
+      : SPOTIFY_STYLES;
+  return candidates[djb2(seed) % candidates.length];
+};
+
 export const effectById = (id: number | undefined) =>
-  EFFECT_STYLES.find((style) => style.id === id);
+  [...EFFECT_STYLES, ...SPOTIFY_STYLES].find((style) => style.id === id);
 
 /** Display name of a plan's effect, whichever kind it is */
 export const effectName = (id: number | undefined) =>
