@@ -1835,6 +1835,9 @@ export class AutoMixEngine {
         dressed = { ...timed, effect: undefined };
       }
     } catch (error) {
+      if (this.debugEnabled()) {
+        console.warn('[AutoMix] transition refused:', error);
+      }
       // Web Audio refused some automation: don't leave our copy playing
       // over the player, which hasn't been touched yet
       chain.source.stop();
