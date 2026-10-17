@@ -1,19 +1,16 @@
+import { app, dialog } from 'electron';
+
 import { blockers } from '@/plugins/do-not-track/types';
 import { DefaultPresetList, type Preset } from '@/plugins/downloader/types';
 
 import { defaultConfig as defaults } from './defaults';
+import {
+  configureWindowsPortablePaths,
+  getWindowsPortableDir,
+} from './portable';
 
 import type { TrackerBlockerConfig } from '@/plugins/do-not-track';
 import type { SyncedLyricsPluginConfig } from '@/plugins/synced-lyrics/types';
-
-// HACK: electron-store is ESM, but rolldown has a bug that prevents it from being imported properly in CommonJS context, so we have to use require here
-/* oxlint-disable typescript/no-require-imports */
-const Store = (
-  require('electron-store') as {
-    default: typeof import('electron-store').default;
-  }
-).default;
-/* oxlint-enable typescript/no-require-imports */
 
 export type IStore = InstanceType<
   typeof import('conf').default<Record<string, unknown>>
@@ -21,7 +18,9 @@ export type IStore = InstanceType<
 
 const migrations = {
   '>=3.12.0'(store: IStore) {
-    const blockerConfig = store.get('plugins.adblocker') as TrackerBlockerConfig;
+    const blockerConfig = store.get(
+      'plugins.adblocker',
+    ) as TrackerBlockerConfig;
     if (blockerConfig) {
       if (!Object.values(blockers).includes(blockerConfig.blocker)) {
         blockerConfig.blocker = blockers.InPlayer;
@@ -278,6 +277,36 @@ const migrations = {
     store.set('plugins', plugins);
   },
 };
+
+const portableDir = getWindowsPortableDir(
+  process.platform,
+  process.type,
+  process.env.PORTABLE_EXECUTABLE_DIR,
+);
+if (portableDir) {
+  try {
+    configureWindowsPortablePaths(portableDir, (name, value) =>
+      app.setPath(name, value),
+    );
+  } catch (error) {
+    console.error('Could not prepare portable data directory:', error);
+    dialog.showErrorBox(
+      'Portable data unavailable',
+      `Pear Desktop could not prepare its portable data directory at ${portableDir}. Move the executable to a writable folder and try again.\n\n${String(error)}`,
+    );
+    app.exit(1);
+    throw error;
+  }
+}
+
+// HACK: electron-store is ESM, but rolldown has a bug that prevents it from being imported properly in CommonJS context, so we have to use require here
+/* oxlint-disable typescript/no-require-imports */
+const Store = (
+  require('electron-store') as {
+    default: typeof import('electron-store').default;
+  }
+).default;
+/* oxlint-enable typescript/no-require-imports */
 
 export const store = new Store({
   defaults: {
