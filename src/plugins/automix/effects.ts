@@ -225,14 +225,16 @@ export const EFFECT_STYLES: EffectStyle[] = [
  * Spotify's playlist-mix presets (desktop 1.305, decompiled from Spotify.dll
  * and its style catalog). A preset is a volume shape, a 3-band EQ move and a
  * one-knob DJ filter, all over the whole overlap. Most keep both songs at
- * full level and swap the bass at the midpoint over 1/64 of the window.
+ * full level and swap the bass at the midpoint. Spotify swaps it in 1/64 of
+ * the window, which slams the new bass in; ours glides over 1/8 of it
+ * (a bar of an 8-bar blend) around the same point.
  * The bass kill is a high-pass at the crossover; Spotify's filter knob is
  * geometric (low-pass 120 Hz to 16 kHz, high-pass 20 Hz to 9 kHz).
  * Style id = 100 + Spotify's preset id.
  */
 const BASS_HZ = 180;
-const SWAP: [At, At] = [0.484, 0.5];
-const SWAP_AT_END: [At, At] = [0.984, 1];
+const SWAP: [At, At] = [0.4375, 0.5625];
+const SWAP_AT_END: [At, At] = [0.875, 1];
 /** Hard volume steps get a short ramp so they don't click */
 const STEP = 0.02;
 const step = (param: EffectParam, from: number, to: number, at: number) =>
