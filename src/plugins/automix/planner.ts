@@ -710,6 +710,13 @@ const planSmooth = (
   return { ...base, mixOut, duration };
 };
 
+/**
+ * Shortest blend that gets a Spotify preset. Spotify's moves (fade in, bass
+ * swap, fade out) bunch up into a couple of seconds on shorter blends and
+ * sound abrupt; those keep AutoMix's own blend.
+ */
+const SPOTIFY_MIN_BARS = 4;
+
 /** Most a song may speed up / slow down at the edge we beat-match on */
 const MAX_EDGE_DRIFT = 0.04;
 
@@ -853,11 +860,14 @@ export const planTransition = (
     if (plan) {
       const seed = `${outgoing.appleId ?? outgoing.duration}|${incoming.appleId ?? incoming.duration}`;
       let effect: number | undefined;
-      if (options.spotifyStyle && plan.style === 'blend' && !plan.holdOutgoing) {
-        effect = pickSpotifyEffect(
-          plan.duration / ((plan.beat || 0.5) * 4),
-          seed,
-        ).id;
+      const bars = plan.duration / ((plan.beat || 0.5) * 4);
+      if (
+        options.spotifyStyle &&
+        plan.style === 'blend' &&
+        !plan.holdOutgoing &&
+        bars >= SPOTIFY_MIN_BARS - 0.05
+      ) {
+        effect = pickSpotifyEffect(bars, seed).id;
       } else if (options.effects && plan.style === 'blend' && !plan.holdOutgoing) {
         effect = pickEffect(
           outgoing.genre,
