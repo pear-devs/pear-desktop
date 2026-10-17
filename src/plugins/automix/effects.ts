@@ -248,10 +248,15 @@ const volume = {
     outgoing: [step('gain', 1, 0, 1 - (STEP / 4))],
     incoming: [step('gain', 0, 1, 0)],
   },
-  /** The old song until 60 %, the new one from 40 % */
+  /**
+   * Spotify's cross shape drops the old song dead at 60 % and starts the new
+   * one at 40 %, which sounds like a cut (and cuts a short blend off half
+   * way). Ours keeps the overlap but fades: the new song rises over 20–60 %,
+   * the old one falls over 40–80 %, both constant power.
+   */
   crossShape: {
-    outgoing: [step('gain', 1, 0, 0.6)],
-    incoming: [step('gain', 0, 1, 0.4)],
+    outgoing: [lane('gain', 1, 0, 'in-0.5', [0, 1], [0.4, 0.8])],
+    incoming: [lane('gain', 0, 1, 'out-0.5', [0, 1], [0.2, 0.6])],
   },
   slowInSlowOut: {
     outgoing: [lane('gain', 1, 0, 'linear', [0, 1], [0.5, 1])],
