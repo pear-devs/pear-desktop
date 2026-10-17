@@ -1,0 +1,368 @@
+/*
+ * --automix-accent is set from the playing song's artwork (toned down by the
+ * renderer). Without artwork everything falls back to the player's own whites.
+ */
+:root {
+  --automix-accent: 255, 255, 255;
+  /* Fixed, high-contrast text on the floating cards. Theme variables are
+     re-tinted by other plugins (e.g. album colour themes) and got unreadable */
+  --automix-surface: rgba(24, 24, 26, 0.97);
+  --automix-text: #fff;
+  --automix-text-dim: rgba(255, 255, 255, 0.78);
+}
+
+/* ---------- Top bar buttons ---------- */
+
+.automix-pill-host {
+  display: flex;
+  align-items: center;
+  margin-right: 12px;
+  /* The top bar doubles as the window's drag area */
+  -webkit-app-region: no-drag;
+}
+
+.automix-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 12px 0 9px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ytmusic-text-primary, rgba(255, 255, 255, 0.9));
+  font-family: 'YouTube Sans', Roboto, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color 0.6s ease,
+    background-color 0.6s ease,
+    border-color 0.6s ease,
+    box-shadow 0.6s ease;
+}
+
+.automix-reorder,
+.automix-mix-now {
+  margin-left: 6px;
+  padding: 0 11px 0 8px;
+}
+
+.automix-reorder[data-state='busy'] .automix-icon,
+.automix-mix-now[data-state='busy'] .automix-icon,
+.automix-mix-now[data-state='armed'] .automix-icon {
+  animation: automix-pulse 1.6s ease-in-out infinite;
+}
+
+.automix-reorder[aria-disabled='true'],
+.automix-mix-now[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.automix-pill:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.automix-pill:focus-visible {
+  outline: 2px solid rgba(var(--automix-accent), 0.9);
+  outline-offset: 2px;
+}
+
+.automix-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.automix-pill[data-phase='inactive'] {
+  border-style: dashed;
+  background: transparent;
+  color: var(--ytmusic-text-secondary, rgba(255, 255, 255, 0.5));
+}
+
+.automix-pill[data-phase='analyzing'] .automix-icon {
+  animation: automix-pulse 1.6s ease-in-out infinite;
+}
+
+.automix-pill[data-phase='ready'] {
+  border-color: rgba(var(--automix-accent), 0.5);
+}
+
+.automix-pill[data-phase='ready'] .automix-icon {
+  color: rgb(var(--automix-accent));
+}
+
+.automix-pill[data-phase='mixing'] {
+  border-color: rgba(var(--automix-accent), 0.6);
+  background-color: rgba(var(--automix-accent), 0.16);
+  box-shadow: 0 0 14px rgba(var(--automix-accent), 0.18);
+}
+
+/* A slow, soft sheen moving across the pill while mixing */
+.automix-pill[data-phase='mixing']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 30%,
+    rgba(var(--automix-accent), 0.22) 50%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  animation: automix-sheen 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.automix-pill[data-phase='mixing'] .automix-bars {
+  color: rgb(var(--automix-accent));
+}
+
+/* ---------- Equalizer bars ---------- */
+
+.automix-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  width: 16px;
+  height: 12px;
+}
+
+.automix-bars i {
+  flex: 1;
+  height: 100%;
+  border-radius: 1px;
+  background: currentColor;
+  transform-origin: bottom;
+  animation: automix-bounce 1.1s ease-in-out infinite;
+}
+
+.automix-bars i:nth-child(2) {
+  animation-delay: -0.7s;
+}
+
+.automix-bars i:nth-child(3) {
+  animation-delay: -0.35s;
+}
+
+.automix-bars i:nth-child(4) {
+  animation-delay: -0.9s;
+}
+
+/* ---------- Shared floating surface (card + hover card) ---------- */
+
+.automix-card,
+.automix-hint {
+  position: fixed;
+  z-index: 10000;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: var(--automix-surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  color: var(--automix-text);
+  font-family: 'YouTube Sans', Roboto, Arial, sans-serif;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+/* ---------- Hover card ---------- */
+
+.automix-hint {
+  width: 280px;
+  max-width: calc(100vw - 16px);
+  padding: 12px 14px;
+  transform: translateY(4px);
+}
+
+.automix-hint-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.automix-hint-heading {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(var(--automix-accent));
+}
+
+.automix-hint-line {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--automix-text);
+}
+
+.automix-hint-line + .automix-hint-line {
+  margin-top: 4px;
+  font-size: 12.5px;
+  color: var(--automix-text-dim);
+}
+
+.automix-hint-footer {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 12px;
+  color: var(--automix-text-dim);
+}
+
+/* ---------- "AutoMixing" card ---------- */
+
+.automix-card {
+  right: 24px;
+  bottom: calc(var(--ytmusic-player-bar-height, 72px) + 16px);
+  width: 320px;
+  max-width: calc(100vw - 48px);
+  padding: 14px 16px 16px;
+  transform: translateY(10px);
+}
+
+.automix-card-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.automix-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.automix-card-header .automix-bars {
+  color: rgb(var(--automix-accent));
+}
+
+.automix-card-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.automix-card-style {
+  margin-left: auto;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(var(--automix-accent), 0.14);
+  color: rgb(var(--automix-accent));
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.automix-card-tracks {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--automix-text);
+}
+
+.automix-card-from,
+.automix-card-to {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.automix-card-from,
+.automix-card-arrow {
+  color: var(--automix-text-dim);
+}
+
+.automix-card-to {
+  font-weight: 600;
+}
+
+.automix-card-detail {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--automix-text-dim);
+}
+
+.automix-progress {
+  height: 3px;
+  margin-top: 12px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.automix-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: rgb(var(--automix-accent));
+  transition: width 0.12s linear;
+}
+
+/* ---------- Player bar while mixing ---------- */
+
+ytmusic-player-bar {
+  transition: box-shadow 0.8s ease;
+}
+
+ytmusic-player-bar.automix-mixing {
+  box-shadow: 0 -1px 0 0 rgba(var(--automix-accent), 0.45);
+}
+
+/* ---------- Animations ---------- */
+
+@keyframes automix-sheen {
+  from {
+    background-position: 125% 0;
+  }
+  to {
+    background-position: -125% 0;
+  }
+}
+
+@keyframes automix-bounce {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes automix-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .automix-pill[data-phase='mixing']::after,
+  .automix-bars i,
+  .automix-pill[data-phase='analyzing'] .automix-icon {
+    animation: none;
+  }
+}
+
+.automix-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
