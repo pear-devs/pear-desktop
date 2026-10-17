@@ -16,6 +16,8 @@ export type EffectParam =
   | 'input'
   | 'lowpass'
   | 'highpass'
+  /** Low-shelf gain at the crossover, in dB (a bass swap) */
+  | 'bass'
   /** Level into the echo / reverb send (SEND_MIXER) */
   | 'send'
   /** Level of the send's return, and of the dry song (RECEIVE_MIXER fx mix) */
@@ -225,16 +227,16 @@ export const EFFECT_STYLES: EffectStyle[] = [
  * Spotify's playlist-mix presets (desktop 1.305, decompiled from Spotify.dll
  * and its style catalog). A preset is a volume shape, a 3-band EQ move and a
  * one-knob DJ filter, all over the whole overlap. Most keep both songs at
- * full level and swap the bass at the midpoint. Spotify swaps it in 1/64 of
- * the window, which slams the new bass in; ours glides over 1/8 of it
- * (a bar of an 8-bar blend) around the same point.
- * The bass kill is a high-pass at the crossover; Spotify's filter knob is
- * geometric (low-pass 120 Hz to 16 kHz, high-pass 20 Hz to 9 kHz).
- * Style id = 100 + Spotify's preset id.
+ * full level and swap the bass at the midpoint. Spotify kills the low band
+ * and swaps it in 1/64 of the window, which slams the new bass in; ours
+ * turns the low shelf down 30 dB (like our own blends' swap) and ramps it
+ * evenly in dB over a quarter of the window around the same point.
+ * Spotify's filter knob is geometric (low-pass 120 Hz to 16 kHz, high-pass
+ * 20 Hz to 9 kHz). Style id = 100 + Spotify's preset id.
  */
-const BASS_HZ = 180;
-const SWAP: [At, At] = [0.4375, 0.5625];
-const SWAP_AT_END: [At, At] = [0.875, 1];
+const BASS_CUT_DB = -30;
+const SWAP: [At, At] = [0.375, 0.625];
+const SWAP_AT_END: [At, At] = [0.75, 1];
 /** Hard volume steps get a short ramp so they don't click */
 const STEP = 0.02;
 const step = (param: EffectParam, from: number, to: number, at: number) =>
@@ -272,12 +274,12 @@ const volume = {
   },
 } satisfies Record<string, Side>;
 
-/** Bass out of the old song and into the new one at the midpoint */
+/** Bass out of the old song and into the new one around the midpoint */
 const bassSwap = (at: [At, At] = SWAP): Side => ({
-  outgoing: [lane('highpass', 10, BASS_HZ, 'log', [0, 1], at)],
+  outgoing: [lane('bass', 0, BASS_CUT_DB, 'linear', [0, 1], at)],
   incoming: [
-    set('highpass', BASS_HZ),
-    lane('highpass', BASS_HZ, 10, 'log', [0, 1], at),
+    set('bass', BASS_CUT_DB),
+    lane('bass', BASS_CUT_DB, 0, 'linear', [0, 1], at),
   ],
 });
 
@@ -294,27 +296,16 @@ const lowpassOut: Side = {
   outgoing: [lane('lowpass', 16_000, 120, 'log', [0, 1], [0.5, 1])],
   incoming: [],
 };
-/**
- * High-pass sweeps, merged with the bass swap on the same filter: the new
- * song's sweep from 9 kHz meets the bass kill 64 % of the way down, the old
- * song's sweep up from 20 Hz passes it 36 % of the way in
- */
+/** The new song opens from a 9 kHz high-pass over the first half */
 const highpassIn: Side = {
   outgoing: [],
   incoming: [
-    lane('highpass', 9000, BASS_HZ, 'log', [0, 1], [0, 0.32]),
-    lane('highpass', BASS_HZ, 10, 'log', [0, 1], SWAP),
+    lane('highpass', 9000, 20, 'log', [0, 1], [0, 0.5]),
+    set('highpass', 10, 0.5),
   ],
 };
+/** The old song thins out to a 9 kHz high-pass over the second half */
 const highpassOut: Side = {
-  outgoing: [
-    lane('highpass', 10, BASS_HZ, 'log', [0, 1], SWAP),
-    lane('highpass', BASS_HZ, 9000, 'log', [0, 1], [0.68, 1]),
-  ],
-  incoming: [],
-};
-/** Rise's sweep runs from 20 Hz, and its bass swap waits for the end */
-const highpassOutFull: Side = {
   outgoing: [lane('highpass', 20, 9000, 'log', [0, 1], [0.5, 1])],
   incoming: [],
 };
@@ -350,7 +341,7 @@ export const SPOTIFY_STYLES: EffectStyle[] = [
   spotify(
     3,
     'Rise',
-    compose(volume.fullOverlap, bassSwap(SWAP_AT_END), lowpassIn, highpassOutFull),
+    compose(volume.fullOverlap, bassSwap(SWAP_AT_END), lowpassIn, highpassOut),
   ),
   spotify(
     4,
@@ -389,6 +380,7 @@ export const EFFECT_DEFAULTS: Record<EffectParam, number> = {
   input: 1,
   lowpass: 20_000,
   highpass: 10,
+  bass: 0,
   send: 0,
   wet: 0,
   dry: 1,

@@ -1198,6 +1198,10 @@ export class AutoMixEngine {
     const lowpass = context.createBiquadFilter();
     lowpass.type = 'lowpass';
     lowpass.frequency.value = 20_000;
+    const bass = context.createBiquadFilter();
+    bass.type = 'lowshelf';
+    bass.frequency.value = CROSSOVER_HZ;
+    bass.gain.value = 0;
     const dryMix = context.createGain();
     const send = context.createGain();
     send.gain.value = 0;
@@ -1213,6 +1217,7 @@ export class AutoMixEngine {
       input,
       highpass,
       lowpass,
+      bass,
       dryMix,
       send,
       wet,
@@ -1229,14 +1234,15 @@ export class AutoMixEngine {
       input.connect(highpass);
     }
     source.connect(sourceGain).connect(input);
-    highpass.connect(lowpass);
-    lowpass.connect(dryMix).connect(dry);
-    lowpass.connect(send);
+    highpass.connect(lowpass).connect(bass);
+    bass.connect(dryMix).connect(dry);
+    bass.connect(send);
     const fx: OutgoingChain['fx'] = {
       gain: dry.gain,
       input: input.gain,
       highpass: highpass.frequency,
       lowpass: lowpass.frequency,
+      bass: bass.gain,
       send: send.gain,
       wet: wet.gain,
       dry: dryMix.gain,
@@ -1283,7 +1289,7 @@ export class AutoMixEngine {
       input,
       dry,
       master,
-      tap: lowpass,
+      tap: bass,
       fx,
       repeat,
       nodes,
@@ -1596,12 +1602,16 @@ export class AutoMixEngine {
       highpass.type = 'highpass';
       const lowpass = context.createBiquadFilter();
       lowpass.type = 'lowpass';
-      stages.push(highpass, lowpass, gain);
+      const bass = context.createBiquadFilter();
+      bass.type = 'lowshelf';
+      bass.frequency.value = CROSSOVER_HZ;
+      stages.push(highpass, lowpass, bass, gain);
       scheduleLanes(
         {
           gain: gain.gain,
           highpass: highpass.frequency,
           lowpass: lowpass.frequency,
+          bass: bass.gain,
         },
         style.incoming,
         mixAt,
