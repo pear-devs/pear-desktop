@@ -462,7 +462,7 @@ const planCut = (
     Math.min(from.outroStart + from.beatPeriod, end),
     end - MAX_EARLY_SECONDS,
   );
-  const mixOut = options.asap
+  let mixOut = options.asap
     ? asapPoint(from, options.earliestMixOut)
     : (latestGridPoint(
         from.downbeats,
@@ -470,6 +470,16 @@ const planCut = (
         limit,
       ) ?? latestGridPoint(from.beats, options.earliestMixOut, limit));
   if (mixOut === undefined) return null;
+  // Never cut a line off mid-way: wait for the first downbeat (else beat)
+  // after it, as long as that's still before the song ends
+  const cutAt = mixOut;
+  const line = from.vocals?.find(
+    (region) => region.start < cutAt && region.end > cutAt + 0.1,
+  );
+  const after = (grid: number[]) =>
+    line && grid.find((time) => time >= line.end && time <= end);
+  const afterLine = after(from.downbeats) ?? after(from.beats) ?? undefined;
+  if (afterLine !== undefined) mixOut = afterLine;
 
   return {
     style: 'cut',
