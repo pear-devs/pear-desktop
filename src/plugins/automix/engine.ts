@@ -18,6 +18,7 @@ import {
   type EffectParam,
   type EffectStyle,
 } from './effects';
+import { alignKicks } from './kicks';
 import { planTransition, type TransitionPlan } from './planner';
 import { getQueueStore, readQueue, type QueueTrack } from './queue';
 import {
@@ -1030,7 +1031,7 @@ export class AutoMixEngine {
       video.currentTime > this.plan.mixOut - prerollFor(this.plan) + 0.5;
     if (key !== this.planKey || tooLate) {
       this.planKey = key;
-      const plan = planTransition(fromAnalysis, toAnalysis, {
+      let plan = planTransition(fromAnalysis, toAnalysis, {
         preference: to ? this.config.transition : 'smooth',
         blendBeats: this.config.blendBeats,
         maxStretch: this.config.maxStretch,
@@ -1044,6 +1045,18 @@ export class AutoMixEngine {
           from.tailStart + MIX_NOW_LEAD,
         ),
       });
+      // Beat grids get the kicks within a few tens of ms: line them up on
+      // what the two copies actually play
+      if (plan && to) {
+        const aligned = alignKicks(plan, from.tail, from.tailStart, to.head);
+        plan = {
+          ...aligned.plan,
+          checks: {
+            ...aligned.plan.checks,
+            kickNudgeMs: Math.round(aligned.nudge * 1000),
+          },
+        };
+      }
       this.plan = plan && !to ? { ...plan, reason: 'late-change' } : plan;
       if (this.debugEnabled()) {
         console.info('[AutoMix] plan', plan?.style ?? 'none', plan?.reason, {
