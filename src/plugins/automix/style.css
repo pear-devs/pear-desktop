@@ -46,16 +46,20 @@
     box-shadow 0.6s ease;
 }
 
-.automix-reorder {
+.automix-reorder,
+.automix-mix-now {
   margin-left: 6px;
   padding: 0 11px 0 8px;
 }
 
-.automix-reorder[data-state='busy'] .automix-icon {
+.automix-reorder[data-state='busy'] .automix-icon,
+.automix-mix-now[data-state='busy'] .automix-icon,
+.automix-mix-now[data-state='armed'] .automix-icon {
   animation: automix-pulse 1.6s ease-in-out infinite;
 }
 
-.automix-reorder[aria-disabled='true'] {
+.automix-reorder[aria-disabled='true'],
+.automix-mix-now[aria-disabled='true'] {
   opacity: 0.45;
   cursor: default;
 }

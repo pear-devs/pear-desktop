@@ -1,6 +1,8 @@
 /**
  * Musical key detection (chroma + Krumhansl-Kessler key profiles) and
  * Camelot wheel compatibility, used to avoid overlapping clashing keys.
+ * Also how tonal each part of a song is, since clashing keys only matter
+ * where both songs play chords or melody (not over drums alone).
  */
 
 export interface MusicalKey {
@@ -95,7 +97,7 @@ const correlation = (a: number[], b: number[]) => {
   return denA > 0 && denB > 0 ? num / Math.sqrt(denA * denB) : 0;
 };
 
-const camelotFor = (pitchClass: number, mode: 'major' | 'minor') => {
+export const camelotFor = (pitchClass: number, mode: 'major' | 'minor') => {
   // Camelot numbers follow the circle of fifths; a minor key shares its
   // number with its relative major (three semitones up)
   const major = mode === 'major' ? pitchClass : (pitchClass + 3) % 12;
@@ -162,6 +164,118 @@ export const detectKey = (
     }
   }
   return best;
+};
+
+/** How tonal (chords, melody, vocals) each stretch of a section is */
+export interface TonalProfile {
+  /** Track time where the first block starts */
+  start: number;
+  /** Seconds per block */
+  step: number;
+  /** Share of each block's mid-range energy that's sustained pitches (0..1) */
+  values: number[];
+}
+
+const TONAL_FRAME = 2048;
+const TONAL_HOP = 1024;
+/** Below this is the bassline, which a blend's bass swap keeps apart */
+const TONAL_MIN_HZ = 200;
+const TONAL_MAX_HZ = 4000;
+/** Frames (~0.5 s) a pitch has to last, longer than a drum hit rings */
+const TONAL_SUSTAIN = 5;
+/** Bins each side (~65 Hz) a pitch has to stand out from */
+const TONAL_NEIGHBOURS = 12;
+/** How far above its neighbourhood (power) a bin has to be to be a pitch */
+const TONAL_PEAK = 6;
+const TONAL_BLOCK_SECONDS = 0.5;
+
+/**
+ * Splits a section into blocks and measures how much of each is sustained
+ * pitches rather than drums. A pitch shows as a sharp spectral peak that
+ * lasts; a drum hit is broadband and over in a moment. So: take the median
+ * of each bin over ~0.5 s (drops most of the hits), and count the energy in
+ * bins that stand well above their neighbours, against all the energy there.
+ */
+export const tonalProfile = (
+  signal: Float32Array,
+  sampleRate: number,
+  fromSeconds: number,
+  toSeconds: number,
+): TonalProfile | null => {
+  const first = Math.max(0, Math.floor(fromSeconds * sampleRate));
+  const last = Math.min(signal.length, Math.floor(toSeconds * sampleRate));
+  const frames = Math.floor((last - first - TONAL_FRAME) / TONAL_HOP) + 1;
+  if (frames < TONAL_SUSTAIN * 2) return null;
+
+  const window = new Float64Array(TONAL_FRAME);
+  for (let i = 0; i < TONAL_FRAME; i++) {
+    window[i] = 0.5 - (0.5 * Math.cos((2 * Math.PI * i) / (TONAL_FRAME - 1)));
+  }
+  const lowBin = Math.ceil((TONAL_MIN_HZ * TONAL_FRAME) / sampleRate);
+  const highBin = Math.min(
+    (TONAL_FRAME / 2) - 1,
+    Math.floor((TONAL_MAX_HZ * TONAL_FRAME) / sampleRate),
+  );
+  const bins = highBin - lowBin + 1;
+
+  const power = new Float32Array(frames * bins);
+  const re = new Float64Array(TONAL_FRAME);
+  const im = new Float64Array(TONAL_FRAME);
+  for (let f = 0; f < frames; f++) {
+    const start = first + (f * TONAL_HOP);
+    for (let i = 0; i < TONAL_FRAME; i++) {
+      re[i] = signal[start + i] * window[i];
+      im[i] = 0;
+    }
+    fft(re, im);
+    for (let b = 0; b < bins; b++) {
+      const bin = lowBin + b;
+      power[(f * bins) + b] = (re[bin] * re[bin]) + (im[bin] * im[bin]);
+    }
+  }
+
+  const blockFrames = Math.max(
+    1,
+    Math.round((TONAL_BLOCK_SECONDS * sampleRate) / TONAL_HOP),
+  );
+  const values: number[] = [];
+  const half = Math.floor(TONAL_SUSTAIN / 2);
+  const run = new Float32Array(TONAL_SUSTAIN);
+  const sustained = new Float32Array(bins);
+  const logSums = new Float64Array(bins + 1);
+  let tonal = 0;
+  let total = 0;
+  for (let f = 0; f < frames; f++) {
+    const from = Math.min(Math.max(0, f - half), frames - TONAL_SUSTAIN);
+    for (let b = 0; b < bins; b++) {
+      for (let k = 0; k < TONAL_SUSTAIN; k++) {
+        run[k] = power[((from + k) * bins) + b];
+      }
+      run.sort();
+      sustained[b] = run[half];
+      logSums[b + 1] = logSums[b] + Math.log(sustained[b] + 1e-12);
+      total += power[(f * bins) + b];
+    }
+    // Geometric mean of the neighbourhood: a few peaks barely move it
+    for (let b = 0; b < bins; b++) {
+      const lo = Math.max(0, b - TONAL_NEIGHBOURS);
+      const hi = Math.min(bins, b + TONAL_NEIGHBOURS + 1);
+      const floor = Math.exp((logSums[hi] - logSums[lo]) / (hi - lo));
+      if (sustained[b] > TONAL_PEAK * floor) tonal += sustained[b];
+    }
+    if ((f + 1) % blockFrames === 0 || f === frames - 1) {
+      values.push(total > 0 ? Math.min(1, tonal / total) : 0);
+      tonal = 0;
+      total = 0;
+    }
+  }
+
+  return {
+    // Frames are placed by their centre
+    start: (first + (TONAL_FRAME / 2)) / sampleRate,
+    step: (blockFrames * TONAL_HOP) / sampleRate,
+    values,
+  };
 };
 
 /**

@@ -3,7 +3,12 @@ import { FastAverageColor } from 'fast-average-color';
 import { createSignal } from 'solid-js';
 
 import { defaultConfig, type AutoMixPluginConfig } from './config';
-import { FETCH_AUDIO_CHANNEL, type FetchedAudio } from './constants';
+import {
+  APPLE_ANALYSIS_CHANNEL,
+  FETCH_AUDIO_CHANNEL,
+  type AppleAnalysis,
+  type FetchedAudio,
+} from './constants';
 import { AutoMixEngine, type AutoMixStatus } from './engine';
 import { reorderQueue } from './reorder';
 import { mountUi } from './ui';
@@ -87,6 +92,11 @@ export const renderer = {
             FETCH_AUDIO_CHANNEL,
             videoId,
           ) as Promise<FetchedAudio | null>,
+        fetchApple: (lookup) =>
+          context.ipc.invoke(
+            APPLE_ANALYSIS_CHANNEL,
+            lookup,
+          ) as Promise<AppleAnalysis | null>,
         onStatus: setStatus,
       },
       config(),
@@ -100,6 +110,7 @@ export const renderer = {
           console.error,
         );
       },
+      mixNow: async () => (await engine?.mixNow()) ?? false,
       reorder: async (onProgress) => {
         const current = engine;
         if (!current) return null;

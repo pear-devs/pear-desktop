@@ -379,8 +379,10 @@
       "description": "Transitions between songs like Apple Music AutoMix: lets real endings play out and segues in as they die away, beat-matches songs with a steady beat (time-stretched, phrase aligned), trims silence, and can also do beat cuts or smooth fades. Don't use together with Crossfade",
       "menu": {
         "active": "AutoMix on",
+        "apple-analysis": "Use Apple Music's song analysis (beats, phrases, vocals) when available",
         "beat-only": "Only beat-matched transitions (Beat Match or Beat Cut, no segues)",
         "cut-echo": "Echo the old song's last beat on Beat Cuts",
+        "effects": "Apple Music effects on blends (filter sweeps, echoes, reverb)",
         "reorder-shape": {
           "build": "Build up the energy",
           "label": "Reorder the queue for",
@@ -412,8 +414,12 @@
       },
       "ui": {
         "detail": {
-          "blend": "{{from}} → {{to}} BPM · stretched {{stretch}}%",
+          "apple": "Planned with Apple Music's analysis of the songs",
+          "blend": "{{bars}} bars · {{from}} → {{to}} BPM · stretched {{stretch}}%",
+          "entry": "Comes into the next song at {{time}}",
+          "entry-vocal": "Comes into the next song at {{time}}, finishing as its vocals start at {{vocal}}",
           "cut": "Cut on the downbeat · {{bpm}} BPM",
+          "effect": "Apple Music effect: {{name}}",
           "keys": "key {{from}} → {{to}}",
           "lead-in": "{{seconds}} s lead-in, lands on the final hit",
           "segue": "Plays the ending out, next song in as it dies away",
@@ -424,6 +430,13 @@
         "mixing": "AutoMixing",
         "off": "AutoMix off",
         "on": "AutoMix",
+        "mix-now": {
+          "armed": "Mixing soon",
+          "busy": "Getting ready…",
+          "idle": "Mix now",
+          "title": "Start the transition into the next song now, on the next bar (or phrase) it can",
+          "unavailable": "Next song isn't ready"
+        },
         "reorder": {
           "already": "Already in the best order",
           "busy": "Analysing {{done}}/{{total}}",

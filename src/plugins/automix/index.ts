@@ -73,6 +73,12 @@ export default createPlugin({
         checked: config.cutEcho,
         click: (item) => setConfig({ cutEcho: item.checked }),
       },
+      {
+        label: t('plugins.automix.menu.effects'),
+        type: 'checkbox',
+        checked: config.effects,
+        click: (item) => setConfig({ effects: item.checked }),
+      },
       radio(
         t('plugins.automix.menu.blend-length'),
         config.blendBeats,
@@ -124,6 +130,12 @@ export default createPlugin({
         ],
         (reorderShape) => setConfig({ reorderShape }),
       ),
+      {
+        label: t('plugins.automix.menu.apple-analysis'),
+        type: 'checkbox',
+        checked: config.appleAnalysis,
+        click: (item) => setConfig({ appleAnalysis: item.checked }),
+      },
       {
         label: t('plugins.automix.menu.show-mix-card'),
         type: 'checkbox',

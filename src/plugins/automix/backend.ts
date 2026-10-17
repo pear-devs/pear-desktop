@@ -2,7 +2,13 @@ import { Utils, type Innertube, type Types } from 'youtubei.js';
 
 import { createInnertube } from '@/plugins/utils/main/innertube';
 
-import { FETCH_AUDIO_CHANNEL, type FetchedAudio } from './constants';
+import { appleAnalysis } from './apple';
+import {
+  APPLE_ANALYSIS_CHANNEL,
+  FETCH_AUDIO_CHANNEL,
+  type AppleLookup,
+  type FetchedAudio,
+} from './constants';
 
 import type { AutoMixPluginConfig } from './config';
 import type { BackendContext } from '@/types/contexts';
@@ -133,8 +139,12 @@ export const backend = {
       queue = result.catch(() => null);
       return result;
     });
+    ipc.handle(APPLE_ANALYSIS_CHANNEL, (lookup: AppleLookup) =>
+      appleAnalysis(lookup),
+    );
   },
   stop({ ipc }: BackendContext<AutoMixPluginConfig>) {
     ipc.removeHandler(FETCH_AUDIO_CHANNEL);
+    ipc.removeHandler(APPLE_ANALYSIS_CHANNEL);
   },
 };

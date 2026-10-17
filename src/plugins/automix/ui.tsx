@@ -11,6 +11,8 @@ import { render } from 'solid-js/web';
 
 import { t } from '@/i18n';
 
+import { effectName } from './effects';
+
 import type { AutoMixPluginConfig } from './config';
 import type { AutoMixStatus } from './engine';
 import type { TransitionPlan } from './planner';
@@ -24,6 +26,8 @@ interface UiProps {
   reorder: (
     onProgress: (done: number, total: number) => void,
   ) => Promise<ReorderResult | null>;
+  /** Mixes into the next song as soon as it can; false if it can't yet */
+  mixNow: () => Promise<boolean>;
 }
 
 const formatTime = (seconds: number) => {
@@ -53,6 +57,7 @@ const describeStyle = (plan: TransitionPlan) => {
   switch (plan.style) {
     case 'blend':
       return t('plugins.automix.ui.detail.blend', {
+        bars: Math.max(1, Math.round(plan.duration / (plan.beat * 4))),
         from,
         to,
         stretch: (Math.abs(plan.rate - 1) * 100).toFixed(1),
@@ -84,6 +89,12 @@ const AutoMixIcon = () => (
 const ReorderIcon = () => (
   <svg aria-hidden="true" class="automix-icon" viewBox="0 0 24 24">
     <path d="M7 4v15M4 16l3 3 3-3M17 20V5M14 8l3-3 3 3" />
+  </svg>
+);
+
+const MixNowIcon = () => (
+  <svg aria-hidden="true" class="automix-icon" viewBox="0 0 24 24">
+    <path d="M4 6l7 6-7 6M13 6l7 6-7 6" />
   </svg>
 );
 
@@ -133,6 +144,24 @@ const hintFor = (status: AutoMixStatus): Hint => {
             ]
           : []),
         describePlan(plan),
+        plan.landsOnVocal === undefined
+          ? t('plugins.automix.ui.detail.entry', {
+              time: formatTime(plan.mixIn),
+            })
+          : t('plugins.automix.ui.detail.entry-vocal', {
+              time: formatTime(plan.mixIn),
+              vocal: formatTime(plan.landsOnVocal),
+            }),
+        ...(effectName(plan.effect)
+          ? [
+              t('plugins.automix.ui.detail.effect', {
+                name: effectName(plan.effect),
+              }),
+            ]
+          : []),
+        ...(plan.appleAnalysis
+          ? [t('plugins.automix.ui.detail.apple')]
+          : []),
         ...(status.lowQuality
           ? [
               t('plugins.automix.ui.low-quality', {
@@ -339,6 +368,59 @@ const ReorderButton = (props: UiProps) => {
   );
 };
 
+type MixNowState = 'idle' | 'busy' | 'armed' | 'unavailable';
+
+/** Next to Reorder: start the transition into the next song now */
+const MixNowButton = (props: UiProps) => {
+  const [state, setState] = createSignal<MixNowState>('idle');
+  let timer: number | undefined;
+  onCleanup(() => window.clearTimeout(timer));
+
+  // Only once the next transition is planned, and not during one
+  const ready = () => props.status().phase === 'ready';
+  createEffect(() => {
+    // An armed mix-now is done once its transition starts (or is dropped)
+    if (state() === 'armed' && props.status().phase !== 'ready') {
+      setState('idle');
+    }
+  });
+
+  const run = async () => {
+    if (state() !== 'idle' || !ready()) return;
+    setState('busy');
+    const started = await props.mixNow().catch(() => false);
+    if (started) {
+      setState('armed');
+      return;
+    }
+    setState('unavailable');
+    window.clearTimeout(timer);
+    timer = window.setTimeout(() => setState('idle'), 3000);
+  };
+
+  const label = () => t(`plugins.automix.ui.mix-now.${state()}`);
+
+  return (
+    <button
+      aria-busy={state() === 'busy'}
+      aria-disabled={!ready() || state() !== 'idle'}
+      aria-label={`${label()}. ${t('plugins.automix.ui.mix-now.title')}`}
+      class="automix-pill automix-mix-now"
+      data-state={state()}
+      // Own listener: the player bar stops clicks reaching delegated ones
+      on:click={(event) => {
+        event.stopPropagation();
+        run().catch(console.error);
+      }}
+      title={t('plugins.automix.ui.mix-now.title')}
+      type="button"
+    >
+      <MixNowIcon />
+      <span class="automix-label">{label()}</span>
+    </button>
+  );
+};
+
 const HoverCard = (props: {
   status: Accessor<AutoMixStatus>;
   anchor: Accessor<DOMRect | null>;
@@ -435,6 +517,7 @@ export const mountUi = (props: UiProps) => {
         <>
           <Pill {...props} onHover={setAnchor} />
           <ReorderButton {...props} />
+          <MixNowButton {...props} />
         </>
       ),
       pillHost,

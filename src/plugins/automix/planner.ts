@@ -1,6 +1,7 @@
+import { pickCrossfadeReverb, pickEffect, CROSSFADE_REVERB } from './effects';
 import { keysClash } from './key';
 
-import type { TrackAnalysis } from './analysis';
+import type { TempoSection, TrackAnalysis } from './analysis';
 
 export type TransitionStyle = 'blend' | 'segue' | 'cut' | 'smooth';
 export type TransitionPreference = 'auto' | TransitionStyle;
@@ -39,6 +40,13 @@ export interface PlannerOptions {
   beatOnly?: boolean;
   /** Mix points before this time (outgoing timeline) can't be used */
   earliestMixOut: number;
+  /** Dress beat-matched blends in one of Apple Music's effect styles */
+  effects?: boolean;
+  /**
+   * Mix now (by hand): start at the first bar from earliestMixOut on (a
+   * phrase if one is close) instead of waiting for the outro
+   */
+  asap?: boolean;
 }
 
 export interface TransitionPlan {
@@ -66,6 +74,19 @@ export interface TransitionPlan {
   /** Camelot keys at the mix point, when detected (e.g. "8A") */
   fromKey?: string;
   toKey?: string;
+  /** Where the incoming song's vocal line starts, when the transition lands on it */
+  landsOnVocal?: number;
+  /** Apple Music's analysis of either song was used to plan this */
+  appleAnalysis?: boolean;
+  /** Apple effect style id the blend is dressed in (see effects.ts) */
+  effect?: number;
+  /**
+   * How tonal both songs are at once through a blend (0..1): clashing keys
+   * are only heard where both play chords, melody or vocals
+   */
+  tonalOverlap?: number;
+  /** What the planner checked to pick the style, for AutoMix's debug log */
+  checks?: Record<string, boolean | number | string>;
 }
 
 /**
@@ -78,8 +99,23 @@ const PHRASE_BARS = 4;
 /** How far a blend may move earlier to start on a phrase instead of a bar */
 const PHRASE_SNAP_SECONDS = 5;
 
+/**
+ * Over clashing keys, blends where both songs are this tonal at once are
+ * kept short (to these lengths); over drums the full length is fine
+ */
+const TONAL_CLASH = 0.12;
+const CLASH_BLEND_BEATS = 8;
+const CLASH_ENDING_BEATS = 4;
+
 /** Seconds of run-up the player needs to lock a blend's incoming song */
 const BLEND_RUN_UP = 2;
+
+/**
+ * Latest a vocal line may start in the incoming song for a transition to aim
+ * at it. AutoMix plays the incoming side from the song's first 60 s, and a
+ * blend still needs room after it to glide back to tempo and hand over.
+ */
+const VOCAL_ENTRY_LIMIT = 38;
 
 /** Longest a segue waits for an ending to die away before coming in */
 const SEGUE_MAX_WAIT = 8;
@@ -99,7 +135,7 @@ const hasBeatGrid = (track: TrackAnalysis) =>
 
 /** A track that is still loud right up to its last audible moment */
 export const endsAbruptly = (track: TrackAnalysis) =>
-  track.trailingSilenceStart - track.outroStart < 2;
+  !track.fadesOut && track.trailingSilenceStart - track.outroStart < 2;
 
 /** A track that hits its full energy almost immediately */
 export const startsPunchy = (track: TrackAnalysis) =>
@@ -137,6 +173,79 @@ const blendEntry = (track: TrackAnalysis) =>
     (time) => time >= track.leadingSilenceEnd + BLEND_RUN_UP,
   ) ?? entryPoint(track);
 
+/**
+ * Where the incoming song comes in so that its first vocal line lands right
+ * as the transition (`span` seconds of the incoming song) finishes, instead
+ * of after a long instrumental intro. The last bar that allows it, never
+ * before `earliest`; undefined when the singing starts too late to reach.
+ */
+const vocalEntry = (track: TrackAnalysis, earliest: number, span: number) =>
+  vocalGapEntry(track, earliest, span) ?? firstLineEntry(track, earliest, span);
+
+/**
+ * What Apple Music does: overlap a stretch of the incoming song where nobody
+ * sings, starting on a phrase, so the two songs' vocals never clash and the
+ * next line starts just as the transition finishes. The earliest such phrase
+ * (or bar) from `earliest` on, if the song has one in reach.
+ */
+const vocalGapEntry = (track: TrackAnalysis, earliest: number, span: number) => {
+  const vocals = track.vocals;
+  if (!vocals?.length || track.beatPeriod <= 0) return undefined;
+  const bar = track.beatPeriod * 4;
+  const starts = track.phrases?.length ? track.phrases : track.downbeats;
+  return starts.find((start) => {
+    const end = start + span;
+    if (start < earliest || end > VOCAL_ENTRY_LIMIT) return false;
+    // Singing during the transition, other than the line it lands on
+    const clash = vocals.some(
+      (region) =>
+        region.end > start + 0.25 &&
+        (region.start < end - (2 * bar) || region.start < start),
+    );
+    // The landing line: starts in the transition's last bars or just after
+    const lands = vocals.some(
+      (region) =>
+        region.start >= Math.max(start, end - (2 * bar)) &&
+        region.start <= end + bar,
+    );
+    return !clash && lands;
+  });
+};
+
+/**
+ * How much of the incoming song a blend covers: the engine glides it from
+ * `rate` back to 1x during the blend, so on average it runs in between
+ */
+const glidedSpan = (duration: number, rate: number) =>
+  Math.abs(rate - 1) < 0.001
+    ? duration
+    : (duration * (rate - 1)) / Math.log(rate);
+
+/** The vocal line that starts as the transition finishes, if there is one */
+const vocalLanding = (track: TrackAnalysis, plan: TransitionPlan) => {
+  const span =
+    plan.style === 'blend' && !plan.holdOutgoing
+      ? glidedSpan(plan.duration, plan.rate)
+      : plan.duration * plan.rate;
+  const end = plan.mixIn + span;
+  const bar = track.beatPeriod > 0 ? track.beatPeriod * 4 : 2;
+  return track.vocals?.find(
+    (region) =>
+      region.start >= Math.max(plan.mixIn, end - (2 * bar)) &&
+      region.start <= end + bar,
+  )?.start;
+};
+
+/** Lands the first vocal line once the song is in full swing on the transition's end */
+const firstLineEntry = (track: TrackAnalysis, earliest: number, span: number) => {
+  if (track.vocalEntry === undefined) return undefined;
+  const target = track.vocalEntry - span;
+  if (target <= earliest || track.vocalEntry > VOCAL_ENTRY_LIMIT) {
+    return undefined;
+  }
+  return latestGridPoint(track.downbeats, earliest, target);
+};
+
 /** First downbeat of the incoming track once it's audible */
 const entryPoint = (track: TrackAnalysis) => {
   const audible = track.leadingSilenceEnd - 0.05;
@@ -157,9 +266,29 @@ const finalHit = (track: TrackAnalysis) => {
  * last bar, since phrases end where the song ends.
  */
 const phraseStarts = (track: TrackAnalysis) =>
-  track.downbeats.filter(
-    (_, i) => (track.downbeats.length - 1 - i) % PHRASE_BARS === 0,
+  track.phrases?.length
+    ? track.phrases
+    : track.downbeats.filter(
+        (_, i) => (track.downbeats.length - 1 - i) % PHRASE_BARS === 0,
+      );
+
+/** How far a mix-now may wait for a phrase instead of the next bar, in bars */
+const ASAP_PHRASE_BARS = 2;
+
+/**
+ * Mix now: the first phrase start within a couple of bars of `earliest`,
+ * else the first bar (else beat) from it on
+ */
+const asapPoint = (track: TrackAnalysis, earliest: number) => {
+  const bar = track.beatPeriod * 4;
+  return (
+    phraseStarts(track).find(
+      (time) => time >= earliest && time <= earliest + (ASAP_PHRASE_BARS * bar),
+    ) ??
+    track.downbeats.find((time) => time >= earliest) ??
+    track.beats.find((time) => time >= earliest)
   );
+};
 
 /** Latest grid point in [min, max] */
 const latestGridPoint = (grid: number[], min: number, max: number) => {
@@ -170,19 +299,64 @@ const latestGridPoint = (grid: number[], min: number, max: number) => {
   return undefined;
 };
 
+/**
+ * How tonal a song is at a track time: 1 where Apple Music hears clear
+ * singing, otherwise our own measure; unknown counts as tonal
+ */
+const tonalAt = (track: TrackAnalysis, section: TempoSection, time: number) => {
+  if (track.vocals?.some((region) => time >= region.start && time < region.end)) {
+    return 1;
+  }
+  const profile = section.tonal;
+  if (!profile) return 1;
+  return profile.values[Math.floor((time - profile.start) / profile.step)] ?? 1;
+};
+
+/**
+ * How tonal both songs are at once through a blend: the less tonal of the
+ * two at each moment, weighted by how loud both are then
+ */
+const tonalOverlap = (
+  outgoing: TrackAnalysis,
+  incoming: TrackAnalysis,
+  plan: TransitionPlan,
+) => {
+  const steps = Math.max(1, Math.ceil(plan.duration / 0.25));
+  let sum = 0;
+  let weights = 0;
+  for (let i = 0; i < steps; i++) {
+    const x = (i + 0.5) / steps;
+    const time = x * plan.duration;
+    const weight = Math.min(
+      Math.sin((x * Math.PI) / 2),
+      plan.holdOutgoing ? 1 : Math.cos((x * Math.PI) / 2),
+    );
+    sum +=
+      weight *
+      Math.min(
+        tonalAt(outgoing, outgoing.end, plan.mixOut + time),
+        tonalAt(incoming, incoming.start, plan.mixIn + (time * plan.rate)),
+      );
+    weights += weight;
+  }
+  return weights > 0 ? sum / weights : 0;
+};
+
+/** Whether a blend would be heard clashing, if the keys clash */
+type ClashCheck = (plan: TransitionPlan) => boolean;
+
 const planBlend = (
   from: TrackAnalysis,
   to: TrackAnalysis,
   options: PlannerOptions,
-  clash = false,
+  clashes: ClashCheck = () => false,
 ): TransitionPlan | null => {
   const rate = tempoRatio(from.bpm, to.bpm);
   if (!Number.isFinite(rate)) return null;
 
   // Try the requested length first, then shorter blends if we're out of
-  // room. Clashing keys get a short overlap
-  const longest = clash ? Math.min(options.blendBeats, 8) : options.blendBeats;
-  for (let beats = longest; beats >= 4; beats /= 2) {
+  // room. Clashing keys get a short overlap, unless one side is just drums
+  for (let beats = options.blendBeats; beats >= 4; beats /= 2) {
     const duration = beats * from.beatPeriod;
     const latestStart = from.trailingSilenceStart - duration;
     // Start in the outro, but never so late that the blend runs past the end
@@ -198,14 +372,22 @@ const planBlend = (
     );
     const slack = from.beatPeriod / 2;
     // Prefer a phrase boundary close to the target, then any bar, then a beat
-    const mixOut =
-      latestGridPoint(
-        phraseStarts(from),
-        Math.max(earliest, target - PHRASE_SNAP_SECONDS),
-        target + slack,
-      ) ??
-      latestGridPoint(from.downbeats, earliest, target + slack) ??
-      latestGridPoint(from.beats, options.earliestMixOut, target);
+    const mixOut = options.asap
+      ? asapPoint(from, options.earliestMixOut)
+      : (latestGridPoint(
+          phraseStarts(from),
+          // Apple Music's phrase marks are reliable enough to move the whole
+          // snap window earlier, so the blend covers whole phrases like Apple's
+          Math.max(
+            from.phrases?.length
+              ? options.earliestMixOut
+              : earliest,
+            target - PHRASE_SNAP_SECONDS,
+          ),
+          target + slack,
+        ) ??
+        latestGridPoint(from.downbeats, earliest, target + slack) ??
+        latestGridPoint(from.beats, options.earliestMixOut, target));
     if (
       mixOut === undefined ||
       mixOut + duration > from.trailingSilenceStart + from.beatPeriod
@@ -213,17 +395,19 @@ const planBlend = (
       continue;
     }
 
-    return {
+    const plan: TransitionPlan = {
       style: 'blend',
       reason: 'fallback',
       mixOut,
-      mixIn: blendEntry(to),
+      mixIn: vocalEntry(to, blendEntry(to), glidedSpan(duration, rate)) ?? blendEntry(to),
       duration,
       rate,
       beat: from.beatPeriod,
       fromBpm: from.bpm,
       toBpm: to.bpm,
     };
+    if (beats > CLASH_BLEND_BEATS && clashes(plan)) continue;
+    return plan;
   }
 
   return null;
@@ -238,22 +422,21 @@ const planEndingBlend = (
   from: TrackAnalysis,
   to: TrackAnalysis,
   options: PlannerOptions,
-  clash = false,
+  clashes: ClashCheck = () => false,
 ): TransitionPlan | null => {
   const rate = tempoRatio(from.bpm, to.bpm);
   const hit = finalHit(from);
   if (!Number.isFinite(rate) || hit === undefined) return null;
 
-  const longest = Math.min(options.blendBeats, clash ? 4 : 8);
-  for (let beats = longest; beats >= 4; beats /= 2) {
+  for (let beats = options.blendBeats; beats >= 4; beats /= 2) {
     const duration = beats * from.beatPeriod;
     const mixOut = hit - duration;
     if (mixOut < options.earliestMixOut) continue;
-    return {
+    const plan: TransitionPlan = {
       style: 'blend',
       reason: 'fallback',
       mixOut,
-      mixIn: blendEntry(to),
+      mixIn: vocalEntry(to, blendEntry(to), duration * rate) ?? blendEntry(to),
       duration,
       rate,
       beat: from.beatPeriod,
@@ -261,6 +444,8 @@ const planEndingBlend = (
       toBpm: to.bpm,
       holdOutgoing: true,
     };
+    if (beats > CLASH_ENDING_BEATS && clashes(plan)) continue;
+    return plan;
   }
   return null;
 };
@@ -277,19 +462,20 @@ const planCut = (
     Math.min(from.outroStart + from.beatPeriod, end),
     end - MAX_EARLY_SECONDS,
   );
-  const mixOut =
-    latestGridPoint(
-      from.downbeats,
-      Math.max(options.earliestMixOut, limit - (from.beatPeriod * 4) - 0.01),
-      limit,
-    ) ?? latestGridPoint(from.beats, options.earliestMixOut, limit);
+  const mixOut = options.asap
+    ? asapPoint(from, options.earliestMixOut)
+    : (latestGridPoint(
+        from.downbeats,
+        Math.max(options.earliestMixOut, limit - (from.beatPeriod * 4) - 0.01),
+        limit,
+      ) ?? latestGridPoint(from.beats, options.earliestMixOut, limit));
   if (mixOut === undefined) return null;
 
   return {
     style: 'cut',
     reason: 'fallback',
     mixOut,
-    mixIn: entryPoint(to),
+    mixIn: vocalEntry(to, entryPoint(to), 0) ?? entryPoint(to),
     duration: from.beatPeriod,
     rate: 1,
     beat: from.beatPeriod,
@@ -398,6 +584,18 @@ const planSmooth = (
     return { ...base, mixOut, duration: leadIn, holdOutgoing: true };
   }
 
+  if (options.asap) {
+    // Mix now: fade over from the first bar we can, at full length
+    const mixOut =
+      from.downbeats.find((time) => time >= options.earliestMixOut) ??
+      options.earliestMixOut;
+    const duration = Math.min(
+      options.smoothSeconds,
+      from.trailingSilenceStart - mixOut,
+    );
+    return duration < 1.5 ? null : { ...base, mixOut, duration };
+  }
+
   // Fade in under the outro, finishing as the ending dies away
   const end = Math.min(from.decayPoint + 1, from.trailingSilenceStart);
   let duration = Math.min(
@@ -416,6 +614,24 @@ const planSmooth = (
 /** Most a song may speed up / slow down at the edge we beat-match on */
 const MAX_EDGE_DRIFT = 0.04;
 
+// Apple's planner gates on its own song ratings (decompiled thresholds):
+// beat-matched styles need danceability >= 0.3 and acousticness < 0.85 on
+// both songs, and keys stop mattering when neither song is melodic (< 0.25)
+const MIN_DANCEABILITY = 0.3;
+const MAX_ACOUSTICNESS = 0.85;
+const MIN_MELODICNESS = 0.25;
+
+/** Apple rates both songs as ones a beat-matched mix suits (true if unrated) */
+const suitsBeatMatch = (a: TrackAnalysis, b: TrackAnalysis) =>
+  [a.traits, b.traits].every(
+    (traits) =>
+      (traits?.danceability ?? 1) >= MIN_DANCEABILITY &&
+      (traits?.acousticness ?? 0) < MAX_ACOUSTICNESS,
+  );
+
+const unmelodic = (track: TrackAnalysis) =>
+  (track.traits?.melodicness ?? 1) < MIN_MELODICNESS;
+
 export const planTransition = (
   outgoing: TrackAnalysis,
   incoming: TrackAnalysis,
@@ -428,8 +644,15 @@ export const planTransition = (
   const steadyEdges =
     Math.abs(outgoing.end.drift) <= MAX_EDGE_DRIFT &&
     Math.abs(incoming.start.drift) <= MAX_EDGE_DRIFT;
-  // Overlapping clashing keys sounds wrong however good the beat match is
-  const clash = keysClash(outgoing.end.key, incoming.start.key);
+  // Overlapping clashing keys sounds wrong however good the beat match is,
+  // but only where both songs are tonal: over drums alone it's fine
+  const clash =
+    keysClash(outgoing.end.key, incoming.start.key) &&
+    !(unmelodic(outgoing) && unmelodic(incoming));
+  const overlap = (plan: TransitionPlan) =>
+    tonalOverlap(outgoing, incoming, plan);
+  const clashes = (plan: TransitionPlan) =>
+    clash && overlap(plan) >= TONAL_CLASH;
 
   const gridsOk = hasBeatGrid(from) && hasBeatGrid(to);
   const stretchOk =
@@ -450,10 +673,13 @@ export const planTransition = (
   const steadyBeat =
     from.tempoConfidence >= DJ_TEMPO_CONFIDENCE &&
     to.tempoConfidence >= DJ_TEMPO_CONFIDENCE;
-  const djBlend = stretchOk && steadyBeat && beatToTheEnd && beatFromTheStart;
+  const danceable = suitsBeatMatch(outgoing, incoming);
+  const djBlend =
+    stretchOk && steadyBeat && danceable && beatToTheEnd && beatFromTheStart;
   // Songs that stop on the beat: blend into the ending when tempos match
   const endingBlend =
     stretchOk &&
+    danceable &&
     endsAbruptly(from) &&
     finalHit(from) !== undefined &&
     beatFromTheStart;
@@ -489,13 +715,19 @@ export const planTransition = (
   if (options.beatOnly && options.preference !== 'segue') {
     order = order.filter((style) => style !== 'segue');
   }
+  // Mix now leaves the song mid-way: there's no ending to play out
+  if (options.asap) {
+    order = order.filter((style) => style !== 'segue');
+    if (order.length === 0) order = ['smooth'];
+  }
 
-  const reasonFor = (style: TransitionStyle): TransitionReason => {
+  const reasonFor = (plan: TransitionPlan): TransitionReason => {
+    const { style } = plan;
     if (options.preference !== 'auto') {
       return style === options.preference ? 'preference' : 'fallback';
     }
     if (style === 'blend') {
-      if (clash) return 'key-clash';
+      if (clashes(plan)) return 'key-clash';
       return endsAbruptly(from) ? 'ending-blend' : 'tempo-match';
     }
     if (style === 'segue') {
@@ -511,20 +743,59 @@ export const planTransition = (
     const plan =
       style === 'blend'
         ? endsAbruptly(from)
-          ? (planEndingBlend(from, to, options, clash) ??
-            planBlend(from, to, options, clash))
-          : planBlend(from, to, options, clash)
+          ? (planEndingBlend(from, to, options, clashes) ??
+            planBlend(from, to, options, clashes))
+          : planBlend(from, to, options, clashes)
         : style === 'segue'
           ? planSegue(from, to, options)
           : style === 'cut'
             ? planCut(from, to, options)
             : planSmooth(from, to, options);
     if (plan) {
+      const seed = `${outgoing.appleId ?? outgoing.duration}|${incoming.appleId ?? incoming.duration}`;
+      let effect: number | undefined;
+      if (options.effects && plan.style === 'blend' && !plan.holdOutgoing) {
+        effect = pickEffect(
+          outgoing.genre,
+          incoming.genre,
+          plan.duration / ((plan.beat || 0.5) * 4),
+          seed,
+        ).id;
+      } else if (
+        options.effects &&
+        plan.style === 'smooth' &&
+        pickCrossfadeReverb(seed)
+      ) {
+        effect = CROSSFADE_REVERB.id;
+      }
       return {
         ...plan,
-        reason: reasonFor(style),
+        effect,
+        reason: reasonFor(plan),
+        tonalOverlap: style === 'blend' ? overlap(plan) : undefined,
         fromKey: outgoing.end.key?.camelot,
         toKey: incoming.start.key?.camelot,
+        landsOnVocal: vocalLanding(to, plan),
+        appleAnalysis: Boolean(outgoing.appleId ?? incoming.appleId),
+        checks: {
+          tried: order.join('>'),
+          tempoGap: Math.round(
+            (tempoRatio(from.bpm, to.bpm) - 1) * 1000,
+          ) / 10,
+          fromBpm: Math.round(from.bpm * 10) / 10,
+          toBpm: Math.round(to.bpm * 10) / 10,
+          gridsOk,
+          steadyEdges,
+          stretchOk,
+          clash,
+          tonalOverlap:
+            style === 'blend' ? Math.round(overlap(plan) * 100) / 100 : '-',
+          steadyBeat,
+          danceable,
+          beatToTheEnd,
+          beatFromTheStart,
+          endsAbruptly: endsAbruptly(from),
+        },
       };
     }
   }

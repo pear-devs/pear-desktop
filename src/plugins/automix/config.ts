@@ -16,10 +16,17 @@ export type AutoMixPluginConfig = {
   beatOnly: boolean;
   /** Echo the old song's last beat under the next one on a beat cut */
   cutEcho: boolean;
+  /** Dress beat-matched blends in Apple Music's effect styles (filters, echoes, reverb) */
+  effects: boolean;
   /** Play consecutive songs from the same album without transitions */
   respectAlbums: boolean;
   /** Show the "AutoMixing" card while a transition plays */
   showMixCard: boolean;
+  /**
+   * Look songs up in Apple Music's catalog and use its analysis (beat grid,
+   * phrases, where the singing starts) to plan transitions
+   */
+  appleAnalysis: boolean;
   /** How Reorder shapes the set: smoothest, building up, or steady */
   reorderShape: ReorderShape;
 };
@@ -33,7 +40,9 @@ export const defaultConfig: AutoMixPluginConfig = {
   smoothSeconds: 10,
   beatOnly: false,
   cutEcho: false,
+  effects: true,
   respectAlbums: true,
   showMixCard: true,
+  appleAnalysis: true,
   reorderShape: 'smooth',
 };

@@ -9,6 +9,8 @@ import type { QueueElement } from '@/types/queue';
 export interface QueueTrack {
   videoId: string;
   title: string;
+  /** First artist in the byline, when the queue lists one */
+  artist: string;
   /** Album browse id (MPRE...), when the queue knows it */
   albumId?: string;
 }
@@ -40,6 +42,7 @@ const toTrack = (renderer: TrackRenderer | undefined): QueueTrack | null => {
   return {
     videoId: renderer.videoId,
     title: renderer.title?.runs?.map((run) => run.text).join('') ?? '',
+    artist: renderer.longBylineText?.runs?.[0]?.text ?? '',
     albumId,
   };
 };

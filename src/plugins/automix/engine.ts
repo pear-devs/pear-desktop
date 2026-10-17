@@ -1,7 +1,23 @@
 import SignalsmithStretch, { type StretchNode } from 'signalsmith-stretch';
 
 import { emptySection, type TrackAnalysis } from './analysis';
-import { decodeAndAnalyze, type AnalyzedTrack } from './decoder';
+import { alignApple, withApple } from './apple-analysis';
+import {
+  decodeAndAnalyze,
+  decodeWindow,
+  LOUDNESS_HOP,
+  type AnalyzedTrack,
+} from './decoder';
+import {
+  CROSSFADE_REVERB,
+  EFFECT_DEFAULTS,
+  effectById,
+  effectName,
+  scheduleLanes,
+  timeIn,
+  type EffectParam,
+  type EffectStyle,
+} from './effects';
 import { planTransition, type TransitionPlan } from './planner';
 import { getQueueStore, readQueue, type QueueTrack } from './queue';
 import {
@@ -13,7 +29,7 @@ import {
 import { locateCapture } from './sync';
 
 import type { AutoMixPluginConfig } from './config';
-import type { FetchedAudio } from './constants';
+import type { AppleAnalysis, AppleLookup, FetchedAudio } from './constants';
 import type { MusicPlayer } from '@/types/music-player';
 
 export type AutoMixPhase =
@@ -47,6 +63,7 @@ export interface AutoMixStatus {
 interface EngineOptions {
   api: MusicPlayer;
   fetchAudio: (videoId: string) => Promise<FetchedAudio | null>;
+  fetchApple: (lookup: AppleLookup) => Promise<AppleAnalysis | null>;
   onStatus: (status: AutoMixStatus) => void;
 }
 
@@ -63,6 +80,10 @@ interface OutgoingChain {
   lowpass?: BiquadFilterNode;
   /** Last node before the dry gain (where an echo send taps in) */
   tap: AudioNode;
+  /** What an effect style's lanes automate, when the blend has one */
+  fx?: Partial<Record<EffectParam, AudioParam>>;
+  /** A beat repeater's way in: the song's level, and where loops go */
+  repeat?: { song: GainNode; into: AudioNode; loops: AudioBufferSourceNode[] };
   nodes: AudioNode[];
   /**
    * Connections out of nodes shared between mixes (the stretchers): only
@@ -89,6 +110,16 @@ interface IncomingHead {
   entry: AudioNode;
   /** Sends a stretched copy its next tempo change when it's due */
   advance?: (now: number) => void;
+}
+
+/** Where the outgoing copy is in its song, and how fast, at a context time */
+interface OutgoingClock {
+  position: (time: number) => number;
+  rate: (time: number) => number;
+  /** Seconds per beat of the outgoing song, at its own tempo */
+  beat: number;
+  /** Song time of the copy's first sample */
+  tailStart: number;
 }
 
 /** A stretched copy's playback rate from a context time on */
@@ -119,6 +150,8 @@ interface ActiveMix {
   outStretch?: StretchNode;
   /** Sends the outgoing stretcher its next tempo change when it's due */
   outAdvance?: (now: number) => void;
+  /** The old song's tempo (rate) at a context time, for the debug log */
+  outRate?: (time: number) => number;
   /**
    * The player's own audio, inverted: while it's on, whatever the player
    * plays is cancelled out exactly, so muting or unmuting the element can
@@ -197,6 +230,8 @@ const GLIDE_STEP = 0.5;
 const OUT_GLIDE_SECONDS = 2;
 /** When the stretched outgoing copy takes over from the plain one */
 const OUT_HANDOFF = 0.5;
+/** Step of the shared tempo glide during a blend */
+const BLEND_GLIDE_STEP = 0.25;
 const CROSSOVER_HZ = 180;
 const SILENT_VOLUME = 0.0001;
 /** Log wanted vs actual levels 5x a second while mixing (opt in) */
@@ -217,6 +252,10 @@ const ENDING_RING = 1.5;
 const FILTER_IN_HZ = 500;
 /** Start a no-analysis fade plan this long before the song's audible end */
 const LATE_PLAN_SECONDS = 25;
+/** How much of the playing song a mix-now decodes from where it is */
+const MIX_NOW_SECONDS = 60;
+/** Seconds a mix-now needs at least to set its transition up */
+const MIX_NOW_LEAD = 6.5;
 
 /** Stand-in for a next song we couldn't analyse in time: fade into its start */
 const unknownTrack: TrackAnalysis = {
@@ -243,6 +282,25 @@ const clamp = (value: number, min: number, max: number) =>
  * When a blend swaps the basslines over: the outgoing bass goes out as the
  * incoming bass comes in, so two basslines never play at once
  */
+/**
+ * The incoming song's tempo through a blend when both songs glide, like
+ * Apple Music's AutoMix: it comes in at the old song's tempo (`rate`) and
+ * reaches its own (1x) as the blend ends, while the old song moves the
+ * other way at rate / `rate`. Both share one tempo at every step, so the
+ * beats stay locked, and neither changes speed while it plays alone.
+ */
+const blendGlide = (from: number, to: number, rate: number): RateStep[] => {
+  const count = Math.max(1, Math.round((to - from) / BLEND_GLIDE_STEP));
+  const step = (to - from) / count;
+  const steps: RateStep[] = [];
+  for (let k = 0; k < count; k++) {
+    const x = (k + 0.5) / count;
+    steps.push({ at: from + (k * step), rate: rate ** (1 - x) });
+  }
+  steps.push({ at: to, rate: 1 });
+  return steps;
+};
+
 const bassSwap = (plan: TransitionPlan, mixAt: number) => {
   if (plan.holdOutgoing) {
     // On the old song's final hit
@@ -279,9 +337,31 @@ const equalPowerOut = (() => {
   return curve;
 })();
 
+/**
+ * A plain reverb's impulse: decaying stereo noise, falling 60 dB over
+ * `decay` seconds (Apple's reverb decay times), brighter at the start
+ */
+const reverbImpulse = (context: AudioContext, decay: number) => {
+  const length = Math.round(Math.min(decay, 6) * context.sampleRate);
+  const impulse = context.createBuffer(2, length, context.sampleRate);
+  for (let c = 0; c < 2; c++) {
+    const data = impulse.getChannelData(c);
+    let smooth = 0;
+    for (let i = 0; i < length; i++) {
+      const t = i / context.sampleRate;
+      // The tail darkens as it dies away
+      const darken = Math.min(0.95, t / decay);
+      smooth = (smooth * darken) + (((Math.random() * 2) - 1) * (1 - darken));
+      data[i] = smooth * Math.exp((-6.9 * t) / decay) * 0.5;
+    }
+  }
+  return impulse;
+};
+
 export class AutoMixEngine {
   private readonly api: MusicPlayer;
   private readonly fetchAudio: EngineOptions['fetchAudio'];
+  private readonly fetchApple: EngineOptions['fetchApple'];
   private readonly onStatus: EngineOptions['onStatus'];
 
   private config: AutoMixPluginConfig;
@@ -310,8 +390,16 @@ export class AutoMixEngine {
    */
   private readonly summaries = loadSummaries();
   private readonly failedAt = new Map<string, number>();
+  /** Title / artist of the songs around the playing one, to look them up on Apple Music */
+  private readonly songInfo = new Map<string, { title: string; artist: string }>();
 
   private currentId: string | null = null;
+  /**
+   * Mix now, asked for on this song: `track` is the song from where it was
+   * asked on (null while that's being decoded)
+   */
+  private rush: { videoId: string; track: AnalyzedTrack | null } | null =
+    null;
   private next: QueueTrack | null = null;
   private afterNext: QueueTrack | null = null;
   private queueStore: ReturnType<typeof getQueueStore> = undefined;
@@ -339,6 +427,7 @@ export class AutoMixEngine {
   constructor(options: EngineOptions, config: AutoMixPluginConfig) {
     this.api = options.api;
     this.fetchAudio = options.fetchAudio;
+    this.fetchApple = options.fetchApple;
     this.onStatus = options.onStatus;
     this.config = config;
 
@@ -355,6 +444,11 @@ export class AutoMixEngine {
   }
 
   setConfig(config: AutoMixPluginConfig) {
+    if (config.appleAnalysis !== this.config.appleAnalysis && !this.mix) {
+      // Analyse the songs again with (or without) Apple Music's analysis
+      this.tracks.clear();
+      this.ready.clear();
+    }
     this.config = config;
     if (!config.active && this.mix) this.abort();
     this.planKey = '';
@@ -566,6 +660,48 @@ export class AutoMixEngine {
     saveSummaries(this.summaries);
   }
 
+  /**
+   * Mix into the next song now, by hand: on the first bar (or a phrase close
+   * by) that leaves room to set the transition up. Only the song's ending is
+   * kept decoded, so mid-song it's decoded again from where it is.
+   * Resolves false when there's nothing to mix into yet.
+   */
+  async mixNow(): Promise<boolean> {
+    const video = this.video;
+    const id = this.currentVideoId();
+    const context = this.context;
+    if (!video || !id || !context || this.mix || this.rush) return false;
+    const base = this.ready.get(id);
+    const nextId = this.next?.videoId;
+    if (!base || !nextId || !this.ready.has(nextId)) return false;
+
+    this.rush = { videoId: id, track: null };
+    try {
+      // The ending we keep already covers it when we're close to it
+      const firstBeat = base.analysis.end.beats[0] ?? Number.POSITIVE_INFINITY;
+      let track = base;
+      if (video.currentTime + MIX_NOW_LEAD < firstBeat) {
+        const audio = await this.fetchAudio(id);
+        if (!audio) throw new Error('no audio for mix now');
+        track = await decodeWindow(
+          base,
+          audio.bytes,
+          context.sampleRate,
+          video.currentTime,
+          MIX_NOW_SECONDS,
+        );
+      }
+      if (this.rush?.videoId !== id || this.stopped) return false;
+      this.rush = { videoId: id, track };
+      this.planKey = '';
+      this.schedule(0);
+      return true;
+    } catch {
+      if (this.rush?.videoId === id) this.rush = null;
+      return false;
+    }
+  }
+
   /** The song the player is on */
   playingVideoId() {
     return this.currentVideoId();
@@ -589,7 +725,11 @@ export class AutoMixEngine {
         audio.bytes,
         this.context?.sampleRate ?? 48000,
       );
-      return { ...track, quality: audio.quality, lowQuality: audio.lowQuality };
+      return {
+        ...(await this.withAppleAnalysis(track)),
+        quality: audio.quality,
+        lowQuality: audio.lowQuality,
+      };
     })()
       .catch(() => null)
       .then((track) => {
@@ -611,7 +751,53 @@ export class AutoMixEngine {
     this.tracks.set(videoId, promise);
   }
 
+  /**
+   * Merges Apple Music's analysis of the song in, when Apple has the same
+   * recording and its timing lines up with our copy
+   */
+  private async withAppleAnalysis(track: AnalyzedTrack) {
+    const info = this.songInfo.get(track.videoId);
+    if (!this.config.appleAnalysis || !info?.title) return track;
+    const apple = await this.fetchApple({
+      ...info,
+      duration: track.analysis.duration,
+    }).catch(() => null);
+    if (!apple) return track;
+    const alignment = alignApple(
+      apple,
+      track.loudness,
+      LOUDNESS_HOP,
+      track.analysis.beats,
+      track.analysis.downbeats,
+    );
+    if (!alignment) return track;
+    const analysis = withApple(track.analysis, apple, alignment);
+    if (this.debugEnabled()) {
+      const r = (value: number) => Math.round(value * 100) / 100;
+      console.info('[AutoMix] Apple Music analysis', info.title, {
+        appleId: apple.id,
+        offset: alignment.offset,
+        gridOk: alignment.gridOk,
+        detail: alignment.detail,
+        introEnd: r(analysis.introEnd),
+        outroStart: r(analysis.outroStart),
+        trailingSilenceStart: r(analysis.trailingSilenceStart),
+        decayPoint: r(analysis.decayPoint),
+        endBpm: r(analysis.end.bpm),
+        endDrift: r(analysis.end.drift),
+        tempoConfidence: r(analysis.tempoConfidence),
+        keys: [analysis.start.key?.camelot, analysis.end.key?.camelot],
+        phrases: analysis.phrases?.length,
+        vocalEntry: analysis.vocalEntry && r(analysis.vocalEntry),
+      });
+    }
+    return { ...track, analysis };
+  }
+
   private pruneTracks(keep: (string | null | undefined)[]) {
+    for (const id of [...this.songInfo.keys()]) {
+      if (!keep.includes(id)) this.songInfo.delete(id);
+    }
     for (const id of [...this.tracks.keys()]) {
       if (!keep.includes(id)) {
         this.tracks.delete(id);
@@ -680,6 +866,14 @@ export class AutoMixEngine {
     this.lastQueueRead = Date.now();
 
     const queue = readQueue(this.currentId);
+    for (const track of [queue?.current, queue?.next, queue?.afterNext]) {
+      if (track) {
+        this.songInfo.set(track.videoId, {
+          title: track.title,
+          artist: track.artist,
+        });
+      }
+    }
     this.next = queue?.next ?? null;
     this.afterNext = queue?.afterNext ?? null;
     this.currentTitle = queue?.current?.title ?? this.currentTitle;
@@ -739,6 +933,9 @@ export class AutoMixEngine {
       return IDLE_TICK_MS;
     }
 
+    // A mix-now is for the song it was asked on
+    if (this.rush && this.rush.videoId !== id) this.rush = null;
+
     if (id !== this.currentId) {
       this.currentId = id;
       this.mismatchSince = null;
@@ -763,7 +960,7 @@ export class AutoMixEngine {
         ? 'no-next'
         : this.repeatOne || video.loop
           ? 'repeat-one'
-          : this.config.respectAlbums && this.sameAlbum
+          : this.config.respectAlbums && this.sameAlbum && !this.rush
             ? 'same-album'
             : null;
     if (blocked || !nextId) {
@@ -775,7 +972,12 @@ export class AutoMixEngine {
     this.ensureTrack(id);
     this.ensureTrack(nextId);
 
-    const from = this.ready.get(id);
+    // Sought back before where a mix-now was decoded from: it can't play
+    if (this.rush?.track && video.currentTime < this.rush.track.tailStart) {
+      this.rush = null;
+    }
+    const rushed = this.rush?.track ?? null;
+    const from = rushed ?? this.ready.get(id);
     if (!from) {
       this.emit(
         this.tracks.has(id)
@@ -821,6 +1023,7 @@ export class AutoMixEngine {
       Boolean(to),
       splitStretch,
       this.config,
+      Boolean(rushed),
     ]);
     const tooLate =
       this.plan &&
@@ -831,12 +1034,25 @@ export class AutoMixEngine {
         preference: to ? this.config.transition : 'smooth',
         blendBeats: this.config.blendBeats,
         maxStretch: this.config.maxStretch,
+        effects: this.config.effects,
+        asap: Boolean(rushed),
         splitStretch,
         smoothSeconds: this.config.smoothSeconds,
         beatOnly: this.config.beatOnly,
-        earliestMixOut: Math.max(video.currentTime + 6.5, from.tailStart + 6.5),
+        earliestMixOut: Math.max(
+          video.currentTime + MIX_NOW_LEAD,
+          from.tailStart + MIX_NOW_LEAD,
+        ),
       });
       this.plan = plan && !to ? { ...plan, reason: 'late-change' } : plan;
+      if (this.debugEnabled()) {
+        console.info('[AutoMix] plan', plan?.style ?? 'none', plan?.reason, {
+          mixOut: plan?.mixOut,
+          mixIn: plan?.mixIn,
+          duration: plan?.duration,
+          ...plan?.checks,
+        });
+      }
     }
 
     const plan = this.plan;
@@ -906,6 +1122,9 @@ export class AutoMixEngine {
       return node;
     };
 
+    const style = plan.style === 'blend' ? effectById(plan.effect) : undefined;
+    if (style) return this.buildDressedOutgoing(context, source, style, plan);
+
     const sweepsHighpass =
       plan.style === 'cut' || (plan.style === 'blend' && !plan.holdOutgoing);
     const highpass = sweepsHighpass ? filter('highpass', 20, 0.9) : undefined;
@@ -946,18 +1165,187 @@ export class AutoMixEngine {
     };
   }
 
+  /**
+   * The outgoing chain of an effect style, after Apple's per-song graph:
+   * input level, high-pass, low-pass, then the dry song alongside a send
+   * through a beat-synced echo and / or a reverb, all into the song's level
+   */
+  private buildDressedOutgoing(
+    context: AudioContext,
+    source: AudioBufferSourceNode,
+    style: EffectStyle,
+    plan: TransitionPlan,
+  ): OutgoingChain {
+    const sourceGain = context.createGain();
+    const input = context.createGain();
+    const highpass = context.createBiquadFilter();
+    highpass.type = 'highpass';
+    highpass.frequency.value = 10;
+    const lowpass = context.createBiquadFilter();
+    lowpass.type = 'lowpass';
+    lowpass.frequency.value = 20_000;
+    const dryMix = context.createGain();
+    const send = context.createGain();
+    send.gain.value = 0;
+    const wet = context.createGain();
+    wet.gain.value = 0;
+    const dry = context.createGain();
+    dry.gain.value = 0;
+    const master = context.createGain();
+
+    const nodes: AudioNode[] = [
+      source,
+      sourceGain,
+      input,
+      highpass,
+      lowpass,
+      dryMix,
+      send,
+      wet,
+      dry,
+      master,
+    ];
+    let repeat: OutgoingChain['repeat'];
+    if (style.repeats) {
+      const song = context.createGain();
+      input.connect(song).connect(highpass);
+      repeat = { song, into: highpass, loops: [] };
+      nodes.push(song);
+    } else {
+      input.connect(highpass);
+    }
+    source.connect(sourceGain).connect(input);
+    highpass.connect(lowpass);
+    lowpass.connect(dryMix).connect(dry);
+    lowpass.connect(send);
+    const fx: OutgoingChain['fx'] = {
+      gain: dry.gain,
+      input: input.gain,
+      highpass: highpass.frequency,
+      lowpass: lowpass.frequency,
+      send: send.gain,
+      wet: wet.gain,
+      dry: dryMix.gain,
+    };
+
+    let sendOut: AudioNode = send;
+    if (style.delay) {
+      // Echoes a beat apart, darkened on every repeat; what isn't echoed
+      // passes on as is (Apple's delay unit dry / wet)
+      const echoes = context.createDelay(2.5);
+      echoes.delayTime.value = Math.min(2.01, plan.beat || 0.5);
+      const echoLowpass = context.createBiquadFilter();
+      echoLowpass.type = 'lowpass';
+      const feedback = context.createGain();
+      feedback.gain.value = 0;
+      const echoLevel = context.createGain();
+      echoLevel.gain.value = 0;
+      const passLevel = context.createGain();
+      const delayOut = context.createGain();
+      send.connect(echoes).connect(echoLowpass).connect(echoLevel).connect(delayOut);
+      echoLowpass.connect(feedback).connect(echoes);
+      send.connect(passLevel).connect(delayOut);
+      nodes.push(echoes, echoLowpass, feedback, echoLevel, passLevel, delayOut);
+      Object.assign(fx, {
+        delayMix: echoLevel.gain,
+        delayDry: passLevel.gain,
+        delayFeedback: feedback.gain,
+        delayLowpass: echoLowpass.frequency,
+      });
+      sendOut = delayOut;
+    }
+    if (style.reverb) {
+      const reverb = context.createConvolver();
+      reverb.buffer = reverbImpulse(context, style.reverb);
+      sendOut = sendOut.connect(reverb);
+      nodes.push(reverb);
+    }
+    sendOut.connect(wet).connect(dry);
+    dry.connect(master).connect(context.destination);
+
+    return {
+      source,
+      sourceGain,
+      input,
+      dry,
+      master,
+      tap: lowpass,
+      fx,
+      repeat,
+      nodes,
+      shared: [],
+    };
+  }
+
+  /**
+   * A beat repeater: the slice of the song heard at the first point loops in
+   * its place, restarting from the slice's start (and shorter) at each point
+   */
+  private scheduleRepeats(
+    context: AudioContext,
+    chain: OutgoingChain,
+    style: EffectStyle,
+    mixAt: number,
+    duration: number,
+    clock: OutgoingClock,
+  ) {
+    const buffer = chain.source.buffer;
+    if (!chain.repeat || !style.repeats || !buffer) return;
+    const end = Math.min(
+      mixAt + duration,
+      style.repeatEnd === undefined
+        ? Number.POSITIVE_INFINITY
+        : timeIn(style.repeatEnd, mixAt, duration),
+    );
+    const points = style.repeats.map((point) => ({
+      at: timeIn(point.at, mixAt, duration),
+      bars: point.bars,
+    }));
+    const first = points[0].at;
+    const sliceStart = clock.position(first) - clock.tailStart;
+    chain.repeat.song.gain.setValueAtTime(0, first);
+    if (end < mixAt + duration) chain.repeat.song.gain.setValueAtTime(1, end);
+    points.forEach((point, i) => {
+      const until = Math.min(end, points[i + 1]?.at ?? end);
+      if (until <= point.at) return;
+      const loop = context.createBufferSource();
+      loop.buffer = buffer;
+      loop.loop = true;
+      loop.loopStart = sliceStart;
+      loop.loopEnd = sliceStart + (point.bars * 4 * clock.beat);
+      // The copy may be gliding to the new song's tempo: loop at its speed
+      loop.playbackRate.value = clock.rate(point.at);
+      loop.connect(chain.repeat!.into);
+      loop.start(point.at, sliceStart);
+      loop.stop(until);
+      chain.nodes.push(loop);
+      chain.repeat!.loops.push(loop);
+    });
+  }
+
   /** Schedules the outgoing side of the transition, sample accurately */
   private scheduleOutgoing(
     context: AudioContext,
     chain: OutgoingChain,
     plan: TransitionPlan,
     mixAt: number,
+    /** Needed by an effect style's beat repeater */
+    clock?: OutgoingClock,
   ) {
     const { dry, highpass, lowShelf, lowpass } = chain;
     const duration = plan.duration;
 
     switch (plan.style) {
       case 'blend': {
+        const style = effectById(plan.effect);
+        if (chain.fx && style) {
+          scheduleLanes(chain.fx, style.outgoing, mixAt, duration, 'outgoing');
+          if (clock) {
+            this.scheduleRepeats(context, chain, style, mixAt, duration, clock);
+          }
+          chain.source.stop(mixAt + duration + 0.1);
+          break;
+        }
         if (plan.holdOutgoing) {
           // The old song keeps its full ending; bass swaps on its final hit,
           // which rings out briefly under the next song
@@ -1028,6 +1416,21 @@ export class AutoMixEngine {
       }
 
       case 'smooth': {
+        if (plan.effect === CROSSFADE_REVERB.id) {
+          // Apple's reverb wash: the send opens over the first seconds and
+          // the tail rings on after the song is gone
+          const send = context.createGain();
+          send.gain.value = 0;
+          const reverb = context.createConvolver();
+          reverb.buffer = reverbImpulse(context, CROSSFADE_REVERB.decay);
+          chain.tap.connect(send).connect(reverb).connect(chain.master);
+          chain.nodes.push(send, reverb);
+          send.gain.setValueAtTime(0, mixAt);
+          send.gain.linearRampToValueAtTime(
+            CROSSFADE_REVERB.send,
+            mixAt + CROSSFADE_REVERB.sendSeconds,
+          );
+        }
         if (plan.holdOutgoing) {
           // Keep the whole ending; the final hit rings out under the next song
           const hit = mixAt + duration;
@@ -1065,6 +1468,8 @@ export class AutoMixEngine {
     mixAt: number,
     mixEnd: number,
     volume: number,
+    /** Glide to 1x during the blend (with the old song) instead of after it */
+    glideDuring = false,
   ): IncomingHead | undefined {
     const stretched = Math.abs(plan.rate - 1) >= 0.001;
     const stretch = this.stretch;
@@ -1073,7 +1478,9 @@ export class AutoMixEngine {
     // Run the stretcher a moment early so it's settled when it's heard
     const lead = stretched ? Math.min(1, plan.mixIn / plan.rate) : 0;
     const steps: RateStep[] = [{ at: mixAt - lead, rate: plan.rate }];
-    if (stretched) {
+    if (stretched && glideDuring) {
+      steps.push(...blendGlide(mixAt, mixEnd, plan.rate));
+    } else if (stretched) {
       for (let t = GLIDE_STEP; t <= GLIDE_SECONDS; t += GLIDE_STEP) {
         const x = t / GLIDE_SECONDS;
         const eased = x * x * (3 - (2 * x));
@@ -1106,12 +1513,15 @@ export class AutoMixEngine {
     };
 
     // A blend's bass swap needs our copy (the player can't be EQ'd), so the
-    // player only takes over once the swap is done
+    // player only takes over once the swap is done, or once an effect
+    // style's filters have opened all the way
+    const style = plan.style === 'blend' ? effectById(plan.effect) : undefined;
     const handOverFrom = Math.max(
       stretched
         ? steady + 0.25
         : mixAt + (plan.filterIn ? filterOpenBy(plan) : 0.3),
       plan.style === 'blend' ? bassSwap(plan, mixAt).to + 0.1 : 0,
+      style ? mixAt + plan.duration + 0.1 : 0,
     );
     // Room for the player to catch up before the copy runs out
     if (position(handOverFrom) + 6 > to.head.duration) return undefined;
@@ -1166,7 +1576,25 @@ export class AutoMixEngine {
     }
 
     const stages: AudioNode[] = [];
-    if (plan.filterIn) {
+    if (style) {
+      // Apple's incoming lanes: the song comes in through its filters
+      const highpass = context.createBiquadFilter();
+      highpass.type = 'highpass';
+      const lowpass = context.createBiquadFilter();
+      lowpass.type = 'lowpass';
+      stages.push(highpass, lowpass, gain);
+      scheduleLanes(
+        {
+          gain: gain.gain,
+          highpass: highpass.frequency,
+          lowpass: lowpass.frequency,
+        },
+        style.incoming,
+        mixAt,
+        plan.duration,
+        'incoming',
+      );
+    } else if (plan.filterIn) {
       // Thin at first so the two songs don't muddy, opening up fully by the
       // time the old song is gone (or on its final hit)
       const highpass = context.createBiquadFilter();
@@ -1179,7 +1607,7 @@ export class AutoMixEngine {
       );
       stages.push(highpass);
     }
-    if (plan.style === 'blend') {
+    if (plan.style === 'blend' && !style) {
       // The other half of the bass swap: no incoming bass until the old
       // song's bass goes out
       const lowShelf = context.createBiquadFilter();
@@ -1191,17 +1619,18 @@ export class AutoMixEngine {
       lowShelf.gain.linearRampToValueAtTime(0, swap.to);
       stages.push(lowShelf);
     }
-    stages.push(gain);
+    if (!style) stages.push(gain);
     stages
       .reduce<AudioNode>((from, node) => from.connect(node), source)
       .connect(master)
       .connect(context.destination);
 
+    // With an effect style, the level is one of the style's lanes
     if (plan.style === 'cut' || plan.style === 'segue') {
       // The incoming song starts as itself: no fade-in on its first note
       gain.gain.setValueAtTime(0, mixAt);
       gain.gain.linearRampToValueAtTime(1, mixAt + 0.004);
-    } else {
+    } else if (!style) {
       gain.gain.setValueCurveAtTime(equalPowerIn, mixAt, plan.duration);
     }
 
@@ -1250,7 +1679,19 @@ export class AutoMixEngine {
     const outStretch = this.stretchOut;
     const needsSplit =
       Math.abs(plan.rate - 1) > this.config.maxStretch + 1e-6;
+    // A stretched blend glides both songs towards each other while they
+    // overlap (see blendGlide), so neither changes speed while heard alone.
+    // Not when the old song plays out at full volume to its final hit
+    const glideMixAt = startAt + (plan.mixOut - startOffset);
+    const glide =
+      plan.style === 'blend' &&
+      !plan.holdOutgoing &&
+      Math.abs(plan.rate - 1) >= 0.001 &&
+      Boolean(outStretch && this.stretch) &&
+      to?.videoId === next.videoId &&
+      glideMixAt - startAt >= OUT_HANDOFF + 0.2;
     const split =
+      !glide &&
       needsSplit &&
       plan.style === 'blend' &&
       Boolean(outStretch && this.stretch) &&
@@ -1261,7 +1702,7 @@ export class AutoMixEngine {
       this.plan = null;
       this.planKey = '';
     };
-    if (needsSplit && !split) {
+    if (needsSplit && !split && !glide) {
       refuseSplit();
       return;
     }
@@ -1280,7 +1721,15 @@ export class AutoMixEngine {
     // The old song's tempo over time: 1x at the hand-off, then a glide to
     // outRate shortly after the stretched copy has taken over
     const outSteps: RateStep[] = [{ at: startAt, rate: 1 }];
-    if (split) {
+    if (glide) {
+      for (const step of blendGlide(
+        glideMixAt,
+        glideMixAt + plan.duration,
+        plan.rate,
+      )) {
+        outSteps.push({ at: step.at, rate: step.rate / plan.rate });
+      }
+    } else if (split) {
       const glideFrom = startAt + OUT_HANDOFF + 0.1;
       for (let t = GLIDE_STEP / 2; t <= OUT_GLIDE_SECONDS; t += GLIDE_STEP / 2) {
         const x = t / OUT_GLIDE_SECONDS;
@@ -1321,7 +1770,7 @@ export class AutoMixEngine {
     // When the old song reaches its mix point, at the tempo it runs at
     const mixAt = split
       ? glided.at + ((plan.mixOut - outPosition(glided.at)) / outRate)
-      : startAt + (plan.mixOut - startOffset);
+      : glideMixAt;
     const mixEnd =
       mixAt +
       (plan.style === 'cut'
@@ -1329,8 +1778,18 @@ export class AutoMixEngine {
         : timed.duration + (plan.holdOutgoing ? ENDING_RING : 0));
 
     let head: IncomingHead | undefined;
+    let dressed = timed;
     try {
-      this.scheduleOutgoing(context, chain, timed, mixAt);
+      this.scheduleOutgoing(context, chain, timed, mixAt, {
+        position: outPosition,
+        rate: (time) => {
+          let current = 1;
+          for (const step of outSteps) if (step.at <= time) current = step.rate;
+          return current;
+        },
+        beat: plan.beat || 0.5,
+        tailStart: from.tailStart,
+      });
       // Play the incoming start from our own copy too, sample accurately
       head =
         to && to.videoId === next.videoId
@@ -1341,15 +1800,33 @@ export class AutoMixEngine {
               mixAt,
               mixEnd,
               video.muted ? 0 : baseVolume,
+              glide,
             )
           : undefined;
-      if (split && !head) throw new Error('no stretched copy to split with');
+      if ((split || glide) && !head) {
+        throw new Error('no stretched copy to split with');
+      }
+      if (!head && chain.fx) {
+        // An effect style needs our copy of the new song to filter, which
+        // isn't there: a plain equal-power blend instead
+        for (const [name, param] of Object.entries(chain.fx)) {
+          param.cancelScheduledValues(mixAt);
+          param.setValueAtTime(EFFECT_DEFAULTS[name as EffectParam], mixAt);
+        }
+        if (chain.repeat) {
+          chain.repeat.song.gain.cancelScheduledValues(mixAt);
+          for (const loop of chain.repeat.loops) loop.stop();
+        }
+        chain.dry.gain.cancelScheduledValues(mixAt);
+        chain.dry.gain.setValueCurveAtTime(equalPowerOut, mixAt, timed.duration);
+        dressed = { ...timed, effect: undefined };
+      }
     } catch (error) {
       // Web Audio refused some automation: don't leave our copy playing
       // over the player, which hasn't been touched yet
       chain.source.stop();
       for (const node of chain.nodes) node.disconnect();
-      if (split) {
+      if (split || glide) {
         refuseSplit();
         return;
       }
@@ -1367,7 +1844,7 @@ export class AutoMixEngine {
     // The stretched copy of the old song takes over from the plain one once
     // it has settled (same audio, in step), then glides to the shared tempo
     let outAdvance: ActiveMix['outAdvance'];
-    if (split && outStretch) {
+    if ((split || glide) && outStretch) {
       const channels = Array.from(
         { length: from.tail.numberOfChannels },
         (_, c) => from.tail.getChannelData(c).slice(),
@@ -1415,6 +1892,7 @@ export class AutoMixEngine {
           sent++;
         }
         if (!stopped && sent >= outSteps.length && now >= glided.at) {
+          // Done gliding; the old song has faded out by the blend's end
           stopped = true;
           outStretch.stop(mixEnd + 0.1).catch(() => {});
         }
@@ -1422,7 +1900,7 @@ export class AutoMixEngine {
     }
 
     const mix: ActiveMix = {
-      plan: timed,
+      plan: dressed,
       fromId: from.videoId,
       toId: next.videoId,
       fromTitle: this.currentTitle,
@@ -1434,8 +1912,13 @@ export class AutoMixEngine {
       switched: false,
       cutDone: false,
       head,
-      outStretch: split ? (outStretch ?? undefined) : undefined,
+      outStretch: split || glide ? (outStretch ?? undefined) : undefined,
       outAdvance,
+      outRate: (time) => {
+        let current = 1;
+        for (const step of outSteps) if (step.at <= time) current = step.rate;
+        return current;
+      },
       lockedTicks: 0,
       sawIncoming: false,
       deferrals: 0,
@@ -1464,10 +1947,14 @@ export class AutoMixEngine {
         '[AutoMix debug] mix:',
         plan.style,
         `${(Math.abs(plan.rate - 1) * 100).toFixed(1)}% tempo gap`,
-        split
-          ? `split: old song x${outRate.toFixed(3)}, new song x${timed.rate.toFixed(3)}`
-          : `new song x${plan.rate.toFixed(3)}`,
+        glide
+          ? `glide: old song x1 -> x${(1 / plan.rate).toFixed(3)}, new song x${plan.rate.toFixed(3)} -> x1`
+          : split
+            ? `split: old song x${outRate.toFixed(3)}, new song x${timed.rate.toFixed(3)}`
+            : `new song x${plan.rate.toFixed(3)}`,
         `| mix point in ${(mixAt - startAt).toFixed(2)}s`,
+        `| out at ${plan.mixOut.toFixed(2)}s, in at ${plan.mixIn.toFixed(2)}s for ${plan.duration.toFixed(2)}s`,
+        `| effect: ${effectName(dressed.effect) ?? 'none'}`,
       );
     }
     // Registered first, so abort() can always undo what follows
@@ -1670,6 +2157,9 @@ export class AutoMixEngine {
       `| new song copy=${
         head ? (head.gain.gain.value * head.master.gain.value).toFixed(3) : '-'
       }`,
+      `| heard tempo: old x${(mix.outRate?.(now) ?? 1).toFixed(3)} new x${(
+        head?.rate(now) ?? video.playbackRate
+      ).toFixed(3)}`,
     );
   }
 

@@ -6,7 +6,14 @@
  * (renderer, worker, or Node for testing).
  */
 
-import { detectKey, type MusicalKey } from './key';
+import {
+  detectKey,
+  tonalProfile,
+  type MusicalKey,
+  type TonalProfile,
+} from './key';
+
+import type { SongTraits } from './constants';
 
 export interface AnalysisBands {
   sampleRate: number;
@@ -52,6 +59,20 @@ export interface TrackAnalysis {
   start: TempoSection;
   /** Tempo / grid of the end, used when this track goes out */
   end: TempoSection;
+  /** Apple Music catalog id, when its analysis was merged in (see apple-analysis) */
+  appleId?: string;
+  /** Downbeats that start a phrase, from Apple Music's structure marks */
+  phrases?: number[];
+  /** Where the first real vocal line starts (not a tag over the intro) */
+  vocalEntry?: number;
+  /** Apple Music says the song fades out (so it doesn't stop on a hit) */
+  fadesOut?: boolean;
+  /** Stretches with clear singing (not faint ad-libs), from Apple Music */
+  vocals?: { start: number; end: number }[];
+  /** Apple Music's danceability / acousticness / melodicness ratings */
+  traits?: SongTraits;
+  /** Apple Music's main genre (e.g. "Dance"), for the effect styles */
+  genre?: string;
 }
 
 const HOP = 128;
@@ -436,6 +457,8 @@ export const computeLoudnessProfile = (
 export interface TempoSection {
   /** Musical key, when it's clear enough to detect */
   key: MusicalKey | null;
+  /** How tonal (not just drums) each part of the section is */
+  tonal: TonalProfile | null;
   bpm: number;
   beatPeriod: number;
   tempoConfidence: number;
@@ -450,6 +473,7 @@ export interface TempoSection {
 
 export const emptySection: TempoSection = {
   key: null,
+  tonal: null,
   bpm: 0,
   beatPeriod: 0,
   tempoConfidence: 0,
@@ -554,13 +578,19 @@ const analyzeSection = (
 ): TempoSection => {
   const { fps } = envelope;
   const key = detectKey(bands.full, bands.sampleRate, fromSeconds, toSeconds);
+  const tonal = tonalProfile(
+    bands.full,
+    bands.sampleRate,
+    fromSeconds,
+    toSeconds,
+  );
   const first = Math.max(0, Math.floor(fromSeconds * fps));
   const last = Math.min(envelope.onset.length, Math.ceil(toSeconds * fps));
   const onset = envelope.onset.subarray(first, last);
   const lowOnset = envelope.lowOnset.subarray(first, last);
 
   const tempo = estimateTempo(onset, fps);
-  if (!tempo) return { ...emptySection, key };
+  if (!tempo) return { ...emptySection, key, tonal };
 
   let beatFrames = trackBeats(onset, tempo.period);
   // At a song's start, skip a beatless intro (speech, ambience, a free-time
@@ -574,6 +604,7 @@ const analyzeSection = (
     return {
       ...emptySection,
       key,
+      tonal,
       bpm: tempo.bpm,
       beatPeriod: 60 / tempo.bpm,
     };
@@ -604,12 +635,41 @@ const analyzeSection = (
 
   return {
     key,
+    tonal,
     bpm: (60 * fps) / period,
     beatPeriod: period / fps,
     tempoConfidence: clamp(tempo.strength / 0.3, 0, 1),
     beats,
     downbeats: beats.filter((_, i) => i % 4 === phase),
     drift: Number.isFinite(drift) ? drift : 0,
+  };
+};
+
+/**
+ * Tempo, grid, key and tonal profile of a stretch of a song, from the bands
+ * of just that stretch, in song time (`offset` is where the stretch starts)
+ */
+export const analyzeWindow = (
+  bands: AnalysisBands,
+  offset: number,
+): TempoSection => {
+  const envelope = computeOnsetEnvelope(bands);
+  const section = analyzeSection(
+    bands,
+    envelope,
+    0,
+    bands.full.length / bands.sampleRate,
+    'end',
+  );
+  const shift = (times: number[]) => times.map((time) => time + offset);
+  return {
+    ...section,
+    beats: shift(section.beats),
+    downbeats: shift(section.downbeats),
+    tonal: section.tonal && {
+      ...section.tonal,
+      start: section.tonal.start + offset,
+    },
   };
 };
 
@@ -637,7 +697,7 @@ export const analyzeTrack = (bands: AnalysisBands): TrackAnalysis => {
     loudness.trailingSilenceStart + 0.5,
     'end',
   );
-  // Whole-song tempo only (the key is per section)
+  // Whole-song tempo only (the key and tonal profile are per section)
   const whole = analyzeSection(
     { ...bands, full: new Float32Array(0) },
     envelope,
