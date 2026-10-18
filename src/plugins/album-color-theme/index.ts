@@ -1,13 +1,9 @@
-import Color, { type ColorInstance } from 'color';
-import { FastAverageColor } from 'fast-average-color';
-
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 
+import { albumColors, COLOR_KEY, DARK_COLOR_KEY } from './colors';
 import style from './style.css?inline';
 
-const COLOR_KEY = '--ytmusic-album-color';
-const DARK_COLOR_KEY = '--ytmusic-album-color-dark';
 const RATIO_KEY = '--ytmusic-album-color-ratio';
 
 type Config = {
@@ -77,8 +73,6 @@ export default createPlugin({
     sidebarBig: null as HTMLElement | null,
     sidebarSmall: null as HTMLElement | null,
     ytmusicAppLayout: null as HTMLElement | null,
-    color: null as ColorInstance | null,
-    darkColor: null as ColorInstance | null,
 
     start() {
       this.playerPage = document.querySelector<HTMLElement>('#player-page');
@@ -100,8 +94,6 @@ export default createPlugin({
       const config = await getConfig();
       (this as Renderer).onConfigChange(config);
 
-      const fastAverageColor = new FastAverageColor();
-
       document.addEventListener('videodatachange', async (event) => {
         if (event.detail.name !== 'dataloaded') return;
 
@@ -110,31 +102,13 @@ export default createPlugin({
           playerResponse?.videoDetails?.thumbnail?.thumbnails?.at(0);
         if (!thumbnail) return;
 
-        const albumColor = await fastAverageColor
-          .getColorAsync(thumbnail.url)
-          .catch((err) => {
-            console.error(err);
-            return null;
-          });
+        const colors = await albumColors(thumbnail.url);
 
-        if (albumColor) {
-          const target = Color(albumColor.hex);
-
-          this.darkColor = target.darken(0.3).rgb();
-          this.color = target.darken(0.15).rgb();
-
-          while (this.color.luminosity() > 0.5) {
-            this.color = this.color?.darken(0.05);
-            this.darkColor = this.darkColor?.darken(0.05);
-          }
-
-          document.documentElement.style.setProperty(
-            COLOR_KEY,
-            `${~~this.color.red()}, ${~~this.color.green()}, ${~~this.color.blue()}`,
-          );
+        if (colors) {
+          document.documentElement.style.setProperty(COLOR_KEY, colors.color);
           document.documentElement.style.setProperty(
             DARK_COLOR_KEY,
-            `${~~this.darkColor.red()}, ${~~this.darkColor.green()}, ${~~this.darkColor.blue()}`,
+            colors.dark,
           );
         } else {
           document.documentElement.style.setProperty(COLOR_KEY, '0, 0, 0');

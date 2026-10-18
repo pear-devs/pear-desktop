@@ -10,6 +10,11 @@ import {
 import { render } from 'solid-js/web';
 
 import { t } from '@/i18n';
+import {
+  albumColors,
+  COLOR_KEY,
+  DARK_COLOR_KEY,
+} from '@/plugins/album-color-theme/colors';
 
 import { effectById, effectName } from './effects';
 
@@ -563,9 +568,110 @@ const followArtwork = (props: { status: Accessor<AutoMixStatus> }) => {
   });
 };
 
-/** Renders nothing: drives the player artwork's cross-fade */
+const THEME_KEYS = [COLOR_KEY, DARK_COLOR_KEY];
+type Rgb = number[];
+
+const parseRgb = (value: string): Rgb | null => {
+  const parts = value.split(',').map(Number);
+  return parts.length === 3 && parts.every(Number.isFinite) ? parts : null;
+};
+
+/**
+ * Moves the album colour theme's colours from the old song's artwork to the
+ * new one's along the blend, instead of them jumping when the player
+ * switches songs. Does nothing when that theme isn't on (no colours set).
+ */
+const followThemeColor = (props: { status: Accessor<AutoMixStatus> }) => {
+  const root = document.documentElement;
+  const read = () =>
+    THEME_KEYS.map((name) => root.style.getPropertyValue(name).trim());
+  let key = '';
+  let from: Rgb[] | null = null;
+  let to: Rgb[] | null = null;
+  /** The theme has set the new song's colours itself */
+  let themed = false;
+  let reveal = 0;
+  let written: string[] = [];
+
+  const apply = () => {
+    if (!from || !to) return;
+    const start = from;
+    const end = to;
+    written = THEME_KEYS.map((name, i) => {
+      const value = start[i]
+        .map((channel, c) => Math.round(channel + ((end[i][c] - channel) * reveal)))
+        .join(', ');
+      root.style.setProperty(name, value);
+      return value;
+    });
+  };
+
+  // The theme sets the new song's colours as soon as the player switches:
+  // they become the target, and the blend is put back before it's painted
+  const observer = new MutationObserver(() => {
+    if (!from) return;
+    const now = read();
+    if (now.every((value, i) => value === written[i])) return;
+    const theirs = now.map(parseRgb);
+    if (theirs.every((rgb) => rgb !== null)) {
+      to = theirs;
+      themed = true;
+    }
+    apply();
+  });
+  observer.observe(root, { attributes: true, attributeFilter: ['style'] });
+
+  const finish = () => {
+    if (from) {
+      // Done: the new song's colours. Called off: the old song's again
+      if (!themed) to = from;
+      reveal = 1;
+      apply();
+    }
+    key = '';
+    from = null;
+    to = null;
+    themed = false;
+  };
+
+  createEffect(() => {
+    const current = props.status();
+    if (current.phase !== 'mixing' || !current.toArt) {
+      finish();
+      return;
+    }
+    const next = `${current.fromArt}|${current.toArt}`;
+    if (next !== key) {
+      finish();
+      key = next;
+      const start = read().map(parseRgb);
+      if (!start.every((rgb) => rgb !== null)) return;
+      from = start;
+      written = read();
+      const mine = key;
+      void albumColors(current.toArt).then((colors) => {
+        if (key !== mine || !from || themed || !colors) return;
+        const end = [parseRgb(colors.color), parseRgb(colors.dark)];
+        if (end.every((rgb) => rgb !== null)) {
+          to = end;
+          apply();
+        }
+      });
+    }
+    reveal = calm(current.progress ?? 0);
+    apply();
+  });
+
+  onCleanup(() => {
+    finish();
+    observer.disconnect();
+  });
+};
+
+/** Renders nothing: drives the player artwork's and theme colour's cross-fade */
 const ArtworkFade = (props: { status: Accessor<AutoMixStatus> }) => {
   followArtwork(props);
+  followThemeColor(props);
   return null;
 };
 
