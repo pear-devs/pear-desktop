@@ -22,12 +22,17 @@ const ATTACK_MS = 60;
  * up: steadier than its steepest rise, which the kick's low note ripples
  */
 const ATTACK_LEVEL = 0.5;
-/** Furthest the incoming song is moved, in seconds */
-const MAX_NUDGE = 0.05;
-/** Most of a blend compared, in seconds */
-const MAX_SPAN = 12;
-/** Beats compared when the tempos differ (before the glide moves them) */
-const GLIDE_BEATS = 8;
+/**
+ * Furthest the incoming song is moved, in seconds: well short of a 16th note
+ * (~120 ms at 128 BPM), so a kick is never paired with the wrong one
+ */
+const MAX_NUDGE = 0.08;
+/**
+ * Most of a blend compared, in seconds. All of it, glide or not: the two
+ * songs share one tempo at every moment, so the incoming one's place stays
+ * in step with the outgoing one's (and many only bring their kick in late)
+ */
+const MAX_SPAN = 40;
 /** Kick pairs needed to trust the result */
 const MIN_PAIRS = 4;
 /** Most the pairs may disagree (median distance from their median), in ms */
@@ -126,12 +131,7 @@ export const alignKicks = (
 ): { plan: TransitionPlan; nudge: number } => {
   const unchanged = { plan, nudge: 0 };
   if (plan.style !== 'blend' || plan.beat <= 0) return unchanged;
-  const sameTempo = Math.abs(plan.rate - 1) < 0.001;
-  const span = Math.min(
-    plan.duration,
-    MAX_SPAN,
-    sameTempo ? Number.POSITIVE_INFINITY : GLIDE_BEATS * plan.beat,
-  );
+  const span = Math.min(plan.duration, MAX_SPAN);
 
   const outgoing = kickEnvelope(tail, plan.mixOut - tailStart, span);
   // The incoming copy, a little either side, mapped onto the outgoing's time
