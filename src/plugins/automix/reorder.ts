@@ -5,8 +5,13 @@
  * ends, keys that don't clash).
  */
 import { keysClash, type MusicalKey } from './key';
-import { DJ_TEMPO_CONFIDENCE, tempoRatio } from './planner';
-import { moveQueueItem, readUpcoming } from './queue';
+import {
+  canBlendIn,
+  canBlendOut,
+  DJ_TEMPO_CONFIDENCE,
+  tempoRatio,
+} from './planner';
+import { moveQueueItem, readUpcoming, type QueueTrack } from './queue';
 
 import type { TempoSection, TrackAnalysis } from './analysis';
 
@@ -26,6 +31,10 @@ export interface TrackSummary {
   loudness: number;
   /** Whole-song tempo, folded into 90-180 BPM (65 counts as 130) */
   tempo: number;
+  /** AutoMix would beat-match out of its ending (tempos aside) */
+  blendOut: boolean;
+  /** AutoMix would beat-match into its start (tempos aside) */
+  blendIn: boolean;
 }
 
 /** How Reorder shapes the set, beyond smooth transitions */
@@ -51,6 +60,8 @@ export const summarize = (analysis: TrackAnalysis): TrackSummary => ({
   end: edge(analysis.end),
   loudness: analysis.bodyLoudness,
   tempo: foldTempo(analysis.bpm),
+  blendOut: canBlendOut(analysis),
+  blendIn: canBlendIn(analysis),
 });
 
 const steady = (side: EdgeSummary) =>
@@ -69,7 +80,13 @@ export const transitionCost = (
   if (!from || !to) return 1;
   const clash = keysClash(from.end.key, to.start.key) ? 0.4 : 0;
   const stretch = Math.abs(tempoRatio(from.end.bpm, to.start.bpm) - 1);
-  if (steady(from.end) && steady(to.start) && stretch <= maxStretch) {
+  if (
+    from.blendOut &&
+    to.blendIn &&
+    steady(from.end) &&
+    steady(to.start) &&
+    stretch <= maxStretch
+  ) {
     return ((stretch / maxStretch) * 0.5) + clash;
   }
   return 1 + clash;
@@ -224,7 +241,7 @@ export const planOrder = (
 };
 
 /** Where song summaries are kept between sessions, and how many */
-const STORE_KEY = 'automix-summaries-v2';
+const STORE_KEY = 'automix-summaries-v3';
 const STORE_MAX = 1000;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -249,7 +266,9 @@ const isSummary = (value: unknown): value is TrackSummary =>
   isEdge(value.start) &&
   isEdge(value.end) &&
   typeof value.loudness === 'number' &&
-  typeof value.tempo === 'number';
+  typeof value.tempo === 'number' &&
+  typeof value.blendOut === 'boolean' &&
+  typeof value.blendIn === 'boolean';
 
 /**
  * Song summaries saved by earlier sessions, oldest first. Anything that
@@ -340,7 +359,7 @@ export const reorderQueue = async ({
   onProgress,
 }: {
   playingId: string | null;
-  summaryOf: (videoId: string) => Promise<TrackSummary | null>;
+  summaryOf: (track: QueueTrack) => Promise<TrackSummary | null>;
   maxStretch: number;
   keepAlbums: boolean;
   shape: ReorderShape;
@@ -352,11 +371,11 @@ export const reorderQueue = async ({
   const total = before.length + 1;
 
   onProgress(0, total);
-  const current = await summaryOf(snapshot.current.videoId);
+  const current = await summaryOf(snapshot.current);
   onProgress(1, total);
   const summaries: (TrackSummary | null)[] = [];
-  for (const id of before) {
-    summaries.push(await summaryOf(id));
+  for (const entry of snapshot.upcoming) {
+    summaries.push(await summaryOf(entry.track));
     onProgress(summaries.length + 1, total);
   }
 

@@ -631,7 +631,11 @@ export class AutoMixEngine {
    * Tempo / key summary of a song, for reordering the queue. Analyses the
    * song if AutoMix hasn't yet, keeping only the summary (not the audio)
    */
-  async summaryOf(videoId: string): Promise<TrackSummary | null> {
+  async summaryOf({
+    videoId,
+    title,
+    artist,
+  }: QueueTrack): Promise<TrackSummary | null> {
     const cached = this.summaries.get(videoId);
     if (cached) {
       // Most recently used last, so it's kept when the store is trimmed
@@ -656,7 +660,12 @@ export class AutoMixEngine {
             audio.bytes,
             this.context?.sampleRate ?? 48000,
           );
-          summary = summarize(track.analysis);
+          // With Apple's analysis too, as the planner will see the song
+          const withApple = await this.withAppleAnalysis(track, {
+            title,
+            artist,
+          });
+          summary = summarize(withApple.analysis);
         }
       } catch {
         // Unknown songs are ordered as neutral
@@ -768,8 +777,10 @@ export class AutoMixEngine {
    * Merges Apple Music's analysis of the song in, when Apple has the same
    * recording and its timing lines up with our copy
    */
-  private async withAppleAnalysis(track: AnalyzedTrack) {
-    const info = this.songInfo.get(track.videoId);
+  private async withAppleAnalysis(
+    track: AnalyzedTrack,
+    info = this.songInfo.get(track.videoId),
+  ) {
     if (!this.config.appleAnalysis || !info?.title) return track;
     const apple = await this.fetchApple({
       ...info,

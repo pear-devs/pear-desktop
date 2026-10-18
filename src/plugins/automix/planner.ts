@@ -727,13 +727,44 @@ const MIN_DANCEABILITY = 0.3;
 const MAX_ACOUSTICNESS = 0.85;
 const MIN_MELODICNESS = 0.25;
 
-/** Apple rates both songs as ones a beat-matched mix suits (true if unrated) */
-const suitsBeatMatch = (a: TrackAnalysis, b: TrackAnalysis) =>
-  [a.traits, b.traits].every(
-    (traits) =>
-      (traits?.danceability ?? 1) >= MIN_DANCEABILITY &&
-      (traits?.acousticness ?? 0) < MAX_ACOUSTICNESS,
+/** Apple rates the song as one a beat-matched mix suits (true if unrated) */
+const danceable = (track: TrackAnalysis) =>
+  (track.traits?.danceability ?? 1) >= MIN_DANCEABILITY &&
+  (track.traits?.acousticness ?? 0) < MAX_ACOUSTICNESS;
+
+/** The beat keeps going until the ending has died away */
+const beatToTheEnd = (from: TrackAnalysis) =>
+  !endsAbruptly(from) && (from.beats.at(-1) ?? 0) >= from.decayPoint - 1;
+
+/** The song comes in on a beat, not after a beatless intro */
+const beatFromTheStart = (to: TrackAnalysis) =>
+  (to.beats[0] ?? Number.POSITIVE_INFINITY) <= to.leadingSilenceEnd + 3;
+
+/**
+ * Whether a song's ending can be blended out of, whatever comes next: the
+ * same checks planTransition makes on its side of a beat-matched blend
+ */
+export const canBlendOut = (track: TrackAnalysis) => {
+  const from: TrackAnalysis = { ...track, ...track.end };
+  return (
+    hasBeatGrid(from) &&
+    Math.abs(track.end.drift) <= MAX_EDGE_DRIFT &&
+    danceable(track) &&
+    ((beatToTheEnd(from) && from.tempoConfidence >= DJ_TEMPO_CONFIDENCE) ||
+      (endsAbruptly(from) && finalHit(from) !== undefined))
   );
+};
+
+/** Whether a song's start can be blended into, whatever comes before */
+export const canBlendIn = (track: TrackAnalysis) => {
+  const to: TrackAnalysis = { ...track, ...track.start };
+  return (
+    hasBeatGrid(to) &&
+    Math.abs(track.start.drift) <= MAX_EDGE_DRIFT &&
+    danceable(track) &&
+    beatFromTheStart(to)
+  );
+};
 
 const unmelodic = (track: TrackAnalysis) =>
   (track.traits?.melodicness ?? 1) < MIN_MELODICNESS;
@@ -771,24 +802,20 @@ export const planTransition = (
   // DJ-style blends only when the beat keeps going until the ending has
   // died away and the next song comes in on a beat; everything else gets a
   // segue, which is what Apple Music does with songs that really end
-  const lastBeat = from.beats.at(-1) ?? 0;
-  const beatToTheEnd =
-    !endsAbruptly(from) && lastBeat >= from.decayPoint - 1;
-  const beatFromTheStart =
-    (to.beats[0] ?? Number.POSITIVE_INFINITY) <= to.leadingSilenceEnd + 3;
+  const beatToEnd = beatToTheEnd(from);
+  const beatFromStart = beatFromTheStart(to);
   const steadyBeat =
     from.tempoConfidence >= DJ_TEMPO_CONFIDENCE &&
     to.tempoConfidence >= DJ_TEMPO_CONFIDENCE;
-  const danceable = suitsBeatMatch(outgoing, incoming);
-  const djBlend =
-    stretchOk && steadyBeat && danceable && beatToTheEnd && beatFromTheStart;
+  const suits = danceable(outgoing) && danceable(incoming);
+  const djBlend = stretchOk && steadyBeat && suits && beatToEnd && beatFromStart;
   // Songs that stop on the beat: blend into the ending when tempos match
   const endingBlend =
     stretchOk &&
-    danceable &&
+    suits &&
     endsAbruptly(from) &&
     finalHit(from) !== undefined &&
-    beatFromTheStart;
+    beatFromStart;
 
   let order: TransitionStyle[];
   switch (options.preference) {
@@ -909,9 +936,9 @@ export const planTransition = (
           tonalOverlap:
             style === 'blend' ? Math.round(overlap(plan) * 100) / 100 : '-',
           steadyBeat,
-          danceable,
-          beatToTheEnd,
-          beatFromTheStart,
+          danceable: suits,
+          beatToTheEnd: beatToEnd,
+          beatFromTheStart: beatFromStart,
           endsAbruptly: endsAbruptly(from),
         },
       };

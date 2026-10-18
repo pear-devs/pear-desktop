@@ -116,7 +116,7 @@ export const renderer = {
         if (!current) return null;
         return reorderQueue({
           playingId: current.playingVideoId(),
-          summaryOf: (videoId) => current.summaryOf(videoId),
+          summaryOf: (track) => current.summaryOf(track),
           maxStretch: current.stretchRange(config().maxStretch),
           keepAlbums: config().respectAlbums,
           shape: config().reorderShape,
