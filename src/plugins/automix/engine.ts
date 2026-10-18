@@ -2469,19 +2469,17 @@ export class AutoMixEngine {
         } else {
           // Phase lock: nudge the tempo until the beats sit on top of each other
           mix.error = (mix.error * 0.7) + (error * 0.3);
-          // Pull in hard while the player is still silent, gently after
+          // Pull it in only while the player is silent. Every rate change
+          // makes Chrome's audio jump ~25 ms, so once it's heard it holds
+          // the copy's rate (a few ms of drift is far less audible)
           const silent = now < mix.mixAt || Boolean(mix.head);
-          const pull = silent ? 0.1 : 0.04;
-          // Close enough: run at exactly the copy's rate. Every rate change
-          // makes the player's position jump a little, so stop nudging early
-          // while it's heard; behind our copy it can get much closer for an
-          // exact hand-over (its timing jitters by only ~1 ms)
+          // Close enough: run at exactly the copy's rate. Behind our copy it
+          // can get closer for the hand-over (its timing jitters ~1 ms)
           const deadband = mix.head ? 0.003 : 0.006;
           this.setRate(
-            Math.abs(mix.error) < deadband
+            !silent || Math.abs(mix.error) < deadband
               ? rate
-              : rate *
-                  (1 - clamp(mix.error * (silent ? 2.5 : 1.5), -pull, pull)),
+              : rate * (1 - clamp(mix.error * 2.5, -0.1, 0.1)),
           );
           // Only count as in sync while steady at that rate. Within the
           // deadband nothing pulls the error lower, so a stricter test
