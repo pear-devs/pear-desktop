@@ -241,7 +241,7 @@ export const planOrder = (
 };
 
 /** Where song summaries are kept between sessions, and how many */
-const STORE_KEY = 'automix-summaries-v3';
+const STORE_KEY = 'automix-summaries-v4';
 const STORE_MAX = 1000;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

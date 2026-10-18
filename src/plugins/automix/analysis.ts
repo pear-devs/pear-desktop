@@ -63,6 +63,11 @@ export interface TrackAnalysis {
   appleId?: string;
   /** Downbeats that start a phrase, from Apple Music's structure marks */
   phrases?: number[];
+  /**
+   * Where the song's bass first settles in at its own level (many intros
+   * have none), undefined when it never does
+   */
+  bassEntry?: number;
   /** Where the first real vocal line starts (not a tag over the intro) */
   vocalEntry?: number;
   /** Apple Music says the song fades out (so it doesn't stop on a hit) */
@@ -673,6 +678,33 @@ export const analyzeWindow = (
   };
 };
 
+/** Bass within this much of the song's usual bass level counts as in */
+const BASS_PRESENT_DB = 8;
+/** ...for at least this long */
+const BASS_SUSTAIN = 2;
+
+/** Where the low band first holds near the song's usual bass level */
+const findBassEntry = (low: Float32Array, sampleRate: number, from: number) => {
+  const frame = Math.round(sampleRate / 4);
+  const levels: number[] = [];
+  for (let i = 0; i + frame <= low.length; i += frame) {
+    let sum = 0;
+    for (let k = i; k < i + frame; k++) sum += low[k] * low[k];
+    levels.push(sum / frame);
+  }
+  const sorted = [...levels].sort((x, y) => x - y);
+  const usual = sorted[Math.floor(sorted.length * 0.7)];
+  if (!(usual > 0)) return undefined;
+  const present = usual * (10 ** (-BASS_PRESENT_DB / 10));
+  const need = Math.round(BASS_SUSTAIN * 4);
+  let run = 0;
+  for (let i = Math.floor(from * 4); i < levels.length; i++) {
+    run = levels[i] >= present ? run + 1 : 0;
+    if (run >= need) return (i - need + 1) / 4;
+  }
+  return undefined;
+};
+
 export const analyzeTrack = (bands: AnalysisBands): TrackAnalysis => {
   const duration = bands.full.length / bands.sampleRate;
   const envelope = computeOnsetEnvelope(bands);
@@ -714,6 +746,11 @@ export const analyzeTrack = (bands: AnalysisBands): TrackAnalysis => {
     beats: whole.beats,
     downbeats: whole.downbeats,
     ...loudness,
+    bassEntry: findBassEntry(
+      bands.low,
+      bands.sampleRate,
+      loudness.leadingSilenceEnd,
+    ),
     start,
     end,
   };

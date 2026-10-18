@@ -12,12 +12,14 @@ import {
   CROSSFADE_REVERB,
   EFFECT_DEFAULTS,
   effectById,
+  withBassSwap,
   effectName,
   scheduleLanes,
   timeIn,
   type EffectParam,
   type EffectStyle,
 } from './effects';
+import { bassSwapWindow } from './bass';
 import { alignKicks } from './kicks';
 import { planTransition, type TransitionPlan } from './planner';
 import { getQueueStore, largeArt, readQueue, type QueueTrack } from './queue';
@@ -349,9 +351,10 @@ const bassSwap = (plan: TransitionPlan, mixAt: number) => {
     const hit = mixAt + plan.duration;
     return { from: hit - ((plan.beat || 0.5) / 2), to: hit };
   }
+  const [from, to] = plan.bassSwapAt ?? [0.45, 0.55];
   return {
-    from: mixAt + (plan.duration * 0.45),
-    to: mixAt + (plan.duration * 0.55),
+    from: mixAt + (plan.duration * from),
+    to: mixAt + (plan.duration * to),
   };
 };
 
@@ -1195,11 +1198,17 @@ export class AutoMixEngine {
       // what the two copies actually play
       if (plan && to) {
         const aligned = alignKicks(plan, from.tail, from.tailStart, to.head);
+        // Swap the basses where the next song's bass really comes in
+        const bassSwapAt = bassSwapWindow(aligned.plan, to.analysis);
         plan = {
           ...aligned.plan,
+          bassSwapAt,
           checks: {
             ...aligned.plan.checks,
             kickNudgeMs: Math.round(aligned.nudge * 1000),
+            bassSwapAt: bassSwapAt
+              ? bassSwapAt.map((x) => x.toFixed(2)).join('-')
+              : '-',
           },
         };
       }
@@ -1504,7 +1513,13 @@ export class AutoMixEngine {
       case 'blend': {
         const style = effectById(plan.effect);
         if (chain.fx && style) {
-          scheduleLanes(chain.fx, style.outgoing, mixAt, duration, 'outgoing');
+          scheduleLanes(
+            chain.fx,
+            withBassSwap(style, plan.bassSwapAt).outgoing,
+            mixAt,
+            duration,
+            'outgoing',
+          );
           if (clock) {
             this.scheduleRepeats(context, chain, style, mixAt, duration, clock);
           }
@@ -1762,7 +1777,7 @@ export class AutoMixEngine {
           lowpass: lowpass.frequency,
           bass: bass.gain,
         },
-        style.incoming,
+        withBassSwap(style, plan.bassSwapAt).incoming,
         mixAt,
         plan.duration,
         'incoming',

@@ -236,7 +236,6 @@ export const EFFECT_STYLES: EffectStyle[] = [
  */
 const BASS_CUT_DB = -30;
 const SWAP: [At, At] = [0.375, 0.625];
-const SWAP_AT_END: [At, At] = [0.75, 1];
 /** Hard volume steps get a short ramp so they don't click */
 const STEP = 0.02;
 const step = (param: EffectParam, from: number, to: number, at: number) =>
@@ -282,6 +281,30 @@ const bassSwap = (at: [At, At] = SWAP): Side => ({
     lane('bass', BASS_CUT_DB, 0, 'linear', [0, 1], at),
   ],
 });
+
+/**
+ * The style with its bass swap moved to `at` (fractions of the window), for
+ * a next song whose bass only comes in late; styles without one are kept
+ */
+export const withBassSwap = (
+  style: EffectStyle,
+  at: [number, number] | undefined,
+): EffectStyle => {
+  if (!at || !style.outgoing.some((item) => item.param === 'bass')) {
+    return style;
+  }
+  const swap = bassSwap(at);
+  const moved = compose(style, swap);
+  // A high-pass sweeping the old song out would take its bass away before
+  // the swap: it waits for the swap to be done
+  const start = (place: At) => (typeof place === 'number' ? place : place[0]);
+  moved.outgoing = moved.outgoing.map((item) =>
+    item.param === 'highpass' && start(item.place[0]) < at[1]
+      ? { ...item, place: [at[1], item.place[1]] }
+      : item,
+  );
+  return { ...style, ...moved };
+};
 
 /** The new song opens from a 120 Hz low-pass over the first half */
 const lowpassIn: Side = {
@@ -341,7 +364,9 @@ export const SPOTIFY_STYLES: EffectStyle[] = [
   spotify(
     3,
     'Rise',
-    compose(volume.fullOverlap, bassSwap(SWAP_AT_END), lowpassIn, highpassOut),
+    // Spotify swaps the bass at the very end, but its high-pass has taken
+    // the old song's bass away well before: swapped half way, like the rest
+    compose(volume.fullOverlap, bassSwap(), lowpassIn, highpassOut),
   ),
   spotify(
     4,

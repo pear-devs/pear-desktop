@@ -80,6 +80,11 @@ export interface TransitionPlan {
    * final hit ring out, instead of fading it across the blend
    */
   holdOutgoing?: boolean;
+  /**
+   * When the basses swap, as fractions of a blend, where the next song's bass
+   * only arrives after the usual swap (measured from the audio)
+   */
+  bassSwapAt?: [number, number];
   /** Bring the incoming song in high-passed, opening up as it fades in */
   filterIn?: boolean;
   /** Camelot keys at the mix point, when detected (e.g. "8A") */
@@ -250,6 +255,27 @@ const vocalLanding = (track: TrackAnalysis, plan: TransitionPlan) => {
       region.start >= Math.max(plan.mixIn + (span / 2), end - (2 * bar)) &&
       region.start <= end + bar,
   )?.start;
+};
+
+/** Where in a blend the basses swap over (its middle) */
+const BASS_SWAP_AT = 0.5;
+/** A next song whose bass only comes in after this share of the blend... */
+const BASS_LATE = 0.625;
+
+/**
+ * ...comes in later on its own grid, so its bass is there when the old one
+ * goes out: otherwise the blend loses its bass for seconds before the new
+ * one drops. Never past where a vocal entry could be reached either
+ */
+const bassReadyEntry = (to: TrackAnalysis, mixIn: number, span: number) => {
+  const entry = to.bassEntry;
+  if (entry === undefined || entry - mixIn <= BASS_LATE * span) return mixIn;
+  const point = latestGridPoint(
+    to.downbeats,
+    mixIn,
+    Math.min(entry - (BASS_SWAP_AT * span), VOCAL_ENTRY_LIMIT),
+  );
+  return point ?? mixIn;
 };
 
 /** Spotify splits a blend into this many slices to score vocal clashes */
@@ -482,11 +508,14 @@ const planBlend = (
       style: 'blend',
       reason: 'fallback',
       mixOut,
-      mixIn:
+      mixIn: bassReadyEntry(
+        to,
         landing ??
-        (options.spotifyStyle
-          ? leastClashingEntry(from, to, mixOut, blendEntry(to), duration, rate)
-          : blendEntry(to)),
+          (options.spotifyStyle
+            ? leastClashingEntry(from, to, mixOut, blendEntry(to), duration, rate)
+            : blendEntry(to)),
+        glidedSpan(duration, rate),
+      ),
       duration,
       rate,
       beat: from.beatPeriod,
@@ -731,9 +760,19 @@ const danceable = (track: TrackAnalysis) =>
 const beatToTheEnd = (from: TrackAnalysis) =>
   !endsAbruptly(from) && (from.beats.at(-1) ?? 0) >= from.decayPoint - 1;
 
-/** The song comes in on a beat, not after a beatless intro */
+/**
+ * Longest beatless intro a blend still goes into. A blend comes in on a
+ * downbeat a couple of seconds in anyway, and a few bars of intro over the
+ * old song's beat are what a DJ would play (dance songs often open with a
+ * riff or a vocal before the drums); a long one means a song that isn't
+ * built to be mixed into
+ */
+const MAX_BEATLESS_INTRO = 16;
+
+/** The song's beat starts soon enough to blend into */
 const beatFromTheStart = (to: TrackAnalysis) =>
-  (to.beats[0] ?? Number.POSITIVE_INFINITY) <= to.leadingSilenceEnd + 3;
+  (to.beats[0] ?? Number.POSITIVE_INFINITY) <=
+  to.leadingSilenceEnd + MAX_BEATLESS_INTRO;
 
 /**
  * Whether a song's ending can be blended out of, whatever comes next: the
@@ -933,6 +972,16 @@ export const planTransition = (
           danceable: suits,
           beatToTheEnd: beatToEnd,
           beatFromTheStart: beatFromStart,
+          toFirstBeat: Math.round((to.beats[0] ?? -1) * 10) / 10,
+          toIntroEnd: Math.round(to.introEnd * 10) / 10,
+          toBassEntry:
+            to.bassEntry === undefined
+              ? '-'
+              : Math.round(to.bassEntry * 10) / 10,
+          toVocalEntry:
+            to.vocalEntry === undefined
+              ? '-'
+              : Math.round(to.vocalEntry * 10) / 10,
           endsAbruptly: endsAbruptly(from),
         },
       };
