@@ -114,6 +114,8 @@ interface IncomingHead {
   entry: AudioNode;
   /** Sends a stretched copy its next tempo change when it's due */
   advance?: (now: number) => void;
+  /** The incoming song's start, as decoded (song time = buffer time) */
+  buffer: AudioBuffer;
 }
 
 /** Where the outgoing copy is in its song, and how fast, at a context time */
@@ -166,6 +168,16 @@ interface ActiveMix {
   cancel?: GainNode;
   /** Consecutive ticks the player has been in sync with our copy */
   lockedTicks: number;
+  /** The player's audio was last heard right on our copy's */
+  heardInSync: boolean;
+  /** How far off it was heard last, in seconds (positive: ahead) */
+  heardError?: number;
+  /** The player's audio has been heard clearly: it steers the hand-over */
+  earWorks: boolean;
+  /** Seeks made to put the player on our copy by ear */
+  earSeeks: number;
+  /** Context time from which the player's audio is worth listening to */
+  hearAfter: number;
   /** The player has been on the incoming song at least once */
   sawIncoming: boolean;
   /** Bars the blend was pushed back waiting for the next song to sync */
@@ -220,6 +232,22 @@ const QUEUE_REFRESH_MS = 2000;
 const SYNC_SEARCH_SECONDS = 0.35;
 /** Correlation needed to trust a position match */
 const SYNC_MIN_SCORE = 0.6;
+/**
+ * Behind our copy, the player hands over once it's heard this close to it.
+ * Nudging its speed can't get it there: every playbackRate change makes
+ * Chrome's audio jump ~25 ms (and currentTime only roughly follows), so it's
+ * put in place by ear, with seeks
+ */
+const HEARD_SYNC = 0.003;
+/** Good enough after a few seeks that kept landing just off */
+const HEARD_SYNC_LOOSE = 0.008;
+const EAR_SEEKS = 3;
+/** How much of the player's latest audio a check listens to */
+const HEAR_SECONDS = 0.25;
+/** How far from where it should be a check looks for the player */
+const HEAR_SEARCH = 0.08;
+/** Checks at most this often */
+const HEAR_EVERY = 0.1;
 /** Most bars a blend waits for a late-loading next song */
 const MAX_DEFERRALS = 2;
 /** A song-length mismatch has to last this long to count (seeks re-buffer) */
@@ -606,6 +634,64 @@ export class AutoMixEngine {
   /** Where the player is in the song (its reported position) */
   private songTime(video: HTMLVideoElement) {
     return video.currentTime - this.timelineOffset(video);
+  }
+
+  /**
+   * How far the player's audio is from our copy of the incoming song, read
+   * from the audio itself (positive: the player is ahead). Null when it
+   * can't be made out clearly enough
+   */
+  private hearIncoming(head: IncomingHead) {
+    const tap = this.tap;
+    const context = this.context;
+    if (!tap || !context) return null;
+    const all = new Float32Array(tap.fftSize);
+    tap.getFloatTimeDomainData(all);
+    const heardAt = context.currentTime;
+    const capture = all.subarray(
+      all.length - Math.round(HEAR_SECONDS * head.buffer.sampleRate),
+    );
+    const expected =
+      head.position(heardAt) - (capture.length / head.buffer.sampleRate);
+    const found = locateCapture(
+      capture,
+      head.buffer,
+      expected - HEAR_SEARCH,
+      expected + HEAR_SEARCH,
+    );
+    if (!found || found.score < SYNC_MIN_SCORE) return null;
+    return found.time - expected;
+  }
+
+  /**
+   * Puts the silent player exactly on our copy once that plays at the song's
+   * own speed: listens where it really is, and seeks it by what's off.
+   * False when it can't be heard (the caller follows currentTime instead)
+   */
+  private followByEar(
+    mix: ActiveMix,
+    head: IncomingHead,
+    video: HTMLVideoElement,
+    now: number,
+    rate: number,
+  ) {
+    // No more nudging: every change would move it again
+    this.setRate(rate);
+    if (now < mix.hearAfter) return mix.earWorks;
+    mix.hearAfter = now + HEAR_EVERY;
+    const error = this.hearIncoming(head);
+    if (error === null) return mix.earWorks;
+    mix.earWorks = true;
+    mix.heardError = error;
+    const tolerance = mix.earSeeks >= EAR_SEEKS ? HEARD_SYNC_LOOSE : HEARD_SYNC;
+    mix.heardInSync = Math.abs(error) < tolerance;
+    if (!mix.heardInSync) {
+      mix.earSeeks++;
+      this.seekIncoming(this.songTime(video) - error);
+      // Only what it plays after the seek tells where it landed
+      mix.hearAfter = now + HEAR_SECONDS + 0.15;
+    }
+    return true;
   }
 
   private schedule(delay: number) {
@@ -1730,6 +1816,7 @@ export class AutoMixEngine {
       rate,
       advance,
       entry: stages[0],
+      buffer: to.head,
     };
   }
 
@@ -2011,6 +2098,10 @@ export class AutoMixEngine {
         return current;
       },
       lockedTicks: 0,
+      heardInSync: false,
+      earWorks: false,
+      earSeeks: 0,
+      hearAfter: 0,
       sawIncoming: false,
       deferrals: 0,
       // Only push a blend back while the old song is still playing music
@@ -2260,6 +2351,11 @@ export class AutoMixEngine {
         (this.songTime(video) + this.playerOffset - this.targetPosition(mix, now)) *
         1000
       ).toFixed(1)}ms avg=${(mix.error * 1000).toFixed(1)}ms locked=${mix.lockedTicks}`,
+      `| heard ${
+        mix.heardError === undefined
+          ? '-'
+          : `${(mix.heardError * 1000).toFixed(1)}ms`
+      } seeks=${mix.earSeeks}`,
     );
   }
 
@@ -2340,7 +2436,18 @@ export class AutoMixEngine {
     const incomingPlaying =
       id === mix.toId && video.readyState >= 3 && !video.seeking;
 
-    if (incomingPlaying && mix.follow) {
+    if (mix.head && !incomingPlaying) {
+      // Nothing worth hearing until it plays again for a full listen
+      mix.hearAfter = Math.max(mix.hearAfter, now + HEAR_SECONDS + 0.15);
+    }
+
+    const byEar = () =>
+      mix.head &&
+      mix.seeded &&
+      now >= mix.head.handOverFrom &&
+      this.followByEar(mix, mix.head, video, now, this.targetRate(mix, now));
+
+    if (incomingPlaying && mix.follow && !byEar()) {
       const target = this.targetPosition(mix, now);
       const rate = this.targetRate(mix, now);
       if (target < 0) {
@@ -2454,7 +2561,7 @@ export class AutoMixEngine {
     // nothing left to do that the player can't: once any filter has opened
     // and a stretched copy is back to normal speed
     const canHandOver = now >= head.handOverFrom;
-    const synced = mix.lockedTicks >= 8;
+    const synced = mix.earWorks ? mix.heardInSync : mix.lockedTicks >= 8;
     const runningOut = now >= head.endAt - 1.5;
     if (canHandOver && incomingPlaying && (synced || runningOut)) {
       this.handOver(mix, head, now);
