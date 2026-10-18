@@ -27,6 +27,8 @@ export type AutoMixPluginConfig = {
   respectAlbums: boolean;
   /** Show the "AutoMixing" card while a transition plays */
   showMixCard: boolean;
+  /** Cross-fade the songs' artwork along with the audio while mixing */
+  artworkFade: boolean;
   /**
    * Look songs up in Apple Music's catalog and use its analysis (beat grid,
    * phrases, where the singing starts) to plan transitions
@@ -49,6 +51,7 @@ export const defaultConfig: AutoMixPluginConfig = {
   spotifyStyle: false,
   respectAlbums: true,
   showMixCard: true,
+  artworkFade: true,
   appleAnalysis: true,
   reorderShape: 'smooth',
 };

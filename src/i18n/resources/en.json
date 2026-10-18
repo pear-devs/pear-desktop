@@ -396,6 +396,7 @@
         "respect-albums": "Play albums without transitions",
         "seconds": "{{seconds}} seconds",
         "show-mix-card": "Show \"AutoMixing\" card",
+        "artwork-fade": "Cross-fade artwork while mixing",
         "tempo-range": {
           "label": "Tempo matching",
           "off": "Off (no time-stretching)",

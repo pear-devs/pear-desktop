@@ -148,6 +148,12 @@ export default createPlugin({
         checked: config.showMixCard,
         click: (item) => setConfig({ showMixCard: item.checked }),
       },
+      {
+        label: t('plugins.automix.menu.artwork-fade'),
+        type: 'checkbox',
+        checked: config.artworkFade,
+        click: (item) => setConfig({ artworkFade: item.checked }),
+      },
     ];
   },
 

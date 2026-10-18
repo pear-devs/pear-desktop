@@ -3,6 +3,7 @@ import type {
   QueueItem,
   RepeatMode,
   Subtitle,
+  ThumbnailDetailsClass,
 } from '@/types/datahost-get-state';
 import type { QueueElement } from '@/types/queue';
 
@@ -13,14 +14,22 @@ export interface QueueTrack {
   artist: string;
   /** Album browse id (MPRE...), when the queue knows it */
   albumId?: string;
+  /** Square artwork, large enough for the player's big image */
+  art?: string;
 }
 
 interface TrackRenderer {
   videoId: string;
   title?: Subtitle;
   longBylineText?: LongBylineText;
+  thumbnail?: ThumbnailDetailsClass;
   selected?: boolean;
 }
+
+/** The queue lists small thumbnails; Google's image URLs take a size */
+const ART_SIZE = 544;
+export const largeArt = (url: string | undefined) =>
+  url?.replace(/=w\d+-h\d+/, `=w${ART_SIZE}-h${ART_SIZE}`);
 
 const primaryOf = (item: QueueItem): TrackRenderer | undefined =>
   item.playlistPanelVideoRenderer ??
@@ -44,6 +53,7 @@ const toTrack = (renderer: TrackRenderer | undefined): QueueTrack | null => {
     title: renderer.title?.runs?.map((run) => run.text).join('') ?? '',
     artist: renderer.longBylineText?.runs?.[0]?.text ?? '',
     albumId,
+    art: largeArt(renderer.thumbnail?.thumbnails?.at(-1)?.url),
   };
 };
 

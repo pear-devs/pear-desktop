@@ -455,6 +455,120 @@ const HoverCard = (props: {
   );
 };
 
+/** Eases the blend's progress so artwork and colour start and settle gently */
+const calm = (progress: number) => {
+  const x = Math.min(1, Math.max(0, progress));
+  return x * x * (3 - (2 * x));
+};
+
+const cssUrl = (url: string | undefined) =>
+  url ? `url("${url.replaceAll('"', '%22')}")` : 'none';
+
+/** The old song's artwork with the new one sweeping in over it */
+const ArtPair = (props: {
+  from?: string;
+  to?: string;
+  reveal: number;
+  class?: string;
+}) => (
+  <div
+    aria-hidden="true"
+    class={`automix-art ${props.class ?? ''}`}
+    style={{ '--automix-reveal': String(props.reveal) }}
+  >
+    <div
+      class="automix-art-from"
+      style={{ 'background-image': cssUrl(props.from) }}
+    />
+    <div
+      class="automix-art-to"
+      style={{ 'background-image': cssUrl(props.to) }}
+    />
+  </div>
+);
+
+/** Where the player shows the playing song's artwork */
+const ART_HOSTS = [
+  'ytmusic-player #song-image',
+  'ytmusic-player-bar .thumbnail-image-wrapper',
+];
+/** How long the overlay takes to melt away once the new song is playing */
+const ART_SETTLE_MS = 1600;
+
+/**
+ * Cross-fades the player's own artwork (big image and player bar thumbnail)
+ * from the old song to the new one along the blend, so the cover doesn't
+ * snap over when the player switches songs. The overlay melts away once the
+ * player shows the new cover itself.
+ */
+const followArtwork = (props: { status: Accessor<AutoMixStatus> }) => {
+  let overlays: HTMLElement[] = [];
+  let key = '';
+  let settle: number | undefined;
+
+  const build = (from: string | undefined, to: string) => {
+    for (const selector of ART_HOSTS) {
+      const host = document.querySelector<HTMLElement>(selector);
+      if (!host) continue;
+      host.classList.add('automix-art-host');
+      const overlay = document.createElement('div');
+      overlay.className = 'automix-art automix-art-overlay';
+      overlay.setAttribute('aria-hidden', 'true');
+      const fromLayer = document.createElement('div');
+      fromLayer.className = 'automix-art-from';
+      fromLayer.style.backgroundImage = cssUrl(from);
+      const toLayer = document.createElement('div');
+      toLayer.className = 'automix-art-to';
+      toLayer.style.backgroundImage = cssUrl(to);
+      overlay.append(fromLayer, toLayer);
+      host.append(overlay);
+      overlays.push(overlay);
+    }
+  };
+  const clear = () => {
+    const leaving = overlays;
+    overlays = [];
+    key = '';
+    for (const overlay of leaving) overlay.classList.add('automix-art-leaving');
+    window.clearTimeout(settle);
+    settle = window.setTimeout(() => {
+      for (const overlay of leaving) overlay.remove();
+    }, ART_SETTLE_MS);
+  };
+
+  createEffect(() => {
+    const current = props.status();
+    if (current.phase !== 'mixing' || !current.toArt) {
+      if (overlays.length) clear();
+      return;
+    }
+    const next = `${current.fromArt}|${current.toArt}`;
+    if (next !== key) {
+      if (overlays.length) clear();
+      key = next;
+      build(current.fromArt, current.toArt);
+    }
+    const reveal = String(calm(current.progress ?? 0));
+    for (const overlay of overlays) {
+      overlay.style.setProperty('--automix-reveal', reveal);
+    }
+  });
+
+  onCleanup(() => {
+    window.clearTimeout(settle);
+    for (const overlay of overlays) overlay.remove();
+    for (const selector of ART_HOSTS) {
+      document.querySelector(selector)?.classList.remove('automix-art-host');
+    }
+  });
+};
+
+/** Renders nothing: drives the player artwork's cross-fade */
+const ArtworkFade = (props: { status: Accessor<AutoMixStatus> }) => {
+  followArtwork(props);
+  return null;
+};
+
 const MixCard = (props: UiProps) => {
   const visible = () =>
     props.config().showMixCard && props.status().phase === 'mixing';
@@ -476,6 +590,14 @@ const MixCard = (props: UiProps) => {
       <Show when={visible() && props.status().plan}>
         {(plan) => (
           <>
+            <Show when={props.config().artworkFade}>
+              <ArtPair
+                class="automix-card-wash"
+                from={props.status().fromArt}
+                reveal={calm(props.status().progress ?? 0)}
+                to={props.status().toArt}
+              />
+            </Show>
             <div class="automix-card-header">
               <MixBars />
               <span class="automix-card-title">
@@ -483,12 +605,28 @@ const MixCard = (props: UiProps) => {
               </span>
               <span class="automix-card-style">{styleName(plan())}</span>
             </div>
-            <div class="automix-card-tracks">
-              <span class="automix-card-from">{props.status().fromTitle}</span>
-              <span class="automix-card-arrow">→</span>
-              <span class="automix-card-to">{props.status().toTitle}</span>
+            <div class="automix-card-body">
+              <Show
+                when={props.config().artworkFade && props.status().toArt}
+              >
+                <ArtPair
+                  class="automix-card-cover"
+                  from={props.status().fromArt}
+                  reveal={calm(props.status().progress ?? 0)}
+                  to={props.status().toArt}
+                />
+              </Show>
+              <div class="automix-card-text">
+                <div class="automix-card-tracks">
+                  <span class="automix-card-from">
+                    {props.status().fromTitle}
+                  </span>
+                  <span class="automix-card-arrow">→</span>
+                  <span class="automix-card-to">{props.status().toTitle}</span>
+                </div>
+                <div class="automix-card-detail">{describePlan(plan())}</div>
+              </div>
             </div>
-            <div class="automix-card-detail">{describePlan(plan())}</div>
             <div class="automix-progress">
               <div
                 class="automix-progress-fill"
@@ -528,6 +666,9 @@ export const mountUi = (props: UiProps) => {
     render(
       () => (
         <>
+          <Show when={props.config().artworkFade}>
+            <ArtworkFade status={props.status} />
+          </Show>
           <MixCard {...props} />
           <HoverCard anchor={anchor} status={props.status} />
         </>

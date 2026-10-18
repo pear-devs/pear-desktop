@@ -20,7 +20,7 @@ import {
 } from './effects';
 import { alignKicks } from './kicks';
 import { planTransition, type TransitionPlan } from './planner';
-import { getQueueStore, readQueue, type QueueTrack } from './queue';
+import { getQueueStore, largeArt, readQueue, type QueueTrack } from './queue';
 import {
   loadSummaries,
   saveSummaries,
@@ -55,6 +55,9 @@ export interface AutoMixStatus {
   plan?: TransitionPlan;
   fromTitle?: string;
   toTitle?: string;
+  /** Artwork of both songs, to cross-fade the player's image while mixing */
+  fromArt?: string;
+  toArt?: string;
   /** 0..1 progress of the audible blend (mixing only) */
   progress?: number;
   /** Stream quality of AutoMix's copy, when it's noticeably worse */
@@ -135,6 +138,8 @@ interface ActiveMix {
   toId: string;
   fromTitle: string;
   toTitle: string;
+  fromArt?: string;
+  toArt?: string;
   chain: OutgoingChain;
   /** Context time at which our copy of the outgoing track took over */
   startAt: number;
@@ -406,6 +411,7 @@ export class AutoMixEngine {
   private queueStore: ReturnType<typeof getQueueStore> = undefined;
   private unsubscribeQueue: (() => void) | null = null;
   private currentTitle = '';
+  private currentArt: string | undefined;
   private repeatOne = false;
   private sameAlbum = false;
   private lastQueueRead = 0;
@@ -878,6 +884,7 @@ export class AutoMixEngine {
     this.next = queue?.next ?? null;
     this.afterNext = queue?.afterNext ?? null;
     this.currentTitle = queue?.current?.title ?? this.currentTitle;
+    this.currentArt = queue?.current?.art ?? this.currentArt;
     this.repeatOne = queue?.repeatMode === 'ONE';
     this.sameAlbum = Boolean(
       queue?.current?.albumId && queue.current.albumId === queue.next?.albumId,
@@ -943,6 +950,11 @@ export class AutoMixEngine {
       // Every play of a song is checked again (it may be a different stream)
       this.versionMatched = null;
       this.currentTitle = this.api.getVideoData()?.title ?? '';
+      this.currentArt = largeArt(
+        this.api.getPlayerResponse?.()?.videoDetails?.thumbnail?.thumbnails?.at(
+          -1,
+        )?.url,
+      );
       this.plan = null;
       this.planKey = '';
       this.refreshQueue(true);
@@ -1932,6 +1944,8 @@ export class AutoMixEngine {
       toId: next.videoId,
       fromTitle: this.currentTitle,
       toTitle: next.title,
+      fromArt: this.currentArt,
+      toArt: next.art,
       chain,
       startAt,
       mixAt,
@@ -2527,6 +2541,8 @@ export class AutoMixEngine {
       plan: mix.plan,
       fromTitle: mix.fromTitle,
       toTitle: mix.toTitle,
+      fromArt: mix.fromArt,
+      toArt: mix.toArt,
       progress,
     });
   }
