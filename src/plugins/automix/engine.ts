@@ -248,6 +248,8 @@ const HEAR_SECONDS = 0.25;
 const HEAR_SEARCH = 0.08;
 /** Checks at most this often */
 const HEAR_EVERY = 0.1;
+/** How long the player gets to be heard before currentTime is trusted */
+const EAR_GRACE = 1.5;
 /** Most bars a blend waits for a late-loading next song */
 const MAX_DEFERRALS = 2;
 /** A song-length mismatch has to last this long to count (seeks re-buffer) */
@@ -2561,7 +2563,10 @@ export class AutoMixEngine {
     // nothing left to do that the player can't: once any filter has opened
     // and a stretched copy is back to normal speed
     const canHandOver = now >= head.handOverFrom;
-    const synced = mix.earWorks ? mix.heardInSync : mix.lockedTicks >= 8;
+    const synced = mix.earWorks
+      ? mix.heardInSync
+      : mix.lockedTicks >= 8 &&
+        (!this.tap || now >= head.handOverFrom + EAR_GRACE);
     const runningOut = now >= head.endAt - 1.5;
     if (canHandOver && incomingPlaying && (synced || runningOut)) {
       this.handOver(mix, head, now);
@@ -2615,6 +2620,15 @@ export class AutoMixEngine {
   }
 
   private handOver(mix: ActiveMix, head: IncomingHead, now: number) {
+    if (this.debugEnabled()) {
+      console.log(
+        '[AutoMix debug] hand-over',
+        `t=${(now - mix.mixAt).toFixed(2)}s from mix point`,
+        mix.earWorks
+          ? `heard ${((mix.heardError ?? 0) * 1000).toFixed(1)}ms after ${mix.earSeeks} seeks`
+          : `unheard, locked=${mix.lockedTicks}`,
+      );
+    }
     // Our copy plays at normal speed by now; make sure the player does too
     this.setRate(1);
 
