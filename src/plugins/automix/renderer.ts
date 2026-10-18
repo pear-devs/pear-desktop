@@ -111,6 +111,8 @@ export const renderer = {
         );
       },
       mixNow: async () => (await engine?.mixNow()) ?? false,
+      timeline: () => engine?.timeline() ?? null,
+      timelinePosition: () => engine?.timelinePosition() ?? null,
       reorder: async (onProgress) => {
         const current = engine;
         if (!current) return null;

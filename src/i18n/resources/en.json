@@ -487,6 +487,24 @@
           "preference": "Chosen in the AutoMix settings",
           "tempo-match": "The tempos are close, so the next song is time-stretched and its beats locked to this one",
           "tempo-mismatch": "The tempos are too far apart to beat-match, so it fades smoothly"
+        },
+        "timeline": {
+          "bars": "Downbeats",
+          "bass": "bass swap",
+          "button": "Transition details",
+          "close": "Close",
+          "done": "Transition done",
+          "high": "Highs",
+          "in": "Transition in {{time}}",
+          "level": "What you'll hear",
+          "low": "Bass",
+          "mid": "Mids",
+          "mix": "mix",
+          "mixing": "Mixing · {{percent}}%",
+          "now-playing": "Now playing",
+          "title": "AutoMix transition",
+          "up-next": "Up next",
+          "vocals": "vocals"
         }
       }
     },

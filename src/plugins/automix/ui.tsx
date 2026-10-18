@@ -17,9 +17,10 @@ import {
 } from '@/plugins/album-color-theme/colors';
 
 import { effectById, effectName } from './effects';
+import { InfoButton, TimelinePanel } from './timeline';
 
 import type { AutoMixPluginConfig } from './config';
-import type { AutoMixStatus } from './engine';
+import type { AutoMixStatus, TransitionTimeline } from './engine';
 import type { TransitionPlan } from './planner';
 import type { ReorderResult } from './reorder';
 
@@ -33,6 +34,10 @@ interface UiProps {
   ) => Promise<ReorderResult | null>;
   /** Mixes into the next song as soon as it can; false if it can't yet */
   mixNow: () => Promise<boolean>;
+  /** The planned transition laid out for drawing */
+  timeline: () => TransitionTimeline | null;
+  /** Where playback is on that timeline */
+  timelinePosition: () => number | null;
 }
 
 const formatTime = (seconds: number) => {
@@ -757,6 +762,7 @@ export const mountUi = (props: UiProps) => {
   document.body.append(cardHost);
 
   const [anchor, setAnchor] = createSignal<DOMRect | null>(null);
+  const [details, setDetails] = createSignal(false);
 
   const disposers = [
     render(
@@ -765,6 +771,7 @@ export const mountUi = (props: UiProps) => {
           <Pill {...props} onHover={setAnchor} />
           <ReorderButton {...props} />
           <MixNowButton {...props} />
+          <InfoButton active={details} open={() => setDetails(!details())} />
         </>
       ),
       pillHost,
@@ -777,6 +784,16 @@ export const mountUi = (props: UiProps) => {
           </Show>
           <MixCard {...props} />
           <HoverCard anchor={anchor} status={props.status} />
+          <Show when={details()}>
+            <TimelinePanel
+              close={() => setDetails(false)}
+              describe={describePlan}
+              hint={() => hintFor(props.status())}
+              position={props.timelinePosition}
+              status={props.status}
+              timeline={props.timeline}
+            />
+          </Show>
         </>
       ),
       cardHost,

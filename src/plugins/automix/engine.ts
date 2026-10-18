@@ -66,6 +66,102 @@ export interface AutoMixStatus {
   lowQuality?: string;
 }
 
+/** One song's waveform on the transition's timeline, split into bands */
+export interface TimelineLane {
+  /** Timeline time (outgoing song seconds) of the first column */
+  start: number;
+  /** Timeline seconds per column */
+  step: number;
+  /** Level per column, 0..1, of the bass (< 200 Hz), mids and highs (> 2.5 kHz) */
+  low: Float32Array;
+  mid: Float32Array;
+  high: Float32Array;
+}
+
+/**
+ * The planned transition, laid out for drawing: both songs on one timeline
+ * in the outgoing song's seconds (the incoming song mapped onto it through
+ * the plan's entry point and tempo ratio)
+ */
+export interface TransitionTimeline {
+  plan: TransitionPlan;
+  fromTitle?: string;
+  toTitle?: string;
+  fromArt?: string;
+  toArt?: string;
+  /** The stretch of the timeline worth showing */
+  start: number;
+  end: number;
+  out: TimelineLane;
+  in: TimelineLane | null;
+  /** Downbeats of each song, on the timeline */
+  outBars: number[];
+  inBars: number[];
+  /** Where the basslines swap, on the timeline (blends) */
+  bassSwap?: [number, number];
+  /** Where the next song's first vocal line lands, on the timeline */
+  vocal?: number;
+}
+
+/** Seconds of the songs shown either side of the transition */
+const TIMELINE_MARGIN = 14;
+/** Timeline columns per second */
+const TIMELINE_RATE = 25;
+
+/**
+ * Band levels of `buffer` (whose first sample is song time `bufferStart`)
+ * from song time `from` on, `count` columns of `step` song seconds each
+ */
+const bandLevels = (
+  buffer: AudioBuffer,
+  bufferStart: number,
+  from: number,
+  step: number,
+  count: number,
+) => {
+  const { sampleRate } = buffer;
+  const low = new Float32Array(count);
+  const mid = new Float32Array(count);
+  const high = new Float32Array(count);
+  const sums = [new Float64Array(count), new Float64Array(count), new Float64Array(count)];
+  const counts = new Uint32Array(count);
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, c) =>
+    buffer.getChannelData(c),
+  );
+  const pole = (hz: number) => Math.exp((-2 * Math.PI * hz) / sampleRate);
+  const p200 = pole(200);
+  const p2500 = pole(2500);
+  // Settle the filters a little before the first column
+  const first = Math.max(0, Math.floor((from - bufferStart - 0.1) * sampleRate));
+  const last = Math.min(
+    buffer.length,
+    Math.ceil((from + (step * count) - bufferStart) * sampleRate),
+  );
+  let a = 0;
+  let b = 0;
+  for (let i = first; i < last; i++) {
+    let x = 0;
+    for (const channel of channels) x += channel[i];
+    x /= channels.length;
+    a = (p200 * a) + ((1 - p200) * x);
+    b = (p2500 * b) + ((1 - p2500) * x);
+    const column = Math.floor(((bufferStart + (i / sampleRate)) - from) / step);
+    if (column < 0 || column >= count) continue;
+    sums[0][column] += a * a;
+    sums[1][column] += (b - a) * (b - a);
+    sums[2][column] += (x - b) * (x - b);
+    counts[column]++;
+  }
+  const level = (sum: number, n: number) =>
+    n ? clamp(((10 * Math.log10((sum / n) + 1e-12)) + 54) / 54, 0, 1) : 0;
+  for (let k = 0; k < count; k++) {
+    low[k] = level(sums[0][k], counts[k]);
+    mid[k] = level(sums[1][k], counts[k]);
+    high[k] = level(sums[2][k], counts[k]);
+  }
+  return { low, mid, high };
+};
+
 interface EngineOptions {
   api: MusicPlayer;
   fetchAudio: (videoId: string) => Promise<FetchedAudio | null>;
@@ -162,6 +258,8 @@ interface ActiveMix {
   outAdvance?: (now: number) => void;
   /** The old song's tempo (rate) at a context time, for the debug log */
   outRate?: (time: number) => number;
+  /** Where the old song is (its seconds) at a context time */
+  outPosition: (time: number) => number;
   /**
    * The player's own audio, inverted: while it's on, whatever the player
    * plays is cancelled out exactly, so muting or unmuting the element can
@@ -833,6 +931,103 @@ export class AutoMixEngine {
       if (this.rush?.videoId === id) this.rush = null;
       return false;
     }
+  }
+
+  private timelineCache: { key: string; value: TransitionTimeline } | null =
+    null;
+
+  /**
+   * The planned (or playing) transition laid out for drawing, null when
+   * there's none. Computed once per plan
+   */
+  timeline(): TransitionTimeline | null {
+    const mix = this.mix;
+    const plan = mix?.plan ?? this.plan;
+    const fromId = mix?.fromId ?? this.currentId;
+    const toId = mix?.toId ?? this.next?.videoId;
+    if (!plan || !fromId) return null;
+    const from =
+      (!mix && this.rush?.videoId === fromId ? this.rush.track : null) ??
+      this.ready.get(fromId);
+    if (!from) return null;
+    const to = toId ? this.ready.get(toId) : undefined;
+    const key = JSON.stringify([
+      fromId,
+      toId,
+      Boolean(to),
+      plan.style,
+      plan.effect,
+      plan.mixOut,
+      plan.mixIn,
+      plan.duration,
+      plan.rate,
+      mix?.fromTitle ?? this.currentTitle,
+      mix?.toTitle ?? this.next?.title,
+    ]);
+    if (this.timelineCache?.key === key) return this.timelineCache.value;
+
+    const start = plan.mixOut - TIMELINE_MARGIN;
+    const end = plan.mixOut + plan.duration + TIMELINE_MARGIN;
+    const step = 1 / TIMELINE_RATE;
+    const count = Math.ceil((end - start) / step);
+    const out = {
+      start,
+      step,
+      ...bandLevels(from.tail, from.tailStart, start, step, count),
+    };
+    // The next song on the same timeline: song time = mixIn + rate x (t - mixOut)
+    const rate = plan.rate || 1;
+    const toTimeline = (time: number) => plan.mixOut + ((time - plan.mixIn) / rate);
+    let incoming: TimelineLane | null = null;
+    if (to) {
+      const inFrom = Math.max(0, plan.mixIn + (rate * (start - plan.mixOut)));
+      const laneStart = toTimeline(inFrom);
+      const laneCount = Math.max(0, Math.ceil((end - laneStart) / step));
+      incoming = {
+        start: laneStart,
+        step,
+        ...bandLevels(to.head, 0, inFrom, step * rate, laneCount),
+      };
+    }
+    const within = (time: number) => time >= start && time <= end;
+    const swapAt: [number, number] | undefined =
+      plan.style !== 'blend'
+        ? undefined
+        : plan.holdOutgoing
+          ? [1 - ((plan.beat || 0.5) / 2 / plan.duration), 1]
+          : (plan.bassSwapAt ??
+            (effectById(plan.effect)?.outgoing.some((lane) => lane.param === 'bass')
+              ? [0.375, 0.625]
+              : [0.45, 0.55]));
+    const value: TransitionTimeline = {
+      plan,
+      fromTitle: mix?.fromTitle ?? this.currentTitle,
+      toTitle: mix?.toTitle ?? this.next?.title,
+      fromArt: mix?.fromArt ?? this.currentArt,
+      toArt: mix?.toArt ?? this.next?.art,
+      start,
+      end,
+      out,
+      in: incoming,
+      outBars: from.analysis.end.downbeats.filter(within),
+      inBars: to ? to.analysis.start.downbeats.map(toTimeline).filter(within) : [],
+      bassSwap: swapAt && [
+        plan.mixOut + (swapAt[0] * plan.duration),
+        plan.mixOut + (swapAt[1] * plan.duration),
+      ],
+      vocal:
+        plan.landsOnVocal === undefined ? undefined : toTimeline(plan.landsOnVocal),
+    };
+    this.timelineCache = { key, value };
+    return value;
+  }
+
+  /** Where playback is on the current timeline (the outgoing song's seconds) */
+  timelinePosition(): number | null {
+    const mix = this.mix;
+    if (mix && this.context) return mix.outPosition(this.context.currentTime);
+    const video = this.video;
+    return video ? this.songTime(video) : null;
   }
 
   /** The song the player is on */
@@ -2114,6 +2309,7 @@ export class AutoMixEngine {
         for (const step of outSteps) if (step.at <= time) current = step.rate;
         return current;
       },
+      outPosition,
       lockedTicks: 0,
       heardInSync: false,
       earWorks: false,

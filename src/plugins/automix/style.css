@@ -470,3 +470,311 @@ ytmusic-player-bar.automix-mixing {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* ---------- Transition details ("i") ---------- */
+
+.automix-info {
+  margin-left: 6px;
+  width: 28px;
+  padding: 0;
+  justify-content: center;
+}
+
+.automix-info[aria-pressed='true'] {
+  border-color: rgba(var(--automix-accent), 0.6);
+  background-color: rgba(var(--automix-accent), 0.16);
+}
+
+.automix-tl-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 4, 8, 0.55);
+  backdrop-filter: blur(6px);
+  animation: automix-tl-fade 0.25s ease-out;
+  -webkit-app-region: no-drag;
+}
+
+.automix-tl {
+  position: relative;
+  width: min(1040px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 22px;
+  background: rgba(16, 16, 20, 0.86);
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(var(--automix-accent), 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: var(--automix-text);
+  font-family: 'YouTube Sans', Roboto, Arial, sans-serif;
+  animation: automix-tl-rise 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Both songs' artwork, blurred into a soft wash behind everything */
+.automix-tl-wash {
+  position: absolute;
+  inset: -60px;
+  background-position: left center, right center;
+  background-repeat: no-repeat;
+  background-size: 60% auto, 60% auto;
+  filter: blur(60px) saturate(1.4);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.automix-tl > :not(.automix-tl-wash) {
+  position: relative;
+}
+
+.automix-tl-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 24px 10px;
+}
+
+.automix-tl-songs {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.automix-tl-song {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.automix-tl-art {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08) center / cover no-repeat;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.automix-tl-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.automix-tl-kicker {
+  color: rgba(var(--automix-accent), 0.95);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.automix-tl-name {
+  overflow: hidden;
+  font-size: 18px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.automix-tl-arrow {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: rgba(var(--automix-accent), 0.9);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.automix-tl-close {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--automix-text);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.automix-tl-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.automix-tl-close svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.automix-tl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 24px 14px;
+}
+
+.automix-tl-chip {
+  padding: 5px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--automix-text-dim);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.automix-tl-chip-style {
+  border-color: rgba(var(--automix-accent), 0.5);
+  background: rgba(var(--automix-accent), 0.14);
+  color: var(--automix-text);
+}
+
+.automix-tl-clock {
+  margin-left: auto;
+  color: var(--automix-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.automix-tl-plot {
+  position: relative;
+  height: 300px;
+  margin: 0 24px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0) 40%),
+    rgba(6, 6, 10, 0.6);
+}
+
+.automix-tl-plot-empty {
+  height: 180px;
+}
+
+.automix-tl-plot canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.automix-tl-lane-label {
+  position: absolute;
+  left: 12px;
+  z-index: 1;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  color: var(--automix-text-dim);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.automix-tl-lane-top {
+  top: 10px;
+}
+
+.automix-tl-lane-bottom {
+  top: calc(50% - 4px);
+}
+
+.automix-tl-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px;
+  color: var(--automix-text-dim);
+  font-size: 13px;
+  text-align: center;
+}
+
+.automix-tl-empty-heading {
+  color: var(--automix-text);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.automix-tl-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 12px 26px 4px;
+  color: var(--automix-text-dim);
+  font-size: 11.5px;
+}
+
+.automix-tl-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.automix-tl-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.automix-tl-line {
+  width: 18px;
+  height: 2px;
+  border-radius: 1px;
+  background: rgb(var(--automix-accent));
+  box-shadow: 0 0 6px rgba(var(--automix-accent), 0.9);
+}
+
+.automix-tl-tick {
+  width: 1px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.automix-tl-why {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 26px 22px;
+  color: var(--automix-text-dim);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+@keyframes automix-tl-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes automix-tl-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+}
