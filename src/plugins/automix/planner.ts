@@ -884,12 +884,16 @@ export const planTransition = (
         order = stretchOk ? ['blend', 'cut', 'smooth'] : ['cut', 'smooth'];
         break;
       }
-      // Something audible every time: beat-matched when the beats allow,
-      // otherwise a filtered fade / lead-in. A plain segue is the last resort
+      // Beat-matched when the beats allow. Otherwise, two clear beats at
+      // different tempos clash however they're faded, so (like Apple Music,
+      // e.g. luther -> NOKIA) the song plays its ending and the next comes in
+      // as it dies away; songs without a clear beat get a filtered fade
       order =
         djBlend || endingBlend
           ? ['blend', 'smooth', 'segue']
-          : ['smooth', 'segue'];
+          : gridsOk && steadyBeat
+            ? ['segue', 'smooth']
+            : ['smooth', 'segue'];
   }
   if (options.beatOnly && options.preference !== 'segue') {
     order = order.filter((style) => style !== 'segue');
