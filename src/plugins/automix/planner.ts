@@ -731,6 +731,29 @@ const planSmooth = (
     duration = end - mixOut;
   }
   if (duration < 1.5) return null;
+
+  // The tempos don't match, but the next song's beat can still come in on
+  // the one: its first downbeat on one of this song's, not anywhere in the
+  // bar (a couple of beats either way)
+  if (hasBeatGrid(from) && hasBeatGrid(to)) {
+    const lead = entryPoint(to) - base.mixIn;
+    const target = mixOut + lead;
+    const one = from.downbeats.reduce(
+      (best, time) =>
+        Math.abs(time - target) < Math.abs(best - target) ? time : best,
+      Number.POSITIVE_INFINITY,
+    );
+    const shifted = one - lead;
+    const room = from.trailingSilenceStart - shifted;
+    if (
+      Math.abs(one - target) <= from.beatPeriod * 2 &&
+      shifted >= options.earliestMixOut &&
+      room >= 1.5
+    ) {
+      mixOut = shifted;
+      duration = Math.min(duration, room);
+    }
+  }
   return { ...base, mixOut, duration };
 };
 
