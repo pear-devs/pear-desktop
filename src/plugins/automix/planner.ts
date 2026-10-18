@@ -113,12 +113,13 @@ const PHRASE_BARS = 4;
 const PHRASE_SNAP_SECONDS = 5;
 
 /**
- * Over clashing keys, blends where both songs are this tonal at once are
- * kept short (to these lengths); over drums the full length is fine
+ * Over clashing keys, a blend where both songs are this tonal at once is
+ * reported as a key clash (it's still played at full length: a long blend
+ * sounds smoother than a short one, clash or not)
  */
 const TONAL_CLASH = 0.12;
-const CLASH_BLEND_BEATS = 8;
-const CLASH_ENDING_BEATS = 4;
+/** Blends shorten a bar at a time when the full length doesn't fit */
+const BAR_BEATS = 4;
 
 /** Seconds of run-up the player needs to lock a blend's incoming song */
 const BLEND_RUN_UP = 2;
@@ -426,21 +427,16 @@ const tonalOverlap = (
   return weights > 0 ? sum / weights : 0;
 };
 
-/** Whether a blend would be heard clashing, if the keys clash */
-type ClashCheck = (plan: TransitionPlan) => boolean;
-
 const planBlend = (
   from: TrackAnalysis,
   to: TrackAnalysis,
   options: PlannerOptions,
-  clashes: ClashCheck = () => false,
 ): TransitionPlan | null => {
   const rate = tempoRatio(from.bpm, to.bpm);
   if (!Number.isFinite(rate)) return null;
 
-  // Try the requested length first, then shorter blends if we're out of
-  // room. Clashing keys get a short overlap, unless one side is just drums
-  for (let beats = options.blendBeats; beats >= 4; beats /= 2) {
+  // The requested length if it fits, else the longest that does
+  for (let beats = options.blendBeats; beats >= 4; beats -= BAR_BEATS) {
     const duration = beats * from.beatPeriod;
     const latestStart = from.trailingSilenceStart - duration;
     // Start in the outro, but never so late that the blend runs past the end
@@ -495,7 +491,6 @@ const planBlend = (
       fromBpm: from.bpm,
       toBpm: to.bpm,
     };
-    if (beats > CLASH_BLEND_BEATS && clashes(plan)) continue;
     return plan;
   }
 
@@ -511,13 +506,12 @@ const planEndingBlend = (
   from: TrackAnalysis,
   to: TrackAnalysis,
   options: PlannerOptions,
-  clashes: ClashCheck = () => false,
 ): TransitionPlan | null => {
   const rate = tempoRatio(from.bpm, to.bpm);
   const hit = finalHit(from);
   if (!Number.isFinite(rate) || hit === undefined) return null;
 
-  for (let beats = options.blendBeats; beats >= 4; beats /= 2) {
+  for (let beats = options.blendBeats; beats >= 4; beats -= BAR_BEATS) {
     const duration = beats * from.beatPeriod;
     const mixOut = hit - duration;
     if (mixOut < options.earliestMixOut) continue;
@@ -533,7 +527,6 @@ const planEndingBlend = (
       toBpm: to.bpm,
       holdOutgoing: true,
     };
-    if (beats > CLASH_ENDING_BEATS && clashes(plan)) continue;
     return plan;
   }
   return null;
@@ -876,9 +869,8 @@ export const planTransition = (
     const plan =
       style === 'blend'
         ? endsAbruptly(from)
-          ? (planEndingBlend(from, to, options, clashes) ??
-            planBlend(from, to, options, clashes))
-          : planBlend(from, to, options, clashes)
+          ? (planEndingBlend(from, to, options) ?? planBlend(from, to, options))
+          : planBlend(from, to, options)
         : style === 'segue'
           ? planSegue(from, to, options)
           : style === 'cut'
