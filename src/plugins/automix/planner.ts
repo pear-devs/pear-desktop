@@ -243,9 +243,11 @@ const vocalLanding = (track: TrackAnalysis, plan: TransitionPlan) => {
       : plan.duration * plan.rate;
   const end = plan.mixIn + span;
   const bar = track.beatPeriod > 0 ? track.beatPeriod * 4 : 2;
+  // Singing from the moment it comes in isn't a line it lands on (a short
+  // fade's last bars reach back to its start)
   return track.vocals?.find(
     (region) =>
-      region.start >= Math.max(plan.mixIn, end - (2 * bar)) &&
+      region.start >= Math.max(plan.mixIn + (span / 2), end - (2 * bar)) &&
       region.start <= end + bar,
   )?.start;
 };
