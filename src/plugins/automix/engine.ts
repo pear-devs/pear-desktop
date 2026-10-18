@@ -569,7 +569,7 @@ export class AutoMixEngine {
     const capture = new Float32Array(tap.fftSize);
     tap.getFloatTimeDomainData(capture);
     const capturedAt = context.currentTime;
-    const reported = video.currentTime;
+    const reported = this.songTime(video);
 
     const span = capture.length / track.tail.sampleRate;
     const expected = reported + this.playerOffset - span - track.tailStart;
@@ -586,6 +586,26 @@ export class AutoMixEngine {
     if (Math.abs(offset) > SYNC_SEARCH_SECONDS) return null;
     this.playerOffset = offset;
     return { position, at: capturedAt };
+  }
+
+  /**
+   * How far the element's clock runs ahead of the song. When a song ends on
+   * its own, YouTube Music plays the next one gaplessly on the same media
+   * timeline, so currentTime keeps counting from where the last song ended
+   */
+  private timelineOffset(video: HTMLVideoElement) {
+    try {
+      const offset = video.currentTime - this.api.getCurrentTime();
+      if (Number.isFinite(offset) && offset > 0.5) return offset;
+    } catch {
+      // Treat as a plain timeline
+    }
+    return 0;
+  }
+
+  /** Where the player is in the song (its reported position) */
+  private songTime(video: HTMLVideoElement) {
+    return video.currentTime - this.timelineOffset(video);
   }
 
   private schedule(delay: number) {
@@ -702,14 +722,14 @@ export class AutoMixEngine {
       // The ending we keep already covers it when we're close to it
       const firstBeat = base.analysis.end.beats[0] ?? Number.POSITIVE_INFINITY;
       let track = base;
-      if (video.currentTime + MIX_NOW_LEAD < firstBeat) {
+      if (this.songTime(video) + MIX_NOW_LEAD < firstBeat) {
         const audio = await this.fetchAudio(id);
         if (!audio) throw new Error('no audio for mix now');
         track = await decodeWindow(
           base,
           audio.bytes,
           context.sampleRate,
-          video.currentTime,
+          this.songTime(video),
           MIX_NOW_SECONDS,
         );
       }
@@ -919,6 +939,14 @@ export class AutoMixEngine {
 
   private playingDuration(video: HTMLVideoElement) {
     try {
+      // On a shared (gapless) timeline the player's duration is how far it
+      // has buffered, not the song's length
+      if (this.timelineOffset(video) > 0) {
+        const length = Number(
+          this.api.getPlayerResponse?.()?.videoDetails?.lengthSeconds,
+        );
+        if (length > 0) return length;
+      }
       const duration = this.api.getDuration();
       if (Number.isFinite(duration) && duration > 0) return duration;
     } catch {
@@ -1003,7 +1031,7 @@ export class AutoMixEngine {
     this.ensureTrack(nextId);
 
     // Sought back before where a mix-now was decoded from: it can't play
-    if (this.rush?.track && video.currentTime < this.rush.track.tailStart) {
+    if (this.rush?.track && this.songTime(video) < this.rush.track.tailStart) {
       this.rush = null;
     }
     const rushed = this.rush?.track ?? null;
@@ -1024,7 +1052,7 @@ export class AutoMixEngine {
     // The next song changed too late (or couldn't be analysed): rather than
     // stopping dead, fade into it once the end of this song gets close
     const late =
-      video.currentTime >
+      this.songTime(video) >
       from.analysis.trailingSilenceStart - LATE_PLAN_SECONDS;
     if (!to && !late) {
       this.emit(
@@ -1057,7 +1085,7 @@ export class AutoMixEngine {
     ]);
     const tooLate =
       this.plan &&
-      video.currentTime > this.plan.mixOut - prerollFor(this.plan) + 0.5;
+      this.songTime(video) > this.plan.mixOut - prerollFor(this.plan) + 0.5;
     if (key !== this.planKey || tooLate) {
       this.planKey = key;
       let plan = planTransition(fromAnalysis, toAnalysis, {
@@ -1071,7 +1099,7 @@ export class AutoMixEngine {
         smoothSeconds: this.config.smoothSeconds,
         beatOnly: this.config.beatOnly,
         earliestMixOut: Math.max(
-          video.currentTime + MIX_NOW_LEAD,
+          this.songTime(video) + MIX_NOW_LEAD,
           from.tailStart + MIX_NOW_LEAD,
         ),
       });
@@ -1115,7 +1143,7 @@ export class AutoMixEngine {
         .join(', ') || undefined,
     });
 
-    const remaining = plan.mixOut - prerollFor(plan) - video.currentTime;
+    const remaining = plan.mixOut - prerollFor(plan) - this.songTime(video);
     this.mixSoon = remaining < 15;
     // The audio a transition plays was decoded minutes ago and may have been
     // paged out to disk since; reading it back in on the audio thread when
@@ -1722,7 +1750,7 @@ export class AutoMixEngine {
     const startAt = context.currentTime + START_LEAD;
     const startOffset = heard
       ? heard.position + ((startAt - heard.at) * video.playbackRate)
-      : video.currentTime + this.playerOffset + (START_LEAD * video.playbackRate);
+      : this.songTime(video) + this.playerOffset + (START_LEAD * video.playbackRate);
     const offsetInTail = startOffset - from.tailStart;
     if (offsetInTail < 0 || plan.mixOut <= startOffset) {
       this.plan = null;
@@ -2148,7 +2176,7 @@ export class AutoMixEngine {
     const video = this.video;
     if (!mix || !video) return;
     mix.pendingSeeks++;
-    video.currentTime = Math.max(0, time);
+    video.currentTime = Math.max(0, time) + this.timelineOffset(video);
   }
 
   private readonly onSeeking = () => {
@@ -2229,7 +2257,7 @@ export class AutoMixEngine {
         head?.rate(now) ?? video.playbackRate
       ).toFixed(3)}`,
       `| sync err=${(
-        (video.currentTime + this.playerOffset - this.targetPosition(mix, now)) *
+        (this.songTime(video) + this.playerOffset - this.targetPosition(mix, now)) *
         1000
       ).toFixed(1)}ms avg=${(mix.error * 1000).toFixed(1)}ms locked=${mix.lockedTicks}`,
     );
@@ -2317,11 +2345,11 @@ export class AutoMixEngine {
       const rate = this.targetRate(mix, now);
       if (target < 0) {
         // Too early for the incoming song: hold it at the very start
-        if (video.currentTime > 0.25) this.seekIncoming(0);
+        if (this.songTime(video) > 0.25) this.seekIncoming(0);
         this.setRate(0.0625);
       } else {
         // Compare what's actually heard, not the player's reported position
-        const error = video.currentTime + this.playerOffset - target;
+        const error = this.songTime(video) + this.playerOffset - target;
         if (!mix.seeded || Math.abs(error) > 0.25) {
           this.seekIncoming(
             target - this.playerOffset + (SEEK_LATENCY * rate),
