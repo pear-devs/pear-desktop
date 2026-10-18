@@ -236,6 +236,12 @@ const GLIDE_STEP = 0.5;
 const OUT_GLIDE_SECONDS = 2;
 /** When the stretched outgoing copy takes over from the plain one */
 const OUT_HANDOFF = 0.5;
+/**
+ * How far ahead our copy of the outgoing song is scheduled to take over.
+ * Setting the mix up takes the main thread ~100 ms; a start time already in
+ * the past would start the copy late, repeating what the player just played
+ */
+const START_LEAD = 0.25;
 /** Step of the shared tempo glide during a blend */
 const BLEND_GLIDE_STEP = 0.25;
 const CROSSOVER_HZ = 180;
@@ -1696,11 +1702,12 @@ export class AutoMixEngine {
 
     // Start our copy exactly where the player's audio is: from what it
     // played at a known context time, not from its currentTime
+    const setupFrom = performance.now();
     const heard = this.measurePlayerOffset(video, from);
-    const startAt = context.currentTime;
+    const startAt = context.currentTime + START_LEAD;
     const startOffset = heard
       ? heard.position + ((startAt - heard.at) * video.playbackRate)
-      : video.currentTime + this.playerOffset;
+      : video.currentTime + this.playerOffset + (START_LEAD * video.playbackRate);
     const offsetInTail = startOffset - from.tailStart;
     if (offsetInTail < 0 || plan.mixOut <= startOffset) {
       this.plan = null;
@@ -1996,13 +2003,14 @@ export class AutoMixEngine {
         `| mix point in ${(mixAt - startAt).toFixed(2)}s`,
         `| out at ${plan.mixOut.toFixed(2)}s, in at ${plan.mixIn.toFixed(2)}s for ${plan.duration.toFixed(2)}s`,
         `| effect: ${effectName(dressed.effect) ?? 'none'}`,
+        `| set up in ${(performance.now() - setupFrom).toFixed(0)} ms (lead ${START_LEAD * 1000} ms)`,
       );
     }
     // Registered first, so abort() can always undo what follows
     this.mix = mix;
-    this.holdVolume(video, mix);
     // From the copy's first sample the player is cancelled out, so it doesn't
-    // matter when muting the element actually takes effect
+    // matter when muting the element actually takes effect, as long as it's
+    // not before the copy starts
     if (this.source) {
       const cancel = context.createGain();
       cancel.gain.value = 0;
@@ -2016,7 +2024,11 @@ export class AutoMixEngine {
       this.source.connect(cancel).connect(context.destination);
       mix.cancel = cancel;
     }
-    this.applyLevel(video, mix);
+    this.at(startAt, () => {
+      if (this.mix !== mix) return;
+      this.holdVolume(video, mix);
+      this.applyLevel(video, mix);
+    });
     // The player moves on to the next song while we keep the old one playing
     this.at(startAt + 0.2, () => {
       if (!this.mix) return;
