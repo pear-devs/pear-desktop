@@ -257,27 +257,6 @@ const vocalLanding = (track: TrackAnalysis, plan: TransitionPlan) => {
   )?.start;
 };
 
-/** Where in a blend the basses swap over (its middle) */
-const BASS_SWAP_AT = 0.5;
-/** A next song whose bass only comes in after this share of the blend... */
-const BASS_LATE = 0.625;
-
-/**
- * ...comes in later on its own grid, so its bass is there when the old one
- * goes out: otherwise the blend loses its bass for seconds before the new
- * one drops. Never past where a vocal entry could be reached either
- */
-const bassReadyEntry = (to: TrackAnalysis, mixIn: number, span: number) => {
-  const entry = to.bassEntry;
-  if (entry === undefined || entry - mixIn <= BASS_LATE * span) return mixIn;
-  const point = latestGridPoint(
-    to.downbeats,
-    mixIn,
-    Math.min(entry - (BASS_SWAP_AT * span), VOCAL_ENTRY_LIMIT),
-  );
-  return point ?? mixIn;
-};
-
 /** Spotify splits a blend into this many slices to score vocal clashes */
 const VOCAL_BINS = 32;
 /** A slice counts as sung when vocals cover this much of it */
@@ -321,8 +300,15 @@ export const vocalClash = (
 };
 
 /**
- * The incoming entry (a phrase, else a bar, in the song's first stretch)
- * whose blend has the fewest vocal clashes, if it beats `current`
+ * Furthest a blend moves into the next song to dodge a vocal clash. Apple
+ * Music keeps a song's intro (it brings it in quietly under the old song's
+ * vocals instead): skipping into a known song is the more noticeable of the two
+ */
+const MAX_CLASH_SKIP = 8;
+
+/**
+ * The incoming entry (a phrase, else a bar, a few seconds in at most) whose
+ * blend has the fewest vocal clashes, if it beats `current`
  */
 const leastClashingEntry = (
   from: TrackAnalysis,
@@ -339,7 +325,13 @@ const leastClashingEntry = (
   let bestScore = score(current);
   const starts = to.phrases?.length ? to.phrases : to.downbeats;
   for (const start of starts) {
-    if (start < current || start + span > VOCAL_ENTRY_LIMIT) continue;
+    if (
+      start < current ||
+      start > current + MAX_CLASH_SKIP ||
+      start + span > VOCAL_ENTRY_LIMIT
+    ) {
+      continue;
+    }
     const value = score(start);
     if (value < bestScore) {
       best = start;
@@ -508,14 +500,11 @@ const planBlend = (
       style: 'blend',
       reason: 'fallback',
       mixOut,
-      mixIn: bassReadyEntry(
-        to,
+      mixIn:
         landing ??
-          (options.spotifyStyle
-            ? leastClashingEntry(from, to, mixOut, blendEntry(to), duration, rate)
-            : blendEntry(to)),
-        glidedSpan(duration, rate),
-      ),
+        (options.spotifyStyle
+          ? leastClashingEntry(from, to, mixOut, blendEntry(to), duration, rate)
+          : blendEntry(to)),
       duration,
       rate,
       beat: from.beatPeriod,

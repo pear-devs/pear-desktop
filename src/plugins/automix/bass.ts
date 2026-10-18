@@ -2,9 +2,9 @@
  * When a blend swaps the basslines over. Swapping half way only works if the
  * next song has its bass by then: many come in on an intro without it, and
  * taking the old bass out first leaves seconds with no bass at all before
- * the new one drops. The planner brings such a song in later where it can;
- * where its bass still arrives after the usual swap, the old bass makes way
- * for it there instead.
+ * the new one drops. So the old bass makes way where the new one arrives
+ * (the song isn't entered later for it: Apple Music keeps a song's intro,
+ * and skipping into a song is far more noticeable than a light intro).
  */
 
 import type { TrackAnalysis } from './analysis';
