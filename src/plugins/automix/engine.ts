@@ -2228,6 +2228,10 @@ export class AutoMixEngine {
       `| heard tempo: old x${(mix.outRate?.(now) ?? 1).toFixed(3)} new x${(
         head?.rate(now) ?? video.playbackRate
       ).toFixed(3)}`,
+      `| sync err=${(
+        (video.currentTime + this.playerOffset - this.targetPosition(mix, now)) *
+        1000
+      ).toFixed(1)}ms avg=${(mix.error * 1000).toFixed(1)}ms locked=${mix.lockedTicks}`,
     );
   }
 
@@ -2333,17 +2337,21 @@ export class AutoMixEngine {
           const pull = silent ? 0.1 : 0.04;
           // Close enough: run at exactly the copy's rate. Every rate change
           // makes the player's position jump a little, so stop nudging early
-          const deadband = mix.head ? 0.01 : 0.006;
+          // while it's heard; behind our copy it can get much closer for an
+          // exact hand-over (its timing jitters by only ~1 ms)
+          const deadband = mix.head ? 0.003 : 0.006;
           this.setRate(
             Math.abs(mix.error) < deadband
               ? rate
               : rate *
                   (1 - clamp(mix.error * (silent ? 2.5 : 1.5), -pull, pull)),
           );
-          // Only count as in sync while steady at that rate
+          // Only count as in sync while steady at that rate. Within the
+          // deadband nothing pulls the error lower, so a stricter test
+          // would flicker on and off and hold the hand-over up
           mix.lockedTicks =
-            Math.abs(error) < 0.012 &&
-            Math.abs(mix.error) < 0.008 &&
+            Math.abs(error) < deadband + 0.004 &&
+            Math.abs(mix.error) < deadband &&
             Math.abs(video.playbackRate - rate) < 0.0005
               ? mix.lockedTicks + 1
               : 0;
