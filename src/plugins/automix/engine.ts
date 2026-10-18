@@ -1634,6 +1634,10 @@ export class AutoMixEngine {
       const bass = context.createBiquadFilter();
       bass.type = 'lowshelf';
       bass.frequency.value = CROSSOVER_HZ;
+      // Only the lanes a style has are scheduled: the rest must start open
+      // (a biquad's default is 350 Hz, which muffles or thins the song)
+      highpass.frequency.value = EFFECT_DEFAULTS.highpass;
+      lowpass.frequency.value = EFFECT_DEFAULTS.lowpass;
       stages.push(highpass, lowpass, bass, gain);
       scheduleLanes(
         {
