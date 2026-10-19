@@ -7,7 +7,8 @@
     "./macros": "./src/macros.ts",
     "./selectors": "./src/selectors.ts",
     "./protocol": "./src/protocol.ts",
-    "./icon": "./src/icon.ts"
+    "./icon": "./src/icon.ts",
+    "./song-details": "./src/song-details.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",

@@ -56,6 +56,9 @@ export const selectors = {
   "upgrade.button": "ytmusic-guide-entry-renderer:last-child, tp-yt-paper-item.ytmusic-guide-entry-renderer[href*='music_premium']",
 
   // ---- integrations (api-server, discord, scrobbler, notifications, …)
+  "integrations.fullscreen": "ytmusic-player-bar[player-fullscreened]",
+  "integrations.fullscreen_button": ".fullscreen-button",
+  "integrations.exit_fullscreen_button": ".exit-fullscreen-button",
 
   // ---- network & files (adblock, downloader, proxy, sponsorblock)
 

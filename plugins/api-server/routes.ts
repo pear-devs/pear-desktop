@@ -1,870 +1,409 @@
-import { createRoute, z } from '@hono/zod-openapi';
-import { ipcMain } from 'electron';
+// The REST routes of the original pear-desktop API server (v1), as a table
+// that drives both request dispatch and the OpenAPI document.
 
-import { getSongControls } from '@/providers/song-controls';
-import {
-  LikeType,
-  type RepeatMode,
-  type VolumeState,
-} from '@/types/datahost-get-state';
+import { livePosition, type NowPlaying, type PlayerAction, type RepeatMode } from "@pear/sdk";
+import type { SongDetails } from "@pear/sdk/song-details";
 
-import { API_VERSION } from '../api-version';
-import {
-  AddSongToQueueSchema,
-  GoBackSchema,
-  GoForwardScheme,
-  MoveSongInQueueSchema,
-  QueueParamsSchema,
-  SearchSchema,
-  SeekSchema,
-  SetFullscreenSchema,
-  SetQueueIndexSchema,
-  SetVolumeSchema,
-  SongInfoSchema,
-  SwitchRepeatSchema,
-  type ResponseSongInfo,
-} from '../scheme';
+export const API_VERSION = "v1";
+const API = `/api/${API_VERSION}`;
 
-import type { APIServerConfig } from '../../config';
-import type { HonoApp } from '../types';
-import type { SongInfo } from '@/providers/song-info';
-import type { BackendContext } from '@/types/contexts';
-import type { QueueResponse } from '@/types/music-player-desktop-internal';
-import type { Context } from 'hono';
+export type Method = "GET" | "POST" | "PATCH" | "DELETE";
+type FieldType = "number" | "integer" | "string" | "boolean";
+/** Field name → type; a trailing "?" marks it optional, an array is an enum of strings. */
+export type BodySchema = Record<string, FieldType | `${FieldType}?` | readonly string[]>;
 
-const routes = {
-  previous: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/previous`,
-    summary: 'play previous song',
-    description: 'Plays the previous song in the queue',
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  next: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/next`,
-    summary: 'play next song',
-    description: 'Plays the next song in the queue',
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  play: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/play`,
-    summary: 'Play',
-    description: 'Change the state of the player to play',
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  pause: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/pause`,
-    summary: 'Pause',
-    description: 'Change the state of the player to pause',
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  togglePlay: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/toggle-play`,
-    summary: 'Toggle play/pause',
-    description:
-      'Change the state of the player to play if paused, or pause if playing',
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  getLikeState: createRoute({
-    method: 'get',
-    path: `/api/${API_VERSION}/like-state`,
-    summary: 'get like state',
-    description: 'Get the current like state',
-    responses: {
-      200: {
-        description: 'Success',
-        content: {
-          'application/json': {
-            schema: z.object({
-              state: z.enum(LikeType).nullable(),
-            }),
-          },
-        },
-      },
-    },
-  }),
-  like: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/like`,
-    summary: 'like song',
-    description: 'Set the current song as liked',
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  dislike: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/dislike`,
-    summary: 'dislike song',
-    description: 'Set the current song as disliked',
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  seekTo: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/seek-to`,
-    summary: 'seek',
-    description: 'Seek to a specific time in the current song',
-    request: {
-      body: {
-        description: 'seconds to seek to',
-        content: {
-          'application/json': {
-            schema: SeekSchema,
-          },
-        },
-      },
-    },
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  goBack: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/go-back`,
-    summary: 'go back',
-    description: 'Move the current song back by a number of seconds',
-    request: {
-      body: {
-        description: 'seconds to go back',
-        content: {
-          'application/json': {
-            schema: GoBackSchema,
-          },
-        },
-      },
-    },
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
+export interface Reply {
+  status: number;
+  body?: unknown;
+}
 
-  goForward: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/go-forward`,
-    summary: 'go forward',
-    description: 'Move the current song forward by a number of seconds',
-    request: {
-      body: {
-        description: 'seconds to go forward',
-        content: {
-          'application/json': {
-            schema: GoForwardScheme,
-          },
-        },
-      },
-    },
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  getShuffleState: createRoute({
-    method: 'get',
-    path: `/api/${API_VERSION}/shuffle`,
-    summary: 'get shuffle state',
-    description: 'Get the current shuffle state',
-    responses: {
-      200: {
-        description: 'Success',
-        content: {
-          'application/json': {
-            schema: z.object({
-              state: z.boolean().nullable(),
-            }),
-          },
-        },
-      },
-    },
-  }),
-  shuffle: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/shuffle`,
-    summary: 'shuffle',
-    description: 'Shuffle the queue',
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  repeatMode: createRoute({
-    method: 'get',
-    path: `/api/${API_VERSION}/repeat-mode`,
-    summary: 'get current repeat mode',
-    description: 'Get the current repeat mode (NONE, ALL, ONE)',
-    responses: {
-      200: {
-        description: 'Success',
-        content: {
-          'application/json': {
-            schema: z.object({
-              mode: z.enum(['ONE', 'NONE', 'ALL']).nullable(),
-            }),
-          },
-        },
-      },
-    },
-  }),
-  switchRepeat: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/switch-repeat`,
-    summary: 'switch repeat',
-    description: 'Switch the repeat mode',
-    request: {
-      body: {
-        description: 'number of times to click the repeat button',
-        content: {
-          'application/json': {
-            schema: SwitchRepeatSchema,
-          },
-        },
-      },
-    },
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  setVolume: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/volume`,
-    summary: 'set volume',
-    description: 'Set the volume of the player',
-    request: {
-      body: {
-        description: 'volume to set',
-        content: {
-          'application/json': {
-            schema: SetVolumeSchema,
-          },
-        },
-      },
-    },
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  getVolumeState: createRoute({
-    method: 'get',
-    path: `/api/${API_VERSION}/volume`,
-    summary: 'get volume state',
-    description: 'Get the current volume state of the player',
-    responses: {
-      200: {
-        description: 'Success',
-        content: {
-          'application/json': {
-            schema: z.object({
-              state: z.number(),
-              isMuted: z.boolean(),
-            }),
-          },
-        },
-      },
-    },
-  }),
-  setFullscreen: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/fullscreen`,
-    summary: 'set fullscreen',
-    description: 'Set the fullscreen state of the player',
-    request: {
-      body: {
-        description: 'fullscreen state',
-        content: {
-          'application/json': {
-            schema: SetFullscreenSchema,
-          },
-        },
-      },
-    },
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  toggleMute: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/toggle-mute`,
-    summary: 'toggle mute',
-    description: 'Toggle the mute state of the player',
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
+export interface RouteRequest {
+  params: Record<string, string>;
+  body: Record<string, unknown>;
+  remoteAddress: string;
+}
 
-  getFullscreenState: createRoute({
-    method: 'get',
-    path: `/api/${API_VERSION}/fullscreen`,
-    summary: 'get fullscreen state',
-    description: 'Get the current fullscreen state',
-    responses: {
-      200: {
-        description: 'Success',
-        content: {
-          'application/json': {
-            schema: z.object({
-              state: z.boolean(),
-            }),
-          },
-        },
-      },
-    },
-  }),
-  oldQueueInfo: createRoute({
-    deprecated: true,
-    method: 'get',
-    path: `/api/${API_VERSION}/queue-info`,
-    summary: 'get current queue info',
-    description: 'Get the current queue info',
-    responses: {
-      200: {
-        description: 'Success',
-        content: {
-          'application/json': {
-            schema: z.object({}),
-          },
-        },
-      },
-      204: {
-        description: 'No queue info',
-      },
-    },
-  }),
-  oldSongInfo: createRoute({
-    deprecated: true,
-    method: 'get',
-    path: `/api/${API_VERSION}/song-info`,
-    summary: 'get current song info',
-    description: 'Get the current song info',
-    responses: {
-      200: {
-        description: 'Success',
-        content: {
-          'application/json': {
-            schema: SongInfoSchema,
-          },
-        },
-      },
-      204: {
-        description: 'No song info',
-      },
-    },
-  }),
-  songInfo: createRoute({
-    method: 'get',
-    path: `/api/${API_VERSION}/song`,
-    summary: 'get current song info',
-    description: 'Get the current song info',
-    responses: {
-      200: {
-        description: 'Success',
-        content: {
-          'application/json': {
-            schema: SongInfoSchema,
-          },
-        },
-      },
-      204: {
-        description: 'No song info',
-      },
-    },
-  }),
-  nextSongInfo: createRoute({
-    method: 'get',
-    path: `/api/${API_VERSION}/queue/next`,
-    summary: 'get next song info',
-    description:
-      'Get information about the next song in the queue (relative index +1)',
-    responses: {
-      200: {
-        description: 'Success',
-        content: {
-          'application/json': {
-            schema: SongInfoSchema,
-          },
-        },
-      },
-      204: {
-        description: 'No next song in queue',
-      },
-    },
-  }),
-  queueInfo: createRoute({
-    method: 'get',
-    path: `/api/${API_VERSION}/queue`,
-    summary: 'get current queue info',
-    description: 'Get the current queue info',
-    responses: {
-      200: {
-        description: 'Success',
-        content: {
-          'application/json': {
-            schema: z.object({}),
-          },
-        },
-      },
-      204: {
-        description: 'No queue info',
-      },
-    },
-  }),
-  addSongToQueue: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/queue`,
-    summary: 'add song to queue',
-    description: 'Add a song to the queue',
-    request: {
-      body: {
-        description: 'video id of the song to add',
-        content: {
-          'application/json': {
-            schema: AddSongToQueueSchema,
-          },
-        },
-      },
-    },
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  moveSongInQueue: createRoute({
-    method: 'patch',
-    path: `/api/${API_VERSION}/queue/{index}`,
-    summary: 'move song in queue',
-    description: 'Move a song in the queue',
-    request: {
-      params: QueueParamsSchema,
-      body: {
-        description: 'index to move the song to',
-        content: {
-          'application/json': {
-            schema: MoveSongInQueueSchema,
-          },
-        },
-      },
-    },
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  removeSongFromQueue: createRoute({
-    method: 'delete',
-    path: `/api/${API_VERSION}/queue/{index}`,
-    summary: 'remove song from queue',
-    description: 'Remove a song from the queue',
-    request: {
-      params: QueueParamsSchema,
-    },
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  setQueueIndex: createRoute({
-    method: 'patch',
-    path: `/api/${API_VERSION}/queue`,
-    summary: 'set queue index',
-    description: 'Set the current index of the queue',
-    request: {
-      body: {
-        description: 'index to move the song to',
-        content: {
-          'application/json': {
-            schema: SetQueueIndexSchema,
-          },
-        },
-      },
-    },
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  clearQueue: createRoute({
-    method: 'delete',
-    path: `/api/${API_VERSION}/queue`,
-    summary: 'clear queue',
-    description: 'Clear the queue',
-    responses: {
-      204: {
-        description: 'Success',
-      },
-    },
-  }),
-  search: createRoute({
-    method: 'post',
-    path: `/api/${API_VERSION}/search`,
-    summary: 'search for a song',
-    description: 'search for a song',
-    request: {
-      body: {
-        description: 'search query',
-        content: {
-          'application/json': {
-            schema: SearchSchema,
-          },
-        },
-      },
-    },
-    responses: {
-      200: {
-        description: 'Success',
-        content: {
-          'application/json': {
-            schema: z.object({}),
-          },
-        },
-      },
-    },
-  }),
+export interface Route {
+  method: Method;
+  path: string;
+  summary: string;
+  body?: BodySchema;
+  /** Reachable without a token. */
+  public?: boolean;
+  handle(request: RouteRequest): Reply | Promise<Reply>;
+}
+
+export type MediaTypeName = "AUDIO" | "ORIGINAL_MUSIC_VIDEO" | "USER_GENERATED_CONTENT" | "PODCAST_EPISODE" | "OTHER_VIDEO";
+
+/** The original's SongInfo shape, which existing API clients parse. */
+export interface SongInfo {
+  title: string;
+  alternativeTitle?: string;
+  artist: string;
+  artistUrl?: string;
+  views: number;
+  uploadDate?: string;
+  imageSrc: string | null;
+  isPaused: boolean;
+  songDuration: number;
+  elapsedSeconds: number;
+  url: string;
+  album: string | null;
+  videoId: string;
+  playlistId?: string;
+  mediaType: MediaTypeName;
+  tags: string[];
+}
+
+export interface QueueResponse {
+  items?: QueueItem[];
+  autoPlaying?: boolean;
+  continuation?: string;
+}
+
+interface PanelVideoRenderer {
+  selected?: boolean;
+  videoId?: string;
+  title?: { runs?: { text: string }[] };
+  thumbnail?: unknown;
+  lengthText?: unknown;
+  shortBylineText?: unknown;
+}
+
+export interface QueueItem {
+  playlistPanelVideoRenderer?: PanelVideoRenderer;
+  playlistPanelVideoWrapperRenderer?: { primaryRenderer?: { playlistPanelVideoRenderer?: PanelVideoRenderer } };
+}
+
+export interface Backend {
+  state(): NowPlaying;
+  details(): SongDetails | undefined;
+  control(action: PlayerAction): void;
+  /** Asks the page part. */
+  page<T = unknown>(event: string, payload?: unknown): Promise<T>;
+  setFullscreen(fullscreen: boolean): Promise<void>;
+  /** Issues an access token for a client, asking the user if needed; null when denied. */
+  authorize(id: string, remoteAddress: string): Promise<string | null>;
+}
+
+const MUSIC_VIDEO_TYPES: Record<string, MediaTypeName> = {
+  MUSIC_VIDEO_TYPE_ATV: "AUDIO",
+  MUSIC_VIDEO_TYPE_OMV: "ORIGINAL_MUSIC_VIDEO",
+  MUSIC_VIDEO_TYPE_UGC: "USER_GENERATED_CONTENT",
+  MUSIC_VIDEO_TYPE_PODCAST_EPISODE: "PODCAST_EPISODE",
 };
+const MEDIA_TYPES: Record<string, MediaTypeName> = { audio: "AUDIO", video: "ORIGINAL_MUSIC_VIDEO", podcast: "PODCAST_EPISODE" };
 
-type PromiseOrValue<T> = T | Promise<T>;
+export const REPEAT_NAMES: Record<RepeatMode, "NONE" | "ALL" | "ONE"> = { none: "NONE", all: "ALL", one: "ONE" };
 
-export const register = (
-  app: HonoApp,
-  { window }: BackendContext<APIServerConfig>,
-  songInfoGetter: () => PromiseOrValue<SongInfo | undefined>,
-  repeatModeGetter: () => PromiseOrValue<RepeatMode | undefined>,
-  likeTypeGetter: () => PromiseOrValue<LikeType | undefined>,
-  volumeStateGetter: () => PromiseOrValue<VolumeState | undefined>,
-) => {
-  const controller = getSongControls(window);
+export function isPaused(state: NowPlaying) {
+  return state.ad || (state.status !== "playing" && state.status !== "buffering");
+}
 
-  app.openapi(routes.previous, (ctx) => {
-    controller.previous();
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.next, (ctx) => {
-    controller.next();
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.play, (ctx) => {
-    controller.play();
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.pause, (ctx) => {
-    controller.pause();
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.togglePlay, (ctx) => {
-    controller.playPause();
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.getLikeState, async (ctx) => {
-    ctx.status(200);
-    return ctx.json({ state: (await likeTypeGetter()) ?? null });
-  });
-  app.openapi(routes.like, (ctx) => {
-    controller.like();
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.dislike, (ctx) => {
-    controller.dislike();
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.seekTo, (ctx) => {
-    const { seconds } = ctx.req.valid('json');
-    controller.seekTo(seconds);
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.goBack, (ctx) => {
-    const { seconds } = ctx.req.valid('json');
-    controller.goBack(seconds);
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.goForward, (ctx) => {
-    const { seconds } = ctx.req.valid('json');
-    controller.goForward(seconds);
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-
-  app.openapi(routes.getShuffleState, async (ctx) => {
-    const stateResponsePromise = new Promise<boolean>((resolve) => {
-      ipcMain.once(
-        'peard:get-shuffle-response',
-        (_, isShuffled: boolean | undefined) => {
-          return resolve(!!isShuffled);
-        },
-      );
-
-      controller.requestShuffleInformation();
-    });
-
-    const isShuffled = await stateResponsePromise;
-
-    ctx.status(200);
-    return ctx.json({ state: isShuffled });
-  });
-
-  app.openapi(routes.shuffle, (ctx) => {
-    controller.shuffle();
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-
-  app.openapi(routes.repeatMode, async (ctx) => {
-    ctx.status(200);
-    return ctx.json({ mode: (await repeatModeGetter()) ?? null });
-  });
-  app.openapi(routes.switchRepeat, (ctx) => {
-    const { iteration } = ctx.req.valid('json');
-    controller.switchRepeat(iteration);
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.setVolume, (ctx) => {
-    const { volume } = ctx.req.valid('json');
-    controller.setVolume(volume);
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.getVolumeState, async (ctx) => {
-    ctx.status(200);
-    return ctx.json(
-      (await volumeStateGetter()) ?? { state: 0, isMuted: false },
-    );
-  });
-  app.openapi(routes.setFullscreen, (ctx) => {
-    const { state } = ctx.req.valid('json');
-    controller.setFullscreen(state);
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.toggleMute, (ctx) => {
-    controller.muteUnmute();
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-
-  app.openapi(routes.getFullscreenState, async (ctx) => {
-    const stateResponsePromise = new Promise<boolean>((resolve) => {
-      ipcMain.once(
-        'peard:set-fullscreen',
-        (_, isFullscreen: boolean | undefined) => {
-          return resolve(!!isFullscreen);
-        },
-      );
-
-      controller.requestFullscreenInformation();
-    });
-
-    const fullscreen = await stateResponsePromise;
-
-    ctx.status(200);
-    return ctx.json({ state: fullscreen });
-  });
-
-  const songInfo = async (ctx: Context) => {
-    const info = await songInfoGetter();
-
-    if (!info) {
-      ctx.status(204);
-      return ctx.body(null);
-    }
-
-    const body = { ...info };
-    delete body.image;
-
-    ctx.status(200);
-    return ctx.json(body satisfies ResponseSongInfo);
+export function songInfo(state: NowPlaying, details: SongDetails | undefined): SongInfo | null {
+  const track = state.track;
+  if (!track) return null;
+  const extra = details?.videoId === track.videoId ? details : undefined;
+  const info: SongInfo = {
+    title: track.title,
+    artist: track.artist,
+    views: extra?.views ?? 0,
+    imageSrc: track.artworkUrl ?? null,
+    isPaused: isPaused(state),
+    songDuration: track.durationSeconds,
+    elapsedSeconds: Math.floor(livePosition(state)),
+    url: track.url,
+    album: track.album ?? null,
+    videoId: track.videoId,
+    mediaType: MUSIC_VIDEO_TYPES[extra?.musicVideoType ?? ""] ?? MEDIA_TYPES[track.mediaType] ?? "OTHER_VIDEO",
+    tags: extra?.tags ?? [],
   };
-  app.openapi(routes.oldSongInfo, songInfo);
-  app.openapi(routes.songInfo, songInfo);
+  if (extra?.alternativeTitle) info.alternativeTitle = extra.alternativeTitle;
+  if (extra?.artistUrl) info.artistUrl = extra.artistUrl;
+  if (extra?.uploadDate) info.uploadDate = extra.uploadDate;
+  if (track.playlistId) info.playlistId = track.playlistId;
+  return info;
+}
 
-  // Queue
-  const queueInfo = async (ctx: Context) => {
-    const queueResponsePromise = new Promise<QueueResponse>((resolve) => {
-      ipcMain.once('peard:get-queue-response', (_, queue: QueueResponse) => {
-        return resolve(queue);
-      });
+const NO_CONTENT: Reply = { status: 204 };
+const ok = (body: unknown): Reply => ({ status: 200, body });
 
-      controller.requestQueueInformation();
-    });
+const renderer = (item: QueueItem | undefined) =>
+  item?.playlistPanelVideoRenderer ?? item?.playlistPanelVideoWrapperRenderer?.primaryRenderer?.playlistPanelVideoRenderer;
 
-    const info = await queueResponsePromise;
-
-    if (!info) {
-      ctx.status(204);
-      return ctx.body(null);
-    }
-
-    ctx.status(200);
-    return ctx.json(info);
+export function createRoutes(backend: Backend): Route[] {
+  const action = (method: Method, path: string, summary: string, act: PlayerAction): Route => ({
+    method,
+    path: `${API}${path}`,
+    summary,
+    handle() {
+      backend.control(act);
+      return NO_CONTENT;
+    },
+  });
+  const pageAction = (method: Method, path: string, summary: string, run: (request: RouteRequest) => Promise<unknown>, body?: BodySchema): Route => ({
+    method,
+    path: `${API}${path}`,
+    summary,
+    ...(body ? { body } : {}),
+    async handle(request) {
+      await run(request);
+      return NO_CONTENT;
+    },
+  });
+  const getSong = (): Reply => {
+    const info = songInfo(backend.state(), backend.details());
+    return info ? ok(info) : NO_CONTENT;
   };
-  app.openapi(routes.oldQueueInfo, queueInfo);
-  app.openapi(routes.queueInfo, queueInfo);
+  const getQueue = async (): Promise<Reply> => {
+    const queue = await backend.page<QueueResponse | null>("queue");
+    return queue ? ok(queue) : NO_CONTENT;
+  };
+  const num = (value: unknown) => value as number;
 
-  app.openapi(routes.nextSongInfo, async (ctx) => {
-    const queueResponsePromise = new Promise<QueueResponse>((resolve) => {
-      ipcMain.once('peard:get-queue-response', (_, queue: QueueResponse) => {
-        return resolve(queue);
-      });
+  return [
+    {
+      method: "POST",
+      path: "/auth/{id}",
+      summary: "Request an access token (asks the user to allow the client the first time)",
+      public: true,
+      async handle({ params, remoteAddress }) {
+        const token = await backend.authorize(params.id!, remoteAddress);
+        return token ? ok({ accessToken: token }) : { status: 403 };
+      },
+    },
+    action("POST", "/previous", "Play the previous song", { type: "previous" }),
+    action("POST", "/next", "Play the next song", { type: "next" }),
+    action("POST", "/play", "Play", { type: "play" }),
+    action("POST", "/pause", "Pause", { type: "pause" }),
+    action("POST", "/toggle-play", "Toggle play/pause", { type: "toggle" }),
+    {
+      method: "GET",
+      path: `${API}/like-state`,
+      summary: "Get the like state",
+      handle() {
+        const like = backend.state().like;
+        return ok({ state: backend.state().track ? { like: "LIKE", dislike: "DISLIKE", none: "INDIFFERENT" }[like] : null });
+      },
+    },
+    pageAction("POST", "/like", "Like the song", () => backend.page("like", "LIKE")),
+    pageAction("POST", "/dislike", "Dislike the song", () => backend.page("like", "DISLIKE")),
+    {
+      method: "POST",
+      path: `${API}/seek-to`,
+      summary: "Seek to a position",
+      body: { seconds: "number" },
+      handle({ body }) {
+        backend.control({ type: "seek", seconds: num(body.seconds) });
+        return NO_CONTENT;
+      },
+    },
+    {
+      method: "POST",
+      path: `${API}/go-back`,
+      summary: "Seek backwards",
+      body: { seconds: "number" },
+      handle({ body }) {
+        backend.control({ type: "seekBy", seconds: -num(body.seconds) });
+        return NO_CONTENT;
+      },
+    },
+    {
+      method: "POST",
+      path: `${API}/go-forward`,
+      summary: "Seek forwards",
+      body: { seconds: "number" },
+      handle({ body }) {
+        backend.control({ type: "seekBy", seconds: num(body.seconds) });
+        return NO_CONTENT;
+      },
+    },
+    {
+      method: "GET",
+      path: `${API}/shuffle`,
+      summary: "Get the shuffle state",
+      handle: () => ok({ state: backend.state().shuffle }),
+    },
+    action("POST", "/shuffle", "Shuffle the queue", { type: "shuffle" }),
+    {
+      method: "GET",
+      path: `${API}/repeat-mode`,
+      summary: "Get the repeat mode",
+      handle: () => ok({ mode: REPEAT_NAMES[backend.state().repeat] }),
+    },
+    {
+      method: "POST",
+      path: `${API}/switch-repeat`,
+      summary: "Advance the repeat mode (NONE → ALL → ONE) `iteration` times",
+      body: { iteration: "integer" },
+      handle({ body }) {
+        const times = ((num(body.iteration) % 3) + 3) % 3;
+        for (let i = 0; i < times; i++) backend.control({ type: "repeat" });
+        return NO_CONTENT;
+      },
+    },
+    {
+      method: "POST",
+      path: `${API}/volume`,
+      summary: "Set the volume (0–100)",
+      body: { volume: "number" },
+      handle({ body }) {
+        backend.control({ type: "volume", value: num(body.volume) });
+        return NO_CONTENT;
+      },
+    },
+    {
+      method: "GET",
+      path: `${API}/volume`,
+      summary: "Get the volume state",
+      handle() {
+        const { volume, muted } = backend.state();
+        return ok({ state: volume, isMuted: muted });
+      },
+    },
+    {
+      method: "POST",
+      path: `${API}/fullscreen`,
+      summary: "Enter or leave fullscreen",
+      body: { state: "boolean" },
+      async handle({ body }) {
+        await backend.setFullscreen(body.state as boolean);
+        return NO_CONTENT;
+      },
+    },
+    {
+      method: "GET",
+      path: `${API}/fullscreen`,
+      summary: "Get the fullscreen state",
+      handle: async () => ok({ state: await backend.page<boolean>("fullscreen") }),
+    },
+    action("POST", "/toggle-mute", "Toggle mute", { type: "mute" }),
+    { method: "GET", path: `${API}/song-info`, summary: "Get the current song (deprecated alias of /song)", handle: getSong },
+    { method: "GET", path: `${API}/song`, summary: "Get the current song", handle: getSong },
+    { method: "GET", path: `${API}/queue-info`, summary: "Get the queue (deprecated alias of /queue)", handle: getQueue },
+    { method: "GET", path: `${API}/queue`, summary: "Get the queue", handle: getQueue },
+    {
+      method: "GET",
+      path: `${API}/queue/next`,
+      summary: "Get the next song in the queue",
+      async handle() {
+        const items = (await backend.page<QueueResponse | null>("queue"))?.items ?? [];
+        const next = renderer(items[items.findIndex((item) => renderer(item)?.selected) + 1]);
+        if (!next) return NO_CONTENT;
+        return ok({
+          title: next.title?.runs?.[0]?.text,
+          videoId: next.videoId,
+          thumbnail: next.thumbnail,
+          lengthText: next.lengthText,
+          shortBylineText: next.shortBylineText,
+        });
+      },
+    },
+    pageAction(
+      "POST",
+      "/queue",
+      "Add a song to the queue",
+      ({ body }) =>
+        backend.page("queue:add", { videoId: body.videoId, insertPosition: body.insertPosition ?? "INSERT_AT_END" }),
+      { videoId: "string", insertPosition: ["INSERT_AT_END", "INSERT_AFTER_CURRENT_VIDEO"] },
+    ),
+    pageAction(
+      "PATCH",
+      "/queue/{index}",
+      "Move a song in the queue",
+      ({ params, body }) => backend.page("queue:move", { fromIndex: Number(params.index), toIndex: body.toIndex }),
+      { toIndex: "integer" },
+    ),
+    pageAction("DELETE", "/queue/{index}", "Remove a song from the queue", ({ params }) =>
+      backend.page("queue:remove", Number(params.index)),
+    ),
+    pageAction("PATCH", "/queue", "Play the song at a queue index", ({ body }) => backend.page("queue:set-index", body.index), {
+      index: "integer",
+    }),
+    pageAction("DELETE", "/queue", "Clear the queue", () => backend.page("queue:clear")),
+    {
+      method: "POST",
+      path: `${API}/search`,
+      summary: "Search \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music (raw innertube response)",
+      body: { query: "string", params: "string?", continuation: "string?" },
+      handle: async ({ body }) => ok(await backend.page("search", body)),
+    },
+  ];
+}
 
-      controller.requestQueueInformation();
-    });
-
-    const queue = await queueResponsePromise;
-
-    if (!queue?.items || queue.items.length === 0) {
-      ctx.status(204);
-      return ctx.body(null);
+/** Validates a JSON body against a schema; returns an error message or null. */
+export function validateBody(schema: BodySchema, body: unknown): string | null {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) return "expected a JSON object";
+  const record = body as Record<string, unknown>;
+  for (const [key, type] of Object.entries(schema)) {
+    const value = record[key];
+    if (Array.isArray(type)) {
+      if (value !== undefined && !type.includes(value as string)) return `${key} must be one of ${type.join(", ")}`;
+      continue;
     }
+    const optional = (type as string).endsWith("?");
+    const base = (type as string).replace("?", "") as FieldType;
+    if (value === undefined && optional) continue;
+    const valid =
+      base === "integer"
+        ? Number.isInteger(value) && (value as number) >= 0
+        : base === "number"
+          ? typeof value === "number" && Number.isFinite(value)
+          : typeof value === base;
+    if (!valid) return `${key} must be ${base === "integer" ? "a non-negative integer" : `a ${base}`}`;
+  }
+  return null;
+}
 
-    // Find the currently selected song
-    const currentIndex = queue.items.findIndex((item) => {
-      const renderer =
-        item.playlistPanelVideoRenderer ||
-        item.playlistPanelVideoWrapperRenderer?.primaryRenderer
-          ?.playlistPanelVideoRenderer;
-      return renderer?.selected === true;
-    });
-
-    // Get the next song (currentIndex + 1)
-    const nextIndex = currentIndex + 1;
-    if (nextIndex >= queue.items.length) {
-      // No next song available
-      ctx.status(204);
-      return ctx.body(null);
-    }
-
-    const nextItem = queue.items[nextIndex];
-    const nextRenderer =
-      nextItem.playlistPanelVideoRenderer ||
-      nextItem.playlistPanelVideoWrapperRenderer?.primaryRenderer
-        ?.playlistPanelVideoRenderer;
-
-    if (!nextRenderer) {
-      ctx.status(204);
-      return ctx.body(null);
-    }
-
-    // Extract relevant information similar to SongInfo format
-    const nextSongInfo = {
-      title: nextRenderer.title?.runs?.[0]?.text,
-      videoId: nextRenderer.videoId,
-      thumbnail: nextRenderer.thumbnail,
-      lengthText: nextRenderer.lengthText,
-      shortBylineText: nextRenderer.shortBylineText,
+/** An OpenAPI 3.1 document for the route table. */
+export function openApiDocument(routes: readonly Route[], title: string) {
+  const paths: Record<string, Record<string, unknown>> = {};
+  for (const route of routes) {
+    const params = [...route.path.matchAll(/\{(\w+)\}/g)].map(([, name]) => ({
+      name,
+      in: "path",
+      required: true,
+      schema: { type: name === "index" ? "integer" : "string" },
+    }));
+    const operation: Record<string, unknown> = {
+      summary: route.summary,
+      ...(route.public ? { security: [] } : {}),
+      ...(params.length ? { parameters: params } : {}),
+      responses: { 200: { description: "Success" }, 204: { description: "No content" } },
     };
+    if (route.body) operation.requestBody = { required: true, content: { "application/json": { schema: jsonSchema(route.body) } } };
+    (paths[route.path] ??= {})[route.method.toLowerCase()] = operation;
+  }
+  paths[`${API}/ws`] = {
+    get: {
+      summary: "WebSocket with real-time player updates (pass ?token= unless auth is off)",
+      responses: { 101: { description: "Switching Protocols" } },
+    },
+  };
+  return {
+    openapi: "3.1.0",
+    info: {
+      version: "1.0.0",
+      title,
+      description: "Get an access token from `/auth/{id}` first to call the endpoints under `/api`.",
+    },
+    components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" } } },
+    security: [{ bearerAuth: [] }],
+    paths,
+  };
+}
 
-    ctx.status(200);
-    return ctx.json(nextSongInfo);
-  });
-
-  app.openapi(routes.addSongToQueue, (ctx) => {
-    const { videoId, insertPosition } = ctx.req.valid('json');
-    controller.addSongToQueue(videoId, insertPosition);
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.moveSongInQueue, (ctx) => {
-    const index = Number(ctx.req.param('index'));
-    const { toIndex } = ctx.req.valid('json');
-    controller.moveSongInQueue(index, toIndex);
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.removeSongFromQueue, (ctx) => {
-    const index = Number(ctx.req.param('index'));
-    controller.removeSongFromQueue(index);
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.setQueueIndex, (ctx) => {
-    const { index } = ctx.req.valid('json');
-    controller.setQueueIndex(index);
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.clearQueue, (ctx) => {
-    controller.clearQueue();
-
-    ctx.status(204);
-    return ctx.body(null);
-  });
-  app.openapi(routes.search, async (ctx) => {
-    const { query, params, continuation } = ctx.req.valid('json');
-    const response = await controller.search(query, params, continuation);
-
-    ctx.status(200);
-    return ctx.json(response as object);
-  });
-};
+function jsonSchema(schema: BodySchema) {
+  const properties: Record<string, unknown> = {};
+  const required: string[] = [];
+  for (const [key, type] of Object.entries(schema)) {
+    if (Array.isArray(type)) {
+      properties[key] = { type: "string", enum: type };
+      continue;
+    }
+    const name = type as string;
+    if (!name.endsWith("?")) required.push(key);
+    properties[key] = { type: name.replace("?", "") };
+  }
+  return { type: "object", properties, required };
+}

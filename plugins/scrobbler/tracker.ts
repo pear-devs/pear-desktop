@@ -1,142 +1,128 @@
-import { type BrowserWindow } from 'electron';
+// Decides when to send "now playing" and when a play counts as a scrobble,
+// following Last.fm's rule: tracks longer than 30 s, scrobbled once they have
+// been *listened to* (not paused, not an ad, not skipped over) for half their
+// duration or 4 minutes, whichever comes first.
 
-import {
-  registerCallback,
-  MediaType,
-  type SongInfo,
-  SongInfoEvent,
-} from '@/providers/song-info';
-import { createBackend } from '@/utils';
+import type { NowPlaying, Track } from "@pear/sdk";
 
-import { LastFmScrobbler } from './services/lastfm';
-import { ListenbrainzScrobbler } from './services/listenbrainz';
+export interface Play {
+  track: Track;
+  /** Date.now() when this play started (the scrobble timestamp). */
+  startedAt: number;
+}
 
-import type { ScrobblerPluginConfig } from './index';
-import type { ScrobblerBase } from './services/base';
+export interface TrackerEvents {
+  nowPlaying(play: Play): void;
+  scrobble(play: Play): void;
+}
 
-export type SetConfType = (
-  conf: Partial<Omit<ScrobblerPluginConfig, 'enabled'>>,
-) => void | Promise<void>;
+const MIN_DURATION_S = 30;
+const MAX_THRESHOLD_S = 240;
+// A jump from the end back to the start of the same track is a replay (repeat one).
+const REPLAY_TAIL_S = 5;
 
-export const backend = createBackend<
-  {
-    config?: ScrobblerPluginConfig;
-    window?: BrowserWindow;
-    enabledScrobblers: Map<string, ScrobblerBase>;
-    toggleScrobblers(
-      config: ScrobblerPluginConfig,
-      window: BrowserWindow,
-    ): void;
-    createSessions(
-      config: ScrobblerPluginConfig,
-      setConfig: SetConfType,
-    ): Promise<void>;
-    setConfig?: SetConfType;
-  },
-  ScrobblerPluginConfig
->({
-  enabledScrobblers: new Map(),
+/** Seconds of listening after which a track is scrobbled, or null if it never is. */
+export function scrobbleThreshold(durationSeconds: number) {
+  if (durationSeconds <= 0) return MAX_THRESHOLD_S;
+  if (durationSeconds <= MIN_DURATION_S) return null;
+  return Math.min(durationSeconds / 2, MAX_THRESHOLD_S);
+}
 
-  toggleScrobblers(config: ScrobblerPluginConfig, window: BrowserWindow) {
-    if (config.scrobblers.lastfm && config.scrobblers.lastfm.enabled) {
-      this.enabledScrobblers.set('lastfm', new LastFmScrobbler(window));
+interface Current extends Play {
+  listenedMs: number;
+  scrobbled: boolean;
+  started: boolean;
+  lastPosition: number;
+}
+
+export class ScrobbleTracker {
+  #events: TrackerEvents;
+  #current: Current | undefined;
+  #playingSince: number | undefined;
+  #ended = false;
+  #last: NowPlaying | undefined;
+
+  constructor(events: TrackerEvents) {
+    this.#events = events;
+  }
+
+  /** Seconds listened to the current play so far. */
+  listened(now = Date.now()) {
+    if (!this.#current) return 0;
+    const running = this.#playingSince === undefined ? 0 : now - this.#playingSince;
+    return (this.#current.listenedMs + running) / 1000;
+  }
+
+  /** Milliseconds until the current play reaches the threshold, or null if not counting. */
+  timeUntilScrobble(now = Date.now()) {
+    const current = this.#current;
+    if (!current || current.scrobbled || this.#playingSince === undefined) return null;
+    const threshold = scrobbleThreshold(current.track.durationSeconds);
+    if (threshold === null) return null;
+    return Math.max(0, threshold * 1000 - this.listened(now) * 1000);
+  }
+
+  update(state: NowPlaying, now = Date.now()) {
+    this.#last = state;
+    const current = this.#accumulate(now);
+    const track = state.track;
+    if (!track) {
+      this.#current = undefined;
+      this.#playingSince = undefined;
+      return;
+    }
+
+    const position = state.positionSeconds;
+    const replay =
+      !!current &&
+      current.track.videoId === track.videoId &&
+      current.started &&
+      position < REPLAY_TAIL_S &&
+      (this.#ended || current.lastPosition >= track.durationSeconds - REPLAY_TAIL_S);
+    const playing = state.status === "playing" && !state.ad;
+    let play = current;
+    if (!play || play.track.videoId !== track.videoId || replay) {
+      play = { track, startedAt: now, listenedMs: 0, scrobbled: false, started: false, lastPosition: position };
+      this.#current = play;
     } else {
-      this.enabledScrobblers.delete('lastfm');
+      play.track = track;
     }
+    if (!state.ad) play.lastPosition = position;
+    if (state.status === "ended") this.#ended = true;
+    else if (playing) this.#ended = false;
 
-    if (
-      config.scrobblers.listenbrainz &&
-      config.scrobblers.listenbrainz.enabled
-    ) {
-      this.enabledScrobblers.set('listenbrainz', new ListenbrainzScrobbler());
-    } else {
-      this.enabledScrobblers.delete('listenbrainz');
-    }
-  },
-
-  async createSessions(config: ScrobblerPluginConfig, setConfig: SetConfType) {
-    for (const [, scrobbler] of this.enabledScrobblers) {
-      if (!scrobbler.isSessionCreated(config)) {
-        await scrobbler.createSession(config, setConfig);
+    const wasPlaying = this.#playingSince !== undefined && current === play;
+    this.#playingSince = playing ? now : undefined;
+    if (playing && !wasPlaying) {
+      if (!play.started) {
+        play.started = true;
+        play.startedAt = now - position * 1000;
       }
+      this.#events.nowPlaying({ track: play.track, startedAt: play.startedAt });
     }
-  },
+    this.#check(now);
+  }
 
-  async start({ getConfig, setConfig, window }) {
-    const config = (this.config = await getConfig());
-    // This will store the timeout that will trigger addScrobble
-    let scrobbleTimer: NodeJS.Timeout | undefined;
+  /** Re-evaluates the threshold with the last state (for timers between updates). */
+  tick(now = Date.now()) {
+    if (this.#last) this.update(this.#last, now);
+  }
 
-    this.window = window;
-    this.toggleScrobblers(config, window);
-    await this.createSessions(config, setConfig);
-    this.setConfig = setConfig;
-
-    registerCallback((songInfo: SongInfo, event) => {
-      if (event === SongInfoEvent.TimeChanged) return;
-      // Set remove the old scrobble timer
-      clearTimeout(scrobbleTimer);
-      if (!songInfo.isPaused) {
-        const configNonnull = this.config!;
-        // Scrobblers normally have no trouble working with official music videos
-        if (
-          !configNonnull.scrobbleOtherMedia &&
-          songInfo.mediaType !== MediaType.Audio &&
-          songInfo.mediaType !== MediaType.OriginalMusicVideo
-        ) {
-          return;
-        }
-
-        // Scrobble when the song is halfway through, or has passed the 4-minute mark
-        const scrobbleTime = Math.min(
-          Math.ceil(songInfo.songDuration / 2),
-          4 * 60,
-        );
-        if (scrobbleTime > (songInfo.elapsedSeconds ?? 0)) {
-          // Scrobble still needs to happen
-          const timeToWait =
-            (scrobbleTime - (songInfo.elapsedSeconds ?? 0)) * 1000;
-          scrobbleTimer = setTimeout(
-            (info, config) => {
-              this.enabledScrobblers.forEach((scrobbler) =>
-                scrobbler.addScrobble(info, config, setConfig),
-              );
-            },
-            timeToWait,
-            songInfo,
-            configNonnull,
-          );
-        }
-
-        this.enabledScrobblers.forEach((scrobbler) =>
-          scrobbler.setNowPlaying(songInfo, configNonnull, setConfig),
-        );
-      }
-    });
-  },
-
-  async onConfigChange(newConfig: ScrobblerPluginConfig) {
-    this.enabledScrobblers.clear();
-
-    this.toggleScrobblers(newConfig, this.window!);
-    for (const [scrobblerName, scrobblerConfig] of Object.entries(
-      newConfig.scrobblers,
-    )) {
-      if (scrobblerConfig.enabled) {
-        const scrobbler = this.enabledScrobblers.get(scrobblerName);
-        if (
-          this.config?.scrobblers?.[
-            scrobblerName as keyof typeof newConfig.scrobblers
-          ]?.enabled !== scrobblerConfig.enabled &&
-          scrobbler &&
-          !scrobbler.isSessionCreated(newConfig) &&
-          this.setConfig
-        ) {
-          await scrobbler.createSession(newConfig, this.setConfig);
-        }
-      }
+  #accumulate(now: number) {
+    const current = this.#current;
+    if (current && this.#playingSince !== undefined) {
+      current.listenedMs += Math.max(0, now - this.#playingSince);
+      this.#playingSince = now;
     }
+    return current;
+  }
 
-    this.config = newConfig;
-  },
-});
+  #check(now: number) {
+    const current = this.#current;
+    if (!current || current.scrobbled) return;
+    const threshold = scrobbleThreshold(current.track.durationSeconds);
+    if (threshold === null || this.listened(now) < threshold) return;
+    current.scrobbled = true;
+    this.#events.scrobble({ track: current.track, startedAt: current.startedAt });
+  }
+}

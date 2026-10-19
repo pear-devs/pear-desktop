@@ -1,101 +1,94 @@
-import { net } from 'electron';
+// Sends song changes and play/pause to Lumia Stream's local media API.
 
-import { t } from '@/i18n';
-import { registerCallback } from '@/providers/song-info';
-import { createPlugin } from '@/utils';
+import { definePlugin, livePosition, type NowPlaying } from "@pear/sdk";
+import { readSongDetails, type SongDetails } from "@pear/sdk/song-details";
+import { net } from "electron";
 
-type LumiaData = {
-  origin: string;
-  eventType: string;
-  url?: string;
-  videoId?: string;
-  playlistId?: string;
-  cover?: string | null;
-  cover_url?: string | null;
-  title?: string;
-  artists?: string[];
-  status?: string;
-  progress?: number;
-  duration?: number;
-  album_url?: string | null;
-  album?: string | null;
-  views?: number;
-  isPaused?: boolean;
+const PORT = 39231;
+/** Lumia Stream's public token for this integration. */
+const TOKEN = "lsmedia_ytmsI7812";
+const HEADERS = {
+  "Content-Type": "application/json",
+  Accept: "application/json",
+  "Access-Control-Allow-Headers": "*",
+  "Access-Control-Allow-Origin": "*",
 };
 
-export default createPlugin({
-  name: () => t('plugins.lumiastream.name'),
-  description: () => t('plugins.lumiastream.description'),
-  restartNeeded: true,
-  config: {
-    enabled: false,
+const isPaused = (state: NowPlaying) => state.ad || (state.status !== "playing" && state.status !== "buffering");
+
+export default definePlugin({
+  id: "lumiastream",
+  name: "Lumia Stream",
+  description: "Let Lumia Stream react to the songs you play.",
+  host: {
+    start(ctx) {
+      let details: SongDetails | undefined;
+      let unreachable = false;
+      let stopped = false;
+      ctx.onCleanup(() => (stopped = true));
+
+      const post = (eventType: "switchSong" | "playPause") => {
+        const state = ctx.player.state;
+        const track = state.track;
+        if (stopped || !track || (!track.title && !track.artist)) return;
+        const extra = details?.videoId === track.videoId ? details : undefined;
+        const paused = isPaused(state);
+        const data = {
+          origin: "\u0079\u006f\u0075\u0074\u0075\u0062\u0065music",
+          eventType,
+          url: track.url,
+          videoId: track.videoId,
+          ...(track.playlistId ? { playlistId: track.playlistId } : {}),
+          cover: track.artworkUrl ?? null,
+          cover_url: track.artworkUrl ?? null,
+          album_url: track.artworkUrl ?? null,
+          title: track.title,
+          artists: [track.artist],
+          status: paused ? "stopped" : "playing",
+          isPaused: paused,
+          progress: Math.round(livePosition(state) * 1000),
+          duration: Math.round(track.durationSeconds * 1000),
+          album: track.album ?? null,
+          ...(extra?.views !== undefined ? { views: extra.views } : {}),
+        };
+        net
+          .fetch(`http://127.0.0.1:${PORT}/api/media`, {
+            method: "POST",
+            headers: HEADERS,
+            body: JSON.stringify({ token: TOKEN, data }),
+          })
+          .then(() => {
+            if (unreachable) ctx.log.info("Lumia Stream is reachable again");
+            unreachable = false;
+          })
+          .catch((error: unknown) => {
+            if (!unreachable) ctx.log.info(`Lumia Stream isn't reachable on port ${PORT}`, error);
+            unreachable = true;
+          });
+      };
+
+      ctx.player.on("change", (state, previous) => {
+        if (state.track && state.track.videoId !== previous.track?.videoId) {
+          const videoId = state.track.videoId;
+          details = undefined;
+          post("switchSong");
+          // Views come from the page part; resend once they're known.
+          ctx
+            .request<SongDetails | null>("details", undefined, { timeout: 5000 })
+            .then((result) => {
+              if (result?.videoId !== videoId || ctx.player.state.track?.videoId !== videoId) return;
+              details = result;
+              post("switchSong");
+            })
+            .catch(() => {});
+        } else if (state.track && isPaused(state) !== isPaused(previous)) {
+          post("playPause");
+        }
+      });
+      if (ctx.player.state.track) post("switchSong");
+    },
   },
-  backend({ ipc }) {
-    const secToMilisec = (t?: number) =>
-      t ? Math.round(Number(t) * 1e3) : undefined;
-    const previousStatePaused = null;
-
-    const data: LumiaData = {
-      origin:
-        '\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u006d\u0075\u0073\u0069\u0063',
-      eventType: 'switchSong',
-    };
-
-    const post = (data: LumiaData) => {
-      const port = 39231;
-      const headers = {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Access-Control-Allow-Headers': '*',
-        'Access-Control-Allow-Origin': '*',
-      } as const;
-      const url = `http://127.0.0.1:${port}/api/media`;
-
-      net
-        .fetch(url, {
-          method: 'POST',
-          body: JSON.stringify({ token: 'lsmedia_ytmsI7812', data }),
-          headers,
-        })
-        .catch((error: { code: number; errno: number }) => {
-          console.log(
-            `Error: '${
-              error.code || error.errno
-            }' - when trying to access lumiastream webserver at port ${port}`,
-          );
-        });
-    };
-
-    ipc.on('peard:player-api-loaded', () =>
-      ipc.send('peard:setup-time-changed-listener'),
-    );
-
-    registerCallback((songInfo) => {
-      if (!songInfo.title && !songInfo.artist) {
-        return;
-      }
-
-      if (previousStatePaused === null) {
-        data.eventType = 'switchSong';
-      } else if (previousStatePaused !== songInfo.isPaused) {
-        data.eventType = 'playPause';
-      }
-
-      data.duration = secToMilisec(songInfo.songDuration);
-      data.progress = secToMilisec(songInfo.elapsedSeconds);
-      data.url = songInfo.url;
-      data.videoId = songInfo.videoId;
-      data.playlistId = songInfo.playlistId;
-      data.cover = songInfo.imageSrc;
-      data.cover_url = songInfo.imageSrc;
-      data.album_url = songInfo.imageSrc;
-      data.title = songInfo.title;
-      data.artists = [songInfo.artist];
-      data.status = songInfo.isPaused ? 'stopped' : 'playing';
-      data.isPaused = songInfo.isPaused;
-      data.album = songInfo.album;
-      data.views = songInfo.views;
-      post(data);
-    });
+  page: (ctx) => {
+    ctx.host.handle("details", () => (ctx.player.api ? readSongDetails(ctx.player.api) : null));
   },
 });

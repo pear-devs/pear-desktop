@@ -1,24 +1,69 @@
-import { APPLICATION_NAME, t } from '@/i18n';
-import { createPlugin } from '@/utils';
+// Serves the current song in the format of the Amuse now-playing widget (6K Labs).
 
-import backend from './backend';
+import { createServer } from "node:http";
+import { config, definePlugin, livePosition, type NowPlaying } from "@pear/sdk";
 
-export interface MusicWidgetConfig {
-  enabled: boolean;
+const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" };
+
+function songInfo(state: NowPlaying) {
+  const track = state.track;
+  return {
+    player: {
+      hasSong: !!(track?.title && track.artist),
+      isPaused: state.ad || (state.status !== "playing" && state.status !== "buffering"),
+      seekbarCurrentPosition: Math.floor(livePosition(state)),
+    },
+    track: {
+      duration: track?.durationSeconds ?? 0,
+      title: track?.title ?? "",
+      author: track?.artist ?? "",
+      cover: track?.artworkUrl ?? "",
+      url: track?.url ?? "",
+      id: track?.videoId ?? "",
+      isAdvertisement: state.ad,
+    },
+  };
 }
 
-export const defaultConfig: MusicWidgetConfig = {
-  enabled: false,
-};
-
-export default createPlugin({
-  name: () => t('plugins.amuse.name'),
-  description: () =>
-    t('plugins.amuse.description', {
-      applicationName: APPLICATION_NAME,
+export default definePlugin({
+  id: "amuse",
+  name: "Amuse",
+  description: "Show the current song in the Amuse now-playing widget by 6K Labs.",
+  config: {
+    port: config.number(9863, {
+      label: "Port",
+      min: 1,
+      max: 65535,
+      step: 1,
+      description: "Amuse expects 9863.",
     }),
-  addedVersion: '3.7.X',
-  restartNeeded: true,
-  config: defaultConfig,
-  backend,
+  },
+  host: {
+    async start(ctx) {
+      const server = createServer((req, res) => {
+        const path = new URL(req.url ?? "/", "http://localhost").pathname;
+        if (req.method === "OPTIONS") {
+          res.writeHead(204, CORS).end();
+        } else if (req.method === "GET" && (path === "/query" || path === "/api")) {
+          res.writeHead(200, { ...CORS, "Content-Type": "application/json" }).end(JSON.stringify(songInfo(ctx.player.state)));
+        } else if (req.method === "GET" && path === "/") {
+          res.writeHead(200, { ...CORS, "Content-Type": "text/plain" }).end("Amuse API server is running. GET /query to get song info.");
+        } else {
+          res.writeHead(404, CORS).end();
+        }
+      });
+      await new Promise<void>((resolve, reject) => {
+        server.once("error", reject);
+        server.listen(ctx.config.port, "127.0.0.1", () => {
+          server.off("error", reject);
+          resolve();
+        });
+      });
+      server.on("error", (error) => ctx.log.error(error));
+      return () => {
+        server.close();
+        server.closeAllConnections();
+      };
+    },
+  },
 });

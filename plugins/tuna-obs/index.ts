@@ -1,100 +1,113 @@
-import { net } from 'electron';
-import is from 'electron-is';
+// Feeds OBS's Tuna plugin (its "web server" source) with the current song.
 
-import { t } from '@/i18n';
-import { registerCallback } from '@/providers/song-info';
-import { createPlugin } from '@/utils';
+import { config, definePlugin, livePosition, type NowPlaying } from "@pear/sdk";
+import { readSongDetails, type SongDetails } from "@pear/sdk/song-details";
+import { net } from "electron";
 
-interface Data {
-  album: string | null | undefined;
-  album_url: string;
-  artists: string[];
-  cover: string;
-  cover_url: string;
-  duration: number;
-  progress: number;
-  status: string;
-  title: string;
-  alternativeTitle: string;
-  url: string;
-  tags: string[];
-}
+const HEADERS = {
+  "Content-Type": "application/json",
+  Accept: "application/json",
+  "Access-Control-Allow-Headers": "*",
+  "Access-Control-Allow-Origin": "*",
+};
 
-export default createPlugin({
-  name: () => t('plugins.tuna-obs.name'),
-  description: () => t('plugins.tuna-obs.description'),
-  restartNeeded: true,
+export default definePlugin({
+  id: "tuna-obs",
+  name: "Tuna OBS",
+  description: "Show the current song in OBS through the Tuna plugin.",
   config: {
-    enabled: false,
+    port: config.number(1608, {
+      label: "Tuna port",
+      min: 1,
+      max: 65535,
+      step: 1,
+      description: "The port of Tuna's web server source in OBS.",
+    }),
   },
-  backend: {
-    liteMode: false,
-    start({ ipc }) {
-      const secToMilisec = (t: number) => Math.round(Number(t) * 1e3);
+  host: {
+    start(ctx) {
+      let details: SongDetails | undefined;
+      // While Tuna isn't reachable, probe it with cheap OPTIONS requests instead of full posts ("lite mode").
+      let lite = false;
+      let busy = false;
+      let again = false;
+      let stopped = false;
 
-      const post = (data: Data) => {
-        const port = 1608;
-        const headers = {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Access-Control-Allow-Headers': '*',
-          'Access-Control-Allow-Origin': '*',
+      const send = async () => {
+        const state = ctx.player.state;
+        const track = state.track;
+        if (!track) return;
+        const extra = details?.videoId === track.videoId ? details : undefined;
+        const data = {
+          album: track.album ?? null,
+          album_url: track.artworkUrl ?? "",
+          artists: [track.artist],
+          cover: track.artworkUrl ?? "",
+          cover_url: track.artworkUrl ?? "",
+          duration: Math.round(track.durationSeconds * 1000),
+          progress: Math.round(livePosition(state) * 1000),
+          status: state.status === "playing" && !state.ad ? "playing" : "stopped",
+          title: track.title,
+          alternativeTitle: extra?.alternativeTitle ?? "",
+          url: track.url,
+          tags: extra?.tags ?? [],
         };
-        const url = `http://127.0.0.1:${port}/`;
-        net
-          .fetch(url, {
-            method: this.liteMode ? 'OPTIONS' : 'POST',
-            headers,
-            keepalive: true,
-            body: this.liteMode ? undefined : JSON.stringify({ data }),
-          })
-          .then(() => {
-            if (this.liteMode) {
-              this.liteMode = false;
-              console.debug(
-                `obs-tuna webserver at port ${port} is now accessible. disable lite mode`,
-              );
-              post(data);
-            }
-          })
-          .catch((error: { code: number; errno: number }) => {
-            if (!this.liteMode) {
-              if (is.dev()) {
-                console.debug(
-                  `Error: '${
-                    error.code || error.errno
-                  }' - when trying to access obs-tuna webserver at port ${port}. enable lite mode`,
-                );
-              }
-              this.liteMode = true;
-            }
+        try {
+          await net.fetch(`http://127.0.0.1:${ctx.config.port}/`, {
+            method: lite ? "OPTIONS" : "POST",
+            headers: HEADERS,
+            ...(lite ? {} : { body: JSON.stringify({ data }) }),
           });
+          if (lite) {
+            lite = false;
+            again = true;
+            ctx.log.info(`Tuna is reachable on port ${ctx.config.port}`);
+          }
+        } catch {
+          if (!lite) ctx.log.info(`Tuna isn't reachable on port ${ctx.config.port}; waiting for it`);
+          lite = true;
+        }
       };
-
-      ipc.on('peard:player-api-loaded', () =>
-        ipc.send('peard:setup-time-changed-listener'),
-      );
-
-      registerCallback((songInfo) => {
-        if (!songInfo.title && !songInfo.artist) {
+      // One request at a time; changes meanwhile are coalesced into one more.
+      const post = () => {
+        if (stopped) return;
+        if (busy) {
+          again = true;
           return;
         }
-
-        post({
-          duration: secToMilisec(songInfo.songDuration),
-          progress: secToMilisec(songInfo.elapsedSeconds ?? 0),
-          cover: songInfo.imageSrc ?? '',
-          cover_url: songInfo.imageSrc ?? '',
-          album_url: songInfo.imageSrc ?? '',
-          title: songInfo.title,
-          alternativeTitle: songInfo.alternativeTitle ?? '',
-          artists: [songInfo.artist],
-          status: songInfo.isPaused ? 'stopped' : 'playing',
-          album: songInfo.album,
-          url: songInfo.url ?? '',
-          tags: songInfo.tags ?? [],
+        busy = true;
+        void send().finally(() => {
+          busy = false;
+          if (!again) return;
+          again = false;
+          post();
         });
+      };
+      ctx.onCleanup(() => (stopped = true));
+
+      ctx.player.on("change", (state, previous) => {
+        if (state.track && state.track.videoId !== previous.track?.videoId) {
+          const videoId = state.track.videoId;
+          ctx
+            .request<SongDetails | null>("details", undefined, { timeout: 5000 })
+            .then((result) => {
+              if (result?.videoId !== videoId) return;
+              details = result;
+              post();
+            })
+            .catch(() => {});
+        }
+        post();
       });
+      post();
     },
+    // The port is read for every request.
+    onConfigChange() {},
+  },
+  page: {
+    start(ctx) {
+      ctx.host.handle("details", () => (ctx.player.api ? readSongDetails(ctx.player.api) : null));
+    },
+    onConfigChange() {},
   },
 });
