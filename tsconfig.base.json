@@ -10,6 +10,8 @@
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
     "noEmit": true,
     "lib": ["es2024", "dom", "dom.iterable"]
   }

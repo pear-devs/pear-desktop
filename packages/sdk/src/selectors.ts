@@ -54,6 +54,16 @@ export const selectors = {
   "lyrics.tab": "ytmusic-player-page tp-yt-paper-tab:nth-of-type(2)",
   "lyrics.container": "ytmusic-description-shelf-renderer",
   "upgrade.button": "ytmusic-guide-entry-renderer:last-child, tp-yt-paper-item.ytmusic-guide-entry-renderer[href*='music_premium']",
+
+  // ---- integrations (api-server, discord, scrobbler, notifications, …)
+
+  // ---- network & files (adblock, downloader, proxy, sponsorblock)
+
+  // ---- audio (equalizer, compressor, crossfade, volume, speed, quality, visualizer, …)
+
+  // ---- interface tweaks (album actions, colors, ambient mode, clock, navigation, pip, …)
+
+  // ---- lyrics & music together
 } as const;
 
 export type SelectorName = keyof typeof selectors;

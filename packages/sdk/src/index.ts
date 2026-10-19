@@ -2,7 +2,7 @@
 // `definePlugin({...})`; the build splits it into a host (main process) part
 // and a page (YTM main world) part, like #[cfg] in Rust.
 
-import type { App, BrowserWindow, Session } from "electron";
+import type { App, BrowserWindow, BrowserWindowConstructorOptions, Session, WebRequest } from "electron";
 import type { ConfigOf, ConfigShape } from "./config.ts";
 import type { NowPlaying, PlayerAction, Track, PlaybackStatus, Unsubscribe, YTPlayerApi } from "./player.ts";
 import type { SelectorName } from "./selectors.ts";
@@ -39,8 +39,18 @@ export interface HostContext<C> {
   setConfig(patch: Partial<C>): void;
   readonly app: App;
   readonly window: BrowserWindow;
+  /** The default session, except `webRequest` is this plugin's (see `webRequest`). */
   readonly session: Session;
+  /**
+   * Electron's WebRequest API, scoped to this plugin: listeners compose with
+   * other plugins' instead of replacing them, and are removed when it stops.
+   */
+  readonly webRequest: WebRequest;
   readonly player: HostPlayer;
+  /** Asks this plugin's page part (`ctx.host.handle`) and resolves with its answer. */
+  request<T = unknown>(event: string, payload?: unknown, options?: { timeout?: number }): Promise<T>;
+  /** Opens the in-page settings overlay (focusing the window). */
+  openSettings(): void;
   /** Sends an event to this plugin's page part (`ctx.host.on`). */
   emit(event: string, payload?: unknown): void;
   /** Runs when the plugin stops (disabled, restarted or app quit). */
@@ -62,6 +72,8 @@ export interface HostPart<C, Cmds extends AnyCommands> {
   start?(ctx: HostContext<C>): MaybePromise<void | Cleanup>;
   /** Default: restart the host part. */
   onConfigChange?(config: Readonly<C>, ctx: HostContext<C>): void | "restart";
+  /** Options merged into the main window's constructor when enabled at launch (frame, transparency…). */
+  windowOptions?(config: Readonly<C>): BrowserWindowConstructorOptions;
   /** Typed commands the page part can call with `ctx.host.invoke`. `this` is the host context. */
   commands?: Cmds & ThisType<HostContext<C>>;
 }
@@ -92,6 +104,25 @@ export interface HostClient<Cmds extends AnyCommands> {
     ...args: Parameters<Cmds[K]>
   ): Promise<Awaited<ReturnType<Cmds[K]>>>;
   on(event: string, listener: (payload: unknown) => void): Unsubscribe;
+  /** Answers `ctx.request(event)` from the host part. */
+  handle(event: string, handler: (payload: unknown) => unknown): Unsubscribe;
+}
+
+/**
+ * The shared Web Audio graph: YTM's <video> → [inserted nodes by order] → speakers.
+ * A media element can only have one source node, so every audio plugin goes through this.
+ */
+export interface AudioGraph {
+  readonly context: AudioContext;
+  readonly source: MediaElementAudioSourceNode;
+  readonly video: HTMLVideoElement;
+  /**
+   * Inserts a processing stage. `output` defaults to `input` (a single node).
+   * Lower `order` runs earlier. Removed automatically when the plugin stops.
+   */
+  insert(input: AudioNode, output?: AudioNode, order?: number): Unsubscribe;
+  /** Connects the graph's final output to `node` as well (analysers, recorders). */
+  tap(node: AudioNode): Unsubscribe;
 }
 
 export interface WaitForOptions {
@@ -119,12 +150,19 @@ export interface PageContext<C, Cmds extends AnyCommands> {
     listener: (event: any) => void,
     options?: AddEventListenerOptions,
   ): void;
-  /** Adds a stylesheet for the plugin's lifetime. */
-  addStyle(css: string): void;
+  /** The shared audio graph, created on first use. */
+  audio(): Promise<AudioGraph>;
+  /** Adds a stylesheet for the plugin's lifetime. Works at document start. */
+  addStyle(css: string): StyleHandle;
   onCleanup(fn: Cleanup): void;
   /** Aborted when the plugin stops. */
   readonly signal: AbortSignal;
   readonly log: Logger;
+}
+
+export interface StyleHandle {
+  update(css: string): void;
+  remove(): void;
 }
 
 export interface PagePartObject<C, Cmds extends AnyCommands> {

@@ -13,6 +13,7 @@ import type {
 } from "@pear/sdk";
 import type { Bridge, PluginState } from "@pear/sdk/protocol";
 import { selectors } from "@pear/sdk/selectors";
+import { AudioGraph } from "./audio.ts";
 import { domReady, waitForSelector } from "./dom.ts";
 import type { Player } from "./player.ts";
 
@@ -30,6 +31,10 @@ export class PluginRunner {
   #states = new Map<string, PluginState>();
   #instances = new Map<string, Instance>();
   #listeners = new Map<string, Map<string, Set<(payload: unknown) => void>>>();
+  #errors = new Map<string, string>();
+  #subscribers = new Set<() => void>();
+  #handlers = new Map<string, Map<string, (payload: unknown) => unknown>>();
+  #audio: Promise<AudioGraph> | undefined;
   #bridge: Bridge;
   #player: Player;
 
@@ -37,10 +42,13 @@ export class PluginRunner {
     this.#bridge = bridge;
     this.#player = player;
     for (const plugin of plugins) {
-      this.#plugins.set(plugin.id, plugin);
       const state = bridge.bootstrap.plugins[plugin.id];
-      if (state) this.#states.set(plugin.id, state);
+      // Plugins the host doesn't run on this platform are not offered at all.
+      if (!state) continue;
+      this.#plugins.set(plugin.id, plugin);
+      this.#states.set(plugin.id, state);
     }
+    for (const [id, message] of Object.entries(bridge.bootstrap.errors)) this.#errors.set(id, message);
   }
 
   get plugins(): readonly AnyPlugin[] {
@@ -49,6 +57,45 @@ export class PluginRunner {
 
   state(id: string) {
     return this.#states.get(id);
+  }
+
+  error(id: string) {
+    return this.#errors.get(id);
+  }
+
+  meta(id: string) {
+    return this.#bridge.bootstrap.meta[id];
+  }
+
+  /** Notified on any state or error change (for the settings UI). */
+  subscribe(listener: () => void) {
+    this.#subscribers.add(listener);
+    return () => void this.#subscribers.delete(listener);
+  }
+
+  setEnabled(id: string, enabled: boolean) {
+    return this.#bridge.invoke("plugin:set-enabled", id, enabled);
+  }
+
+  setConfig(id: string, patch: Record<string, unknown>) {
+    return this.#bridge.invoke("plugin:set-config", id, patch);
+  }
+
+  relaunch() {
+    return this.#bridge.invoke("app:relaunch");
+  }
+
+  get version() {
+    return this.#bridge.bootstrap.version;
+  }
+
+  reportError(id: string, message: string) {
+    this.#errors.set(id, message);
+    this.#notify();
+  }
+
+  #notify() {
+    for (const subscriber of this.#subscribers) subscriber();
   }
 
   startEnabled() {
@@ -60,6 +107,7 @@ export class PluginRunner {
     const plugin = this.#plugins.get(id);
     const previous = this.#states.get(id);
     this.#states.set(id, next);
+    this.#notify();
     if (!plugin) return;
     if (!next.enabled) return this.#stop(id);
     const instance = this.#instances.get(id);
@@ -74,6 +122,30 @@ export class PluginRunner {
       this.#stop(id);
       void this.#start(id);
     }
+  }
+
+  /** Answers a host `ctx.request` with the page part's handler. */
+  async request(id: string, event: string, payload: unknown, requestId: number) {
+    const handler = this.#handlers.get(id)?.get(event);
+    try {
+      if (!handler) throw new Error(`no handler for "${event}" (plugin not running in the page?)`);
+      const value = await handler(payload);
+      await this.#bridge.invoke("plugin:respond", requestId, true, value);
+    } catch (error) {
+      await this.#bridge.invoke("plugin:respond", requestId, false, error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  #audioGraph() {
+    this.#audio ??= this.#player.ready().then(async () => {
+      let video = this.#player.video();
+      while (!video) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        video = this.#player.video();
+      }
+      return new AudioGraph(video);
+    });
+    return this.#audio;
   }
 
   dispatch(id: string, event: string, payload: unknown) {
@@ -91,6 +163,7 @@ export class PluginRunner {
     if (!plugin || this.#instances.has(id)) return;
     const instance = this.#createInstance(plugin);
     this.#instances.set(id, instance);
+    if (this.#errors.delete(id)) this.#notify();
     this.#renderStyle(plugin, instance);
 
     const part = pagePart(plugin);
@@ -104,7 +177,10 @@ export class PluginRunner {
         else instance.cleanups.push(cleanup);
       }
     } catch (error) {
-      if (!instance.controller.signal.aborted) console.error(`[pear:${id}] failed to start`, error);
+      if (!instance.controller.signal.aborted) {
+        console.error(`[pear:${id}] failed to start`, error);
+        this.reportError(id, `failed to start: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
   }
 
@@ -122,6 +198,7 @@ export class PluginRunner {
     }
     this.#removeSheets(instance);
     this.#listeners.delete(id);
+    this.#handlers.delete(id);
   }
 
   #renderStyle(plugin: AnyPlugin, instance: Instance) {
@@ -200,6 +277,25 @@ export class PluginRunner {
           set.add(listener);
           return track(() => set.delete(listener));
         },
+        handle(event, handler) {
+          let handlers = runner.#handlers.get(id);
+          if (!handlers) runner.#handlers.set(id, (handlers = new Map()));
+          handlers.set(event, handler);
+          return track(() => {
+            if (handlers.get(event) === handler) handlers.delete(event);
+          });
+        },
+      },
+      async audio() {
+        const graph = await runner.#audioGraph();
+        // Same graph, but stages and taps are removed when the plugin stops.
+        return {
+          context: graph.context,
+          source: graph.source,
+          video: graph.video,
+          insert: (input, output, order) => track(graph.insert(input, output, order)),
+          tap: (node) => track(graph.tap(node)),
+        };
       },
       sel: (name: SelectorName) => selectors[name],
       $: (name: SelectorName, root: ParentNode = document) => root.querySelector(selectors[name]) as any,
@@ -208,7 +304,15 @@ export class PluginRunner {
         waitForSelector(selectors[name], { ...options, signal: controller.signal }) as any,
       listen,
       addStyle(css) {
-        instance.sheets.push(runner.#addSheet(css));
+        const sheet = runner.#addSheet(css);
+        instance.sheets.push(sheet);
+        return {
+          update: (next) => sheet.replaceSync(next),
+          remove: () => {
+            instance.sheets = instance.sheets.filter((s) => s !== sheet);
+            document.adoptedStyleSheets = document.adoptedStyleSheets.filter((s) => s !== sheet);
+          },
+        };
       },
       onCleanup(fn) {
         cleanups.push(fn);

@@ -1,153 +1,98 @@
-import PausedTrayIconWhite from '@assets/tray-paused-white.png?asset&asarUnpack';
-import PausedTrayIcon from '@assets/tray-paused.png?asset&asarUnpack';
-import TrayIconWhite from '@assets/tray-white.png?asset&asarUnpack';
-import TrayIcon from '@assets/tray.png?asset&asarUnpack';
-import { Menu, nativeImage, screen, Tray } from 'electron';
-import is from 'electron-is';
+import { config, definePlugin, type NowPlaying } from "@pear/sdk";
+import { trayIconBitmap } from "@pear/sdk/icon";
+import { Menu, nativeImage, Tray } from "electron";
 
-import { APPLICATION_NAME, t } from '@/i18n';
-
-import * as config from './config';
-import { restart } from './providers/app-controls';
-import { getSongControls } from './providers/song-controls';
-import { registerCallback, SongInfoEvent } from './providers/song-info';
-
-import type { MenuTemplate } from './menu';
-
-// Prevent tray being garbage collected
-let tray: Electron.Tray | undefined;
-
-type TrayEvent = (
-  event: Electron.KeyboardEvent,
-  bounds: Electron.Rectangle,
-) => void;
-
-export const setTrayOnClick = (fn: TrayEvent) => {
-  if (!tray) {
-    return;
-  }
-
-  tray.removeAllListeners('click');
-  tray.on('click', fn);
-};
-
-// Won't do anything on macOS since its disabled
-export const setTrayOnDoubleClick = (fn: TrayEvent) => {
-  if (!tray) {
-    return;
-  }
-
-  tray.removeAllListeners('double-click');
-  tray.on('double-click', fn);
-};
-
-export const setUpTray = (app: Electron.App, win: Electron.BrowserWindow) => {
-  if (!config.get('options.tray')) {
-    tray = undefined;
-    return;
-  }
-
-  const { playPause, next, previous } = getSongControls(win);
-
-  const pixelRatio = is.windows()
-    ? screen.getPrimaryDisplay().scaleFactor || 1
-    : 1;
-
-  const defaultTrayIcon = nativeImage
-    .createFromPath(is.macOS() ? TrayIconWhite : TrayIcon)
-    .resize({
-      width: 16 * pixelRatio,
-      height: 16 * pixelRatio,
-    });
-  const pausedTrayIcon = nativeImage
-    .createFromPath(is.macOS() ? PausedTrayIconWhite : PausedTrayIcon)
-    .resize({
-      width: 16 * pixelRatio,
-      height: 16 * pixelRatio,
-    });
-
-  tray = new Tray(defaultTrayIcon);
-
-  tray.setToolTip(
-    t('main.tray.tooltip.default', {
-      applicationName: APPLICATION_NAME,
+export default definePlugin({
+  id: "tray",
+  name: "Tray icon",
+  description: "Playback controls and the current track in the system tray.",
+  enabledByDefault: true,
+  config: {
+    closeToTray: config.bool(false, {
+      label: "Close to tray",
+      description: "Closing the window keeps music playing in the background.",
     }),
-  );
+    clickToToggle: config.bool(true, { label: "Click toggles the window" }),
+  },
+  host: {
+    start(ctx) {
+      const size = 32;
+      const icon = nativeImage.createFromBitmap(trayIconBitmap(size * 2), {
+        width: size * 2,
+        height: size * 2,
+        scaleFactor: 2,
+      });
+      const tray = new Tray(icon);
+      const { window, app } = ctx;
+      const showWindow = () => {
+        if (window.isMinimized()) window.restore();
+        window.show();
+        window.focus();
+      };
+      const toggleWindow = () => (window.isVisible() && window.isFocused() ? window.hide() : showWindow());
 
-  // MacOS only
-  tray.setIgnoreDoubleClickEvents(true);
+      const update = (state: NowPlaying) => {
+        const track = state.track;
+        const playing = state.status === "playing" || state.status === "buffering";
+        tray.setToolTip(track ? `${track.title} — ${track.artist}` : "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063");
+        tray.setContextMenu(
+          Menu.buildFromTemplate([
+            ...(track
+              ? [
+                  { label: track.title, enabled: false },
+                  { label: track.artist, enabled: false },
+                  { type: "separator" as const },
+                ]
+              : []),
+            { label: playing ? "Pause" : "Play", click: () => ctx.player.control({ type: "toggle" }) },
+            { label: "Next", click: () => ctx.player.control({ type: "next" }) },
+            { label: "Previous", click: () => ctx.player.control({ type: "previous" }) },
+            { type: "separator" },
+            { label: window.isVisible() ? "Hide window" : "Show window", click: toggleWindow },
+            { label: "Settings…", click: () => ctx.openSettings() },
+            { type: "separator" },
+            { label: "Quit", click: () => app.quit() },
+          ]),
+        );
+      };
+      update(ctx.player.state);
+      // Rebuild the menu only when something it shows changes.
+      ctx.player.on("change", (state, previous) => {
+        const wasPlaying = previous.status === "playing" || previous.status === "buffering";
+        const isPlaying = state.status === "playing" || state.status === "buffering";
+        if (state.track !== previous.track || wasPlaying !== isPlaying) update(state);
+      });
+      const refresh = () => update(ctx.player.state);
+      window.on("show", refresh);
+      window.on("hide", refresh);
+      ctx.onCleanup(() => {
+        window.off("show", refresh);
+        window.off("hide", refresh);
+      });
 
-  tray.on('click', () => {
-    if (config.get('options.trayClickPlayPause')) {
-      playPause();
-    } else if (win.isVisible()) {
-      win.hide();
-      app.dock?.hide();
-    } else {
-      win.show();
-      app.dock?.show();
-    }
-  });
+      tray.on("click", () => {
+        if (ctx.config.clickToToggle) toggleWindow();
+      });
 
-  const template: MenuTemplate = [
-    {
-      label: t('main.tray.play-pause'),
-      click() {
-        playPause();
-      },
+      let quitting = false;
+      const onBeforeQuit = () => {
+        quitting = true;
+      };
+      const onClose = (event: Electron.Event) => {
+        if (!ctx.config.closeToTray || quitting) return;
+        event.preventDefault();
+        window.hide();
+      };
+      app.on("before-quit", onBeforeQuit);
+      window.on("close", onClose);
+
+      return () => {
+        app.off("before-quit", onBeforeQuit);
+        window.off("close", onClose);
+        tray.destroy();
+      };
     },
-    {
-      label: t('main.tray.next'),
-      click() {
-        next();
-      },
-    },
-    {
-      label: t('main.tray.previous'),
-      click() {
-        previous();
-      },
-    },
-    {
-      label: t('main.tray.show'),
-      click() {
-        win.show();
-        app.dock?.show();
-      },
-    },
-    { type: 'separator' },
-    {
-      label: t('main.tray.restart'),
-      click: restart,
-    },
-    { type: 'separator' },
-    {
-      label: t('main.tray.quit'),
-      role: 'quit',
-    },
-  ];
-
-  const trayMenu = Menu.buildFromTemplate(template);
-  tray.setContextMenu(trayMenu);
-
-  registerCallback((songInfo, event) => {
-    if (event === SongInfoEvent.TimeChanged) return;
-
-    if (tray) {
-      if (typeof songInfo.isPaused === 'undefined') {
-        tray.setImage(defaultTrayIcon);
-        return;
-      }
-
-      tray.setToolTip(
-        t('main.tray.tooltip.with-song-info', {
-          artist: songInfo.artist,
-          title: songInfo.title,
-          applicationName: APPLICATION_NAME,
-        }),
-      );
-
-      tray.setImage(songInfo.isPaused ? pausedTrayIcon : defaultTrayIcon);
-    }
-  });
-};
+    // Both options are read when used; no restart needed.
+    onConfigChange() {},
+  },
+});

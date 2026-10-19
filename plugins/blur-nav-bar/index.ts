@@ -29,17 +29,12 @@ export default definePlugin({
   page: {
     runAt: "start",
     start(ctx) {
-      applyVariables(ctx.config);
-      ctx.onCleanup(() => {
-        document.documentElement.style.removeProperty("--pear-nav-blur");
-        document.documentElement.style.removeProperty("--pear-nav-opacity");
-      });
+      // A stylesheet (not documentElement.style): there is no <html> yet at document start.
+      ctx.addStyle(variablesCss(ctx.config));
     },
-    onConfigChange: applyVariables,
   },
 });
 
-function applyVariables(config: { blur: number; opacity: number }) {
-  document.documentElement.style.setProperty("--pear-nav-blur", `${config.blur}px`);
-  document.documentElement.style.setProperty("--pear-nav-opacity", String(config.opacity / 100));
+function variablesCss(config: { blur: number; opacity: number }) {
+  return `:root{--pear-nav-blur:${config.blur}px;--pear-nav-opacity:${config.opacity / 100}}`;
 }

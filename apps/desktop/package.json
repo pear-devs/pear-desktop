@@ -1,6 +1,7 @@
 {
   "name": "@pear/desktop",
   "productName": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "out/main/index.js",
@@ -9,7 +10,8 @@
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "tsc -p .",
-    "test:e2e": "electron-vite build && playwright test"
+    "test:e2e": "electron-vite build && playwright test",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@jellybrick/dbus-next": "^0.11.4",
@@ -20,6 +22,7 @@
     "@types/node": "^24.0.0",
     "electron": "^44.9.0",
     "electron-vite": "^6.0.0",
-    "vite": "^8.3.4"
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5"
   }
 }

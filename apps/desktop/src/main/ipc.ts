@@ -28,6 +28,7 @@ export function setupIpc(plugins: PluginHost, player: PlayerMirror) {
       if (!Array.isArray(args)) throw new Error("[pear] plugin invoke args must be an array");
       return plugins.invoke(String(id), String(command), args);
     },
+    "plugin:respond": (requestId, ok, value) => plugins.respond(Number(requestId), Boolean(ok), value),
     "player:update": (state) => player.update(state),
   };
 
@@ -49,6 +50,8 @@ export function setupIpc(plugins: PluginHost, player: PlayerMirror) {
       version: app.getVersion(),
       platform: process.platform,
       plugins: plugins.states(),
+      meta: plugins.meta(),
+      errors: plugins.errors(),
     } satisfies Bootstrap;
   });
 }

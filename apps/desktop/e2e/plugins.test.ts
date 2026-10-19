@@ -36,12 +36,15 @@ test("disable-autoplay keeps a freshly opened track paused", async () => {
   try {
     const page = await mainWindow(app);
     await playTestTrack(page);
-    // Logged-out sessions may get a pre-roll ad first; the track must not start after it.
+    // Logged-out sessions may get a pre-roll ad first. If it sits paused (the
+    // plugin's early pause can catch it), play it like a user would; the track
+    // itself must still not start afterwards.
     const settled = () =>
       page.evaluate(() => {
-        const { state } = window.__pearRuntime!.player;
+        const { player } = window.__pearRuntime!;
         const video = document.querySelector("video");
-        return !state.ad && state.status === "paused" && !!video?.paused;
+        if (player.state.ad && video?.paused) void video.play();
+        return !player.state.ad && player.state.status === "paused" && !!video?.paused;
       });
     await expect.poll(settled, { timeout: 90_000 }).toBe(true);
     await page.waitForTimeout(3000);

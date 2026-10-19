@@ -9,6 +9,7 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
-    "@pear/sdk": "workspace:*"
+    "@pear/sdk": "workspace:*",
+    "@pear/ui": "workspace:*"
   }
 }

@@ -6,7 +6,8 @@
     ".": "./src/index.ts",
     "./macros": "./src/macros.ts",
     "./selectors": "./src/selectors.ts",
-    "./protocol": "./src/protocol.ts"
+    "./protocol": "./src/protocol.ts",
+    "./icon": "./src/icon.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",

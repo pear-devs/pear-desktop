@@ -16,12 +16,13 @@ function configFile({ plugins = {} }: LaunchOptions) {
 }
 
 /** Launch the built app with a fresh, isolated profile. */
-export function launchApp(options: LaunchOptions = {}) {
+export async function launchApp(options: LaunchOptions = {}) {
   const userData = mkdtempSync(join(tmpdir(), "pear-e2e-"));
   if (options.plugins) {
     writeFileSync(join(userData, "config.json"), JSON.stringify(configFile(options)));
   }
-  return electron.launch({ args: ["."], env: { ...process.env, PEAR_USER_DATA: userData } });
+  const app = await electron.launch({ args: ["."], env: { ...process.env, PEAR_USER_DATA: userData } });
+  return Object.assign(app, { userData });
 }
 
 /** A track that is reliably available on YTM without signing in. */

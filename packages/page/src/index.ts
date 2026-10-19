@@ -4,7 +4,9 @@
 
 import type { NowPlaying } from "@pear/sdk";
 import type { Bridge } from "@pear/sdk/protocol";
+import { mountSettings, type SettingsController } from "@pear/ui";
 import plugins from "virtual:pear/page-plugins";
+import { domReady } from "./dom.ts";
 import { Player } from "./player.ts";
 import { PluginRunner } from "./plugins.ts";
 
@@ -21,6 +23,8 @@ export interface Runtime {
   readonly marker: RuntimeMarker;
   readonly player: Player;
   readonly plugins: PluginRunner;
+  /** Available once the document has loaded. */
+  readonly settings: SettingsController | undefined;
 }
 
 declare global {
@@ -68,14 +72,34 @@ bridge.onEvent((event) => {
       return runner.applyState(event.id, event.state);
     case "plugin-event":
       return runner.dispatch(event.id, event.event, event.payload);
+    case "plugin-error":
+      return runner.reportError(event.id, event.message);
+    case "plugin-request":
+      return void runner.request(event.id, event.event, event.payload, event.requestId);
     case "player-control":
       return player.control(event.action);
     case "ui":
-      return document.dispatchEvent(new CustomEvent("pear:ui", { detail: event.action }));
+      return void domReady().then(() => {
+        if (event.action === "open-settings") settings?.open();
+        else if (event.action === "close-settings") settings?.close();
+        else settings?.toggle();
+      });
   }
 });
 
-window.__pearRuntime = Object.freeze({ marker, player, plugins: runner });
+let settings: SettingsController | undefined;
+
+window.__pearRuntime = Object.freeze({
+  marker,
+  player,
+  plugins: runner,
+  get settings() {
+    return settings;
+  },
+});
 console.info("[pear] runtime injected", marker);
 
 runner.startEnabled();
+void domReady().then(() => {
+  settings = mountSettings(runner);
+});

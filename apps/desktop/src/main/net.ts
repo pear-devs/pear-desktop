@@ -1,6 +1,7 @@
-// Session-level request rewriting.
+// Core request rewriting, registered through the webRequest router so plugins
+// (ad blockers, proxies) compose with it.
 
-import type { Session } from "electron";
+import type { WebRequest } from "electron";
 import { GOOGLE_AUTH_ORIGIN, YTM_ORIGIN } from "../shared/user-agent.ts";
 
 const STRIPPED_RESPONSE_HEADERS = new Set([
@@ -13,9 +14,9 @@ export interface NetOptions {
   electronUserAgent: string;
 }
 
-export function setupNet(session: Session, { electronUserAgent }: NetOptions) {
+export function setupNet(webRequest: WebRequest, { electronUserAgent }: NetOptions) {
   // YTM's CSP (incl. Trusted Types) would block the page runtime and plugin code.
-  session.webRequest.onHeadersReceived({ urls: [`${YTM_ORIGIN}/*`] }, (details, callback) => {
+  webRequest.onHeadersReceived({ urls: [`${YTM_ORIGIN}/*`] }, (details, callback) => {
     const responseHeaders: Record<string, string[]> = {};
     for (const [name, value] of Object.entries(details.responseHeaders ?? {})) {
       if (!STRIPPED_RESPONSE_HEADERS.has(name.toLowerCase())) responseHeaders[name] = value;
@@ -24,7 +25,7 @@ export function setupNet(session: Session, { electronUserAgent }: NetOptions) {
   });
 
   // Covers sign-in XHRs and subresources; the window switches the navigator UA.
-  session.webRequest.onBeforeSendHeaders({ urls: [`${GOOGLE_AUTH_ORIGIN}/*`] }, (details, callback) => {
+  webRequest.onBeforeSendHeaders({ urls: [`${GOOGLE_AUTH_ORIGIN}/*`] }, (details, callback) => {
     callback({ requestHeaders: { ...details.requestHeaders, "User-Agent": electronUserAgent } });
   });
 }

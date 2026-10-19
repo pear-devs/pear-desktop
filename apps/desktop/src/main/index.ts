@@ -1,5 +1,6 @@
 import { join } from "node:path";
-import { app, BrowserWindow, screen, session } from "electron";
+import { app, BrowserWindow, nativeImage, screen, session } from "electron";
+import { pearIconBitmap } from "@pear/sdk/icon";
 import { CHANNEL, type HostEvent } from "@pear/sdk/protocol";
 import hostPlugins from "virtual:pear/host-plugins";
 import { chromeUserAgent, isGoogleAuth, YTM_ORIGIN } from "../shared/user-agent.ts";
@@ -9,6 +10,7 @@ import { setupIpc } from "./ipc.ts";
 import { setupNet } from "./net.ts";
 import { PlayerMirror } from "./player.ts";
 import { PluginHost } from "./plugins.ts";
+import { WebRequestRouter } from "./web-request.ts";
 
 const YTM_URL = `${YTM_ORIGIN}/`;
 
@@ -48,15 +50,21 @@ function main() {
 
   function createWindow() {
     const saved = settings.window;
+    const pluginOptions = plugins.windowOptions();
     const window = new BrowserWindow({
-      ...windowBounds(saved),
       minWidth: 360,
       minHeight: 300,
-      show: false,
       backgroundColor: "#030303",
       title: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063",
+      icon: nativeImage.createFromBitmap(pearIconBitmap(256), { width: 256, height: 256 }),
       autoHideMenuBar: true,
+      // Plugins may override the defaults above (frame, transparency, colors)…
+      ...pluginOptions,
+      // …but not geometry, visibility or the security-relevant preferences below.
+      ...windowBounds(saved),
+      show: false,
       webPreferences: {
+        ...pluginOptions.webPreferences,
         preload: join(import.meta.dirname, "../preload/index.cjs"),
         contextIsolation: true,
         sandbox: true,
@@ -64,7 +72,10 @@ function main() {
       },
     });
     if (saved?.maximized) window.maximize();
-    window.once("ready-to-show", () => window.show());
+    window.once("ready-to-show", () => {
+      window.show();
+      console.info(`[pear] startup: window shown after ${Math.round(performance.now())}ms`);
+    });
 
     // Keep navigator.userAgent consistent with the UA header per destination.
     window.webContents.on("did-start-navigation", ({ url, isMainFrame }) => {
@@ -99,14 +110,16 @@ function main() {
   });
 
   app.whenReady().then(async () => {
+    console.info(`[pear] startup: app ready after ${Math.round(performance.now())}ms`);
     electronUserAgent = app.userAgentFallback;
     ytmUserAgent = chromeUserAgent(electronUserAgent);
     app.userAgentFallback = ytmUserAgent;
-    setupNet(session.defaultSession, { electronUserAgent });
+    const router = new WebRequestRouter(session.defaultSession);
+    setupNet(router.scoped("core"), { electronUserAgent });
     setupIpc(plugins, player);
     await seedConsent(session.defaultSession);
     mainWindow = createWindow();
-    plugins.attach({ app, window: mainWindow, session: session.defaultSession, player, send });
+    plugins.attach({ app, window: mainWindow, session: session.defaultSession, router, player, send });
   });
 
   app.on("before-quit", () => {
