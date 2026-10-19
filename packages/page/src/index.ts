@@ -1,24 +1,81 @@
-// Page runtime: runs in YTM's main world before any of its own scripts.
+/// <reference path="./virtual.d.ts" />
+// Page runtime: runs in YTM's main world before any of its own
+// scripts. Boots the player facade and the plugin runner.
 
-import type { Bridge, RuntimeMarker } from "./bridge.ts";
+import type { NowPlaying } from "@pear/sdk";
+import type { Bridge } from "@pear/sdk/protocol";
+import plugins from "virtual:pear/page-plugins";
+import { Player } from "./player.ts";
+import { PluginRunner } from "./plugins.ts";
 
-export type { Bridge, RuntimeMarker } from "./bridge.ts";
+export interface RuntimeMarker {
+  /** performance.now() at the moment the runtime executed. */
+  injectedAt: number;
+  /** document.readyState when the runtime executed; "loading" means before the page parsed. */
+  readyState: DocumentReadyState;
+  /** Number of <script> elements already in the document when the runtime executed. */
+  scriptsBefore: number;
+}
+
+export interface Runtime {
+  readonly marker: RuntimeMarker;
+  readonly player: Player;
+  readonly plugins: PluginRunner;
+}
+
+declare global {
+  interface Window {
+    __pear?: Bridge;
+    __pearRuntime?: Runtime;
+  }
+}
 
 const marker: RuntimeMarker = {
   injectedAt: performance.now(),
   readyState: document.readyState,
   scriptsBefore: document.scripts.length,
 };
-window.__pearRuntime = marker;
+
+const bridge = window.__pear;
+if (!bridge) throw new Error("[pear] bridge missing; preload did not expose __pear");
+
+// Position-only updates are batched; everything else goes to the host at once.
+const POSITION_PUBLISH_MS = 1000;
+let lastPublished = 0;
+let pending: ReturnType<typeof setTimeout> | undefined;
+let latest: NowPlaying | undefined;
+function publish(state: NowPlaying, urgent: boolean) {
+  latest = state;
+  const send = () => {
+    pending = undefined;
+    lastPublished = Date.now();
+    if (latest) void bridge!.invoke("player:update", latest);
+  };
+  if (urgent || Date.now() - lastPublished >= POSITION_PUBLISH_MS) {
+    clearTimeout(pending);
+    send();
+  } else {
+    pending ??= setTimeout(send, POSITION_PUBLISH_MS);
+  }
+}
+
+const player = new Player(publish);
+const runner = new PluginRunner(plugins, bridge, player);
+
+bridge.onEvent((event) => {
+  switch (event.type) {
+    case "plugin-state":
+      return runner.applyState(event.id, event.state);
+    case "plugin-event":
+      return runner.dispatch(event.id, event.event, event.payload);
+    case "player-control":
+      return player.control(event.action);
+    case "ui":
+      return document.dispatchEvent(new CustomEvent("pear:ui", { detail: event.action }));
+  }
+});
+
+window.__pearRuntime = Object.freeze({ marker, player, plugins: runner });
 console.info("[pear] runtime injected", marker);
 
-const bridge: Bridge | undefined = window.__pear;
-
-document.addEventListener("DOMContentLoaded", async () => {
-  if (!bridge) {
-    console.error("[pear] bridge missing; preload did not expose __pear");
-    return;
-  }
-  const pong = await bridge.invoke("ping", "hello from page");
-  console.info("[pear] ping →", pong);
-});
+runner.startEnabled();

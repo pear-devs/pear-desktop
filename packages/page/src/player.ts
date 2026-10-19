@@ -1,357 +1,279 @@
-import { LikeType, type GetState } from '@/types/datahost-get-state';
+// The page-side player facade over YTM's `#movie_player` API and <video>.
+// It owns the NowPlaying state, mirrors it to the host, and executes
+// PlayerActions coming from plugins or the host.
 
-import { singleton } from './decorators';
+import {
+  IDLE,
+  type LikeStatus,
+  type MediaType,
+  type NowPlaying,
+  type PagePlayer,
+  type PlaybackStatus,
+  type PlayerAction,
+  type RepeatMode,
+  type Track,
+  type Unsubscribe,
+  type YTPlayerApi,
+} from "@pear/sdk";
+import { selectors } from "@pear/sdk/selectors";
+import { waitForSelector } from "./dom.ts";
+import { Emitter } from "./emitter.ts";
 
-import type { SongInfo } from './song-info';
-import type { MusicPlayer } from '@/types/music-player';
-import type {
-  AlbumDetails,
-  PlayerOverlays,
-  VideoDataChangeValue,
-} from '@/types/player-api-events';
-import type { VideoDataChanged } from '@/types/video-data-changed';
-
-const DATAUPDATED_FALLBACK_TIMEOUT_MS = 1500;
-
-let songInfo: SongInfo = {} as SongInfo;
-export const getSongInfo = () => songInfo;
-
-window.ipcRenderer.on(
-  'peard:update-song-info',
-  (_, extractedSongInfo: SongInfo) => {
-    songInfo = extractedSongInfo;
-  },
-);
-
-// Used because 'loadeddata' or 'loadedmetadata' weren't firing on song start for some users (https://github.com/pear-devs/pear-desktop/issues/473)
-const srcChangedEvent = new CustomEvent('peard:src-changed');
-
-export const setupSeekedListener = singleton(() => {
-  document.querySelector('video')?.addEventListener('seeked', (v) => {
-    if (v.target instanceof HTMLVideoElement) {
-      window.ipcRenderer.send('peard:seeked', v.target.currentTime);
-    }
-  });
-});
-
-export const setupTimeChangedListener = singleton(() => {
-  const progressObserver = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      const target = mutation.target as Node & { value: string };
-      const numberValue = Number(target.value);
-      window.ipcRenderer.send('peard:time-changed', numberValue);
-      songInfo.elapsedSeconds = numberValue;
-    }
-  });
-  const progressBar = document.querySelector('#progress-bar');
-  if (progressBar) {
-    progressObserver.observe(progressBar, { attributeFilter: ['value'] });
-  }
-});
-
-export const setupRepeatChangedListener = singleton(() => {
-  const repeatObserver = new MutationObserver((mutations) => {
-    // provided by App
-    window.ipcRenderer.send(
-      'peard:repeat-changed',
-      (
-        mutations[0].target as Node & {
-          __dataHost: {
-            getState: () => GetState;
-          };
-        }
-      ).__dataHost.getState().queue.repeatMode,
-    );
-  });
-  repeatObserver.observe(document.querySelector('#right-controls .repeat')!, {
-    attributeFilter: ['title'],
-  });
-
-  // Emit the initial value as well; as it's persistent between launches.
-  // provided by App
-  window.ipcRenderer.send(
-    'peard:repeat-changed',
-    document
-      .querySelector<
-        HTMLElement & {
-          getState: () => GetState;
-        }
-      >('ytmusic-player-bar')
-      ?.getState().queue.repeatMode,
-  );
-});
-
-const mapLikeStatus = (status: string | null): LikeType =>
-  Object.values(LikeType).includes(status as LikeType)
-    ? (status as LikeType)
-    : LikeType.Indifferent;
-
-const LIKE_STATUS_ATTRIBUTE = 'like-status';
-
-export const setupLikeChangedListener = singleton(() => {
-  const likeDislikeObserver = new MutationObserver((mutations) => {
-    window.ipcRenderer.send(
-      'peard:like-changed',
-      mapLikeStatus(
-        (mutations[0].target as HTMLElement)?.getAttribute?.(
-          LIKE_STATUS_ATTRIBUTE,
-        ),
-      ),
-    );
-  });
-  const likeButtonRenderer = document.querySelector('#like-button-renderer');
-  if (likeButtonRenderer) {
-    likeDislikeObserver.observe(likeButtonRenderer, {
-      attributes: true,
-      attributeFilter: [LIKE_STATUS_ATTRIBUTE],
-    });
-
-    // Emit the initial value as well; as it's persistent between launches.
-    window.ipcRenderer.send(
-      'peard:like-changed',
-      mapLikeStatus(likeButtonRenderer.getAttribute?.(LIKE_STATUS_ATTRIBUTE)),
-    );
-  }
-});
-
-export const setupVolumeChangedListener = singleton((api: MusicPlayer) => {
-  document.querySelector('video')?.addEventListener('volumechange', () => {
-    window.ipcRenderer.send('peard:volume-changed', {
-      state: api.getVolume(),
-      isMuted: api.isMuted(),
-    });
-  });
-
-  // Emit the initial value as well; as it's persistent between launches.
-  window.ipcRenderer.send('peard:volume-changed', {
-    state: api.getVolume(),
-    isMuted: api.isMuted(),
-  });
-});
-
-export const setupShuffleChangedListener = singleton(() => {
-  const playerBar = document.querySelector('ytmusic-player-bar');
-
-  if (!playerBar) {
-    window.ipcRenderer.send('peard:shuffle-changed-supported', false);
-    return;
-  }
-
-  const observer = new MutationObserver(() => {
-    window.ipcRenderer.send(
-      'peard:shuffle-changed',
-      (playerBar?.attributes.getNamedItem('shuffle-on') ?? null) !== null,
-    );
-  });
-
-  observer.observe(playerBar, {
-    attributes: true,
-    attributeFilter: ['shuffle-on'],
-    childList: false,
-    subtree: false,
-  });
-});
-
-export const setupFullScreenChangedListener = singleton(() => {
-  const playerBar = document.querySelector('ytmusic-player-bar');
-
-  if (!playerBar) {
-    window.ipcRenderer.send('peard:fullscreen-changed-supported', false);
-    return;
-  }
-
-  const observer = new MutationObserver(() => {
-    window.ipcRenderer.send(
-      'peard:fullscreen-changed',
-      (playerBar?.attributes.getNamedItem('player-fullscreened') ?? null) !==
-        null,
-    );
-  });
-
-  observer.observe(playerBar, {
-    attributes: true,
-    attributeFilter: ['player-fullscreened'],
-    childList: false,
-    subtree: false,
-  });
-});
-
-export const setupAutoPlayChangedListener = singleton(() => {
-  const autoplaySlider = document.querySelector<HTMLInputElement>(
-    '.autoplay > tp-yt-paper-toggle-button',
-  );
-
-  const observer = new MutationObserver(() => {
-    window.ipcRenderer.send('peard:autoplay-changed');
-  });
-
-  observer.observe(autoplaySlider!, {
-    attributes: true,
-    childList: false,
-    subtree: false,
-  });
-});
-
-export const setupSongInfo = (api: MusicPlayer) => {
-  window.ipcRenderer.on('peard:setup-time-changed-listener', () => {
-    setupTimeChangedListener();
-  });
-
-  window.ipcRenderer.on('peard:setup-like-changed-listener', () => {
-    setupLikeChangedListener();
-  });
-
-  window.ipcRenderer.on('peard:setup-repeat-changed-listener', () => {
-    setupRepeatChangedListener();
-  });
-
-  window.ipcRenderer.on('peard:setup-volume-changed-listener', () => {
-    setupVolumeChangedListener(api);
-  });
-
-  window.ipcRenderer.on('peard:setup-shuffle-changed-listener', () => {
-    setupShuffleChangedListener();
-  });
-
-  window.ipcRenderer.on('peard:setup-fullscreen-changed-listener', () => {
-    setupFullScreenChangedListener();
-  });
-
-  window.ipcRenderer.on('peard:setup-autoplay-changed-listener', () => {
-    setupAutoPlayChangedListener();
-  });
-
-  window.ipcRenderer.on('peard:setup-seeked-listener', () => {
-    setupSeekedListener();
-  });
-
-  const playPausedHandler = (e: Event, status: string) => {
-    if (
-      e.target instanceof HTMLVideoElement &&
-      Math.round(e.target.currentTime) > 0
-    ) {
-      window.ipcRenderer.send('peard:play-or-paused', {
-        isPaused: status === 'pause',
-        elapsedSeconds: Math.floor(e.target.currentTime),
-      });
-    }
-  };
-
-  const playPausedHandlers = {
-    playing: (e: Event) => playPausedHandler(e, 'playing'),
-    pause: (e: Event) => playPausedHandler(e, 'pause'),
-  };
-
-  const videoEventDispatcher = async (
-    name: string,
-    videoData: VideoDataChangeValue,
-    // oxlint-disable-next-line typescript/require-await
-  ) =>
-    document.dispatchEvent(
-      new CustomEvent<VideoDataChanged>('videodatachange', {
-        detail: { name, videoData },
-      }),
-    );
-
-  const waitingEvent = new Set<string>();
-  const waitingTimeouts = new Map<string, NodeJS.Timeout>();
-
-  const clearVideoTimeout = (videoId: string) => {
-    const timeoutId = waitingTimeouts.get(videoId);
-
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      waitingTimeouts.delete(videoId);
-    }
-  };
-
-  // Name = "dataloaded" and abit later "dataupdated"
-  // Sometimes "dataupdated" is not fired, so we need to fallback to "dataloaded"
-  api.addEventListener('videodatachange', (name, videoData) => {
-    videoEventDispatcher(name, videoData);
-
-    if (name === 'dataupdated' && waitingEvent.has(videoData.videoId)) {
-      waitingEvent.delete(videoData.videoId);
-      clearVideoTimeout(videoData.videoId);
-      sendSongInfo(videoData);
-    } else if (name === 'dataloaded') {
-      const video = document.querySelector<HTMLVideoElement>('video');
-      video?.dispatchEvent(srcChangedEvent);
-
-      for (const status of ['playing', 'pause'] as const) {
-        // for fix issue that pause event not fired
-        video?.addEventListener(status, playPausedHandlers[status]);
-      }
-
-      clearVideoTimeout(videoData.videoId);
-      waitingEvent.add(videoData.videoId);
-
-      const timeoutId = setTimeout(() => {
-        if (waitingEvent.has(videoData.videoId)) {
-          waitingEvent.delete(videoData.videoId);
-          waitingTimeouts.delete(videoData.videoId);
-          sendSongInfo(videoData);
-        }
-      }, DATAUPDATED_FALLBACK_TIMEOUT_MS);
-
-      waitingTimeouts.set(videoData.videoId, timeoutId);
-    }
-  });
-
-  const video = document.querySelector('video');
-
-  if (video) {
-    for (const status of ['playing', 'pause'] as const) {
-      video.addEventListener(status, playPausedHandlers[status]);
-    }
-
-    if (!isNaN(video.duration)) {
-      const {
-        title,
-        author,
-        video_id: videoId,
-        list: playlistId,
-      } = api.getVideoData();
-
-      const watchNextResponse = api.getWatchNextResponse();
-
-      sendSongInfo({
-        title,
-        author,
-        videoId,
-        playlistId,
-
-        isUpcoming: false,
-        lengthSeconds: video.duration,
-        loading: true,
-
-        ['\u0079\u0074\u006d\u0064WatchNextResponse']: watchNextResponse,
-      } satisfies VideoDataChangeValue);
-    }
-  }
-
-  function sendSongInfo(videoData: VideoDataChangeValue) {
-    const data = api.getPlayerResponse();
-
-    let playerOverlay: PlayerOverlays | undefined;
-
-    if (!videoData['\u0079\u0074\u006d\u0064WatchNextResponse']) {
-      playerOverlay = (
-        Object.entries(videoData).find(
-          ([, value]) => value && Object.hasOwn(value, 'playerOverlays'),
-        ) as [string, AlbumDetails | undefined]
-      )?.[1]?.playerOverlays;
-    } else {
-      playerOverlay =
-        videoData['\u0079\u0074\u006d\u0064WatchNextResponse']?.playerOverlays;
-    }
-    data.videoDetails.album =
-      playerOverlay?.playerOverlayRenderer?.browserMediaSession?.browserMediaSessionRenderer?.album?.runs?.at(
-        0,
-      )?.text;
-    data.videoDetails.elapsedSeconds = 0;
-    data.videoDetails.isPaused = false;
-
-    window.ipcRenderer.send('peard:video-src-changed', data);
-  }
+type Events = {
+  trackLoading: (videoId: string) => void;
+  trackChange: (track: Track) => void;
+  statusChange: (status: PlaybackStatus) => void;
+  timeUpdate: (seconds: number) => void;
+  adChange: (ad: boolean) => void;
+  volumeChange: (volume: number, muted: boolean) => void;
+  change: (state: NowPlaying) => void;
 };
+
+// YTM sometimes never fires "dataupdated" after "dataloaded".
+const DATAUPDATED_FALLBACK_MS = 1500;
+
+const MEDIA_TYPES: Record<string, MediaType> = {
+  MUSIC_VIDEO_TYPE_ATV: "audio",
+  MUSIC_VIDEO_TYPE_OMV: "video",
+  MUSIC_VIDEO_TYPE_UGC: "video",
+  MUSIC_VIDEO_TYPE_PODCAST_EPISODE: "podcast",
+};
+
+const REPEAT_MODES: Record<string, RepeatMode> = { NONE: "none", ALL: "all", ONE: "one" };
+
+interface PlayerBarElement extends HTMLElement {
+  getState?(): { queue?: { repeatMode?: string } };
+  updateVolume?(volume: number): void;
+}
+
+export class Player implements PagePlayer {
+  #emitter = new Emitter<Events>();
+  #api: YTPlayerApi | null = null;
+  #ready: Promise<YTPlayerApi>;
+  #state: NowPlaying = { ...IDLE };
+  #publish: (state: NowPlaying, urgent: boolean) => void;
+
+  constructor(publish: (state: NowPlaying, urgent: boolean) => void) {
+    this.#publish = publish;
+    this.#ready = this.#findApi().then((api) => {
+      this.#api = api;
+      this.#attach(api);
+      return api;
+    });
+  }
+
+  get api() {
+    return this.#api;
+  }
+
+  get state(): NowPlaying {
+    return this.#state;
+  }
+
+  ready() {
+    return this.#ready;
+  }
+
+  video() {
+    return this.#api?.querySelector("video") ?? document.querySelector<HTMLVideoElement>(selectors["player.video"]);
+  }
+
+  on<K extends keyof Events>(event: K, listener: Events[K]): Unsubscribe {
+    return this.#emitter.on(event, listener);
+  }
+
+  control(action: PlayerAction) {
+    const api = this.#api;
+    if (!api) return;
+    const click = (name: keyof typeof selectors) => document.querySelector<HTMLElement>(selectors[name])?.click();
+    switch (action.type) {
+      case "play":
+        return api.playVideo();
+      case "pause":
+        return api.pauseVideo();
+      case "toggle":
+        return this.#state.status === "playing" ? api.pauseVideo() : api.playVideo();
+      case "next":
+        return document.querySelector(selectors["player_bar.next"]) ? click("player_bar.next") : api.nextVideo();
+      case "previous":
+        return document.querySelector(selectors["player_bar.previous"])
+          ? click("player_bar.previous")
+          : api.previousVideo();
+      case "seek":
+        return api.seekTo(Math.max(0, action.seconds), true);
+      case "seekBy":
+        return api.seekTo(Math.max(0, api.getCurrentTime() + action.seconds), true);
+      case "volume": {
+        const volume = Math.round(Math.min(100, Math.max(0, action.value)));
+        api.setVolume(volume);
+        // Keep YTM's own slider and its persisted volume in sync.
+        document.querySelector<PlayerBarElement>(selectors.player_bar)?.updateVolume?.(volume);
+        return;
+      }
+      case "mute":
+        return (action.muted ?? !api.isMuted()) ? api.mute() : api.unMute();
+      case "like":
+        return click("player_bar.like");
+      case "dislike":
+        return click("player_bar.dislike");
+      case "shuffle":
+        return click("player_bar.shuffle");
+      case "repeat":
+        return click("player_bar.repeat");
+    }
+  }
+
+  async #findApi(): Promise<YTPlayerApi> {
+    const element = await waitForSelector<YTPlayerApi>(selectors["player.api"]);
+    // The element exists before YTM upgrades it with the API methods.
+    while (typeof element.getPlayerState !== "function") {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return element;
+  }
+
+  #attach(api: YTPlayerApi) {
+    let pendingVideoId: string | undefined;
+    let fallback: ReturnType<typeof setTimeout> | undefined;
+    const loadTrack = () => {
+      pendingVideoId = undefined;
+      clearTimeout(fallback);
+      const track = this.#readTrack(api);
+      if (!track) return;
+      const previous = this.#state;
+      // Ads reload the content video; only a different track (or a replay) is a change.
+      const isNew = previous.track?.videoId !== track.videoId || previous.status === "ended";
+      this.#update(isNew ? { track, positionSeconds: 0 } : { track }, true);
+      if (isNew) this.#emitter.emit("trackChange", track);
+    };
+    api.addEventListener("videodatachange", (name: string, data?: { videoId?: string }) => {
+      // Ads fire their own "dataloaded" with the ad's video id.
+      const contentId = api.getVideoData().video_id;
+      if (data?.videoId && data.videoId !== contentId) return;
+      if (name === "dataloaded") {
+        pendingVideoId = contentId;
+        this.#emitter.emit("trackLoading", pendingVideoId);
+        clearTimeout(fallback);
+        fallback = setTimeout(loadTrack, DATAUPDATED_FALLBACK_MS);
+      } else if (name === "dataupdated" && pendingVideoId !== undefined) {
+        loadTrack();
+      }
+    });
+
+    const video = this.video();
+    if (video) this.#attachVideo(video);
+    if (video && !Number.isNaN(video.duration)) loadTrack();
+
+    this.#observeControls();
+    this.#observeAds(api);
+    this.#update({ volume: api.getVolume(), muted: api.isMuted() }, true);
+  }
+
+  #attachVideo(video: HTMLVideoElement) {
+    const status = (next: PlaybackStatus) => () => {
+      if (this.#state.status === next) return;
+      this.#update(this.#state.ad ? { status: next } : { status: next, positionSeconds: video.currentTime }, true);
+      this.#emitter.emit("statusChange", next);
+    };
+    video.addEventListener("playing", status("playing"));
+    video.addEventListener("pause", status("paused"));
+    video.addEventListener("waiting", status("buffering"));
+    video.addEventListener("ended", status("ended"));
+    video.addEventListener("seeked", () => {
+      if (!this.#state.ad) this.#update({ positionSeconds: video.currentTime }, true);
+    });
+    let lastSecond = -1;
+    video.addEventListener("timeupdate", () => {
+      if (this.#state.ad) return;
+      const second = Math.floor(video.currentTime);
+      if (second === lastSecond) return;
+      lastSecond = second;
+      this.#update({ positionSeconds: video.currentTime }, false);
+      this.#emitter.emit("timeUpdate", video.currentTime);
+    });
+    video.addEventListener("volumechange", () => {
+      const api = this.#api;
+      const volume = api?.getVolume() ?? Math.round(video.volume * 100);
+      const muted = api?.isMuted() ?? video.muted;
+      this.#update({ volume, muted }, true);
+      this.#emitter.emit("volumeChange", volume, muted);
+    });
+    if (!video.paused) status("playing")();
+  }
+
+  /** YTM plays ads in the same <video>; the player gets an `ad-showing` class meanwhile. */
+  #observeAds(api: YTPlayerApi) {
+    const read = () => {
+      const ad = api.classList.contains("ad-showing") || api.classList.contains("ad-interrupting");
+      if (ad === this.#state.ad) return;
+      this.#update({ ad }, true);
+      this.#emitter.emit("adChange", ad);
+    };
+    new MutationObserver(read).observe(api, { attributes: true, attributeFilter: ["class"] });
+    read();
+  }
+
+  #observeControls() {
+    const read = () => {
+      const bar = document.querySelector<PlayerBarElement>(selectors.player_bar);
+      const repeat = REPEAT_MODES[bar?.getState?.().queue?.repeatMode ?? ""] ?? this.#state.repeat;
+      const shuffle = bar?.hasAttribute("shuffle-on") ?? false;
+      const likeStatus = document.querySelector(selectors["player_bar.like_buttons"])?.getAttribute("like-status");
+      const like: LikeStatus = likeStatus === "LIKE" ? "like" : likeStatus === "DISLIKE" ? "dislike" : "none";
+      const s = this.#state;
+      if (repeat !== s.repeat || shuffle !== s.shuffle || like !== s.like) this.#update({ repeat, shuffle, like }, true);
+    };
+    void waitForSelector(selectors.player_bar).then((bar) => {
+      new MutationObserver(read).observe(bar, {
+        attributes: true,
+        subtree: true,
+        attributeFilter: ["shuffle-on", "like-status", "title", "aria-label", "repeat-mode"],
+      });
+      read();
+    });
+  }
+
+  #readTrack(api: YTPlayerApi): Track | undefined {
+    const response = api.getPlayerResponse();
+    const details = response?.videoDetails;
+    const data = api.getVideoData();
+    const videoId = details?.videoId ?? data.video_id;
+    if (!videoId) return;
+    const metadata = navigator.mediaSession?.metadata;
+    const sameTrack = metadata && metadata.title === (details?.title ?? data.title);
+    const artwork = sameTrack ? largest(metadata.artwork.map((a) => ({ url: a.src, size: parseSize(a.sizes) }))) : undefined;
+    const thumbnails = details?.thumbnail?.thumbnails ?? [];
+    const thumbnail = largest(thumbnails.map((t) => ({ url: t.url, size: t.width * t.height })));
+    const track: Track = {
+      videoId,
+      title: details?.title ?? data.title,
+      artist: (sameTrack && metadata.artist) || details?.author || data.author,
+      durationSeconds: Number(details?.lengthSeconds) || api.getDuration() || 0,
+      url: `https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/watch?v=${videoId}`,
+      mediaType: MEDIA_TYPES[details?.musicVideoType ?? ""] ?? "other",
+    };
+    if (sameTrack && metadata.album) track.album = metadata.album;
+    const artworkUrl = artwork ?? thumbnail;
+    if (artworkUrl) track.artworkUrl = artworkUrl;
+    if (data.list) track.playlistId = data.list;
+    return track;
+  }
+
+  #update(patch: Partial<NowPlaying>, urgent: boolean) {
+    this.#state = { ...this.#state, ...patch, updatedAt: Date.now() };
+    this.#emitter.emit("change", this.#state);
+    this.#publish(this.#state, urgent);
+  }
+}
+
+function parseSize(sizes: string | undefined) {
+  const [w = 0, h = 0] = (sizes ?? "").split("x").map(Number);
+  return w * h;
+}
+
+function largest(items: { url: string; size: number }[]) {
+  return items.reduce<{ url: string; size: number } | undefined>(
+    (best, item) => (!best || item.size > best.size ? item : best),
+    undefined,
+  )?.url;
+}

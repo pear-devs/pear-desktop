@@ -1,0 +1,61 @@
+// Build-time macros. Import with `with { type: "macro" }`: every call runs in
+// Node while bundling and is replaced by its (serialized) return value, so a
+// mistake here fails the build instead of a user's session.
+
+import { readFileSync } from "node:fs";
+import { transform } from "lightningcss";
+import { isSelectorName, selectors, type SelectorName } from "./selectors.ts";
+
+/** Resolves a selector from the registry at build time. */
+export function sel(name: SelectorName): string {
+  if (!isSelectorName(name)) throw new Error(unknownSelector(name));
+  return selectors[name];
+}
+
+/**
+ * Validates and minifies CSS at build time. `sel(name)` inside the CSS text is
+ * replaced with the registry selector, e.g. css`sel(nav_bar.background) { … }`.
+ * Interpolation is not supported: macros only accept static input.
+ */
+export function css(strings: TemplateStringsArray | string, ...values: unknown[]): string {
+  if (values.length > 0) throw new Error("[pear] css`` macro does not support interpolation; use sel(name) in the CSS text");
+  const source = typeof strings === "string" ? strings : strings.join("");
+  const resolved = source.replace(/\bsel\(\s*([\w.-]+)\s*\)/g, (_, name: string) => {
+    if (!isSelectorName(name)) throw new Error(unknownSelector(name));
+    return selectors[name];
+  });
+  assertBalanced(resolved);
+  const { code, warnings } = transform({
+    filename: "plugin.css",
+    code: new TextEncoder().encode(resolved),
+    minify: true,
+    errorRecovery: false,
+  });
+  if (warnings.length > 0) {
+    throw new Error(`[pear] css: ${warnings.map((w) => w.message).join("; ")}`);
+  }
+  return new TextDecoder().decode(code);
+}
+
+/** CSS error recovery silently accepts unbalanced braces; a typo should fail the build instead. */
+function assertBalanced(source: string) {
+  const stripped = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, '""');
+  let depth = 0;
+  for (const char of stripped) {
+    if (char === "{") depth++;
+    else if (char === "}" && --depth < 0) throw new Error("[pear] css: unexpected `}`");
+  }
+  if (depth !== 0) throw new Error("[pear] css: unclosed `{`");
+}
+
+function unknownSelector(name: string) {
+  return `[pear] unknown selector "${name}"; add it to @pear/sdk/selectors (known: ${Object.keys(selectors).join(", ")})`;
+}
+
+/**
+ * Reads a file from the repository's assets/ at build time and returns it
+ * base64-encoded (icons), so nothing depends on runtime asset paths.
+ */
+export function embed(asset: string): string {
+  return readFileSync(new URL(`../../../assets/${asset}`, import.meta.url)).toString("base64");
+}

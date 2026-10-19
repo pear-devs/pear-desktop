@@ -1,0 +1,16 @@
+{
+  "name": "@pear/plugin-media-controls",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@pear/sdk": "workspace:*",
+    "@jellybrick/mpris-service": "^2.2.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "electron": "^44.9.0"
+  }
+}

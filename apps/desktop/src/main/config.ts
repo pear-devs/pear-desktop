@@ -1,289 +1,148 @@
-import { blockers } from '@/plugins/do-not-track/types';
-import { DefaultPresetList, type Preset } from '@/plugins/downloader/types';
+// Persistent settings: pear-desktop's config.json in userData, in its layout,
+// so existing installs keep their settings:
+//
+//   plugins.<id>        { enabled, ...config }
+//   url, window-size, window-position, window-maximized
+//
+// Values are normalized against their schema on load, so stale or hand-edited
+// ones fall back to defaults instead of crashing anything. Keys this version
+// doesn't know are kept, for older versions and future migrations.
 
-import { defaultConfig as defaults } from './defaults';
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { type AnyPlugin, normalizeConfig } from "@pear/sdk";
+import type { PluginState } from "@pear/sdk/protocol";
 
-import type { TrackerBlockerConfig } from '@/plugins/do-not-track';
-import type { SyncedLyricsPluginConfig } from '@/plugins/synced-lyrics/types';
+export interface WindowState {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+  maximized: boolean;
+}
 
-// HACK: electron-store is ESM, but rolldown has a bug that prevents it from being imported properly in CommonJS context, so we have to use require here
-/* oxlint-disable typescript/no-require-imports */
-const Store = (
-  require('electron-store') as {
-    default: typeof import('electron-store').default;
-  }
-).default;
-/* oxlint-enable typescript/no-require-imports */
+type Json = Record<string, unknown>;
 
-export type IStore = InstanceType<
-  typeof import('conf').default<Record<string, unknown>>
->;
+interface StoredConfig {
+  plugins?: Record<string, Json>;
+  options?: Json;
+  url?: unknown;
+  "window-size"?: unknown;
+  "window-position"?: unknown;
+  "window-maximized"?: unknown;
+  [key: string]: unknown;
+}
 
-const migrations = {
-  '>=3.12.0'(store: IStore) {
-    const blockerConfig = store.get('plugins.adblocker') as TrackerBlockerConfig;
-    if (blockerConfig) {
-      if (!Object.values(blockers).includes(blockerConfig.blocker)) {
-        blockerConfig.blocker = blockers.InPlayer;
-      }
-      store.set('plugins.do-not-track', blockerConfig);
-      store.delete('plugins.adblocker');
-    }
-  },
-  '>=3.10.0'(store: IStore) {
-    const lyricGeniusConfig = store.get('plugins.lyrics-genius') as
-      | {
-          enabled?: boolean;
-          romanizedLyrics?: boolean;
-        }
-      | undefined;
+export const CONFIG_FILE = "config.json";
+const WRITE_DELAY_MS = 300;
 
-    if (lyricGeniusConfig) {
-      const syncedLyricsConfig = store.get('plugins.synced-lyrics') as
-        | SyncedLyricsPluginConfig
-        | undefined;
+const isRecord = (value: unknown): value is Json => typeof value === "object" && value !== null && !Array.isArray(value);
 
-      if (
-        !syncedLyricsConfig ||
-        syncedLyricsConfig?.enabled !== lyricGeniusConfig?.enabled
-      ) {
-        store.set('plugins.synced-lyrics', {
-          ...syncedLyricsConfig,
-          enabled: lyricGeniusConfig.enabled,
-        });
-      }
+export class Settings {
+  readonly path: string;
+  #data: StoredConfig;
+  #plugins = new Map<string, PluginState>();
+  #writeTimer: ReturnType<typeof setTimeout> | undefined;
 
-      store.delete('plugins.lyrics-genius');
-    }
-  },
-  '>=3.3.0'(store: IStore) {
-    const lastfmConfig = store.get('plugins.lastfm') as {
-      enabled?: boolean;
-      token?: string;
-      session_key?: string;
-      api_root?: string;
-      api_key?: string;
-      secret?: string;
-    };
-    if (lastfmConfig) {
-      let scrobblerConfig = store.get('plugins.scrobbler') as
-        | {
-            enabled?: boolean;
-            scrobblers?: {
-              lastfm?: {
-                enabled?: boolean;
-                token?: string;
-                sessionKey?: string;
-                apiRoot?: string;
-                apiKey?: string;
-                secret?: string;
-              };
-            };
-          }
-        | undefined;
-
-      if (!scrobblerConfig) {
-        scrobblerConfig = {
-          enabled: lastfmConfig.enabled,
-        };
-      }
-
-      if (!scrobblerConfig.scrobblers) {
-        scrobblerConfig.scrobblers = {
-          lastfm: {},
-        };
-      }
-
-      scrobblerConfig.scrobblers.lastfm = {
-        enabled: lastfmConfig.enabled,
-        token: lastfmConfig.token,
-        sessionKey: lastfmConfig.session_key,
-        apiRoot: lastfmConfig.api_root,
-        apiKey: lastfmConfig.api_key,
-        secret: lastfmConfig.secret,
-      };
-      store.set('plugins.scrobbler', scrobblerConfig);
-      store.delete('plugins.lastfm');
-    }
-  },
-  '>=3.0.0'(store: IStore) {
-    const discordConfig = store.get('plugins.discord') as Record<
-      string,
-      unknown
-    >;
-    if (discordConfig) {
-      const oldActivityTimoutEnabled = store.get(
-        'plugins.discord.activityTimoutEnabled',
-      ) as boolean | undefined;
-      const oldActivityTimoutTime = store.get(
-        'plugins.discord.activityTimoutTime',
-      ) as number | undefined;
-      if (oldActivityTimoutEnabled !== undefined) {
-        discordConfig.activityTimeoutEnabled = oldActivityTimoutEnabled;
-        store.set('plugins.discord', discordConfig);
-      }
-      if (oldActivityTimoutTime !== undefined) {
-        discordConfig.activityTimeoutTime = oldActivityTimoutTime;
-        store.set('plugins.discord', discordConfig);
-      }
-    }
-  },
-  '>=2.1.3'(store: IStore) {
-    const listenAlong = store.get('plugins.discord.listenAlong');
-    if (listenAlong !== undefined) {
-      store.set(
-        'plugins.discord.playOn\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063',
-        listenAlong,
-      );
-      store.delete('plugins.discord.listenAlong');
-    }
-  },
-  '>=2.1.0'(store: IStore) {
-    const originalPreset = store.get('plugins.downloader.preset') as
-      | string
-      | undefined;
-    if (originalPreset) {
-      if (originalPreset !== 'opus') {
-        store.set('plugins.downloader.selectedPreset', 'Custom');
-        store.set('plugins.downloader.customPresetSetting', {
-          extension: 'mp3',
-          ffmpegArgs:
-            (store.get('plugins.downloader.ffmpegArgs') as string[]) ??
-            DefaultPresetList['mp3 (256kbps)'].ffmpegArgs,
-        } satisfies Preset);
-      } else {
-        store.set('plugins.downloader.selectedPreset', 'Source');
-        store.set('plugins.downloader.customPresetSetting', {
-          extension: null,
-          ffmpegArgs:
-            (store.get('plugins.downloader.ffmpegArgs') as string[]) ?? [],
-        } satisfies Preset);
-      }
-      store.delete('plugins.downloader.preset');
-      store.delete('plugins.downloader.ffmpegArgs');
-    }
-  },
-  '>=1.20.0'(store: IStore) {
-    store.delete('plugins.visualizer'); // default value is now in the plugin
-
-    if (store.get('plugins.notifications.toastStyle') === undefined) {
-      const pluginOptions = store.get('plugins.notifications') || {};
-      store.set('plugins.notifications', {
-        ...pluginOptions,
+  constructor(userData: string, plugins: readonly AnyPlugin[]) {
+    this.path = join(userData, CONFIG_FILE);
+    this.#data = readJson(this.path) ?? {};
+    for (const plugin of plugins) {
+      const entry = this.#data.plugins?.[plugin.id];
+      this.#plugins.set(plugin.id, {
+        enabled: typeof entry?.enabled === "boolean" ? entry.enabled : (plugin.enabledByDefault ?? false),
+        config: plugin.config ? normalizeConfig(plugin.config, entry) : {},
       });
     }
+  }
 
-    if (store.get('options.ForceShowLikeButtons')) {
-      store.delete('options.ForceShowLikeButtons');
-      store.set('options.likeButtons', 'force');
-    }
-  },
-  '>=1.17.0'(store: IStore) {
-    store.delete('plugins.picture-in-picture'); // default value is now in the plugin
+  plugin(id: string): PluginState | undefined {
+    return this.#plugins.get(id);
+  }
 
-    if (store.get('plugins.video-toggle.mode') === undefined) {
-      store.set('plugins.video-toggle.mode', 'custom');
-    }
-  },
-  '>=1.14.0'(store: IStore) {
-    if (
-      typeof store.get('plugins.precise-volume.globalShortcuts') !== 'object'
-    ) {
-      store.set('plugins.precise-volume.globalShortcuts', {});
-    }
+  allPlugins(): Record<string, PluginState> {
+    return Object.fromEntries(this.#plugins);
+  }
 
-    if (store.get('plugins.hide-video-player.enabled')) {
-      store.delete('plugins.hide-video-player');
-      store.set('plugins.video-toggle.enabled', true);
-    }
-  },
-  '>=1.13.0'(store: IStore) {
-    if (store.get('plugins.discord.listenAlong') === undefined) {
-      store.set('plugins.discord.listenAlong', true);
-    }
-  },
-  '>=1.12.0'(store: IStore) {
-    const options = store.get('plugins.shortcuts') as
-      | Record<
-          string,
-          | {
-              action: string;
-              shortcut: unknown;
-            }[]
-          | Record<string, unknown>
-        >
-      | undefined;
-    if (options) {
-      let updated = false;
-      for (const optionType of ['global', 'local']) {
-        if (
-          Object.hasOwn(options, optionType) &&
-          Array.isArray(options[optionType])
-        ) {
-          const optionsArray = options[optionType] as {
-            action: string;
-            shortcut: unknown;
-          }[];
-          const updatedOptions: Record<string, unknown> = {};
-          for (const optionObject of optionsArray) {
-            if (optionObject.action && optionObject.shortcut) {
-              updatedOptions[optionObject.action] = optionObject.shortcut;
-            }
-          }
-
-          options[optionType] = updatedOptions;
-          updated = true;
-        }
-      }
-      if (updated) {
-        store.set('plugins.shortcuts', options);
-      }
-    }
-  },
-  '>=1.11.0'(store: IStore) {
-    if (store.get('options.resumeOnStart') === undefined) {
-      store.set('options.resumeOnStart', true);
-    }
-  },
-  '>=1.7.0'(store: IStore) {
-    const enabledPlugins = store.get('plugins') as string[];
-    if (!Array.isArray(enabledPlugins)) {
-      console.warn('Plugins are not in array format, cannot migrate');
-      return;
-    }
-
-    // Include custom options
-    // oxlint-disable-next-line typescript/no-explicit-any
-    const plugins: Record<string, any> = {
-      adblocker: {
-        enabled: true,
-        cache: true,
-        additionalBlockLists: [],
-      },
-      downloader: {
-        enabled: false,
-        ffmpegArgs: [], // E.g. ["-b:a", "192k"] for an audio bitrate of 192kb/s
-        downloadFolder: undefined, // Custom download folder (absolute path)
-      },
+  setPlugin(plugin: AnyPlugin, patch: { enabled?: boolean; config?: Record<string, unknown> }): PluginState {
+    const current = this.#plugins.get(plugin.id) ?? { enabled: false, config: {} };
+    const next: PluginState = {
+      enabled: patch.enabled ?? current.enabled,
+      config: plugin.config ? normalizeConfig(plugin.config, { ...current.config, ...patch.config }) : {},
     };
+    this.#plugins.set(plugin.id, next);
+    this.#putPlugin(plugin.id, { enabled: next.enabled, ...next.config });
+    return next;
+  }
 
-    for (const enabledPlugin of enabledPlugins) {
-      // oxlint-disable-next-line typescript/no-unsafe-assignment
-      plugins[enabledPlugin] = {
-        ...plugins[enabledPlugin],
-        enabled: true,
-      };
-    }
+  get window(): WindowState | undefined {
+    const size = this.#data["window-size"];
+    if (!isRecord(size) || typeof size.width !== "number" || typeof size.height !== "number") return undefined;
+    const position = this.#data["window-position"];
+    // pear-desktop writes -1/-1 for "let the OS place it".
+    const placed =
+      isRecord(position) &&
+      typeof position.x === "number" &&
+      typeof position.y === "number" &&
+      !(position.x === -1 && position.y === -1);
+    return {
+      width: size.width,
+      height: size.height,
+      ...(placed ? { x: position.x as number, y: position.y as number } : {}),
+      maximized: this.#data["window-maximized"] === true,
+    };
+  }
 
-    store.set('plugins', plugins);
-  },
-};
+  set window(state: WindowState) {
+    this.#data["window-size"] = { width: state.width, height: state.height };
+    if (state.x !== undefined && state.y !== undefined) this.#data["window-position"] = { x: state.x, y: state.y };
+    this.#data["window-maximized"] = state.maximized;
+    this.#scheduleWrite();
+  }
 
-export const store = new Store({
-  defaults: {
-    ...defaults,
-    // README: 'plugin' uses deepmerge to populate the default values, so it is not necessary to include it here
-  },
-  clearInvalidConfig: false,
-  migrations,
-});
+  get lastUrl(): string | undefined {
+    return typeof this.#data.url === "string" ? this.#data.url : undefined;
+  }
+
+  set lastUrl(url: string) {
+    if (this.#data.url === url) return;
+    this.#data.url = url;
+    this.#scheduleWrite();
+  }
+
+  /** Writes pending changes immediately (on quit). */
+  flush() {
+    if (this.#writeTimer === undefined) return;
+    clearTimeout(this.#writeTimer);
+    this.#write();
+  }
+
+  #putPlugin(id: string, values: Json) {
+    // Keep keys this version doesn't know (an older version's, say).
+    this.#data.plugins = { ...this.#data.plugins, [id]: { ...this.#data.plugins?.[id], ...values } };
+    this.#scheduleWrite();
+  }
+
+  #scheduleWrite() {
+    clearTimeout(this.#writeTimer);
+    this.#writeTimer = setTimeout(() => this.#write(), WRITE_DELAY_MS);
+  }
+
+  #write() {
+    this.#writeTimer = undefined;
+    mkdirSync(dirname(this.path), { recursive: true });
+    const temp = `${this.path}.tmp`;
+    // Tabs, like electron-store writes it.
+    writeFileSync(temp, `${JSON.stringify(this.#data, null, "\t")}\n`);
+    renameSync(temp, this.path);
+  }
+}
+
+function readJson(path: string): StoredConfig | undefined {
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+    return isRecord(parsed) ? (parsed as StoredConfig) : undefined;
+  } catch {
+    return undefined;
+  }
+}

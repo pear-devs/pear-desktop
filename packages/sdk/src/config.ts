@@ -1,70 +1,106 @@
-import { deepmerge } from 'deepmerge-ts';
-import { allPlugins } from 'virtual:plugins';
+// Config schema builders. A plugin's `config` is a record of fields; each field
+// carries its default and the metadata the settings UI is generated from.
 
-import { restart } from '@/providers/app-controls';
-
-import { store } from './store';
-
-import type { PluginConfig } from '@/types/plugins';
-
-export function getPlugins() {
-  return store.get('plugins') as Record<string, PluginConfig>;
+interface FieldMeta {
+  label: string;
+  description?: string;
 }
 
-export async function isEnabled(plugin: string) {
-  const pluginConfig = deepmerge(
-    (await allPlugins())[plugin]?.config ?? { enabled: false },
-    (store.get('plugins') as Record<string, PluginConfig>)[plugin] ?? {},
-  );
-  return pluginConfig !== undefined && pluginConfig.enabled;
+interface FieldBase<K extends string, T> extends FieldMeta {
+  readonly kind: K;
+  readonly default: T;
 }
 
-/**
- * Set options for a plugin
- * @param plugin Plugin name
- * @param options Options to set
- * @param exclude Options to exclude from the options object
- */
-export function setOptions<T>(
-  plugin: string,
-  options: T,
-  exclude: string[] = ['enabled'],
-) {
-  const plugins = store.get('plugins') as Record<string, T>;
-  // HACK: This is a workaround for preventing changed options from being overwritten
-  exclude.forEach((key) => {
-    if (Object.prototype.hasOwnProperty.call(options, key)) {
-      delete options[key as keyof T];
-    }
-  });
-  store.set('plugins', {
-    ...plugins,
-    [plugin]: {
-      ...plugins[plugin],
-      ...options,
-    },
-  });
+export interface BoolField extends FieldBase<"bool", boolean> {}
+
+export interface NumberField extends FieldBase<"number", number> {
+  min?: number;
+  max?: number;
+  step?: number;
+  unit?: string;
 }
 
-export function setMenuOptions<T>(
-  plugin: string,
-  options: T,
-  exclude: string[] = ['enabled'],
-) {
-  setOptions(plugin, options, exclude);
-  if (store.get('options.restartOnConfigChanges')) {
-    restart();
+export interface StringField extends FieldBase<"string", string> {
+  placeholder?: string;
+  /** Rendered as a password input; never logged. */
+  secret?: boolean;
+}
+
+export interface SelectOption<T extends string> {
+  value: T;
+  label: string;
+}
+
+export interface SelectField<T extends string = string> extends FieldBase<"select", T> {
+  options: readonly SelectOption<T>[];
+}
+
+/** An Electron accelerator such as "CmdOrCtrl+Shift+P"; empty means unset. */
+export interface ShortcutField extends FieldBase<"shortcut", string> {}
+
+export type Field = BoolField | NumberField | StringField | SelectField | ShortcutField;
+
+export type ConfigShape = Record<string, Field>;
+
+export type ConfigOf<S extends ConfigShape> = { -readonly [K in keyof S]: S[K]["default"] };
+
+type NumberMeta = FieldMeta & Pick<NumberField, "min" | "max" | "step" | "unit">;
+type StringMeta = FieldMeta & Pick<StringField, "placeholder" | "secret">;
+
+export const config = {
+  bool: (defaultValue: boolean, meta: FieldMeta): BoolField => ({ kind: "bool", default: defaultValue, ...meta }),
+  number: (defaultValue: number, meta: NumberMeta): NumberField => ({
+    kind: "number",
+    default: defaultValue,
+    ...meta,
+  }),
+  string: (defaultValue: string, meta: StringMeta): StringField => ({
+    kind: "string",
+    default: defaultValue,
+    ...meta,
+  }),
+  select: <const O extends readonly SelectOption<string>[]>(
+    defaultValue: O[number]["value"],
+    options: O,
+    meta: FieldMeta,
+  ): SelectField<O[number]["value"]> => ({ kind: "select", default: defaultValue, options, ...meta }),
+  shortcut: (defaultValue: string, meta: FieldMeta): ShortcutField => ({
+    kind: "shortcut",
+    default: defaultValue,
+    ...meta,
+  }),
+};
+
+export function defaultsOf<S extends ConfigShape>(shape: S): ConfigOf<S> {
+  return Object.fromEntries(Object.entries(shape).map(([key, field]) => [key, field.default])) as ConfigOf<S>;
+}
+
+/** Coerces stored values onto the schema: unknown keys dropped, invalid values reset to defaults. */
+export function normalizeConfig<S extends ConfigShape>(shape: S, stored: unknown): ConfigOf<S> {
+  const input = (typeof stored === "object" && stored !== null ? stored : {}) as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+  for (const [key, field] of Object.entries(shape)) {
+    const value = input[key];
+    result[key] = isValid(field, value) ? value : field.default;
   }
+  return result as ConfigOf<S>;
 }
 
-export function getOptions<T>(plugin: string): T {
-  return (store.get('plugins') as Record<string, T>)[plugin];
-}
-
-export function enable(plugin: string) {
-  setMenuOptions(plugin, { enabled: true }, []);
-}
-
-export function disable(plugin: string) {
-  setMenuOptions(plugin, { enabled: false }, []);
+function isValid(field: Field, value: unknown): boolean {
+  switch (field.kind) {
+    case "bool":
+      return typeof value === "boolean";
+    case "number":
+      return (
+        typeof value === "number" &&
+        Number.isFinite(value) &&
+        (field.min === undefined || value >= field.min) &&
+        (field.max === undefined || value <= field.max)
+      );
+    case "string":
+    case "shortcut":
+      return typeof value === "string";
+    case "select":
+      return field.options.some((option) => option.value === value);
+  }
 }

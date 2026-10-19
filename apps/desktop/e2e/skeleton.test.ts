@@ -8,15 +8,12 @@ test("runtime is injected before page scripts and the bridge works", async () =>
   const app = await launchApp();
   try {
     const page = await app.firstWindow();
-    const ping = page.waitForEvent("console", {
-      predicate: (msg) => msg.text().startsWith("[pear] ping"),
-    });
     await page.waitForURL(/music\.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\.com/);
 
-    const marker = await page.waitForFunction(() => window.__pearRuntime).then((h) => h.jsonValue());
+    const marker = await page.waitForFunction(() => window.__pearRuntime?.marker).then((h) => h.jsonValue());
     expect(marker).toMatchObject({ readyState: "loading", scriptsBefore: 0 });
 
-    expect((await ping).text()).toContain("pong: hello from page");
+    expect(await page.evaluate(() => window.__pear!.invoke("ping", "hello from page"))).toBe("pong: hello from page");
 
     const meta = await page.evaluate(() =>
       document.querySelector('meta[http-equiv="Content-Security-Policy" i]')?.getAttribute("content"),

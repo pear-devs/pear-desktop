@@ -12,7 +12,9 @@
     "test:e2e": "electron-vite build && playwright test"
   },
   "devDependencies": {
+    "@jellybrick/dbus-next": "^0.11.4",
     "@pear/page": "workspace:*",
+    "@pear/sdk": "workspace:*",
     "@pear/vite-plugin": "workspace:*",
     "@playwright/test": "^1.64.1",
     "@types/node": "^24.0.0",

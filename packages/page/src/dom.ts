@@ -1,30 +1,37 @@
-export const waitForElement = <T extends Element>(
-  selector: string,
-  options: {
-    maxRetry?: number;
-    retryInterval?: number;
-  } = {
-    maxRetry: -1,
-    retryInterval: 100,
-  },
-): Promise<T> => {
-  return new Promise<T>((resolve) => {
-    let retryCount = 0;
-    const maxRetry = options.maxRetry ?? -1;
-    const retryInterval = options.retryInterval ?? 100;
-    const interval = setInterval(() => {
-      if (maxRetry > 0 && retryCount >= maxRetry) {
-        clearInterval(interval);
-        return;
-      }
-      const elem = document.querySelector<T>(selector);
-      if (!elem) {
-        retryCount++;
-        return;
-      }
+export interface WaitOptions {
+  root?: ParentNode;
+  timeout?: number;
+  signal?: AbortSignal;
+}
 
-      clearInterval(interval);
-      resolve(elem);
-    }, retryInterval /* ms */);
+/** Resolves with the first element matching `selector`, observing the DOM until it appears. */
+export function waitForSelector<E extends Element>(selector: string, options: WaitOptions = {}): Promise<E> {
+  const root = options.root ?? document;
+  const found = root.querySelector<E>(selector);
+  if (found) return Promise.resolve(found);
+
+  return new Promise((resolve, reject) => {
+    const observer = new MutationObserver(() => {
+      const element = root.querySelector<E>(selector);
+      if (element) finish(() => resolve(element));
+    });
+    const timer = options.timeout === undefined
+      ? undefined
+      : setTimeout(() => finish(() => reject(new Error(`[pear] timed out waiting for ${selector}`))), options.timeout);
+    const onAbort = () => finish(() => reject(options.signal?.reason));
+    function finish(settle: () => void) {
+      observer.disconnect();
+      clearTimeout(timer);
+      options.signal?.removeEventListener("abort", onAbort);
+      settle();
+    }
+    options.signal?.addEventListener("abort", onAbort, { once: true });
+    // Observe the Document node itself: at document start it has no documentElement yet.
+    observer.observe(root as Node, { childList: true, subtree: true });
   });
-};
+}
+
+export function domReady(): Promise<void> {
+  if (document.readyState !== "loading") return Promise.resolve();
+  return new Promise((resolve) => document.addEventListener("DOMContentLoaded", () => resolve(), { once: true }));
+}

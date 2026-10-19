@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "nub run --filter @pear/desktop dev",
     "build": "nub run --filter @pear/desktop build",
-    "typecheck": "nub run -r typecheck"
+    "typecheck": "nub run -r typecheck",
+    "test": "nub run -r test",
+    "test:e2e": "nub run --filter @pear/desktop test:e2e"
   },
   "devDependencies": {
     "typescript": "^7.0.2"
