@@ -65,6 +65,29 @@ export const selectors = {
   // ---- audio (equalizer, compressor, crossfade, volume, speed, quality, visualizer, …)
 
   // ---- interface tweaks (album actions, colors, ambient mode, clock, navigation, pip, …)
+  "player_bar.background": "#player-bar-background",
+  "guide.background": "#guide-wrapper",
+  "guide.mini_background": "#mini-guide-background",
+  "browse.background": "ytmusic-browse-response #background",
+  "browse.gradient": "ytmusic-browse-response .background-gradient",
+  "browse.page": "#browse-page",
+  "browse.action_buttons": "ytmusic-responsive-header-renderer #action-buttons",
+  "browse.continuations": "#browse-page #continuations",
+  "browse.tracklist":
+    "#browse-page ytmusic-playlist-shelf-renderer, #browse-page ytmusic-shelf-renderer:nth-last-child(1 of ytmusic-shelf-renderer)",
+  "browse.track_like": "#button-shape-like > button",
+  "browse.track_dislike": "#button-shape-dislike > button",
+  "list.play_button": "ytmusic-play-button-renderer",
+  "player.player": "ytmusic-player#player",
+  "player.main_panel": "ytmusic-player-page #main-panel",
+  "player.side_panel": "ytmusic-player-page #side-panel",
+  "player.song_image_img": "#song-image #thumbnail img",
+  "player.song_video_wrapper": "#song-video .player-wrapper",
+  "player.native_av_toggle": "ytmusic-player-page #av-id",
+  "player_bar.menu_button": "ytmusic-player-bar ytmusic-menu-renderer.menu yt-button-shape button",
+  "player_bar.toggle_page": "ytmusic-player-bar .toggle-player-page-button",
+  "player.fullscreen_button": "ytmusic-player #song-media-window .fullscreen-button button",
+  "popup.listbox": "ytmusic-menu-popup-renderer tp-yt-paper-listbox",
 
   // ---- lyrics & music together
   /** The player page's tab panel (Up next / Lyrics / Related); it is also the scroller. */

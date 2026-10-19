@@ -1,270 +1,175 @@
-import { createSignal, Show } from 'solid-js';
-import { render } from 'solid-js/web';
+import { definePlugin, type SelectorName } from "@pear/sdk";
+import { css } from "@pear/sdk/macros" with { type: "macro" };
 
-import { t } from '@/i18n';
-import { createPlugin } from '@/utils';
-import { waitForElement } from '@/utils/wait-for-element';
+const THUMB_UP =
+  "M3 11h3v10H3V11zm15.77 0h-4.23l1.52-4.94C16.38 5.03 15.54 4 14.38 4c-.58 0-1.14.24-1.52.65L7 11v10h10.43c1.06 0 1.98-.67 2.19-1.61l1.34-6C21.23 12.15 20.18 11 18.77 11z";
+const THUMB_DOWN =
+  "M18 4h3v10h-3V4zM5.23 14h4.23l-1.52 4.94C7.62 19.97 8.46 21 9.62 21c.58 0 1.14-.24 1.52-.65L17 14V4H6.57c-1.06 0-1.98.67-2.19 1.61l-1.34 6C2.77 12.85 3.82 14 5.23 14z";
+const STRIKE = "M3.3 2 2 3.3 20.7 22l1.3-1.3z";
 
-import {
-  DislikeButton,
-  LikeButton,
-  UnDislikeButton,
-  UnLikeButton,
-} from './templates';
+// Loading a long playlist's remaining rows: wait this long per batch, give up after this many.
+const CONTINUATION_WAIT_MS = 1500;
+const MAX_CONTINUATIONS = 100;
 
-export default createPlugin<
-  unknown,
-  unknown,
-  {
-    observer?: MutationObserver;
-    loadObserver?: MutationObserver;
-    changeObserver?: MutationObserver;
-    waiting: boolean;
-    onPageChange(): void;
-    loadFullList: (event: MouseEvent) => void;
-    applyToList(id: string, loader: HTMLElement): void;
-    start(): void;
-    stop(): void;
-  }
->({
-  name: () => t('plugins.album-actions.name'),
-  description: () => t('plugins.album-actions.description'),
-  restartNeeded: false,
-  addedVersion: '3.2.X',
-  config: {
-    enabled: false,
-  },
-  renderer: {
-    waiting: false,
-    start() {
-      // Waits for pagechange
-      this.onPageChange();
-      this.observer = new MutationObserver(() => {
-        this.onPageChange();
-      });
-      this.observer.observe(document.querySelector('#browse-page')!, {
-        attributes: false,
-        childList: true,
-        subtree: true,
-      });
-    },
-    async onPageChange() {
-      if (this.waiting) {
-        return;
-      } else {
-        this.waiting = true;
-      }
-      const continuations = await waitForElement<HTMLElement>('#continuations');
-      this.waiting = false;
+interface Action {
+  id: string;
+  label: string;
+  icon: string[];
+  /** The rows' buttons this action clicks, and whether they must be pressed already. */
+  button: SelectorName;
+  pressed: boolean;
+}
 
-      const [showUnDislike, setShowUnDislike] = createSignal(true);
-      const [showDislike, setShowDislike] = createSignal(true);
-      const [showLike, setShowLike] = createSignal(true);
-      const [showUnLike, setShowUnLike] = createSignal(true);
+const ACTIONS: readonly Action[] = [
+  { id: "like", label: "Like all", icon: [THUMB_UP], button: "browse.track_like", pressed: false },
+  { id: "unlike", label: "Remove all likes", icon: [THUMB_UP, STRIKE], button: "browse.track_like", pressed: true },
+  { id: "dislike", label: "Dislike all", icon: [THUMB_DOWN], button: "browse.track_dislike", pressed: false },
+  { id: "undislike", label: "Remove all dislikes", icon: [THUMB_DOWN, STRIKE], button: "browse.track_dislike", pressed: true },
+];
 
-      const DEFAULT_MASK_SIZE = '100% 50%';
-      const [unDislikeMaskSize, setUnDislikeMaskSize] =
-        createSignal(DEFAULT_MASK_SIZE);
-      const [dislikeMaskSize, setDislikeMaskSize] =
-        createSignal(DEFAULT_MASK_SIZE);
-      const [likeMaskSize, setLikeMaskSize] = createSignal(DEFAULT_MASK_SIZE);
-      const [unLikeMaskSize, setUnLikeMaskSize] =
-        createSignal(DEFAULT_MASK_SIZE);
-
-      const buttonContainer = document.createElement('div');
-      buttonContainer.style.display = 'flex';
-      buttonContainer.style.flexDirection = 'row';
-
-      render(
-        () => (
-          <>
-            <Show when={showUnDislike()}>
-              <UnDislikeButton
-                maskSize={unDislikeMaskSize()}
-                onClick={this.loadFullList}
-              />
-            </Show>
-            <Show when={showDislike()}>
-              <DislikeButton
-                maskSize={dislikeMaskSize()}
-                onClick={this.loadFullList}
-              />
-            </Show>
-            <Show when={showLike()}>
-              <LikeButton
-                maskSize={likeMaskSize()}
-                onClick={this.loadFullList}
-              />
-            </Show>
-            <Show when={showUnLike()}>
-              <UnLikeButton
-                maskSize={unLikeMaskSize()}
-                onClick={this.loadFullList}
-              />
-            </Show>
-          </>
-        ),
-        buttonContainer,
-      );
-
-      //Finds the playlist
-      const playlist =
-        document.querySelector('ytmusic-playlist-shelf-renderer') ??
-        document.querySelector(':nth-last-child(1 of ytmusic-shelf-renderer)');
-
-      if (!playlist) {
-        return;
-      }
-
-      // Adds an observer for every button, so it gets updated when one is clicked
-      this.changeObserver?.disconnect();
-
-      this.changeObserver = new MutationObserver(() => {
-        this.stop();
-        this.start();
-      });
-      const allButtons = playlist.querySelectorAll(
-        'yt-button-shape.ytmusic-like-button-renderer',
-      );
-      for (const btn of allButtons) {
-        this.changeObserver.observe(btn, {
-          attributes: true,
-          childList: false,
-          subtree: false,
-        });
-      }
-      //Determine if button is needed and colors the percentage
-      const listsLength = playlist.querySelectorAll(
-        '#button-shape-dislike > button',
-      ).length;
-      if (continuations.children.length == 0 && listsLength > 0) {
-        const counts = {
-          dislike: playlist?.querySelectorAll(
-            '#button-shape-dislike > button[aria-pressed=true]',
-          ).length,
-          undislike: playlist?.querySelectorAll(
-            '#button-shape-dislike > button[aria-pressed=false]',
-          ).length,
-          unlike: playlist?.querySelectorAll(
-            '#button-shape-like > button[aria-pressed=false]',
-          ).length,
-          like: playlist?.querySelectorAll(
-            '#button-shape-like > button[aria-pressed=true]',
-          ).length,
-        };
-        for (const [name, size] of Object.entries(counts)) {
-          switch (name) {
-            case 'dislike':
-              if (size > 0) {
-                setShowDislike(true);
-                setDislikeMaskSize(`100% ${100 - ((size / listsLength) * 100)}%`);
-              } else {
-                setShowDislike(false);
-              }
-              break;
-            case 'undislike':
-              if (size > 0) {
-                setShowUnDislike(true);
-                setUnDislikeMaskSize(
-                  `100% ${100 - ((size / listsLength) * 100)}%`,
-                );
-              } else {
-                setShowUnDislike(false);
-              }
-              break;
-            case 'like':
-              if (size > 0) {
-                setShowLike(true);
-                setLikeMaskSize(`100% ${100 - ((size / listsLength) * 100)}%`);
-              } else {
-                setShowLike(false);
-              }
-              break;
-            case 'unlike':
-              if (size > 0) {
-                setShowUnLike(true);
-                setUnLikeMaskSize(`100% ${100 - ((size / listsLength) * 100)}%`);
-              } else {
-                setShowUnLike(false);
-              }
-              break;
-          }
-        }
-      }
-      const menuParent =
-        document.querySelector('#action-buttons')?.parentElement;
-      if (menuParent && !document.querySelector('.like-menu')) {
-        const menu = document.createElement('div');
-        menu.id = 'ytmd-album-action-buttons';
-        menu.className =
-          'action-buttons style-scope ytmusic-responsive-header-renderer';
-
-        menuParent.insertBefore(
-          menu,
-          menuParent.children[menuParent.children.length - 1],
-        );
-        menu.appendChild(buttonContainer);
-      }
-    },
-    loadFullList(event: MouseEvent) {
-      if (event.target instanceof Element) {
+export default definePlugin({
+  id: "album-actions",
+  name: "Album actions",
+  description: "Like or dislike every track of an album or playlist at once.",
+  style: css`
+    .pear-album-actions {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .pear-album-actions button {
+      position: relative;
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: rgb(255 255 255 / 0.1);
+      color: #fff;
+      cursor: pointer;
+      transition: background-color 120ms;
+    }
+    .pear-album-actions button:hover {
+      background: rgb(255 255 255 / 0.2);
+    }
+    .pear-album-actions button[hidden] {
+      display: none;
+    }
+    .pear-album-actions button:disabled {
+      cursor: progress;
+      opacity: 0.5;
+    }
+    .pear-album-actions svg {
+      grid-area: 1 / 1;
+      width: 22px;
+      height: 22px;
+      fill: rgb(255 255 255 / 0.45);
+    }
+    .pear-album-actions svg + svg {
+      fill: #fff;
+      clip-path: inset(calc(100% - var(--pear-done, 0%)) 0 0 0);
+    }
+  `,
+  page: (ctx) => {
+    const bar = document.createElement("div");
+    bar.className = "pear-album-actions";
+    ctx.onCleanup(() => bar.remove());
+    const buttons = new Map<Action, HTMLButtonElement>();
+    for (const action of ACTIONS) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.action = action.id;
+      button.append(icon(action.icon), icon(action.icon));
+      button.addEventListener("click", (event) => {
         event.stopPropagation();
-        const button = event.target.closest('button') as HTMLElement;
-        if (!button?.id) return;
-        const id = button.id;
-        const loader = document.getElementById('continuations')!;
-        this.loadObserver = new MutationObserver(() => {
-          this.applyToList(id, loader);
-        });
-        this.applyToList(id, loader);
-        this.loadObserver.observe(loader, {
-          attributes: true,
-          childList: true,
-          subtree: true,
-        });
-        loader?.style.setProperty('top', '0');
-        loader?.style.setProperty('left', '50%');
-        loader?.style.setProperty('position', 'absolute');
+        void run(action);
+      });
+      buttons.set(action, button);
+      bar.append(button);
+    }
+
+    const rows = (action: Action) => {
+      const list = ctx.$("browse.tracklist");
+      return list ? ctx.$$<HTMLButtonElement>(action.button, list) : [];
+    };
+    const matching = (action: Action) =>
+      rows(action).filter((button) => (button.getAttribute("aria-pressed") === "true") === action.pressed);
+
+    let busy = false;
+    const update = () => {
+      const header = ctx.$("browse.action_buttons");
+      if (!header || !ctx.$("browse.tracklist")) {
+        bar.remove();
+        return;
       }
-    },
-    applyToList(id: string, loader: HTMLElement) {
-      if (loader.children.length != 0) return;
-      this.loadObserver?.disconnect();
-      let playlistButtons: NodeListOf<HTMLElement> | undefined;
-      const playlist =
-        document.querySelector('ytmusic-playlist-shelf-renderer') ??
-        document.querySelector(':nth-last-child(1 of ytmusic-shelf-renderer)');
-      switch (id) {
-        case 'allundislike':
-          playlistButtons = playlist?.querySelectorAll(
-            '#button-shape-dislike > button[aria-pressed=true]',
-          );
-          break;
-        case 'alldislike':
-          playlistButtons = playlist?.querySelectorAll(
-            '#button-shape-dislike > button[aria-pressed=false]',
-          );
-          break;
-        case 'alllike':
-          playlistButtons = playlist?.querySelectorAll(
-            '#button-shape-like > button[aria-pressed=false]',
-          );
-          break;
-        case 'allunlike':
-          playlistButtons = playlist?.querySelectorAll(
-            '#button-shape-like > button[aria-pressed=true]',
-          );
-          break;
-        default:
+      if (bar.previousElementSibling !== header) header.after(bar);
+      for (const [action, button] of buttons) {
+        const total = rows(action).length;
+        const pending = matching(action).length;
+        button.hidden = pending === 0;
+        button.disabled = busy;
+        // The icon fills up with the share of tracks that are liked (or disliked).
+        const pressed = action.pressed ? pending : total - pending;
+        button.style.setProperty("--pear-done", `${total === 0 ? 0 : Math.round((pressed / total) * 100)}%`);
+        const label = `${action.label} (${pending} of ${total})`;
+        button.title = label;
+        button.setAttribute("aria-label", label);
       }
-      playlistButtons?.forEach((elem) => elem.click());
-    },
-    stop() {
-      this.observer?.disconnect();
-      this.changeObserver?.disconnect();
-      for (const button of document.querySelectorAll('.like-menu')) {
-        button.remove();
+    };
+
+    const run = async (action: Action) => {
+      busy = true;
+      update();
+      try {
+        await loadAllRows();
+        for (const button of matching(action)) button.click();
+      } finally {
+        busy = false;
+        update();
       }
-    },
+    };
+
+    // Long playlists load in batches as you scroll; pull them all in before acting.
+    const loadAllRows = async () => {
+      for (let i = 0; i < MAX_CONTINUATIONS; i++) {
+        const loader = ctx.$("browse.continuations")?.firstElementChild;
+        if (!loader || ctx.signal.aborted) return;
+        loader.scrollIntoView({ block: "end" });
+        const before = rows(ACTIONS[0]!).length;
+        await new Promise((resolve) => setTimeout(resolve, CONTINUATION_WAIT_MS));
+        if (rows(ACTIONS[0]!).length === before && ctx.$("browse.continuations")?.firstElementChild === loader) return;
+      }
+    };
+
+    let scheduled = 0;
+    const schedule = () => {
+      if (scheduled) return;
+      scheduled = requestAnimationFrame(() => {
+        scheduled = 0;
+        update();
+      });
+    };
+    ctx.onCleanup(() => cancelAnimationFrame(scheduled));
+    void ctx.waitFor("browse.page").then((page) => {
+      const observer = new MutationObserver(schedule);
+      observer.observe(page, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-pressed"] });
+      ctx.onCleanup(() => observer.disconnect());
+      update();
+    }, () => {});
   },
 });
+
+function icon(paths: string[]) {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+  for (const d of paths) {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", d);
+    svg.append(path);
+  }
+  return svg;
+}

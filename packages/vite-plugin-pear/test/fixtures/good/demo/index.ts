@@ -11,7 +11,10 @@ export default definePlugin({
     },
   },
   page: () => {
+    // TypeScript-only syntax must not trip up the macro expansion.
+    const typed = (window as { demo?: { ready: boolean } }).demo;
     document.querySelector(sel("player_bar.next"));
+    return () => void typed;
   },
   style: css`sel(nav_bar.divider) { display: none !important; }`,
 });

@@ -1,99 +1,74 @@
-import { t } from '@/i18n';
-import { createPlugin } from '@/utils';
+import { definePlugin } from "@pear/sdk";
+import { css } from "@pear/sdk/macros" with { type: "macro" };
 
-import style from './style.css?inline';
+// Set while playback was started from a list: the player page stays out of the way.
+const DID_PLAY = "pear-unobtrusive-did-play";
+// YTM can't close the player page during an ad, and the ad should be seen anyway.
+const AD = "pear-unobtrusive-ad";
+const AUTO_CLOSING_MS = 500;
 
-const handlePlay = (e: MouseEvent) => {
-  if (!(e.target instanceof HTMLElement)) return;
+export default definePlugin({
+  id: "unobtrusive-player",
+  name: "Unobtrusive player",
+  description: "Starting a song from a list keeps you where you are instead of opening the full player.",
+  style: css`
+    html.pear-unobtrusive-did-play:not(.pear-unobtrusive-ad) sel(player.page),
+    html.pear-unobtrusive-did-play:not(.pear-unobtrusive-ad) sel(player.page) * {
+      visibility: hidden !important;
+    }
+    html.pear-unobtrusive-did-play sel(player_bar.toggle_page) {
+      transform: rotate(180deg) !important;
+    }
+  `,
+  page: (ctx) => {
+    const root = document.documentElement;
+    ctx.onCleanup(() => root.classList.remove(DID_PLAY, AD));
+    let autoClosing = false;
 
-  // Player bar handler
-  if (
-    e.target.closest('ytmusic-player-bar') &&
-    !document.body.classList.contains('unobtrusive-player--auto-closing')
-  ) {
-    document.body.classList.remove('unobtrusive-player--did-play');
-    return;
-  }
+    ctx.listen(
+      document,
+      "click",
+      (event: MouseEvent) => {
+        if (!(event.target instanceof Element)) return;
+        const target = event.target;
+        if (target.closest(ctx.sel("player_bar"))) {
+          // The user is driving the player now (e.g. opening the page); stop hiding it.
+          if (!autoClosing) root.classList.remove(DID_PLAY);
+          return;
+        }
+        if (target.closest(ctx.sel("player.page"))) return;
+        // Play buttons, track links and "Shuffle"/"Start radio" style menu entries all lead to /watch.
+        if (target.closest(`${ctx.sel("list.play_button")}, a[href*="watch?"]`)) root.classList.add(DID_PLAY);
+      },
+      { capture: true },
+    );
 
-  // Song play button handler
-  if (
-    e.target.closest('ytmusic-play-button-renderer') &&
-    !e.target.closest('ytmusic-player-page')
-  ) {
-    document.body.classList.add('unobtrusive-player--did-play');
-    return;
-  }
-
-  // Shuffle play menu item handler
-  const shuffleIconPathData = (
-    document.querySelector('iron-iconset-svg[name="yt-sys-icons"] #shuffle')
-      ?.firstChild as SVGElement | null
-  )
-    ?.getAttribute('d')
-    ?.substring(0, 15);
-
-  if (
-    e.target.closest(
-      `ytmusic-menu-navigation-item-renderer:has(yt-icon path[d^="${shuffleIconPathData}"])`,
-    )
-  ) {
-    document.body.classList.add('unobtrusive-player--did-play');
-    return;
-  }
-};
-
-const handleVideoDataChange = () => {
-  const isPlayerPageOpen =
-    document
-      .querySelector('ytmusic-app-layout')
-      ?.attributes.getNamedItem('player-ui-state')?.value ===
-    'PLAYER_PAGE_OPEN';
-
-  if (
-    document.body.classList.contains('unobtrusive-player--did-play') &&
-    isPlayerPageOpen
-  ) {
-    document.body.classList.add('unobtrusive-player--auto-closing');
-
-    document
-      .querySelector<HTMLButtonElement>('.toggle-player-page-button')
-      ?.click();
-
-    // prevent animation flickering
-    setTimeout(() => {
-      document.body.classList.remove('unobtrusive-player--auto-closing');
-    }, 500);
-  }
-};
-
-export default createPlugin({
-  name: () => t('plugins.unobtrusive-player.name'),
-  description: () => t('plugins.unobtrusive-player.description'),
-  addedVersion: '3.8.x',
-  restartNeeded: false,
-  config: {
-    enabled: false,
-  },
-  stylesheets: [style],
-  renderer: {
-    start: () => {
-      document.body.classList.add('unobtrusive-player');
-      document.addEventListener('click', handlePlay);
-    },
-    onPlayerApiReady: () => {
-      // Close player page when video changes while
-      // `unobtrusive-player--did-play` className is present.
-      document.addEventListener('videodatachange', handleVideoDataChange);
-    },
-    stop: () => {
-      document.removeEventListener('click', handlePlay);
-      document.removeEventListener('videodatachange', handleVideoDataChange);
-
-      [
-        'unobtrusive-player',
-        'unobtrusive-player--did-play',
-        'unobtrusive-player--auto-closing',
-      ].forEach((className) => document.body.classList.remove(className));
-    },
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    ctx.onCleanup(() => clearTimeout(timer));
+    const closePlayerPage = () => {
+      if (autoClosing || !root.classList.contains(DID_PLAY)) return;
+      if (ctx.$("app.layout")?.getAttribute("player-ui-state") !== "PLAYER_PAGE_OPEN") return;
+      autoClosing = true;
+      ctx.$("player_bar.toggle_page")?.click();
+      // Keep the page hidden until YTM's close animation is over, then check
+      // again: YTM ignores the toggle while it is still opening the page.
+      timer = setTimeout(() => {
+        autoClosing = false;
+        closePlayerPage();
+      }, AUTO_CLOSING_MS);
+    };
+    // YTM opens the page either while navigating to /watch or once the track loads.
+    ctx.player.on("trackLoading", closePlayerPage);
+    const onAd = (ad: boolean) => {
+      root.classList.toggle(AD, ad);
+      if (!ad) closePlayerPage();
+    };
+    ctx.player.on("adChange", onAd);
+    onAd(ctx.player.state.ad);
+    void ctx.waitFor("app.layout").then((layout) => {
+      const observer = new MutationObserver(closePlayerPage);
+      observer.observe(layout, { attributes: true, attributeFilter: ["player-ui-state"] });
+      ctx.onCleanup(() => observer.disconnect());
+    }, () => {});
   },
 });

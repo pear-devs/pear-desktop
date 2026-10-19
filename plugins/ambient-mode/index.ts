@@ -1,275 +1,164 @@
-import { t } from '@/i18n';
-import { createPlugin } from '@/utils';
-import { waitForElement } from '@/utils/wait-for-element';
+import { config, definePlugin } from "@pear/sdk";
+import { css } from "@pear/sdk/macros" with { type: "macro" };
 
-import { menu } from './menu';
-import style from './style.css?inline';
-import { type AmbientModePluginConfig } from './types';
+// Re-check for view changes the observer misses (miniplayer, video/song switch).
+const FALLBACK_SYNC_MS = 1000;
 
-const defaultConfig: AmbientModePluginConfig = {
-  enabled: false,
-  quality: 50,
-  buffer: 30,
-  interpolationTime: 1500,
-  blur: 100,
-  size: 100,
-  opacity: 1,
-  fullscreen: false,
-};
+export default definePlugin({
+  id: "ambient-mode",
+  name: "Ambient mode",
+  description: "Surrounds the video or cover art with a soft glow of its own colors.",
+  config: {
+    interpolationTime: config.number(1500, {
+      label: "Transition smoothness",
+      description: "How long the glow takes to follow the video.",
+      min: 0,
+      max: 5000,
+      step: 100,
+      unit: "ms",
+    }),
+    quality: config.number(50, { label: "Quality", min: 10, max: 500, step: 10, unit: "px" }),
+    size: config.number(100, { label: "Size", min: 100, max: 300, step: 5, unit: "%" }),
+    buffer: config.number(30, { label: "Frame rate", min: 1, max: 60, step: 1, unit: "fps" }),
+    opacity: config.number(100, { label: "Opacity", min: 0, max: 100, step: 5, unit: "%" }),
+    blur: config.number(100, { label: "Blur", min: 0, max: 500, step: 5, unit: "px" }),
+    fullscreen: config.bool(false, {
+      label: "Fill the window",
+      description: "Let the video's glow cover the whole player page.",
+    }),
+  },
+  style: css`
+    .pear-ambient {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: var(--pear-ambient-size, 100%);
+      height: var(--pear-ambient-size, 100%);
+      transform: translate(-50%, -50%);
+      filter: blur(var(--pear-ambient-blur, 100px));
+      opacity: var(--pear-ambient-opacity, 1);
+      object-fit: cover;
+      pointer-events: none;
+    }
+    canvas.pear-ambient.fullscreen {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      transform: none;
+    }
+    sel(player.player):not([video-mode]):not([player-ui-state='MINIPLAYER']) {
+      overflow: visible;
+    }
+    sel(player.side_panel) {
+      z-index: 0;
+    }
+    sel(player.av_toggle) {
+      z-index: 1;
+    }
+  `,
+  page: {
+    start(ctx) {
+      // Config changes restart the page part, which rebuilds the glow.
+      const glow = { remove: () => {} };
+      ctx.onCleanup(() => glow.remove());
+      let mounted: "video" | "image" | null = null;
+      let mountedSource = "";
 
-export default createPlugin({
-  name: () => t('plugins.ambient-mode.name'),
-  description: () => t('plugins.ambient-mode.description'),
-  restartNeeded: false,
-  config: defaultConfig,
-  stylesheets: [style],
-  menu: menu,
+      const applyStyle = (element: HTMLElement) => {
+        element.style.setProperty("--pear-ambient-size", `${ctx.config.size}%`);
+        element.style.setProperty("--pear-ambient-blur", `${ctx.config.blur}px`);
+        element.style.setProperty("--pear-ambient-opacity", `${ctx.config.opacity / 100}`);
+      };
 
-  renderer: {
-    interpolationTime: defaultConfig.interpolationTime,
-    buffer: defaultConfig.buffer,
-    qualityRatio: defaultConfig.quality,
-    size: defaultConfig.size,
-    blur: defaultConfig.blur,
-    opacity: defaultConfig.opacity,
-    isFullscreen: defaultConfig.fullscreen,
+      const mountImage = (container: HTMLElement, source: HTMLImageElement) => {
+        const image = document.createElement("img");
+        image.className = "pear-ambient";
+        image.alt = "";
+        image.src = source.src;
+        applyStyle(image);
+        container.prepend(image);
+        glow.remove = () => image.remove();
+      };
 
-    unregister: null as (() => void) | null,
-    update: null as (() => void) | null,
-    interval: null as NodeJS.Timeout | null,
-    lastMediaType: null as 'video' | 'image' | null,
-    lastVideoSource: null as string | null,
-    lastImageSource: null as string | null,
-
-    async start({ getConfig }) {
-      const config = await getConfig();
-      this.interpolationTime = config.interpolationTime;
-      this.buffer = config.buffer;
-      this.qualityRatio = config.quality;
-      this.size = config.size;
-      this.blur = config.blur;
-      this.opacity = config.opacity;
-      this.isFullscreen = config.fullscreen;
-
-      const songImage = document.querySelector<HTMLImageElement>('#song-image');
-      const songVideo = document.querySelector<HTMLDivElement>('#song-video');
-      const image = songImage?.querySelector<HTMLImageElement>(
-        'yt-img-shadow > img',
-      );
-      const video = await waitForElement<HTMLVideoElement>(
-        '.html5-video-container > video',
-      );
-
-      const videoWrapper = document.querySelector(
-        '#song-video > .player-wrapper',
-      );
-
-      const injectBlurImage = () => {
-        if (!songImage || !image) return null;
-
-        this.lastImageSource = image.src;
-
-        const blurImage = document.createElement('img');
-        blurImage.classList.add('html5-blur-image');
-        blurImage.src = image.src;
-
-        this.update = () => {
-          if (this.isFullscreen) blurImage.classList.add('fullscreen');
-          else blurImage.classList.remove('fullscreen');
-
-          blurImage.style.setProperty('--width', `${this.size}%`);
-          blurImage.style.setProperty('--height', `${this.size}%`);
-          blurImage.style.setProperty('--blur', `${this.blur}px`);
-          blurImage.style.setProperty('--opacity', `${this.opacity}`);
+      const mountVideo = (wrapper: HTMLElement, video: HTMLVideoElement) => {
+        const canvas = document.createElement("canvas");
+        canvas.className = "pear-ambient";
+        const context = canvas.getContext("2d")!;
+        const resize = () => {
+          const width = ctx.config.quality;
+          const aspect = video.videoHeight && video.videoWidth ? video.videoHeight / video.videoWidth : 9 / 16;
+          canvas.width = width;
+          canvas.height = Math.max(1, Math.round(width * aspect));
         };
-        this.update();
-
-        /* injecting */
-        songImage.prepend(blurImage);
-
-        /* cleanup */
-        return () => {
-          if (blurImage.isConnected) blurImage.remove();
+        // Each frame is blended over the previous ones, so the glow eases toward the video.
+        const draw = () => {
+          if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+          const frameMs = 1000 / ctx.config.buffer;
+          context.globalAlpha = ctx.config.interpolationTime > 0 ? Math.min(1, frameMs / ctx.config.interpolationTime) : 1;
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        };
+        let timer: ReturnType<typeof setInterval> | undefined;
+        const run = () => {
+          clearInterval(timer);
+          timer = video.paused ? undefined : setInterval(draw, Math.max(1, Math.ceil(1000 / ctx.config.buffer)));
+        };
+        applyStyle(canvas);
+        canvas.classList.toggle("fullscreen", ctx.config.fullscreen);
+        resize();
+        context.globalAlpha = 1;
+        draw();
+        run();
+        video.addEventListener("play", run);
+        video.addEventListener("pause", run);
+        video.addEventListener("loadedmetadata", resize);
+        wrapper.prepend(canvas);
+        glow.remove = () => {
+          clearInterval(timer);
+          video.removeEventListener("play", run);
+          video.removeEventListener("pause", run);
+          video.removeEventListener("loadedmetadata", resize);
+          canvas.remove();
         };
       };
 
-      const injectBlurVideo = () => {
-        if (!songVideo || !video || !videoWrapper) return null;
-
-        this.lastVideoSource = video.src;
-
-        const blurCanvas = document.createElement('canvas');
-        blurCanvas.classList.add('html5-blur-canvas');
-
-        const context = blurCanvas.getContext('2d', {
-          willReadFrequently: true,
-        });
-
-        /* effect */
-        let lastEffectWorkId: number | null = null;
-        let lastImageData: ImageData | null = null;
-
-        const onSync = () => {
-          if (typeof lastEffectWorkId === 'number')
-            cancelAnimationFrame(lastEffectWorkId);
-
-          lastEffectWorkId = requestAnimationFrame(() => {
-            if (!context) return;
-
-            const width = this.qualityRatio;
-            let height = Math.max(
-              Math.floor((blurCanvas.height / blurCanvas.width) * width),
-              1,
-            );
-            if (!Number.isFinite(height)) height = width;
-            if (!height) return;
-
-            context.globalAlpha = 1;
-            if (lastImageData) {
-              const frameOffset =
-                (1 / this.buffer) * (1000 / this.interpolationTime);
-              context.globalAlpha = 1 - (frameOffset * 2); // because of alpha value must be < 1
-              context.putImageData(lastImageData, 0, 0);
-              context.globalAlpha = frameOffset;
-            }
-            context.drawImage(video, 0, 0, width, height);
-
-            lastImageData = context.getImageData(0, 0, width, height); // current image data
-
-            lastEffectWorkId = null;
-          });
-        };
-
-        this.update = () => {
-          const rect = video.getBoundingClientRect();
-
-          const newWidth = Math.floor(video.width || rect.width);
-          const newHeight = Math.floor(video.height || rect.height);
-
-          if (newWidth === 0 || newHeight === 0) return;
-
-          blurCanvas.width = this.qualityRatio;
-          blurCanvas.height = Math.floor(
-            (newHeight / newWidth) * this.qualityRatio,
-          );
-
-          if (this.isFullscreen) blurCanvas.classList.add('fullscreen');
-          else blurCanvas.classList.remove('fullscreen');
-
-          blurCanvas.style.setProperty('--width', `${this.size}%`);
-          blurCanvas.style.setProperty('--height', `${this.size}%`);
-          blurCanvas.style.setProperty('--blur', `${this.blur}px`);
-          blurCanvas.style.setProperty('--opacity', `${this.opacity}`);
-        };
-        this.update();
-
-        /* hooking */
-        let canvasInterval: NodeJS.Timeout | null = null;
-        canvasInterval = setInterval(
-          onSync,
-          Math.max(1, Math.ceil(1000 / this.buffer)),
-        );
-
-        const onPause = () => {
-          if (canvasInterval) clearInterval(canvasInterval);
-          canvasInterval = null;
-        };
-        const onPlay = () => {
-          if (canvasInterval) clearInterval(canvasInterval);
-          canvasInterval = setInterval(
-            onSync,
-            Math.max(1, Math.ceil(1000 / this.buffer)),
-          );
-        };
-        songVideo.addEventListener('pause', onPause);
-        songVideo.addEventListener('play', onPlay);
-
-        /* injecting */
-        videoWrapper.prepend(blurCanvas);
-
-        /* cleanup */
-        return () => {
-          if (canvasInterval) clearInterval(canvasInterval);
-
-          songVideo.removeEventListener('pause', onPause);
-          songVideo.removeEventListener('play', onPlay);
-
-          if (blurCanvas.isConnected) blurCanvas.remove();
-        };
-      };
-
-      const isVideoMode = () => {
-        const songVideo = document.querySelector<HTMLDivElement>('#song-video');
-        if (!songVideo) {
-          this.lastMediaType = 'image';
-          return false;
-        }
-
-        const isVideo = getComputedStyle(songVideo).display !== 'none';
-        this.lastMediaType = isVideo ? 'video' : 'image';
-        return isVideo;
-      };
-
-      const playerPage = document.querySelector<HTMLElement>('#player-page');
-      const ytmusicAppLayout = document.querySelector<HTMLElement>('#layout');
-
-      const injectBlurElement = (force?: boolean): boolean | void => {
-        const isPageOpen = ytmusicAppLayout?.hasAttribute('player-page-open');
-        if (isPageOpen) {
-          const isVideo = isVideoMode();
-          if (!force) {
-            if (
-              this.lastMediaType === 'video' &&
-              this.lastVideoSource === video?.src
-            )
-              return false;
-            if (
-              this.lastMediaType === 'image' &&
-              this.lastImageSource === image?.src
-            )
-              return false;
-          }
-          this.unregister?.();
-          this.unregister =
-            (isVideo ? injectBlurVideo() : injectBlurImage()) ?? null;
+      const sync = () => {
+        const open = ctx.$("app.layout")?.hasAttribute("player-page-open") ?? false;
+        const songVideo = ctx.$("player.song_video");
+        const isVideo = !!songVideo && getComputedStyle(songVideo).display !== "none";
+        const video = ctx.player.video();
+        const image = ctx.$<HTMLImageElement>("player.song_image_img");
+        const wanted = !open ? null : isVideo ? "video" : "image";
+        const source = wanted === "video" ? (video?.src ?? "") : wanted === "image" ? (image?.src ?? "") : "";
+        if (wanted === mounted && source === mountedSource) return;
+        glow.remove();
+        glow.remove = () => {};
+        mounted = null;
+        mountedSource = "";
+        if (wanted === "video") {
+          const wrapper = ctx.$("player.song_video_wrapper");
+          if (!wrapper || !video) return;
+          mountVideo(wrapper, video);
+        } else if (wanted === "image") {
+          const container = ctx.$("player.song_image");
+          // YTM shows a transparent placeholder until the artwork loads.
+          if (!container || !image || image.src.startsWith("data:")) return;
+          mountImage(container, image);
         } else {
-          this.unregister?.();
-          this.unregister = null;
+          return;
         }
+        mounted = wanted;
+        mountedSource = source;
       };
 
-      /* needed for switching between different views (e.g. miniplayer) */
-      const observer = new MutationObserver((mutationsList) => {
-        for (const mutation of mutationsList) {
-          if (mutation.type === 'attributes') {
-            injectBlurElement(true);
-            break;
-          }
-        }
-      });
-
-      if (playerPage) {
-        observer.observe(playerPage, { attributes: true });
-
-        /* fallback ticker for when the observer isn't triggered */
-        this.interval = setInterval(injectBlurElement, 1000);
-      }
-    },
-    onConfigChange(newConfig) {
-      this.interpolationTime = newConfig.interpolationTime;
-      this.buffer = newConfig.buffer;
-      this.qualityRatio = newConfig.quality;
-      this.size = newConfig.size;
-      this.blur = newConfig.blur;
-      this.opacity = newConfig.opacity;
-      this.isFullscreen = newConfig.fullscreen;
-
-      this.update?.();
-    },
-    stop() {
-      this.update = null;
-      this.unregister?.();
-      if (this.interval) clearInterval(this.interval);
+      void ctx.waitFor("player.page").then((page) => {
+        const observer = new MutationObserver(sync);
+        observer.observe(page, { attributes: true });
+        ctx.onCleanup(() => observer.disconnect());
+        sync();
+      }, () => {});
+      const interval = setInterval(sync, FALLBACK_SYNC_MS);
+      ctx.onCleanup(() => clearInterval(interval));
     },
   },
 });

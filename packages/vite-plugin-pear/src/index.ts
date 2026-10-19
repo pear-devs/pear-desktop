@@ -21,9 +21,11 @@ export { splitPlugin, type SplitTarget } from "./split.ts";
 const HOST_PLUGINS_ID = "virtual:pear/host-plugins";
 const PAGE_PLUGINS_ID = "virtual:pear/page-plugins";
 const PAGE_RUNTIME_ID = "virtual:pear/page-runtime";
-const SPLIT_QUERY = /\?pear=(host|page)$/;
+// The id keeps ending in ".ts" (`&lang.ts`): the macro analyzer picks its
+// parser from the extension and would parse TypeScript as JavaScript otherwise.
+const SPLIT_QUERY = /\?pear=(host|page)&lang\.ts$/;
 // unplugin-macros' default filter rejects ids with a query (our split ids).
-const MACRO_OPTIONS = { include: [/\.[cm]?[jt]sx?(\?pear=(host|page))?$/] };
+const MACRO_OPTIONS = { include: [/\.[cm]?[jt]sx?(\?pear=(host|page)&lang\.ts)?$/] };
 
 export interface PearPluginOptions {
   /** Directory containing one folder per plugin. */
@@ -44,7 +46,7 @@ export function discoverPlugins({ pluginsDir, only }: PearPluginOptions): string
 }
 
 function registryModule(files: readonly string[], target: SplitTarget) {
-  const imports = files.map((file, i) => `import p${i} from ${JSON.stringify(`${file}?pear=${target}`)};`);
+  const imports = files.map((file, i) => `import p${i} from ${JSON.stringify(`${file}?pear=${target}&lang.ts`)};`);
   return `${imports.join("\n")}\nexport default [${files.map((_, i) => `p${i}`).join(", ")}];\n`;
 }
 

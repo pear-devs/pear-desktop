@@ -1,109 +1,63 @@
-import { createSignal, onMount } from 'solid-js';
-import { render } from 'solid-js/web';
+import { config, definePlugin } from "@pear/sdk";
+import { css } from "@pear/sdk/macros" with { type: "macro" };
 
-import { t } from '@/i18n';
-import { type MenuTemplate } from '@/menu';
-import { createPlugin } from '@/utils';
-
-import style from './style.css?inline';
-import { type ClockPluginConfig } from './types';
-
-const defaultConfig: ClockPluginConfig = {
-  enabled: false,
-  displaySeconds: false,
-  hour12: false,
-};
-
-export default createPlugin({
-  name: () => t('plugins.clock.name'),
-  description: () => t('plugins.clock.description'),
-  restartNeeded: false,
-  config: defaultConfig,
-  stylesheets: [style],
-  menu: async ({ getConfig, setConfig }): Promise<MenuTemplate> => {
-    const config = await getConfig();
-
-    return [
-      {
-        label: t('plugins.clock.menu.format.label'),
-        submenu: [
-          {
-            label: t('plugins.clock.menu.format.display-seconds'),
-            type: 'checkbox',
-            checked: config.displaySeconds,
-            click(item) {
-              setConfig({ displaySeconds: item.checked });
-            },
-          },
-          {
-            label: t('plugins.clock.menu.format.24-hour-format'),
-            type: 'checkbox',
-            checked: !config.hour12,
-            click(item) {
-              setConfig({ hour12: !item.checked });
-            },
-          },
-        ],
-      },
-    ];
+export default definePlugin({
+  id: "clock",
+  name: "Clock",
+  description: "Shows the current time in the top bar.",
+  config: {
+    displaySeconds: config.bool(false, { label: "Show seconds" }),
+    hour12: config.bool(false, { label: "12-hour format" }),
   },
-  renderer: {
-    displaySeconds: defaultConfig.displaySeconds,
-    hour12: defaultConfig.hour12,
+  // The original centered the clock, but the search box lives there now.
+  style: css`
+    .pear-clock {
+      align-self: center;
+      margin: 0 12px 0 4px;
+      color: var(--ytmusic-text-secondary, #aaa);
+      font: 500 15px/1 "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Sans", Roboto, sans-serif;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      user-select: none;
+    }
+  `,
+  page: async (ctx) => {
+    const clock = document.createElement("time");
+    clock.className = "pear-clock";
+    ctx.onCleanup(() => clock.remove());
 
-    interval: null as NodeJS.Timeout | null,
-    clockContainer: document.createElement('div'),
-    updateTime: null as unknown as () => void,
+    // Config changes restart the page part, which rebuilds the format.
+    const format = new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+      ...(ctx.config.displaySeconds ? { second: "2-digit" } : {}),
+      hour12: ctx.config.hour12,
+    });
+    const tick = () => {
+      const now = new Date();
+      clock.textContent = format.format(now);
+      clock.dateTime = now.toISOString();
+    };
+    tick();
+    // Tick on second boundaries so the display never lags behind the system clock.
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        tick();
+        schedule();
+      }, 1000 - (Date.now() % 1000));
+    };
+    schedule();
+    ctx.onCleanup(() => clearTimeout(timer));
 
-    async start({ getConfig }) {
-      const config = await getConfig();
-      this.displaySeconds = config.displaySeconds;
-      this.hour12 = config.hour12;
-
-      if (!this.clockContainer) {
-        this.clockContainer = document.createElement('div');
-      }
-
-      const [time, setTime] = createSignal<string>();
-
-      const updateTime = () => {
-        const timeFormat: Intl.DateTimeFormatOptions = {
-          hour12: this.hour12,
-          hour: 'numeric',
-          minute: 'numeric',
-          second: this.displaySeconds ? 'numeric' : undefined,
-        };
-        const now = new Date();
-        setTime(now.toLocaleTimeString('en', timeFormat));
-      };
-      this.updateTime = updateTime;
-
-      onMount(() => {
-        this.interval = setInterval(updateTime, 1000);
-      });
-
-      render(
-        () => (
-          <>
-            <h1 class="clock"> {time()} </h1>
-          </>
-        ),
-        this.clockContainer,
-      );
-      const menu = document.querySelector('.center-content');
-      menu?.append(this.clockContainer);
-    },
-    onConfigChange(newConfig) {
-      this.displaySeconds = newConfig.displaySeconds;
-      this.hour12 = newConfig.hour12;
-      this.updateTime();
-    },
-    stop() {
-      this.clockContainer.remove();
-      this.clockContainer.replaceChildren();
-      if (this.interval) {
-        clearInterval(this.interval);
-      }
-    },
+    const mount = (right: Element) => right.prepend(clock);
+    mount(await ctx.waitFor("nav_bar.right"));
+    // YTM re-renders the nav bar on some navigations.
+    const observer = new MutationObserver(() => {
+      const right = ctx.$("nav_bar.right");
+      if (!clock.isConnected && right) mount(right);
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    ctx.onCleanup(() => observer.disconnect());
   },
 });

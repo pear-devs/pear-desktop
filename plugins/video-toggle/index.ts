@@ -1,353 +1,249 @@
-import { createSignal, Show } from 'solid-js';
-import { render } from 'solid-js/web';
+import { config, definePlugin } from "@pear/sdk";
+import { css } from "@pear/sdk/macros" with { type: "macro" };
 
-import { t } from '@/i18n';
-import { type MenuTemplate } from '@/menu';
-import { moveVolumeHud as preciseVolumeMoveVolumeHud } from '@/plugins/precise-volume/renderer';
-import { type ThumbnailElement } from '@/types/get-player-response';
-import { createPlugin } from '@/utils';
+const CUSTOM = css`
+  sel(player.native_av_toggle) {
+    display: none !important;
+  }
+  .pear-video-toggle {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    right: 16px;
+    z-index: 10;
+    display: flex;
+    justify-content: var(--pear-video-toggle-align, flex-start);
+    pointer-events: none;
+  }
+  .pear-video-toggle[hidden] {
+    display: none;
+  }
+  .pear-video-toggle [role="radiogroup"] {
+    display: flex;
+    padding: 3px;
+    border-radius: 999px;
+    background: rgb(0 0 0 / 0.45);
+    backdrop-filter: blur(12px);
+    pointer-events: auto;
+  }
+  .pear-video-toggle button {
+    min-width: 76px;
+    padding: 7px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: rgb(255 255 255 / 0.7);
+    font: 500 14px/1 "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Sans", Roboto, sans-serif;
+    cursor: pointer;
+    transition: background-color 150ms, color 150ms;
+  }
+  .pear-video-toggle button:hover {
+    color: #fff;
+  }
+  .pear-video-toggle button[aria-checked="true"] {
+    background: rgb(255 255 255 / 0.18);
+    color: #fff;
+  }
+`;
 
-import buttonSwitcherStyle from './button-switcher.css?inline';
-import forceHideStyle from './force-hide.css?inline';
-import { VideoSwitchButton } from './templates/video-switch-button';
+const FORCE_HIDE = css`
+  sel(player.main_panel) {
+    display: none !important;
+  }
+  sel(player.side_panel) {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+`;
 
-export type VideoTogglePluginConfig = {
-  enabled: boolean;
-  hideVideo: boolean;
-  mode: 'custom' | 'native' | 'disabled';
-  forceHide: boolean;
-  align: 'left' | 'middle' | 'right';
-};
+const ALIGN = { left: "flex-start", middle: "center", right: "flex-end" } as const;
 
-export default createPlugin({
-  name: () => t('plugins.video-toggle.name'),
-  description: () => t('plugins.video-toggle.description'),
-  restartNeeded: true,
+interface PlayerElement extends HTMLElement {
+  videoMode_?: boolean;
+}
+
+export default definePlugin({
+  id: "video-toggle",
+  name: "Video toggle",
+  description: "Switch between a track's music video and its cover art, or hide the video entirely.",
   config: {
-    enabled: false,
-    hideVideo: false,
-    mode: 'custom',
-    forceHide: false,
-    align: 'left',
-  } as VideoTogglePluginConfig,
-  stylesheets: [buttonSwitcherStyle, forceHideStyle],
-  menu: async ({ getConfig, setConfig }): Promise<MenuTemplate> => {
-    const config = await getConfig();
-
-    return [
-      {
-        label: t('plugins.video-toggle.menu.mode.label'),
-        submenu: [
-          {
-            label: t('plugins.video-toggle.menu.mode.submenu.custom'),
-            type: 'radio',
-            checked: config.mode === 'custom',
-            click() {
-              setConfig({ mode: 'custom' });
-            },
-          },
-          {
-            label: t('plugins.video-toggle.menu.mode.submenu.native'),
-            type: 'radio',
-            checked: config.mode === 'native',
-            click() {
-              setConfig({ mode: 'native' });
-            },
-          },
-          {
-            label: t('plugins.video-toggle.menu.mode.submenu.disabled'),
-            type: 'radio',
-            checked: config.mode === 'disabled',
-            click() {
-              setConfig({ mode: 'disabled' });
-            },
-          },
-        ],
-      },
-      {
-        label: t('plugins.video-toggle.menu.align.label'),
-        submenu: [
-          {
-            label: t('plugins.video-toggle.menu.align.submenu.left'),
-            type: 'radio',
-            checked: config.align === 'left',
-            click() {
-              setConfig({ align: 'left' });
-            },
-          },
-          {
-            label: t('plugins.video-toggle.menu.align.submenu.middle'),
-            type: 'radio',
-            checked: config.align === 'middle',
-            click() {
-              setConfig({ align: 'middle' });
-            },
-          },
-          {
-            label: t('plugins.video-toggle.menu.align.submenu.right'),
-            type: 'radio',
-            checked: config.align === 'right',
-            click() {
-              setConfig({ align: 'right' });
-            },
-          },
-        ],
-      },
-      {
-        label: t('plugins.video-toggle.menu.force-hide'),
-        type: 'checkbox',
-        checked: config.forceHide,
-        click(item) {
-          setConfig({ forceHide: item.checked });
-        },
-      },
-    ];
+    mode: config.select(
+      "custom",
+      [
+        { value: "custom", label: "Pear Desktop's switch" },
+        { value: "native", label: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music's switch" },
+        { value: "disabled", label: "No switch" },
+      ],
+      { label: "Switch" },
+    ),
+    align: config.select(
+      "left",
+      [
+        { value: "left", label: "Left" },
+        { value: "middle", label: "Middle" },
+        { value: "right", label: "Right" },
+      ],
+      { label: "Switch position" },
+    ),
+    hideVideo: config.bool(false, {
+      label: "Show cover art instead of video",
+      description: "Remembered when you use the switch.",
+    }),
+    forceHide: config.bool(false, {
+      label: "Hide the player completely",
+      description: "The queue and lyrics take the whole player page.",
+    }),
   },
+  style: (config) =>
+    config.forceHide
+      ? FORCE_HIDE
+      : config.mode === "custom"
+        ? `${CUSTOM}:root{--pear-video-toggle-align:${ALIGN[config.align]}}`
+        : "",
+  page: {
+    start(ctx) {
+      if (ctx.config.forceHide) return;
+      const restore = new Map<Element, [string, string | null][]>();
+      /** Sets an attribute, remembering the original value for cleanup. */
+      const setAttribute = (element: Element | null, name: string, value: string | null) => {
+        if (!element || element.getAttribute(name) === value) return;
+        const saved = restore.get(element) ?? [];
+        if (!saved.some(([n]) => n === name)) saved.push([name, element.getAttribute(name)]);
+        restore.set(element, saved);
+        if (value === null) element.removeAttribute(name);
+        else element.setAttribute(name, value);
+      };
+      ctx.onCleanup(() => {
+        for (const [element, saved] of restore) {
+          for (const [name, value] of saved) {
+            if (value === null) element.removeAttribute(name);
+            else element.setAttribute(name, value);
+          }
+        }
+      });
 
-  renderer: {
-    config: null as VideoTogglePluginConfig | null,
-    applyStyleClass: (config: VideoTogglePluginConfig) => {
-      if (config.forceHide) {
-        document.body.classList.add('video-toggle-force-hide');
-        document.body.classList.remove('video-toggle-custom-mode');
-      } else if (!config.mode || config.mode === 'custom') {
-        document.body.classList.add('video-toggle-custom-mode');
-        document.body.classList.remove('video-toggle-force-hide');
-      }
-    },
-    async start({ getConfig }) {
-      const config = await getConfig();
-      this.applyStyleClass(config);
-
-      if (config.forceHide) {
+      if (ctx.config.mode !== "custom") {
+        // Enable or disable YTM's own song/video switch.
+        const enable = ctx.config.mode === "native";
+        const apply = () => {
+          const flag = enable ? "" : null;
+          setAttribute(ctx.$("player.page"), "has-av-switcher", flag);
+          setAttribute(ctx.$("player.player"), "has-av-switcher", flag);
+          setAttribute(ctx.$("player.av_toggle"), "toggle-disabled", enable ? null : "");
+        };
+        void ctx.waitFor("player.av_toggle").then(() => {
+          apply();
+          // YTM resets these when a track loads.
+          ctx.player.on("trackChange", apply);
+        }, () => {});
         return;
       }
 
-      switch (config.mode) {
-        case 'native': {
-          document
-            .querySelector('ytmusic-player-page')
-            ?.setAttribute('has-av-switcher', '');
-          document
-            .querySelector('ytmusic-player')
-            ?.setAttribute('has-av-switcher', '');
-          document
-            .querySelector('ytmusic-av-toggle')
-            ?.removeAttribute('toggle-disabled');
-          return;
-        }
+      const container = document.createElement("div");
+      container.className = "pear-video-toggle";
+      const group = document.createElement("div");
+      group.setAttribute("role", "radiogroup");
+      group.setAttribute("aria-label", "Show");
+      const songButton = choice("Song", () => setVideoState(false));
+      const videoButton = choice("Video", () => setVideoState(true));
+      group.append(songButton, videoButton);
+      container.append(group);
+      // Clicks on the player would toggle playback.
+      container.addEventListener("click", (event) => event.stopPropagation());
+      ctx.onCleanup(() => container.remove());
 
-        case 'disabled': {
-          document
-            .querySelector('ytmusic-player-page')
-            ?.removeAttribute('has-av-switcher');
-          document
-            .querySelector('ytmusic-player')
-            ?.removeAttribute('has-av-switcher');
-          document
-            .querySelector('ytmusic-av-toggle')
-            ?.setAttribute('toggle-disabled', '');
-          return;
-        }
-      }
-    },
-    async onPlayerApiReady(api, { getConfig }) {
-      const [showButton, setShowButton] = createSignal(true);
+      let showVideo = !ctx.config.hideVideo;
+      let hasVideo = true;
 
-      const config = await getConfig();
-      this.config = config;
-
-      const moveVolumeHud = (await window.mainConfig.plugins.isEnabled(
-        'precise-volume',
-      ))
-        ? (preciseVolumeMoveVolumeHud as (_: boolean) => void)
-        : () => {};
-
-      const player = document.querySelector<
-        HTMLElement & { videoMode_: boolean }
-      >('ytmusic-player');
-      const video = document.querySelector<HTMLVideoElement>('video');
-
-      const switchButtonContainer = document.createElement('div');
-      switchButtonContainer.id = 'ytmd-video-toggle-switch-button-container';
-      switchButtonContainer.style.display = 'flex';
-      render(
-        () => (
-          <Show when={showButton()}>
-            <VideoSwitchButton
-              onChange={(e) => {
-                const target = e.target as HTMLInputElement;
-
-                setVideoState(target.checked);
-              }}
-              onClick={(e) => e.stopPropagation()}
-              songButtonText={t('plugins.video-toggle.templates.button-song')}
-              videoButtonText={t('plugins.video-toggle.templates.button-video')}
-            />
-          </Show>
-        ),
-        switchButtonContainer,
-      );
-
-      const forceThumbnail = (img: HTMLImageElement) => {
-        const thumbnails: ThumbnailElement[] =
-          api?.getPlayerResponse()?.videoDetails?.thumbnail?.thumbnails ?? [];
-        if (thumbnails && thumbnails.length > 0) {
-          const thumbnail = thumbnails.at(-1)?.url.split('?')[0];
-          if (thumbnail) img.src = thumbnail;
-        }
+      const setVideoState = (show: boolean, remember = true) => {
+        showVideo = show;
+        if (remember && ctx.config.hideVideo === show) ctx.setConfig({ hideVideo: !show });
+        apply();
       };
 
-      const setVideoState = (showVideo: boolean) => {
-        if (this.config) {
-          this.config.hideVideo = !showVideo;
+      const apply = () => {
+        const player = ctx.$<PlayerElement>("player.player");
+        const songVideo = ctx.$("player.song_video");
+        const songImage = ctx.$("player.song_image");
+        const visible = showVideo && hasVideo;
+        songButton.setAttribute("aria-checked", String(!visible));
+        videoButton.setAttribute("aria-checked", String(visible));
+        container.hidden = !hasVideo;
+        if (!player || !songVideo || !songImage) return;
+        setAttribute(player, "playback-mode", visible ? "OMV_PREFERRED" : "ATV_PREFERRED");
+        songVideo.style.display = visible ? "block" : "none";
+        songImage.style.display = visible ? "none" : "block";
+        if (!visible) forceThumbnail();
+      };
+      ctx.onCleanup(() => {
+        for (const name of ["player.song_video", "player.song_image"] as const) {
+          const element = ctx.$(name);
+          if (element) element.style.display = "";
         }
-        window.mainConfig.plugins.setOptions('video-toggle', this.config);
+      });
 
-        const checkbox = document.querySelector<HTMLInputElement>(
-          '.video-switch-button-checkbox',
-        ); // custom mode
-        if (checkbox) checkbox.checked = !this.config?.hideVideo;
-
-        if (player) {
-          player.style.margin = showVideo ? '' : 'auto 0px';
-          player.setAttribute(
-            'playback-mode',
-            showVideo ? 'OMV_PREFERRED' : 'ATV_PREFERRED',
-          );
-
-          document.querySelector<HTMLElement>(
-            '#song-video.ytmusic-player',
-          )!.style.display = showVideo ? 'block' : 'none';
-          document.querySelector<HTMLElement>('#song-image')!.style.display =
-            showVideo ? 'none' : 'block';
-
-          if (showVideo && video && !video.style.top) {
-            video.style.top = `${
-              (player.clientHeight - video.clientHeight) / 2
-            }px`;
-          }
-
-          moveVolumeHud(showVideo);
-        }
+      // For video tracks YTM leaves a placeholder in the cover-art slot; use the video's thumbnail.
+      const forceThumbnail = () => {
+        const image = ctx.$<HTMLImageElement>("player.song_image_img");
+        const thumbnails = ctx.player.api?.getPlayerResponse().videoDetails?.thumbnail?.thumbnails ?? [];
+        const best = thumbnails.toSorted((a, b) => b.width * b.height - a.width * a.height)[0];
+        if (!image || !best || !image.src.startsWith("data:")) return;
+        image.src = best.url.split("?")[0]!;
       };
 
-      const videoStarted = () => {
-        if (
-          api.getPlayerResponse().videoDetails.musicVideoType ===
-          'MUSIC_VIDEO_TYPE_ATV'
-        ) {
-          // Video doesn't exist -> switch to song mode
-          setVideoState(false);
-          // Hide toggle button
-          setShowButton(false);
-        } else {
-          const songImage = document.querySelector<HTMLImageElement>(
-            '#song-image #img.style-scope.yt-img-shadow',
-          );
-          if (!songImage) {
-            return;
-          }
-          // Switch to high-res thumbnail
-          forceThumbnail(songImage);
-          // Show toggle button
-          setShowButton(true);
-          // Change display to video mode if video exist & video is hidden & option.hideVideo = false
-          if (
-            !this.config?.hideVideo &&
-            document.querySelector<HTMLElement>('#song-video.ytmusic-player')
-              ?.style.display === 'none'
-          ) {
-            setVideoState(true);
-          } else {
-            moveVolumeHud(!this.config?.hideVideo);
-          }
-        }
+      const onTrack = () => {
+        // Audio-only tracks have no video to switch to.
+        hasVideo = ctx.player.state.track?.mediaType !== "audio";
+        apply();
       };
 
-      /**
-       * On load, after a delay, the page overrides the playback-mode to 'OMV_PREFERRED' which causes weird aspect ratio in the image container
-       * this function fix the problem by overriding that override :)
-       */
-      const forcePlaybackMode = () => {
-        if (player) {
-          const playbackModeObserver = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-              if (mutation.target instanceof HTMLElement) {
-                const target = mutation.target;
-                if (target.getAttribute('playback-mode') !== 'ATV_PREFERRED') {
-                  playbackModeObserver.disconnect();
-                  target.setAttribute('playback-mode', 'ATV_PREFERRED');
-                }
-              }
-            }
-          });
-          playbackModeObserver.observe(player, {
-            attributeFilter: ['playback-mode'],
-          });
-        }
-      };
-
-      const observeThumbnail = () => {
-        const playbackModeObserver = new MutationObserver((mutations) => {
-          if (!player?.videoMode_) {
-            return;
-          }
-
-          for (const mutation of mutations) {
-            if (mutation.target instanceof HTMLImageElement) {
-              const target = mutation.target;
-              if (!target.src.startsWith('data:')) {
-                continue;
-              }
-
-              forceThumbnail(target);
-            }
-          }
+      void ctx.waitFor("player.player").then((player) => {
+        player.prepend(container);
+        ctx.player.on("trackChange", onTrack);
+        onTrack();
+        // YTM switches playback-mode back after loading; keep the user's choice.
+        const observer = new MutationObserver(() => {
+          const wanted = showVideo && hasVideo ? "OMV_PREFERRED" : "ATV_PREFERRED";
+          if (player.getAttribute("playback-mode") !== wanted) apply();
+          if (!(showVideo && hasVideo)) forceThumbnail();
         });
-        playbackModeObserver.observe(
-          document.querySelector('#song-image #img.style-scope.yt-img-shadow')!,
-          { attributeFilter: ['src'] },
-        );
-      };
+        observer.observe(player, { attributes: true, attributeFilter: ["playback-mode"] });
+        const image = ctx.$("player.song_image_img");
+        if (image) observer.observe(image, { attributes: true, attributeFilter: ["src"] });
+        ctx.onCleanup(() => observer.disconnect());
+      }, () => {});
 
-      if (config.mode !== 'native' && config.mode != 'disabled') {
-        setTimeout(() => {
-          const playerSelector =
-            document.querySelector<HTMLVideoElement>('#player');
-          if (!playerSelector) return;
-
-          playerSelector.prepend(switchButtonContainer);
-          setVideoState(!config.hideVideo);
-          forcePlaybackMode();
-          if (video) {
-            video.style.height = 'auto';
-          }
-          video?.addEventListener('peard:src-changed', videoStarted);
-          observeThumbnail();
-          videoStarted();
-          switch (config.align) {
-            case 'right': {
-              switchButtonContainer.style.justifyContent = 'flex-end';
-              return;
-            }
-
-            case 'middle': {
-              switchButtonContainer.style.justifyContent = 'center';
-              return;
-            }
-
-            default:
-            case 'left': {
-              switchButtonContainer.style.justifyContent = 'flex-start';
-            }
-          }
-        }, 0);
-      }
-    },
-    onConfigChange(newConfig) {
-      this.config = newConfig;
-      this.applyStyleClass(newConfig);
+      // The switch writes hideVideo itself; apply that (and edits from settings) without a restart.
+      const others = settingsKey(ctx.config);
+      liveUpdates.set(ctx, (config) => {
+        if (settingsKey(config) !== others) return false;
+        if (showVideo === config.hideVideo) setVideoState(!config.hideVideo, false);
+        return true;
+      });
+      },
+    onConfigChange(config, ctx) {
+      return liveUpdates.get(ctx)?.(config) ? undefined : "restart";
     },
   },
 });
+
+interface VideoToggleConfig {
+  mode: string;
+  align: string;
+  hideVideo: boolean;
+  forceHide: boolean;
+}
+
+const liveUpdates = new WeakMap<object, (config: VideoToggleConfig) => boolean>();
+
+const settingsKey = ({ mode, align, forceHide }: VideoToggleConfig) => `${mode}/${align}/${forceHide}`;
+
+function choice(label: string, onSelect: () => void) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.setAttribute("role", "radio");
+  button.textContent = label;
+  button.addEventListener("click", onSelect);
+  return button;
+}

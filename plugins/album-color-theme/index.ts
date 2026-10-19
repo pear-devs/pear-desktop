@@ -1,250 +1,128 @@
-import Color, { type ColorInstance } from 'color';
-import { FastAverageColor } from 'fast-average-color';
+import { config, definePlugin } from "@pear/sdk";
+import { css } from "@pear/sdk/macros" with { type: "macro" };
+import { averageColor, formatRgb, themeColors } from "./color.ts";
 
-import { t } from '@/i18n';
-import { createPlugin } from '@/utils';
+const ACTIVE = "pear-album-color";
+const SAMPLE_SIZE = 32;
 
-import style from './style.css?inline';
+// YTM's dark palette, each color mixed with the artwork color. The colors come
+// in as custom properties; `--pear-transparent-opacity` is set by transparent-player.
+const THEME = css`
+  html.pear-album-color {
+    --ytmusic-color-black1: color-mix(in srgb, #212121, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --ytmusic-color-black2: color-mix(in srgb, #181818, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --ytmusic-color-black3: color-mix(in srgb, #030303, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --ytmusic-color-black4: color-mix(in srgb, #030303, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --ytmusic-color-blackpure: color-mix(in srgb, #000, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --dark-theme-background-color: color-mix(in srgb, #212121, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-base-background: color-mix(in srgb, #0f0f0f, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-raised-background: color-mix(in srgb, #212121, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-menu-background: color-mix(in srgb, #282828, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-static-brand-black: color-mix(in srgb, #212121, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-static-overlay-background-solid: color-mix(in srgb, #000, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-static-overlay-background-heavy: color-mix(in srgb, rgb(0 0 0 / 0.8), rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-static-overlay-background-medium: color-mix(in srgb, rgb(0 0 0 / 0.6), rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-static-overlay-background-medium-light: color-mix(in srgb, rgb(0 0 0 / 0.3), rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-static-overlay-background-light: color-mix(in srgb, rgb(0 0 0 / 0.1), rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-general-background-a: color-mix(in srgb, #181818, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-general-background-b: color-mix(in srgb, #0f0f0f, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-general-background-c: color-mix(in srgb, #030303, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-snackbar-background: color-mix(in srgb, #030303, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-filled-button-text: color-mix(in srgb, #030303, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-black-1: color-mix(in srgb, #282828, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-black-2: color-mix(in srgb, #1f1f1f, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-black-3: color-mix(in srgb, #161616, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-black-4: color-mix(in srgb, #0d0d0d, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-black-pure: color-mix(in srgb, #000, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-black-pure-alpha-5: color-mix(in srgb, rgb(0 0 0 / 0.05), rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-black-pure-alpha-10: color-mix(in srgb, rgb(0 0 0 / 0.1), rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-black-pure-alpha-15: color-mix(in srgb, rgb(0 0 0 / 0.15), rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-black-pure-alpha-30: color-mix(in srgb, rgb(0 0 0 / 0.3), rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-black-pure-alpha-60: color-mix(in srgb, rgb(0 0 0 / 0.6), rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-black-pure-alpha-80: color-mix(in srgb, rgb(0 0 0 / 0.8), rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-black-1-alpha-98: color-mix(in srgb, rgb(40 40 40 / 0.98), rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --yt-spec-black-1-alpha-95: color-mix(in srgb, rgb(40 40 40 / 0.95), rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --paper-toast-background-color: color-mix(in srgb, #323232, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --ytmusic-search-background: color-mix(in srgb, #030303, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --paper-slider-knob-color: color-mix(in srgb, #f03, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --paper-dialog-background-color: color-mix(in srgb, #212121, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    --paper-progress-active-color-1: color-mix(in srgb, #f03, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) min(100%, var(--pear-album-ratio) * 1.75)) !important;
+    --paper-progress-active-color-2: color-mix(in srgb, #ff2791, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) min(100%, var(--pear-album-ratio) * 1.75)) !important;
+    --yt-spec-inverted-background: color-mix(in srgb, #f3f3f3, rgba(var(--pear-album-color), var(--pear-transparent-opacity, 1)) min(100%, var(--pear-album-ratio) * 1.75)) !important;
+    --ytmusic-background: color-mix(in srgb, #030303, rgba(var(--pear-album-color-dark), var(--pear-transparent-opacity, 1)) var(--pear-album-ratio)) !important;
+    background: var(--ytmusic-background) !important;
+  }
+  html.pear-album-color body {
+    background: var(--ytmusic-background) !important;
+  }
+  sel(nav_bar.background),
+  sel(player_bar.background),
+  sel(guide.background),
+  sel(guide.mini_background),
+  sel(player.page) {
+    transition: background-color 300ms cubic-bezier(0.2, 0, 0.6, 1) !important;
+  }
+  html.pear-album-color sel(player_bar) {
+    color: rgb(255 255 255 / 0.6) !important;
+  }
+`;
 
-const COLOR_KEY = '--ytmusic-album-color';
-const DARK_COLOR_KEY = '--ytmusic-album-color-dark';
-const RATIO_KEY = '--ytmusic-album-color-ratio';
+const SEEKBAR = css`
+  html.pear-album-color sel(player_bar.progress) {
+    --paper-slider-active-color: linear-gradient(to right, var(--paper-progress-active-color-1) 80%, var(--paper-progress-active-color-2) 100%) !important;
+    --paper-slider-knob-color: var(--paper-progress-active-color-1) !important;
+    --paper-slider-knob-start-color: var(--paper-progress-active-color-2) !important;
+  }
+`;
 
-type Config = {
-  enabled: boolean;
-  ratio: number;
-  enableSeekbar: boolean;
-};
-
-type Renderer = {
-  getMixedColor(
-    color: string,
-    key: string,
-    alpha?: number,
-    ratioMultiply?: number,
-  ): string;
-  updateColor(alpha: number): void;
-  onConfigChange(newConfig: Config): void;
-};
-
-export default createPlugin({
-  name: () => t('plugins.album-color-theme.name'),
-  description: () => t('plugins.album-color-theme.description'),
-  restartNeeded: false,
+export default definePlugin({
+  id: "album-color-theme",
+  name: "Album color theme",
+  description: "Tints the interface with the colors of the current track's artwork.",
   config: {
-    enabled: false,
-    ratio: 0.5,
-    enableSeekbar: true,
-  } satisfies Config as Config,
-  stylesheets: [style],
-  menu: async ({ getConfig, setConfig }) => {
-    const ratioList = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1];
-
-    const config = await getConfig();
-
-    return [
-      {
-        label: t('plugins.album-color-theme.menu.color-mix-ratio.label'),
-        submenu: ratioList.map((ratio) => ({
-          label: t(
-            'plugins.album-color-theme.menu.color-mix-ratio.submenu.percent',
-            {
-              ratio: ratio * 100,
-            },
-          ),
-          type: 'radio',
-          checked: config.ratio === ratio,
-          click() {
-            setConfig({ ratio });
-          },
-        })),
-      },
-      {
-        label: t('plugins.album-color-theme.menu.enable-seekbar'),
-        type: 'checkbox',
-        checked: config.enableSeekbar,
-        click(item) {
-          setConfig({ enableSeekbar: item.checked });
-        },
-      },
-    ];
+    ratio: config.number(50, { label: "Color strength", min: 0, max: 100, step: 5, unit: "%" }),
+    enableSeekbar: config.bool(true, { label: "Color the progress bar" }),
   },
-  renderer: {
-    playerPage: null as HTMLElement | null,
-    navBarBackground: null as HTMLElement | null,
-    ytmusicPlayerBar: null as HTMLElement | null,
-    playerBarBackground: null as HTMLElement | null,
-    sidebarBig: null as HTMLElement | null,
-    sidebarSmall: null as HTMLElement | null,
-    ytmusicAppLayout: null as HTMLElement | null,
-    color: null as ColorInstance | null,
-    darkColor: null as ColorInstance | null,
+  style: (config) => `${THEME}${config.enableSeekbar ? SEEKBAR : ""}:root{--pear-album-ratio:${config.ratio}%}`,
+  page: (ctx) => {
+    const root = document.documentElement;
+    const colors = ctx.addStyle("");
+    ctx.onCleanup(() => root.classList.remove(ACTIVE));
 
-    start() {
-      this.playerPage = document.querySelector<HTMLElement>('#player-page');
-      this.navBarBackground = document.querySelector<HTMLElement>(
-        '#nav-bar-background',
-      );
-      this.ytmusicPlayerBar =
-        document.querySelector<HTMLElement>('ytmusic-player-bar');
-      this.playerBarBackground = document.querySelector<HTMLElement>(
-        '#player-bar-background',
-      );
-      this.sidebarBig = document.querySelector<HTMLElement>('#guide-wrapper');
-      this.sidebarSmall = document.querySelector<HTMLElement>(
-        '#mini-guide-background',
-      );
-      this.ytmusicAppLayout = document.querySelector<HTMLElement>('#layout');
-    },
-    async onPlayerApiReady(playerApi, { getConfig }) {
-      const config = await getConfig();
-      (this as Renderer).onConfigChange(config);
-
-      const fastAverageColor = new FastAverageColor();
-
-      document.addEventListener('videodatachange', async (event) => {
-        if (event.detail.name !== 'dataloaded') return;
-
-        const playerResponse = playerApi.getPlayerResponse();
-        const thumbnail =
-          playerResponse?.videoDetails?.thumbnail?.thumbnails?.at(0);
-        if (!thumbnail) return;
-
-        const albumColor = await fastAverageColor
-          .getColorAsync(thumbnail.url)
-          .catch((err) => {
-            console.error(err);
-            return null;
-          });
-
-        if (albumColor) {
-          const target = Color(albumColor.hex);
-
-          this.darkColor = target.darken(0.3).rgb();
-          this.color = target.darken(0.15).rgb();
-
-          while (this.color.luminosity() > 0.5) {
-            this.color = this.color?.darken(0.05);
-            this.darkColor = this.darkColor?.darken(0.05);
-          }
-
-          document.documentElement.style.setProperty(
-            COLOR_KEY,
-            `${~~this.color.red()}, ${~~this.color.green()}, ${~~this.color.blue()}`,
-          );
-          document.documentElement.style.setProperty(
-            DARK_COLOR_KEY,
-            `${~~this.darkColor.red()}, ${~~this.darkColor.green()}, ${~~this.darkColor.blue()}`,
-          );
-        } else {
-          document.documentElement.style.setProperty(COLOR_KEY, '0, 0, 0');
-          document.documentElement.style.setProperty(DARK_COLOR_KEY, '0, 0, 0');
-        }
-
-        let alpha: number | null = null;
-        if (await window.mainConfig.plugins.isEnabled('transparent-player')) {
-          const value: unknown = window.mainConfig.get(
-            'plugins.transparent-player.opacity',
-          );
-          if (typeof value === 'number' && value >= 0 && value <= 1) {
-            alpha = value;
-          }
-        }
-        (this as Renderer).updateColor(alpha ?? 1);
-      });
-    },
-    onConfigChange(config) {
-      document.documentElement.style.setProperty(
-        RATIO_KEY,
-        `${~~(config.ratio * 100)}%`,
-      );
-      if (config.enableSeekbar) document.body.classList.add('seekbar-theme');
-      else document.body.classList.remove('seekbar-theme');
-    },
-    getMixedColor(
-      color: string,
-      key: string,
-      alpha = 1,
-      ratioMultiply?: number,
-    ) {
-      const keyColor = `rgba(var(${key}), ${alpha})`;
-
-      let colorRatio = `var(${RATIO_KEY}, 50%)`;
-      let originalRatio = `calc(100% - var(${RATIO_KEY}, 50%))`;
-      if (ratioMultiply) {
-        colorRatio = `calc(var(${RATIO_KEY}, 50%) * ${ratioMultiply})`;
-        originalRatio = `calc(100% - calc(var(${RATIO_KEY}, 50%) * ${ratioMultiply}))`;
+    let generation = 0;
+    const apply = async () => {
+      const current = ++generation;
+      const url = thumbnailUrl(ctx.player.api?.getPlayerResponse().videoDetails?.thumbnail?.thumbnails) ??
+        ctx.player.state.track?.artworkUrl;
+      const average = url ? await sampleImage(url).catch((error) => ctx.log.warn("couldn't sample artwork", error)) : undefined;
+      if (current !== generation || ctx.signal.aborted) return;
+      if (!average) {
+        root.classList.remove(ACTIVE);
+        return;
       }
-      return `color-mix(in srgb, ${color} ${originalRatio}, ${keyColor} ${colorRatio})`;
-    },
-    updateColor(alpha: number) {
-      const variableMap = {
-        '--ytmusic-color-black1': '#212121',
-        '--ytmusic-color-black2': '#181818',
-        '--ytmusic-color-black3': '#030303',
-        '--ytmusic-color-black4': '#030303',
-        '--ytmusic-color-blackpure': '#000',
-        '--dark-theme-background-color': '#212121',
-        '--yt-spec-base-background': '#0f0f0f',
-        '--yt-spec-raised-background': '#212121',
-        '--yt-spec-menu-background': '#282828',
-        '--yt-spec-static-brand-black': '#212121',
-        '--yt-spec-static-overlay-background-solid': '#000',
-        '--yt-spec-static-overlay-background-heavy': 'rgba(0,0,0,0.8)',
-        '--yt-spec-static-overlay-background-medium': 'rgba(0,0,0,0.6)',
-        '--yt-spec-static-overlay-background-medium-light': 'rgba(0,0,0,0.3)',
-        '--yt-spec-static-overlay-background-light': 'rgba(0,0,0,0.1)',
-        '--yt-spec-general-background-a': '#181818',
-        '--yt-spec-general-background-b': '#0f0f0f',
-        '--yt-spec-general-background-c': '#030303',
-        '--yt-spec-snackbar-background': '#030303',
-        '--yt-spec-filled-button-text': '#030303',
-        '--yt-spec-black-1': '#282828',
-        '--yt-spec-black-2': '#1f1f1f',
-        '--yt-spec-black-3': '#161616',
-        '--yt-spec-black-4': '#0d0d0d',
-        '--yt-spec-black-pure': '#000',
-        '--yt-spec-black-pure-alpha-5': 'rgba(0,0,0,0.05)',
-        '--yt-spec-black-pure-alpha-10': 'rgba(0,0,0,0.1)',
-        '--yt-spec-black-pure-alpha-15': 'rgba(0,0,0,0.15)',
-        '--yt-spec-black-pure-alpha-30': 'rgba(0,0,0,0.3)',
-        '--yt-spec-black-pure-alpha-60': 'rgba(0,0,0,0.6)',
-        '--yt-spec-black-pure-alpha-80': 'rgba(0,0,0,0.8)',
-        '--yt-spec-black-1-alpha-98': 'rgba(40,40,40,0.98)',
-        '--yt-spec-black-1-alpha-95': 'rgba(40,40,40,0.95)',
-        '--paper-toast-background-color': '#323232',
-        '--ytmusic-search-background': '#030303',
-        '--paper-slider-knob-color': '#f03',
-        '--paper-dialog-background-color': '#212121',
-        '--paper-progress-active-color-1': '#f03',
-        '--paper-progress-active-color-2': '#ff2791',
-        '--yt-spec-inverted-background': '#f3f3f3',
-        'background': 'rgba(3, 3, 3)',
-        '--ytmusic-background': 'rgba(3, 3, 3)',
-      };
-
-      const colorKeyMap: Record<string, string> = {
-        'background': DARK_COLOR_KEY,
-        '--ytmusic-background': DARK_COLOR_KEY,
-      };
-
-      const ratioMap: Record<string, number> = {
-        '--paper-progress-active-color-1': 1.75,
-        '--paper-progress-active-color-2': 1.75,
-        '--yt-spec-inverted-background': 1.75,
-      };
-
-      const getMixedColor = (this as Renderer).getMixedColor.bind(this);
-      Object.entries(variableMap).map(([variable, color]) => {
-        const key = colorKeyMap[variable] ?? COLOR_KEY;
-        const ratio = ratioMap[variable] ?? undefined;
-
-        document.documentElement.style.setProperty(
-          variable,
-          getMixedColor(color, key, alpha, ratio),
-          'important',
-        );
-      });
-    },
+      const { color, dark } = themeColors(average);
+      colors.update(`:root{--pear-album-color:${formatRgb(color)};--pear-album-color-dark:${formatRgb(dark)}}`);
+      root.classList.add(ACTIVE);
+    };
+    ctx.player.on("trackChange", () => void apply());
+    if (ctx.player.state.track) void apply();
   },
 });
+
+/** The smallest thumbnail is plenty for an average and loads fastest. */
+function thumbnailUrl(thumbnails: { url: string; width: number }[] | undefined) {
+  return thumbnails?.toSorted((a, b) => a.width - b.width)[0]?.url;
+}
+
+async function sampleImage(url: string) {
+  const image = new Image();
+  image.crossOrigin = "anonymous";
+  image.src = url;
+  await image.decode();
+  const canvas = document.createElement("canvas");
+  canvas.width = SAMPLE_SIZE;
+  canvas.height = SAMPLE_SIZE;
+  const context = canvas.getContext("2d", { willReadFrequently: true })!;
+  context.drawImage(image, 0, 0, SAMPLE_SIZE, SAMPLE_SIZE);
+  return averageColor(context.getImageData(0, 0, SAMPLE_SIZE, SAMPLE_SIZE).data);
+}
