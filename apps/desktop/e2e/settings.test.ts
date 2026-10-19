@@ -43,7 +43,7 @@ test("toggles and configures plugins live, persisting to config.json", async () 
     await page.keyboard.press("Control+,");
 
     // Search narrows the list.
-    await overlay(page).getByRole("searchbox").fill("blur");
+    await overlay(page).getByRole("searchbox").fill("blur navigation");
     await expect(overlay(page).locator("[data-plugin]")).toHaveCount(1);
 
     expect(await enabled(page, "blur-nav-bar")).toBe(false);
@@ -55,8 +55,7 @@ test("toggles and configures plugins live, persisting to config.json", async () 
 
     await pluginRow(page, "blur-nav-bar").getByRole("button", { name: "Configure Blur navigation bar" }).click();
     const slider = pluginRow(page, "blur-nav-bar").getByLabel("Blur radius");
-    await slider.focus();
-    for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowRight");
+    await slider.fill("12");
     await expect.poll(async () => (await pluginConfig(page, "blur-nav-bar"))?.blur).toBe(12);
     await expect
       .poll(() => page.evaluate(() => getComputedStyle(document.querySelector("#nav-bar-background")!).backdropFilter))

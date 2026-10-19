@@ -1,321 +1,154 @@
-import prompt from 'custom-electron-prompt';
-import { Howl } from 'howler';
-import { Innertube } from '\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js';
+import { config, definePlugin } from "@pear/sdk";
 
-import { t } from '@/i18n';
-import { getNetFetchAsFetch } from '@/plugins/utils/main';
-import promptOptions from '@/providers/prompt-options';
-import { createPlugin } from '@/utils';
+// Late in the shared graph: fades apply after effects, before visualizer taps.
+const ORDER = 50;
+const CURVE_POINTS = 256;
+// Tracks shorter than this play untouched.
+const MIN_TRACK_SECONDS = 30;
 
-import { VolumeFader } from './fader';
-
-import type { RendererContext } from '@/types/contexts';
-import type { BrowserWindow } from 'electron';
-
-export type CrossfadePluginConfig = {
-  enabled: boolean;
-  fadeInDuration: number;
-  fadeOutDuration: number;
-  secondsBeforeEnd: number;
-  fadeScaling: 'linear' | 'logarithmic' | number;
-};
-
-export default createPlugin<
-  unknown,
-  unknown,
-  {
-    config?: CrossfadePluginConfig;
-    ipc?: RendererContext<CrossfadePluginConfig>['ipc'];
-  },
-  CrossfadePluginConfig
->({
-  name: () => t('plugins.crossfade.name'),
-  description: () => t('plugins.crossfade.description'),
-  restartNeeded: true,
+export default definePlugin({
+  id: "crossfade",
+  name: "Crossfade",
+  description: "Fades out the end of a track and fades the next one in.",
   config: {
-    enabled: false,
-    /**
-     * The duration of the fade in and fade out in milliseconds.
-     *
-     * @default 1500ms
-     */
-    fadeInDuration: 1500,
-    /**
-     * The duration of the fade in and fade out in milliseconds.
-     *
-     * @default 5000ms
-     */
-    fadeOutDuration: 5000,
-    /**
-     * The duration of the fade in and fade out in seconds.
-     *
-     * @default 10s
-     */
-    secondsBeforeEnd: 10,
-    /**
-     * The scaling algorithm to use for the fade.
-     * (or a positive number in dB)
-     *
-     * @default 'linear'
-     */
-    fadeScaling: 'linear',
+    fadeInDuration: config.number(1500, { label: "Fade-in", min: 0, max: 10000, step: 100, unit: " ms" }),
+    fadeOutDuration: config.number(5000, { label: "Fade-out", min: 0, max: 20000, step: 100, unit: " ms" }),
+    secondsBeforeEnd: config.number(10, {
+      label: "Skip to the next track",
+      description: "Seconds before the end; the fade-out finishes there.",
+      min: 0,
+      max: 30,
+      step: 1,
+      unit: " s before the end",
+    }),
+    fadeScaling: config.select(
+      "linear",
+      [
+        { value: "linear", label: "Linear" },
+        { value: "logarithmic", label: "Logarithmic (sounds even)" },
+      ],
+      { label: "Fade curve" },
+    ),
+    dynamicRange: config.number(60, { label: "Logarithmic range", min: 10, max: 120, step: 5, unit: " dB" }),
   },
-  menu({ window, getConfig, setConfig }) {
-    const promptCrossfadeValues = async (
-      win: BrowserWindow,
-      options: CrossfadePluginConfig,
-    ): Promise<Omit<CrossfadePluginConfig, 'enabled'> | undefined> => {
-      const res = await prompt(
-        {
-          title: t('plugins.crossfade.prompt.options'),
-          type: 'multiInput',
-          multiInputOptions: [
-            {
-              label: t(
-                'plugins.crossfade.prompt.options.multi-input.fade-in-duration',
-              ),
-              value: options.fadeInDuration,
-              inputAttrs: {
-                type: 'number',
-                required: true,
-                min: '0',
-                step: '100',
-              },
-            },
-            {
-              label: t(
-                'plugins.crossfade.prompt.options.multi-input.fade-out-duration',
-              ),
-              value: options.fadeOutDuration,
-              inputAttrs: {
-                type: 'number',
-                required: true,
-                min: '0',
-                step: '100',
-              },
-            },
-            {
-              label: t(
-                'plugins.crossfade.prompt.options.multi-input.seconds-before-end',
-              ),
-              value: options.secondsBeforeEnd,
-              inputAttrs: {
-                type: 'number',
-                required: true,
-                min: '0',
-              },
-            },
-            {
-              label: t(
-                'plugins.crossfade.prompt.options.multi-input.fade-scaling.label',
-              ),
-              selectOptions: {
-                linear: t(
-                  'plugins.crossfade.prompt.options.multi-input.fade-scaling.linear',
-                ),
-                logarithmic: t(
-                  'plugins.crossfade.prompt.options.multi-input.fade-scaling.logarithmic',
-                ),
-              },
-              value: options.fadeScaling,
-            },
-          ],
-          resizable: true,
-          height: 360,
-          ...promptOptions(),
-        },
-        win,
-      ).catch(console.error);
+  page: {
+    async start(ctx) {
+      const graph = await ctx.audio();
+      const { context, video } = graph;
+      const gain = context.createGain();
+      graph.insert(gain, gain, ORDER);
 
-      if (!res) {
-        return undefined;
-      }
-
-      let fadeScaling: 'linear' | 'logarithmic' | number;
-      if (res[3] === 'linear' || res[3] === 'logarithmic') {
-        fadeScaling = res[3];
-      } else if (isFinite(Number(res[3]))) {
-        fadeScaling = Number(res[3]);
-      } else {
-        fadeScaling = options.fadeScaling;
-      }
-
-      return {
-        fadeInDuration: Number(res[0]),
-        fadeOutDuration: Number(res[1]),
-        secondsBeforeEnd: Number(res[2]),
-        fadeScaling,
+      // Gain for a normalized fade position (0 silent → 1 full).
+      const level = (x: number) => {
+        if (ctx.config.fadeScaling === "linear" || x <= 0) return Math.max(0, x);
+        return 10 ** (((Math.min(1, x) - 1) * ctx.config.dynamicRange) / 20);
       };
-    };
+      const ramp = (from: number, to: number, seconds: number) => {
+        const now = context.currentTime;
+        gain.gain.cancelScheduledValues(now);
+        if (seconds <= 0.01) return gain.gain.setValueAtTime(level(to), now);
+        const curve = new Float32Array(CURVE_POINTS);
+        for (let i = 0; i < CURVE_POINTS; i++) curve[i] = level(from + ((to - from) * i) / (CURVE_POINTS - 1));
+        gain.gain.setValueCurveAtTime(curve, now, seconds);
+      };
+      const hold = (value: number) => {
+        gain.gain.cancelScheduledValues(context.currentTime);
+        gain.gain.setValueAtTime(value, context.currentTime);
+      };
 
-    return [
-      {
-        label: t('plugins.crossfade.menu.advanced'),
-        async click() {
-          const newOptions = await promptCrossfadeValues(
-            window,
-            await getConfig(),
-          );
-          if (newOptions) {
-            setConfig(newOptions);
+      let fadingOut = false;
+      let skipped = false;
+      let pendingFadeIn = false;
+
+      const fadeWindow = () => {
+        const duration = video.duration;
+        if (!Number.isFinite(duration) || duration < MIN_TRACK_SECONDS || ctx.player.state.ad) return;
+        const end = Math.max(0, duration - ctx.config.secondsBeforeEnd);
+        const length = Math.min(ctx.config.fadeOutDuration / 1000, end);
+        return { start: end - length, end, length };
+      };
+      // Schedules the rest of the fade-out from the current position, at the current rate.
+      const scheduleFadeOut = () => {
+        const fade = fadeWindow();
+        if (!fade || video.paused) return;
+        const position = video.currentTime;
+        if (position < fade.start || position >= fade.end) return;
+        fadingOut = true;
+        const from = fade.length > 0 ? (fade.end - position) / fade.length : 0;
+        ramp(from, 0, (fade.end - position) / video.playbackRate);
+      };
+      const onTime = () => {
+        const fade = fadeWindow();
+        if (!fade || video.paused) return;
+        const position = video.currentTime;
+        if (position >= fade.end) {
+          if (skipped) return;
+          skipped = true;
+          fadingOut = false;
+          if (ctx.player.state.repeat === "one") {
+            ctx.player.control({ type: "seek", seconds: 0 });
+            fadeIn();
+          } else {
+            // Also covers the end of the queue: the next play fades in.
+            pendingFadeIn = true;
+            ctx.player.control({ type: "next" });
           }
-        },
-      },
-    ];
-  },
-
-  async backend({ ipc }) {
-    const yt = await Innertube.create({
-      fetch: getNetFetchAsFetch(),
-    });
-
-    ipc.handle('audio-url', async (videoID: string) => {
-      const info = await yt.getBasicInfo(videoID);
-      return info.streaming_data?.formats[0].decipher(yt.session.player);
-    });
-  },
-
-  renderer: {
-    async start({ ipc, getConfig }) {
-      this.config = await getConfig();
-      this.ipc = ipc;
-    },
-    onConfigChange(newConfig) {
-      this.config = newConfig;
-    },
-    onPlayerApiReady() {
-      let transitionAudio: Howl; // Howler audio used to fade out the current music
-      let firstVideo = true;
-      let waitForTransition: Promise<unknown>;
-
-      const getStreamURL = async (videoID: string): Promise<string> =>
-        this.ipc?.invoke('audio-url', videoID) as Promise<string>;
-
-      const getVideoIDFromURL = (url: string) =>
-        new URLSearchParams(url.split('?')?.at(-1)).get('v');
-
-      const isReadyToCrossfade = () =>
-        transitionAudio && transitionAudio.state() === 'loaded';
-
-      const watchVideoIDChanges = (cb: (id: string) => void) => {
-        window.navigation.addEventListener('navigate', (event) => {
-          const currentVideoID = getVideoIDFromURL(
-            (event.currentTarget as Navigation).currentEntry?.url ?? '',
-          );
-          const nextVideoID = getVideoIDFromURL(event.destination.url ?? '');
-
-          if (
-            nextVideoID &&
-            currentVideoID &&
-            (firstVideo || nextVideoID !== currentVideoID)
-          ) {
-            if (isReadyToCrossfade()) {
-              crossfade(() => {
-                cb(nextVideoID);
-              });
-            } else {
-              cb(nextVideoID);
-              firstVideo = false;
-            }
-          }
-        });
-      };
-
-      const createAudioForCrossfade = (url: string) => {
-        if (transitionAudio) {
-          transitionAudio.unload();
+        } else if (!fadingOut && position >= fade.start) {
+          scheduleFadeOut();
         }
-
-        transitionAudio = new Howl({
-          src: url,
-          html5: true,
-          volume: 0,
-        });
-        syncVideoWithTransitionAudio();
       };
-
-      const syncVideoWithTransitionAudio = () => {
-        const video = document.querySelector('video')!;
-
-        const videoFader = new VolumeFader(video, {
-          fadeScaling: this.config?.fadeScaling,
-          fadeDuration: this.config?.fadeInDuration,
-        });
-
-        transitionAudio.play();
-        transitionAudio.seek(video.currentTime);
-
-        video.addEventListener('seeking', () => {
-          transitionAudio.seek(video.currentTime);
-        });
-
-        video.addEventListener('pause', () => {
-          transitionAudio.pause();
-        });
-
-        video.addEventListener('play', () => {
-          transitionAudio.play();
-          transitionAudio.seek(video.currentTime);
-
-          // Fade in
-          const videoVolume = video.volume;
-          video.volume = 0;
-          videoFader.fadeTo(videoVolume);
-        });
-
-        // Exit just before the end for the transition
-        const transitionBeforeEnd = () => {
-          if (
-            video.currentTime >=
-              video.duration - (this.config?.secondsBeforeEnd ?? 0) &&
-            isReadyToCrossfade()
-          ) {
-            video.removeEventListener('timeupdate', transitionBeforeEnd);
-
-            // Go to next video - XXX: does not support "repeat 1" mode
-            document.querySelector<HTMLButtonElement>('.next-button')?.click();
-          }
-        };
-
-        video.addEventListener('timeupdate', transitionBeforeEnd);
+      const fadeIn = () => {
+        pendingFadeIn = false;
+        ramp(0, 1, ctx.config.fadeInDuration / 1000 / video.playbackRate);
       };
-
-      const crossfade = (cb: () => void) => {
-        if (!isReadyToCrossfade()) {
-          cb();
-          return;
+      // Pauses freeze the fade; seeks and rate changes recompute it.
+      const resync = () => {
+        if (pendingFadeIn || ctx.player.state.ad) return;
+        const fade = fadeWindow();
+        const position = video.currentTime;
+        if (!fade || position < fade.start) {
+          // Seeked back out of a fade-out (a fade-in in progress is left alone).
+          if (fadingOut) hold(1);
+          fadingOut = false;
+          skipped = false;
+        } else if (video.paused) {
+          gain.gain.cancelAndHoldAtTime(context.currentTime);
+        } else {
+          scheduleFadeOut();
         }
-
-        let resolveTransition: () => void;
-        waitForTransition = new Promise<void>((resolve) => {
-          resolveTransition = resolve;
-        });
-
-        const video = document.querySelector('video')!;
-
-        const fader = new VolumeFader(transitionAudio._sounds[0]._node, {
-          initialVolume: video.volume,
-          fadeScaling: this.config?.fadeScaling,
-          fadeDuration: this.config?.fadeOutDuration,
-        });
-
-        // Fade out the music
-        video.volume = 0;
-        fader.fadeOut(() => {
-          resolveTransition();
-          cb();
-        });
       };
 
-      watchVideoIDChanges(async (videoID) => {
-        await waitForTransition;
-        const url = await getStreamURL(videoID);
-        if (!url) {
-          return;
-        }
-
-        createAudioForCrossfade(url);
+      ctx.player.on("trackLoading", () => {
+        skipped = false;
+        fadingOut = false;
+        pendingFadeIn = true;
+        hold(0);
       });
+      ctx.listen(video, "playing", () => {
+        if (pendingFadeIn && !ctx.player.state.ad) fadeIn();
+        else resync();
+      });
+      ctx.player.on("adChange", (ad) => {
+        // Ads play at full volume; the track fades in after them.
+        if (ad) hold(1);
+        else if (pendingFadeIn && !video.paused) fadeIn();
+        else if (pendingFadeIn) hold(0);
+      });
+      ctx.listen(video, "timeupdate", onTime);
+      ctx.listen(video, "pause", resync);
+      ctx.listen(video, "seeked", resync);
+      ctx.listen(video, "ratechange", resync);
+
+      live = resync;
+      return () => {
+        live = undefined;
+      };
+    },
+    onConfigChange() {
+      live?.();
     },
   },
 });
+
+// The running page part's re-scheduler (one instance at a time).
+let live: (() => void) | undefined;

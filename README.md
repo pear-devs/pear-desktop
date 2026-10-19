@@ -13,6 +13,57 @@ a desktop client for YTM with a plugin system, built on Electron.
 - **Live everything**: enable, disable and configure plugins from the in-page
   settings (<kbd>Ctrl</kbd>+<kbd>,</kbd>) without restarting.
 
+## Plugins
+
+| id | name | what it does |
+|---|---|---|
+| `adblock` | Ad blocker | Blocks ad and tracker requests, and gets through player ads in a blink without cutting into the track. |
+| `album-actions` | Album actions | Like or dislike every track of an album or playlist at once. |
+| `album-color-theme` | Album color theme | Tints the interface with the colors of the current track's artwork. |
+| `ambient-mode` | Ambient mode | Surrounds the video or cover art with a soft glow of its own colors. |
+| `amuse` | Amuse | Show the current song in the Amuse now-playing widget by 6K Labs. |
+| `api-server` | API server | A local HTTP and WebSocket API to control playback and read the current song from other apps. |
+| `audio-compressor` | Audio compressor | Evens out loud and quiet parts with a dynamics compressor. |
+| `auth-proxy-adapter` | Proxy | Sends all traffic through an HTTP or SOCKS proxy, including ones that need a username and password. |
+| `blur-nav-bar` | Blur navigation bar | Makes the top bar translucent with a blur behind it. |
+| `captions-selector` | Captions selector | Pick the captions language from the player bar, and optionally load it automatically. |
+| `clock` | Clock | Shows the current time in the top bar. |
+| `crossfade` | Crossfade | Fades out the end of a track and fades the next one in. |
+| `custom-output-device` | Custom output device | Play through a chosen audio device instead of the system default. |
+| `disable-autoplay` | Disable autoplay | Starts every track paused instead of playing it automatically. |
+| `discord` | Discord Rich Presence | Show your friends what you're listening to in your Discord status. |
+| `downloader` | Downloader | Saves songs, albums and playlists as tagged audio files with cover art, using yt-dlp. |
+| `equalizer` | Equalizer | A 10-band equalizer with presets. |
+| `exponential-volume` | Exponential volume | Makes the volume slider follow loudness perception, giving finer control at low volumes. |
+| `in-app-menu` | In-app menu | Replaces the system title bar: the top bar moves the window and holds the app menu. |
+| `lumiastream` | Lumia Stream | Let Lumia Stream react to the songs you play. |
+| `media-controls` | Media controls | Control playback from your desktop's media widgets and keys (MPRIS). (linux only) |
+| `music-together` | Music Together | Listen in sync with friends: host a session, share the code, and everyone hears the same thing. |
+| `navigation` | Navigation buttons | Back and forward buttons in the top bar. |
+| `notifications` | Notifications | Show a desktop notification when a new song starts. |
+| `picture-in-picture` | Picture in picture | Watch in a small floating window, from the track menu or a hotkey. |
+| `playback-speed` | Playback speed | Adds a speed control to the player bar (scroll over it for fine steps). |
+| `precise-volume` | Precise volume | Change the volume in fine steps with the scroll wheel or arrow keys, with a volume readout. |
+| `quality-changer` | Video quality changer | Adds a quality picker to the top of the video player. |
+| `scrobbler` | Scrobbler | Scrobble what you listen to to Last.fm and ListenBrainz. |
+| `shortcuts` | Global shortcuts | System-wide keyboard shortcuts that work while the window is in the background. |
+| `skip-disliked-songs` | Skip disliked songs | Skips a track as soon as you dislike it, and whenever a disliked track comes up. |
+| `skip-silences` | Skip silences | Skips over silent parts of tracks. |
+| `sponsorblock` | SponsorBlock | Skips non-music parts of music videos, using segments crowdsourced by SponsorBlock. |
+| `synced-lyrics` | Synced lyrics | Time-synced lyrics in the Lyrics tab, with word-by-word highlighting, click-to-seek and romanization. |
+| `taskbar-mediacontrol` | Taskbar media controls | Previous, play/pause and next buttons in the window's taskbar thumbnail. (win32 only) |
+| `touchbar` | Touch Bar | The current track and playback controls on the MacBook Touch Bar. (darwin only) |
+| `transparent-player` | Transparent player | Makes the window see-through, with a blurred material behind it on Windows 11 and macOS. |
+| `tray` | Tray icon | Playback controls and the current track in the system tray. |
+| `tuna-obs` | Tuna OBS | Show the current song in OBS through the Tuna plugin. |
+| `unobtrusive-player` | Unobtrusive player | Starting a song from a list keeps you where you are instead of opening the full player. |
+| `video-toggle` | Video toggle | Switch between a track's music video and its cover art, or hide the video entirely. |
+| `visualizer` | Visualizer | Shows a music visualizer in place of the album art on the player page. |
+
+Not ported from pear-desktop: `performance-improvement` (global timer patches that
+can't be undone live and interfere with the player). Musixmatch lyrics are gone
+too: its anonymous token now returns decoy lyrics.
+
 ## Layout
 
 ```

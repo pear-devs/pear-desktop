@@ -1,133 +1,43 @@
-import { t } from '@/i18n';
-import { type MusicPlayer } from '@/types/music-player';
-import { createPlugin } from '@/utils';
+import { config, definePlugin } from "@pear/sdk";
 
-const lazySafeTry = (...fns: (() => void)[]) => {
-  for (const fn of fns) {
-    try {
-      fn();
-    } catch {}
-  }
-};
+// After the equalizer, before fades and the output.
+const ORDER = 20;
 
-const createCompressorNode = (
-  audioContext: AudioContext,
-): DynamicsCompressorNode => {
-  const compressor = audioContext.createDynamicsCompressor();
-
-  compressor.threshold.value = -50;
-  compressor.ratio.value = 12;
-  compressor.knee.value = 40;
-  compressor.attack.value = 0;
-  compressor.release.value = 0.25;
-
-  return compressor;
-};
-
-class Storage {
-  lastSource: MediaElementAudioSourceNode | null = null;
-  lastContext: AudioContext | null = null;
-  lastCompressor: DynamicsCompressorNode | null = null;
-
-  connected: WeakMap<MediaElementAudioSourceNode, DynamicsCompressorNode> =
-    new WeakMap();
-
-  connectToCompressor = (
-    source: MediaElementAudioSourceNode | null = null,
-    audioContext: AudioContext | null = null,
-    compressor: DynamicsCompressorNode | null = null,
-  ): boolean => {
-    if (!(source && audioContext && compressor)) return false;
-
-    const current = this.connected.get(source);
-    if (current === compressor) return false;
-
-    this.lastSource = source;
-    this.lastContext = audioContext;
-    this.lastCompressor = compressor;
-
-    if (current) {
-      lazySafeTry(
-        () => source.disconnect(current),
-        () => current.disconnect(audioContext.destination),
-      );
-    } else {
-      lazySafeTry(() => source.disconnect(audioContext.destination));
-    }
-
-    try {
-      source.connect(compressor);
-      compressor.connect(audioContext.destination);
-      this.connected.set(source, compressor);
-      return true;
-    } catch (error) {
-      console.error('connectToCompressor failed', error);
-      return false;
-    }
-  };
-
-  disconnectCompressor = (): boolean => {
-    const source = this.lastSource;
-    const audioContext = this.lastContext;
-    if (!(source && audioContext)) return false;
-    const current = this.connected.get(source);
-    if (!current) return false;
-
-    lazySafeTry(
-      () => source.connect(audioContext.destination),
-      () => source.disconnect(current),
-      () => current.disconnect(audioContext.destination),
-    );
-    this.connected.delete(source);
-    return true;
-  };
-}
-
-const storage = new Storage();
-
-const audioCanPlayHandler = ({
-  detail: { audioSource, audioContext },
-}: CustomEvent<Compressor>) => {
-  storage.connectToCompressor(
-    audioSource,
-    audioContext,
-    createCompressorNode(audioContext),
-  );
-};
-
-const ensureAudioContextLoad = (playerApi: MusicPlayer) => {
-  if (playerApi.getPlayerState() !== 1 || storage.lastContext) return;
-
-  playerApi.loadVideoById(
-    playerApi.getPlayerResponse().videoDetails.videoId,
-    playerApi.getCurrentTime(),
-    playerApi.getUserPlaybackQualityPreference(),
-  );
-};
-
-export default createPlugin({
-  name: () => t('plugins.audio-compressor.name'),
-  description: () => t('plugins.audio-compressor.description'),
-
-  renderer: {
-    onPlayerApiReady(playerApi) {
-      ensureAudioContextLoad(playerApi);
+export default definePlugin({
+  id: "audio-compressor",
+  name: "Audio compressor",
+  description: "Evens out loud and quiet parts with a dynamics compressor.",
+  config: {
+    threshold: config.number(-50, { label: "Threshold", min: -100, max: 0, step: 1, unit: " dB" }),
+    ratio: config.number(12, { label: "Ratio", min: 1, max: 20, step: 0.5, unit: ":1" }),
+    knee: config.number(40, { label: "Knee", min: 0, max: 40, step: 1, unit: " dB" }),
+    attack: config.number(0, { label: "Attack", min: 0, max: 1000, step: 5, unit: " ms" }),
+    release: config.number(250, { label: "Release", min: 0, max: 1000, step: 5, unit: " ms" }),
+  },
+  page: {
+    async start(ctx) {
+      const graph = await ctx.audio();
+      const compressor = graph.context.createDynamicsCompressor();
+      const apply = () => {
+        const { threshold, ratio, knee, attack, release } = ctx.config;
+        compressor.threshold.value = threshold;
+        compressor.ratio.value = ratio;
+        compressor.knee.value = knee;
+        compressor.attack.value = attack / 1000;
+        compressor.release.value = release / 1000;
+      };
+      apply();
+      graph.insert(compressor, compressor, ORDER);
+      live = apply;
+      return () => {
+        live = undefined;
+      };
     },
-
-    start() {
-      document.addEventListener('peard:audio-can-play', audioCanPlayHandler, {
-        passive: true,
-      });
-      storage.connectToCompressor(
-        storage.lastSource,
-        storage.lastContext,
-        storage.lastCompressor,
-      );
-    },
-
-    stop() {
-      document.removeEventListener('peard:audio-can-play', audioCanPlayHandler);
-      storage.disconnectCompressor();
+    onConfigChange() {
+      live?.();
     },
   },
 });
+
+// The running page part's updater (one instance at a time).
+let live: (() => void) | undefined;

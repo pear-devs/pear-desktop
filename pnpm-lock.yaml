@@ -206,6 +206,19 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
 
+  plugins/audio-compressor:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+
   plugins/auth-proxy-adapter:
     dependencies:
       '@pear/sdk':
@@ -238,7 +251,46 @@ importers:
         specifier: ^44.9.0
         version: 44.9.0
 
+  plugins/captions-selector:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+
   plugins/clock:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+
+  plugins/crossfade:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+
+  plugins/custom-output-device:
     dependencies:
       '@pear/sdk':
         specifier: workspace:*
@@ -298,6 +350,32 @@ importers:
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
+
+  plugins/equalizer:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+
+  plugins/exponential-volume:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
 
   plugins/in-app-menu:
     dependencies:
@@ -405,6 +483,45 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
 
+  plugins/playback-speed:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+
+  plugins/precise-volume:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+
+  plugins/quality-changer:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+
   plugins/scrobbler:
     dependencies:
       '@pear/sdk':
@@ -435,6 +552,19 @@ importers:
         version: 44.9.0
 
   plugins/skip-disliked-songs:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+
+  plugins/skip-silences:
     dependencies:
       '@pear/sdk':
         specifier: workspace:*
@@ -594,7 +724,29 @@ importers:
         specifier: ^44.9.0
         version: 44.9.0
 
+  plugins/visualizer:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      butterchurn:
+        specifier: 3.0.0-beta.5
+        version: 3.0.0-beta.5
+      butterchurn-presets:
+        specifier: 3.0.0-beta.4
+        version: 3.0.0-beta.4
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+
 packages:
+
+  '@assemblyscript/loader@0.17.14':
+    resolution: {integrity: sha512-+PVTOfla/0XMLRTQLJFPg4u40XcdTfon6GGea70hBGi8Pd7ZymIXyVUR+vK8wt5Jb4MVKTKPIz43Myyebw5mZA==}
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -1241,6 +1393,12 @@ packages:
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
     hasBin: true
 
+  butterchurn-presets@3.0.0-beta.4:
+    resolution: {integrity: sha512-TbQLUPvGOYMZAtWKoCmBtludh9aQZ6NaMGQU4lvPeadBPy3Du3yNmwBjlTMLP5c5mRWElxQPjTL1PtR7FZK3OQ==}
+
+  butterchurn@3.0.0-beta.5:
+    resolution: {integrity: sha512-BStK4OAbBb9Pvt8PuQlS4WVmYBwU1KuDMRHF1V89QjoIFauAqq7tpV4EpYXj7K563r5daLrMX+2y5DBhZZ9Xig==}
+
   cac@7.1.0:
     resolution: {integrity: sha512-LMDU/U2yA4IPIY8KT0NsNPWEYZvAMkbgyspxJ6btJaYV+WMDOHAZCmB0lsTObiHaRS1V/ztKAl7+TSkTqXyeoA==}
     engines: {node: '>=20.19.0'}
@@ -1277,6 +1435,12 @@ packages:
 
   doublearray@0.0.2:
     resolution: {integrity: sha512-aw55FtZzT6AmiamEj2kvmR6BuFqvYgKZUkfQ7teqVRNqD5UE0rw8IeW/3gieHNKQ5sPuDKlljWEn4bzv5+1bHw==}
+
+  ecma-proposal-math-extensions@0.0.2:
+    resolution: {integrity: sha512-80BnDp2Fn7RxXlEr5HHZblniY4aQ97MOAicdWWpSo0vkQiISSE9wLR4SqxKsu4gCtXFBIPPzy8JMhay4NWRg/Q==}
+
+  eel-wasm@0.0.16:
+    resolution: {integrity: sha512-1tkId7I7E1Vs4fXTRsH83Sjn2S/AbzrVQKLBRGys6NLc3eVH4NBffJsdEeLHOWWUgQpVXBEP3CV/srUZNIuBnw==}
 
   electron-to-chromium@1.5.459:
     resolution: {integrity: sha512-4SC9HHSFjO/liAhifpdOL5hG9b4BP7/5G3y3UPZVO8trlAXr1CaUEEJL0gWK3kOcYcZrOA5rkwG45Gra/lTIgg==}
@@ -1870,6 +2034,8 @@ packages:
 
 snapshots:
 
+  '@assemblyscript/loader@0.17.14': {}
+
   '@babel/code-frame@7.29.7':
     dependencies:
       '@babel/helper-validator-identifier': 7.29.7
@@ -2353,6 +2519,16 @@ snapshots:
       node-releases: 2.0.59
       update-browserslist-db: 1.3.4(browserslist@4.29.3)
 
+  butterchurn-presets@3.0.0-beta.4:
+    dependencies:
+      '@babel/runtime': 7.29.10
+
+  butterchurn@3.0.0-beta.5:
+    dependencies:
+      '@assemblyscript/loader': 0.17.14
+      ecma-proposal-math-extensions: 0.0.2
+      eel-wasm: 0.0.16
+
   cac@7.1.0: {}
 
   caniuse-lite@1.0.30001816: {}
@@ -2372,6 +2548,10 @@ snapshots:
   discord-api-types@0.38.56: {}
 
   doublearray@0.0.2: {}
+
+  ecma-proposal-math-extensions@0.0.2: {}
+
+  eel-wasm@0.0.16: {}
 
   electron-to-chromium@1.5.459: {}
 

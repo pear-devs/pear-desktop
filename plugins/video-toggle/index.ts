@@ -129,7 +129,7 @@ export default definePlugin({
         const apply = () => {
           const flag = enable ? "" : null;
           setAttribute(ctx.$("player.page"), "has-av-switcher", flag);
-          setAttribute(ctx.$("player.player"), "has-av-switcher", flag);
+          setAttribute(ctx.$("player.container"), "has-av-switcher", flag);
           setAttribute(ctx.$("player.av_toggle"), "toggle-disabled", enable ? null : "");
         };
         void ctx.waitFor("player.av_toggle").then(() => {
@@ -163,7 +163,7 @@ export default definePlugin({
       };
 
       const apply = () => {
-        const player = ctx.$<PlayerElement>("player.player");
+        const player = ctx.$<PlayerElement>("player.container");
         const songVideo = ctx.$("player.song_video");
         const songImage = ctx.$("player.song_image");
         const visible = showVideo && hasVideo;
@@ -198,7 +198,7 @@ export default definePlugin({
         apply();
       };
 
-      void ctx.waitFor("player.player").then((player) => {
+      void ctx.waitFor("player.container").then((player) => {
         player.prepend(container);
         ctx.player.on("trackChange", onTrack);
         onTrack();

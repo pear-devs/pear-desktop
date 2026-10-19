@@ -179,7 +179,7 @@ export default definePlugin({
     const setPip = (active: boolean) => {
       pip = active;
       root.classList.toggle("pear-pip", active);
-      const fullscreen = ctx.$("player.player")?.getAttribute("player-ui-state") === "FULLSCREEN";
+      const fullscreen = ctx.$("player.container")?.getAttribute("player-ui-state") === "FULLSCREEN";
       if (active) {
         if (!fullscreen) ctx.$("player.fullscreen_button")?.click();
         document.body.append(dragStrip);

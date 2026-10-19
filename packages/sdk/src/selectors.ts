@@ -13,6 +13,7 @@ export const selectors = {
   "player.song_image": "#song-image",
   "player.song_video": "#song-video",
   "player.av_toggle": "ytmusic-av-toggle",
+  "player.main_panel": "ytmusic-player-page #main-panel",
 
   player_bar: "ytmusic-player-bar",
   "player_bar.play_pause": "ytmusic-player-bar #play-pause-button",
@@ -23,6 +24,7 @@ export const selectors = {
   "player_bar.right_controls": "ytmusic-player-bar #right-controls",
   "player_bar.right_controls_buttons": "ytmusic-player-bar #right-controls .right-controls-buttons",
   "player_bar.volume_slider": "ytmusic-player-bar #volume-slider",
+  "player_bar.volume_button": "ytmusic-player-bar .volume.ytmusic-player-bar",
   "player_bar.progress": "ytmusic-player-bar #progress-bar",
   "player_bar.like_buttons": "ytmusic-player-bar #like-button-renderer",
   "player_bar.like": "ytmusic-player-bar #like-button-renderer #button-shape-like button",
@@ -61,8 +63,13 @@ export const selectors = {
   "integrations.exit_fullscreen_button": ".exit-fullscreen-button",
 
   // ---- network & files (adblock, downloader, proxy, sponsorblock)
-  "player_bar.volume_button": "ytmusic-player-bar #right-controls .right-controls-buttons > .volume",
+
   // ---- audio (equalizer, compressor, crossfade, volume, speed, quality, visualizer, …)
+  "player.container": "ytmusic-player#player",
+  "player.top_row_buttons": ".top-row-buttons.ytmusic-player",
+  "player_bar.expand_volume": "ytmusic-player-bar #expand-volume",
+  "player_bar.volume_sliders": "ytmusic-player-bar #volume-slider, ytmusic-player-bar #expand-volume-slider",
+  "player_bar.captions": "ytmusic-player-bar .right-controls-buttons .captions",
 
   // ---- interface tweaks (album actions, colors, ambient mode, clock, navigation, pip, …)
   "player_bar.background": "#player-bar-background",
@@ -78,8 +85,6 @@ export const selectors = {
   "browse.track_like": "#button-shape-like > button",
   "browse.track_dislike": "#button-shape-dislike > button",
   "list.play_button": "ytmusic-play-button-renderer",
-  "player.player": "ytmusic-player#player",
-  "player.main_panel": "ytmusic-player-page #main-panel",
   "player.side_panel": "ytmusic-player-page #side-panel",
   "player.song_image_img": "#song-image #thumbnail img",
   "player.song_video_wrapper": "#song-video .player-wrapper",

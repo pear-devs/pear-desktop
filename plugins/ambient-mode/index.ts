@@ -47,7 +47,7 @@ export default definePlugin({
       height: 100%;
       transform: none;
     }
-    sel(player.player):not([video-mode]):not([player-ui-state='MINIPLAYER']) {
+    sel(player.container):not([video-mode]):not([player-ui-state='MINIPLAYER']) {
       overflow: visible;
     }
     sel(player.side_panel) {

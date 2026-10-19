@@ -1,247 +1,183 @@
-import { t } from '@/i18n';
-import { createPlugin } from '@/utils';
+import { config, definePlugin } from "@pear/sdk";
+import { css } from "@pear/sdk/macros" with { type: "macro" };
+import butterchurnSource from "butterchurn/dist/butterchurn.min.js?raw";
+import presetsSource from "butterchurn-presets/dist/minimal.min.js?raw";
+import { drawBars, drawWave, type Frame } from "./canvas.ts";
 
-import emptyStyle from './empty-player.css?inline';
-import {
-  ButterchurnVisualizer as butterchurn,
-  VudioVisualizer as vudio,
-  WaveVisualizer as wave,
-} from './visualizers';
-import { type Visualizer } from './visualizers/visualizer';
+// butterchurn's "minimal" preset pack, bundled into the host and sent to the
+// page only when used, so the page runtime stays small.
+const PRESETS = [
+  "martin [shadow harlequins shape code] - fata morgana",
+  "_Aderrasi - Wanderer in Curved Space - mash0000 - faclempt kibitzing meshuggana schmaltz (Geiss color mix)",
+  "_Mig_085",
+  "$$$ Royal - Mashup (197)",
+  "$$$ Royal - Mashup (431)",
+  "An AdamFX n Martin Infusion 2 flexi - Why The Sky Looks Diffrent Today - AdamFx n Martin Infusion - Tack Tile Disfunction B",
+  "Flexi - alien fish pond",
+  "flexi - bouncing balls [double mindblob neon mix]",
+  "Flexi - mindblob [shiny mix]",
+  "Flexi, fishbrain, Geiss + Martin - tokamak witchery",
+  "Flexi, martin + geiss - dedicated to the sherwin maxawow",
+  "Geiss - Cauldron - painterly 2 (saturation remix)",
+  "Geiss - Reaction Diffusion 2",
+  "Geiss - Thumb Drum",
+  "Halfbreak - Funny Madness",
+  "Martin - acid wiring",
+  "martin - chain breaker",
+  "martin - extreme heat",
+  "martin - mandelbox explorer - high speed demo version",
+  "martin - reflections on black tiles",
+  "martin - witchcraft reloaded",
+  "Milk Artist At our Best - FED - SlowFast Ft AdamFX n Martin - HD CosmoFX",
+  "MilkDrop2077.R002",
+  "ShadowHarlequin - LovelyShinySquares [ liquid starburst rmx ] - unchained + rovaster - luckless - martin - starfield sector",
+  "shifter - liquid circuitry - conjugoth",
+  "suksma - uninitialized variabowl (hydroponic chronic)",
+  "Unchained - Rewop",
+  "yin - 191 - Temporal singularities",
+  "Zylot - Paint Spill (Music Reactive Paint Mix)",
+] as const;
 
-type WaveColor = {
-  gradient: string[];
-  rotate?: number;
-};
+const shorten = (name: string) => (name.length > 60 ? `${name.slice(0, 57)}…` : name);
 
-export type VisualizerPluginConfig = {
-  enabled: boolean;
-  type: 'butterchurn' | 'vudio' | 'wave';
-  butterchurn: {
-    preset: string;
-    blendTimeInSeconds: number;
-  };
-  vudio: {
-    effect: string;
-    accuracy: number;
-    lighting: {
-      maxHeight: number;
-      maxSize: number;
-      lineWidth: number;
-      color: string;
-      shadowBlur: number;
-      shadowColor: string;
-      fadeSide: boolean;
-      prettify: boolean;
-      horizontalAlign: string;
-      verticalAlign: string;
-      dottify: boolean;
-    };
-  };
-  wave: {
-    animations: {
-      type: string;
-      config: {
-        bottom?: boolean;
-        top?: boolean;
-        count?: number;
-        cubeHeight?: number;
-        lineWidth?: number;
-        diameter?: number;
-        fillColor?: string | WaveColor;
-        lineColor?: string | WaveColor;
-        radius?: number;
-        frequencyBand?: string;
-      };
-    }[];
-  };
-};
-
-type RenderProps = {
-  visualizerInstance: Visualizer | null;
-  audioContext: AudioContext | null;
-  audioSource: MediaElementAudioSourceNode | null;
-  observer: ResizeObserver | null;
-};
-
-export default createPlugin({
-  name: () => t('plugins.visualizer.name'),
-  description: () => t('plugins.visualizer.description'),
-  restartNeeded: false,
+export default definePlugin({
+  id: "visualizer",
+  name: "Visualizer",
+  description: "Shows a music visualizer in place of the album art on the player page.",
   config: {
-    enabled: false,
-    type: 'butterchurn',
-    // Config per visualizer
-    butterchurn: {
-      preset: 'martin [shadow harlequins shape code] - fata morgana',
-      blendTimeInSeconds: 2.7,
-    },
-    vudio: {
-      effect: 'lighting',
-      accuracy: 128,
-      lighting: {
-        maxHeight: 160,
-        maxSize: 12,
-        lineWidth: 1,
-        color: '#49f3f7',
-        shadowBlur: 2,
-        shadowColor: 'rgba(244,244,244,.5)',
-        fadeSide: true,
-        prettify: false,
-        horizontalAlign: 'center',
-        verticalAlign: 'middle',
-        dottify: true,
-      },
-    },
-    wave: {
-      animations: [
-        {
-          type: 'Cubes',
-          config: {
-            bottom: true,
-            count: 30,
-            cubeHeight: 5,
-            fillColor: { gradient: ['#FAD961', '#F76B1C'] },
-            lineColor: 'rgba(0,0,0,0)',
-            radius: 20,
-          },
-        },
-        {
-          type: 'Cubes',
-          config: {
-            top: true,
-            count: 12,
-            cubeHeight: 5,
-            fillColor: { gradient: ['#FAD961', '#F76B1C'] },
-            lineColor: 'rgba(0,0,0,0)',
-            radius: 10,
-          },
-        },
-        {
-          type: 'Circles',
-          config: {
-            lineColor: {
-              gradient: ['#FAD961', '#FAD961', '#F76B1C'],
-              rotate: 90,
-            },
-            lineWidth: 4,
-            diameter: 20,
-            count: 10,
-            frequencyBand: 'base',
-          },
-        },
+    type: config.select(
+      "butterchurn",
+      [
+        { value: "butterchurn", label: "Milkdrop (butterchurn)" },
+        { value: "bars", label: "Bars" },
+        { value: "wave", label: "Wave" },
       ],
-    },
-  } as VisualizerPluginConfig,
-  stylesheets: [emptyStyle],
-  menu: async ({ getConfig, setConfig }) => {
-    const config = await getConfig();
-    const visualizerTypes = ['butterchurn', 'vudio', 'wave'] as const; // For bundling
-
-    return [
-      {
-        label: t('plugins.visualizer.menu.visualizer-type'),
-        submenu: visualizerTypes.map((visualizerType) => ({
-          label: visualizerType,
-          type: 'radio',
-          checked: config.type === visualizerType,
-          click() {
-            setConfig({ type: visualizerType });
-          },
-        })),
-      },
-    ];
+      { label: "Visualizer" },
+    ),
+    preset: config.select(PRESETS[0], PRESETS.map((value) => ({ value, label: shorten(value) })), { label: "Milkdrop preset" }),
+    blendTimeInSeconds: config.number(2.7, { label: "Milkdrop preset blend time", min: 0, max: 10, step: 0.1, unit: " s" }),
+    songTitle: config.bool(false, { label: "Milkdrop: show the track title on change" }),
+    bars: config.number(64, { label: "Bars / wave detail", min: 16, max: 256, step: 8 }),
+    primary: config.string("#49f3f7", { label: "Primary color", placeholder: "#49f3f7" }),
+    secondary: config.string("#f76b1c", { label: "Secondary color", placeholder: "#f76b1c" }),
   },
+  style: css`
+    .pear-visualizer {
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      width: 100%;
+      height: 100%;
+      background: #000;
+      pointer-events: none;
+    }
+  `,
+  host: {
+    commands: {
+      butterchurn() {
+        return butterchurnSource;
+      },
+      preset(name: string) {
+        presets ??= evaluatePresets(presetsSource);
+        return presets[name] ?? presets[PRESETS[0]];
+      },
+    },
+  },
+  page: async (ctx) => {
+    const graph = await ctx.audio();
+    const container = await ctx.waitFor("player.container");
+    const canvas = document.createElement("canvas");
+    canvas.className = "pear-visualizer";
+    container.prepend(canvas);
+    let frame = 0;
+    let observer: ResizeObserver | undefined;
+    ctx.onCleanup(() => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+      canvas.remove();
+    });
 
-  renderer: {
-    props: {
-      visualizerInstance: null,
-      audioContext: null,
-      audioSource: null,
-      observer: null,
-    } as RenderProps,
-
-    createVisualizer(
-      this: { props: RenderProps },
-      config: VisualizerPluginConfig,
-    ) {
-      this.props.visualizerInstance?.destroy();
-      this.props.visualizerInstance = null;
-
-      if (!this.props.audioContext || !this.props.audioSource) return;
-      if (!config.enabled) return;
-
-      const video = document.querySelector<
-        HTMLVideoElement & { captureStream(): MediaStream }
-      >('video');
-      if (!video) {
-        return;
-      }
-
-      const visualizerContainer =
-        document.querySelector<HTMLElement>('#player');
-      if (!visualizerContainer) {
-        return;
-      }
-
-      let canvas = document.querySelector<HTMLCanvasElement>('#visualizer');
-      if (!canvas) {
-        canvas = document.createElement('canvas');
-        canvas.id = 'visualizer';
-        visualizerContainer?.prepend(canvas);
-      }
-
-      const gainNode = this.props.audioContext.createGain();
-      gainNode.gain.value = 1.25;
-      this.props.audioSource.connect(gainNode);
-
-      let visualizerType: {
-        new (...args: ConstructorParameters<typeof vudio>): Visualizer;
-      } = vudio;
-      if (config.type === 'wave') {
-        visualizerType = wave;
-      } else if (config.type === 'butterchurn') {
-        visualizerType = butterchurn;
-      }
-      this.props.visualizerInstance = new visualizerType(
-        this.props.audioContext,
-        this.props.audioSource,
-        canvas,
-        gainNode,
-        video.captureStream(),
-        config,
-      );
-
-      const resizeVisualizer = () => {
-        if (canvas && visualizerContainer) {
-          const { width, height } =
-            window.getComputedStyle(visualizerContainer);
-          canvas.width = Math.ceil(parseFloat(width));
-          canvas.height = Math.ceil(parseFloat(height));
-        }
-        this.props.visualizerInstance?.resize(canvas.width, canvas.height);
+    const size = () => {
+      const ratio = window.devicePixelRatio || 1;
+      return { width: Math.ceil(container.clientWidth * ratio), height: Math.ceil(container.clientHeight * ratio) };
+    };
+    // Hidden (mini player, another page): skip drawing.
+    const visible = () => container.clientWidth > 0 && container.clientHeight > 0;
+    const loop = (render: () => void) => {
+      const tick = () => {
+        if (visible()) render();
+        frame = requestAnimationFrame(tick);
       };
-      resizeVisualizer();
+      frame = requestAnimationFrame(tick);
+    };
 
-      this.props.observer?.disconnect();
-      this.props.observer = new ResizeObserver(resizeVisualizer);
-      this.props.observer.observe(visualizerContainer);
-    },
-
-    onConfigChange(newConfig) {
-      this.createVisualizer(newConfig);
-    },
-
-    onPlayerApiReady(_, { getConfig }) {
-      document.addEventListener(
-        'peard:audio-can-play',
-        async (e) => {
-          this.props.audioContext = e.detail.audioContext;
-          this.props.audioSource = e.detail.audioSource;
-          this.createVisualizer(await getConfig());
-        },
-        { passive: true },
-      );
-    },
+    if (ctx.config.type === "butterchurn") {
+      butterchurn ??= ctx.host.invoke("butterchurn").then(importSource);
+      const [module, preset] = await Promise.all([butterchurn, ctx.host.invoke("preset", ctx.config.preset)]);
+      if (ctx.signal.aborted) return;
+      const input = graph.context.createGain();
+      ctx.onCleanup(() => input.disconnect());
+      graph.tap(input);
+      const { width, height } = size();
+      const visualizer = module.default.createVisualizer(graph.context, canvas, { width, height });
+      ctx.onCleanup(() => visualizer.loseGLContext());
+      visualizer.connectAudio(input);
+      await visualizer.loadPreset(preset, ctx.config.blendTimeInSeconds);
+      observer = new ResizeObserver(() => {
+        const { width, height } = size();
+        if (width === 0 || height === 0) return;
+        canvas.width = width;
+        canvas.height = height;
+        visualizer.setRendererSize(width, height);
+      });
+      ctx.player.on("trackChange", (track) => {
+        if (ctx.config.songTitle) visualizer.launchSongTitleAnim(`${track.artist} - ${track.title}`);
+      });
+      loop(() => visualizer.render());
+    } else {
+      const analyser = graph.context.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.8;
+      graph.tap(analyser);
+      const data: Frame = {
+        frequency: new Uint8Array(analyser.frequencyBinCount),
+        waveform: new Uint8Array(analyser.fftSize),
+      };
+      const g = canvas.getContext("2d")!;
+      const draw = ctx.config.type === "wave" ? drawWave : drawBars;
+      const options = { bars: ctx.config.bars, primary: ctx.config.primary, secondary: ctx.config.secondary };
+      observer = new ResizeObserver(() => {
+        const { width, height } = size();
+        canvas.width = width;
+        canvas.height = height;
+      });
+      loop(() => {
+        analyser.getByteFrequencyData(data.frequency);
+        analyser.getByteTimeDomainData(data.waveform);
+        draw(g, data, options);
+      });
+    }
+    observer.observe(container);
   },
 });
+
+// Host: parsed preset pack. Page: the loaded butterchurn module. Both kept across restarts.
+let presets: Record<string, unknown> | undefined;
+let butterchurn: Promise<ButterchurnModule> | undefined;
+
+/** butterchurn ships as an ES module; the page's CSP is lifted, so a blob URL can be imported. */
+async function importSource(source: string): Promise<ButterchurnModule> {
+  const url = URL.createObjectURL(new Blob([source], { type: "text/javascript" }));
+  try {
+    return (await import(/* @vite-ignore */ url)) as ButterchurnModule;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+/** The preset pack is a UMD bundle that expects a browser-like `self`. */
+function evaluatePresets(source: string): Record<string, unknown> {
+  const module: { exports: { default?: Record<string, unknown> } } = { exports: {} };
+  new Function("module", "exports", "self", source)(module, module.exports, globalThis);
+  return module.exports.default ?? {};
+}
