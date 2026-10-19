@@ -1,42 +1,44 @@
-import path from 'node:path';
-import process from 'node:process';
+// Milestone 1: the page runtime runs before YTM's scripts, CSP is stripped,
+// and the typed bridge round-trips to the host. Requires `nub run build` first.
 
-import { test, expect, _electron as electron } from '@playwright/test';
+import { expect, test } from "@playwright/test";
+import { launchApp } from "./launch.ts";
 
-process.env.NODE_ENV = 'test';
+test("runtime is injected before page scripts and the bridge works", async () => {
+  const app = await launchApp();
+  try {
+    const page = await app.firstWindow();
+    const ping = page.waitForEvent("console", {
+      predicate: (msg) => msg.text().startsWith("[pear] ping"),
+    });
+    await page.waitForURL(/music\.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\.com/);
 
-const appPath = path.resolve(import.meta.dirname, '..');
+    const marker = await page.waitForFunction(() => window.__pearRuntime).then((h) => h.jsonValue());
+    expect(marker).toMatchObject({ readyState: "loading", scriptsBefore: 0 });
 
-test('Pear Desktop App - With default settings, app is launched and visible', async () => {
-  const app = await electron.launch({
-    cwd: appPath,
-    args: [
-      appPath,
-      '--no-sandbox',
-      '--disable-gpu',
-      '--whitelisted-ips=',
-      '--disable-dev-shm-usage',
-    ],
-  });
+    expect((await ping).text()).toContain("pong: hello from page");
 
-  const window = await app.firstWindow();
+    const meta = await page.evaluate(() =>
+      document.querySelector('meta[http-equiv="Content-Security-Policy" i]')?.getAttribute("content"),
+    );
+    expect(meta ?? null).toBeNull();
 
-  const consentForm = await window.$(
-    "form[action='https://consent.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/save']",
-  );
-  if (consentForm) {
-    await consentForm.click('button');
+    const ua = await page.evaluate(() => navigator.userAgent);
+    expect(ua).not.toMatch(/Electron|th-ch/);
+  } finally {
+    await app.close();
   }
+});
 
-  // const title = await window.title();
-  // expect(title.replaceAll(/\s/g, ' ')).toEqual('Pear Desktop');
-
-  const url = window.url();
-  expect(
-    url.startsWith(
-      'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com',
-    ),
-  ).toBe(true);
-
-  await app.close();
+test("fresh profile skips the cookie-consent screen with essential-only consent", async () => {
+  const app = await launchApp();
+  try {
+    const page = await app.firstWindow();
+    await page.waitForFunction(() => window.__pearRuntime);
+    expect(new URL(page.url()).hostname).toBe("music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com");
+    const socs = await page.context().cookies("https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com");
+    expect(socs.find((c) => c.name === "SOCS")?.value).toBe("CAI");
+  } finally {
+    await app.close();
+  }
 });

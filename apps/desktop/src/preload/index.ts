@@ -1,109 +1,31 @@
-import {
-  contextBridge,
-  ipcRenderer,
-  type IpcRendererEvent,
-  webFrame,
-} from 'electron';
-import is from 'electron-is';
+// Runs in an isolated world before the page's scripts, on every top-level page
+// the window navigates to. On YTM it exposes the typed bridge and
+// injects the page runtime; other origins (e.g. Google sign-in) are left alone.
 
-import { loadI18n, setLanguage } from '@/i18n';
+import { contextBridge, ipcRenderer } from "electron";
+import pageRuntime from "virtual:pear/page-runtime";
+import { INVOKE_CHANNEL, type CommandName, type HostCommands } from "../shared/ipc.ts";
+import { YTM_ORIGIN } from "../shared/user-agent.ts";
 
-import * as config from './config';
-import {
-  forceLoadPreloadPlugin,
-  forceUnloadPreloadPlugin,
-  loadAllPreloadPlugins,
-} from './loader/preload';
+const bridge = {
+  invoke<K extends CommandName>(
+    name: K,
+    ...args: Parameters<HostCommands[K]>
+  ): Promise<ReturnType<HostCommands[K]>> {
+    return ipcRenderer.invoke(INVOKE_CHANNEL, name, args);
+  },
+};
 
-// @ts-expect-error dummy
-globalThis.customElements = { define() {} };
+export type PearBridge = typeof bridge;
 
-new MutationObserver((mutations, observer) => {
-  for (const mutation of mutations) {
-    for (const node of mutation.addedNodes) {
-      const elem = node as HTMLElement;
-      if (elem.tagName !== 'SCRIPT') continue;
-
-      const script = elem as HTMLScriptElement;
-      if (
-        !script.getAttribute('src')?.endsWith('custom-elements-es5-adapter.js')
-      )
-        continue;
-
-      script.remove();
-
-      observer.disconnect();
-      return;
-    }
-  }
-}).observe(document, { subtree: true, childList: true });
-
-loadI18n().then(async () => {
-  await setLanguage(config.get('options.language') ?? 'en');
-  await loadAllPreloadPlugins();
-});
-
-ipcRenderer.on('plugin:unload', async (_, id: string) => {
-  await forceUnloadPreloadPlugin(id);
-});
-ipcRenderer.on('plugin:enable', async (_, id: string) => {
-  await forceLoadPreloadPlugin(id);
-});
-
-contextBridge.exposeInMainWorld('mainConfig', config);
-contextBridge.exposeInMainWorld('electronIs', is);
-contextBridge.exposeInMainWorld('ipcRenderer', {
-  on: (
-    channel: string,
-    listener: (event: IpcRendererEvent, ...args: unknown[]) => void,
-  ) => ipcRenderer.on(channel, listener),
-  off: (channel: string, listener: (...args: unknown[]) => void) =>
-    ipcRenderer.off(channel, listener),
-  once: (
-    channel: string,
-    listener: (event: IpcRendererEvent, ...args: unknown[]) => void,
-  ) => ipcRenderer.once(channel, listener),
-  send: (channel: string, ...args: unknown[]) =>
-    ipcRenderer.send(channel, ...args),
-  removeListener: (channel: string, listener: (...args: unknown[]) => void) =>
-    ipcRenderer.removeListener(channel, listener),
-  removeAllListeners: (channel: string) =>
-    ipcRenderer.removeAllListeners(channel),
-  invoke: async (channel: string, ...args: unknown[]): Promise<unknown> =>
-    ipcRenderer.invoke(channel, ...args),
-  sendSync: (channel: string, ...args: unknown[]): unknown =>
-    ipcRenderer.sendSync(channel, ...args),
-  sendToHost: (channel: string, ...args: unknown[]) =>
-    ipcRenderer.sendToHost(channel, ...args),
-});
-contextBridge.exposeInMainWorld('reload', () =>
-  ipcRenderer.send('peard:reload'),
-);
-contextBridge.exposeInMainWorld(
-  'ELECTRON_RENDERER_URL',
-  process.env.ELECTRON_RENDERER_URL,
-);
-
-const [path, script] = ipcRenderer.sendSync('get-renderer-script') as [
-  string | null,
-  string,
-];
-let blocked = true;
-if (path) {
-  webFrame.executeJavaScriptInIsolatedWorld(
-    0,
-    [
-      {
-        code: script,
-        url: path,
-      },
-    ],
-    true,
-    () => (blocked = false),
-  );
-} else {
-  webFrame.executeJavaScript(script, true, () => (blocked = false));
+if (location.origin === YTM_ORIGIN) {
+  contextBridge.exposeInMainWorld("__pear", bridge);
+  // The page runtime is a self-contained IIFE string; CSP is stripped by the
+  // host, so indirect eval runs it in the main world's global scope.
+  contextBridge.executeInMainWorld({
+    func: (code: string) => {
+      (0, eval)(code);
+    },
+    args: [pageRuntime],
+  });
 }
-
-// HACK: Wait for the script to be executed
-while (blocked);

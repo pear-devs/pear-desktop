@@ -1,152 +1,47 @@
-import { basename, resolve, extname, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+// The pear "macro compiler". For now it only provides the page runtime as a
+// string, bundled to a self-contained IIFE so the preload can run it in the
+// page's main world. Plugin discovery and host/page splitting come next.
 
-import { globSync } from 'glob';
-import { Project } from 'ts-morph';
+import { fileURLToPath } from "node:url";
+import { build } from "rolldown";
+import type { Plugin } from "vite";
 
-// HACK: DO NOT USE @ ALIAS IN THIS FILE, IT WILL CAUSE PROBLEMS
-import { Platform } from '../src/types/plugins';
+const PAGE_RUNTIME_ID = "virtual:pear/page-runtime";
+const RESOLVED_PAGE_RUNTIME_ID = `\0${PAGE_RUNTIME_ID}`;
 
-const kebabToCamel = (text: string) =>
-  text.replace(/-(\w)/g, (_, letter: string) => letter.toUpperCase());
+export interface PearPluginOptions {
+  /** Entry of the page runtime. Defaults to @pear/page. */
+  pageEntry?: string;
+}
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const globalProject = new Project({
-  tsConfigFilePath: resolve(__dirname, '..', 'tsconfig.json'),
-  skipAddingFilesFromTsConfig: true,
-  skipLoadingLibFiles: true,
-  skipFileDependencyResolution: true,
-});
+export default function pear(options: PearPluginOptions = {}): Plugin {
+  const pageEntry =
+    options.pageEntry ?? fileURLToPath(import.meta.resolve("@pear/page"));
 
-export const pluginVirtualModuleGenerator = (
-  mode: 'main' | 'preload' | 'renderer',
-) => {
-  const srcPath = resolve(__dirname, '..', 'src');
-  const plugins = globSync([
-    'src/plugins/*/index.{js,ts,jsx,tsx}',
-    'src/plugins/*.{js,ts,jsx,tsx}',
-    '!src/plugins/utils/**/*',
-    '!src/plugins/utils/*',
-  ]).map((path) => {
-    let name = basename(path);
-    if (
-      name === 'index.ts' ||
-      name === 'index.js' ||
-      name === 'index.jsx' ||
-      name === 'index.tsx'
-    ) {
-      name = basename(resolve(path, '..'));
-    }
-
-    name = name.replace(extname(name), '');
-
-    return { name, path };
-  });
-
-  const src = globalProject.createSourceFile(
-    'vm:pluginIndexes',
-    (writer) => {
-      for (const { name, path } of plugins) {
-        const absolutePath = resolve(srcPath, '..', path).replace(/\\/g, '/');
-        if (mode === 'main') {
-          // dynamic import (for main)
-          writer.writeLine(
-            `const ${kebabToCamel(name)}PluginImport = () => import('${absolutePath}');`,
-          );
-          writer.writeLine(
-            `const ${kebabToCamel(name)}Plugin = async () => (await ${kebabToCamel(name)}PluginImport()).default;`,
-          );
-          writer.writeLine(
-            `const ${kebabToCamel(name)}PluginStub = async () => (await ${kebabToCamel(name)}PluginImport()).pluginStub;`,
-          );
-        } else {
-          // static import (preload does not support dynamic import)
-          writer.writeLine(
-            `import ${kebabToCamel(name)}PluginImport, { pluginStub as ${kebabToCamel(name)}PluginStubImport } from "${absolutePath}";`,
-          );
-          writer.writeLine(
-            `const ${kebabToCamel(name)}Plugin = () => Promise.resolve(${kebabToCamel(name)}PluginImport);`,
-          );
-          writer.writeLine(
-            `const ${kebabToCamel(name)}PluginStub = () => Promise.resolve(${kebabToCamel(name)}PluginStubImport);`,
-          );
-        }
-      }
-
-      writer.blankLine();
-      if (mode === 'main' || mode === 'preload') {
-        writer.writeLine("import is from 'electron-is';");
-        writer.writeLine('globalThis.electronIs = is;');
-      }
-      writer.write(supportsPlatform.toString());
-      writer.blankLine();
-
-      // Context-specific exports
-      writer.writeLine(`let ${mode}PluginsCache = null;`);
-      writer.writeLine(`export const ${mode}Plugins = async () => {`);
-      writer.writeLine(
-        `  if (${mode}PluginsCache) return await ${mode}PluginsCache;`,
-      );
-      writer.writeLine(
-        '  const { promise, resolve } = Promise.withResolvers();',
-      );
-      writer.writeLine('  ' + `${mode}PluginsCache = promise;`);
-      writer.writeLine('  const pluginEntries = await Promise.all([');
-      for (const { name } of plugins) {
-        const checkMode = mode === 'main' ? 'backend' : mode;
-        // HACK: To avoid situation like importing renderer plugins in main
-        writer.writeLine(
-          `    ${kebabToCamel(name)}Plugin().then((plg) => plg['${checkMode}'] ? ["${name}", plg] : null),`,
-        );
-      }
-      writer.writeLine('  ]);');
-      writer.writeLine(
-        '  resolve(pluginEntries.filter((entry) => entry && supportsPlatform(entry[1])).reduce((acc, [name, plg]) => { acc[name] = plg; return acc; }, {}));',
-      );
-      writer.writeLine(`  return await ${mode}PluginsCache;`);
-      writer.writeLine('};');
-      writer.blankLine();
-
-      // All plugins export (stub only) // Omit<Plugin, 'backend' | 'preload' | 'renderer'>
-      writer.writeLine('let allPluginsCache = null;');
-      writer.writeLine('export const allPlugins = async () => {');
-      writer.writeLine('  if (allPluginsCache) return await allPluginsCache;');
-      writer.writeLine(
-        '  const { promise, resolve } = Promise.withResolvers();',
-      );
-      writer.writeLine('  allPluginsCache = promise;');
-      writer.writeLine('  const stubEntries = await Promise.all([');
-      for (const { name } of plugins) {
-        writer.writeLine(
-          `    ${kebabToCamel(name)}PluginStub().then((stub) => ["${name}", stub]),`,
-        );
-      }
-      writer.writeLine('  ]);');
-      writer.writeLine(
-        '  resolve(stubEntries.filter(entry => entry && supportsPlatform(entry[1])).reduce((acc, [name, plg]) => { acc[name] = plg; return acc; }, {}));',
-      );
-      writer.writeLine('  return await promise;');
-      writer.writeLine('};');
-      writer.blankLine();
+  return {
+    name: "pear",
+    resolveId(id) {
+      if (id === PAGE_RUNTIME_ID) return RESOLVED_PAGE_RUNTIME_ID;
     },
-    { overwrite: true },
-  );
+    async load(id) {
+      if (id !== RESOLVED_PAGE_RUNTIME_ID) return;
+      const { code, watchFiles } = await bundlePage(pageEntry);
+      for (const file of watchFiles) this.addWatchFile(file);
+      return `export default ${JSON.stringify(code)};`;
+    },
+  };
+}
 
-  return src.getText();
-};
-
-function supportsPlatform({ platform }: { platform: string }) {
-  if (typeof platform !== 'number') return true;
-
-  const is = (globalThis as typeof globalThis & {
-    electronIs: typeof import('electron-is');
-  }).electronIs;
-
-  if (is.windows()) return (platform & Platform.Windows) !== 0;
-  if (is.macOS()) return (platform & Platform.macOS) !== 0;
-  if (is.linux()) return (platform & Platform.Linux) !== 0;
-  if (is.freebsd()) return (platform & Platform.Freebsd) !== 0;
-
-  // unknown platform
-  return false;
+async function bundlePage(entry: string) {
+  const result = await build({
+    input: entry,
+    write: false,
+    platform: "browser",
+    output: { format: "iife", minify: process.env.NODE_ENV === "production" },
+  });
+  const chunk = result.output.find((o) => o.type === "chunk" && o.isEntry);
+  if (!chunk || chunk.type !== "chunk") {
+    throw new Error(`[pear] page runtime bundle produced no entry chunk (${entry})`);
+  }
+  return { code: chunk.code, watchFiles: Object.keys(chunk.modules) };
 }
