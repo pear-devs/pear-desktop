@@ -73,7 +73,7 @@ bridge.onEvent((event) => {
     case "plugin-event":
       return runner.dispatch(event.id, event.event, event.payload);
     case "plugin-error":
-      return runner.reportError(event.id, event.message);
+      return runner.reportError(event.id, event.message, "host");
     case "plugin-request":
       return void runner.request(event.id, event.event, event.payload, event.requestId);
     case "player-control":

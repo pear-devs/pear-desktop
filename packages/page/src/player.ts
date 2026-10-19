@@ -105,9 +105,11 @@ export class Player implements PagePlayer {
         return api.seekTo(Math.max(0, api.getCurrentTime() + action.seconds), true);
       case "volume": {
         const volume = Math.round(Math.min(100, Math.max(0, action.value)));
-        api.setVolume(volume);
-        // Keep YTM's own slider and its persisted volume in sync.
-        document.querySelector<PlayerBarElement>(selectors.player_bar)?.updateVolume?.(volume);
+        // YTM's slider value is what users see; updateVolume applies YTM's
+        // perceptual curve to the actual audio (e.g. 37 → 12%) and persists it.
+        const bar = document.querySelector<PlayerBarElement>(selectors.player_bar);
+        if (bar?.updateVolume) bar.updateVolume(volume);
+        else api.setVolume(volume);
         return;
       }
       case "mute":
@@ -166,7 +168,7 @@ export class Player implements PagePlayer {
 
     this.#observeControls();
     this.#observeAds(api);
-    this.#update({ volume: api.getVolume(), muted: api.isMuted() }, true);
+    this.#update({ volume: this.#readVolume(), muted: api.isMuted() }, true);
   }
 
   #attachVideo(video: HTMLVideoElement) {
@@ -192,13 +194,19 @@ export class Player implements PagePlayer {
       this.#emitter.emit("timeUpdate", video.currentTime);
     });
     video.addEventListener("volumechange", () => {
-      const api = this.#api;
-      const volume = api?.getVolume() ?? Math.round(video.volume * 100);
-      const muted = api?.isMuted() ?? video.muted;
+      const volume = this.#readVolume();
+      const muted = this.#api?.isMuted() ?? video.muted;
       this.#update({ volume, muted }, true);
       this.#emitter.emit("volumeChange", volume, muted);
     });
     if (!video.paused) status("playing")();
+  }
+
+  /** The volume as YTM's slider shows it (before its perceptual curve). */
+  #readVolume() {
+    const slider = document.querySelector<HTMLElement & { value?: number }>(selectors["player_bar.volume_slider"]);
+    if (typeof slider?.value === "number") return Math.round(slider.value);
+    return this.#api?.getVolume() ?? 100;
   }
 
   /** YTM plays ads in the same <video>; the player gets an `ad-showing` class meanwhile. */

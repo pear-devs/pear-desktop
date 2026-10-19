@@ -34,6 +34,7 @@ export type UiAction = "toggle-settings" | "open-settings" | "close-settings";
 export type HostEvent =
   | { type: "plugin-state"; id: string; state: PluginState }
   | { type: "plugin-event"; id: string; event: string; payload: unknown }
+  /** An empty message clears the plugin's host error. */
   | { type: "plugin-error"; id: string; message: string }
   | { type: "plugin-request"; id: string; event: string; payload: unknown; requestId: number }
   | { type: "player-control"; action: PlayerAction }

@@ -78,13 +78,10 @@ test("REST endpoints and WebSocket reflect and control playback", async () => {
       .poll(() => messages.some((m) => m.type === "PLAYER_STATE_CHANGED" && m.isPlaying === false))
       .toBe(true);
 
-    // YTM maps the slider value onto its own volume curve, so only check that
-    // the change is reported consistently.
+    // Volume is in YTM slider units (what the user sees), not the curved audio level.
     expect((await post("/volume", { volume: 37 })).status).toBe(204);
-    await expect.poll(() => messages.some((m) => m.type === "VOLUME_CHANGED")).toBe(true);
-    const volume = messages.findLast((m) => m.type === "VOLUME_CHANGED")!.volume;
-    await expect.poll(async () => (await (await api("/volume")).json()).state).toBe(volume);
-    expect(volume).not.toBe(100);
+    await expect.poll(() => messages.findLast((m) => m.type === "VOLUME_CHANGED")?.volume).toBe(37);
+    await expect.poll(async () => (await (await api("/volume")).json()).state).toBe(37);
 
     expect((await post("/seek-to", { seconds: 30 })).status).toBe(204);
     await expect.poll(async () => Math.round((await status()).positionSeconds)).toBe(30);

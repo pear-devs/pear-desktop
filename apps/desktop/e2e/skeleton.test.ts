@@ -2,7 +2,7 @@
 // and the typed bridge round-trips to the host. Requires `nub run build` first.
 
 import { expect, test } from "@playwright/test";
-import { launchApp } from "./launch.ts";
+import { launchApp, mainWindow, playTestTrack } from "./launch.ts";
 
 test("runtime is injected before page scripts and the bridge works", async () => {
   const app = await launchApp();
@@ -38,4 +38,17 @@ test("fresh profile skips the cookie-consent screen with essential-only consent"
   } finally {
     await app.close();
   }
+});
+
+test("quits while a track is playing (YTM's beforeunload must not cancel it)", async () => {
+  test.setTimeout(120_000);
+  const app = await launchApp();
+  const page = await mainWindow(app);
+  await playTestTrack(page);
+  await expect
+    .poll(() => page.evaluate(() => window.__pearRuntime!.player.state.status), { timeout: 60_000 })
+    .toBe("playing");
+  const closed = app.close().then(() => "closed");
+  const hung = new Promise((resolve) => setTimeout(() => resolve("hung"), 10_000));
+  expect(await Promise.race([closed, hung])).toBe("closed");
 });

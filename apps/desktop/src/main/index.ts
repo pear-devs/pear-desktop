@@ -77,6 +77,9 @@ function main() {
       console.info(`[pear] startup: window shown after ${Math.round(performance.now())}ms`);
     });
 
+    // YTM asks "leave page?" while playing, which would silently cancel quitting.
+    window.webContents.on("will-prevent-unload", (event) => event.preventDefault());
+
     // Keep navigator.userAgent consistent with the UA header per destination.
     window.webContents.on("did-start-navigation", ({ url, isMainFrame }) => {
       if (!isMainFrame) return;

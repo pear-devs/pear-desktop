@@ -61,7 +61,7 @@ export const selectors = {
   "integrations.exit_fullscreen_button": ".exit-fullscreen-button",
 
   // ---- network & files (adblock, downloader, proxy, sponsorblock)
-
+  "player_bar.volume_button": "ytmusic-player-bar #right-controls .right-controls-buttons > .volume",
   // ---- audio (equalizer, compressor, crossfade, volume, speed, quality, visualizer, …)
 
   // ---- interface tweaks (album actions, colors, ambient mode, clock, navigation, pip, …)

@@ -110,6 +110,25 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2))
 
+  plugins/adblock:
+    dependencies:
+      '@ghostery/adblocker':
+        specifier: ^2.20.1
+        version: 2.20.1
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2))
+
   plugins/amuse:
     dependencies:
       '@pear/sdk':
@@ -138,6 +157,25 @@ importers:
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2))
+
+  plugins/auth-proxy-adapter:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+      socks:
+        specifier: ^2.8.10
+        version: 2.8.10
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
       electron:
         specifier: ^44.9.0
         version: 44.9.0
@@ -179,6 +217,22 @@ importers:
       '@xhayper/discord-rpc':
         specifier: ^1.5.1
         version: 1.5.1
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2))
+
+  plugins/downloader:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
@@ -260,6 +314,22 @@ importers:
       electron:
         specifier: ^44.9.0
         version: 44.9.0
+
+  plugins/sponsorblock:
+    dependencies:
+      '@pear/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.19.2
+      electron:
+        specifier: ^44.9.0
+        version: 44.9.0
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2))
 
   plugins/tray:
     dependencies:
@@ -385,6 +455,18 @@ packages:
   '@electron/get@5.1.0':
     resolution: {integrity: sha512-3kSBtG8ObcTVfXanm5vVJ6UnBLEVmVsRk1M+vGqCuMBV+XLCbJYuWQful+yIy0GQDsSlK0kHEriEHn7SPk4EnA==}
     engines: {node: '>=22.12.0'}
+
+  '@ghostery/adblocker-content@2.20.1':
+    resolution: {integrity: sha512-1vBDzEzoi4ZE9xjL3akAn0PiIA2KIeQ1K0JCpRIjPPWy8GoqN1saV2Md2jRSZPuXv9iENMKRPn1TetEE0MbUXw==}
+
+  '@ghostery/adblocker-extended-selectors@2.20.1':
+    resolution: {integrity: sha512-PCnELdIoylSQ8hsRXQUkiSnch6WwHTNYxu8iAthmbOD+44WoXnmjR+Zfgdut3Lh3xUZmvv1uojslNIhYrJX9rA==}
+
+  '@ghostery/adblocker@2.20.1':
+    resolution: {integrity: sha512-1ghCrMnWRf/CWQ5PMw7ZxL4W0U390gmko8kPXhwm7zi+4GDOR49JlHVvmCke90E2hCpBIoNdS5jtNlIKalp2Ww==}
+
+  '@ghostery/url-parser@1.3.1':
+    resolution: {integrity: sha512-QKqGi+7aDQ4RcyHyCwgEk6B9vWnsBP4Q7htaN0zPJV3ATqTKEQDtSTb9c/AN586oJUDs24YXKcwFYwNweY/YjQ==}
 
   '@jellybrick/dbus-next@0.11.4':
     resolution: {integrity: sha512-Anordy8AB71YZE4wCvKlQoZKnnHwbyhbXhGmHxn5pxlPDt9NBxow5jSiQGy5v6CEtfizDcIXuW3knvJBdW0ijw==}
@@ -542,6 +624,24 @@ packages:
     resolution: {integrity: sha512-IaYGml/nSOiZWROfPtuIL7neuu9qDOZ3TNvNljUIrhDMxiGTgPjzj/g9p9RxpS2tSepPDRY+UwAaEeiKtUvIAg==}
     engines: {node: '>=20'}
     hasBin: true
+
+  '@remusao/guess-url-type@2.1.0':
+    resolution: {integrity: sha512-zI3dlTUxpjvx2GCxp9nLOSK5yEIqDCpxlAVGwb2Y49RKkS72oeNaxxo+VWS5+XQ5+Mf8Zfp9ZXIlk+G5eoEN8A==}
+
+  '@remusao/small@2.1.0':
+    resolution: {integrity: sha512-Y1kyjZp7JU7dXdyOdxHVNfoTr1XLZJTyQP36/esZUU/WRWq9XY0PV2HsE3CsIHuaTf4pvgWv2pvzvnZ//UHIJQ==}
+
+  '@remusao/smaz-compress@2.2.0':
+    resolution: {integrity: sha512-TXpTPgILRUYOt2rEe0+9PC12xULPvBqeMpmipzB9A7oM4fa9Ztvy9lLYzPTd7tiQEeoNa1pmxihpKfJtsxnM/w==}
+
+  '@remusao/smaz-decompress@2.2.0':
+    resolution: {integrity: sha512-ERAPwxPaA0/yg4hkNU7T2S+lnp9jj1sApcQMtOyROvOQyo+Zuh6Hn/oRcXr8mmjlYzyRaC7E6r3mT1nrdHR6pg==}
+
+  '@remusao/smaz@2.2.0':
+    resolution: {integrity: sha512-eSd3Qs0ELP/e7tU1SI5RWXcCn9KjDgvBY+KtWbL4i2QvvHhJOfdIt4v0AA3S5BbLWAr5dCEC7C4LUfogDm6q/Q==}
+
+  '@remusao/trie@2.1.0':
+    resolution: {integrity: sha512-Er3Q8q0/2OcCJPQYJOPLmCuqO0wu7cav3SPtpjlxSbjFi1x+A1pZkkLD6c9q2rGEkGW/tkrRzfrhNMt8VQjzXg==}
 
   '@rolldown/binding-android-arm-eabi@1.2.14':
     resolution: {integrity: sha512-aWR+XKH9+rW7m5fWq/5360J3mHycrx/o6xZM2DQFdJnTMdyP7/WzxPjhtLbVWdKo2y612/4U1bWqb3HQhiF7vg==}
@@ -996,6 +1096,10 @@ packages:
     resolution: {integrity: sha512-vXoV9PjKHEednCUu01e98TkImxy67e3BJXbTIOmIq4Hyzw3IAwYRcuPkfeTzJzwyyts4kjuA73x+pWJLc4f86A==}
     engines: {node: ^22.18.0 || >=24.0.0}
 
+  ip-address@10.7.4:
+    resolution: {integrity: sha512-DWBMKyeM25D70nrIiTkgQth59/G+naKOTep6huF9j+GmeK3DMD60Zvxg5d5qQnz+38AHgou6ean2LECX+lrKDg==}
+    engines: {node: '>= 12'}
+
   is-unsafe@2.0.2:
     resolution: {integrity: sha512-HgbIHPBH0KHHCcjLfGsCvhtPTVxjaAZlXjwdz7/GQC40SjSe4sfQsar8J5VFo8JOSbarkpV0OLG95bbaNd9aAQ==}
 
@@ -1204,6 +1308,14 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
+  smart-buffer@4.2.0:
+    resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
+    engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
+
+  socks@2.8.10:
+    resolution: {integrity: sha512-e0VyvkVTwVYViNovRkZ9aodhxVlyoMn7eJhVUPxZ+eK9P/7CBkxvvsBOHqFPEH416726W8tLXXXjKwqgTErrCQ==}
+    engines: {node: '>= 10.0.0', npm: '>= 3.0.0'}
+
   source-map-js@1.2.2:
     resolution: {integrity: sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==}
     engines: {node: '>=0.10.0'}
@@ -1229,6 +1341,12 @@ packages:
   tinyglobby@0.2.17:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
+
+  tldts-core@7.4.18:
+    resolution: {integrity: sha512-KI2PKvCmvQI/xD6ypPqkU0i7oxNXR/O58RLRaHR4svsgVUQ2JE/XC8BtMbG6PSehD27I8sZJRcC1ASnCy6lp3g==}
+
+  tldts-experimental@7.4.18:
+    resolution: {integrity: sha512-IErxVvjgDme6GfcjahlKkVpjgrtvOIzUs8oSc9vftTjFen8/R+oKlBlJ1jIY/ffVo/eYAZVzf3he/aBC304PyQ==}
 
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
@@ -1589,6 +1707,26 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@ghostery/adblocker-content@2.20.1':
+    dependencies:
+      '@ghostery/adblocker-extended-selectors': 2.20.1
+
+  '@ghostery/adblocker-extended-selectors@2.20.1': {}
+
+  '@ghostery/adblocker@2.20.1':
+    dependencies:
+      '@ghostery/adblocker-content': 2.20.1
+      '@ghostery/adblocker-extended-selectors': 2.20.1
+      '@ghostery/url-parser': 1.3.1
+      '@remusao/guess-url-type': 2.1.0
+      '@remusao/small': 2.1.0
+      '@remusao/smaz': 2.2.0
+      tldts-experimental: 7.4.18
+
+  '@ghostery/url-parser@1.3.1':
+    dependencies:
+      tldts-experimental: 7.4.18
+
   '@jellybrick/dbus-next@0.11.4':
     dependencies:
       fast-xml-builder: 1.3.1
@@ -1688,6 +1826,23 @@ snapshots:
       - kerberos
       - utf-8-validate
       - zod
+
+  '@remusao/guess-url-type@2.1.0': {}
+
+  '@remusao/small@2.1.0': {}
+
+  '@remusao/smaz-compress@2.2.0':
+    dependencies:
+      '@remusao/trie': 2.1.0
+
+  '@remusao/smaz-decompress@2.2.0': {}
+
+  '@remusao/smaz@2.2.0':
+    dependencies:
+      '@remusao/smaz-compress': 2.2.0
+      '@remusao/smaz-decompress': 2.2.0
+
+  '@remusao/trie@2.1.0': {}
 
   '@rolldown/binding-android-arm-eabi@1.2.14':
     optional: true
@@ -1966,6 +2121,8 @@ snapshots:
 
   import-without-cache@0.4.1: {}
 
+  ip-address@10.7.4: {}
+
   is-unsafe@2.0.2: {}
 
   js-tokens@4.0.0: {}
@@ -2129,6 +2286,13 @@ snapshots:
 
   semver@7.8.5: {}
 
+  smart-buffer@4.2.0: {}
+
+  socks@2.8.10:
+    dependencies:
+      ip-address: 10.7.4
+      smart-buffer: 4.2.0
+
   source-map-js@1.2.2: {}
 
   std-env@4.3.0: {}
@@ -2151,6 +2315,12 @@ snapshots:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.7)
       picomatch: 4.0.7
+
+  tldts-core@7.4.18: {}
+
+  tldts-experimental@7.4.18:
+    dependencies:
+      tldts-core: 7.4.18
 
   tslib@2.8.1: {}
 

@@ -86,6 +86,10 @@ export class PluginHost {
     return Object.fromEntries(this.#errors);
   }
 
+  #clearError(id: string) {
+    if (this.#errors.delete(id)) this.#env?.send({ type: "plugin-error", id, message: "" });
+  }
+
   #reportError(id: string, what: string, error: unknown) {
     logger(id).error(what, error);
     const message = `${what}: ${error instanceof Error ? error.message : String(error)}`;
@@ -180,7 +184,7 @@ export class PluginHost {
     if (!env || !plugin.host || this.#instances.has(plugin.id)) return;
     const instance = this.#createInstance(plugin, env);
     this.#instances.set(plugin.id, instance);
-    this.#errors.delete(plugin.id);
+    this.#clearError(plugin.id);
     try {
       const cleanup = await plugin.host.start?.(instance.ctx);
       if (typeof cleanup === "function") {
@@ -197,6 +201,7 @@ export class PluginHost {
     if (!instance) return;
     this.#instances.delete(id);
     instance.stopped = true;
+    this.#clearError(id);
     this.#env?.router.release(id);
     for (const cleanup of instance.cleanups.reverse()) {
       try {

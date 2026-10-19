@@ -32,6 +32,8 @@ export class PluginRunner {
   #instances = new Map<string, Instance>();
   #listeners = new Map<string, Map<string, Set<(payload: unknown) => void>>>();
   #errors = new Map<string, string>();
+  // Host errors are only cleared by the host (an empty message), not by restarting the page part.
+  #hostErrors = new Map<string, string>();
   #subscribers = new Set<() => void>();
   #handlers = new Map<string, Map<string, (payload: unknown) => unknown>>();
   #audio: Promise<AudioGraph> | undefined;
@@ -48,7 +50,7 @@ export class PluginRunner {
       this.#plugins.set(plugin.id, plugin);
       this.#states.set(plugin.id, state);
     }
-    for (const [id, message] of Object.entries(bridge.bootstrap.errors)) this.#errors.set(id, message);
+    for (const [id, message] of Object.entries(bridge.bootstrap.errors)) this.#hostErrors.set(id, message);
   }
 
   get plugins(): readonly AnyPlugin[] {
@@ -60,7 +62,7 @@ export class PluginRunner {
   }
 
   error(id: string) {
-    return this.#errors.get(id);
+    return this.#hostErrors.get(id) ?? this.#errors.get(id);
   }
 
   meta(id: string) {
@@ -89,8 +91,10 @@ export class PluginRunner {
     return this.#bridge.bootstrap.version;
   }
 
-  reportError(id: string, message: string) {
-    this.#errors.set(id, message);
+  reportError(id: string, message: string, source: "host" | "page" = "page") {
+    const errors = source === "host" ? this.#hostErrors : this.#errors;
+    if (message) errors.set(id, message);
+    else errors.delete(id);
     this.#notify();
   }
 
