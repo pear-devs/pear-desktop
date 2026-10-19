@@ -1,206 +1,83 @@
-import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
-import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
+// YTM's own lyrics (mostly LyricFind), fetched straight from
+// InnerTube. The mobile client returns timed lines when YTM has them.
 
-const headers = {
-  'Accept': 'application/json',
-  'Content-Type': 'application/json',
-};
+import { finishLines } from "../lrc.ts";
+import type { LyricLine, LyricResult, SearchQuery } from "../types.ts";
+import { getJson, type Fetch } from "./http.ts";
 
-const client = {
-  clientName: '26',
-  clientVersion: '7.01.05',
-};
+const API = "https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i/v1";
+const WEB_CLIENT = { clientName: "WEB_REMIX", clientVersion: "1.20250101.01.00", hl: "en" };
+const MOBILE_CLIENT = { clientName: "26", clientVersion: "7.01.05", hl: "en" };
 
-export class YTMusic implements LyricProvider {
-  public name = 'YTMusic';
-  public baseUrl =
-    'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/';
+interface TimedLine {
+  lyricLine?: string;
+  cueRange?: { startTimeMilliseconds: string; endTimeMilliseconds: string };
+}
 
-  // prettier-ignore
-  public async search(
-    { videoId, title, artist }: SearchSongInfo,
-  ): Promise<LyricResult | null> {
-    const data = await this.fetchNext(videoId);
-
-    const { tabs } =
-      data?.contents?.singleColumnMusicWatchNextResultsRenderer?.tabbedRenderer
-        ?.watchNextTabbedResultsRenderer ?? {};
-    if (!Array.isArray(tabs)) return null;
-
-    const lyricsTab = tabs.find((it) => {
-      const pageType = it?.tabRenderer?.endpoint?.browseEndpoint
-        ?.browseEndpointContextSupportedConfigs
-        ?.browseEndpointContextMusicConfig?.pageType;
-      return pageType === 'MUSIC_PAGE_TYPE_TRACK_LYRICS';
+export async function ytmusic(query: SearchQuery, fetch: Fetch): Promise<LyricResult | null> {
+  const post = (endpoint: string, body: object) =>
+    getJson<unknown>(fetch, `${API}/${endpoint}?prettyPrint=false`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com" },
+      body: JSON.stringify(body),
     });
 
-    if (!lyricsTab) return null;
+  const next = await post("next", { videoId: query.videoId, context: { client: WEB_CLIENT } });
+  const browseId = findLyricsBrowseId(next);
+  if (!browseId) return null;
 
-    const { browseId } = lyricsTab?.tabRenderer?.endpoint?.browseEndpoint ?? {};
-    if (!browseId) return null;
+  const browse = (await post("browse", { browseId, context: { client: MOBILE_CLIENT } })) as Record<string, any>;
+  const result: LyricResult = { title: query.title, artists: [query.artist] };
 
-    const { contents } = await this.fetchBrowse(browseId);
-    if (!contents) return null;
-
-    /*
-      NOTE: Due to the nature of the library, the json responses are not consistent,
-            this means we have to check for multiple possible paths to get the lyrics.
-    */
-
-    const syncedLines = contents?.elementRenderer?.newElement?.type
-      ?.componentType?.model?.timedLyricsModel?.lyricsData?.timedLyricsData;
-
-    const synced = syncedLines?.length && syncedLines[0]?.cueRange
-      ? syncedLines.map((it) => ({
-        time: this.millisToTime(parseInt(it.cueRange.startTimeMilliseconds)),
-        timeInMs: parseInt(it.cueRange.startTimeMilliseconds),
-        duration: parseInt(it.cueRange.endTimeMilliseconds) -
-          parseInt(it.cueRange.startTimeMilliseconds),
-        text: it.lyricLine.trim() === '♪' ? '' : it.lyricLine.trim(),
-        status: 'upcoming' as const,
-      }))
-      : undefined;
-
-    const plain = !synced
-      ? syncedLines?.length
-        ? syncedLines.map((it) => it.lyricLine).join('\n')
-        : contents?.messageRenderer
-        ? contents?.messageRenderer?.text?.runs?.map((it) => it.text).join('\n')
-        : contents?.sectionListRenderer?.contents?.[0]
-          ?.musicDescriptionShelfRenderer?.description?.runs?.map((it) =>
-            it.text,
-          )?.join('\n')
-      : undefined;
-
-    if (typeof plain === 'string' && plain === 'Lyrics not available') {
-      return null;
-    }
-
-    if (synced?.length && synced[0].timeInMs > 300) {
-      synced.unshift({
-        duration: 0,
-        text: '',
-        time: '00:00.00',
-        timeInMs: 0,
-        status: 'upcoming' as const,
+  const timed = findDeep(browse, (node) => Array.isArray(node.timedLyricsData))?.timedLyricsData as
+    | TimedLine[]
+    | undefined;
+  if (timed?.length) {
+    if (timed.every((line) => line.cueRange)) {
+      const lines: LyricLine[] = timed.map((line) => {
+        const text = (line.lyricLine ?? "").trim();
+        return {
+          startMs: Number(line.cueRange!.startTimeMilliseconds),
+          endMs: Number(line.cueRange!.endTimeMilliseconds),
+          text: text === "♪" ? "" : text,
+        };
       });
+      result.lines = finishLines(lines, query.durationSeconds * 1000);
+    } else {
+      result.plain = timed.map((line) => line.lyricLine ?? "").join("\n");
     }
-
-    return {
-      title,
-      artists: [artist],
-
-      lyrics: plain,
-      lines: synced,
-    };
+    return result;
   }
 
-  private millisToTime(millis: number) {
-    const minutes = Math.floor(millis / 60000);
-    const seconds = Math.floor((millis - ((minutes * 60) * 1000)) / 1000);
-    const remaining = (millis - ((minutes * 60) * 1000) - (seconds * 1000)) / 10;
-    return `${minutes.toString().padStart(2, '0')}:${seconds
-      .toString()
-      .padStart(2, '0')}.${remaining.toString().padStart(2, '0')}`;
+  const shelf = findDeep(browse, (node) => !!node.musicDescriptionShelfRenderer)?.musicDescriptionShelfRenderer;
+  const text = runsText(shelf?.description);
+  if (!text?.trim()) return null;
+  result.plain = text;
+  return result;
+}
+
+function findLyricsBrowseId(next: unknown): string | undefined {
+  const endpoint = findDeep(
+    next,
+    (node) =>
+      node.browseEndpoint?.browseEndpointContextSupportedConfigs?.browseEndpointContextMusicConfig?.pageType ===
+      "MUSIC_PAGE_TYPE_TRACK_LYRICS",
+  );
+  return endpoint?.browseEndpoint?.browseId;
+}
+
+function runsText(value: any): string | undefined {
+  return Array.isArray(value?.runs) ? value.runs.map((run: { text?: string }) => run.text ?? "").join("") : undefined;
+}
+
+/** Depth-first search for the first object matching `predicate` (InnerTube shapes shift a lot). */
+function findDeep(root: unknown, predicate: (node: Record<string, any>) => boolean): Record<string, any> | undefined {
+  const stack = [root];
+  while (stack.length) {
+    const node = stack.pop();
+    if (!node || typeof node !== "object") continue;
+    if (!Array.isArray(node) && predicate(node as Record<string, any>)) return node as Record<string, any>;
+    const values = Object.values(node);
+    for (let i = values.length - 1; i >= 0; i--) stack.push(values[i]);
   }
-
-  // RATE LIMITED (2 req per sec)
-  private PROXIED_ENDPOINT = 'https://ytmbrowseproxy.zvz.be/';
-
-  private fetchNext(videoId: string) {
-    const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
-
-    if (!app) return null;
-
-    return app.networkManager.fetch<
-      NextData,
-      {
-        videoId: string;
-      }
-    >('/next?prettyPrint=false', {
-      videoId,
-    });
-  }
-
-  private fetchBrowse(browseId: string) {
-    return fetch(this.PROXIED_ENDPOINT + 'browse?prettyPrint=false', {
-      headers,
-      method: 'POST',
-      body: JSON.stringify({
-        browseId,
-        context: { client },
-      }),
-    }).then((res) => res.json()) as Promise<BrowseData>;
-  }
-}
-
-interface NextData {
-  contents: {
-    singleColumnMusicWatchNextResultsRenderer: {
-      tabbedRenderer: {
-        watchNextTabbedResultsRenderer: {
-          tabs: {
-            tabRenderer: {
-              endpoint: {
-                browseEndpoint: {
-                  browseId: string;
-                  browseEndpointContextSupportedConfigs: {
-                    browseEndpointContextMusicConfig: {
-                      pageType: string;
-                    };
-                  };
-                };
-              };
-            };
-          }[];
-        };
-      };
-    };
-  };
-}
-
-interface BrowseData {
-  contents: {
-    elementRenderer: {
-      newElement: {
-        type: {
-          componentType: {
-            model: {
-              timedLyricsModel: {
-                lyricsData: {
-                  timedLyricsData: SyncedLyricLine[];
-                };
-              };
-            };
-          };
-        };
-      };
-    };
-    messageRenderer: {
-      text: PlainLyricsTextRenderer;
-    };
-    sectionListRenderer: {
-      contents: {
-        musicDescriptionShelfRenderer: {
-          description: PlainLyricsTextRenderer;
-        };
-      }[];
-    };
-  };
-}
-
-interface SyncedLyricLine {
-  lyricLine: string;
-  cueRange: CueRange;
-}
-
-interface CueRange {
-  startTimeMilliseconds: string;
-  endTimeMilliseconds: string;
-}
-
-interface PlainLyricsTextRenderer {
-  runs: {
-    text: string;
-  }[];
 }

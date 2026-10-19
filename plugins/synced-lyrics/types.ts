@@ -1,48 +1,53 @@
-import type { ProviderName } from './providers';
-import type { SongInfo } from '@/providers/song-info';
+// Shared between the host (providers) and the page (renderer).
 
-export type SyncedLyricsPluginConfig = {
-  enabled: boolean;
-  preferredProvider?: ProviderName;
-  preciseTiming: boolean;
-  showTimeCodes: boolean;
-  defaultTextString: string | string[];
-  showLyricsEvenIfInexact: boolean;
-  lineEffect: LineEffect;
-  romanization: boolean;
-  convertChineseCharacter?:
-    | 'simplifiedToTraditional'
-    | 'traditionalToSimplified'
-    | 'disabled';
+export const PROVIDERS = ["lrclib", "ytmusic", "genius"] as const;
+export type ProviderId = (typeof PROVIDERS)[number];
+
+export const PROVIDER_NAMES: Record<ProviderId, string> = {
+  lrclib: "LRCLIB",
+  ytmusic: "YT Music",
+  genius: "Genius",
 };
 
-export type LineLyricsStatus = 'previous' | 'current' | 'upcoming';
-
-export type LineLyrics = {
-  time: string;
-  timeInMs: number;
-  duration: number;
-
+export interface LyricWord {
+  startMs: number;
+  endMs: number;
+  /** Includes its trailing whitespace, so joining words gives the line. */
   text: string;
-  status: LineLyricsStatus;
-};
+}
 
-export type LineEffect = 'fancy' | 'scale' | 'offset' | 'focus';
+export interface LyricLine {
+  startMs: number;
+  endMs: number;
+  /** Empty for instrumental gaps. */
+  text: string;
+  /** Present when the provider has word-level timing. */
+  words?: LyricWord[];
+}
 
 export interface LyricResult {
   title: string;
   artists: string[];
-
-  lyrics?: string;
-  lines?: LineLyrics[];
+  /** Time-synced lines, sorted by start. */
+  lines?: LyricLine[];
+  /** Unsynced lyrics, newline separated. */
+  plain?: string;
 }
 
-// prettier-ignore
-export type SearchSongInfo = Pick<SongInfo, 'title' | 'alternativeTitle' | 'artist' | 'album' | 'songDuration' | 'videoId' | 'tags'>;
+export interface SearchQuery {
+  videoId: string;
+  title: string;
+  artist: string;
+  album?: string;
+  durationSeconds: number;
+  /** Accept looser matches (title-only search). */
+  inexact: boolean;
+}
 
-export interface LyricProvider {
-  name: string;
-  baseUrl: string;
-
-  search(songInfo: SearchSongInfo): Promise<LyricResult | null>;
+/** How good a result is: word sync > line sync > plain text > nothing. */
+export function resultRank(result: LyricResult | null | undefined) {
+  if (!result) return 0;
+  if (result.lines?.some((line) => line.words?.length)) return 3;
+  if (result.lines?.length) return 2;
+  return result.plain?.trim() ? 1 : 0;
 }

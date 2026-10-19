@@ -1,179 +1,207 @@
-import { createMemo, runWithOwner } from 'solid-js';
-import { createStore } from 'solid-js/store';
+// Page-side lyrics state: per-provider results for the current track, which one
+// is shown, and its romanization. Framework-free; the view subscribes to it.
 
-import { getSongInfo } from '@/providers/song-info-front';
+import type { Track } from "@pear/sdk";
+import { PROVIDERS, resultRank, type LyricLine, type LyricResult, type ProviderId, type SearchQuery } from "../types.ts";
 
-import { reactiveOwner } from './reactive-root';
+export type ProviderState =
+  | { status: "loading" }
+  | { status: "done"; result: LyricResult | null }
+  | { status: "error"; message: string };
 
-import {
-  type ProviderName,
-  providerNames,
-  type ProviderState,
-} from '../providers';
-import { providers } from '../providers/renderer';
-
-import type { LyricProvider } from '../types';
-import type { SongInfo } from '@/providers/song-info';
-
-type LyricsStore = {
-  provider: ProviderName;
-  current: ProviderState;
-  lyrics: Record<ProviderName, ProviderState>;
-};
-
-const initialData = () =>
-  providerNames.reduce(
-    (acc, name) => {
-      acc[name] = { state: 'fetching', data: null, error: null };
-      return acc;
-    },
-    {} as LyricsStore['lyrics'],
-  );
-
-export const [lyricsStore, setLyricsStore] = createStore<LyricsStore>({
-  provider: providerNames[0],
-  lyrics: initialData(),
-  get current(): ProviderState {
-    return this.lyrics[this.provider];
-  },
-});
-
-export const currentLyrics = runWithOwner(reactiveOwner, () =>
-  createMemo(() => {
-    const provider = lyricsStore.provider;
-    return lyricsStore.lyrics[provider];
-  }),
-)!;
-
-type VideoId = string;
-
-type SearchCacheData = Record<ProviderName, ProviderState>;
-interface SearchCache {
-  state: 'loading' | 'done';
-  data: SearchCacheData;
+export interface Options {
+  preferred: ProviderId | "auto";
+  inexact: boolean;
+  romanize: boolean;
+  chinese: "off" | "s2t" | "t2s";
 }
 
-// TODO: Maybe use localStorage for the cache.
-const searchCache = new Map<VideoId, SearchCache>();
-export const fetchLyrics = (info: SongInfo) => {
-  if (searchCache.has(info.videoId)) {
-    const cache = searchCache.get(info.videoId)!;
+export interface Backend {
+  search(provider: ProviderId, query: SearchQuery): Promise<LyricResult | null>;
+  romanize(lines: string[]): Promise<(string | null)[]>;
+  convertChinese(lines: string[], mode: "s2t" | "t2s"): Promise<string[]>;
+}
 
-    if (cache.state === 'loading') {
-      setTimeout(() => {
-        fetchLyrics(info);
-      });
-      return;
-    }
+export interface Shown {
+  provider: ProviderId;
+  result: LyricResult;
+  /** Synced lines, or plain lines with zero timing. */
+  lines: LyricLine[];
+  synced: boolean;
+  /** Display text per line after script conversion. */
+  texts: string[];
+  /** Romanization per line (null where not applicable). */
+  romanized: (string | null)[];
+}
 
-    if (getSongInfo().videoId === info.videoId) {
-      setLyricsStore('lyrics', () => {
-        // weird bug with solid-js
-        return JSON.parse(JSON.stringify(cache.data)) as typeof cache.data;
-      });
-    }
+const PICK_KEY = "pear:synced-lyrics:pick:";
 
-    return;
+export class LyricsStore {
+  track: Track | null = null;
+  providers = initialProviders();
+  /** The user's explicit choice for this track. */
+  manual: ProviderId | null = null;
+  shown: Shown | null = null;
+
+  #options: Options;
+  #backend: Backend;
+  #listeners = new Set<() => void>();
+  #generation = 0;
+  #shownKey = "";
+
+  constructor(backend: Backend, options: Options) {
+    this.#backend = backend;
+    this.#options = options;
   }
 
-  const cache: SearchCache = {
-    state: 'loading',
-    data: initialData(),
-  };
-
-  searchCache.set(info.videoId, cache);
-  if (getSongInfo().videoId === info.videoId) {
-    setLyricsStore('lyrics', () => {
-      // weird bug with solid-js
-      return JSON.parse(JSON.stringify(cache.data)) as typeof cache.data;
-    });
+  subscribe(listener: () => void) {
+    this.#listeners.add(listener);
+    return () => void this.#listeners.delete(listener);
   }
 
-  const tasks: Promise<void>[] = [];
-
-  // prettier-ignore
-  for (
-    const [providerName, provider] of Object.entries(providers) as [
-    ProviderName,
-    LyricProvider,
-  ][]
-    ) {
-    const pCache = cache.data[providerName];
-
-    tasks.push(
-      provider
-        .search(info)
-        .then((res) => {
-          pCache.state = 'done';
-          pCache.data = res;
-
-          if (getSongInfo().videoId === info.videoId) {
-            setLyricsStore('lyrics', (old) => {
-              return {
-                ...old,
-                [providerName]: {
-                  state: 'done',
-                  data: res ? { ...res } : null,
-                  error: null,
-                },
-              };
-            });
-          }
-        })
-        .catch((error: Error) => {
-          pCache.state = 'error';
-          pCache.error = error;
-
-          console.error(error);
-
-          if (getSongInfo().videoId === info.videoId) {
-            setLyricsStore('lyrics', (old) => {
-              return {
-                ...old,
-                [providerName]: { state: 'error', error, data: null },
-              };
-            });
-          }
-        }),
-    );
+  get loading() {
+    return PROVIDERS.some((id) => this.providers[id].status === "loading");
   }
 
-  Promise.allSettled(tasks).then(() => {
-    cache.state = 'done';
-    searchCache.set(info.videoId, cache);
-  });
-};
+  setOptions(options: Options) {
+    const previous = this.#options;
+    this.#options = options;
+    if (previous.inexact !== options.inexact) return void this.load(this.track, true);
+    if (previous.romanize !== options.romanize || previous.chinese !== options.chinese) this.#shownKey = "";
+    this.#update();
+  }
 
-export const retrySearch = (provider: ProviderName, info: SongInfo) => {
-  setLyricsStore('lyrics', (old) => {
-    const pCache = {
-      state: 'fetching',
-      data: null,
-      error: null,
+  load(track: Track | null, force = false) {
+    if (!force && track?.videoId === this.track?.videoId) return;
+    const generation = ++this.#generation;
+    this.track = track;
+    this.providers = initialProviders();
+    this.manual = track ? readPick(track.videoId) : null;
+    this.#shownKey = "";
+    this.shown = null;
+    this.#emit();
+    if (!track) return;
+    for (const id of PROVIDERS) void this.#search(id, track, generation);
+  }
+
+  retry(provider: ProviderId) {
+    if (!this.track) return;
+    this.providers = { ...this.providers, [provider]: { status: "loading" } };
+    this.#emit();
+    void this.#search(provider, this.track, this.#generation);
+  }
+
+  pick(provider: ProviderId) {
+    if (!this.track) return;
+    this.manual = provider;
+    writePick(this.track.videoId, provider);
+    this.#update();
+  }
+
+  /** Which provider is displayed: the user's pick, the preferred one, or the richest result. */
+  choose(): ProviderId | null {
+    const has = (id: ProviderId) => {
+      const state = this.providers[id];
+      return state.status === "done" && resultRank(state.result) > 0;
     };
+    if (this.manual && has(this.manual)) return this.manual;
+    const preferred = this.#options.preferred;
+    if (preferred !== "auto" && has(preferred)) return preferred;
+    let best: ProviderId | null = null;
+    let bestRank = 0;
+    for (const id of PROVIDERS) {
+      const state = this.providers[id];
+      const rank = state.status === "done" ? resultRank(state.result) : 0;
+      if (rank > bestRank) [best, bestRank] = [id, rank];
+    }
+    return best;
+  }
 
-    return {
-      ...old,
-      [provider]: pCache,
+  async #search(provider: ProviderId, track: Track, generation: number) {
+    const query: SearchQuery = {
+      videoId: track.videoId,
+      title: track.title,
+      artist: track.artist,
+      durationSeconds: track.durationSeconds,
+      inexact: this.#options.inexact,
     };
-  });
+    if (track.album) query.album = track.album;
+    let state: ProviderState;
+    try {
+      state = { status: "done", result: await this.#backend.search(provider, query) };
+    } catch (error) {
+      state = { status: "error", message: error instanceof Error ? error.message : String(error) };
+    }
+    if (generation !== this.#generation) return;
+    this.providers = { ...this.providers, [provider]: state };
+    this.#update();
+  }
 
-  providers[provider]
-    .search(info)
-    .then((res) => {
-      setLyricsStore('lyrics', (old) => {
-        return {
-          ...old,
-          [provider]: { state: 'done', data: res, error: null },
-        };
-      });
-    })
-    .catch((error) => {
-      setLyricsStore('lyrics', (old) => {
-        return {
-          ...old,
-          [provider]: { state: 'error', data: null, error },
-        };
-      });
-    });
-};
+  #update() {
+    const provider = this.choose();
+    const state = provider ? this.providers[provider] : undefined;
+    const result = state?.status === "done" ? state.result : null;
+    if (!provider || !result) {
+      this.shown = null;
+      this.#shownKey = "";
+      return this.#emit();
+    }
+    const key = `${this.track?.videoId}:${provider}`;
+    if (key === this.#shownKey) return this.#emit();
+    this.#shownKey = key;
+
+    const synced = !!result.lines?.length;
+    const lines = synced
+      ? result.lines!
+      : (result.plain ?? "").split("\n").map((text) => ({ startMs: 0, endMs: 0, text: text.trim() }));
+    const texts = lines.map((line) => line.text);
+    this.shown = { provider, result, lines, synced, texts, romanized: texts.map(() => null) };
+    this.#emit();
+    void this.#transform(key, texts);
+  }
+
+  async #transform(key: string, original: string[]) {
+    const { chinese, romanize } = this.#options;
+    try {
+      let texts = original;
+      if (chinese !== "off") {
+        texts = await this.#backend.convertChinese(original, chinese);
+        if (key !== this.#shownKey || !this.shown) return;
+        this.shown = { ...this.shown, texts };
+        this.#emit();
+      }
+      if (romanize && texts.some((text) => /[^\p{Script=Latin}\p{P}\p{N}\s]/u.test(text))) {
+        const romanized = await this.#backend.romanize(texts);
+        if (key !== this.#shownKey || !this.shown) return;
+        this.shown = { ...this.shown, romanized };
+        this.#emit();
+      }
+    } catch (error) {
+      console.warn("[pear:synced-lyrics] romanization failed", error);
+    }
+  }
+
+  #emit() {
+    for (const listener of this.#listeners) listener();
+  }
+}
+
+function initialProviders(): Record<ProviderId, ProviderState> {
+  return Object.fromEntries(PROVIDERS.map((id) => [id, { status: "loading" }])) as Record<ProviderId, ProviderState>;
+}
+
+// localStorage can be unavailable (or throw); a forgotten pick is harmless.
+function readPick(videoId: string): ProviderId | null {
+  try {
+    const value = localStorage.getItem(PICK_KEY + videoId);
+    return (PROVIDERS as readonly string[]).includes(value ?? "") ? (value as ProviderId) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePick(videoId: string, provider: ProviderId) {
+  try {
+    localStorage.setItem(PICK_KEY + videoId, provider);
+  } catch {}
+}

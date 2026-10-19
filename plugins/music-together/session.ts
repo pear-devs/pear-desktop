@@ -1,611 +1,519 @@
-import { t } from '@/i18n';
+// Session logic, independent of PeerJS and of YTM: a host that owns the room
+// and broadcasts its playback, and guests that mirror it. Tested with in-memory
+// links and fake players.
 
-import { getMusicQueueRenderer } from './song';
-import { mapQueueItem } from './utils';
+import {
+  HOST_ID,
+  isGuestMessage,
+  isHostMessage,
+  type GuestAction,
+  type GuestMessage,
+  type HostMessage,
+  type Participant,
+  type Permission,
+  type Playback,
+  type QueueItem,
+  type RoomState,
+} from "./protocol.ts";
 
-import { getDefaultProfile, type Profile, type VideoData } from '../types';
+/** What a session needs from the local player. */
+export interface LocalPlayback {
+  videoId: string;
+  title: string;
+  artist: string;
+  artworkUrl?: string;
+  durationSeconds: number;
+  playing: boolean;
+  /** Seconds, as of now. */
+  position: number;
+  /** An ad plays instead of the track; nothing can be synced meanwhile. */
+  ad: boolean;
+  ended: boolean;
+}
 
-import type { ConnectionEventUnion } from '@/plugins/music-together/connection';
-import type { QueueItem } from '@/types/datahost-get-state';
-import type { QueueElement, Store } from '@/types/queue';
+export interface PlayerPort {
+  snapshot(): LocalPlayback | null;
+  load(videoId: string): void;
+  play(): void;
+  pause(): void;
+  seek(seconds: number): void;
+  next(): void;
+  /** Called on track, play/pause and seek changes (not on every time update). */
+  subscribe(listener: () => void): () => void;
+}
 
-const getHeaderPayload = (() => {
-  let payload: {
-    items?: QueueItem[] | undefined;
-    title: {
-      runs: {
-        text: string;
-      }[];
-    };
-    subtitle: {
-      runs: {
-        text: string;
-      }[];
-    };
-    buttons: {
-      chipCloudChipRenderer: {
-        style: {
-          styleType: string;
-        };
-        text: {
-          runs: {
-            text: string;
-          }[];
-        };
-        navigationEndpoint: {
-          saveQueueToPlaylistCommand: unknown;
-        };
-        icon: {
-          iconType: string;
-        };
-        accessibilityData: {
-          accessibilityData: {
-            label: string;
-          };
-        };
-        isSelected: boolean;
-        uniqueId: string;
-      };
-    }[];
-  } | null = null;
+/** A reliable, ordered message channel to one peer. */
+export interface Link {
+  readonly peerId: string;
+  send(message: unknown): void;
+  onMessage(listener: (message: unknown) => void): void;
+  onClose(listener: () => void): void;
+  close(): void;
+}
 
-  return () => {
-    if (!payload) {
-      payload = {
-        title: {
-          runs: [
-            {
-              text: t('plugins.music-together.internal.track-source'),
-            },
-          ],
-        },
-        subtitle: {
-          runs: [
-            {
-              text: t('plugins.music-together.name'),
-            },
-          ],
-        },
-        buttons: [
-          {
-            chipCloudChipRenderer: {
-              style: {
-                styleType: 'STYLE_TRANSPARENT',
-              },
-              text: {
-                runs: [
-                  {
-                    text: t('plugins.music-together.internal.save'),
-                  },
-                ],
-              },
-              navigationEndpoint: {
-                saveQueueToPlaylistCommand: {},
-              },
-              icon: {
-                iconType: 'ADD_TO_PLAYLIST',
-              },
-              accessibilityData: {
-                accessibilityData: {
-                  label: t('plugins.music-together.internal.save'),
-                },
-              },
-              isSelected: false,
-              uniqueId: t('plugins.music-together.internal.save'),
-            },
-          },
-        ],
-      };
-    }
+export type TrackInfo = { title: string; artist: string };
 
-    return payload;
+/** Guests further off than this get seeked. */
+export const DRIFT_SECONDS = 2;
+const HEARTBEAT_MS = 2000;
+const PING_MS = 5000;
+/** Player changes right after we commanded the player are ours, not the user's. */
+const OWN_CHANGE_MS = 1500;
+/** A load that hasn't happened by then is retried. */
+const LOAD_TIMEOUT_MS = 15_000;
+/** After a guest asked the host for something, give the host time to act before enforcing its state again. */
+const REQUEST_GRACE_MS = 2500;
+const MAX_NAME = 32;
+const MAX_QUEUE = 100;
+
+abstract class Observable {
+  #listeners = new Set<() => void>();
+  #toastListeners = new Set<(text: string) => void>();
+
+  subscribe(listener: () => void) {
+    this.#listeners.add(listener);
+    return () => void this.#listeners.delete(listener);
+  }
+
+  onToast(listener: (text: string) => void) {
+    this.#toastListeners.add(listener);
+    return () => void this.#toastListeners.delete(listener);
+  }
+
+  protected changed() {
+    for (const listener of this.#listeners) listener();
+  }
+
+  protected toast(text: string) {
+    for (const listener of this.#toastListeners) listener(text);
+  }
+}
+
+export function toPlayback(local: LocalPlayback | null): Playback | null {
+  if (!local) return null;
+  const playback: Playback = {
+    videoId: local.videoId,
+    title: local.title,
+    artist: local.artist,
+    durationSeconds: local.durationSeconds,
+    // Guests wait while the host sits through an ad.
+    playing: local.playing && !local.ad,
+    position: local.position,
   };
-})();
+  if (local.artworkUrl) playback.artworkUrl = local.artworkUrl;
+  return playback;
+}
 
-export type QueueOptions = {
-  videoList?: VideoData[];
-  owner?: Profile;
-  queue?: QueueElement;
-  getProfile: (id: string) => Profile | undefined;
-};
-export type QueueEventListener = (event: ConnectionEventUnion) => void;
+// ---------------------------------------------------------------- host
 
-export class Queue {
-  private readonly queue: QueueElement;
+interface Guest {
+  link: Link;
+  name?: string;
+}
 
-  private originalDispatch?: (obj: {
-    type: string;
-    payload?: { items?: QueueItem[] | undefined };
-  }) => void;
+export class HostSession extends Observable {
+  readonly role = "host";
+  permission: Permission;
+  queue: QueueItem[] = [];
+  #name: string;
+  #guests = new Map<string, Guest>();
+  #player: PlayerPort;
+  #resolve: (videoId: string) => Promise<TrackInfo>;
+  #nextItemId = 1;
+  #lastSent: Playback | null = null;
+  #lastSentAt = 0;
+  #cleanups: (() => void)[] = [];
+  #closed = false;
 
-  private internalDispatch = false;
-  private ignoreFlag = false;
-  private listeners: QueueEventListener[] = [];
-
-  private owner: Profile | null;
-  private readonly getProfile: (id: string) => Profile | undefined;
-
-  constructor(options: QueueOptions) {
-    this.getProfile = options.getProfile;
-    this.queue =
-      options.queue ?? document.querySelector<QueueElement>('#queue')!;
-    this.owner = options.owner ?? null;
-    this._videoList = options.videoList ?? [];
+  constructor(options: {
+    player: PlayerPort;
+    name: string;
+    permission: Permission;
+    resolve: (videoId: string) => Promise<TrackInfo>;
+  }) {
+    super();
+    this.#player = options.player;
+    this.#name = options.name;
+    this.permission = options.permission;
+    this.#resolve = options.resolve;
+    this.#cleanups.push(options.player.subscribe(() => this.#onPlayerChange()));
+    const heartbeat = setInterval(() => this.#broadcastPlayback(true), HEARTBEAT_MS);
+    this.#cleanups.push(() => clearInterval(heartbeat));
   }
 
-  private _videoList: VideoData[] = [];
-
-  /* utils */
-  get videoList() {
-    return this._videoList;
+  get participants(): Participant[] {
+    const guests = [...this.#guests].filter(([, g]) => g.name).map(([id, g]) => ({ id, name: g.name! }));
+    return [{ id: HOST_ID, name: this.#name }, ...guests];
   }
 
-  get selectedIndex() {
+  get room(): RoomState {
+    return { permission: this.permission, participants: this.participants, queue: this.queue };
+  }
+
+  addLink(link: Link) {
+    if (this.#closed) return link.close();
+    const guest: Guest = { link };
+    this.#guests.set(link.peerId, guest);
+    link.onMessage((message) => {
+      if (isGuestMessage(message)) void this.#handle(link.peerId, guest, message);
+    });
+    link.onClose(() => {
+      if (!this.#guests.delete(link.peerId) || !guest.name) return;
+      this.toast(`${guest.name} left`);
+      this.#broadcastRoom();
+    });
+  }
+
+  setName(name: string) {
+    this.#name = cleanName(name) || this.#name;
+    this.#broadcastRoom();
+  }
+
+  setPermission(permission: Permission) {
+    this.permission = permission;
+    this.#broadcastRoom();
+  }
+
+  /** Adds a track to the room queue (the host's own additions use this too). */
+  async suggest(videoId: string, by = HOST_ID) {
+    const from = this.participants.find((p) => p.id === by)?.name ?? "Someone";
+    if (this.queue.some((item) => item.videoId === videoId)) {
+      return this.#notice(by, "That song is already in the queue");
+    }
+    if (this.queue.length >= MAX_QUEUE) return this.#notice(by, "The queue is full");
+    const info = await this.#resolve(videoId).catch(() => ({ title: videoId, artist: "" }));
+    if (this.#closed) return;
+    this.queue = [...this.queue, { id: String(this.#nextItemId++), videoId, ...info, by }];
+    if (by !== HOST_ID) this.toast(`${from} suggested ${info.title}`);
+    this.#broadcastRoom();
+  }
+
+  playItem(id: string) {
+    const item = this.queue.find((i) => i.id === id);
+    if (!item) return;
+    this.queue = this.queue.filter((i) => i !== item);
+    this.#player.load(item.videoId);
+    this.#broadcastRoom();
+  }
+
+  removeItem(id: string) {
+    this.queue = this.queue.filter((i) => i.id !== id);
+    this.#broadcastRoom();
+  }
+
+  close() {
+    if (this.#closed) return;
+    this.#closed = true;
+    for (const { link } of this.#guests.values()) {
+      link.send({ type: "closed" } satisfies HostMessage);
+      link.close();
+    }
+    this.#guests.clear();
+    for (const cleanup of this.#cleanups) cleanup();
+    this.changed();
+  }
+
+  async #handle(peerId: string, guest: Guest, message: GuestMessage) {
+    if (message.type === "hello") {
+      const first = !guest.name;
+      guest.name = cleanName(message.name) || `Guest ${peerId.slice(-4)}`;
+      guest.link.send({
+        type: "welcome",
+        you: peerId,
+        host: this.#name,
+        room: this.room,
+        playback: toPlayback(this.#player.snapshot()),
+      } satisfies HostMessage);
+      if (first) this.toast(`${guest.name} joined`);
+      return this.#broadcastRoom();
+    }
+    if (!guest.name) return;
+    switch (message.type) {
+      case "ping":
+        return guest.link.send({ type: "pong", t: message.t } satisfies HostMessage);
+      case "suggest":
+        if (this.permission === "host-only") return this.#notice(peerId, "The host isn't taking suggestions");
+        return this.suggest(message.videoId, peerId);
+      case "control":
+        return this.#control(peerId, message.action);
+    }
+  }
+
+  #control(peerId: string, action: GuestAction) {
+    const own = action.type === "removeItem" && this.queue.find((i) => i.id === action.id)?.by === peerId;
+    if (this.permission !== "control" && !own) {
+      // Resend the truth so the guest's player snaps back.
+      this.#notice(peerId, "Only the host controls playback");
+      return this.#guests.get(peerId)?.link.send({
+        type: "playback",
+        playback: toPlayback(this.#player.snapshot()),
+      } satisfies HostMessage);
+    }
+    switch (action.type) {
+      case "play":
+        return this.#player.play();
+      case "pause":
+        return this.#player.pause();
+      case "seek":
+        return this.#player.seek(action.seconds);
+      case "next":
+        return this.queue[0] ? this.playItem(this.queue[0].id) : this.#player.next();
+      case "load":
+        return this.#player.load(action.videoId);
+      case "playItem":
+        return this.playItem(action.id);
+      case "removeItem":
+        return this.removeItem(action.id);
+    }
+  }
+
+  #onPlayerChange() {
+    const local = this.#player.snapshot();
+    // The room queue plays before YTM's own up-next.
+    if (local?.ended && this.queue[0]) return this.playItem(this.queue[0].id);
+    this.#broadcastPlayback(false);
+    this.changed();
+  }
+
+  #broadcastPlayback(heartbeat: boolean) {
+    const playback = toPlayback(this.#player.snapshot());
+    if (!heartbeat && samePlayback(this.#lastSent, playback, (Date.now() - this.#lastSentAt) / 1000)) return;
+    this.#lastSent = playback;
+    this.#lastSentAt = Date.now();
+    this.#broadcast({ type: "playback", playback });
+  }
+
+  #broadcastRoom() {
+    this.#broadcast({ type: "room", room: this.room });
+    this.changed();
+  }
+
+  #broadcast(message: HostMessage) {
+    for (const { link, name } of this.#guests.values()) if (name) link.send(message);
+  }
+
+  #notice(peerId: string, text: string) {
+    if (peerId === HOST_ID) return this.toast(text);
+    this.#guests.get(peerId)?.link.send({ type: "notice", text } satisfies HostMessage);
+  }
+}
+
+/** Whether `next` is what guests already extrapolate from `previous` (no need to resend). */
+function samePlayback(previous: Playback | null, next: Playback | null, elapsed: number) {
+  if (!previous || !next) return previous === next;
+  if (previous.videoId !== next.videoId || previous.playing !== next.playing || previous.title !== next.title) return false;
+  const expected = previous.position + (previous.playing ? elapsed : 0);
+  return Math.abs(expected - next.position) < 1;
+}
+
+// ---------------------------------------------------------------- guest
+
+export type GuestStatus = "connecting" | "connected" | "closed";
+
+export class GuestSession extends Observable {
+  readonly role = "guest";
+  status: GuestStatus = "connecting";
+  /** Our participant id. */
+  you = "";
+  hostName = "";
+  room: RoomState | null = null;
+  playback: Playback | null = null;
+  /** Round-trip time to the host, smoothed. */
+  rttMs = 0;
+  closeReason = "";
+
+  #link: Link;
+  #player: PlayerPort;
+  #receivedAt = 0;
+  #ownChangeUntil = 0;
+  #requestUntil = 0;
+  #pendingLoad: { videoId: string; at: number } | null = null;
+  #lastLocal: LocalPlayback | null = null;
+  #cleanups: (() => void)[] = [];
+
+  constructor(options: { link: Link; player: PlayerPort; name: string }) {
+    super();
+    this.#link = options.link;
+    this.#player = options.player;
+    this.#link.onMessage((message) => {
+      if (isHostMessage(message)) this.#handle(message);
+    });
+    this.#link.onClose(() => this.#end(this.closeReason || "Connection to the host was lost"));
+    this.#send({ type: "hello", name: cleanName(options.name) });
+
+    this.#cleanups.push(this.#player.subscribe(() => this.#onLocalChange()));
+    const ping = setInterval(() => this.#send({ type: "ping", t: Date.now() }), PING_MS);
+    const sync = setInterval(() => this.#sync(), 1000);
+    this.#cleanups.push(() => clearInterval(ping), () => clearInterval(sync));
+  }
+
+  get permission(): Permission {
+    return this.room?.permission ?? "host-only";
+  }
+
+  /** Whether we play what the host plays, within the drift tolerance. */
+  get inSync() {
+    const local = this.#player.snapshot();
+    const playback = this.playback;
+    if (!playback || !local) return !playback;
     return (
-      mapQueueItem(
-        (it) => it?.selected,
-        this.queue.queue.store.store.getState().queue.items,
-      ).findIndex(Boolean) ?? 0
+      local.videoId === playback.videoId &&
+      local.playing === playback.playing &&
+      Math.abs(local.position - this.#target(playback)) <= DRIFT_SECONDS
     );
   }
 
-  get rawItems() {
-    return this.queue?.queue.store.store.getState().queue.items;
+  suggest(videoId: string) {
+    this.#send({ type: "suggest", videoId });
   }
 
-  get flatItems() {
-    return mapQueueItem((it) => it, this.rawItems);
+  control(action: GuestAction) {
+    this.#requestUntil = Date.now() + REQUEST_GRACE_MS;
+    this.#send({ type: "control", action });
   }
 
-  setOwner(owner: Profile) {
-    this.owner = owner;
+  leave() {
+    this.closeReason = "You left the session";
+    this.#link.close();
+    this.#end(this.closeReason);
   }
 
-  /* public */
-  async setVideoList(videoList: VideoData[], sync = true) {
-    this._videoList = videoList;
-
-    if (sync) await this.syncVideo();
-  }
-
-  async addVideos(videos: VideoData[], index?: number) {
-    const response = await getMusicQueueRenderer(
-      videos.map((it) => it.videoId),
-    );
-    if (!response) return false;
-
-    const items = response.queueDatas.map((it) => it?.content).filter(Boolean);
-    if (!items) return false;
-
-    this.internalDispatch = true;
-    this._videoList = this._videoList.map(
-      (it) =>
-        ({
-          videoId: it.videoId,
-          ownerId: it.ownerId ?? this.owner!.id,
-        }) satisfies VideoData,
-    );
-
-    const state = this.queue.queue.store.store.getState();
-
-    this.queue?.dispatch({
-      type: 'ADD_ITEMS',
-      payload: {
-        nextQueueItemId: state.queue.nextQueueItemId,
-        index:
-          index ??
-          (state.queue.items.length ? state.queue.items.length - 1 : null) ??
-          0,
-        items,
-        shuffleEnabled: false,
-        shouldAssignIds: true,
-      },
-    });
-
-    const insertedItem = this._videoList[index ?? this._videoList.length];
-    if (
-      !insertedItem ||
-      (insertedItem.videoId !== videos[0].videoId &&
-        insertedItem.ownerId !== videos[0].ownerId)
-    ) {
-      this._videoList.splice(
-        index ?? this._videoList.length,
-        0,
-        ...videos.map((it) => ({
-          ...it,
-          ownerId: it.ownerId ?? this.owner?.id,
-        })),
-      );
-    }
-
-    this.internalDispatch = false;
-    setTimeout(() => {
-      this.initQueue();
-      this.syncQueueOwner();
-    }, 0);
-
-    return true;
-  }
-
-  removeVideo(index: number) {
-    this.internalDispatch = true;
-    this._videoList.splice(index, 1);
-    this.queue?.dispatch({
-      type: 'REMOVE_ITEM',
-      payload: index,
-    });
-    this.internalDispatch = false;
-    setTimeout(() => {
-      this.initQueue();
-      this.syncQueueOwner();
-    }, 0);
-  }
-
-  setIndex(index: number) {
-    this.internalDispatch = true;
-    this.queue?.dispatch({
-      type: 'SET_INDEX',
-      payload: index,
-    });
-    this.internalDispatch = false;
-  }
-
-  moveItem(fromIndex: number, toIndex: number) {
-    this.internalDispatch = true;
-    const data = this._videoList.splice(fromIndex, 1)[0];
-    this._videoList.splice(toIndex, 0, data);
-    this.queue?.dispatch({
-      type: 'MOVE_ITEM',
-      payload: {
-        fromIndex,
-        toIndex,
-      },
-    });
-    this.internalDispatch = false;
-    setTimeout(() => {
-      this.initQueue();
-      this.syncQueueOwner();
-    }, 0);
-  }
-
-  clear() {
-    this.internalDispatch = true;
-    this._videoList = [];
-    this.queue?.dispatch({
-      type: 'CLEAR',
-    });
-    this.internalDispatch = false;
-  }
-
-  on(listener: QueueEventListener) {
-    if (!this.listeners.includes(listener)) {
-      this.listeners.push(listener);
-    }
-  }
-
-  off(listener: QueueEventListener) {
-    this.listeners = this.listeners.filter((it) => it !== listener);
-  }
-
-  rollbackInjection() {
-    if (!this.queue) {
-      console.error('Queue is not initialized!');
-      return;
-    }
-
-    if (this.originalDispatch)
-      this.queue.queue.store.store.dispatch = this
-        .originalDispatch as Store['dispatch'];
-  }
-
-  injection() {
-    if (!this.queue) {
-      console.error('Queue is not initialized!');
-      return;
-    }
-
-    this.originalDispatch = this.queue.queue.store.store.dispatch;
-    this.queue.queue.store.store.dispatch = (event) => {
-      if (!this.queue || !this.owner) {
-        console.error('Queue is not initialized!');
+  #handle(message: HostMessage) {
+    switch (message.type) {
+      case "welcome":
+        this.status = "connected";
+        this.you = message.you;
+        this.hostName = message.host;
+        this.room = message.room;
+        this.#setPlayback(message.playback);
+        break;
+      case "room": {
+        const before = this.room?.permission;
+        this.room = message.room;
+        if (before && before !== message.room.permission) this.toast(permissionToast(message.room.permission));
+        break;
+      }
+      case "playback":
+        this.#setPlayback(message.playback);
+        break;
+      case "pong": {
+        const rtt = Date.now() - message.t;
+        this.rttMs = this.rttMs ? this.rttMs * 0.7 + rtt * 0.3 : rtt;
         return;
       }
+      case "notice":
+        this.toast(message.text);
+        return;
+      case "closed":
+        this.closeReason = "The host ended the session";
+        this.#link.close();
+        return this.#end(this.closeReason);
+    }
+    this.changed();
+  }
 
-      if (!this.internalDispatch) {
-        if (event.type === 'CLEAR') {
-          this.ignoreFlag = true;
-          this.broadcast({
-            type: 'CLEAR_QUEUE',
-            payload: null,
-          });
-          return;
-        }
-        if (event.type === 'ADD_ITEMS') {
-          if (this.ignoreFlag) {
-            this.ignoreFlag = false;
-            const videoList = mapQueueItem(
-              (it) =>
-                ({
-                  videoId: it!.videoId,
-                  ownerId: this.owner!.id,
-                }) satisfies VideoData,
-              (
-                event.payload! as {
-                  items: QueueItem[];
-                }
-              ).items,
-            );
-            const index = this._videoList.length;
+  #setPlayback(playback: Playback | null) {
+    this.playback = playback;
+    this.#receivedAt = Date.now();
+    // A fresh host state supersedes whatever we asked for.
+    this.#requestUntil = 0;
+    this.#sync();
+  }
 
-            if (videoList.length > 0) {
-              this._videoList = [
-                ...videoList.map((it) => ({
-                  ...it,
-                  ownerId: it.ownerId ?? this.owner?.id,
-                })),
-              ];
-              this.broadcast({
-                // play
-                type: 'ADD_SONGS',
-                payload: {
-                  videoList,
-                },
-                after: [
-                  {
-                    type: 'SET_INDEX',
-                    payload: {
-                      index,
-                    },
-                  },
-                ],
-              });
-            }
-          } else if (
-            (
-              event.payload as {
-                items: unknown[];
-              }
-            ).items.length === 1
-          ) {
-            const videoList = mapQueueItem(
-              (it) =>
-                ({
-                  videoId: it!.videoId,
-                  ownerId: this.owner!.id,
-                }) satisfies VideoData,
-              (
-                event.payload! as {
-                  items: QueueItem[];
-                }
-              ).items,
-            );
-            this._videoList.splice(
-              event.payload && Object.hasOwn(event.payload, 'index')
-                ? (
-                    event.payload as {
-                      index: number;
-                    }
-                  ).index
-                : this._videoList.length,
-              0,
-              ...videoList.map((it) => ({
-                ...it,
-                ownerId: it.ownerId ?? this.owner?.id,
-              })),
-            );
-            this.broadcast({
-              // add playlist
-              type: 'ADD_SONGS',
-              payload: {
-                index:
-                  event.payload && Object.hasOwn(event.payload, 'index')
-                    ? (
-                        event.payload as {
-                          index: number;
-                        }
-                      ).index
-                    : undefined,
-                videoList,
-              },
-            });
-          }
+  /** Where the host is now, extrapolated from its last message. */
+  #target(playback: Playback) {
+    if (!playback.playing) return playback.position;
+    const elapsed = (Date.now() - this.#receivedAt + this.rttMs / 2) / 1000;
+    return Math.min(playback.position + elapsed, playback.durationSeconds || Infinity);
+  }
 
-          return;
-        }
+  #ours() {
+    this.#ownChangeUntil = Date.now() + OWN_CHANGE_MS;
+  }
 
-        if (event.type === 'MOVE_ITEM') {
-          this.broadcast({
-            type: 'MOVE_SONG',
-            payload: {
-              fromIndex: (
-                event.payload as {
-                  fromIndex: number;
-                }
-              ).fromIndex,
-              toIndex: (
-                event.payload as {
-                  toIndex: number;
-                }
-              ).toIndex,
-            },
-          });
-          return;
-        }
-        if (event.type === 'REMOVE_ITEM') {
-          this.broadcast({
-            type: 'REMOVE_SONG',
-            payload: {
-              index: event.payload as number,
-            },
-          });
-          return;
-        }
-        if (event.type === 'SET_INDEX') {
-          this.broadcast({
-            type: 'SYNC_PROGRESS',
-            payload: {
-              index: event.payload as number,
-            },
-          });
-          return;
-        }
+  /** Makes the local player match the host. */
+  #sync() {
+    const playback = this.playback;
+    if (this.status !== "connected" || !playback || Date.now() < this.#requestUntil) return;
+    const local = this.#player.snapshot();
+    if (local?.ad) return;
+    const now = Date.now();
 
-        if (event.type === 'SET_HEADER') event.payload = getHeaderPayload();
-        if (event.type === 'ADD_STEERING_CHIPS') {
-          event.type = 'CLEAR_STEERING_CHIPS';
-          event.payload = undefined;
-        }
-        if (event.type === 'SET_PLAYER_UI_STATE') {
-          if (
-            (event.payload as string) === 'INACTIVE' &&
-            this.videoList.length > 0
-          ) {
-            return;
-          }
-        }
-        if (event.type === 'HAS_SHOWN_AUTOPLAY') return;
-        if (event.type === 'ADD_AUTOMIX_ITEMS') return;
+    if (local?.videoId !== playback.videoId) {
+      const pending = this.#pendingLoad;
+      if (pending?.videoId === playback.videoId && now - pending.at < LOAD_TIMEOUT_MS) return;
+      this.#pendingLoad = { videoId: playback.videoId, at: now };
+      this.#ours();
+      this.#player.load(playback.videoId);
+      return;
+    }
+    this.#pendingLoad = null;
+
+    const target = this.#target(playback);
+    if (Math.abs(local.position - target) > DRIFT_SECONDS) {
+      this.#ours();
+      this.#player.seek(target);
+    }
+    // Our copy ended a moment before the host's; it will move on with the host.
+    if (local.playing !== playback.playing && !(local.ended && playback.playing)) {
+      this.#ours();
+      if (playback.playing) this.#player.play();
+      else this.#player.pause();
+    }
+  }
+
+  /** Local changes we didn't make are the user's: forward them (full control) or undo them. */
+  #onLocalChange() {
+    const local = this.#player.snapshot();
+    const previous = this.#lastLocal;
+    this.#lastLocal = local;
+    const playback = this.playback;
+    if (this.status !== "connected" || !local || !playback || local.ad || Date.now() < this.#ownChangeUntil) {
+      return this.changed();
+    }
+    if (this.#pendingLoad && local.videoId !== this.#pendingLoad.videoId) return this.changed();
+
+    if (this.permission === "control") {
+      const target = this.#target(playback);
+      // YTM autoplaying its own next track when ours ended is not a request.
+      const autoplay = previous?.ended || (previous && previous.position >= previous.durationSeconds - 3);
+      if (local.videoId !== playback.videoId && !autoplay) {
+        this.control({ type: "load", videoId: local.videoId });
+      } else if (local.videoId === playback.videoId && local.playing !== playback.playing && !local.ended) {
+        this.control({ type: local.playing ? "play" : "pause" });
+      } else if (local.videoId === playback.videoId && Math.abs(local.position - target) > DRIFT_SECONDS) {
+        this.control({ type: "seek", seconds: local.position });
       }
-
-      const fakeContext = {
-        ...this.queue,
-        queue: {
-          ...this.queue.queue,
-          store: {
-            ...this.queue.queue.store,
-            dispatch: this.originalDispatch,
-          },
-        },
-      };
-      this.originalDispatch?.call(
-        fakeContext,
-        event as {
-          type: string;
-          payload?: { items?: QueueItem[] | undefined } | undefined;
-        },
-      );
-    };
+    }
+    this.#sync();
+    this.changed();
   }
 
-  /* sync */
-  initQueue() {
-    if (!this.queue) return;
-
-    this.internalDispatch = true;
-    this.queue.dispatch({
-      type: 'HAS_SHOWN_AUTOPLAY',
-      payload: false,
-    });
-    this.queue.dispatch({
-      type: 'SET_HEADER',
-      payload: getHeaderPayload(),
-    });
-    this.queue.dispatch({
-      type: 'CLEAR_STEERING_CHIPS',
-    });
-    this.internalDispatch = false;
+  #send(message: GuestMessage) {
+    if (this.status !== "closed") this.#link.send(message);
   }
 
-  async syncVideo() {
-    const response = await getMusicQueueRenderer(
-      this._videoList.map((it) => it.videoId),
-    );
-    if (!response) return false;
-
-    const items = response.queueDatas.map((it) => it.content);
-
-    this.internalDispatch = true;
-    this.queue?.dispatch({
-      type: 'UPDATE_ITEMS',
-      payload: {
-        items: items,
-        nextQueueItemId:
-          this.queue.queue.store.store.getState().queue.nextQueueItemId,
-        shouldAssignIds: true,
-        currentIndex: -1,
-      },
-    });
-    this.internalDispatch = false;
-    setTimeout(() => {
-      this.initQueue();
-      this.syncQueueOwner();
-    }, 0);
-
-    return true;
+  #end(reason: string) {
+    if (this.status === "closed") return;
+    this.status = "closed";
+    this.closeReason = reason;
+    for (const cleanup of this.#cleanups) cleanup();
+    this.toast(reason);
+    this.changed();
   }
+}
 
-  syncQueueOwner() {
-    const allQueue = document.querySelectorAll('#queue');
-
-    allQueue.forEach((queue) => {
-      const list = Array.from(
-        queue?.querySelectorAll<HTMLElement>(
-          '#contents > ytmusic-player-queue-item,#contents > ytmusic-playlist-panel-video-wrapper-renderer > #primary-renderer > ytmusic-player-queue-item',
-        ) ?? [],
-      );
-
-      list.forEach((item, index: number | undefined) => {
-        if (typeof index !== 'number') return;
-
-        const id = this._videoList[index]?.ownerId;
-        let data = this.getProfile(id);
-
-        const profile =
-          item.querySelector<HTMLImageElement>('.music-together-owner') ??
-          document.createElement('img');
-        profile.classList.add('music-together-owner');
-        profile.dataset.id = id;
-        profile.dataset.index = index.toString();
-
-        const name =
-          item.querySelector<HTMLElement>('.music-together-name') ??
-          document.createElement('div');
-        name.classList.add('music-together-name');
-        name.textContent =
-          data?.name ?? t('plugins.music-together.internal.unknown-user');
-
-        if (!data?.name && !data?.handleId) {
-          data = getDefaultProfile(data?.id ?? '');
-        }
-
-        if (data) {
-          profile.dataset.thumbnail = data.thumbnail ?? '';
-          profile.dataset.name = data.name ?? '';
-          profile.dataset.handleId = data.handleId ?? '';
-          profile.dataset.id = data.id ?? '';
-
-          profile.src = data.thumbnail ?? '';
-          profile.title = data.name ?? '';
-          profile.alt = data.handleId ?? '';
-        }
-
-        if (!profile.isConnected) item.append(profile);
-        if (!name.isConnected) item.append(name);
-      });
-    });
+function permissionToast(permission: Permission) {
+  switch (permission) {
+    case "host-only":
+      return "The host now controls the music alone";
+    case "suggest":
+      return "You can now suggest songs";
+    case "control":
+      return "You can now control playback";
   }
+}
 
-  removeQueueOwner() {
-    const allQueue = document.querySelectorAll('#queue');
-
-    allQueue.forEach((queue) => {
-      const list = Array.from(
-        queue?.querySelectorAll<HTMLElement>('ytmusic-player-queue-item') ?? [],
-      );
-
-      list.forEach((item) => {
-        const profile = item.querySelector<HTMLImageElement>(
-          '.music-together-owner',
-        );
-        const name = item.querySelector<HTMLElement>('.music-together-name');
-        profile?.remove();
-        name?.remove();
-      });
-    });
-  }
-
-  /* private */
-  private broadcast(event: ConnectionEventUnion) {
-    this.listeners.forEach((listener) => listener(event));
-  }
+export function cleanName(name: string) {
+  return name.replace(/\s+/g, " ").trim().slice(0, MAX_NAME);
 }

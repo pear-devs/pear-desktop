@@ -1,144 +1,98 @@
-import { test, expect } from '@playwright/test';
+import { describe, expect, test } from "vitest";
+import { lineAt, parseLrc } from "../lrc.ts";
+import { parseLyricsfile } from "../providers/lrclib.ts";
 
-import { LRC } from './lrc';
+describe("parseLrc", () => {
+  test("parses lines, fills end times and adds a leading gap", () => {
+    const lines = parseLrc("[ar:Someone]\n[00:12.34] First line\n[00:15.5]Second\n[01:02.003] Third", 70_000);
+    expect(lines).toEqual([
+      { startMs: 0, endMs: 12_340, text: "" },
+      { startMs: 12_340, endMs: 15_500, text: "First line" },
+      { startMs: 15_500, endMs: 62_003, text: "Second" },
+      { startMs: 62_003, endMs: 70_000, text: "Third" },
+    ]);
+  });
 
-test('empty string', () => {
-  const lrc = LRC.parse('');
-  expect(lrc).toStrictEqual({ lines: [], tags: [] });
-});
+  test("expands repeated timestamps and sorts", () => {
+    const lines = parseLrc("[00:20.00][00:01.00]Chorus\n[00:10.00]Verse");
+    expect(lines.map((l) => [l.startMs, l.text])).toEqual([
+      [0, ""],
+      [1000, "Chorus"],
+      [10_000, "Verse"],
+      [20_000, "Chorus"],
+    ]);
+  });
 
-test('chorus', () => {
-  const lrc = LRC.parse(`\
-[00:12.00]Line 1 lyrics
-[00:17.20]Line 2 lyrics
-[00:21.10][00:45.10]Repeating lyrics (e.g. chorus)
-[mm:ss.xx]Last lyrics line\
-`);
+  test("applies [offset:] (positive = earlier)", () => {
+    const lines = parseLrc("[offset:+500]\n[00:01.00]a\n[00:02.00]b");
+    expect(lines.filter((l) => l.text).map((l) => l.startMs)).toEqual([500, 1500]);
+  });
 
-  expect(lrc).toStrictEqual({
-    lines: [
-      { duration: 12000, text: '', words: [], time: '00:00:00', timeInMs: 0 },
-      {
-        duration: 5200,
-        text: 'Line 1 lyrics',
-        words: [],
-        time: '00:12:00',
-        timeInMs: 12000,
-      },
-      {
-        duration: 3900,
-        text: 'Line 2 lyrics',
-        words: [],
-        time: '00:17:20',
-        timeInMs: 17200,
-      },
-      {
-        duration: 24000,
-        text: 'Repeating lyrics (e.g. chorus)',
-        words: [],
-        time: '00:21:10',
-        timeInMs: 21100,
-      },
-      {
-        duration: Infinity,
-        text: 'Repeating lyrics (e.g. chorus)',
-        words: [],
-        time: '00:45:10',
-        timeInMs: 45100,
-      },
-    ],
-    tags: [],
+  test("parses enhanced LRC word timing", () => {
+    const [, line] = parseLrc("[00:01.00]<00:01.00> Never <00:01.50> gonna <00:02.00> give <00:02.40>\n[00:03.00]next");
+    expect(line!.text).toBe("Never gonna give");
+    expect(line!.words).toEqual([
+      { startMs: 1000, endMs: 1500, text: "Never " },
+      { startMs: 1500, endMs: 2000, text: "gonna " },
+      { startMs: 2000, endMs: 2400, text: "give" },
+    ]);
+  });
+
+  test("keeps CJK words unspaced", () => {
+    const [, line] = parseLrc("[00:01.00]<00:01.00>私<00:01.30>は<00:01.60>");
+    expect(line!.text).toBe("私は");
+    expect(line!.words!.map((w) => w.text)).toEqual(["私", "は"]);
   });
 });
 
-test('attributes', () => {
-  const lrc = LRC.parse(
-    `[ar:Chubby Checker oppure  Beatles, The]
-[al:Hits Of The 60's - Vol. 2 – Oldies]
-[ti:Let's Twist Again]
-[au:Written by Kal Mann / Dave Appell, 1961]
-[length: 2:23]
-
-[00:12.00]Naku Penda Piya-Naku Taka Piya-Mpenziwe
-[00:15.30]Some more lyrics ...`,
-  );
-
-  expect(lrc).toStrictEqual({
-    lines: [
-      { duration: 12000, text: '', words: [], time: '00:00:00', timeInMs: 0 },
-      {
-        duration: 3300,
-        text: 'Naku Penda Piya-Naku Taka Piya-Mpenziwe',
-        words: [],
-        time: '00:12:00',
-        timeInMs: 12000,
-      },
-      {
-        duration: Infinity,
-        text: 'Some more lyrics ...',
-        words: [],
-        time: '00:15:30',
-        timeInMs: 15300,
-      },
-    ],
-    tags: [
-      { tag: 'ar', value: 'Chubby Checker oppure  Beatles, The' },
-      { tag: 'al', value: "Hits Of The 60's - Vol. 2 – Oldies" },
-      { tag: 'ti', value: "Let's Twist Again" },
-      { tag: 'au', value: 'Written by Kal Mann / Dave Appell, 1961' },
-      { tag: 'length', value: '2:23' },
-    ],
+describe("lineAt", () => {
+  const lines = parseLrc("[00:01.00]a\n[00:02.00]b\n[00:03.00]c");
+  test("finds the current line", () => {
+    expect(lineAt(lines, 0)).toBe(0);
+    expect(lineAt(lines, 1999)).toBe(1);
+    expect(lineAt(lines, 2000)).toBe(2);
+    expect(lineAt(lines, 99_999)).toBe(3);
+    expect(lineAt([], 5)).toBe(-1);
   });
 });
 
-test('karaoke', () => {
-  const lrc = LRC.parse(
-    '[00:00.00] <00:00.04> When <00:00.16> the <00:00.82> truth <00:01.29> is <00:01.63> found <00:03.09> to <00:03.37> be <00:05.92> lies',
-  );
-
-  expect(lrc).toStrictEqual({
-    lines: [
+describe("parseLyricsfile", () => {
+  test("reads lines and word timing", () => {
+    const lines = parseLyricsfile(
+      [
+        "version: '1.0'",
+        "lines:",
+        "- text: Hello there",
+        "  start_ms: 1000",
+        "  end_ms: 2000",
+        "  words:",
+        "  - text: Hello",
+        "    start_ms: 1000",
+        "    end_ms: 1400",
+        "  - text: there",
+        "    start_ms: 1400",
+        "- text: Bye",
+        "  start_ms: 2500",
+        "  end_ms: 3000",
+      ].join("\n"),
+    );
+    expect(lines).toEqual([
+      { startMs: 0, endMs: 1000, text: "" },
       {
-        duration: Infinity,
-        text: 'When the truth is found to be lies',
-        time: '00:00:00',
-        timeInMs: 0,
+        startMs: 1000,
+        endMs: 2000,
+        text: "Hello there",
         words: [
-          {
-            timeInMs: 40,
-            word: 'When',
-          },
-          {
-            timeInMs: 160,
-            word: 'the',
-          },
-          {
-            timeInMs: 820,
-            word: 'truth',
-          },
-          {
-            timeInMs: 1290,
-            word: 'is',
-          },
-          {
-            timeInMs: 1630,
-            word: 'found',
-          },
-          {
-            timeInMs: 3090,
-            word: 'to',
-          },
-          {
-            timeInMs: 3370,
-            word: 'be',
-          },
-          {
-            timeInMs: 5920,
-            word: 'lies',
-          },
+          { startMs: 1000, endMs: 1400, text: "Hello " },
+          { startMs: 1400, endMs: 2000, text: "there" },
         ],
       },
-    ],
-    tags: [],
+      { startMs: 2500, endMs: 3000, text: "Bye" },
+    ]);
+  });
+
+  test("returns undefined for empty or broken files", () => {
+    expect(parseLyricsfile("lines: []")).toBeUndefined();
+    expect(parseLyricsfile("lines: [")).toBeUndefined();
   });
 });

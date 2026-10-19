@@ -1,319 +1,314 @@
-import {
-  createEffect,
-  createSignal,
-  onCleanup,
-  onMount,
-  runWithOwner,
-  Show,
-  untrack,
-} from 'solid-js';
-import { type VirtualizerHandle, VList } from 'virtua/solid';
+import type { ComponentChildren } from "preact";
+import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
+import { lineAt } from "../lrc.ts";
+import { PROVIDER_NAMES, PROVIDERS, resultRank, type LyricLine, type ProviderId } from "../types.ts";
+import type { LyricsStore, ProviderState } from "./store.ts";
 
-import {
-  ErrorDisplay,
-  LoadingKaomoji,
-  NotFoundKaomoji,
-  SyncedLine,
-  PlainLyrics,
-} from './components';
-import { LyricsPicker } from './components/LyricsPicker';
-import { reactiveOwner } from './reactive-root';
-import { currentLyrics } from './store';
-import { selectors } from './utils';
+export type LineEffect = "fancy" | "scale" | "offset" | "focus";
+export type GapText = "dots" | "note" | "dash" | "none";
 
-import type { LineLyrics, SyncedLyricsPluginConfig } from '../types';
+export interface ViewOptions {
+  effect: LineEffect;
+  gapText: GapText;
+  showTimeCodes: boolean;
+  /** Added to the playback position; positive shows lines earlier. */
+  offsetMs: number;
+}
 
-export const [isVisible, setIsVisible] = createSignal<boolean>(false);
-export const [config, setConfig] =
-  createSignal<SyncedLyricsPluginConfig | null>(null);
+export interface ViewProps {
+  store: LyricsStore;
+  options: ViewOptions;
+  /** Playback position in ms, or null while it isn't meaningful (ads). */
+  now(): number | null;
+  seek(ms: number): void;
+  /** The element that scrolls the lyrics (YTM's tab panel). */
+  scroller(): HTMLElement | null;
+}
 
-runWithOwner(reactiveOwner, () => {
-  createEffect(() => {
-    if (!config()?.enabled) return;
-    const root = document.documentElement;
+/** While the user scrolls the lyrics themselves, stop following the current line. */
+const USER_SCROLL_GRACE_MS = 4000;
 
-    // Set the line effect
-    switch (config()?.lineEffect) {
-      case 'fancy':
-        root.style.setProperty('--lyrics-font-size', '3rem');
-        root.style.setProperty('--lyrics-line-height', '1.333');
-        root.style.setProperty('--lyrics-width', '100%');
-        root.style.setProperty('--lyrics-padding', '2rem');
-        root.style.setProperty(
-          '--lyrics-animations',
-          'lyrics-glow var(--lyrics-glow-duration) forwards, lyrics-wobble var(--lyrics-wobble-duration) forwards',
-        );
+function useStore(store: LyricsStore) {
+  const [, setTick] = useState(0);
+  useEffect(() => store.subscribe(() => setTick((t) => t + 1)), [store]);
+}
 
-        root.style.setProperty('--lyrics-inactive-font-weight', '700');
-        root.style.setProperty('--lyrics-inactive-opacity', '0.33');
-        root.style.setProperty('--lyrics-inactive-scale', '0.95');
-        root.style.setProperty('--lyrics-inactive-offset', '0');
+export function LyricsView(props: ViewProps) {
+  const { store, options } = props;
+  useStore(store);
+  const shown = store.shown;
+  const track = store.track;
 
-        root.style.setProperty('--lyrics-active-font-weight', '700');
-        root.style.setProperty('--lyrics-active-opacity', '1');
-        root.style.setProperty('--lyrics-active-scale', '1');
-        root.style.setProperty('--lyrics-active-offset', '0');
-        break;
-      case 'scale':
-        root.style.setProperty(
-          '--lyrics-font-size',
-          'clamp(1.4rem, 1.1vmax, 3rem)',
-        );
-        root.style.setProperty(
-          '--lyrics-line-height',
-          'var(--ytmusic-body-line-height)',
-        );
-        root.style.setProperty('--lyrics-width', '83%');
-        root.style.setProperty('--lyrics-padding', '0');
-        root.style.setProperty('--lyrics-animations', 'none');
-
-        root.style.setProperty('--lyrics-inactive-font-weight', '400');
-        root.style.setProperty('--lyrics-inactive-opacity', '0.33');
-        root.style.setProperty('--lyrics-inactive-scale', '1');
-        root.style.setProperty('--lyrics-inactive-offset', '0');
-
-        root.style.setProperty('--lyrics-active-font-weight', '700');
-        root.style.setProperty('--lyrics-active-opacity', '1');
-        root.style.setProperty('--lyrics-active-scale', '1.2');
-        root.style.setProperty('--lyrics-active-offset', '0');
-        break;
-      case 'offset':
-        root.style.setProperty(
-          '--lyrics-font-size',
-          'clamp(1.4rem, 1.1vmax, 3rem)',
-        );
-        root.style.setProperty(
-          '--lyrics-line-height',
-          'var(--ytmusic-body-line-height)',
-        );
-        root.style.setProperty('--lyrics-width', '100%');
-        root.style.setProperty('--lyrics-padding', '0');
-        root.style.setProperty('--lyrics-animations', 'none');
-
-        root.style.setProperty('--lyrics-inactive-font-weight', '400');
-        root.style.setProperty('--lyrics-inactive-opacity', '0.33');
-        root.style.setProperty('--lyrics-inactive-scale', '1');
-        root.style.setProperty('--lyrics-inactive-offset', '0');
-
-        root.style.setProperty('--lyrics-active-font-weight', '700');
-        root.style.setProperty('--lyrics-active-opacity', '1');
-        root.style.setProperty('--lyrics-active-scale', '1');
-        root.style.setProperty('--lyrics-active-offset', '5%');
-        break;
-      case 'focus':
-        root.style.setProperty(
-          '--lyrics-font-size',
-          'clamp(1.4rem, 1.1vmax, 3rem)',
-        );
-        root.style.setProperty(
-          '--lyrics-line-height',
-          'var(--ytmusic-body-line-height)',
-        );
-        root.style.setProperty('--lyrics-width', '100%');
-        root.style.setProperty('--lyrics-padding', '0');
-        root.style.setProperty('--lyrics-animations', 'none');
-
-        root.style.setProperty('--lyrics-inactive-font-weight', '400');
-        root.style.setProperty('--lyrics-inactive-opacity', '0.33');
-        root.style.setProperty('--lyrics-inactive-scale', '1');
-        root.style.setProperty('--lyrics-inactive-offset', '0');
-
-        root.style.setProperty('--lyrics-active-font-weight', '700');
-        root.style.setProperty('--lyrics-active-opacity', '1');
-        root.style.setProperty('--lyrics-active-scale', '1');
-        root.style.setProperty('--lyrics-active-offset', '0');
-        break;
-    }
-  });
-});
-
-type LyricsRendererChild =
-  | { kind: 'LyricsPicker' }
-  | { kind: 'LoadingKaomoji' }
-  | { kind: 'NotFoundKaomoji' }
-  | { kind: 'Error'; error: Error }
-  | {
-      kind: 'SyncedLine';
-      line: LineLyrics;
-    }
-  | {
-      kind: 'PlainLine';
-      line: string;
-    };
-
-const lyricsPicker: LyricsRendererChild = { kind: 'LyricsPicker' };
-
-export const [currentTime, setCurrentTime] = createSignal<number>(-1);
-export const LyricsRenderer = () => {
-  const [scroller, setScroller] = createSignal<VirtualizerHandle>();
-  const [stickyRef, setStickRef] = createSignal<HTMLElement | null>(null);
-
-  const tab = document.querySelector<HTMLElement>(selectors.body.tabRenderer)!;
-
-  let mouseCoord = 0;
-  const mousemoveListener = (e: Event) => {
-    if ('clientY' in e) {
-      mouseCoord = (e as MouseEvent).clientY;
-    }
-
-    const { top } = tab.getBoundingClientRect();
-    const { clientHeight: height } = stickyRef()!;
-    const scrollOffset = scroller()?.scrollOffset ?? -1;
-
-    const isInView = scrollOffset <= height;
-    const isMouseOver = mouseCoord - top - 5 <= height;
-
-    const showPicker = isInView || isMouseOver;
-
-    if (showPicker) {
-      // picker visible
-      stickyRef()!.style.setProperty('--lyrics-picker-top', '0');
-    } else {
-      // picker hidden
-      stickyRef()!.style.setProperty('--lyrics-picker-top', `-${height}px`);
-    }
-  };
-
-  onMount(() => {
-    const vList = document.querySelector<HTMLElement>('.synced-lyrics-vlist');
-
-    tab.addEventListener('mousemove', mousemoveListener);
-    vList?.addEventListener('scroll', mousemoveListener);
-    vList?.addEventListener('scrollend', mousemoveListener);
-
-    onCleanup(() => {
-      tab.removeEventListener('mousemove', mousemoveListener);
-      vList?.removeEventListener('scroll', mousemoveListener);
-      vList?.removeEventListener('scrollend', mousemoveListener);
-    });
-  });
-
-  const [children, setChildren] = createSignal<LyricsRendererChild[]>([
-    { kind: 'LoadingKaomoji' },
-  ]);
-
-  createEffect(() => {
-    const current = currentLyrics();
-    if (!current) {
-      setChildren(() => [{ kind: 'NotFoundKaomoji' }]);
-      return;
-    }
-
-    const { state, data, error } = current;
-
-    setChildren(() => {
-      if (state === 'fetching') {
-        return [{ kind: 'LoadingKaomoji' }];
-      }
-
-      if (state === 'error') {
-        return [{ kind: 'Error', error: error! }];
-      }
-
-      if (data?.lines) {
-        return data.lines.map((line) => ({
-          kind: 'SyncedLine' as const,
-          line,
-        }));
-      }
-
-      if (data?.lyrics) {
-        const lines = data.lyrics.split('\n').filter((line) => line.trim());
-        return lines.map((line) => ({
-          kind: 'PlainLine' as const,
-          line,
-        }));
-      }
-
-      return [{ kind: 'NotFoundKaomoji' }];
-    });
-  });
-
-  const [statuses, setStatuses] = createSignal<
-    ('previous' | 'current' | 'upcoming')[]
-  >([]);
-  createEffect(() => {
-    const time = currentTime();
-    const data = currentLyrics()?.data;
-
-    if (!data || !data.lines) return setStatuses([]);
-
-    const previous = untrack(statuses);
-    const current = data.lines.map((line) => {
-      if (line.timeInMs >= time) return 'upcoming';
-      if (time - line.timeInMs >= line.duration) return 'previous';
-      return 'current';
-    });
-
-    if (previous.length !== current.length) return setStatuses(current);
-    if (previous.every((status, idx) => status === current[idx])) return;
-
-    setStatuses(current);
-    return;
-  });
-
-  const [currentIndex, setCurrentIndex] = createSignal(0);
-  createEffect(() => {
-    const index = statuses().findIndex((status) => status === 'current');
-    if (index === -1) return;
-    setCurrentIndex(index);
-  });
-
-  createEffect(() => {
-    const current = currentLyrics();
-    const idx = currentIndex();
-    const maxIdx = untrack(statuses).length - 1;
-
-    if (!scroller() || !current.data?.lines) return;
-
-    // hacky way to make the "current" line scroll to the center of the screen
-    const scrollIndex = Math.min(idx + 1, maxIdx);
-
-    scroller()!.scrollToIndex(scrollIndex, {
-      smooth: true,
-      align: 'center',
-    });
-  });
+  let body;
+  if (!track) body = <Message title="Nothing playing" />;
+  else if (shown?.synced) body = <SyncedLyrics {...props} key={`${track.videoId}:${shown.provider}`} />;
+  else if (shown) body = <PlainLyrics texts={shown.texts} romanized={shown.romanized} />;
+  else if (store.loading) body = <Skeleton />;
+  else
+    body = (
+      <Message title="No lyrics found" detail={`${track.title} · ${track.artist}`}>
+        {PROVIDERS.some((id) => store.providers[id].status === "error") && (
+          <p class="hint">Some providers could not be reached. Retry them above.</p>
+        )}
+      </Message>
+    );
 
   return (
-    <Show when={isVisible()}>
-      <VList
-        {...{
-          ref: setScroller,
-          style: { 'scrollbar-width': 'none' },
-          class: 'synced-lyrics-vlist',
-          keepMounted: [0],
-          overscan: 4,
-        }}
-        data={[lyricsPicker, ...children()]}
-      >
-        {(props, idx) => {
-          if (typeof props === 'undefined') return null;
-          switch (props.kind) {
-            case 'LyricsPicker':
-              return <LyricsPicker setStickRef={setStickRef} />;
-            case 'Error':
-              return <ErrorDisplay {...props} />;
-            case 'LoadingKaomoji':
-              return <LoadingKaomoji />;
-            case 'NotFoundKaomoji':
-              return <NotFoundKaomoji />;
-            case 'SyncedLine': {
-              return (
-                <SyncedLine
-                  {...props}
-                  index={idx()}
-                  scroller={scroller()!}
-                  status={statuses()[idx() - 1]}
-                />
-              );
-            }
-            case 'PlainLine': {
-              return <PlainLyrics {...props} />;
-            }
-          }
-        }}
-      </VList>
-    </Show>
+    <div class={`root effect-${options.effect}`} data-state={shown ? (shown.synced ? "synced" : "plain") : store.loading ? "loading" : "empty"}>
+      {track && <Picker store={store} />}
+      {body}
+      {shown && (
+        <footer class="source">
+          Lyrics from {PROVIDER_NAMES[shown.provider]}
+          {!shown.synced && " · not time-synced"}
+        </footer>
+      )}
+    </div>
   );
-};
+}
+
+function Picker({ store }: { store: LyricsStore }) {
+  const current = store.shown?.provider;
+  return (
+    <div class="picker" role="radiogroup" aria-label="Lyrics provider">
+      {PROVIDERS.map((id) => {
+        const state = store.providers[id];
+        const usable = state.status === "done" && resultRank(state.result) > 0;
+        return (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            class="chip"
+            aria-checked={current === id}
+            data-provider={id}
+            data-status={state.status === "done" ? (usable ? "found" : "none") : state.status}
+            disabled={state.status === "loading" || (state.status === "done" && !usable)}
+            title={describe(state)}
+            onClick={() => (state.status === "error" ? store.retry(id) : store.pick(id))}
+          >
+            <span class="dot" aria-hidden="true" />
+            {PROVIDER_NAMES[id]}
+            {usable && current === id && <span class="kind">{kind(state)}</span>}
+            {state.status === "error" && <span class="kind">retry</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function kind(state: ProviderState) {
+  if (state.status !== "done") return "";
+  return ["", "plain", "synced", "words"][resultRank(state.result)];
+}
+
+function describe(state: ProviderState) {
+  switch (state.status) {
+    case "loading":
+      return "Searching…";
+    case "error":
+      return `Failed: ${state.message}. Click to retry.`;
+    case "done":
+      return resultRank(state.result) ? `Found ${kind(state)} lyrics` : "No lyrics for this track";
+  }
+}
+
+function SyncedLyrics({ store, options, now, seek, scroller }: ViewProps) {
+  const shown = store.shown!;
+  const lines = shown.lines;
+  const [active, setActive] = useState(-1);
+  const [following, setFollowing] = useState(true);
+  const listRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef(active);
+
+  // Per-frame: find the current line; animate word fill and gap dots directly on the DOM.
+  useEffect(() => {
+    let frame = 0;
+    let last = Number.NaN;
+    const tick = () => {
+      frame = requestAnimationFrame(tick);
+      const position = now();
+      // Nothing to do while paused or during ads.
+      if (position === null || position === last) return;
+      last = position;
+      const ms = position + options.offsetMs;
+      const index = lineAt(lines, ms);
+      if (index !== activeRef.current) {
+        activeRef.current = index;
+        setActive(index);
+      }
+      const element = listRef.current?.children[index] as HTMLElement | undefined;
+      const line = lines[index];
+      if (!element || !line) return;
+      element.style.setProperty("--p", progress(ms, line.startMs, line.endMs).toFixed(3));
+      if (line.words) {
+        const words = element.querySelectorAll<HTMLElement>(".word");
+        line.words.forEach((word, i) => words[i]?.style.setProperty("--p", progress(ms, word.startMs, word.endMs).toFixed(3)));
+      }
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [lines, now, options.offsetMs]);
+
+  // Keep the current line in view, unless the user is reading elsewhere.
+  useLayoutEffect(() => {
+    const element = listRef.current?.children[Math.max(0, active)] as HTMLElement | undefined;
+    const container = scroller();
+    if (!element || !container || !following) return;
+    const box = container.getBoundingClientRect();
+    const rect = element.getBoundingClientRect();
+    const top = container.scrollTop + rect.top - box.top - box.height * 0.38 + rect.height / 2;
+    container.scrollTo({ top, behavior: "smooth" });
+  }, [active, following]);
+
+  // Follow again once the user has stopped scrolling for a while.
+  useEffect(() => {
+    const container = scroller();
+    if (!container) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const onUser = () => {
+      setFollowing(false);
+      clearTimeout(timer);
+      timer = setTimeout(() => setFollowing(true), USER_SCROLL_GRACE_MS);
+    };
+    container.addEventListener("wheel", onUser, { passive: true });
+    container.addEventListener("touchmove", onUser, { passive: true });
+    return () => {
+      clearTimeout(timer);
+      container.removeEventListener("wheel", onUser);
+      container.removeEventListener("touchmove", onUser);
+    };
+  }, []);
+
+  return (
+    <>
+      <div class="lines" ref={listRef}>
+        {lines.map((line, i) => (
+          <Line
+            key={i}
+            line={line}
+            text={shown.texts[i] ?? line.text}
+            romanized={shown.romanized[i] ?? null}
+            state={i === active ? "active" : i < active ? "past" : "future"}
+            options={options}
+            onSeek={() => {
+              seek(line.startMs);
+              setFollowing(true);
+            }}
+          />
+        ))}
+      </div>
+      {!following && (
+        <button type="button" class="resume" onClick={() => setFollowing(true)}>
+          Back to current line
+        </button>
+      )}
+    </>
+  );
+}
+
+interface LineProps {
+  line: LyricLine;
+  text: string;
+  romanized: string | null;
+  state: "past" | "active" | "future";
+  options: ViewOptions;
+  onSeek(): void;
+}
+
+function Line({ line, text, romanized, state, options, onSeek }: LineProps) {
+  const gap = !text;
+  // Word timing only applies to the original script.
+  const words = line.words && text === line.text ? line.words : undefined;
+  return (
+    <div
+      class={`line${gap ? " gap" : ""}${words ? " has-words" : ""}`}
+      data-state={state}
+      role="button"
+      tabIndex={-1}
+      onClick={onSeek}
+    >
+      {options.showTimeCodes && <span class="time">{formatTime(line.startMs)}</span>}
+      {gap ? (
+        <GapMark kind={options.gapText} />
+      ) : (
+        <span class="text" dir="auto">
+          {words ? words.map((word, i) => <span key={i} class="word">{word.text}</span>) : text}
+        </span>
+      )}
+      {romanized && !gap && <span class="romanized">{romanized}</span>}
+    </div>
+  );
+}
+
+function GapMark({ kind }: { kind: GapText }) {
+  switch (kind) {
+    case "dots":
+      return (
+        <span class="text gap-dots" aria-label="Instrumental">
+          <i />
+          <i />
+          <i />
+        </span>
+      );
+    case "note":
+      return <span class="text">♪</span>;
+    case "dash":
+      return <span class="text">———</span>;
+    case "none":
+      return <span class="text" />;
+  }
+}
+
+function PlainLyrics({ texts, romanized }: { texts: string[]; romanized: (string | null)[] }) {
+  return (
+    <div class="lines plain">
+      {texts.map((text, i) =>
+        text ? (
+          <div key={i} class={`line${/^\[.*\]$/.test(text) ? " section" : ""}`}>
+            <span class="text" dir="auto">
+              {text}
+            </span>
+            {romanized[i] && <span class="romanized">{romanized[i]}</span>}
+          </div>
+        ) : (
+          <div key={i} class="spacer" />
+        ),
+      )}
+    </div>
+  );
+}
+
+function Skeleton() {
+  return (
+    <div class="skeleton" aria-busy="true" aria-label="Searching for lyrics">
+      {[78, 62, 88, 54, 70, 46].map((width, i) => (
+        <span key={i} style={{ width: `${width}%`, animationDelay: `${i * 90}ms` }} />
+      ))}
+    </div>
+  );
+}
+
+function Message({ title, detail, children }: { title: string; detail?: string; children?: ComponentChildren }) {
+  return (
+    <div class="message">
+      <div class="glyph" aria-hidden="true">
+        ♪
+      </div>
+      <h2>{title}</h2>
+      {detail && <p>{detail}</p>}
+      {children}
+    </div>
+  );
+}
+
+function progress(ms: number, start: number, end: number) {
+  if (end <= start) return ms >= start ? 1 : 0;
+  return Math.min(1, Math.max(0, (ms - start) / (end - start)));
+}
+
+function formatTime(ms: number) {
+  const seconds = Math.floor(ms / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}

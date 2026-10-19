@@ -67,6 +67,8 @@ export const selectors = {
   // ---- interface tweaks (album actions, colors, ambient mode, clock, navigation, pip, …)
 
   // ---- lyrics & music together
+  /** The player page's tab panel (Up next / Lyrics / Related); it is also the scroller. */
+  "lyrics.panel": "ytmusic-player-page #tab-renderer",
 } as const;
 
 export type SelectorName = keyof typeof selectors;
