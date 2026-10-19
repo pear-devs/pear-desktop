@@ -777,6 +777,10 @@
             "message": "Не удалось войти с помощью Last.fm\nСкрыть сообщение до следующего запуска.",
             "title": "Ошибка аунтефикации"
           }
+        },
+        "invalid-regex": {
+          "title": "Некорректное регулярное выражение",
+          "message": "Регулярное выражение в строке {{line}} некорректно: {{error}}"
         }
       },
       "menu": {
@@ -788,7 +792,10 @@
         },
         "scrobble-alternative-artist": "Использовать альтернативных исполнителей",
         "scrobble-alternative-title": "Использовать альтернативные названия",
-        "scrobble-other-media": "Скробблинг других медиа"
+        "scrobble-other-media": "Скробблинг других медиа",
+        "regex-filters": "Фильтры через регулярные выражения",
+        "use-musicbrainz": "Использовать MusicBrainz для коррекции метаданных",
+        "musicbrainz-email": "Контактная почта для MusicBrainz"
       },
       "name": "Скробблер",
       "prompt": {
@@ -801,6 +808,13 @@
             "label": "Введите токен пользователя ListenBrainz:",
             "title": "Токен ListenBrainz"
           }
+        },
+        "regex-filter-multi": {
+          "label": "Введите одно рег.выр. на каждую строку:"
+        },
+        "musicbrainz-email": {
+          "title": "Контактная почта для MusicBrainz",
+          "label": "Введите email для MusicBrainz API:"
         }
       }
     },

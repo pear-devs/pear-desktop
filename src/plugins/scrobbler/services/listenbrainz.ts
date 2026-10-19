@@ -50,7 +50,7 @@ export class ListenbrainzScrobbler extends ScrobblerBase {
       return;
     }
 
-    const body = createRequestBody('playing_now', songInfo, config);
+    const body = createRequestBody('playing_now', songInfo);
     submitListen(body, config);
   }
 
@@ -66,7 +66,7 @@ export class ListenbrainzScrobbler extends ScrobblerBase {
       return;
     }
 
-    const body = createRequestBody('single', songInfo, config);
+    const body = createRequestBody('single', songInfo);
     body.payload[0].listened_at = Math.trunc(Date.now() / 1000);
 
     submitListen(body, config);
@@ -76,17 +76,9 @@ export class ListenbrainzScrobbler extends ScrobblerBase {
 function createRequestBody(
   listenType: string,
   songInfo: SongInfo,
-  config: ScrobblerPluginConfig,
 ): ListenbrainzRequestBody {
-  const title =
-    config.alternativeTitles && songInfo.alternativeTitle !== undefined
-      ? songInfo.alternativeTitle
-      : songInfo.title;
-
-  const artist =
-    config.alternativeArtist && songInfo.tags?.at(0) !== undefined
-      ? songInfo.tags?.at(0)
-      : songInfo.artist;
+  const title = songInfo.title;
+  const artist = songInfo.artist;
 
   const trackMetadata = {
     artist_name: artist,
