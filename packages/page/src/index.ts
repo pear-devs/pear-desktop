@@ -108,6 +108,8 @@ bridge.onEvent((event) => {
       return player.setOptions(event.state.config);
     case "themes":
       return setThemes(event.css);
+    case "window-visibility":
+      return runner.setWindowVisible(event.visible);
     case "player-control":
       return player.control(event.action);
     case "ui":

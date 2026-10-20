@@ -131,7 +131,7 @@ function mountVideo(ctx: Ctx) {
   };
   // Each frame is blended over the previous ones, so the glow eases toward the video.
   const draw = () => {
-    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !ctx.isWindowVisible()) return;
     context.globalAlpha = blendAlpha(ctx);
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
   };

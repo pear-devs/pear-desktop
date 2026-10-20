@@ -70,6 +70,8 @@ export interface Bootstrap {
   catalog: PluginInfo[];
   /** The CSS of the user's theme files (appearance.themes), in order. */
   themes: string[];
+  /** Whether the main window is on screen (not hidden or minimized). */
+  windowVisible: boolean;
 }
 
 export type UiAction = "toggle-settings" | "open-settings" | "close-settings";
@@ -85,6 +87,8 @@ export type HostEvent =
   | { type: "core-state"; section: CoreSection; state: CoreState }
   /** The theme files changed (the list or a file's contents). */
   | { type: "themes"; css: string[] }
+  /** The main window was shown, hidden, minimized or restored. */
+  | { type: "window-visibility"; visible: boolean }
   | { type: "player-control"; action: PlayerAction }
   | { type: "ui"; action: UiAction };
 

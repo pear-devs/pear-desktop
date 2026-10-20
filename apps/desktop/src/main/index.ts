@@ -60,6 +60,7 @@ function main() {
       requests,
       settingsPath: settings.path,
       onRuntimeBootstrap: (sender) => mainWindow.runtimeBootstrapped(sender),
+      windowVisible: () => mainWindow.visible,
       core: {
         states: () => ({ ...core.states(), apiServer: api?.state() ?? { config: settings.core("apiServer") } }),
         async setConfig(section, patch) {

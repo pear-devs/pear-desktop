@@ -72,6 +72,12 @@ export class MainWindow {
     this.send({ type: "ui", action: "open-settings" });
   };
 
+  /** On screen: shown and not minimized. */
+  get visible() {
+    const window = this.window;
+    return !!window && window.isVisible() && !window.isMinimized();
+  }
+
   focus() {
     const window = this.window;
     if (window) focusWindow(window);
@@ -108,6 +114,7 @@ export class MainWindow {
     this.#followNavigation(window);
     routeLinks(window);
     this.#saveBounds(window);
+    this.#reportVisibility(window);
     void window.loadURL(startUrl(settings.core("general"), settings.lastUrl));
     return window;
   }
@@ -150,6 +157,21 @@ export class MainWindow {
     window.webContents.on("did-navigate-in-page", (_, url, isMainFrame) => {
       if (isMainFrame && isYtmUrl(url)) this.#settings.lastUrl = url;
     });
+  }
+
+  /** The page keeps rendering while the window is off screen (no background throttling); tell it, so visual plugins can pause. */
+  #reportVisibility(window: BrowserWindow) {
+    let reported = this.visible;
+    const report = () => {
+      const visible = this.visible;
+      if (visible === reported) return;
+      reported = visible;
+      this.send({ type: "window-visibility", visible });
+    };
+    window.on("show", report);
+    window.on("hide", report);
+    window.on("minimize", report);
+    window.on("restore", report);
   }
 
   #saveBounds(window: BrowserWindow) {

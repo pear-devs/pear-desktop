@@ -229,3 +229,19 @@ test("picture in picture shrinks the window and restores it", async ({ launch })
   await page.keyboard.press("p");
   await expect.poll(() => page.evaluate(() => document.pictureInPictureElement)).toBeNull();
 });
+
+test("the page knows when the window is off screen", async ({ app, page }) => {
+  const windowVisible = () => page.evaluate(() => window.__pearRuntime!.plugins.windowVisible);
+  const mainWindowDo = (action: "minimize" | "restore" | "hide" | "show") =>
+    app.evaluate(({ BrowserWindow }, action) => BrowserWindow.getAllWindows()[0]![action](), action);
+  // Shown once the page is ready to paint.
+  await expect.poll(windowVisible).toBe(true);
+  await mainWindowDo("minimize");
+  await expect.poll(windowVisible).toBe(false);
+  await mainWindowDo("restore");
+  await expect.poll(windowVisible).toBe(true);
+  await mainWindowDo("hide");
+  await expect.poll(windowVisible).toBe(false);
+  await mainWindowDo("show");
+  await expect.poll(windowVisible).toBe(true);
+});

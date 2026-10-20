@@ -68,19 +68,21 @@ export default definePlugin({
     // Stopped while the renderer loaded: the cleanup above already ran, so no loop.
     if (!renderer || ctx.signal.aborted) return;
 
+    // Zero-sized while the player page is closed or in the mini player; known from here
+    // rather than read every frame (reading layout each frame forces a layout).
+    let shown = false;
     const observer = new ResizeObserver(() => {
       const { width, height } = size();
-      if (width > 0 && height > 0) renderer.resize(width, height);
+      shown = width > 0 && height > 0;
+      if (shown) renderer.resize(width, height);
     });
     observer.observe(container);
     ctx.onCleanup(() => observer.disconnect());
 
     const { render } = renderer;
     if (!render) return;
-    // Hidden (mini player, another page): skip drawing.
-    const visible = () => container.clientWidth > 0 && container.clientHeight > 0;
     const tick = () => {
-      if (visible()) render();
+      if (shown && ctx.isWindowVisible()) render();
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);

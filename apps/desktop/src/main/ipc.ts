@@ -43,6 +43,8 @@ export interface IpcEnvironment {
   settingsPath: string;
   /** The page runtime of the main window has bootstrapped (it can show the in-page settings). */
   onRuntimeBootstrap(sender: Electron.WebContents): void;
+  /** Whether the main window is on screen. */
+  windowVisible(): boolean;
   core: {
     states(): Record<CoreSection, CoreState>;
     setConfig(section: CoreSection, patch: Record<string, unknown>): void | Promise<void>;
@@ -51,7 +53,7 @@ export interface IpcEnvironment {
   };
 }
 
-export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBootstrap, core }: IpcEnvironment) {
+export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBootstrap, windowVisible, core }: IpcEnvironment) {
   const handlers: Handlers = {
     ping: (message) => `pong: ${message}`,
     "app:version": () => app.getVersion(),
@@ -101,11 +103,11 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
       return;
     }
     if (isPageRuntime(event)) onRuntimeBootstrap(event.sender);
-    event.returnValue = bootstrapPayload(plugins, core);
+    event.returnValue = { ...bootstrapPayload(plugins, core), windowVisible: windowVisible() };
   });
 }
 
-function bootstrapPayload(plugins: PluginHost, core: IpcEnvironment["core"]): Bootstrap {
+function bootstrapPayload(plugins: PluginHost, core: IpcEnvironment["core"]): Omit<Bootstrap, "windowVisible"> {
   return {
     // Also in `app`: the page runtime reads these, the settings UI the copies there.
     version: app.getVersion(),

@@ -179,6 +179,7 @@ host: {
 | `setTimeout`, `setInterval`, `clearTimeout`, `clearInterval` | timers |
 | `addStyle(css)` | add CSS; returns `{ update, remove }` |
 | `toast(message)` | show a message in YTM's toast |
+| `isWindowVisible()` | whether the window is on screen; the page keeps running while it's minimized or hidden, so per-frame drawing should check this |
 | `audio()` | the shared audio graph, to add Web Audio nodes (see `plugins/equalizer`) |
 | `host` | talk to the host part (see below) |
 | `onCleanup(fn)`, `signal` | run `fn`, or abort `signal`, when the plugin stops |

@@ -32,16 +32,34 @@ export function isolateKeys(element: EventTarget, signal: AbortSignal) {
   for (const type of ["keydown", "keyup", "keypress"]) element.addEventListener(type, stop, { signal });
 }
 
+/** Elements kept in the page, with where each one goes; one document observer serves them all. */
+const mounted = new Map<Element, (element: Element) => void>();
+let stopWatching: (() => void) | undefined;
+
+function placeDetached() {
+  for (const [element, place] of mounted) {
+    if (element.isConnected) continue;
+    // One plugin's failing placement mustn't keep the others out.
+    try {
+      place(element);
+    } catch (error) {
+      console.error("[pear] placing an element failed", error);
+    }
+  }
+}
+
 /** Calls `place` whenever `element` is detached (now, and on any later DOM change). Returns a stop function. */
 export function keepMounted(element: Element, place: (element: Element) => void): () => void {
-  const ensure = () => {
-    if (!element.isConnected) place(element);
-  };
-  ensure();
+  mounted.set(element, place);
+  if (!element.isConnected) place(element);
   // YTM may re-render or replace whole parts of the page, so watch the document.
-  const stop = observe(document, { childList: true, subtree: true }, ensure);
+  stopWatching ??= observe(document, { childList: true, subtree: true }, placeDetached);
   return () => {
-    stop();
+    if (mounted.get(element) === place) mounted.delete(element);
+    if (mounted.size === 0) {
+      stopWatching?.();
+      stopWatching = undefined;
+    }
     element.remove();
   };
 }

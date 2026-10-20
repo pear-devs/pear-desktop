@@ -141,31 +141,54 @@ function safely(fn: () => void) {
 
 export function matchesFilter(filter: WebRequestFilter | undefined, details: { url: string; resourceType?: string }) {
   if (!filter) return true;
-  if (filter.urls.length > 0 && !filter.urls.some((p) => matchPattern(p, details.url))) return false;
-  if (filter.excludeUrls?.some((p) => matchPattern(p, details.url))) return false;
   if (filter.types && filter.types.length > 0 && !filter.types.includes(details.resourceType as never)) return false;
+  const target = URL.parse(details.url);
+  const matches = (pattern: string) => !!target && compiledPattern(pattern)(target);
+  if (filter.urls.length > 0 && !filter.urls.some(matches)) return false;
+  if (filter.excludeUrls?.some(matches)) return false;
   return true;
 }
 
 /** Chrome-style match patterns: `<all_urls>`, `scheme://host/path` with `*` wildcards. */
 export function matchPattern(pattern: string, url: string): boolean {
-  if (pattern === "<all_urls>") return true;
-  const match = /^(\*|[a-z][a-z0-9+.-]*):\/\/([^/]*)(\/.*)?$/i.exec(pattern);
   const target = URL.parse(url);
-  if (!match || !target) return false;
-  const [, scheme, host = "", path = "/*"] = match;
-  const targetScheme = target.protocol.slice(0, -1);
-  if (scheme === "*" ? !["http", "https", "ws", "wss"].includes(targetScheme) : scheme !== targetScheme) return false;
-  if (host !== "*") {
-    if (host.startsWith("*.")) {
-      const base = host.slice(2);
-      if (target.hostname !== base && !target.hostname.endsWith(`.${base}`)) return false;
-    } else if (target.host !== host && target.hostname !== host) {
-      return false;
-    }
+  return !!target && compiledPattern(pattern)(target);
+}
+
+type CompiledPattern = (target: URL) => boolean;
+
+/** Patterns are few and checked on every request, so each is parsed once. */
+const compiled = new Map<string, CompiledPattern>();
+
+function compiledPattern(pattern: string): CompiledPattern {
+  let matcher = compiled.get(pattern);
+  if (!matcher) {
+    matcher = compilePattern(pattern);
+    compiled.set(pattern, matcher);
   }
+  return matcher;
+}
+
+const WILDCARD_SCHEMES = ["http", "https", "ws", "wss"];
+
+function compilePattern(pattern: string): CompiledPattern {
+  if (pattern === "<all_urls>") return () => true;
+  const match = /^(\*|[a-z][a-z0-9+.-]*):\/\/([^/]*)(\/.*)?$/i.exec(pattern);
+  if (!match) return () => false;
+  const [, scheme, host = "", path = "/*"] = match;
   const pathRegex = new RegExp(`^${path.split("*").map(escapeRegExp).join(".*")}$`);
-  return pathRegex.test(target.pathname + target.search);
+  return (target) => {
+    const targetScheme = target.protocol.slice(0, -1);
+    const schemeMatches = scheme === "*" ? WILDCARD_SCHEMES.includes(targetScheme) : scheme === targetScheme;
+    return schemeMatches && hostMatches(host, target) && pathRegex.test(target.pathname + target.search);
+  };
+}
+
+function hostMatches(host: string, target: URL) {
+  if (host === "*") return true;
+  if (!host.startsWith("*.")) return target.host === host || target.hostname === host;
+  const base = host.slice(2);
+  return target.hostname === base || target.hostname.endsWith(`.${base}`);
 }
 
 function escapeRegExp(text: string) {

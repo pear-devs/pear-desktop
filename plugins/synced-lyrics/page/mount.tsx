@@ -43,9 +43,11 @@ export function mountLyrics(ctx: Ctx) {
   // Keep YTM's global shortcuts from reacting to keys in here.
   isolateKeys(element, ctx.signal);
 
+  // null pauses the view's per-frame work: during ads, and while the window is off screen.
   const now = () => {
     const video = ctx.player.video();
-    return video && !ctx.player.state.ad ? video.currentTime * 1000 : null;
+    if (!video || ctx.player.state.ad || !ctx.isWindowVisible()) return null;
+    return video.currentTime * 1000;
   };
   const seek = (ms: number) => ctx.player.control({ type: "seek", seconds: ms / 1000 });
   const scroller = () => element.parentElement;

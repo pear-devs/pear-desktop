@@ -230,6 +230,11 @@ export interface PageContext<C, Cmds extends AnyCommands> extends CommonContext<
   addStyle(css: string): StyleHandle;
   /** Shows a message in YTM's own toast (bottom left), as pear-desktop's plugins do. */
   toast(message: string): void;
+  /**
+   * Whether the window is on screen. The page itself can't tell: it keeps rendering,
+   * and `document.hidden` stays false, while minimized or hidden. Visual loops check this to pause.
+   */
+  isWindowVisible(): boolean;
   /** Aborted when the plugin stops. */
   readonly signal: AbortSignal;
 }

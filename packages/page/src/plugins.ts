@@ -45,6 +45,7 @@ export class PluginRunner {
   #listeners = new Map<string, Map<string, Set<EventListener>>>();
   #handlers = new Map<string, Map<string, RequestHandler>>();
   #audio: Promise<AudioGraph> | undefined;
+  #windowVisible: boolean;
   #bridge: Bridge;
   #player: Player;
   /** The active language's strings, from the host. */
@@ -59,6 +60,7 @@ export class PluginRunner {
     // Plugins the host doesn't run on this platform are not offered at all.
     for (const plugin of plugins) if (this.#host.plugins.has(plugin.id)) this.#plugins.set(plugin.id, plugin);
     this.t = translator(bridge.bootstrap.strings);
+    this.#windowVisible = bridge.bootstrap.windowVisible ?? true;
     this.settings = settingsModel(bridge, this.#host, (id) => this.error(id));
   }
 
@@ -97,6 +99,15 @@ export class PluginRunner {
 
   applyCore(section: CoreSection, state: CoreState) {
     this.#host.setCore(section, state);
+  }
+
+  /** Whether the window is on screen (`ctx.isWindowVisible`). */
+  get windowVisible() {
+    return this.#windowVisible;
+  }
+
+  setWindowVisible(visible: boolean) {
+    this.#windowVisible = visible;
   }
 
   /** Answers host requests for the core (id "core"), e.g. the API server's. */
@@ -233,6 +244,7 @@ export class PluginRunner {
       ...timers(scope.track),
       addStyle: (css) => styleHandle(scope, css),
       toast: showToast,
+      isWindowVisible: () => this.#windowVisible,
       onCleanup: (fn) => scope.onStop(fn),
       signal: scope.signal,
       t: this.t,
