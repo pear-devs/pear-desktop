@@ -98,6 +98,25 @@ export const config = {
   }),
 };
 
+/** A slider for at most this many steps; finer ranges get a stepper. */
+const MAX_SLIDER_STEPS = 1000;
+/** Chips for up to this many options; more get a dropdown. */
+const MAX_CHIPS = 8;
+
+/** How the settings UI shows a number: its `variant`, or by its range; a slider needs both bounds. */
+export function numberVariant(field: NumberField): "slider" | "stepper" {
+  if (field.min === undefined || field.max === undefined) return "stepper";
+  if (field.variant) return field.variant;
+  const steps = (field.max - field.min) / (field.step ?? 1);
+  return steps <= MAX_SLIDER_STEPS ? "slider" : "stepper";
+}
+
+/** How the settings UI shows a select: its `variant`, or by its number of options. */
+export function selectVariant(field: SelectField): "chips" | "dropdown" {
+  if (field.variant) return field.variant;
+  return field.options.length <= MAX_CHIPS ? "chips" : "dropdown";
+}
+
 /** Whether a `platforms` list (absent: every platform) includes `platform`. */
 export function onPlatform(platforms: readonly Platform[] | undefined, platform: string) {
   const list: readonly string[] | undefined = platforms;

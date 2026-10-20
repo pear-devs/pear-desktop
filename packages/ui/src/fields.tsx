@@ -2,7 +2,18 @@
 // everything else below the label. The control is picked from the field kind
 // and its `variant`.
 
-import type { Field, ListField, MultiField, NumberField, SelectField } from "@pear/sdk";
+import {
+  type Field,
+  type ListField,
+  type MultiField,
+  type NumberField,
+  numberVariant,
+  type SelectField,
+  selectVariant,
+  type ShortcutField,
+  type StringField,
+} from "@pear/sdk";
+import { clamp } from "@pear/sdk/util";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { toAccelerator } from "./accelerator.ts";
 import { useText } from "./strings.ts";
@@ -15,9 +26,25 @@ interface FieldProps {
   onChange(value: unknown): void;
 }
 
+interface ControlProps<F extends Field, V> {
+  id: string;
+  field: F;
+  value: V;
+  onChange(value: V): void;
+}
+
+// Commit on a short idle, so dragging a slider or typing doesn't write settings on every change.
+const SLIDER_DEBOUNCE_MS = 200;
+const TEXT_DEBOUNCE_MS = 400;
+
+/** Controls that sit next to the label instead of below it. */
+const INLINE_KINDS = new Set<Field["kind"]>(["bool", "shortcut"]);
+
 export function SettingsField({ name, field, value, onChange }: FieldProps) {
   const id = `field-${name}`;
   const text = useText();
+  const control = <Control id={id} field={field} value={value} onChange={onChange} />;
+  const inline = INLINE_KINDS.has(field.kind);
   return (
     <div class="field" data-field={name}>
       <div class="field-row">
@@ -34,38 +61,32 @@ export function SettingsField({ name, field, value, onChange }: FieldProps) {
           </div>
           {field.description && <div class="field-desc">{field.description}</div>}
         </div>
-        {field.kind === "bool" && (
-          <Switch id={id} checked={value === true} label={field.label} onChange={onChange} />
-        )}
-        {field.kind === "shortcut" && <ShortcutRecorder id={id} value={String(value ?? "")} onChange={onChange} />}
+        {inline && control}
       </div>
-      {field.kind === "number" && (
-        <div class="field-control">
-          <NumberControl id={id} field={field} value={Number(value)} onChange={onChange} />
-        </div>
-      )}
-      {field.kind === "string" && (
-        <div class="field-control">
-          <TextControl id={id} secret={field.secret ?? false} placeholder={field.placeholder} value={value} onChange={onChange} />
-        </div>
-      )}
-      {field.kind === "select" && (
-        <div class="field-control">
-          <SelectControl id={id} field={field} value={String(value)} onChange={onChange} />
-        </div>
-      )}
-      {field.kind === "list" && (
-        <div class="field-control">
-          <ListControl id={id} field={field} value={Array.isArray(value) ? (value as string[]) : []} onChange={onChange} />
-        </div>
-      )}
-      {field.kind === "multi" && (
-        <div class="field-control">
-          <MultiControl id={id} field={field} value={Array.isArray(value) ? (value as string[]) : []} onChange={onChange} />
-        </div>
-      )}
+      {!inline && <div class="field-control">{control}</div>}
     </div>
   );
+}
+
+const stringList = (value: unknown): string[] => (Array.isArray(value) ? value : []);
+
+function Control({ id, field, value, onChange }: ControlProps<Field, unknown>) {
+  switch (field.kind) {
+    case "bool":
+      return <Switch id={id} checked={value === true} label={field.label} onChange={onChange} />;
+    case "shortcut":
+      return <ShortcutRecorder id={id} field={field} value={String(value ?? "")} onChange={onChange} />;
+    case "number":
+      return <NumberControl id={id} field={field} value={Number(value)} onChange={onChange} />;
+    case "string":
+      return <TextControl id={id} field={field} value={String(value ?? "")} onChange={onChange} />;
+    case "select":
+      return <SelectControl id={id} field={field} value={String(value)} onChange={onChange} />;
+    case "list":
+      return <ListControl id={id} field={field} value={stringList(value)} onChange={onChange} />;
+    case "multi":
+      return <MultiControl id={id} field={field} value={stringList(value)} onChange={onChange} />;
+  }
 }
 
 export function Switch(props: { id?: string; checked: boolean; label: string; onChange(checked: boolean): void }) {
@@ -84,68 +105,87 @@ export function Switch(props: { id?: string; checked: boolean; label: string; on
   );
 }
 
-/** Commits on a short idle so dragging a slider doesn't write settings on every pixel. */
-function useDebounced(onChange: (value: unknown) => void, delay = 200) {
+/** `onChange`, called once calls stop coming for `delay`. */
+function useDebounced<V>(onChange: (value: V) => void, delay: number) {
   const timer = useRef<ReturnType<typeof setTimeout>>();
   useEffect(() => () => clearTimeout(timer.current), []);
-  return (value: unknown) => {
+  return (value: V) => {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => onChange(value), delay);
   };
 }
 
+/** Local state that follows `value` when it changes from outside. */
 function useDraft<T>(value: T) {
   const [draft, setDraft] = useState(value);
   useEffect(() => setDraft(value), [value]);
   return [draft, setDraft] as const;
 }
 
-const MAX_SLIDER_STEPS = 1000;
-
-function NumberControl({ id, field, value, onChange }: { id: string; field: NumberField; value: number; onChange(v: unknown): void }) {
-  const text = useText();
+function NumberControl({ id, field, value, onChange }: ControlProps<NumberField, number>) {
   const [draft, setDraft] = useDraft(value);
-  const commit = useDebounced(onChange);
-  const step = field.step ?? 1;
-  const clamp = (next: number) => Math.min(field.max ?? Infinity, Math.max(field.min ?? -Infinity, next));
+  const commit = useDebounced(onChange, SLIDER_DEBOUNCE_MS);
   const update = (next: number, debounce = true) => {
     if (!Number.isFinite(next)) return;
-    const clamped = clamp(next);
+    const clamped = clamp(next, field.min ?? -Infinity, field.max ?? Infinity);
     setDraft(clamped);
     if (debounce) commit(clamped);
     else onChange(clamped);
   };
-  const unit = field.unit ?? "";
-  const bounded = field.min !== undefined && field.max !== undefined;
-  const slider = field.variant === "slider" || (field.variant !== "stepper" && bounded && (field.max! - field.min!) / step <= MAX_SLIDER_STEPS);
-
-  if (slider && bounded) {
-    const progress = ((draft - field.min!) / (field.max! - field.min!)) * 100;
-    return (
-      <div class="slider-row">
-        <div class="slider-track" style={{ "--progress": `${progress}%` }}>
-          <input
-            id={id}
-            class="slider"
-            type="range"
-            min={field.min}
-            max={field.max}
-            step={step}
-            value={draft}
-            aria-valuetext={`${draft}${unit}`}
-            onInput={(e) => update(e.currentTarget.valueAsNumber)}
-          />
-        </div>
-        <output class="slider-value" for={id}>
-          {draft}
-          {unit && ` ${unit}`}
-        </output>
-      </div>
-    );
+  const { min, max } = field;
+  // numberVariant only picks a slider for bounded fields; the checks tell TypeScript so.
+  if (numberVariant(field) === "slider" && min !== undefined && max !== undefined) {
+    return <Slider id={id} field={field} min={min} max={max} draft={draft} update={update} />;
   }
+  return <Stepper id={id} field={field} draft={draft} update={update} />;
+}
+
+interface NumberViewProps {
+  id: string;
+  field: NumberField;
+  draft: number;
+  /** Clamps and stores `next`; `debounce: false` commits right away. */
+  update(next: number, debounce?: boolean): void;
+}
+
+function Slider({ id, field, min, max, draft, update }: NumberViewProps & { min: number; max: number }) {
+  const unit = field.unit ?? "";
+  const progress = ((draft - min) / (max - min)) * 100;
+  return (
+    <div class="slider-row">
+      <div class="slider-track" style={{ "--progress": `${progress}%` }}>
+        <input
+          id={id}
+          class="slider"
+          type="range"
+          min={min}
+          max={max}
+          step={field.step ?? 1}
+          value={draft}
+          aria-valuetext={`${draft}${unit}`}
+          onInput={(e) => update(e.currentTarget.valueAsNumber)}
+        />
+      </div>
+      <output class="slider-value" for={id}>
+        {draft}
+        {unit && ` ${unit}`}
+      </output>
+    </div>
+  );
+}
+
+function Stepper({ id, field, draft, update }: NumberViewProps) {
+  const text = useText();
+  const step = field.step ?? 1;
+  const unit = field.unit ?? "";
   return (
     <div class="stepper">
-      <button type="button" class="stepper-button" aria-label={text("settings-ui.decrease", { label: field.label })} onClick={() => update(draft - step, false)}>
+      <button
+        type="button"
+        class="stepper-button"
+        aria-label={text("settings-ui.decrease", { label: field.label })}
+        onClick={() => update(draft - step, false)}
+      >
         −
       </button>
       <input
@@ -153,24 +193,26 @@ function NumberControl({ id, field, value, onChange }: { id: string; field: Numb
         class="stepper-input"
         type="number"
         value={draft}
-        {...(field.min !== undefined ? { min: field.min } : {})}
-        {...(field.max !== undefined ? { max: field.max } : {})}
+        min={field.min}
+        max={field.max}
         step={step}
         onInput={(e) => update(e.currentTarget.valueAsNumber)}
       />
       {unit && <span class="stepper-unit">{unit}</span>}
-      <button type="button" class="stepper-button" aria-label={text("settings-ui.increase", { label: field.label })} onClick={() => update(draft + step, false)}>
+      <button
+        type="button"
+        class="stepper-button"
+        aria-label={text("settings-ui.increase", { label: field.label })}
+        onClick={() => update(draft + step, false)}
+      >
         +
       </button>
     </div>
   );
 }
 
-const MAX_CHIPS = 8;
-
-function SelectControl({ id, field, value, onChange }: { id: string; field: SelectField; value: string; onChange(v: unknown): void }) {
-  const chips = field.variant === "chips" || (field.variant !== "dropdown" && field.options.length <= MAX_CHIPS);
-  if (!chips) {
+function SelectControl({ id, field, value, onChange }: ControlProps<SelectField, string>) {
+  if (selectVariant(field) === "dropdown") {
     return (
       <select id={id} class="dropdown" value={value} onChange={(e) => onChange(e.currentTarget.value)}>
         {field.options.map((o) => (
@@ -199,7 +241,9 @@ function SelectControl({ id, field, value, onChange }: { id: string; field: Sele
   );
 }
 
-function MultiControl({ id, field, value, onChange }: { id: string; field: MultiField; value: string[]; onChange(v: unknown): void }) {
+function MultiControl({ id, field, value, onChange }: ControlProps<MultiField, string[]>) {
+  const toggle = (option: string, checked: boolean) =>
+    onChange(checked ? value.filter((v) => v !== option) : [...value, option]);
   return (
     <div class="chips" id={id} role="group" aria-labelledby={`${id}-label`}>
       {field.options.map((o) => {
@@ -211,7 +255,7 @@ function MultiControl({ id, field, value, onChange }: { id: string; field: Multi
             role="checkbox"
             class="chip"
             aria-checked={checked}
-            onClick={() => onChange(checked ? value.filter((v) => v !== o.value) : [...value, o.value])}
+            onClick={() => toggle(o.value, checked)}
           >
             {o.label}
           </button>
@@ -222,14 +266,17 @@ function MultiControl({ id, field, value, onChange }: { id: string; field: Multi
 }
 
 /** One row per entry; empty entries are dropped when saved. */
-function ListControl({ id, field, value, onChange }: { id: string; field: ListField; value: string[]; onChange(v: unknown): void }) {
+function ListControl({ id, field, value, onChange }: ControlProps<ListField, string[]>) {
   const text = useText();
   const [rows, setRows] = useDraft(value);
-  const commit = useDebounced((next) => onChange((next as string[]).map((v) => v.trim()).filter(Boolean)), 400);
+  const commit = useDebounced((next: string[]) => onChange(next.map((v) => v.trim()).filter(Boolean)), TEXT_DEBOUNCE_MS);
   const update = (next: string[]) => {
     setRows(next);
     commit(next);
   };
+  const setRow = (index: number, row: string) => update(rows.map((v, i) => (i === index ? row : v)));
+  const removeRow = (index: number) => update(rows.filter((_, i) => i !== index));
+  const rowName = (row: string, index: number) => row || text("settings-ui.entry", { number: index + 1 });
   return (
     <div class="list" id={id} role="group" aria-labelledby={`${id}-label`}>
       {rows.map((row, index) => (
@@ -241,9 +288,14 @@ function ListControl({ id, field, value, onChange }: { id: string; field: ListFi
             placeholder={field.placeholder}
             aria-label={`${field.label} ${index + 1}`}
             value={row}
-            onInput={(e) => update(rows.map((v, i) => (i === index ? e.currentTarget.value : v)))}
+            onInput={(e) => setRow(index, e.currentTarget.value)}
           />
-          <button type="button" class="icon-button" aria-label={text("settings-ui.remove", { item: row || text("settings-ui.entry", { number: index + 1 }) })} onClick={() => update(rows.filter((_, i) => i !== index))}>
+          <button
+            type="button"
+            class="icon-button"
+            aria-label={text("settings-ui.remove", { item: rowName(row, index) })}
+            onClick={() => removeRow(index)}
+          >
             ×
           </button>
         </div>
@@ -255,17 +307,17 @@ function ListControl({ id, field, value, onChange }: { id: string; field: ListFi
   );
 }
 
-function TextControl(props: { id: string; secret: boolean; placeholder: string | undefined; value: unknown; onChange(v: unknown): void }) {
-  const [draft, setDraft] = useDraft(String(props.value ?? ""));
-  const commit = useDebounced(props.onChange, 400);
+function TextControl({ id, field, value, onChange }: ControlProps<StringField, string>) {
+  const [draft, setDraft] = useDraft(value);
+  const commit = useDebounced(onChange, TEXT_DEBOUNCE_MS);
   return (
     <input
-      id={props.id}
+      id={id}
       class="text"
-      type={props.secret ? "password" : "text"}
+      type={field.secret ? "password" : "text"}
       autocomplete="off"
       spellcheck={false}
-      placeholder={props.placeholder}
+      placeholder={field.placeholder}
       value={draft}
       onInput={(e) => {
         setDraft(e.currentTarget.value);
@@ -275,9 +327,22 @@ function TextControl(props: { id: string; secret: boolean; placeholder: string |
   );
 }
 
-function ShortcutRecorder({ id, value, onChange }: { id: string; value: string; onChange(v: unknown): void }) {
+function ShortcutRecorder({ id, value, onChange }: ControlProps<ShortcutField, string>) {
   const [recording, setRecording] = useState(false);
   const text = useText();
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (!recording) return;
+    event.preventDefault();
+    if (event.key === "Escape") return setRecording(false);
+    if (event.key === "Backspace" || event.key === "Delete") {
+      setRecording(false);
+      return onChange("");
+    }
+    const accelerator = toAccelerator(event);
+    if (!accelerator) return;
+    setRecording(false);
+    onChange(accelerator);
+  };
   return (
     <button
       id={id}
@@ -287,19 +352,7 @@ function ShortcutRecorder({ id, value, onChange }: { id: string; value: string; 
       title={text("settings-ui.shortcut-hint")}
       onClick={() => setRecording(true)}
       onBlur={() => setRecording(false)}
-      onKeyDown={(event) => {
-        if (!recording) return;
-        event.preventDefault();
-        if (event.key === "Escape") return setRecording(false);
-        if (event.key === "Backspace" || event.key === "Delete") {
-          setRecording(false);
-          return onChange("");
-        }
-        const accelerator = toAccelerator(event);
-        if (!accelerator) return;
-        setRecording(false);
-        onChange(accelerator);
-      }}
+      onKeyDown={onKeyDown}
     >
       {recording ? text("settings-ui.shortcut-recording") : value || text("settings-ui.shortcut-unset")}
     </button>

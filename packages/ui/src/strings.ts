@@ -78,18 +78,14 @@ export function useText(): Text {
 /** A field with its texts in the active language (labels live next to the code, in English). */
 export function localize(t: Translate, owner: string, name: string, field: Field): Field {
   const key = fieldKey(owner, name);
-  const out: Field & { placeholder?: string } = {
+  return {
     ...field,
     label: t(`${key}.label`, field.label),
+    ...(field.description && { description: t(`${key}.description`, field.description) }),
+    ...(field.group && { group: t(groupKey(field.group), field.group) }),
+    ...("placeholder" in field && field.placeholder && { placeholder: t(`${key}.placeholder`, field.placeholder) }),
+    ...("options" in field && {
+      options: field.options.map((option) => ({ ...option, label: t(`${key}.options.${option.value}`, option.label) })),
+    }),
   };
-  if (field.description) out.description = t(`${key}.description`, field.description);
-  if (field.group) out.group = t(groupKey(field.group), field.group);
-  if ("placeholder" in field && field.placeholder) out.placeholder = t(`${key}.placeholder`, field.placeholder);
-  if ("options" in field) {
-    (out as { options: unknown }).options = field.options.map((option) => ({
-      ...option,
-      label: t(`${key}.options.${option.value}`, option.label),
-    }));
-  }
-  return out;
 }
