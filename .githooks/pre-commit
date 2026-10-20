@@ -1,0 +1,6 @@
+#!/bin/sh
+# Installed for everyone by the root `prepare` script (scripts/install-hooks.ts).
+
+# package.json must spell the app name escaped, like pear-desktop always has;
+# package managers un-escape it whenever they rewrite the file.
+exec node scripts/escape-names.ts --staged

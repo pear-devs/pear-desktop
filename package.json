@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prepare": "node scripts/install-hooks.ts",
     "dev": "nub run --filter @pear/desktop dev",
     "build": "nub run --filter @pear/desktop build",
     "typecheck": "nub run -r typecheck",
