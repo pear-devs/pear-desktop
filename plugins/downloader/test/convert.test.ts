@@ -5,8 +5,10 @@ import {
   codecOf,
   ffmetadata,
   ffmpegArgs,
+  loudnessTags,
   metadataOf,
   outputFor,
+  parseLoudness,
   parseProgressLine,
   pictureBlock,
   preferredContainer,
@@ -89,6 +91,33 @@ describe("tags", () => {
     expect(parseProgressLine("out_time_us=12500000")).toBe(12.5);
     expect(parseProgressLine("out_time_ms=1000000")).toBe(1);
     expect(parseProgressLine("progress=continue")).toBeUndefined();
+  });
+});
+
+describe("ReplayGain", () => {
+  const summary = [
+    "[Parsed_ebur128_0 @ 0x7f2800003d00] t: 4.9  TARGET:-23 LUFS    M: -21.8 S: -21.8     I: -21.9 LUFS",
+    "[Parsed_ebur128_0 @ 0x7f2800003d00] Summary:",
+    "",
+    "  Integrated loudness:",
+    "    I:         -21.8 LUFS",
+    "    Threshold: -31.8 LUFS",
+    "",
+    "  True peak:",
+    "    Peak:      -17.9 dBFS",
+  ].join("\n");
+
+  test("reads ffmpeg's ebur128 summary", () => {
+    expect(parseLoudness(summary)).toEqual({ integrated: -21.8, peak: -17.9 });
+    expect(parseLoudness("no summary")).toBeUndefined();
+  });
+
+  test("ReplayGain 2.0 for MP3, R128 for Opus, nothing ffmpeg would drop for M4A", () => {
+    const loudness = { integrated: -14, peak: -1 };
+    expect(loudnessTags("mp3", loudness)).toEqual({ REPLAYGAIN_TRACK_GAIN: "-4.00 dB", REPLAYGAIN_TRACK_PEAK: "0.891251" });
+    expect(loudnessTags("mp3", { integrated: -21.8, peak: -17.9 }).REPLAYGAIN_TRACK_GAIN).toBe("+3.80 dB");
+    expect(loudnessTags("opus", loudness)).toEqual({ R128_TRACK_GAIN: String(-9 * 256) });
+    expect(loudnessTags("m4a", loudness)).toEqual({});
   });
 });
 

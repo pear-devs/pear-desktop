@@ -38,6 +38,12 @@ export interface Cover {
   height: number;
 }
 
+/** EBU R128 loudness of a song: integrated loudness (LUFS) and true peak (dBFS). */
+export interface Loudness {
+  integrated: number;
+  peak: number;
+}
+
 export interface ConvertJob {
   input: string;
   output: string;
@@ -45,6 +51,8 @@ export interface ConvertJob {
   codecArgs: string[];
   tags: Tags;
   cover?: Cover | undefined;
+  /** Also measure the loudness and write ReplayGain tags (the audio itself stays as it is). */
+  replayGain?: boolean | undefined;
   /** The song's length, for progress. */
   duration: number;
   signal: AbortSignal;
@@ -89,6 +97,35 @@ export const codecOf = (mimeType: string): SourceStream["codec"] => {
 
 /** `;FFMETADATA1` escaping: `=`, `;`, `#`, `\` and newlines get a backslash. */
 const escapeMetadata = (value: string) => value.replace(/[=;#\\\n]/g, (char) => `\\${char}`);
+
+/**
+ * ReplayGain 2.0 (reference −18 LUFS) for MP3; Opus has its own R128 tag (−23 LUFS,
+ * Q7.8). ffmpeg's MP4 muxer drops tags it doesn't know, so M4A gets none.
+ */
+export function loudnessTags(ext: Extension, loudness: Loudness): Record<string, string> {
+  if (ext === "m4a") return {};
+  if (ext === "opus") {
+    const q78 = Math.round((-23 - loudness.integrated) * 256);
+    return { R128_TRACK_GAIN: String(Math.max(-32768, Math.min(32767, q78))) };
+  }
+  const gain = -18 - loudness.integrated;
+  return {
+    REPLAYGAIN_TRACK_GAIN: `${gain >= 0 ? "+" : ""}${gain.toFixed(2)} dB`,
+    REPLAYGAIN_TRACK_PEAK: (10 ** (loudness.peak / 20)).toFixed(6),
+  };
+}
+
+/** ffmpeg's `ebur128=peak=true` summary. */
+export function parseLoudness(output: string): Loudness | undefined {
+  const summary = output.slice(output.lastIndexOf("Summary:"));
+  const integrated = /I:\s+(-?[\d.]+) LUFS/.exec(summary)?.[1];
+  const peak = /Peak:\s+(-?[\d.]+|-inf) dBFS/.exec(summary)?.[1];
+  if (integrated === undefined || peak === undefined) return undefined;
+  return { integrated: Number(integrated), peak: peak === "-inf" ? -Infinity : Number(peak) };
+}
+
+/** Measures loudness without writing anything. */
+const LOUDNESS_ARGS = ["-af", "ebur128=peak=true", "-f", "null", "-"];
 
 /**
  * The tags by ffmpeg's names, for a file of type `ext`. ffmpeg writes MP3 lyrics
@@ -170,8 +207,8 @@ export function ffmpegArgs({ input, metadataFile, coverFile, output, ext, codecA
 const muxerOf = (ext: Extension) => (ext === "m4a" ? "ipod" : ext === "opus" ? "ogg" : "mp3");
 
 /** The tags for the metadata file: Opus's cover goes in as a picture block. */
-function metadataFor(job: Pick<ConvertJob, "ext" | "tags" | "cover">) {
-  const extra: Record<string, string> = {};
+function metadataFor(job: Pick<ConvertJob, "ext" | "tags" | "cover">, loudness: Loudness | undefined) {
+  const extra: Record<string, string> = loudness ? loudnessTags(job.ext, loudness) : {};
   if (job.ext === "opus" && job.cover) extra.METADATA_BLOCK_PICTURE = pictureBlock(job.cover);
   return metadataOf(job.tags, job.ext, extra);
 }
@@ -195,10 +232,11 @@ export class NativeConverter implements Converter {
   }
 
   async convert(job: ConvertJob) {
+    const loudness = job.replayGain ? await this.#loudness(job.input, job.signal) : undefined;
     const metadataFile = `${job.output}.meta.txt`;
     const coverFile = job.cover && job.ext !== "opus" ? `${job.output}.cover.jpg` : undefined;
     try {
-      await writeFile(metadataFile, ffmetadata(metadataFor(job)));
+      await writeFile(metadataFile, ffmetadata(metadataFor(job, loudness)));
       if (coverFile) await writeFile(coverFile, job.cover!.data);
       const args = ffmpegArgs({ ...job, metadataFile, coverFile });
       await this.#run(["-y", "-nostdin", "-hide_banner", "-loglevel", "error", "-progress", "pipe:1", "-nostats", ...args], job);
@@ -206,6 +244,11 @@ export class NativeConverter implements Converter {
     } finally {
       await Promise.all([metadataFile, coverFile].map((file) => file && rm(file, { force: true })));
     }
+  }
+
+  async #loudness(input: string, signal: AbortSignal) {
+    const { stderr } = await this.#spawn(["-nostdin", "-hide_banner", "-nostats", "-i", input, ...LOUDNESS_ARGS], signal);
+    return parseLoudness(stderr);
   }
 
   async #run(args: string[], job: ConvertJob) {
@@ -271,7 +314,7 @@ export async function addMp3Lyrics(file: Buffer, lyrics: string): Promise<Buffer
 }
 
 /** MP3 tags as pear-desktop wrote them after ffmpeg.wasm: with node-id3. */
-export async function tagMp3(file: Buffer, tags: Tags, cover: Cover | undefined): Promise<Buffer> {
+export async function tagMp3(file: Buffer, tags: Tags, cover: Cover | undefined, extra: Record<string, string> = {}): Promise<Buffer> {
   const { default: NodeID3 } = await import("node-id3");
   const id3: Id3Tags = { title: tags.title };
   if (tags.artist) id3.artist = tags.artist;
@@ -280,6 +323,8 @@ export async function tagMp3(file: Buffer, tags: Tags, cover: Cover | undefined)
   if (tags.year) id3.year = String(tags.year);
   if (tags.track) id3.trackNumber = tags.trackCount ? `${tags.track}/${tags.trackCount}` : String(tags.track);
   if (tags.lyrics) id3.unsynchronisedLyrics = lyricsFrame(tags.lyrics);
+  const userTags = Object.entries(extra).map(([description, value]) => ({ description, value }));
+  if (userTags.length > 0) id3.userDefinedText = userTags;
   if (cover) {
     const FRONT_COVER = 3;
     id3.image = { mime: "image/jpeg", type: { id: FRONT_COVER }, description: "Cover", imageBuffer: cover.data };
@@ -313,8 +358,9 @@ export class WasmConverter implements Converter {
     const mp3 = job.ext === "mp3";
     ffmpeg.FS("writeFile", names.input, await readFile(job.input));
     try {
+      const loudness = job.replayGain ? parseLoudness(await this.#run(ffmpeg, ["-i", names.input, ...LOUDNESS_ARGS], job, () => {})) : undefined;
       // MP3 tags come from node-id3 afterwards.
-      const metadata = mp3 ? metadataOf({ title: job.tags.title }, job.ext) : metadataFor(job);
+      const metadata = mp3 ? metadataOf({ title: job.tags.title }, job.ext) : metadataFor(job, loudness);
       ffmpeg.FS("writeFile", names.metadata, new TextEncoder().encode(ffmetadata(metadata)));
       const cover = !mp3 && job.cover && job.ext !== "opus";
       if (cover) ffmpeg.FS("writeFile", names.cover, job.cover!.data);
@@ -333,7 +379,8 @@ export class WasmConverter implements Converter {
       } catch {
         throw new Error(lastLine(log) || "ffmpeg.wasm couldn't convert the song");
       }
-      const file = mp3 ? await tagMp3(Buffer.from(data), job.tags, job.cover) : data;
+      const extra = loudness ? loudnessTags(job.ext, loudness) : {};
+      const file = mp3 ? await tagMp3(Buffer.from(data), job.tags, job.cover, extra) : data;
       await writeFile(job.output, file);
     } finally {
       for (const name of Object.values(names)) {

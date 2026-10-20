@@ -939,6 +939,13 @@
         "archive": {
           "label": "…even when their files were renamed",
           "description": "Remembers what was downloaded to a folder by song, in a list there (yt-dlp's download archive)."
+        },
+        "replayGain": {
+          "label": "Add ReplayGain tags",
+          "description": "Measures each song's loudness so players can even it out; the audio stays as it is. MP3 and Opus, with the built-in downloader."
+        },
+        "notifyWhenHidden": {
+          "label": "Notify me when a download finishes while the window is hidden"
         }
       },
       "errors": {

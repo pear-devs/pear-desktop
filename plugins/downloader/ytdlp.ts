@@ -178,6 +178,11 @@ export function parseLine(line: string): OutputEvent | undefined {
   return undefined;
 }
 
+/** A file yt-dlp starts writing ("[download] Destination: …", also its post-processors'), to remove if cancelled. */
+export function parseDestination(line: string): string | undefined {
+  return /^\[\w+\] Destination: (.+)$/.exec(line.trim())?.[1];
+}
+
 /** Parses `yt-dlp -v`'s debug header. */
 export function parseProbe(output: string): Capabilities {
   const field = (name: string) => new RegExp(`\\[debug\\] ${name}: (.*)`).exec(output)?.[1] ?? "";

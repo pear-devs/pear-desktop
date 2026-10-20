@@ -1,10 +1,10 @@
 // The yt-dlp engine: runs yt-dlp for a job and reads its progress (host only).
 
-import { spawn } from "node:child_process";
-import { mkdir } from "node:fs/promises";
+import { type ChildProcess, execFile, spawn } from "node:child_process";
+import { mkdir, rm } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import type { ReadyTools } from "../tools.ts";
-import { type ArgsOptions, buildArgs, overallProgress, parseLine } from "../ytdlp.ts";
+import { type ArgsOptions, buildArgs, overallProgress, parseDestination, parseLine } from "../ytdlp.ts";
 import type { Engine, EngineJob, EngineResult, Progress } from "./types.ts";
 
 export interface YtDlpOptions {
@@ -41,14 +41,18 @@ export class YtDlpEngine implements Engine {
   }
 
   async #spawn(tools: ReadyTools, options: ArgsOptions, progress: Progress, signal: AbortSignal): Promise<EngineResult> {
-    const child = spawn(tools.ytDlp, buildArgs(options), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
-    const kill = () => child.kill();
+    // Its own process group, so cancelling also stops the ffmpeg it runs.
+    const child = spawn(tools.ytDlp, buildArgs(options), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true, detached: !WINDOWS });
+    const kill = () => killTree(child);
     signal.addEventListener("abort", kill, { once: true });
 
     const files: string[] = [];
     const errors: string[] = [];
+    const started = new Set<string>();
     let item = { index: 1, count: 1 };
     const onLine = (line: string) => {
+      const destination = parseDestination(line);
+      if (destination) started.add(destination);
       const event = parseLine(line);
       if (!event) return;
       switch (event.type) {
@@ -83,6 +87,30 @@ export class YtDlpEngine implements Engine {
       return { files };
     } finally {
       signal.removeEventListener("abort", kill);
+      if (signal.aborted) await removePartial(started, files);
     }
   }
+}
+
+const WINDOWS = process.platform === "win32";
+
+/** Stops yt-dlp and what it started: its process group, or on Windows its process tree. */
+export function killTree(child: ChildProcess) {
+  if (child.pid === undefined || child.exitCode !== null) return;
+  if (WINDOWS) {
+    execFile("taskkill", ["/pid", String(child.pid), "/T", "/F"], { windowsHide: true }, () => {});
+    return;
+  }
+  try {
+    process.kill(-child.pid, "SIGTERM");
+  } catch {
+    child.kill();
+  }
+}
+
+/** What a cancelled yt-dlp leaves: parts, its resume notes, and files it hadn't finished. */
+async function removePartial(started: Set<string>, finished: readonly string[]) {
+  const unfinished = [...started].filter((file) => !finished.includes(file));
+  const leftovers = [...started].flatMap((file) => [`${file}.part`, `${file}.ytdl`]);
+  await Promise.all([...unfinished, ...leftovers].map((file) => rm(file, { force: true }).catch(() => {})));
 }

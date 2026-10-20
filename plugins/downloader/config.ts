@@ -49,12 +49,17 @@ export const downloaderConfig = {
     description: "Remembers what was downloaded to a folder by song, in a list there (yt-dlp's download archive).",
   }),
   squareCover: config.bool(true, { label: "Crop cover art to a square" }),
+  replayGain: config.bool(false, {
+    label: "Add ReplayGain tags",
+    description: "Measures each song's loudness so players can even it out; the audio stays as it is. MP3 and Opus, with the built-in downloader.",
+  }),
   lyrics: config.bool(false, {
     label: "Add lyrics to the files",
     description: "Looked up on LRCLib, as synced-lyrics does. Only the built-in downloader adds them.",
     group: "Lyrics",
   }),
   lyricsFile: config.bool(false, { label: "Also save synced lyrics as an .lrc file next to the song", group: "Lyrics" }),
+  notifyWhenHidden: config.bool(true, { label: "Notify me when a download finishes while the window is hidden" }),
   autoDownload: config.bool(false, {
     label: "Download everything I listen to",
     description: "Saves each song shortly before it ends.",

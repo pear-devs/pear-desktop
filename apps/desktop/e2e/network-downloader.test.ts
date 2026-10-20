@@ -11,7 +11,7 @@ import { expect, type Launch, test } from "./fixtures.ts";
 import { pause } from "./helpers/playback.ts";
 import { invoke, pluginError, pluginStatus, setConfig } from "./helpers/plugins.ts";
 import { openSettings, pluginRow, searchbox } from "./helpers/settings.ts";
-import { mainWindow, playTestTrack } from "./launch.ts";
+import { mainWindow, playTestTrack, TEST_TRACK } from "./launch.ts";
 
 // Rick Astley, "Whenever You Need Somebody": an album page that works logged out.
 const ALBUM_URL = ytmUrl("/playlist?list=OLAK5uy_nmDUsWOMoEcz0SsVqUwir0oxu-k1oUyXE");
@@ -208,7 +208,7 @@ test("downloader downloads yt-dlp and ffmpeg when neither is installed", async (
 test("downloader converts with ffmpeg.wasm when there is no ffmpeg, without downloading anything", async ({ launch, tempDir }) => {
   test.skip(!hasTool("ffprobe"), "needs ffprobe to check the file");
   test.setTimeout(150_000);
-  const { app, page, folder } = await launchDownloader({ launch, tempDir }, { format: "mp3" }, NO_SYSTEM_TOOLS);
+  const { app, page, folder } = await launchDownloader({ launch, tempDir }, { format: "mp3", replayGain: true }, NO_SYSTEM_TOOLS);
   await expect.poll(() => status(page), { timeout: 20_000 }).toBe(
     "Downloading with the built-in downloader, converting with the built-in ffmpeg; yt-dlp is downloaded when that fails.",
   );
@@ -226,6 +226,8 @@ test("downloader converts with ffmpeg.wasm when there is no ffmpeg, without down
   );
   expect(format.tags.title).toBeTruthy();
   expect(format.tags.artist).toBeTruthy();
+  // ffmpeg.wasm measured the loudness.
+  expect(format.tags.REPLAYGAIN_TRACK_GAIN).toMatch(/^[+-]\d+\.\d\d dB$/);
   // node-id3 wrote the cover, square.
   const cover = streams.find((s) => s.codec_type === "video");
   expect(cover?.width).toBe(cover?.height);
@@ -234,7 +236,7 @@ test("downloader converts with ffmpeg.wasm when there is no ffmpeg, without down
 test("downloader saves an album into its own folder, two songs at a time, with the album's tags", async ({ launch, tempDir }) => {
   test.skip(!hasTool("ffmpeg") || !hasTool("ffprobe"), "needs ffmpeg");
   test.setTimeout(150_000);
-  const { page, folder } = await launchDownloader({ launch, tempDir }, { format: "opus", playlistMaxItems: 2 });
+  const { page, folder } = await launchDownloader({ launch, tempDir }, { format: "opus", playlistMaxItems: 2, replayGain: true });
   await expect.poll(() => invoke(page, "downloader", "state").catch(() => null)).toBeTruthy();
   await invoke(page, "downloader", "download", { videoId: "", playlistId: new URL(ALBUM_URL).searchParams.get("list")! }, "album");
   await expect
@@ -248,8 +250,43 @@ test("downloader saves an album into its own folder, two songs at a time, with t
   // Ogg keeps the tags on the audio stream; ffprobe shows the cover's picture block as a picture stream.
   const tags = tracks.map(({ streams }) => streams.find((s) => s.codec_type === "audio")!.tags!);
   expect(tags.map((t) => t.track).sort()).toEqual(["1/2", "2/2"]);
-  for (const t of tags) expect(t).toMatchObject({ album: "Whenever You Need Somebody", album_artist: "Rick Astley", date: "1987" });
+  for (const t of tags) {
+    expect(t).toMatchObject({ album: "Whenever You Need Somebody", album_artist: "Rick Astley", date: "1987" });
+    expect(t.R128_TRACK_GAIN).toMatch(/^-?\d+$/);
+  }
   for (const { streams } of tracks) expect(streams.some((s) => s.codec_type === "video")).toBe(true);
+});
+
+test("downloader leaves nothing half-written when a download is cancelled", async ({ launch, tempDir }) => {
+  test.setTimeout(120_000);
+  const { page, folder } = await launchDownloader({ launch, tempDir }, { format: "opus", playlistFolders: false });
+  await expect.poll(() => invoke(page, "downloader", "state").catch(() => null)).toBeTruthy();
+  await invoke(page, "downloader", "download", { videoId: "", playlistId: new URL(ALBUM_URL).searchParams.get("list")! }, "album");
+  const state = () => invoke<{ active?: { stage: string; progress: number }; recent: { cancelled?: boolean }[] }>(page, "downloader", "state");
+  await expect.poll(async () => (await state()).active?.progress ?? 0, { timeout: 60_000 }).toBeGreaterThan(0);
+  await invoke(page, "downloader", "cancel");
+  await expect.poll(async () => (await state()).recent[0]?.cancelled).toBe(true);
+  expect(songFiles(folder).filter((file) => /\.(part|temp\.\w+|meta\.txt|cover\.jpg)$/.test(file))).toEqual([]);
+});
+
+test("downloader notifies when a download finishes while the window is hidden", async ({ launch, tempDir }) => {
+  test.setTimeout(120_000);
+  const { app, page } = await launchDownloader({ launch, tempDir }, { format: "opus" });
+  await expect.poll(() => invoke(page, "downloader", "state").catch(() => null)).toBeTruthy();
+  // Hidden once the app has shown it (it shows the window when the page is ready).
+  await expect.poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().some((window) => window.isVisible()))).toBe(true);
+  await app.evaluate(({ BrowserWindow, Notification }) => {
+    const shown: string[] = [];
+    Object.assign(globalThis, { shownNotifications: shown });
+    Notification.prototype.show = function (this: Electron.Notification) {
+      shown.push(this.body);
+    };
+    for (const window of BrowserWindow.getAllWindows()) window.hide();
+  });
+  await invoke(page, "downloader", "download", { videoId: TEST_TRACK }, "Test song");
+  await expect
+    .poll(() => app.evaluate(() => (globalThis as unknown as { shownNotifications: string[] }).shownNotifications), { timeout: 90_000 })
+    .toEqual(["Saved “Test song”"]);
 });
 
 test("downloader adds Download to the menus of songs and albums, as pear-desktop", async ({ launch, tempDir }) => {

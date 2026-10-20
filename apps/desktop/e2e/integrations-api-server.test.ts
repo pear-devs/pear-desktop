@@ -237,11 +237,20 @@ test("plugins' RPC methods are callable, validated, documented and follow the pl
   await expect.poll(() => ws.messages[0]?.type).toBe("PLAYER_INFO");
   const download = await call("downloader/download", { videoId: TEST_TRACK });
   expect(download.status).toBe(200);
-  expect(await download.json()).toMatchObject({ id: expect.anything() });
+  const { id } = (await download.json()) as { id: number };
+  expect(id).toEqual(expect.anything());
+  // Its progress, as an event and from the queue.
+  await expect
+    .poll(() => ws.messages.find((m) => m.type === "PLUGIN_EVENT" && m.event === "progress" && (m.data as { active?: unknown }).active), {
+      timeout: 30_000,
+    })
+    .toMatchObject({ plugin: "downloader", data: { active: expect.objectContaining({ id }) } });
+  expect(await (await call("downloader/queue")).json()).toMatchObject({ queued: 0, recent: [] });
   expect((await call("downloader/cancel")).status).toBe(204);
   await expect
-    .poll(() => ws.messages.find((m) => m.type === "PLUGIN_EVENT"), { timeout: 30_000 })
-    .toMatchObject({ plugin: "downloader", event: "result", data: expect.objectContaining({ cancelled: true }) });
+    .poll(() => ws.messages.find((m) => m.type === "PLUGIN_EVENT" && m.event === "result"), { timeout: 30_000 })
+    .toMatchObject({ plugin: "downloader", data: expect.objectContaining({ cancelled: true }) });
+  expect(await (await call("downloader/queue")).json()).toMatchObject({ queued: 0, recent: [expect.objectContaining({ id, cancelled: true })] });
 
   // Disabling the plugin takes its methods away live.
   await setEnabled(page, "sponsorblock", false);

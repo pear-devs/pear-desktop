@@ -34,6 +34,8 @@ export interface BuiltInJobOptions {
   /** Also skip songs the folder's archive lists, and add the downloaded ones to it. */
   archive: boolean;
   squareCover: boolean;
+  /** Measure loudness and write ReplayGain tags. */
+  replayGain: boolean;
   /** Lyrics in the tags, and synced ones in an .lrc file next to the song. */
   lyrics: boolean;
   lyricsFile: boolean;
@@ -282,7 +284,7 @@ export class InnertubeEngine implements Engine {
     const format = await recoverable(async () => chooseAudio(info, options.format), signal);
     const { ext, codecArgs } = outputFor(options.format, { codec: codecOf(format.mime_type) });
 
-    const fields = templateFields(entry.videoId, tags, ext, list, info.basic_info.duration);
+    const fields = templateFields(entry, tags, ext, list, info.basic_info.duration);
     const relative = renderTemplate(options.template, fields);
     const folder = list && options.playlistFolders ? join(options.folder, playlistFolder(fields)) : options.folder;
     const file = join(folder, relative);
@@ -307,6 +309,7 @@ export class InnertubeEngine implements Engine {
         codecArgs,
         tags,
         cover,
+        replayGain: options.replayGain,
         duration: info.basic_info.duration ?? 0,
         signal,
         onProgress: (fraction) => progress.convert(fraction),
@@ -463,9 +466,9 @@ function albumTags(album: AlbumInfo, track: number, count: number): Partial<Tags
   return tags;
 }
 
-function templateFields(id: string, tags: Tags, ext: string, list: ListInfo | undefined, duration: number | undefined): TemplateFields {
+function templateFields(entry: Entry, tags: Tags, ext: string, list: ListInfo | undefined, duration: number | undefined): TemplateFields {
   return {
-    id,
+    id: entry.videoId,
     title: tags.title,
     ext,
     artist: tags.artist,
@@ -473,7 +476,7 @@ function templateFields(id: string, tags: Tags, ext: string, list: ListInfo | un
     album_artist: tags.albumArtist,
     release_year: tags.year,
     track_number: tags.track,
-    playlist_index: list && tags.track,
+    playlist_index: list && entry.index,
     playlist_title: list?.title,
     playlist_id: list?.id,
     n_entries: list?.count,

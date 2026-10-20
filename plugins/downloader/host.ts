@@ -5,7 +5,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { type HostContextOf, livePosition, type NowPlaying, type Track } from "@pear/sdk";
 import { YTM_ORIGIN } from "@pear/sdk/util";
-import { nativeImage, net } from "electron";
+import { Notification, nativeImage, net } from "electron";
 import { archivePath } from "./archive.ts";
 import type { downloaderConfig } from "./config.ts";
 import { chooseConverter, type Converter, type Cover, WasmConverter, type WasmFFmpeg } from "./convert.ts";
@@ -148,6 +148,7 @@ class Publisher {
   readonly #tools: Tools;
   #published = 0;
   #timer: ReturnType<typeof setTimeout> | undefined;
+  #broadcast = "";
 
   constructor(ctx: Ctx, tools: Tools) {
     this.#ctx = ctx;
@@ -171,6 +172,15 @@ class Publisher {
     if (!downloader) return;
     ctx.emit("state", stateOf(downloader));
     this.#showProgress(downloader.queue.state);
+    this.#broadcastProgress(downloader.queue.state);
+  }
+
+  /** API clients get the queue's progress when it changes, as often as the page does. */
+  #broadcastProgress(state: QueueState) {
+    const json = JSON.stringify(state);
+    if (json === this.#broadcast) return;
+    this.#broadcast = json;
+    this.#ctx.api.broadcast("progress", state);
   }
 
   // As pear-desktop: progress on the taskbar / dock icon, and how many downloads are left.
@@ -198,6 +208,7 @@ function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, remember: (r
         void tools.update(UPDATE_AFTER_FAILURE_MS);
       }
       remember(result);
+      notifyWhenHidden(ctx, result);
       ctx.emit("result", result);
       ctx.api.broadcast("result", result);
     },
@@ -265,6 +276,7 @@ function createBuiltInEngine(ctx: Ctx, tools: Tools, autoJobs: Set<number>) {
         skipExisting: config.skipExisting,
         archive: config.archive,
         squareCover: config.squareCover,
+        replayGain: config.replayGain,
         lyrics: config.lyrics,
         lyricsFile: config.lyricsFile,
       };
@@ -305,6 +317,24 @@ async function fetchCover(ctx: Ctx, url: string, square: boolean, signal: AbortS
   }
   const size = image.getSize();
   return { data: image.toJPEG(COVER_QUALITY), width: size.width, height: size.height };
+}
+
+/** The page's toast can't be seen with the window hidden or minimized; a system notification can. */
+function notifyWhenHidden(ctx: Ctx, result: JobResult) {
+  const { window, t } = ctx;
+  if (!ctx.config.notifyWhenHidden || result.cancelled || !Notification.isSupported()) return;
+  if (window.isDestroyed() || (window.isVisible() && !window.isMinimized())) return;
+  const notification = new Notification({ title: t("plugins.downloader.name", "Downloader"), body: resultMessage(ctx, result) });
+  notification.on("click", () => ctx.focusWindow());
+  notification.show();
+}
+
+/** What the toast says about a finished download. */
+function resultMessage({ t }: Ctx, result: JobResult) {
+  if (result.error) return t("plugins.downloader.toast.failed", "Download failed: {{error}}", { error: result.error });
+  const count = result.files.length;
+  if (count > 1) return t("plugins.downloader.toast.saved-many", "Saved {{count}} songs from “{{title}}”", { count, title: result.label });
+  return t("plugins.downloader.toast.saved", "Saved “{{title}}”", { title: result.label });
 }
 
 /** Automatic downloads go to their own folder when one is set. */

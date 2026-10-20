@@ -76,8 +76,16 @@ export default definePlugin({
           return stateOf(downloaderOf(this));
         },
       },
+      queue: {
+        summary: "The running download, how many are queued, and the last ones that finished",
+        input: v.optional(v.object({})),
+        run() {
+          const { active, queued, recent } = stateOf(downloaderOf(this));
+          return { active, queued, recent };
+        },
+      },
       cancel: {
-        summary: "Cancel the running download",
+        summary: "Cancel the running download and the queued ones",
         input: v.optional(v.object({})),
         run() {
           downloaderOf(this).queue.cancel();
