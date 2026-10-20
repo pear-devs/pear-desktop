@@ -81,15 +81,15 @@ test("shows synced lyrics in the Lyrics tab, follows playback and seeks on click
     await expect(active).toContainText("strangers");
 
     // The provider picker shows what each provider found.
-    await expect(lyrics(page).locator('.chip[data-provider="lrclib"]')).toHaveAttribute("aria-checked", "true");
+    await expect(lyrics(page).locator('.chip[data-provider="LRCLib"]')).toHaveAttribute("aria-checked", "true");
     // Switching to an unsynced provider shows plain lyrics.
-    const genius = lyrics(page).locator('.chip[data-provider="genius"]');
+    const genius = lyrics(page).locator('.chip[data-provider="LyricsGenius"]');
     await expect(genius).toHaveAttribute("data-status", /found|none|error/, { timeout: 30_000 });
     if ((await genius.getAttribute("data-status")) === "found") {
       await genius.click();
       await expect(lyrics(page)).toHaveAttribute("data-state", "plain");
       await screenshot(app, "lyrics-plain");
-      await lyrics(page).locator('.chip[data-provider="lrclib"]').click();
+      await lyrics(page).locator('.chip[data-provider="LRCLib"]').click();
       await expect(lyrics(page)).toHaveAttribute("data-state", "synced");
     }
 
@@ -164,6 +164,33 @@ test("highlights word by word when the provider has word timing", async () => {
       return first === 1 && third! > 0 && third! < 1 && last === 0;
     }).toBe(true);
     await screenshot(app, "lyrics-words");
+  } finally {
+    await close(app);
+  }
+});
+
+test("Megalobiz lyrics as pear-desktop's preferred provider; Musixmatch says it needs a token", async () => {
+  test.setTimeout(180_000);
+  // pear-desktop's provider name, as its config.json stores it.
+  const app = await launchApp({ plugins: { "synced-lyrics": { enabled: true, config: { preferredProvider: "Megalobiz" } } } });
+  try {
+    const page = await mainWindow(app);
+    await playTestTrack(page);
+    await waitForTrackPlaying(page);
+    await page.locator("ytmusic-player-page tp-yt-paper-tab").nth(1).click();
+
+    const megalobiz = lyrics(page).locator('.chip[data-provider="Megalobiz"]');
+    await expect(megalobiz).toHaveAttribute("data-status", "found", { timeout: 30_000 });
+    await expect(megalobiz).toHaveAttribute("aria-checked", "true");
+    await expect(lyrics(page)).toHaveAttribute("data-state", "synced");
+    await expect(lyrics(page).locator(".lines .line").filter({ hasText: /strangers to love/i }).first()).toBeAttached();
+    // Megalobiz's terms ask to link to the sheet.
+    await expect(lyrics(page).locator(".source a")).toHaveAttribute("href", /^https:\/\/megalobiz\.com\/lrc\/\d+/);
+
+    // Anonymous Musixmatch only has decoy lyrics: it reports why instead of showing them.
+    const musixmatch = lyrics(page).locator('.chip[data-provider="MusixMatch"]');
+    await expect(musixmatch).toHaveAttribute("data-status", "error", { timeout: 30_000 });
+    await expect(musixmatch).toHaveAttribute("title", /user token/);
   } finally {
     await close(app);
   }

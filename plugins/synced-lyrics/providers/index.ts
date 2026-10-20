@@ -4,11 +4,24 @@ import type { LyricResult, ProviderId, SearchQuery } from "../types.ts";
 import { genius } from "./genius.ts";
 import type { Fetch } from "./http.ts";
 import { lrclib } from "./lrclib.ts";
+import { megalobiz } from "./megalobiz.ts";
+import { musixmatch, type MusixmatchOptions } from "./musixmatch.ts";
 import { ytmusic } from "./ytmusic.ts";
 
-export type Provider = (query: SearchQuery, fetch: Fetch) => Promise<LyricResult | null>;
+/** Settings and helpers some providers need. */
+export interface ProviderOptions {
+  musixmatch: MusixmatchOptions;
+}
 
-export const providers: Record<ProviderId, Provider> = { lrclib, ytmusic, genius };
+export type Provider = (query: SearchQuery, fetch: Fetch, options: ProviderOptions) => Promise<LyricResult | null>;
+
+export const providers: Record<ProviderId, Provider> = {
+  LRCLib: lrclib,
+  YTMusic: ytmusic,
+  MusixMatch: (query, fetch, options) => musixmatch(query, fetch, options.musixmatch),
+  Megalobiz: megalobiz,
+  LyricsGenius: genius,
+};
 
 const CACHE_SIZE = 500;
 

@@ -36,6 +36,7 @@ a desktop client for YTM with a plugin system, built on Electron.
 | `custom-output-device` | Custom output device | Play through a chosen audio device instead of the system default. |
 | `disable-autoplay` | Disable autoplay | Starts every track paused instead of playing it automatically. |
 | `discord` | Discord Rich Presence | Show your friends what you're listening to in your Discord status. |
+| `do-not-track` | Do Not Track | Blocks tracking: strips ad and tracking data from the player, or filters requests with tracker blocklists (works alongside `adblock`). |
 | `downloader` | Downloader | Saves songs, albums and playlists as tagged audio files with cover art, using yt-dlp. |
 | `equalizer` | Equalizer | A 10-band equalizer with presets. |
 | `exponential-volume` | Exponential volume | Makes the volume slider follow loudness perception, giving finer control at low volumes. |
@@ -45,6 +46,7 @@ a desktop client for YTM with a plugin system, built on Electron.
 | `music-together` | Music Together | Listen in sync with friends: host a session, share the code, and everyone hears the same thing. |
 | `navigation` | Navigation buttons | Back and forward buttons in the top bar. |
 | `notifications` | Notifications | Show a desktop notification when a new song starts. |
+| `performance-improvement` | Performance improvement | Lowers CPU use with CY Fung's scripts: batches the page's timers onto animation frames and reuses YTM's list elements. Takes effect after a restart. |
 | `picture-in-picture` | Picture in picture | Watch in a small floating window, from the track menu or a hotkey. |
 | `playback-speed` | Playback speed | Adds a speed control to the player bar (scroll over it for fine steps). |
 | `precise-volume` | Precise volume | Change the volume in fine steps with the scroll wheel or arrow keys, with a volume readout. |
@@ -64,9 +66,9 @@ a desktop client for YTM with a plugin system, built on Electron.
 | `video-toggle` | Video toggle | Switch between a track's music video and its cover art, or hide the video entirely. |
 | `visualizer` | Visualizer | Shows a music visualizer in place of the album art on the player page. |
 
-Not ported from pear-desktop: `performance-improvement` (global timer patches that
-can't be undone live and interfere with the player). Musixmatch lyrics are gone
-too: its anonymous token now returns decoy lyrics.
+Musixmatch lyrics (synced-lyrics) need a Musixmatch user token in the
+settings: Musixmatch answers anonymous apps with an all-zero token that only
+gets decoy lyrics.
 
 ## Layout
 

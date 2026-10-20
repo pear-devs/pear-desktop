@@ -174,6 +174,7 @@ export const lyricsStyles = css`
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
 
   .source { margin-top: 28px; color: var(--faint); font-size: 12px; }
+  .source a { color: inherit; text-decoration: underline; }
 
   .skeleton { display: flex; flex-direction: column; gap: 18px; padding-top: 8px; }
   .skeleton span {

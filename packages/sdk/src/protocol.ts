@@ -20,7 +20,7 @@ export interface PluginState {
 }
 
 export interface PluginMeta {
-  /** Has a beforeReady hook: enabling/disabling only fully applies after a restart. */
+  /** `restartRequired` or a beforeReady/windowOptions hook: enabling/disabling only fully applies after a restart. */
   restartRequired: boolean;
 }
 

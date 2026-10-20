@@ -1,5 +1,6 @@
 import { config, definePlugin } from "@pear/sdk";
 import { css } from "@pear/sdk/macros" with { type: "macro" };
+import { shell } from "electron";
 import { hostOf, hosts, LyricsHost } from "./host.ts";
 import { mountLyrics, pages } from "./page/mount.tsx";
 import type { LyricResult, ProviderId, SearchQuery } from "./types.ts";
@@ -13,10 +14,13 @@ export default definePlugin({
     preferredProvider: config.select(
       "auto",
       [
+        // pear-desktop's provider names, so its setting carries over.
         { value: "auto", label: "Best available" },
-        { value: "lrclib", label: "LRCLIB" },
-        { value: "ytmusic", label: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music" },
-        { value: "genius", label: "Genius" },
+        { value: "LRCLib", label: "LRCLIB" },
+        { value: "YTMusic", label: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music" },
+        { value: "MusixMatch", label: "Musixmatch" },
+        { value: "Megalobiz", label: "Megalobiz" },
+        { value: "LyricsGenius", label: "Genius" },
       ],
       { label: "Preferred provider", description: "Used whenever it has lyrics; otherwise word-synced beats line-synced beats plain." },
     ),
@@ -66,6 +70,12 @@ export default definePlugin({
       label: "Show lyrics even if inexact",
       description: "Also try looser searches; may occasionally match a different version of the song.",
     }),
+    musixmatchToken: config.string("", {
+      label: "Musixmatch user token",
+      description:
+        "Musixmatch only serves lyrics to signed-in apps: the usertoken of your own Musixmatch desktop app session. Without one, Musixmatch reports that it needs it.",
+      secret: true,
+    }),
   },
   host: {
     start(ctx) {
@@ -76,7 +86,13 @@ export default definePlugin({
     onConfigChange() {},
     commands: {
       search(provider: ProviderId, query: SearchQuery): Promise<LyricResult | null> {
-        return hostOf(this).search(provider, query);
+        const t = (key: string, fallback: string) => this.t(key, fallback);
+        return hostOf(this).search(provider, query, { musixmatch: { userToken: this.config.musixmatchToken, t } });
+      },
+      /** Opens a lyrics page at its provider (Megalobiz asks to be linked). */
+      openSource(url: string) {
+        if (!/^https:\/\/(www\.)?megalobiz\.com\//.test(url)) throw new Error("not a lyrics page");
+        return shell.openExternal(url);
       },
       romanize(lines: string[]) {
         return hostOf(this).romanize(lines);

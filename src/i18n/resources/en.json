@@ -697,7 +697,31 @@
       "menu": {
         "blocker": "Blocker"
       },
-      "name": "Do Not Track"
+      "name": "Do Not Track",
+      "settings": {
+        "blocker": {
+          "label": "Blocker",
+          "description": "In the player removes ad and tracking placements from \u0059\u006f\u0075\u0054\u0075\u0062\u0065's player data; with blocklists filters network requests with pear-desktop's curated tracker lists. Works alongside the Ad blocker plugin: both can be on, each filters with its own lists.",
+          "options": {
+            "In player": "In the player",
+            "With blocklists": "With blocklists"
+          }
+        },
+        "cache": {
+          "label": "Cache the blocklists",
+          "description": "Starts blocking instantly on launch; lists refresh in the background."
+        },
+        "additionalBlockLists": {
+          "label": "Additional blocklists",
+          "description": "URLs of extra lists in Adblock Plus / uBlock syntax.",
+          "placeholder": "https://…/filters.txt"
+        },
+        "disableDefaultLists": {
+          "label": "Disable the default blocklists",
+          "description": "Only use the additional blocklists."
+        }
+      },
+      "no-lists": "No blocklists: enable the default ones or add your own."
     },
     "downloader": {
       "backend": {
@@ -1431,7 +1455,12 @@
             "auto": "Best available",
             "lrclib": "LRCLIB",
             "ytmusic": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music",
-            "genius": "Genius"
+            "genius": "Genius",
+            "LRCLib": "LRCLIB",
+            "YTMusic": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music",
+            "MusixMatch": "Musixmatch",
+            "Megalobiz": "Megalobiz",
+            "LyricsGenius": "Genius"
           }
         },
         "lineEffect": {
@@ -1474,7 +1503,15 @@
         "showLyricsEvenIfInexact": {
           "label": "Show lyrics even if inexact",
           "description": "Also try looser searches; may occasionally match a different version of the song."
+        },
+        "musixmatchToken": {
+          "label": "Musixmatch user token",
+          "description": "Musixmatch only serves lyrics to signed-in apps: the usertoken of your own Musixmatch desktop app session. Without one, Musixmatch reports that it needs it."
         }
+      },
+      "musixmatch": {
+        "no-token": "Musixmatch only gives lyrics to signed-in apps: set a Musixmatch user token in the settings",
+        "token-rejected": "Musixmatch rejected the user token (expired, or asking for a captcha)"
       }
     },
     "taskbar-mediacontrol": {
@@ -1855,7 +1892,8 @@
       "performance": "Performance",
       "network": "Network",
       "access": "Access",
-      "https": "HTTPS"
+      "https": "HTTPS",
+      "blocklists": "Blocklists"
     },
     "title": "Settings",
     "search-placeholder": "Search settings",

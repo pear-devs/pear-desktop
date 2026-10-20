@@ -23,6 +23,8 @@ export interface ViewProps {
   seek(ms: number): void;
   /** The element that scrolls the lyrics (YTM's tab panel). */
   scroller(): HTMLElement | null;
+  /** Opens the lyrics' page at the provider in the browser. */
+  openSource(url: string): void;
 }
 
 /** While the user scrolls the lyrics themselves, stop following the current line. */
@@ -59,7 +61,20 @@ export function LyricsView(props: ViewProps) {
       {body}
       {shown && (
         <footer class="source">
-          Lyrics from {PROVIDER_NAMES[shown.provider]}
+          Lyrics from{" "}
+          {shown.result.url ? (
+            <a
+              href={shown.result.url}
+              onClick={(event) => {
+                event.preventDefault();
+                props.openSource(shown.result.url!);
+              }}
+            >
+              {PROVIDER_NAMES[shown.provider]}
+            </a>
+          ) : (
+            PROVIDER_NAMES[shown.provider]
+          )}
           {!shown.synced && " · not time-synced"}
         </footer>
       )}

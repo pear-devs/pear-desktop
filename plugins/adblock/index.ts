@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { config, definePlugin } from "@pear/sdk";
 import { adStrategy, FAST_FORWARD_RATE, rewindTarget } from "./ads.ts";
-import { enableBlocking, loadEngine, parseListUrls } from "./engine.ts";
+import { DEFAULT_LISTS, enableBlocking, loadEngine, parseListUrls } from "./engine.ts";
 
 const stats = { active: false, blocked: 0 };
 
@@ -44,8 +44,7 @@ export default definePlugin({
       if (!ctx.config.blockRequests) return;
       const started = performance.now();
       const loaded = await loadEngine({
-        defaultLists: ctx.config.defaultLists,
-        extraLists: parseListUrls(ctx.config.additionalLists),
+        lists: [...(ctx.config.defaultLists ? DEFAULT_LISTS : []), ...parseListUrls(ctx.config.additionalLists)],
         cacheDir: ctx.config.cache ? join(ctx.app.getPath("userData"), "adblock") : undefined,
       });
       let engine = loaded.engine;

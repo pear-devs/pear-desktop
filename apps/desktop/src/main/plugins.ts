@@ -70,7 +70,7 @@ export class PluginHost {
   /** Runs plugins' beforeReady hooks; returns the Chromium features they asked for. */
   meta(): Record<string, PluginMeta> {
     return Object.fromEntries(
-      this.plugins.map((p) => [p.id, { restartRequired: Boolean(p.host?.beforeReady || p.host?.windowOptions) }]),
+      this.plugins.map((p) => [p.id, { restartRequired: Boolean(p.restartRequired || p.host?.beforeReady || p.host?.windowOptions) }]),
     );
   }
 

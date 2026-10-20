@@ -1,0 +1,25 @@
+{
+ "id": 8510,
+ "title": "Yellow",
+ "artist": "Coldplay",
+ "duration": 269.24,
+ "sync": "manual",
+ "synced_by": "Hailee",
+ "updated_at": "2018-08-21T13:08:20.000Z",
+ "url": "https://megalobiz.com/lrc/8510/yellow",
+ "lines": [
+  {
+   "time_ms": 33240,
+   "text": "Look at the stars"
+  },
+  {
+   "time_ms": 36010,
+   "text": "Look how they shine for you"
+  },
+  {
+   "time_ms": 41500,
+   "text": "And everything you do"
+  }
+ ],
+ "lrc": "[ar:Coldplay]\n[ti:Yellow]\n[by:Hailee]\n[length:04:29.24]\n[re:Megalobiz]\n[00:33.24]Look at the stars\n[00:36.01]Look how they shine for you\n[00:41.50]And everything you do"
+}

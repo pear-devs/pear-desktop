@@ -1,0 +1,146 @@
+{
+ "message": {
+  "header": {
+   "status_code": 200,
+   "execute_time": 0.184,
+   "pid": 21,
+   "surrogate_key_list": []
+  },
+  "body": {
+   "macro_calls": {
+    "matcher.track.get": {
+     "message": {
+      "header": {
+       "status_code": 200,
+       "execute_time": 0.02
+      },
+      "body": {
+       "track": {
+        "track_id": 226291677,
+        "track_name": "NOKIA",
+        "track_name_translation_list": [],
+        "track_rating": 62,
+        "commontrack_id": 124185591,
+        "instrumental": 0,
+        "explicit": 1,
+        "has_lyrics": 1,
+        "has_subtitles": 1,
+        "has_richsync": 1,
+        "num_favourite": 12043,
+        "album_id": 78890989,
+        "album_name": "$ome $exy $ongs 4 U",
+        "artist_id": 15723312,
+        "artist_name": "Drake",
+        "track_share_url": "https://www.musixmatch.com/lyrics/Drake/NOKIA",
+        "commontrack_vanity_id": "Drake/NOKIA",
+        "restricted": 0,
+        "first_release_date": "2025-02-14T00:00:00Z",
+        "updated_time": "2025-03-01T10:22:41Z"
+       }
+      }
+     }
+    },
+    "track.lyrics.get": {
+     "message": {
+      "header": {
+       "status_code": 200,
+       "execute_time": 0.03
+      },
+      "body": {
+       "lyrics": {
+        "lyrics_id": 35776330,
+        "can_edit": 1,
+        "check_validation_overridable": 1,
+        "locked": 0,
+        "published_status": 6,
+        "action_requested": "",
+        "verified": 0,
+        "restricted": 0,
+        "instrumental": 0,
+        "explicit": 0,
+        "lyrics_body": "Wob gopini den\nTefe woxica fero\nGogoh vudob wiya\nKeric sohu peduf\nKahe rorew vip\n",
+        "lyrics_language": "tt",
+        "lyrics_language_description": "Tatar",
+        "script_tracking_url": "https://tracking.musixmatch.com/t1.0/m_js/e_0/sn_0/l_35776330/su_0/rs_0/tr_3vUCAAEYa_hl_dMfWAioyLZzCJacXINx7nWi_jsRpafJ8aH3zjz-uqymXRqi7Il6ELw3inEXngDu6l26oGl9AeEUsKIEoDfyZgXy0ZIZ6szOIulql_ZIlzaCf4l7AljnKxJgGx6kP-U3_-atVAopvj94SPgHpXl-lSnxjfaoFJPrjVGrsoxvMp5NJ070nGyTv7GR2Q0qKsC6QnD6RpeNmXtPibaY87xBGOx6d1P8azGekr5jQiC9WduuRSGr7XOtdFtxaqNqw4GjALfUfmo7qGKyzc4JH_jhWubDxrv1gYNY9j9kGUcLSCqYHfY50ZW9H-Mz7DAKw_gNdlrDUsur9Exi2k5PR8RQJo6Vl5n7crQ1W69fKD4v20ROMSzKAqO9JvU0TsbmHRmX8Qxz-OiGe4p3zSkItrw5lLLZppWCeIrtOvhRHIZPSEd3t3Xopkr8ltJGjm-iiEk7PtB6Cz6_6-cIZdHLqkRsRd2WtxrNl6EKKjy6HKIBDZeh6f1s8-Pfgwaf9QNBhaXkGeI2PnC7hGPZkLce9kEBkdPDuIzjY42dBEjoknkxLu7Rrc-0hnDV6vbVin4OLi2HNdj6j_D4bo3IL9-zDnEVDzDX/",
+        "pixel_tracking_url": "https://tracking.musixmatch.com/t1.0/m_img/e_0/sn_0/l_35776330/su_0/rs_0/tr_3vUCAKBnEDE8WP1ezvwp8IiQKMD9jd0WsCCZMSct9pkYgPX87_J48NkKYEwl4PJEDoLPQRAyKv_dDAmE0hrUK-5qwiVM8dLJX5DR0188dmM_lnKlk4_8piJmnRTXNnhabwzxV4nMwsuiivBlLYuP82ig1sWMnF5w5Ue8XJ_KhRd2qL1LXJhZ99YOtEgpoRLb-2809xsoQEQz1bywO_sGWGuAxKPYqLcvx2N0VSpF2RFWzTde2quKlbSUkwJX1gR_0wSjmzJp8hMaG6eXakg1iCzlJ19JzrJd6Z2K44YesPyitqdWM0LZ9EmR-g5OwXwSUY0sFwaScmoj4CiLmdoGc2HF-b7aczO8lD_Fge6MLxnpECU3-0lYBl1yeuB9Naeh13seCX5WT-J195Xu37UbFIUv3Rog_dZsnaHOTlTT0mpQmI3GeIn_mpcqucqoMoQ_MZ2v_PX5Eb76EObt_b6umwbRpohCJsfr7ibROM8U6HKRC960znoD9n_dTxAutOIJPAAjrRrleGreuecEVGYM21SghuFMiWxWSh2Ds7Lwg0SeWCr45casFbeyC1sY3zoNKjSwvo7sLTIXO7DCFx-GLOhWSDYEOEJwtFzX/",
+        "html_tracking_url": "https://tracking.musixmatch.com/t1.0/m_html/e_0/sn_0/l_35776330/su_0/rs_0/tr_3vUCACaur3LNijWRFsslc30eP9_muP-aIYiXn8wAztbc44DLX0c_RpQvfU8r0ZyKgmPJblWivnuUrT0H7RO1FPBL7yCwodenUtpTl8hucRfcT4ffBF2jMQwoliC_F9Gl56lN9B3V8kVRhGYrfQ7x9F3M0ayXyViPS7ULaWoQIDMn_6krltYVob5ShR8AfK_YTyotZeWvRRVdgnx2LyjvqfBx6QAqPt1G_YSmKBkNlJEhjQmxNwjIB6BkpfSewyLYT_j4z4on0cspEmlBCTGRTJj-h0hiWm8L7BBiHS12alS6Njj8_iIYIq2JDroWaY1TkzHyA64-aWbQEe2bFJQQaWHE2JDDXrowmGtGfTJEJk94VCkiVeX3KEJbDz3tB14fN9FmjOJwUwFiQfKbBRJ-WPrQR43orDqpzsgrS8dc62Jd1pVzcEa62TT47DQFghqZrJIuBBrZAJFkf4ZOoaVD-MInc2ZJFBNk1THxnTjgHZBMTWKkSGzJTb6imymsKsipx6GeM1zmv5jQYSUUlr81PYvkyeD6vXKOyRaedwZlHXvgoaYJkwUjNaPBBL2jwsBRfY7rUzEqGSxBV0FlrHSbq33rAIQMI1EOBU3b/",
+        "lyrics_copyright": "",
+        "writer_list": [],
+        "publisher_list": [],
+        "backlink_url": "https://www.musixmatch.com/lyrics/Noble-Music-ASMR/Soothing-Forest-Sounds-for-Concentration?utm_source=application&utm_campaign=api&utm_medium=musixmatch-community%3A1409608317702",
+        "updated_time": "2024-07-17T23:12:39Z"
+       }
+      }
+     }
+    },
+    "track.snippet.get": {
+     "message": {
+      "header": {
+       "status_code": 200,
+       "execute_time": 0.01
+      },
+      "body": {
+       "snippet": {
+        "snippet_id": 32107841,
+        "snippet_language": "en",
+        "restricted": 0,
+        "instrumental": 0,
+        "snippet_body": "Wob gopini den",
+        "script_tracking_url": "",
+        "pixel_tracking_url": "",
+        "html_tracking_url": "",
+        "updated_time": "2025-03-01T10:22:41Z"
+       }
+      }
+     }
+    },
+    "track.subtitles.get": {
+     "message": {
+      "header": {
+       "status_code": 200,
+       "execute_time": 0.04
+      },
+      "body": {
+       "subtitle_list": [
+        {
+         "subtitle": {
+          "subtitle_id": 32661201,
+          "restricted": 0,
+          "published_status": 1,
+          "subtitle_body": "[00:12.00]Wob gopini den\n[00:16.00]Tefe woxica fero\n[00:20.00]Gogoh vudob wiya\n[00:24.00]Keric sohu peduf",
+          "subtitle_avg_count": 0,
+          "lyrics_copyright": "Lyrics powered by www.musixmatch.com",
+          "subtitle_length": 836,
+          "subtitle_language": "en",
+          "subtitle_language_description": "English",
+          "script_tracking_url": "",
+          "pixel_tracking_url": "",
+          "html_tracking_url": "",
+          "writer_list": [],
+          "publisher_list": [],
+          "updated_time": "2025-03-01T10:22:41Z"
+         }
+        }
+       ]
+      }
+     }
+    },
+    "userblob.get": {
+     "message": {
+      "header": {
+       "status_code": 200,
+       "execute_time": 0.0
+      },
+      "body": {
+       "any": 0,
+       "lyrics": 0,
+       "subtitle": 0,
+       "richsync": 0,
+       "track_structure": 0
+      }
+     }
+    }
+   }
+  }
+ }
+}

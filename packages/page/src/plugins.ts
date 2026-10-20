@@ -154,8 +154,10 @@ export class PluginRunner {
     this.#states.set(id, next);
     this.#notify();
     if (!plugin) return;
-    if (!next.enabled) return this.#stop(id);
     const instance = this.#instances.get(id);
+    // Started (or not) for good when the page loaded; the restart banner covers the rest.
+    if (plugin.restartRequired && (!instance || !next.enabled)) return;
+    if (!next.enabled) return this.#stop(id);
     if (!instance) return void this.#start(id);
     if (previous && sameConfig(previous.config, next.config)) return;
 

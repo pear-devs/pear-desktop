@@ -15,9 +15,12 @@ import { net, type WebRequest } from "electron";
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const CSP_HEADER = "content-security-policy";
 
+/** Ghostery's ads and tracking lists (EasyList, EasyPrivacy, uBlock Origin's). */
+export const DEFAULT_LISTS: readonly string[] = adsAndTrackingLists;
+
 export interface EngineOptions {
-  defaultLists: boolean;
-  extraLists: readonly string[];
+  /** Filter list URLs. */
+  lists: readonly string[];
   /** Directory for the cache; undefined disables caching. */
   cacheDir: string | undefined;
 }
@@ -50,7 +53,7 @@ async function save(file: string, engine: FiltersEngine) {
 }
 
 export async function loadEngine(options: EngineOptions): Promise<LoadedEngine> {
-  const lists = [...(options.defaultLists ? adsAndTrackingLists : []), ...options.extraLists];
+  const lists = [...new Set(options.lists)];
   if (lists.length === 0) throw new Error("No filter lists: enable the default lists or add your own.");
   if (!options.cacheDir) return { engine: await build(lists), refreshed: Promise.resolve(undefined) };
 

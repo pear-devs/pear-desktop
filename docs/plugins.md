@@ -37,6 +37,7 @@ export default definePlugin({
   description: "One sentence shown in settings.",
   platforms: ["linux"],          // optional; default all
   enabledByDefault: false,
+  restartRequired: false,        // true: enabling/disabling applies after a restart (see below)
   config: {                      // generates the settings UI and the config type
     amount: config.number(5, { label: "Amount", min: 0, max: 10, unit: "dB" }),
     mode: config.select("a", [{ value: "a", label: "A" }, { value: "b", label: "B" }], { label: "Mode" }),
@@ -96,7 +97,11 @@ Web Audio graph (`insert(input, output?, order?)`, `tap(node)`), `onCleanup`,
 `signal`, `log`.
 
 Everything registered through `ctx` is cleaned up automatically when the plugin
-is disabled, so enabling and disabling never needs a restart.
+is disabled, so enabling and disabling never needs a restart. The exception is
+code that can't be undone (patching the page's globals for good): mark the
+plugin `restartRequired: true` and its page part only starts if the plugin was
+enabled when the page loaded, and keeps running until the next load; settings
+show a restart pill and offer the restart (see `plugins/performance-improvement`).
 
 ### Translations
 

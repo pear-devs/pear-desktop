@@ -24,6 +24,7 @@ interface Commands {
   search(provider: ProviderId, query: SearchQuery): Promise<LyricResult | null>;
   romanize(lines: string[]): Promise<(string | null)[]>;
   convertChinese(lines: string[], mode: "s2t" | "t2s"): Promise<string[]>;
+  openSource(url: string): Promise<void>;
 }
 
 export interface LyricsController {
@@ -71,11 +72,12 @@ export function mountLyrics(ctx: PageContext<LyricsConfig, Commands>): LyricsCon
   };
   const seek = (ms: number) => ctx.player.control({ type: "seek", seconds: ms / 1000 });
   const scroller = () => element.parentElement;
+  const openSource = (url: string) => void ctx.host.invoke("openSource", url).catch((error) => ctx.log.warn("could not open", url, error));
 
   let options = viewOptions(ctx.config);
   let open = false;
   const draw = () =>
-    render(open ? <LyricsView store={store} options={options} now={now} seek={seek} scroller={scroller} /> : null, root);
+    render(open ? <LyricsView store={store} options={options} now={now} seek={seek} scroller={scroller} openSource={openSource} /> : null, root);
 
   const setOpen = (next: boolean) => {
     if (next === open) return;

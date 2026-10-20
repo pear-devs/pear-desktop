@@ -211,6 +211,14 @@ export interface PluginDef<S extends ConfigShape, Cmds extends AnyCommands, Rpc 
   /** Default: all platforms. */
   platforms?: readonly Platform[];
   enabledByDefault?: boolean;
+  /**
+   * Enabling or disabling only applies after a restart (shown in settings).
+   * The page part then starts only if the plugin was enabled when the page
+   * loaded, and keeps running until the next load: for patches that can't be
+   * undone. Config changes still apply live. Implied by `host.beforeReady`
+   * and `host.windowOptions`.
+   */
+  restartRequired?: boolean;
   config?: S;
   host?: HostPart<ConfigOf<S>, Cmds, Rpc>;
   page?: PagePart<ConfigOf<S>, Cmds>;

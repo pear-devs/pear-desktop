@@ -1,12 +1,15 @@
 // Shared between the host (providers) and the page (renderer).
 
-export const PROVIDERS = ["lrclib", "ytmusic", "genius"] as const;
+// The ids are pear-desktop's provider names, which its `preferredProvider` setting stores.
+export const PROVIDERS = ["LRCLib", "YTMusic", "MusixMatch", "Megalobiz", "LyricsGenius"] as const;
 export type ProviderId = (typeof PROVIDERS)[number];
 
 export const PROVIDER_NAMES: Record<ProviderId, string> = {
-  lrclib: "LRCLIB",
-  ytmusic: "YT Music",
-  genius: "Genius",
+  LRCLib: "LRCLIB",
+  YTMusic: "YT Music",
+  MusixMatch: "Musixmatch",
+  Megalobiz: "Megalobiz",
+  LyricsGenius: "Genius",
 };
 
 export interface LyricWord {
@@ -32,6 +35,8 @@ export interface LyricResult {
   lines?: LyricLine[];
   /** Unsynced lyrics, newline separated. */
   plain?: string;
+  /** The lyrics' page at the provider, for providers that ask to be linked. */
+  url?: string;
 }
 
 export interface SearchQuery {

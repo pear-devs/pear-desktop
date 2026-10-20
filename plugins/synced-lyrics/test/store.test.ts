@@ -2,7 +2,7 @@ import type { Track } from "@pear/sdk";
 import { describe, expect, test, vi } from "vitest";
 import { detectScripts, Romanizer } from "../romanize.ts";
 import { LyricsStore, type Backend, type Options } from "../page/store.ts";
-import type { LyricResult, ProviderId } from "../types.ts";
+import { PROVIDERS, type LyricResult, type ProviderId } from "../types.ts";
 
 const track: Track = {
   videoId: "abc",
@@ -33,41 +33,41 @@ const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("LyricsStore", () => {
   test("shows the richest result regardless of provider order", async () => {
-    const store = new LyricsStore(backend({ lrclib: null, ytmusic: synced, genius: plain }), options);
+    const store = new LyricsStore(backend({ LRCLib: null, YTMusic: synced, LyricsGenius: plain }), options);
     store.load(track);
     expect(store.loading).toBe(true);
     await settle();
     expect(store.loading).toBe(false);
-    expect(store.shown).toMatchObject({ provider: "ytmusic", synced: true, texts: ["hi"] });
+    expect(store.shown).toMatchObject({ provider: "YTMusic", synced: true, texts: ["hi"] });
   });
 
   test("honours the preferred provider and manual picks", async () => {
-    const store = new LyricsStore(backend({ lrclib: synced, genius: plain }), { ...options, preferred: "genius" });
+    const store = new LyricsStore(backend({ LRCLib: synced, LyricsGenius: plain }), { ...options, preferred: "LyricsGenius" });
     store.load(track);
     await settle();
-    expect(store.shown).toMatchObject({ provider: "genius", synced: false, texts: ["hi", "there"] });
-    store.pick("lrclib");
-    expect(store.shown?.provider).toBe("lrclib");
+    expect(store.shown).toMatchObject({ provider: "LyricsGenius", synced: false, texts: ["hi", "there"] });
+    store.pick("LRCLib");
+    expect(store.shown?.provider).toBe("LRCLib");
   });
 
   test("reports errors and retries a provider", async () => {
-    const api = backend({ lrclib: new Error("offline") });
+    const api = backend({ LRCLib: new Error("offline") });
     const store = new LyricsStore(api, options);
     store.load(track);
     await settle();
-    expect(store.providers.lrclib).toEqual({ status: "error", message: "offline" });
+    expect(store.providers.LRCLib).toEqual({ status: "error", message: "offline" });
     expect(store.shown).toBeNull();
-    store.retry("lrclib");
-    expect(store.providers.lrclib.status).toBe("loading");
+    store.retry("LRCLib");
+    expect(store.providers.LRCLib.status).toBe("loading");
     await settle();
-    expect(api.search).toHaveBeenCalledTimes(4);
+    expect(api.search).toHaveBeenCalledTimes(PROVIDERS.length + 1);
   });
 
   test("ignores results of a previous track", async () => {
     const pending: ((result: LyricResult) => void)[] = [];
     const api = backend({});
     api.search = vi.fn((provider: ProviderId) =>
-      provider === "lrclib" ? new Promise<LyricResult>((r) => pending.push(r)) : Promise.resolve(null),
+      provider === "LRCLib" ? new Promise<LyricResult>((r) => pending.push(r)) : Promise.resolve(null),
     );
     const store = new LyricsStore(api, options);
     store.load(track);
@@ -78,14 +78,14 @@ describe("LyricsStore", () => {
   });
 
   test("romanizes non-Latin lyrics only", async () => {
-    const api = backend({ lrclib: { ...synced, lines: [{ startMs: 0, endMs: 1, text: "사랑해" }] } });
+    const api = backend({ LRCLib: { ...synced, lines: [{ startMs: 0, endMs: 1, text: "사랑해" }] } });
     const store = new LyricsStore(api, { ...options, romanize: true });
     store.load(track);
     await settle();
     await settle();
     expect(store.shown?.romanized).toEqual(["r:사랑해"]);
 
-    const latin = backend({ lrclib: synced });
+    const latin = backend({ LRCLib: synced });
     const other = new LyricsStore(latin, { ...options, romanize: true });
     other.load(track);
     await settle();

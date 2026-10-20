@@ -1,0 +1,30 @@
+{
+ "message": {
+  "header": {
+   "status_code": 200,
+   "execute_time": 0.757,
+   "pid": 21,
+   "surrogate_key_list": []
+  },
+  "body": {
+   "user_token": "00000000000000000000000000000000000000000000000000000000",
+   "app_config": {
+    "last_updated": "2023-10-19T08:57:50.072Z",
+    "cluster": "2e",
+    "event_map": [
+     {
+      "regex": "i:view.external.scrobbler.notified.*",
+      "enabled": false
+     },
+     {
+      "regex": ".*",
+      "enabled": true,
+      "piggyback": {
+       "server_weight": 1
+      }
+     }
+    ]
+   }
+  }
+ }
+}
