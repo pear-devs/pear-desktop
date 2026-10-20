@@ -151,6 +151,9 @@ export interface PagePlayer {
   /** YTM's player API once available. */
   readonly api: YTPlayerApi | null;
   ready(): Promise<YTPlayerApi>;
+  /** YTM's <video> once it exists (YTM adds it a little after the player API). */
+  videoReady(): Promise<HTMLVideoElement>;
+  /** YTM's <video>, or null while there is none yet (see `videoReady`). */
   video(): HTMLVideoElement | null;
   readonly state: NowPlaying;
   /** Fires as soon as YTM starts loading a track, before its metadata is complete. */

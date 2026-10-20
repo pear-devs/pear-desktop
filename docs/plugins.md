@@ -169,7 +169,8 @@ host: {
 | `player.state`, `player.control(action)` | as on the host |
 | `player.on(event, fn)` | `trackLoading`, `trackChange`, `statusChange`, `timeUpdate`, `volumeChange`, `adChange`, `change` |
 | `player.ready()`, `player.api` | YTM's player object, once it exists |
-| `player.video()` | the `<video>` element |
+| `player.videoReady()` | the `<video>` element, once it exists (YTM adds it a little after its player object) |
+| `player.video()` | the `<video>` element, or `null` before it exists |
 | `$(name)`, `$$(name)` | find elements by selector name (see "Selectors") |
 | `waitFor(name)` | wait for an element to appear |
 | `mount(element, name, "prepend" \| "append")` | put an element into the page and keep it there when YTM re-renders |

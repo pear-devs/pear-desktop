@@ -21,16 +21,22 @@ export function beforeReady(app: App, settings: Settings, plugins: PluginHost) {
   if (features.disabled.size > 0) app.commandLine.appendSwitch("disable-features", [...features.disabled].join(","));
 }
 
+/** The Proxy plugin: while on, it owns the session's proxy. */
+export const PROXY_PLUGIN = "auth-proxy-adapter";
+
 /**
- * advanced.proxy, from the first request on. The Proxy plugin (which also
- * handles credentials) takes precedence when it's enabled, as in pear-desktop.
+ * advanced.proxy, from the first request on (and again when the Proxy plugin is
+ * turned off). The Proxy plugin (which also handles credentials) takes
+ * precedence when it's enabled, as in pear-desktop.
  */
 export async function applyProxy(settings: Settings) {
   const proxy = settings.core("advanced").proxy;
-  const pluginEnabled = Boolean(settings.plugin("auth-proxy-adapter")?.enabled);
+  const pluginEnabled = Boolean(settings.plugin(PROXY_PLUGIN)?.enabled);
   if (!proxy.trim() || pluginEnabled) return;
   try {
     await session.defaultSession.setProxy({ mode: "fixed_servers", proxyRules: proxy.trim() });
+    // Connections opened before keep their old route otherwise (after the Proxy plugin was turned off).
+    await session.defaultSession.closeAllConnections();
     console.info(`[pear] using proxy ${proxy.trim()}`);
   } catch (error) {
     console.error(`[pear] invalid proxy "${proxy}":`, error);

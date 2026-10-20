@@ -45,6 +45,8 @@ export interface HostEnvironment {
   broadcast(plugin: string, event: string, data: unknown): void;
   /** Subscribes to app protocol commands. */
   onProtocol(listener: (command: string, args: string[]) => void): () => void;
+  /** A plugin was turned off in settings (not stopped to restart it or to quit). */
+  onDisabled(id: string): void;
 }
 
 /** An exposed method, as listed by the API server. */
@@ -177,7 +179,10 @@ export class PluginHost {
     const plugin = this.#require(id);
     const state = this.#settings.setPlugin(plugin, { enabled });
     if (enabled) await this.#start(plugin);
-    else this.#stop(id);
+    else {
+      this.#stop(id);
+      this.#env?.onDisabled(id);
+    }
     this.#broadcast(id, state);
     return state;
   }

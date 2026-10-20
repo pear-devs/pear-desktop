@@ -63,6 +63,7 @@ export class Player implements PagePlayer {
   #emitter = new Emitter<PlayerEvents>();
   #api: YTPlayerApi | null = null;
   #ready: Promise<YTPlayerApi>;
+  #videoReady: Promise<HTMLVideoElement>;
   #state: NowPlaying = { ...IDLE };
   #publisher: StatePublisher;
   /** The core's appearance section (usePodcastParticipantAsArtist). */
@@ -76,6 +77,8 @@ export class Player implements PagePlayer {
       this.#attach(api);
       return api;
     });
+    // YTM adds the <video> a little after its player API.
+    this.#videoReady = this.#ready.then((api) => waitForSelector<HTMLVideoElement>(selectors["player.video"], { root: api }));
   }
 
   get api() {
@@ -88,6 +91,10 @@ export class Player implements PagePlayer {
 
   ready() {
     return this.#ready;
+  }
+
+  videoReady() {
+    return this.#videoReady;
   }
 
   video() {
@@ -187,9 +194,11 @@ export class Player implements PagePlayer {
       }
     });
 
-    const video = this.video();
-    if (video) this.#attachVideo(video);
-    if (video && !Number.isNaN(video.duration)) loadTrack();
+    void this.#videoReady.then((video) => {
+      this.#attachVideo(video);
+      // A track already loaded before the player was found.
+      if (!Number.isNaN(video.duration)) loadTrack();
+    });
 
     this.#observeControls();
     this.#observeAds(api);

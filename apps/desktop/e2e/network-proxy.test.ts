@@ -47,3 +47,26 @@ test("auth-proxy-adapter routes everything through an authenticated proxy, live"
     .poll(() => pluginError(page, "auth-proxy-adapter"))
     .toMatch(/Unsupported proxy type/);
 });
+
+test("turning the plugin off hands the proxy back to advanced.proxy", async ({ launch, defer }) => {
+  test.setTimeout(120_000);
+  const core = await startConnectProxy();
+  defer(core.close);
+  const plugin = await startConnectProxy({ credentials: CREDENTIALS });
+  defer(plugin.close);
+  const app = await launch({
+    core: { advanced: { proxy: core.url } },
+    plugins: { "auth-proxy-adapter": { enabled: true, config: { url: plugin.url, ...CREDENTIALS } } },
+  });
+  // The plugin takes precedence while it's on.
+  const page = await mainWindow(app);
+  expect(plugin.tunnels[0]).toBe(`${YTM_HOST}:443`);
+  expect(core.tunnels).toHaveLength(0);
+
+  await setEnabled(page, "auth-proxy-adapter", false);
+  await page.waitForTimeout(SETTLE_MS);
+  const before = plugin.tunnels.length;
+  await reload(page);
+  expect(plugin.tunnels.length).toBe(before);
+  expect(core.tunnels).toContain(`${YTM_HOST}:443`);
+});

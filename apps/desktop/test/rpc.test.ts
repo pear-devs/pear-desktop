@@ -44,6 +44,7 @@ async function setup(enabled = true) {
     focusWindow() {},
     broadcast,
     onProtocol: () => () => {},
+    onDisabled() {},
   });
   if (enabled) await host.setEnabled("greeter", true);
   return { host, broadcast };

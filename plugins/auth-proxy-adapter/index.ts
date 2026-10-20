@@ -65,6 +65,7 @@ export default definePlugin({
         await session.setProxy({ mode: "fixed_servers", proxyRules: rules, proxyBypassRules: config.bypass });
         // Connections opened before keep their old route otherwise.
         await session.closeAllConnections();
+        // Turned off, the core then re-applies its own proxy option, if one is set.
         ctx.onCleanup(() => {
           void session.setProxy({ mode: "system" }).then(() => session.closeAllConnections());
         });

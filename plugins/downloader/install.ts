@@ -17,7 +17,8 @@
 
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { createWriteStream, existsSync, readFileSync } from "node:fs";
+import { once } from "node:events";
+import { createWriteStream, existsSync, readFileSync, type WriteStream } from "node:fs";
 import { chmod, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { errorMessage } from "@pear/sdk/util";
@@ -101,6 +102,21 @@ export function describeFailure(error: unknown): { message: string; offline: boo
     message,
   );
   return { message, offline };
+}
+
+/** Waits for `file` to take more data; rejects if it fails or closes instead (it would never drain). */
+async function drained(file: WriteStream) {
+  const closedEarly = () => file.errored ?? new Error("the file closed before the download was written");
+  if (file.destroyed) throw closedEarly();
+  const listening = new AbortController();
+  const { signal } = listening;
+  try {
+    // `once` also rejects on the stream's "error".
+    const closed = once(file, "close", { signal }).then(() => Promise.reject(closedEarly()));
+    await Promise.race([once(file, "drain", { signal }), closed]);
+  } finally {
+    listening.abort();
+  }
 }
 
 export class Installer {
@@ -262,6 +278,8 @@ export class Installer {
       file.once("close", resolve);
       file.once("error", reject);
     });
+    // Awaited below; failing earlier (while reading) mustn't be an unhandled rejection.
+    closed.catch(() => {});
     let received = 0;
     try {
       const reader = response.body!.getReader();
@@ -270,7 +288,7 @@ export class Installer {
         if (done) break;
         hash.update(value);
         received += value.byteLength;
-        if (!file.write(value)) await new Promise<void>((resolve) => file.once("drain", () => resolve()));
+        if (!file.write(value)) await drained(file);
         this.#options.onProgress({ tool, stage: "downloading", received, total });
       }
     } finally {

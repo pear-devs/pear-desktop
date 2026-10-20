@@ -10,9 +10,7 @@ export default definePlugin({
   name: "Exponential volume",
   description: "Makes the volume slider follow loudness perception, giving finer control at low volumes.",
   page: async (ctx) => {
-    await ctx.player.ready();
-    const video = ctx.player.video();
-    if (!video) throw new Error("no video element");
+    const video = await ctx.player.videoReady();
     const native = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "volume")!;
     // Reads return what was set, not the cube root of the real value, which
     // would drift by rounding (YTM compares volumes it wrote).

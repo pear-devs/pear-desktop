@@ -66,8 +66,7 @@ export default definePlugin({
     const initial = api.getVideoData().video_id;
     if (initial) void load(initial);
 
-    const video = ctx.player.video();
-    if (!video) return;
+    const video = await ctx.player.videoReady();
     ctx.listen(video, "timeupdate", () => {
       if (submissions.length === 0 || ctx.player.state.ad || api.getVideoData().video_id !== videoId) return;
       const target = skipTarget(usableSegments(submissions, api.getDuration()), api.getCurrentTime());

@@ -248,12 +248,20 @@ export class ApiServer {
 
   async #userAllows(id: string, remoteAddress: string) {
     if (this.#config.authStrategy !== "AUTH_AT_FIRST") return true;
+    // pear-desktop's translated texts (the keys its translators already filled in).
+    const { t } = this.#env.plugins;
     const { response } = await dialog.showMessageBox(this.#env.window, {
       type: "question",
-      title: "API server",
-      message: `Allow “${id}” to control Pear Desktop?`,
-      detail: `The request came from ${remoteAddress}. You can revoke access in the API server settings.`,
-      buttons: ["Allow", "Deny"],
+      title: t("plugins.api-server.dialog.request.title", "API authorization request"),
+      message: t("plugins.api-server.dialog.request.message", "Allow {{ID}} ({{origin}}) to access the API?", {
+        ID: id,
+        origin: remoteAddress,
+      }),
+      detail: t("plugins.api-server.dialog.request.detail", "You can revoke access in the API server settings."),
+      buttons: [
+        t("plugins.api-server.dialog.request.buttons.allow", "Allow"),
+        t("plugins.api-server.dialog.request.buttons.deny", "Deny"),
+      ],
       defaultId: DENY_BUTTON,
       cancelId: DENY_BUTTON,
       signal: this.#dialogs.signal,

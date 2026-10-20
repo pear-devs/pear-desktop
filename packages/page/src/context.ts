@@ -77,6 +77,7 @@ export function scopedPlayer(player: Player, track: Track): PagePlayer {
       return player.state;
     },
     ready: () => player.ready(),
+    videoReady: () => player.videoReady(),
     video: () => player.video(),
     on: (event, listener) => track(player.on(event, listener)),
     control: (action) => player.control(action),

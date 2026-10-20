@@ -129,6 +129,21 @@ describe("Installer", () => {
     expect(existsSync(`${installer.ytDlpPath}.download`)).toBe(false);
   });
 
+  test("a write error fails the download instead of waiting for the disk forever", async () => {
+    const dir = tempDir();
+    // More than the stream buffers, so the download waits for it to drain.
+    const big = Buffer.alloc(1024 * 1024, 1);
+    const { fetch } = network({
+      [`${YT_DLP}/SHA2-256SUMS`]: `${sha256(big)}  yt-dlp_linux\n`,
+      [`${YT_DLP}/yt-dlp_linux`]: big,
+    });
+    const installer = new Installer({ dir, fetch, resolveRedirect: async (url) => url, onProgress: () => {}, platform: "linux", arch: "x64" });
+    // The temporary file can't be written: a directory is in its place.
+    mkdirSync(join(`${installer.ytDlpPath}.download`, "in-the-way"), { recursive: true });
+    await expect(installer.installYtDlp()).rejects.toThrow();
+    expect(existsSync(installer.ytDlpPath)).toBe(false);
+  }, 5000);
+
   test("reports HTTP errors", async () => {
     const installer = new Installer({
       dir: tempDir(),

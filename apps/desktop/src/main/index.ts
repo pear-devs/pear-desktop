@@ -18,7 +18,7 @@ import { PlayerMirror } from "./player.ts";
 import { PluginHost } from "./plugins.ts";
 import { findProtocolLink, ProtocolLinks, registerProtocol } from "./protocol.ts";
 import { openSettingsWindow, SETTINGS_FLAG, serveSettings } from "./settings-window.ts";
-import { applyProxy, beforeReady, scheduleLaterTasks } from "./startup-tasks.ts";
+import { applyProxy, beforeReady, PROXY_PLUGIN, scheduleLaterTasks } from "./startup-tasks.ts";
 import { WebRequestRouter } from "./web-request.ts";
 import { focusWindow } from "./windows.ts";
 
@@ -109,6 +109,10 @@ function main() {
       focusWindow: () => focusWindow(window),
       broadcast: (plugin, event, data) => api?.broadcastPluginEvent(plugin, event, data),
       onProtocol: (listener) => links.listen(listener),
+      // The Proxy plugin resets to the system proxy when turned off; the core option takes over again.
+      onDisabled: (id) => {
+        if (id === PROXY_PLUGIN) void applyProxy(settings);
+      },
     });
     registerProtocol(app);
     core.apply("window");

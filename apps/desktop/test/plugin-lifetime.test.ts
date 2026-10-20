@@ -51,6 +51,7 @@ function setup(plugin: ReturnType<typeof slowPlugin>["plugin"]) {
     focusWindow() {},
     broadcast() {},
     onProtocol: () => () => {},
+    onDisabled() {},
   });
   const fire = (event: string, details: object) => (webRequestListeners[event] as (d: object) => void)(details);
   return { host, off, fire };

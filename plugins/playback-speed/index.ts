@@ -116,13 +116,10 @@ export default definePlugin({
     render();
     ctx.mount(button, "player_bar.right_controls_buttons", "prepend");
 
-    await ctx.player.ready();
-    const video = ctx.player.video();
+    const video = await ctx.player.videoReady();
     // YTM resets the rate when it loads a track.
-    if (video) {
-      ctx.listen(video, "ratechange", enforce);
-      ctx.listen(video, "loadeddata", enforce);
-    }
+    ctx.listen(video, "ratechange", enforce);
+    ctx.listen(video, "loadeddata", enforce);
     enforce();
   },
 });

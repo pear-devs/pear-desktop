@@ -6,7 +6,7 @@ import type { CoreSection } from "@pear/sdk/core-config";
 import { type Translate, translator } from "@pear/sdk/i18n";
 import type { Bridge, CoreState, PluginState } from "@pear/sdk/protocol";
 import { adoptSheet, styleSheet } from "@pear/sdk/stylesheets";
-import { createLogger, errorMessage, sleep } from "@pear/sdk/util";
+import { createLogger, errorMessage } from "@pear/sdk/util";
 import { HostState, type SettingsModel, setMessage, settingsModel } from "@pear/ui";
 import { AudioGraph } from "./audio.ts";
 import {
@@ -34,9 +34,6 @@ interface Instance {
   scope: Scope;
   ctx: AnyContext;
 }
-
-// YTM adds the <video> a little after its player API.
-const VIDEO_POLL_MS = 100;
 
 export class PluginRunner {
   #plugins = new Map<string, AnyPlugin>();
@@ -205,17 +202,8 @@ export class PluginRunner {
   }
 
   #audioGraph() {
-    this.#audio ??= this.#video().then((video) => new AudioGraph(video));
+    this.#audio ??= this.#player.videoReady().then((video) => new AudioGraph(video));
     return this.#audio;
-  }
-
-  async #video() {
-    await this.#player.ready();
-    for (;;) {
-      const video = this.#player.video();
-      if (video) return video;
-      await sleep(VIDEO_POLL_MS);
-    }
   }
 
   #setConfig(id: string, patch: Partial<AnyConfig>) {

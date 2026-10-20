@@ -349,7 +349,8 @@
             "deny": "Deny"
           },
           "message": "Allow {{ID}} ({{origin}}) to access the API?",
-          "title": "API authorization request"
+          "title": "API authorization request",
+          "detail": "You can revoke access in the API server settings."
         }
       },
       "menu": {

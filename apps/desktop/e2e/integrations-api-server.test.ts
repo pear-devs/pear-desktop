@@ -155,6 +155,31 @@ test("requires a token for authorized clients unless auth is off", async ({ laun
     .toBe(401);
 });
 
+test("asks in the app's language before authorizing a new client", async ({ launch }) => {
+  const port = randomPort();
+  const base = `http://127.0.0.1:${port}`;
+  const app = await launch({
+    core: {
+      general: { language: "de" },
+      apiServer: { enabled: true, hostname: "127.0.0.1", port, authStrategy: "AUTH_AT_FIRST", secret: "e2e-secret" },
+    },
+  });
+  await mainWindow(app);
+  await waitForApi(base);
+  // Answers the prompt with "Allow" and keeps what it showed.
+  await app.evaluate(({ dialog }) => {
+    dialog.showMessageBox = (async (_window: unknown, options: Electron.MessageBoxOptions) => {
+      (globalThis as { shownDialog?: unknown }).shownDialog = options;
+      return { response: 0, checkboxChecked: false };
+    }) as typeof dialog.showMessageBox;
+  });
+
+  expect((await fetch(`${base}/auth/e2e-new`, { method: "POST" })).status).toBe(200);
+  const shown = await app.evaluate(() => (globalThis as { shownDialog?: Electron.MessageBoxOptions }).shownDialog);
+  expect(shown).toMatchObject({ title: "API-Autorisierungs-Anfrage", buttons: ["Erlauben", "Ablehnen"] });
+  expect(shown?.message).toMatch(/^e2e-new \(.+\) den Zugriff zur API erlauben\?$/);
+});
+
 test("is off by default", async ({ page }) => {
   const state = await page.evaluate(() => window.__pearRuntime!.plugins.core("apiServer"));
   expect(state.config).toMatchObject({ enabled: false, hostname: "127.0.0.1", port: DEFAULT_PORT });
