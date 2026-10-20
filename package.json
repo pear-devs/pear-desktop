@@ -8,7 +8,19 @@
     "build": "nub run --filter @pear/desktop build",
     "typecheck": "nub run -r typecheck",
     "test": "nub run -r test",
-    "test:e2e": "nub run --filter @pear/desktop test:e2e"
+    "test:e2e": "nub run --filter @pear/desktop test:e2e",
+    "dist": "nub run --filter @pear/desktop dist",
+    "dist:linux": "nub run --filter @pear/desktop dist:linux",
+    "dist:linux:deb-arm64": "nub run --filter @pear/desktop dist:linux:deb-arm64",
+    "dist:linux:rpm-arm64": "nub run --filter @pear/desktop dist:linux:rpm-arm64",
+    "dist:mac": "nub run --filter @pear/desktop dist:mac",
+    "dist:mac:arm64": "nub run --filter @pear/desktop dist:mac:arm64",
+    "dist:win": "nub run --filter @pear/desktop dist:win",
+    "dist:win:x64": "nub run --filter @pear/desktop dist:win:x64",
+    "release:linux": "nub run --filter @pear/desktop release:linux",
+    "release:mac": "nub run --filter @pear/desktop release:mac",
+    "release:win": "nub run --filter @pear/desktop release:win",
+    "changelog": "nub dlx auto-changelog"
   },
   "devDependencies": {
     "typescript": "^7.0.2"

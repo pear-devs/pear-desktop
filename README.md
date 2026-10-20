@@ -90,9 +90,15 @@ nub run dev          # launch the app with hot rebuilds
 nub run typecheck
 nub run test         # unit tests
 nub run test:e2e     # builds, then drives the app against real YTM
+nub run dist:linux   # packages with electron-builder into pack/ (also dist:mac, dist:win, dist)
 ```
 
-`PEAR_USER_DATA=/tmp/profile nub run dev` runs with a separate profile.
+`PEAR_USER_DATA=/tmp/profile nub run dev` runs with a separate profile. Without
+it, the app uses the same data folder as an installed pear-desktop, so it picks
+up that session.
+
+`nub install` also installs a pre-commit hook (`.githooks/`) that keeps the app
+name escaped in package.json files, the way pear-desktop has always spelled it.
 
 ## Notes
 

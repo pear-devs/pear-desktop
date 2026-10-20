@@ -19,20 +19,14 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - name: Setup nub and NodeJS
+        uses: nubjs/setup-nub@c7b970ec04655a2f0a111cd436cc182a3b660e7a # v0.6.0
         with:
-          version: 11
-          run_install: false
-
-      - name: Setup NodeJS
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
-        with:
+          nub-version: 0.9.5
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: nub ci --ignore-scripts
 
       - name: Checkout PR source files
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
@@ -58,7 +52,7 @@ jobs:
         run: |
           set -o pipefail
 
-          pnpm exec oxlint src --type-aware --format=checkstyle |
+          nub dlx oxlint apps packages plugins scripts --format=checkstyle |
             reviewdog \
               -f=checkstyle \
               -name=oxlint \
