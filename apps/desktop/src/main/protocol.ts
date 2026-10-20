@@ -86,6 +86,39 @@ export function protocolActions({ command, args }: ProtocolCommand): PlayerActio
   }
 }
 
+export type ProtocolListener = (command: string, args: string[]) => void;
+
+/** Runs the links that reach this instance: playback controls, then plugins' listeners. */
+export class ProtocolLinks {
+  #listeners = new Set<ProtocolListener>();
+  #control: (action: PlayerAction) => void;
+
+  constructor(control: (action: PlayerAction) => void) {
+    this.#control = control;
+  }
+
+  run({ command, args }: ProtocolCommand) {
+    for (const action of protocolActions({ command, args })) this.#control(action);
+    for (const listener of this.#listeners) listener(command, args);
+  }
+
+  /** Subscribes to every link; returns the unsubscribe. */
+  listen(listener: ProtocolListener) {
+    this.#listeners.add(listener);
+    return () => void this.#listeners.delete(listener);
+  }
+
+  /** macOS hands links to the running app instead of starting a second instance. */
+  handleOpenUrl(app: Pick<App, "on">) {
+    app.on("open-url", (event, url) => {
+      const parsed = parseProtocolLink(url);
+      if (!parsed) return;
+      event.preventDefault();
+      this.run(parsed);
+    });
+  }
+}
+
 /**
  * Makes this app the handler for the protocol, as pear-desktop did. Only when
  * packaged: development runs (and tests) shouldn't take over the system's handler.

@@ -4,7 +4,9 @@
 
 import { type BrowserWindow, dialog, net, shell } from "electron";
 import type { Translate } from "@pear/sdk/i18n";
+import { errorMessage } from "@pear/sdk/util";
 import { compareVersions } from "./migrations.ts";
+import { alive } from "./windows.ts";
 
 export const RELEASES_URL = "https://github.com/pear-devs/pear-desktop/releases/latest";
 const LATEST_RELEASE_API = "https://api.github.com/repos/pear-devs/pear-desktop/releases/latest";
@@ -73,7 +75,7 @@ export async function checkForUpdates({ currentVersion, window, t, disable }: Up
   try {
     release = await newerRelease(currentVersion, net.fetch);
   } catch (error) {
-    console.warn("[pear] update check failed:", error instanceof Error ? error.message : error);
+    console.warn("[pear] update check failed:", errorMessage(error));
     return;
   }
   if (!release) return;
@@ -93,8 +95,8 @@ export async function checkForUpdates({ currentVersion, window, t, disable }: Up
     defaultId: 1,
     cancelId: 0,
   };
-  const parent = window();
-  const { response } = parent && !parent.isDestroyed() ? await dialog.showMessageBox(parent, options) : await dialog.showMessageBox(options);
+  const parent = alive(window());
+  const { response } = parent ? await dialog.showMessageBox(parent, options) : await dialog.showMessageBox(options);
   if (response === 1) void shell.openExternal(release.url);
   else if (response === 2) disable();
 }

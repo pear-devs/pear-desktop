@@ -2,12 +2,11 @@
 // served from pear://settings, so settings stay reachable when YTM
 // doesn't load (a broken plugin, no network…).
 
-import { join } from "node:path";
-import { BrowserWindow, nativeImage, protocol } from "electron";
-import { pearIconBitmap } from "@pear/sdk/icon";
+import { BrowserWindow, protocol } from "electron";
 import { SETTINGS_ORIGIN } from "@pear/sdk/protocol";
 import settingsApp from "virtual:pear/settings-app";
 import { isSettingsUrl } from "../shared/user-agent.ts";
+import { alive, appIcon, focusWindow, secureWebPreferences } from "./windows.ts";
 
 const PAGE = `<!doctype html>
 <html lang="en">
@@ -41,14 +40,16 @@ export function serveSettings() {
   });
 }
 
+/** `--settings` opens the standalone settings window (also in an already running instance). */
+export const SETTINGS_FLAG = "--settings";
+
 let settingsWindow: BrowserWindow | undefined;
 
 export function openSettingsWindow() {
-  if (settingsWindow && !settingsWindow.isDestroyed()) {
-    if (settingsWindow.isMinimized()) settingsWindow.restore();
-    settingsWindow.show();
-    settingsWindow.focus();
-    return settingsWindow;
+  const open = alive(settingsWindow);
+  if (open) {
+    focusWindow(open);
+    return open;
   }
   const window = new BrowserWindow({
     width: 900,
@@ -57,14 +58,10 @@ export function openSettingsWindow() {
     minHeight: 480,
     backgroundColor: "#1d1b20",
     title: "Pear Desktop settings",
-    icon: nativeImage.createFromBitmap(pearIconBitmap(256), { width: 256, height: 256 }),
+    icon: appIcon(),
     autoHideMenuBar: true,
     show: false,
-    webPreferences: {
-      preload: join(import.meta.dirname, "../preload/index.cjs"),
-      contextIsolation: true,
-      sandbox: true,
-    },
+    webPreferences: secureWebPreferences(),
   });
   settingsWindow = window;
   window.on("closed", () => {
@@ -79,5 +76,5 @@ export function openSettingsWindow() {
 }
 
 export function settingsWindowContents() {
-  return settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow.webContents : undefined;
+  return alive(settingsWindow)?.webContents;
 }

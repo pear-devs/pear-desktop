@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import { createServer as createHttpServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { createServer as createHttpsServer } from "node:https";
 import type { Duplex } from "node:stream";
+import { errorMessage } from "@pear/sdk/util";
 import { type WebSocket, WebSocketServer } from "ws";
 import { verifyToken } from "./jwt.ts";
 import { API_VERSION, openApiDocument, type Reply, type Route, type RpcInfo, validateBody } from "./routes.ts";
@@ -131,7 +132,7 @@ export async function startServer(options: ServerOptions) {
   const listener = (req: IncomingMessage, res: ServerResponse) => {
     handle(req, res).catch((error: unknown) => {
       options.onError(error);
-      if (!res.headersSent) send(res, { status: 500, body: { error: error instanceof Error ? error.message : String(error) } });
+      if (!res.headersSent) send(res, { status: 500, body: { error: errorMessage(error) } });
       else res.end();
     });
   };

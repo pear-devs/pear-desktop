@@ -2,7 +2,7 @@
 // and config changes apply live in both processes, no restart needed.
 
 import type { App, BrowserWindow, BrowserWindowConstructorOptions, Session } from "electron";
-import { interpolate } from "@pear/sdk/i18n";
+import { interpolate, type Translate } from "@pear/sdk/i18n";
 import { type AnyPlugin, type Cleanup, type HostContext, type RpcMethod, supportsPlatform } from "@pear/sdk";
 import { createLogger, errorMessage } from "@pear/sdk/util";
 import { v } from "@pear/sdk/rpc";
@@ -155,6 +155,10 @@ export class PluginHost {
   get i18n() {
     return this.#i18n;
   }
+
+  /** Translates into the active language; the English fallbacks until it is set. */
+  readonly t: Translate = (key, fallback, vars) =>
+    this.#i18n ? this.#i18n.t(key, fallback, vars) : interpolate(fallback ?? key, vars);
 
   attach(env: HostEnvironment) {
     this.#env = env;
@@ -332,7 +336,7 @@ export class PluginHost {
       },
       onProtocol: (listener) => void cleanups.push(env.onProtocol(listener)),
       onCleanup: (fn) => cleanups.push(fn),
-      t: (key, fallback, vars) => (host.#i18n ? host.#i18n.t(key, fallback, vars) : interpolate(fallback ?? key, vars)),
+      t: host.t,
       log: createLogger(id),
     };
     return instance;

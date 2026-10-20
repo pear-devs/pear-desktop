@@ -7,6 +7,7 @@ import { livePosition, type NowPlaying } from "@pear/sdk";
 import type { ApiServerConfig } from "@pear/sdk/core-config";
 import type { CoreState } from "@pear/sdk/protocol";
 import { toJsonSchema } from "@pear/sdk/rpc";
+import { errorMessage } from "@pear/sdk/util";
 import type { SongDetails } from "@pear/sdk/song-details";
 import { type BrowserWindow, dialog } from "electron";
 import type { WebSocket } from "ws";
@@ -86,7 +87,7 @@ export class ApiServer {
       log.info(`listening on ${this.#status}`);
     } catch (error) {
       if (generation !== this.#generation) return;
-      this.#error = `couldn't start: ${error instanceof Error ? error.message : String(error)}`;
+      this.#error = `couldn't start: ${errorMessage(error)}`;
       log.error(this.#error);
     }
     this.#publish();

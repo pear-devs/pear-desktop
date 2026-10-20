@@ -4,6 +4,7 @@
 
 import { app, type BrowserWindow, clipboard, Menu, type MenuItemConstructorOptions, shell } from "electron";
 import type { Translate } from "@pear/sdk/i18n";
+import { alive } from "./windows.ts";
 
 export interface MenuEnvironment {
   platform: NodeJS.Platform;
@@ -23,10 +24,7 @@ export const ALWAYS_ON_TOP_ID = "always-on-top";
 export function menuTemplate(env: MenuEnvironment): MenuItemConstructorOptions[] {
   const { t, platform } = env;
   const isMac = platform === "darwin";
-  const contents = () => {
-    const window = env.window();
-    return window && !window.isDestroyed() ? window.webContents : undefined;
-  };
+  const contents = () => alive(env.window())?.webContents;
   const settings: MenuItemConstructorOptions = {
     id: "settings",
     label: t("main.menu.options.submenu.settings", "Settings…"),

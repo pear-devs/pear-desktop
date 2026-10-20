@@ -15,6 +15,10 @@ export function isGoogleAuth(url: string) {
   return URL.parse(url)?.origin === GOOGLE_AUTH_ORIGIN;
 }
 
+export function isYtmUrl(url: string) {
+  return URL.parse(url)?.origin === YTM_ORIGIN;
+}
+
 /** Whether a URL is the standalone settings window (Node's URL gives custom schemes a "null" origin). */
 export function isSettingsUrl(url: string) {
   const parsed = URL.parse(url);

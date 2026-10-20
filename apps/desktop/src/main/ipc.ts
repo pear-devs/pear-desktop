@@ -7,7 +7,7 @@ import {
   type CoreCommands,
   type CoreState,
 } from "@pear/sdk/protocol";
-import { isSettingsUrl, YTM_ORIGIN } from "../shared/user-agent.ts";
+import { isSettingsUrl, isYtmUrl } from "../shared/user-agent.ts";
 import type { PageRequests } from "./page-requests.ts";
 import type { PlayerMirror } from "./player.ts";
 import type { PluginHost } from "./plugins.ts";
@@ -17,7 +17,7 @@ function isTrustedSender(event: IpcMainInvokeEvent | IpcMainEvent) {
   const frame = event.senderFrame;
   // Only top-level frames: an iframe on YTM's origin is not the runtime.
   if (!frame || frame.parent) return false;
-  return URL.parse(frame.url)?.origin === YTM_ORIGIN || isSettingsUrl(frame.url);
+  return isYtmUrl(frame.url) || isSettingsUrl(frame.url);
 }
 
 type Handlers = { [K in CoreCommandName]: (...args: Parameters<CoreCommands[K]>) => unknown };
@@ -63,7 +63,7 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
     "app:show-settings-file": () => shell.showItemInFolder(settingsPath),
     "app:toggle-devtools": () => {
       for (const window of BrowserWindow.getAllWindows()) {
-        if (URL.parse(window.webContents.getURL())?.origin === YTM_ORIGIN) window.webContents.toggleDevTools();
+        if (isYtmUrl(window.webContents.getURL())) window.webContents.toggleDevTools();
       }
     },
     "player:update": (state) => player.update(state),
@@ -72,7 +72,7 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
   ipcMain.handle(CHANNEL.invoke, (event, name: unknown, args: unknown) => {
     if (!isTrustedSender(event)) throw new Error("[pear] invoke from untrusted frame");
     // Only the page runtime answers requests and reports the player.
-    if ((name === "plugin:respond" || name === "player:update") && URL.parse(event.senderFrame!.url)?.origin !== YTM_ORIGIN) {
+    if ((name === "plugin:respond" || name === "player:update") && !isYtmUrl(event.senderFrame!.url)) {
       throw new Error(`[pear] ${name} is for the page runtime`);
     }
     if (typeof name !== "string" || !Object.hasOwn(handlers, name)) {
@@ -87,7 +87,7 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
       event.returnValue = null;
       return;
     }
-    if (URL.parse(event.senderFrame!.url)?.origin === YTM_ORIGIN) onRuntimeBootstrap(event.sender);
+    if (isYtmUrl(event.senderFrame!.url)) onRuntimeBootstrap(event.sender);
     event.returnValue = {
       version: app.getVersion(),
       platform: process.platform,
@@ -109,7 +109,7 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
       strings: plugins.i18n?.strings ?? {},
       catalog: plugins.plugins.map((plugin) => {
         // pear-desktop's translated plugin names and descriptions, where they exist.
-        const t = plugins.i18n?.t ?? ((_: string, fallback?: string) => fallback ?? "");
+        const t = plugins.t;
         const description = plugin.description ? t(`plugins.${plugin.id}.description`, plugin.description) : undefined;
         const actions = Object.entries((plugin.actions ?? {}) as Record<string, { label: string; description?: string } | undefined>).flatMap(
           ([name, action]) => {
