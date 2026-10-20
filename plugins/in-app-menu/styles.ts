@@ -104,13 +104,13 @@ export const shadowStyles = css`
     background: rgb(255 255 255 / 0.1);
     outline: none;
   }
-  .item .check {
+  .item > svg:first-child {
     width: 16px;
     height: 16px;
     color: #c6e47a;
     visibility: hidden;
   }
-  .item[aria-checked="true"] .check {
+  .item[aria-checked="true"] > svg:first-child {
     visibility: visible;
   }
   .item:disabled {
