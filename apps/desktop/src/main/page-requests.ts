@@ -3,8 +3,11 @@
 // its answer, which comes back through the "plugin:respond" command.
 
 import type { HostEvent } from "@pear/sdk/protocol";
+import type { SongDetails } from "@pear/sdk/song-details";
 
 const REQUEST_TIMEOUT_MS = 10_000;
+/** The song details are extras; don't wait long for a page that isn't up. */
+const DETAILS_TIMEOUT_MS = 5000;
 
 interface Pending {
   resolve(value: unknown): void;
@@ -39,6 +42,12 @@ export class PageRequests {
       });
       this.#send({ type: "plugin-request", id, event, payload, requestId });
     });
+  }
+
+  /** The current track's extras, from the runtime's own handler; null if the page doesn't answer. */
+  songDetails(options?: { timeout?: number }): Promise<SongDetails | null> {
+    const timeout = options?.timeout ?? DETAILS_TIMEOUT_MS;
+    return this.request<SongDetails | null>("core", "details", undefined, { timeout }).catch(() => null);
   }
 
   /** Settles a request with the page's answer. */

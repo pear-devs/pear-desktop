@@ -2,18 +2,11 @@
 // quietly keeps retrying (with backoff) while Discord isn't running.
 
 import { definePlugin } from "@pear/sdk";
-import { readSongDetails } from "@pear/sdk/song-details";
 import { Presence } from "./presence.ts";
 import { schema } from "./schema.ts";
 
-/** What the settings actions call on the running instance. */
-interface PresenceActions {
-  connectNow(): void;
-  clear(): void;
-}
-
-// Typed by an interface: naming `Presence` here would keep the host-only module in the page build.
-const presences = new WeakMap<object, PresenceActions>();
+/** The running instance, for the settings actions. */
+const presences = new WeakMap<object, Presence>();
 
 export default definePlugin({
   id: "discord",
@@ -44,11 +37,5 @@ export default definePlugin({
         presences.get(this)?.clear();
       },
     },
-  },
-  page: {
-    start(ctx) {
-      ctx.host.handle("details", () => (ctx.player.api ? readSongDetails(ctx.player.api) : null));
-    },
-    onConfigChange() {},
   },
 });

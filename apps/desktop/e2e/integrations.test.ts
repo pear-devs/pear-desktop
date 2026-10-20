@@ -100,6 +100,8 @@ test("now-playing services report the playing track and follow pause and disable
   const lumiaPosts = () => lumia.requests.filter((r) => r.url === "/api/media").map((r) => r.body);
   await test.step("Lumia Stream", async () => {
     await expect.poll(() => lumiaPosts()[0]).toMatchObject({ token: expect.any(String), data: { eventType: "switchSong", videoId: TEST_TRACK } });
+    // The view count comes from the page's song details (ctx.player.details()).
+    await expect.poll(() => lumiaPosts().at(-1)?.data.views).toEqual(expect.any(Number));
     // While playing, progress goes out every second, as pear-desktop did.
     const progressCount = lumiaPosts().length;
     await expect.poll(() => lumiaPosts().length, { timeout: PROGRESS_WINDOW_MS }).toBeGreaterThanOrEqual(progressCount + PROGRESS_POSTS);

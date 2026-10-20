@@ -1,7 +1,7 @@
 // Sends song changes, play/pause and progress to Lumia Stream's local media API.
 
 import { definePlugin, livePosition, type NowPlaying, type Track } from "@pear/sdk";
-import { readSongDetails, type SongDetails } from "@pear/sdk/song-details";
+import type { SongDetails } from "@pear/sdk/song-details";
 import { isPlaying } from "@pear/sdk/util";
 import { net } from "electron";
 
@@ -16,8 +16,6 @@ const HEADERS = {
   "Access-Control-Allow-Origin": "*",
 };
 
-/** How long the page part gets to answer with the track's details. */
-const DETAILS_TIMEOUT_MS = 5000;
 /** A position jump bigger than this (beyond normal playback) is a seek. */
 const SEEK_THRESHOLD_S = 1.5;
 
@@ -85,14 +83,11 @@ export default definePlugin({
 
       // Views come from the page part; resend once they're known.
       const fetchDetails = (videoId: string) => {
-        ctx
-          .request<SongDetails | null>("details", undefined, { timeout: DETAILS_TIMEOUT_MS })
-          .then((result) => {
-            if (result?.videoId !== videoId || ctx.player.state.track?.videoId !== videoId) return;
-            details = result;
-            post("switchSong");
-          })
-          .catch(() => {});
+        void ctx.player.details().then((result) => {
+          if (result?.videoId !== videoId || ctx.player.state.track?.videoId !== videoId) return;
+          details = result;
+          post("switchSong");
+        });
       };
 
       ctx.player.on("change", (state, previous) => {
@@ -114,8 +109,5 @@ export default definePlugin({
         if (!isPaused(ctx.player.state)) post("switchSong");
       }, PROGRESS_MS);
     },
-  },
-  page: (ctx) => {
-    ctx.host.handle("details", () => (ctx.player.api ? readSongDetails(ctx.player.api) : null));
   },
 });

@@ -1,6 +1,6 @@
 // Extra track metadata that integrations report (views, alternative title,
-// tags…) but that the shared `Track` doesn't carry. Page side only: read it in
-// a `ctx.host.handle` handler and fetch it from the host with `ctx.request`.
+// tags…) but that the shared `Track` doesn't carry. Read in the page by the
+// runtime; host parts get it with `ctx.player.details()`.
 
 import type { YTPlayerApi } from "./player.ts";
 import { ytmUrl } from "./util.ts";

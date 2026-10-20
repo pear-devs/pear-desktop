@@ -7,6 +7,7 @@ import { type ConfigOf, type ConfigShape, onPlatform } from "./config.ts";
 import type { NowPlaying, PlayerAction, Track, PlaybackStatus, Unsubscribe, YTPlayerApi } from "./player.ts";
 import type { RpcMethods, RpcSchemas } from "./rpc.ts";
 import type { SelectorName } from "./selectors.ts";
+import type { SongDetails } from "./song-details.ts";
 
 export * from "./config.ts";
 export * from "./player.ts";
@@ -71,6 +72,11 @@ export interface HostPlayer {
   on(event: "change", listener: (state: NowPlaying, previous: NowPlaying) => void): Unsubscribe;
   on(event: "trackChange", listener: (track: Track | null, state: NowPlaying) => void): Unsubscribe;
   control(action: PlayerAction): void;
+  /**
+   * Extras of the current track the page knows (views, tags, alternative title…).
+   * Null when there are none or the page doesn't answer within `timeout` ms (default 5000).
+   */
+  details(options?: { timeout?: number }): Promise<SongDetails | null>;
 }
 
 export interface HostContext<C> extends CommonContext<C> {

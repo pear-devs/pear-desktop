@@ -303,7 +303,7 @@ export class PluginHost {
       session: env.router.scopedSession(id),
       webRequest: env.router.scoped(id),
       request: (event, payload, options) => env.requests.request(id, event, payload, options),
-      player: scopedPlayer(env.player, cleanups),
+      player: scopedPlayer(env, cleanups),
       openSettings: () => env.openSettings(),
       focusWindow: () => env.focusWindow(),
       listen: (target, event, listener) => {
@@ -339,7 +339,7 @@ export class PluginHost {
 }
 
 /** The player, with the plugin's listeners removed when it stops. */
-function scopedPlayer(player: PlayerMirror, cleanups: Cleanup[]): HostPlayer {
+function scopedPlayer({ player, requests }: HostEnvironment, cleanups: Cleanup[]): HostPlayer {
   return {
     get state() {
       return player.state;
@@ -351,6 +351,7 @@ function scopedPlayer(player: PlayerMirror, cleanups: Cleanup[]): HostPlayer {
       return off;
     }) as HostPlayer["on"],
     control: (action) => player.control(action),
+    details: (options) => requests.songDetails(options),
   };
 }
 

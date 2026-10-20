@@ -3,7 +3,8 @@
 import { EventEmitter } from "node:events";
 import { IDLE, type HostPlayer, type NowPlaying, type PlayerAction, type Track } from "@pear/sdk";
 
-export class PlayerMirror implements HostPlayer {
+// The page's details are read through PageRequests (see plugins.ts), not mirrored.
+export class PlayerMirror implements Omit<HostPlayer, "details"> {
   #state: NowPlaying = { ...IDLE };
   #events = new EventEmitter();
   #send: (action: PlayerAction) => void;

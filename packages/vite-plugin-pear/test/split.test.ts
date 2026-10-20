@@ -97,6 +97,39 @@ describe("splitPlugin", () => {
     expect(out).not.toContain("node:os");
   });
 
+  test("host code named only in types stays out of the page", () => {
+    const out = splitPlugin(
+      `import { Presence } from "./presence.ts";
+       import { createNotifier } from "./notifier.ts";
+       type Notifier = ReturnType<typeof createNotifier>;
+       const presences = new WeakMap<object, Presence>();
+       export default definePlugin({
+         id: "a",
+         name: "A",
+         host: { start(ctx) { presences.set(ctx, new Presence(createNotifier() as Notifier)); } },
+         page: (ctx) => { presences.get(ctx); },
+       });`,
+      "a.ts",
+      "page",
+    );
+    expect(out).not.toContain("./presence.ts");
+    expect(out).not.toContain("./notifier.ts");
+    expect(out).toContain("new WeakMap()");
+  });
+
+  test("keeps JSX and the JSX pragma in .tsx files", () => {
+    const out = splitPlugin(
+      `/** @jsxImportSource @pear/sdk */
+       import { Icon } from "@pear/sdk/dom";
+       export default definePlugin({ id: "a", name: "A", page: () => { document.body.append(<Icon path="M0" />); } });`,
+      "a.tsx",
+      "page",
+    );
+    expect(out).toContain("@jsxImportSource @pear/sdk");
+    expect(out).toContain('<Icon path="M0" />');
+    expect(out).toContain('import { Icon } from "@pear/sdk/dom";');
+  });
+
   test("rejects files without a plugin export", () => {
     expect(() => splitPlugin("export const x = 1;", "bad.ts", "page")).toThrow(/definePlugin/);
   });

@@ -4,8 +4,12 @@
 // local helpers that are no longer referenced are pruned until nothing changes,
 // so host-only dependencies (node:*, native modules) never reach the page and
 // vice versa.
+//
+// Types are stripped first: a host class named only in a type (`WeakMap<object,
+// Presence>`, `ReturnType<typeof createNotifier>`) must not keep it in the page.
 
 import MagicString from "magic-string";
+import { transformSync } from "rolldown/utils";
 import {
   type ExportDefaultDeclaration,
   type ImportDeclaration,
@@ -17,9 +21,6 @@ import {
   type Program,
   type PropertyKey,
   type Span,
-  type TSAsExpression,
-  type TSNonNullExpression,
-  type TSSatisfiesExpression,
   type VariableDeclaration,
   type VariableDeclarator,
 } from "oxc-parser";
@@ -31,7 +32,8 @@ const REMOVED_PROPERTIES: Record<SplitTarget, readonly string[]> = {
   page: ["host"],
 };
 
-export function splitPlugin(code: string, filename: string, target: SplitTarget): string {
+export function splitPlugin(source: string, filename: string, target: SplitTarget): string {
+  const code = stripTypes(source, filename);
   const program = parse(code, filename);
   const object = findPluginObject(program);
   if (!object) {
@@ -47,6 +49,16 @@ export function splitPlugin(code: string, filename: string, target: SplitTarget)
   return prune(s.toString(), filename);
 }
 
+/** The file as JavaScript (JSX and comments, such as a `@jsxImportSource` pragma, kept). */
+function stripTypes(code: string, filename: string): string {
+  const lang = filename.endsWith(".tsx") ? "tsx" : "ts";
+  const { code: js, errors } = transformSync(filename, code, { lang, jsx: "preserve" });
+  if (errors.length > 0) {
+    throw new Error(`[pear] ${filename}: ${errors.map((e) => e.message).join("; ")}`);
+  }
+  return js;
+}
+
 function parse(code: string, filename: string): Program {
   const { program, errors } = parseSync(filename, code, { sourceType: "module" });
   if (errors.length > 0) {
@@ -55,12 +67,9 @@ function parse(code: string, filename: string): Program {
   return program;
 }
 
-/** Wrappers that leave the expression inside as it is: `x as T`, `x satisfies T`, `x!`, `(x)`. */
-type Wrapper = TSAsExpression | TSSatisfiesExpression | TSNonNullExpression | ParenthesizedExpression;
-const WRAPPERS = new Set(["TSAsExpression", "TSSatisfiesExpression", "TSNonNullExpression", "ParenthesizedExpression"]);
+const isWrapper = (node: Node): node is ParenthesizedExpression => node.type === "ParenthesizedExpression";
 
-const isWrapper = (node: Node): node is Wrapper => WRAPPERS.has(node.type);
-
+/** `(x)` → `x`. */
 function unwrap(node: Node): Node {
   while (isWrapper(node)) node = node.expression;
   return node;
@@ -200,10 +209,9 @@ function rebuildImport(code: string, statement: ImportDeclaration, kept: ImportD
   const defaults = kept.filter((spec) => spec.type !== "ImportSpecifier").map(text);
   const named = kept.filter((spec) => spec.type === "ImportSpecifier").map(text);
   const clause = [...defaults, ...(named.length > 0 ? [`{ ${named.join(", ")} }`] : [])].join(", ");
-  const typeKeyword = statement.importKind === "type" ? "type " : "";
   // Everything from the source string on, including `with { type: "macro" }`.
   const tail = code.slice(statement.source.start, statement.end);
-  return `import ${typeKeyword}${clause} from ${tail}`;
+  return `import ${clause} from ${tail}`;
 }
 
 interface Reference {
@@ -243,8 +251,6 @@ function isPropertyName(parent: Node | undefined, key: string | undefined) {
       return key === "key" && !parent.computed && !parent.shorthand;
     case "MethodDefinition":
     case "PropertyDefinition":
-    case "TSPropertySignature":
-    case "TSMethodSignature":
       return key === "key" && !parent.computed;
     case "JSXAttribute":
       return key === "name";

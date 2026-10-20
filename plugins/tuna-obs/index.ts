@@ -1,7 +1,7 @@
 // Feeds OBS's Tuna plugin (its "web server" source) with the current song.
 
 import { config, definePlugin, livePosition, type NowPlaying, type Track } from "@pear/sdk";
-import { readSongDetails, type SongDetails } from "@pear/sdk/song-details";
+import type { SongDetails } from "@pear/sdk/song-details";
 import { net } from "electron";
 
 const HEADERS = {
@@ -11,8 +11,6 @@ const HEADERS = {
   "Access-Control-Allow-Origin": "*",
 };
 
-/** How long the page part gets to answer with the track's details. */
-const DETAILS_TIMEOUT_MS = 5000;
 
 /** Tuna's song data, in pear-desktop's shape. */
 function songData(state: NowPlaying, track: Track, details: SongDetails | undefined) {
@@ -93,14 +91,11 @@ export default definePlugin({
       });
 
       const fetchDetails = (videoId: string) => {
-        ctx
-          .request<SongDetails | null>("details", undefined, { timeout: DETAILS_TIMEOUT_MS })
-          .then((result) => {
-            if (result?.videoId !== videoId) return;
-            details = result;
-            post();
-          })
-          .catch(() => {});
+        void ctx.player.details().then((result) => {
+          if (result?.videoId !== videoId) return;
+          details = result;
+          post();
+        });
       };
 
       ctx.player.on("change", (state, previous) => {
@@ -110,12 +105,6 @@ export default definePlugin({
       post();
     },
     // The port is read for every request.
-    onConfigChange() {},
-  },
-  page: {
-    start(ctx) {
-      ctx.host.handle("details", () => (ctx.player.api ? readSongDetails(ctx.player.api) : null));
-    },
     onConfigChange() {},
   },
 });

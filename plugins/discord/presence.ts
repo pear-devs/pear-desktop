@@ -13,8 +13,6 @@ const RETRY_MIN_MS = 5_000;
 const RETRY_MAX_MS = 60_000;
 // Discord allows 5 activity updates per 20 s.
 const MIN_UPDATE_INTERVAL_MS = 4_000;
-/** How long the page part gets to answer with the track's details. */
-const DETAILS_TIMEOUT_MS = 5_000;
 
 type Ctx = HostContextOf<typeof schema>;
 
@@ -184,14 +182,11 @@ export class Presence {
   }
 
   async #fetchDetails(videoId: string) {
-    try {
-      const result = await this.#ctx.request<SongDetails | null>("details", undefined, { timeout: DETAILS_TIMEOUT_MS });
-      if (result?.videoId === videoId && this.#ctx.player.state.track?.videoId === videoId) {
-        this.#details = result;
-        this.#update();
-      }
-    } catch {
-      // Page part not up yet: show the plain title and artist.
+    // Null while the page isn't up: the plain title and artist show meanwhile.
+    const result = await this.#ctx.player.details();
+    if (result?.videoId === videoId && this.#ctx.player.state.track?.videoId === videoId) {
+      this.#details = result;
+      this.#update();
     }
   }
 }

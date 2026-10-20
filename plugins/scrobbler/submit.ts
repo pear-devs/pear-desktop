@@ -7,19 +7,19 @@ import type { Ctx } from "./schema.ts";
 import { LASTFM_REAUTH_CODES, LastFmError, lastFm, type Listen, listenBrainzSubmit } from "./services.ts";
 import type { Play } from "./tracker.ts";
 
+/** Submissions wait for the details, so give the page less time than the default. */
 const DETAILS_TIMEOUT_MS = 3000;
 const SONG_TYPES = new Set(["MUSIC_VIDEO_TYPE_ATV", "MUSIC_VIDEO_TYPE_OMV"]);
 
 export function submitter(ctx: Ctx, warn: Warn) {
-  // Details (alternative title, tags, exact video type) arrive from the page part; the current track's are kept.
+  // Details (alternative title, tags, exact video type) come from the page; the current track's are kept.
   const details = new Map<string, Promise<SongDetails | undefined>>();
   const detailsFor = (videoId: string) => {
     let pending = details.get(videoId);
     if (!pending) {
-      pending = ctx
-        .request<SongDetails | null>("details", undefined, { timeout: DETAILS_TIMEOUT_MS })
-        .then((result) => (result?.videoId === videoId ? result : undefined))
-        .catch(() => undefined);
+      pending = ctx.player
+        .details({ timeout: DETAILS_TIMEOUT_MS })
+        .then((result) => (result?.videoId === videoId ? result : undefined));
       details.clear();
       details.set(videoId, pending);
     }

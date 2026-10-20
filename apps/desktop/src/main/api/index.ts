@@ -38,8 +38,6 @@ const ALLOW_BUTTON = 0;
 const DENY_BUTTON = 1;
 /** Of the generated token secret. */
 const SECRET_BYTES = 32;
-/** The song details are extras; don't wait long for a page that isn't up. */
-const DETAILS_TIMEOUT_MS = 5000;
 
 const networkKey = (c: ApiServerConfig) =>
   JSON.stringify([c.enabled, c.hostname, c.port, c.useHttps && c.certPath, c.useHttps && c.keyPath]);
@@ -137,12 +135,9 @@ export class ApiServer {
   }
 
   async #fetchDetails(videoId: string) {
-    try {
-      const result = await this.#env.requests.request<SongDetails | null>("core", "details", undefined, { timeout: DETAILS_TIMEOUT_MS });
-      if (result?.videoId === videoId) this.#details = result;
-    } catch {
-      // The page runtime isn't up yet; song info just lacks the extras.
-    }
+    // Null while the page runtime isn't up; song info then just lacks the extras.
+    const result = await this.#env.requests.songDetails();
+    if (result?.videoId === videoId) this.#details = result;
   }
 
   #onPlayerChange(state: NowPlaying, previous: NowPlaying) {

@@ -2,7 +2,6 @@
 // or resumes, a scrobble once it has really been listened to (see tracker.ts).
 
 import { definePlugin } from "@pear/sdk";
-import { readSongDetails } from "@pear/sdk/song-details";
 import { lastFmAuthorizer } from "./auth.ts";
 import { warner } from "./common.ts";
 import { schema } from "./schema.ts";
@@ -49,11 +48,5 @@ export default definePlugin({
       ctx.onConfigChange(() => auth.reconfigure());
       void auth.authorize();
     },
-  },
-  page: {
-    start(ctx) {
-      ctx.host.handle("details", () => (ctx.player.api ? readSongDetails(ctx.player.api) : null));
-    },
-    onConfigChange() {},
   },
 });
