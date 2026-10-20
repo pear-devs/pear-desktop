@@ -19,6 +19,7 @@ import { join, resolve } from "node:path";
 import pear from "@pear/vite-plugin";
 import type { AnyPlugin, ConfigShape } from "@pear/sdk";
 import { createServer } from "vite";
+import { escapeNames } from "../../../scripts/escape-names.ts";
 
 const desktop = resolve(import.meta.dirname, "..");
 const repo = resolve(desktop, "../..");
@@ -132,6 +133,7 @@ if (process.argv.includes("--check")) {
   console.log("i18n: en.json is up to date");
 } else {
   for (const [key, english] of missing) insert(en, key, english);
-  writeFileSync(EN, `${JSON.stringify(en, null, 2)}\n`);
+  // JSON.stringify writes the app name plainly; keep it escaped like the rest of the repo.
+  writeFileSync(EN, escapeNames(`${JSON.stringify(en, null, 2)}\n`));
   console.log(`i18n: added ${missing.length} key(s) to en.json`);
 }

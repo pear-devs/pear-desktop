@@ -1,11 +1,13 @@
-// Keeps the app's name escaped in package.json files, the way pear-desktop has
-// always spelled it (as JavaScript unicode escapes, not the plain name). Package
-// managers rewrite package.json and silently un-escape it, so the pre-commit
-// hook runs this on every staged package.json.
+// Keeps the trademarked app name out of the sources, the way pear-desktop
+// always has: in JSON (package.json, en.json, test data) it is written as
+// unicode escapes, which this fixes automatically; in code and docs it must be
+// escaped in strings or left out of prose ("YTM"), which this reports. Package
+// managers and JSON writers un-escape JSON, so the pre-commit hook runs this on
+// every commit, and CI runs --check.
 //
-//   node scripts/escape-names.ts --staged   fix staged package.json files (pre-commit)
-//   node scripts/escape-names.ts --check    exit 1 if a tracked one is plain (CI)
-//   node scripts/escape-names.ts <files…>   fix these files
+//   node scripts/escape-names.ts --staged   fix staged JSON, reject other plain uses (pre-commit)
+//   node scripts/escape-names.ts --check    exit 1 on any plain use in tracked files (CI)
+//   node scripts/escape-names.ts <files…>   fix these JSON files
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -21,7 +23,15 @@ export function escapeNames(json: string): string {
 }
 
 const git = (...args: string[]) => execFileSync("git", args, { encoding: "utf8" });
-const isPackageJson = (path: string) => path === "package.json" || path.endsWith("/package.json");
+// pear-desktop's own files, kept as it wrote them.
+const isUpstream = (path: string) => path === "changelog.md" || path.startsWith(".github/");
+const isJson = (path: string) => path.endsWith(".json");
+const isText = (path: string) => /\.(m|c)?(ts|tsx|js|jsx|json|md|ya?ml|css|html|txt)$/.test(path);
+
+/** Lines that spell the name plainly. */
+function plainLines(text: string) {
+  return text.split("\n").flatMap((line, index) => (escapeNames(line) !== line ? [index + 1] : []));
+}
 
 function fixFile(path: string) {
   if (!existsSync(path)) return false;
@@ -32,31 +42,51 @@ function fixFile(path: string) {
   return true;
 }
 
+function report(found: [path: string, lines: number[]][]) {
+  for (const [path, lines] of found) console.error(`escape-names: ${path}:${lines.join(",")} spells the app name plainly`);
+  if (found.length > 0) {
+    console.error("escape-names: write it as unicode escapes in strings (as pear-desktop does), or say YTM in prose.");
+  }
+  return found.length === 0;
+}
+
 function fixStaged() {
-  const staged = git("diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z").split("\0").filter(isPackageJson);
+  const staged = git("diff", "--cached", "--name-only", "--diff-filter=ACMR", "-z")
+    .split("\0")
+    .filter((path) => path && isText(path) && !isUpstream(path));
+  const found: [string, number[]][] = [];
   for (const path of staged) {
-    const [mode] = git("ls-files", "-s", "--", path).split(" ");
     const text = git("show", `:${path}`);
+    if (!isJson(path)) {
+      const lines = plainLines(text);
+      if (lines.length > 0) found.push([path, lines]);
+      continue;
+    }
     const fixed = escapeNames(text);
     if (fixed === text) continue;
     // Fix what is staged without staging anything else, then the working copy.
+    const [mode] = git("ls-files", "-s", "--", path).split(" ");
     const blob = execFileSync("git", ["hash-object", "-w", "--stdin", "--path", path], { input: fixed, encoding: "utf8" }).trim();
     git("update-index", "--cacheinfo", `${mode},${blob},${path}`);
     fixFile(path);
     console.log(`escape-names: escaped the app name in ${path}`);
   }
+  if (!report(found)) process.exit(1);
 }
 
 function check() {
-  const plain = git("ls-files", "-z").split("\0").filter(isPackageJson).filter((path) => {
-    const text = readFileSync(path, "utf8");
-    return escapeNames(text) !== text;
-  });
-  for (const path of plain) console.error(`escape-names: ${path} spells the app name plainly; run node scripts/escape-names.ts ${path}`);
-  if (plain.length > 0) process.exit(1);
+  const found: [string, number[]][] = [];
+  for (const path of git("ls-files", "-z").split("\0")) {
+    if (!path || !isText(path) || isUpstream(path) || !existsSync(path)) continue;
+    const lines = plainLines(readFileSync(path, "utf8"));
+    if (lines.length > 0) found.push([path, lines]);
+  }
+  if (!report(found)) process.exit(1);
 }
 
-const args = process.argv.slice(2);
-if (args[0] === "--staged") fixStaged();
-else if (args[0] === "--check") check();
-else for (const path of args) if (fixFile(path)) console.log(`escape-names: escaped the app name in ${path}`);
+if (import.meta.main) {
+  const args = process.argv.slice(2);
+  if (args[0] === "--staged") fixStaged();
+  else if (args[0] === "--check") check();
+  else for (const path of args) if (fixFile(path)) console.log(`escape-names: escaped the app name in ${path}`);
+}

@@ -99,8 +99,10 @@ nub run i18n         # adds new English texts to src/i18n/resources/en.json (Web
 it, the app uses the same data folder as an installed pear-desktop, so it picks
 up that session.
 
-`nub install` also installs a pre-commit hook (`.githooks/`) that keeps the app
-name escaped in package.json files, the way pear-desktop has always spelled it.
+`nub install` also installs a pre-commit hook (`.githooks/`) that keeps the
+trademarked app name out of the sources, like pear-desktop always has: it
+escapes it in JSON files and rejects plain uses in code and docs (write it as
+unicode escapes in strings, or "YTM" in prose). CI checks the same.
 
 ## Notes
 

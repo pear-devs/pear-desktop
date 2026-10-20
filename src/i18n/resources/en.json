@@ -677,7 +677,7 @@
           }
         },
         "playButton": {
-          "label": "“Play on \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music” button"
+          "label": "“Play on \u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063” button"
         },
         "hideGitHubButton": {
           "label": "Hide the GitHub button"
@@ -1148,7 +1148,7 @@
         "play-now": "Play now",
         "remove-item": "Remove {{title}}",
         "remove": "Remove",
-        "link-placeholder": "Paste a \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music link",
+        "link-placeholder": "Paste a \u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063 link",
         "song-link": "Song link"
       }
     },
@@ -1417,7 +1417,7 @@
         },
         "alternativeTitles": {
           "label": "Use alternative titles",
-          "description": "Prefer \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music's alternative title when it has one (e.g. original-script titles)."
+          "description": "Prefer \u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063's alternative title when it has one (e.g. original-script titles)."
         },
         "alternativeArtist": {
           "label": "Use the canonical artist",
@@ -1618,7 +1618,7 @@
           "options": {
             "auto": "Best available",
             "LRCLib": "LRCLIB",
-            "YTMusic": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music",
+            "YTMusic": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063",
             "MusixMatch": "Musixmatch",
             "Megalobiz": "Megalobiz",
             "LyricsGenius": "Genius"
@@ -1777,7 +1777,7 @@
           "label": "Switch",
           "options": {
             "custom": "Pear Desktop's switch",
-            "native": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music's switch",
+            "native": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063's switch",
             "disabled": "No switch"
           }
         },
@@ -1966,7 +1966,7 @@
       },
       "themes": {
         "label": "Themes",
-        "description": "CSS files applied on top of \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music.",
+        "description": "CSS files applied on top of \u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063.",
         "placeholder": "/path/to/theme.css"
       },
       "disableHardwareAcceleration": {
@@ -2097,7 +2097,7 @@
       }
     },
     "about": {
-      "tagline": "A feature-rich desktop app for \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music",
+      "tagline": "A feature-rich desktop app for \u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063",
       "versions": "Versions",
       "platform": "Platform",
       "actions": "Actions",
