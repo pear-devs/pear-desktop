@@ -351,6 +351,9 @@ importers:
       node-id3:
         specifier: 0.2.9
         version: 0.2.9
+      preact:
+        specifier: ^10.29.8
+        version: 10.29.8
       youtubei.js:
         specifier: 17.2.0
         version: 17.2.0

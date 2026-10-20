@@ -1,12 +1,15 @@
+import type { PluginMenuItem } from "@pear/sdk";
 import type { MenuItemConstructorOptions } from "electron";
 import { describe, expect, test, vi } from "vitest";
+import { MenuItems } from "../src/main/menu-items.ts";
 import { menuTemplate } from "../src/main/menu.ts";
 
 vi.mock("electron", () => ({ app: { name: "App" } }));
 
 describe("menuTemplate", () => {
-  const env = (platform: NodeJS.Platform) => ({
+  const env = (platform: NodeJS.Platform, pluginItems: PluginMenuItem[] = []) => ({
     platform,
+    pluginItems: () => pluginItems,
     t: (_key: string, fallback?: string) => fallback ?? "",
     window: () => undefined,
     openSettings: vi.fn(),
@@ -42,5 +45,26 @@ describe("menuTemplate", () => {
     expect(e.openSettings).toHaveBeenCalled();
     (options[2]!.click as (item: { checked: boolean }) => void)({ checked: false });
     expect(e.setAlwaysOnTop).toHaveBeenCalledWith(false);
+  });
+
+  test("plugins' items follow Settings, and come and go", () => {
+    const items = new MenuItems();
+    const changes = vi.fn();
+    items.onChange(changes);
+    const click = vi.fn();
+    const remove = items.add({ label: "Downloads", accelerator: "CmdOrCtrl+J", click });
+    expect(changes).toHaveBeenCalledOnce();
+
+    const options = submenu(menuTemplate({ ...env("linux"), pluginItems: () => items.items })[0]);
+    expect(labels(options).slice(0, 3)).toEqual(["Settings…", "Downloads", "separator"]);
+    expect(options[1]).toMatchObject({ accelerator: "CmdOrCtrl+J" });
+    (options[1]!.click as () => void)();
+    expect(click).toHaveBeenCalled();
+    // On macOS, where Settings is in the app menu, they lead Options.
+    expect(labels(submenu(menuTemplate({ ...env("darwin"), pluginItems: () => items.items })[1])).slice(0, 2)).toEqual(["Downloads", "separator"]);
+
+    remove();
+    expect(changes).toHaveBeenCalledTimes(2);
+    expect(items.items).toEqual([]);
   });
 });

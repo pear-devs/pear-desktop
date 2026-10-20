@@ -42,3 +42,24 @@ test("tray shows a paused icon while paused and offers Restart", async ({ app, p
   await expect.poll(async () => (await probe()).images.length).toBe(before + 2);
   expect((await probe()).images.at(-1)).not.toBe(paused);
 });
+
+test("tray menu has plugins' items above Settings, while they run", async ({ app, page }) => {
+  await app.evaluate(({ Tray }) => {
+    const probe = { images: [] as number[], menu: [] as string[] };
+    globalThis.__trayProbe = probe;
+    const setContextMenu = Tray.prototype.setContextMenu;
+    Tray.prototype.setContextMenu = function (this: Electron.Tray, menu: Electron.Menu | null) {
+      probe.menu = menu?.items.map((item) => item.label) ?? [];
+      return setContextMenu.call(this, menu);
+    };
+  });
+  await setEnabled(page, "tray", true);
+  const menu = async () => (await app.evaluate(() => globalThis.__trayProbe!)).menu;
+  await expect.poll(menu).toContain("Settings…");
+  expect(await menu()).not.toContain("Downloads");
+
+  await setEnabled(page, "downloader", true);
+  await expect.poll(async () => (await menu()).filter((label) => label === "Downloads" || label === "Settings…")).toEqual(["Downloads", "Settings…"]);
+  await setEnabled(page, "downloader", false);
+  await expect.poll(menu).not.toContain("Downloads");
+});

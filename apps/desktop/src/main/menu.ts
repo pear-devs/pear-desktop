@@ -3,6 +3,7 @@
 // in-app-menu plugin draws this same menu in the page.
 
 import { app, type BrowserWindow, clipboard, Menu, type MenuItemConstructorOptions, shell } from "electron";
+import type { PluginMenuItem } from "@pear/sdk";
 import type { Translate } from "@pear/sdk/i18n";
 import { alive } from "./windows.ts";
 
@@ -12,6 +13,8 @@ export interface MenuEnvironment {
   /** The YTM window. */
   window(): BrowserWindow | undefined;
   openSettings(): void;
+  /** Plugins' items (`ctx.addMenuItem`), below Settings. */
+  pluginItems(): readonly PluginMenuItem[];
   alwaysOnTop(): boolean;
   setAlwaysOnTop(value: boolean): void;
   /** config.json */
@@ -42,13 +45,14 @@ function settingsItem(env: MenuEnvironment): MenuItemConstructorOptions {
   };
 }
 
-/** `settings` leads the menu, except on macOS where it is in the app menu. */
+/** `settings` leads the menu, except on macOS where it is in the app menu; plugins' items follow. */
 function optionsMenu(env: MenuEnvironment, contents: Contents, settings: MenuItemConstructorOptions | undefined): MenuItemConstructorOptions {
   const { t } = env;
+  const leading = [...(settings ? [settings] : []), ...env.pluginItems().map(pluginItem)];
   return {
     label: t("main.menu.options.label", "Options"),
     submenu: [
-      ...(settings ? [settings, { type: "separator" } as const] : []),
+      ...(leading.length > 0 ? [...leading, { type: "separator" } as const] : []),
       {
         id: ALWAYS_ON_TOP_ID,
         label: t("main.menu.options.submenu.always-on-top", "Always on top"),
@@ -68,6 +72,10 @@ function optionsMenu(env: MenuEnvironment, contents: Contents, settings: MenuIte
       },
     ],
   };
+}
+
+function pluginItem({ label, accelerator, click }: PluginMenuItem): MenuItemConstructorOptions {
+  return { label, ...(accelerator ? { accelerator } : {}), click: () => click() };
 }
 
 function viewMenu({ t }: MenuEnvironment): MenuItemConstructorOptions {

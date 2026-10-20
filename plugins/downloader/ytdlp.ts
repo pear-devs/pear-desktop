@@ -98,7 +98,10 @@ export function buildArgs(options: ArgsOptions): string[] {
     "--progress-template",
     "download:pear-progress %(progress.downloaded_bytes)s %(progress.total_bytes)s %(progress.total_bytes_estimate)s",
     "--print",
-    "before_dl:pear-item %(playlist_index)s %(n_entries)s %(title)s",
+    "before_dl:pear-item %(playlist_index)s %(n_entries)s %(id)s %(title)s",
+    // --print keeps yt-dlp quiet, "[download] Destination: …" included; the file it starts.
+    "--print",
+    "before_dl:pear-file %(filename)s",
     "--print",
     "post_process:pear-convert",
     "--print",
@@ -145,8 +148,11 @@ function audioFormatArg(options: ArgsOptions) {
 }
 
 export type OutputEvent =
-  | { type: "item"; index: number; count: number; title: string }
-  | { type: "progress"; fraction: number }
+  | { type: "item"; index: number; count: number; videoId: string; title: string }
+  /** Bytes of the current song received, and in all when yt-dlp knows or estimates it. */
+  | { type: "progress"; bytes: number; total: number | undefined }
+  /** The file the song is downloaded to (its partial download is `<file>.part`). */
+  | { type: "file"; file: string }
   | { type: "convert" }
   | { type: "done"; file: string }
   | { type: "error"; message: string }
@@ -162,15 +168,15 @@ export function parseLine(line: string): OutputEvent | undefined {
   const text = line.trim();
   if (text.startsWith("pear-progress ")) {
     const [, downloaded, total, estimate] = text.split(" ");
-    const done = number(downloaded);
-    const size = number(total) ?? number(estimate);
-    if (done === undefined || !size) return undefined;
-    return { type: "progress", fraction: Math.min(1, done / size) };
+    const bytes = number(downloaded);
+    if (bytes === undefined) return undefined;
+    return { type: "progress", bytes, total: number(total) ?? number(estimate) };
   }
   if (text.startsWith("pear-item ")) {
-    const [, index, count, ...title] = text.split(" ");
-    return { type: "item", index: number(index) ?? 1, count: number(count) ?? 1, title: title.join(" ") };
+    const [, index, count, videoId, ...title] = text.split(" ");
+    return { type: "item", index: number(index) ?? 1, count: number(count) ?? 1, videoId: videoId ?? "", title: title.join(" ") };
   }
+  if (text.startsWith("pear-file ")) return { type: "file", file: text.slice("pear-file ".length) };
   if (text === "pear-convert") return { type: "convert" };
   if (text.startsWith("pear-done ")) return { type: "done", file: text.slice("pear-done ".length) };
   if (text.startsWith("ERROR: ")) return { type: "error", message: text.slice("ERROR: ".length) };

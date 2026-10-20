@@ -1,5 +1,6 @@
 /** @jsxImportSource @pear/sdk */
-// The player-bar button, which shows the progress of downloads in its ring and title.
+// The player-bar button: a click downloads the playing song. Its ring and title
+// show how downloads are going.
 
 import { Icon } from "@pear/sdk/dom";
 import type { Translate } from "@pear/sdk/i18n";
@@ -12,9 +13,9 @@ import { ICON } from "./types.ts";
 /** What the ring shows: a download, or a conversion (pulsing). */
 type Busy = { ring: "downloading" | "converting"; progress: number; title: string };
 
-export function downloadButton(onClick: (event: MouseEvent) => void) {
+export function downloadButton(download: () => void) {
   return (
-    <button class="pear-dl-button" aria-haspopup="menu" aria-expanded="false" onClick={onClick}>
+    <button class="pear-dl-button" onClick={download}>
       <Icon path={ICON} />
     </button>
   );
@@ -22,15 +23,15 @@ export function downloadButton(onClick: (event: MouseEvent) => void) {
 
 export function showState(button: HTMLElement, state: DownloaderState, t: Translate) {
   const busy = busyWith(state, t);
+  const label = busy?.title ?? t("plugins.downloader.templates.button", "Download");
   if (busy) {
     button.dataset.busy = busy.ring;
     button.style.setProperty("--pear-dl-progress", String(busy.progress));
-    button.title = busy.title;
   } else {
     delete button.dataset.busy;
-    button.title = t("plugins.downloader.templates.button", "Download");
   }
-  button.setAttribute("aria-label", button.title);
+  button.setAttribute("aria-label", label);
+  button.title = label;
 }
 
 function busyWith(state: DownloaderState, t: Translate): Busy | undefined {

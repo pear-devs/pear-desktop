@@ -99,14 +99,33 @@ describe("canEmbedCover", () => {
 });
 
 describe("parseLine", () => {
-  test("parses progress, preferring the exact size over the estimate", () => {
-    expect(parseLine("pear-progress 512 1024 NA")).toEqual({ type: "progress", fraction: 0.5 });
-    expect(parseLine("pear-progress 300 NA 1200.5")).toEqual({ type: "progress", fraction: 300 / 1200.5 });
-    expect(parseLine("pear-progress 300 NA NA")).toBeUndefined();
+  // Lines yt-dlp printed with buildArgs' templates, downloading an album's first two songs.
+  test("parses progress in bytes, preferring the exact size over the estimate", () => {
+    expect(parseLine("pear-progress 1024 3445462 NA")).toEqual({ type: "progress", bytes: 1024, total: 3445462 });
+    expect(parseLine("pear-progress 3748382 3748382 NA")).toEqual({ type: "progress", bytes: 3748382, total: 3748382 });
+    expect(parseLine("pear-progress 300 NA 1200.5")).toEqual({ type: "progress", bytes: 300, total: 1200.5 });
+    expect(parseLine("pear-progress 300 NA NA")).toEqual({ type: "progress", bytes: 300, total: undefined });
+    expect(parseLine("pear-progress NA NA NA")).toBeUndefined();
   });
   test("parses items, stages, results and diagnostics", () => {
-    expect(parseLine("pear-item 3 12 Song  with spaces")).toEqual({ type: "item", index: 3, count: 12, title: "Song  with spaces" });
-    expect(parseLine("pear-item NA NA Single")).toEqual({ type: "item", index: 1, count: 1, title: "Single" });
+    expect(parseLine("pear-item 1 2 lYBUbBu4W08 Never Gonna Give You Up")).toEqual({
+      type: "item",
+      index: 1,
+      count: 2,
+      videoId: "lYBUbBu4W08",
+      title: "Never Gonna Give You Up",
+    });
+    expect(parseLine("pear-item NA NA dQw4w9WgXcQ Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)")).toEqual({
+      type: "item",
+      index: 1,
+      count: 1,
+      videoId: "dQw4w9WgXcQ",
+      title: "Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)",
+    });
+    expect(parseLine("pear-file /music/Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster).webm")).toEqual({
+      type: "file",
+      file: "/music/Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster).webm",
+    });
     expect(parseLine("pear-convert")).toEqual({ type: "convert" });
     expect(parseLine("pear-done /music/Pear Desktop/A - B.mp3\n")).toEqual({ type: "done", file: "/music/Pear Desktop/A - B.mp3" });
     expect(parseLine("ERROR: [\u0079\u006f\u0075\u0074\u0075\u0062\u0065] abc: Video unavailable")).toEqual({ type: "error", message: "[\u0079\u006f\u0075\u0074\u0075\u0062\u0065] abc: Video unavailable" });

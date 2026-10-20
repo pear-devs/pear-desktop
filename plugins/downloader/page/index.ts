@@ -1,5 +1,8 @@
-// The page part: the player-bar button with its menu, the toasts, and the entry in YTM's menus.
+// The page part: the player-bar button, the Download button of album and
+// playlist pages, the Downloads entry in the sidebar with its popover, the
+// toasts, and the entry in YTM's menus.
 
+import { sidebarEntry } from "@pear/sdk/dom";
 import { remoteErrorMessage } from "@pear/sdk/util";
 import type { JobResult } from "../downloads.ts";
 import type { DownloaderState } from "../host.ts";
@@ -7,41 +10,44 @@ import { type PoTokenRequest, poTokens } from "../potoken.ts";
 import { visibleSetup } from "../progress.ts";
 import type { DownloadTarget } from "../ytdlp.ts";
 import { downloadButton, showState } from "./button.tsx";
-import { buttonMenu } from "./menu.tsx";
-import { menuOptions } from "./options.ts";
+import type { StartDownload } from "./options.ts";
+import { downloadsPopover } from "./downloads-popover.tsx";
+import { pageButton } from "./page-button.tsx";
 import { popupEntry } from "./popup-entry.ts";
 import { createToast, type ShowToast } from "./toast.tsx";
-import type { Ctx } from "./types.ts";
+import { type Ctx, ICON } from "./types.ts";
 
 export function startPage(ctx: Ctx) {
   const { t } = ctx;
   const toast = createToast(ctx);
   let state: DownloaderState = { active: undefined, queued: 0 };
 
-  const start = async (target: DownloadTarget | undefined, label?: string) => {
-    menu.close();
+  const start = async (target: DownloadTarget, label: string) => {
     try {
       await ctx.host.invoke("download", target, label);
-      if (state.active) {
-        toast(t("plugins.downloader.toast.queued", "Queued “{{title}}”", { title: label ?? ctx.player.state.track?.title ?? "" }));
-      }
+      if (state.active) toast(t("plugins.downloader.toast.queued", "Queued “{{title}}”", { title: label }));
     } catch (error) {
       toast(t("plugins.downloader.toast.cannot-download", "Can't download: {{error}}", { error: remoteErrorMessage(error) }));
     }
   };
-  const startDownload = (target: DownloadTarget, label: string) => void start(target, label);
+  const startDownload: StartDownload = (target, label) => void start(target, label);
 
-  const onButtonClick = (event: MouseEvent) => {
-    event.stopPropagation();
-    if (menu.isOpen()) return menu.close();
-    const options = menuOptions(ctx, state, startDownload);
-    if (options.length === 0) return toast(t("plugins.downloader.toast.nothing-playing", "Play something to download it"));
-    // A lone song downloads right away; choices open a menu.
-    if (options.length === 1 && !state.active) return options[0]!.run();
-    menu.open(options);
+  const downloadPlaying = () => {
+    const track = ctx.player.state.track;
+    if (!track) return toast(t("plugins.downloader.toast.nothing-playing", "Play something to download it"));
+    startDownload({ videoId: track.videoId }, track.title);
   };
-  const button = downloadButton(onButtonClick);
-  const menu = buttonMenu(ctx, button);
+  const button = downloadButton(downloadPlaying);
+  const entry = sidebarEntry(ctx, {
+    name: "downloader",
+    label: t("plugins.downloader.downloads", "Downloads"),
+    icon: ICON,
+    onClick: () => downloads.toggle(),
+  });
+  const downloads = downloadsPopover(ctx, entry, button);
+  const openDownloads = () => downloads.show();
+  // The app menu, the tray and the settings' button.
+  ctx.host.on("open-downloads", openDownloads);
   showState(button, state, t);
 
   const apply = (next: DownloaderState) => {
@@ -53,11 +59,27 @@ export function startPage(ctx: Ctx) {
       toast(t("plugins.downloader.setup.toast", "Downloading {{tool}}, which saving songs needs. This happens only once.", { tool: setup.tool }));
     }
     showState(button, state, t);
+    // How many downloads are running or waiting.
+    const count = (next.active ? 1 : 0) + next.queued;
+    entry.setBadge(count > 0 ? String(count) : "");
   };
   ctx.host.on("state", (payload) => apply(payload as DownloaderState));
-  ctx.host.on("result", (payload) => showResult(ctx, toast, payload as JobResult));
+  ctx.host.on("result", (payload) => showResult(ctx, toast, payload as JobResult, openDownloads));
   ctx.host.invoke("state").then(apply, () => {});
 
+  // The menu's Ctrl+J, also when the page has the keyboard (as the settings' Ctrl+,).
+  ctx.listen(
+    document,
+    "keydown",
+    (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== "j") return;
+      event.preventDefault();
+      openDownloads();
+    },
+    { capture: true },
+  );
+
+  pageButton(ctx, startDownload);
   popupEntry(ctx, startDownload);
 
   // The built-in engine's PO tokens.
@@ -66,17 +88,20 @@ export function startPage(ctx: Ctx) {
   ctx.onCleanup(() => tokens.dispose());
 
   // Before the volume button; YTM may re-render or replace the player bar while starting up.
-  ctx.mount(menu.root, (root) => {
+  ctx.mount(button, (element) => {
     const volume = ctx.$("player_bar.volume_button");
-    if (volume) volume.before(root);
-    else ctx.$("player_bar.right_controls_buttons")?.prepend(root);
+    if (volume) volume.before(element);
+    else ctx.$("player_bar.right_controls_buttons")?.prepend(element);
   });
 }
 
-function showResult(ctx: Ctx, toast: ShowToast, result: JobResult) {
+function showResult(ctx: Ctx, toast: ShowToast, result: JobResult, openDownloads: () => void) {
   const { t } = ctx;
   if (result.cancelled) return toast(t("plugins.downloader.toast.cancelled", "Download cancelled"));
-  if (result.error) return toast(t("plugins.downloader.toast.failed", "Download failed: {{error}}", { error: result.error }));
+  if (result.error) {
+    const downloads = { label: t("plugins.downloader.toast.downloads", "Downloads"), run: openDownloads };
+    return toast(t("plugins.downloader.toast.failed", "Download failed: {{error}}", { error: result.error }), downloads);
+  }
   const [file] = result.files;
   const count = result.files.length;
   const message =

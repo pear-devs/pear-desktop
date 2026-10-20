@@ -67,6 +67,7 @@ export default definePlugin({
       const refresh = () => update(ctx.player.state);
       ctx.listen(window, "show", refresh);
       ctx.listen(window, "hide", refresh);
+      ctx.onMenuItemsChange(refresh);
 
       // Another plugin may claim clicks (notifications' tray controls on Windows, as in pear-desktop).
       const claimed = (event: string) => {
@@ -130,6 +131,8 @@ function menu(ctx: Ctx, state: NowPlaying, toggleWindow: () => void): MenuItemCo
       label: window.isVisible() ? ctx.t("main.tray.hide", "Hide window") : ctx.t("main.tray.show", "Show window"),
       click: toggleWindow,
     },
+    // Other plugins' items (`ctx.addMenuItem`), e.g. the downloader's Downloads.
+    ...ctx.pluginMenuItems().map(({ label, click }): MenuItemConstructorOptions => ({ label, click: () => click() })),
     { label: ctx.t("main.tray.settings", "Settings…"), click: () => ctx.openSettings() },
     { type: "separator" },
     {

@@ -210,7 +210,7 @@ describe("DownloadQueue", () => {
     });
     queue.add({ videoId: "abc" }, "Song");
     await new Promise((resolve) => setTimeout(resolve, 10));
-    queue.cancel();
+    queue.cancelAll();
     await expect.poll(() => results).toHaveLength(1);
     expect(aborted).toBe(true);
     expect(results[0]).toMatchObject({ label: "Song", cancelled: true });

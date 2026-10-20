@@ -6,6 +6,7 @@ import { toJsonSchema, v } from "@pear/sdk/rpc";
 import { describe, expect, test, vi } from "vitest";
 import { openApiDocument } from "../src/main/api/openapi.ts";
 import { Settings } from "../src/main/config.ts";
+import { MenuItems } from "../src/main/menu-items.ts";
 import { PluginHost } from "../src/main/plugins.ts";
 
 vi.mock("electron", () => ({}));
@@ -42,6 +43,7 @@ async function setup(enabled = true) {
     send() {},
     openSettings() {},
     focusWindow() {},
+    menuItems: new MenuItems(),
     broadcast,
     onProtocol: () => () => {},
     onDisabled() {},

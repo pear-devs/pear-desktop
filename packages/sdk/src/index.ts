@@ -99,6 +99,15 @@ export interface HostContext<C> extends CommonContext<C> {
   openSettings(): void;
   /** Shows the main window and brings it to the front (restoring it if minimized). */
   focusWindow(): void;
+  /**
+   * Adds an item to the app menu (under Options) and the tray menu. It goes
+   * when the plugin stops.
+   */
+  addMenuItem(item: PluginMenuItem): void;
+  /** The items plugins added with `addMenuItem`, for a plugin that draws a menu of its own (the tray). */
+  pluginMenuItems(): readonly PluginMenuItem[];
+  /** Calls `listener` when plugins add or remove menu items. */
+  onMenuItemsChange(listener: () => void): void;
   /** `target.on(event, listener)`, removed when the plugin stops. */
   listen(target: Emitter, event: string, listener: (...args: any[]) => void): void;
   /**
@@ -118,6 +127,14 @@ export interface HostContext<C> extends CommonContext<C> {
    * links, e.g. from Windows notification buttons), after the core applied them.
    */
   onProtocol(listener: (command: string, args: string[]) => void): void;
+}
+
+/** An item of the app and tray menus. */
+export interface PluginMenuItem {
+  label: string;
+  /** A shortcut while the app is focused, e.g. "CmdOrCtrl+J". */
+  accelerator?: string;
+  click(): void;
 }
 
 export interface BeforeReadyContext<C> {

@@ -13,6 +13,8 @@ export interface LaunchOptions {
   config?: Record<string, unknown>;
   /** Extra environment variables for the app. */
   env?: Record<string, string>;
+  /** A profile to launch with (kept when the app closes), e.g. to launch it again. Default: a fresh one. */
+  userData?: string;
 }
 
 /** How long the page runtime and the test track get to load. */
@@ -35,13 +37,13 @@ function configFile({ plugins = {}, core = {} }: LaunchOptions) {
 
 /** Launch the built app with a fresh, isolated profile. */
 export async function launchApp(options: LaunchOptions = {}) {
-  const userData = mkdtempSync(join(tmpdir(), "pear-e2e-"));
+  const userData = options.userData ?? mkdtempSync(join(tmpdir(), "pear-e2e-"));
   if (options.config || options.plugins || options.core) {
     writeFileSync(join(userData, "config.json"), JSON.stringify(options.config ?? configFile(options)));
   }
   const app = await electron.launch({ args: ["."], env: { ...process.env, ...options.env, PEAR_USER_DATA: userData } });
   // Profiles are ~40 MB each, and /tmp is often RAM-backed.
-  app.on("close", () => rmSync(userData, { recursive: true, force: true }));
+  if (!options.userData) app.on("close", () => rmSync(userData, { recursive: true, force: true }));
   return Object.assign(app, { userData });
 }
 

@@ -150,6 +150,8 @@ host: {
 | `listen(emitter, event, fn)` | `emitter.on(event, fn)` that is removed when the plugin stops |
 | `setTimeout`, `setInterval`, `clearTimeout`, `clearInterval` | timers that are cleared when the plugin stops |
 | `focusWindow()` | show the main window and bring it to the front |
+| `addMenuItem({ label, accelerator?, click })` | an item in the app menu (under Options) and the tray menu |
+| `pluginMenuItems()`, `onMenuItemsChange(fn)` | the items plugins added, for a plugin with a menu of its own (see `plugins/tray`) |
 | `openSettings()` | open the settings |
 | `setStatus(text)` | a status line on the plugin's settings card (`""` clears it) |
 | `emit`, `request` | talk to the page part (see below) |
@@ -292,6 +294,15 @@ export default definePlugin({
 - `popupMenuItem(ctx, options)`: an entry in YTM's ⋮ menus. See
   `plugins/picture-in-picture`.
 - `shadowHost(tag, css)`: an element whose content YTM's CSS can't reach.
+- `anchoredPopover(ctx, { name, label })`: an empty popover in the pickers'
+  look that you fill and show next to any element (`show(element, position)`,
+  `hide()`), and close when you like. See the downloader's Downloads popover.
+- `containScroll(element, signal)` and `isolateKeys(element, signal)`: the wheel
+  and key presses inside `element` don't reach the page behind it.
+- `sidebarEntry(ctx, { name, label, icon, onClick })`: an entry in YTM's
+  sidebar, under Home and Library, in the full and the collapsed sidebar. Its
+  `setBadge(text)` shows a small count next to it; `elements` and `focus()` are
+  there to put a popover on it. See `plugins/downloader`.
 
 For bigger UIs that change a lot, like the lyrics panel, use Preact instead
 (see `plugins/synced-lyrics`).

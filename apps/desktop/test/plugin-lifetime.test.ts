@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { definePlugin, type HostContext } from "@pear/sdk";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { Settings } from "../src/main/config.ts";
+import { MenuItems } from "../src/main/menu-items.ts";
 import { PluginHost } from "../src/main/plugins.ts";
 import { WebRequestRouter } from "../src/main/web-request.ts";
 
@@ -49,6 +50,7 @@ function setup(plugin: ReturnType<typeof slowPlugin>["plugin"]) {
     send() {},
     openSettings() {},
     focusWindow() {},
+    menuItems: new MenuItems(),
     broadcast() {},
     onProtocol: () => () => {},
     onDisabled() {},

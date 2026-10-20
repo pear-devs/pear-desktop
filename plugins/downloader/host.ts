@@ -11,6 +11,7 @@ import type { downloaderConfig } from "./config.ts";
 import { chooseConverter, type Converter, type Cover, WasmConverter, type WasmFFmpeg } from "./convert.ts";
 import { isSiteCookie, toNetscape } from "./cookies.ts";
 import { DownloadQueue, type JobResult, type QueueState } from "./downloads.ts";
+import { DownloadHistory, HISTORY_LIMIT } from "./history.ts";
 import { type BuiltInJobOptions, InnertubeEngine, InnertubeSession, type PoTokenAnswer } from "./engines/innertube.ts";
 import type { Engine } from "./engines/types.ts";
 import { YtDlpEngine } from "./engines/ytdlp.ts";
@@ -27,14 +28,11 @@ type Config = Ctx["config"];
 /** What the page shows: the queue, and yt-dlp or ffmpeg being downloaded. */
 export interface DownloaderState extends QueueState {
   setup?: SetupState | undefined;
-  /** The last downloads, newest first. */
-  recent?: JobResult[];
 }
 
 interface Downloader {
   queue: DownloadQueue;
   tools: Tools;
-  recent: JobResult[];
 }
 
 /** Tests set this to pretend yt-dlp and ffmpeg aren't installed. */
@@ -43,12 +41,12 @@ const IGNORE_SYSTEM_TOOLS = "PEAR_DOWNLOADER_IGNORE_SYSTEM_TOOLS";
 const UPDATE_DELAY_MS = 15_000;
 /** After a failed download, a newer yt-dlp may fix it; check if the last check is this old. */
 const UPDATE_AFTER_FAILURE_MS = 60 * 60 * 1000;
-/** How many finished downloads the button's menu lists. */
-const RECENT_COUNT = 10;
-/** Progress comes per network chunk; the page and the settings need a few updates a second. */
+/** Progress comes per network chunk; the page, the settings and the Downloads window need a few updates a second. */
 const PUBLISH_INTERVAL_MS = 250;
 /** BotGuard takes a few seconds in the page; a page that is loading takes longer to answer. */
 const PO_TOKEN_TIMEOUT_MS = 60_000;
+/** Opens the Downloads window, as in browsers. */
+const DOWNLOADS_SHORTCUT = "CmdOrCtrl+J";
 /** The cover's JPEG quality. */
 const COVER_QUALITY = 92;
 /** The taskbar shows at least a sliver while a download runs. */
@@ -65,8 +63,8 @@ export function downloaderOf(ctx: Pick<Ctx, "t">) {
   return downloader;
 }
 
-export function stateOf({ queue, tools, recent }: Downloader): DownloaderState {
-  return { ...queue.state, setup: tools.setup, recent };
+export function stateOf({ queue, tools }: Downloader): DownloaderState {
+  return { ...queue.state, setup: tools.setup };
 }
 
 export async function startHost(ctx: Ctx) {
@@ -75,13 +73,9 @@ export async function startHost(ctx: Ctx) {
   await tools.init();
 
   const autoJobs = new Set<number>();
-  const recent: JobResult[] = [];
-  const remember = (result: JobResult) => {
-    recent.unshift(result);
-    recent.splice(RECENT_COUNT);
-  };
-  const queue = createQueue(ctx, tools, autoJobs, remember, () => publisher.publish());
-  downloaders.set(ctx, { queue, tools, recent });
+  const history = new DownloadHistory(join(ctx.app.getPath("userData"), "downloads.json"));
+  const queue = createQueue(ctx, tools, autoJobs, history, () => publisher.publish());
+  downloaders.set(ctx, { queue, tools });
   // Everything but the tool paths is read per download.
   const toolsKey = toolsKeyOf(ctx.config);
   ctx.onConfigChange((config) => {
@@ -92,11 +86,13 @@ export async function startHost(ctx: Ctx) {
   ctx.setTimeout(() => void tools.update(), UPDATE_DELAY_MS);
   ctx.onCleanup(() => {
     queue.dispose();
+    history.flush();
     downloaders.delete(ctx);
   });
   publisher.flush();
   if (tools.ytDlp) ctx.log.info(`yt-dlp ${tools.capabilities?.version ?? ""} at ${tools.ytDlp.path}`);
 
+  ctx.addMenuItem({ label: ctx.t("plugins.downloader.downloads", "Downloads"), accelerator: DOWNLOADS_SHORTCUT, click: () => openDownloads(ctx) });
   downloadWhileListening(ctx, (track) => autoJobs.add(queue.add({ videoId: track.videoId }, track.title)));
 }
 
@@ -142,7 +138,10 @@ function resolveRedirect(url: string) {
 
 // ---------------------------------------------------------------- state
 
-/** Sends the state to the page and the settings, at most every PUBLISH_INTERVAL_MS while a tool installs. */
+/**
+ * Sends the state to the page and the settings, and the jobs to the Downloads
+ * window; at most every PUBLISH_INTERVAL_MS while a tool installs.
+ */
 class Publisher {
   readonly #ctx: Ctx;
   readonly #tools: Tools;
@@ -171,6 +170,7 @@ class Publisher {
     const downloader = downloaders.get(ctx);
     if (!downloader) return;
     ctx.emit("state", stateOf(downloader));
+    ctx.emit("jobs", downloader.queue.jobs);
     this.#showProgress(downloader.queue.state);
     this.#broadcastProgress(downloader.queue.state);
   }
@@ -194,11 +194,14 @@ class Publisher {
 
 // ---------------------------------------------------------------- queue
 
-function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, remember: (result: JobResult) => void, publish: () => void) {
+function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, history: DownloadHistory, publish: () => void) {
   const ytDlp = createYtDlpEngine(ctx, tools, autoJobs);
   const builtIn = createBuiltInEngine(ctx, tools, autoJobs);
   return new DownloadQueue({
     engines: () => enginesFor(ctx.config, builtIn, ytDlp),
+    saved: history.load(),
+    keepFinished: HISTORY_LIMIT,
+    onSaved: (saved) => history.save(saved),
     onState: publish,
     onResult: (result) => {
       autoJobs.delete(result.id);
@@ -207,7 +210,6 @@ function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, remember: (r
         // The site changes; a newer yt-dlp often fixes failing downloads.
         void tools.update(UPDATE_AFTER_FAILURE_MS);
       }
-      remember(result);
       notifyWhenHidden(ctx, result);
       ctx.emit("result", result);
       ctx.api.broadcast("result", result);
@@ -335,6 +337,12 @@ function resultMessage({ t }: Ctx, result: JobResult) {
   const count = result.files.length;
   if (count > 1) return t("plugins.downloader.toast.saved-many", "Saved {{count}} songs from “{{title}}”", { count, title: result.label });
   return t("plugins.downloader.toast.saved", "Saved “{{title}}”", { title: result.label });
+}
+
+/** Shows the page's Downloads popover, pinned open; the window first, if it is hidden. */
+export function openDownloads(ctx: Pick<Ctx, "focusWindow" | "emit">) {
+  ctx.focusWindow();
+  ctx.emit("open-downloads");
 }
 
 /** Automatic downloads go to their own folder when one is set. */

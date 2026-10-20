@@ -4,6 +4,7 @@
 
 import type { PageContext, SelectorName } from "./index.ts";
 import type { Child } from "./jsx-runtime.ts";
+import { selectors } from "./selectors.ts";
 import { styleSheet } from "./stylesheets.ts";
 
 type Ctx = Pick<PageContext<unknown, {}>, "addStyle" | "onCleanup" | "listen" | "observe" | "$">;
@@ -110,18 +111,8 @@ export interface PickerOptions {
 export function picker(ctx: Ctx, options: PickerOptions) {
   ctx.addStyle(PICKER_CSS);
   const anchor = `--pear-${options.name}`;
-  const popover = (
-    <div
-      class={`pear-picker-popover pear-${options.name}-popover`}
-      popover="auto"
-      role="menu"
-      style={{
-        "position-anchor": anchor,
-        "position-area": options.position ?? "top span-left",
-        "min-width": `${options.width ?? 180}px`,
-      }}
-    />
-  );
+  const popover = popoverElement(options.name, "auto", "menu");
+  Object.assign(popover.style, { positionAnchor: anchor, positionArea: options.position ?? "top span-left", minWidth: `${options.width ?? 180}px` });
   const button = (
     <button
       class={`pear-picker-button pear-${options.name}-button`}
@@ -168,6 +159,86 @@ export function picker(ctx: Ctx, options: PickerOptions) {
     popover.remove();
   });
   return { button, popover, close };
+}
+
+/** The popover of a picker or an anchored popover, in YTM's menu look (PICKER_CSS). */
+function popoverElement(name: string, type: "auto" | "manual", role: string) {
+  return <div class={`pear-picker-popover pear-${name}-popover`} popover={type} role={role} />;
+}
+
+export interface AnchoredPopoverOptions {
+  /** Class prefix: `pear-<name>-popover`, next to `pear-picker-popover`. */
+  name: string;
+  /** Its accessible name. */
+  label: string;
+}
+
+/**
+ * An empty popover in the pickers' look, to fill yourself, shown next to any
+ * element. It is "manual": it stays until `hide`, so the plugin decides when
+ * it closes (hover, Escape, a click outside…). It lives in <body>.
+ */
+export function anchoredPopover(ctx: Ctx, options: AnchoredPopoverOptions) {
+  ctx.addStyle(PICKER_CSS);
+  const popover = popoverElement(options.name, "manual", "dialog");
+  popover.setAttribute("aria-label", options.label);
+  const anchorName = `--pear-${options.name}-anchor`;
+  let anchor: HTMLElement | undefined;
+  document.body.append(popover);
+  ctx.onCleanup(() => {
+    anchor?.style.removeProperty("anchor-name");
+    popover.remove();
+  });
+  return {
+    popover,
+    get isOpen() {
+      return popover.matches(":popover-open");
+    },
+    /**
+     * Shows it at `position` (a CSS `position-area`) of `next`, e.g. "right span-bottom";
+     * without an element, where the plugin's CSS puts it.
+     */
+    show(next?: HTMLElement, position = "") {
+      // One element at a time carries the anchor name.
+      if (anchor !== next) anchor?.style.removeProperty("anchor-name");
+      anchor = next;
+      anchor?.style.setProperty("anchor-name", anchorName);
+      Object.assign(popover.style, { positionAnchor: anchor ? anchorName : "", positionArea: anchor ? position : "" });
+      if (!popover.matches(":popover-open")) popover.showPopover();
+    },
+    hide() {
+      if (popover.matches(":popover-open")) popover.hidePopover();
+    },
+  };
+}
+
+/**
+ * Keeps the wheel inside `element`: scrolling over it scrolls what is under the
+ * pointer, never the page behind it, even past the end.
+ */
+export function containScroll(element: HTMLElement, signal?: AbortSignal) {
+  const onWheel = (event: WheelEvent) => {
+    event.stopPropagation();
+    if (!scrollsInside(event, element)) event.preventDefault();
+  };
+  element.addEventListener("wheel", onWheel, { passive: false, ...(signal ? { signal } : {}) });
+}
+
+/** Whether something in `boundary` under the pointer can still scroll the way the wheel turns. */
+function scrollsInside(event: WheelEvent, boundary: Element) {
+  const vertical = Math.abs(event.deltaY) >= Math.abs(event.deltaX);
+  const delta = vertical ? event.deltaY : event.deltaX;
+  for (const target of event.composedPath()) {
+    if (!(target instanceof HTMLElement)) break;
+    const style = getComputedStyle(target);
+    if (/auto|scroll/.test(vertical ? style.overflowY : style.overflowX)) {
+      const position = vertical ? target.scrollTop : target.scrollLeft;
+      const room = vertical ? target.scrollHeight - target.clientHeight : target.scrollWidth - target.clientWidth;
+      if (delta < 0 ? position > 0 : position < room - 1) return true;
+    }
+    if (target === boundary) break;
+  }
+  return false;
 }
 
 const PICKER_CSS = `
@@ -315,5 +386,135 @@ const MENU_ITEM_CSS = `
     width: 24px;
     height: 24px;
     fill: rgb(255 255 255 / 0.7);
+  }
+`;
+
+// ---------------------------------------------------------------- sidebar entries
+
+export interface SidebarEntryOptions {
+  /** Names the entry's element, `pear-<name>-entry`. */
+  name: string;
+  /** The text under or next to the icon. */
+  label: string;
+  /** The icon (an SVG path). */
+  icon: string;
+  /** The tooltip; default `label`. */
+  title?: string;
+  /** The accessible name; default `label`. */
+  ariaLabel?: string;
+  onClick(): void;
+}
+
+export interface SidebarEntry {
+  /** A small count or word next to the label ("" hides it). */
+  setBadge(text: string): void;
+  /** The entry's elements, in the full and the collapsed sidebar (only one shows at a time). */
+  readonly elements: readonly HTMLElement[];
+  /** Focuses the entry that shows. */
+  focus(): void;
+}
+
+/** The sidebar's two layouts: the full guide and the collapsed ("mini") one. */
+const GUIDES = [
+  ["guide.full", false],
+  ["guide.mini", true],
+] as const;
+
+/**
+ * An entry at the end of YTM's sidebar's main section, like its own Home and
+ * Library, in both the full and the collapsed sidebar. `owner` removes it when it
+ * stops (a plugin's `ctx`).
+ */
+export function sidebarEntry(owner: Pick<PageContext<unknown, {}>, "onCleanup">, options: SidebarEntryOptions): SidebarEntry {
+  const badges: HTMLElement[] = [];
+  const elements: HTMLElement[] = [];
+  const buttons: HTMLElement[] = [];
+  for (const [guide, mini] of GUIDES) {
+    const { host, root } = shadowHost(`pear-${options.name}-entry`, SIDEBAR_ENTRY_CSS);
+    host.toggleAttribute("mini", mini);
+    const badge = <span class="badge" />;
+    const button = (
+      <button type="button" title={options.title ?? options.label} aria-label={options.ariaLabel ?? options.label} onClick={() => options.onClick()}>
+        <Icon path={options.icon} />
+        <span class="label">{options.label}</span>
+        {badge}
+      </button>
+    );
+    root.append(button);
+    badges.push(badge);
+    elements.push(host);
+    buttons.push(button);
+    // YTM renders the sidebar late and again on some navigations; the entry stays in place.
+    const stop = keepMounted(host, (element) => {
+      const items = document.querySelector(selectors[guide])?.querySelector(selectors["guide.primary_items"]);
+      items?.append(element);
+    });
+    owner.onCleanup(stop);
+  }
+  return {
+    setBadge(text) {
+      for (const badge of badges) badge.textContent = text;
+    },
+    elements,
+    focus() {
+      buttons.find((button) => button.getClientRects().length > 0)?.focus();
+    },
+  };
+}
+
+/** YTM's own look for sidebar entries. */
+const SIDEBAR_ENTRY_CSS = `
+  :host { display: block; }
+  button {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    height: 48px;
+    margin: 0;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: #fff;
+    font: 16px Roboto, system-ui, sans-serif;
+    text-align: left;
+    cursor: pointer;
+    user-select: none;
+  }
+  button:hover { background: rgb(255 255 255 / 0.1); }
+  button:focus-visible { outline: 2px solid #d0bcff; }
+  svg { flex: none; width: 24px; height: 24px; fill: currentColor; }
+  .badge {
+    min-width: 20px;
+    height: 20px;
+    margin-left: auto;
+    padding: 0 6px;
+    border-radius: 10px;
+    background: #fff;
+    color: #030303;
+    font: 500 12px/20px Roboto, system-ui, sans-serif;
+    text-align: center;
+  }
+  .badge:empty { display: none; }
+  :host([mini]) button {
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    height: 64px;
+    padding: 0;
+    font-size: 10px;
+  }
+  :host([mini]) .badge {
+    position: absolute;
+    top: 6px;
+    left: calc(50% + 6px);
+    min-width: 16px;
+    height: 16px;
+    margin: 0;
+    padding: 0 4px;
+    font-size: 10px;
+    line-height: 16px;
   }
 `;

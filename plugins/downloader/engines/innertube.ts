@@ -4,7 +4,7 @@
 // Anything the site refuses it is a RecoverableError, which yt-dlp gets next.
 
 import { existsSync } from "node:fs";
-import { mkdir, open, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, open, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { errorMessage } from "@pear/sdk/util";
 import { Innertube, Platform, type Types, UniversalCache, type YT, YTNodes, type YTMusic } from "\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js";
@@ -13,7 +13,7 @@ import type { Lyrics, LyricsQuery } from "../lyrics.ts";
 import { Archive } from "../archive.ts";
 import { playlistFolder, renderTemplate, type TemplateFields } from "../template.ts";
 import { isAlbum } from "../ytdlp.ts";
-import { type Engine, type EngineJob, type EngineResult, type Progress, RecoverableError } from "./types.ts";
+import { type Engine, type EngineJob, type EngineResult, isPause, type Progress, RecoverableError, type SongUpdate } from "./types.ts";
 
 /** The stream is fetched in parts of this size, as the site's player does; one request for all of it is refused. */
 const CHUNK_BYTES = 10 * 1024 * 1024;
@@ -162,10 +162,16 @@ interface AlbumInfo {
   cover: string | undefined;
 }
 
-/** Progress of one song: downloading, then converting. */
+/** Progress of one song: looked up, downloading (in bytes), converting, then saved or skipped. */
 interface SongProgress {
-  download(fraction: number): void;
+  started(): void;
+  download(bytes: number, total: number): void;
   convert(fraction: number): void;
+  saved(file: string): void;
+  /** Downloaded before. */
+  skipped(): void;
+  /** Its partial download stays for later. */
+  keep(file: string): void;
 }
 
 export class InnertubeEngine implements Engine {
@@ -181,7 +187,8 @@ export class InnertubeEngine implements Engine {
     const yt = await recoverable(() => this.#options.session.get(), signal);
     const { playlistId } = job.target;
     if (playlistId) return this.#playlist(yt, playlistId, job.target.items, options, progress, signal);
-    const file = await this.#song(yt, { videoId: job.target.videoId, title: job.label, index: 1 }, undefined, options, songProgress(progress, 0, 1), signal);
+    const entry = { videoId: job.target.videoId, title: job.label, index: 1 };
+    const file = await this.#song(yt, entry, undefined, options, songProgress(progress, entry, 0, 1), signal);
     return { files: file ? [file] : [] };
   }
 
@@ -195,10 +202,11 @@ export class InnertubeEngine implements Engine {
   ): Promise<EngineResult> {
     const { list, entries } = await recoverable(() => this.#list(yt, playlistId, options.playlistLimit), signal);
     const wanted = only ? entries.filter((entry) => only.includes(entry.index)) : entries;
+    progress.songs(entries.map(({ index, videoId, title }) => ({ index, videoId, title })));
     const saved: (string | undefined)[] = [];
     const retry: number[] = [];
     const errors: string[] = [];
-    const songs = listProgress(progress, wanted.length);
+    const songs = listProgress(progress, wanted);
     let next = 0;
     // A few songs at a time: most of a song's time is waiting for the site, not the disk.
     const worker = async () => {
@@ -212,6 +220,7 @@ export class InnertubeEngine implements Engine {
         } catch (error) {
           if (signal.aborted) throw error;
           this.#options.log.warn(`${entry.title} (${entry.videoId}):`, errorMessage(error));
+          progress.song({ index: entry.index, status: "failed", error: errorMessage(error) });
           if (error instanceof RecoverableError) retry.push(entry.index);
           else errors.push(errorMessage(error));
         }
@@ -276,7 +285,11 @@ export class InnertubeEngine implements Engine {
     signal: AbortSignal,
   ): Promise<string | undefined> {
     const archive = options.skipExisting && options.archive ? new Archive(options.folder) : undefined;
-    if (await archive?.has(entry.videoId)) return undefined;
+    if (await archive?.has(entry.videoId)) {
+      progress.skipped();
+      return undefined;
+    }
+    progress.started();
     const session = this.#options.session;
     let poToken = await session.poToken(yt, entry.videoId);
     const { info, tags } = await recoverable(() => this.#lookup(yt, entry.videoId, poToken), signal);
@@ -290,15 +303,17 @@ export class InnertubeEngine implements Engine {
     const file = join(folder, relative);
     if (options.skipExisting && existsSync(file)) {
       await archive?.add(entry.videoId);
+      progress.skipped();
       return file;
     }
     await mkdir(dirname(file), { recursive: true });
 
-    const partial = `${file}.part`;
+    // Named by the stream, so a paused download only continues from the same one.
+    const partial = `${file}.f${format.itag}.part`;
     const converted = join(dirname(file), `${relative.split("/").at(-1)!.replace(/\.[^.]+$/, "")}.temp.${ext}`);
     try {
       const refresh = async () => (poToken = await session.poToken(yt, entry.videoId, true));
-      await this.#stream({ yt, format, poToken: () => poToken, refresh }, partial, (fraction) => progress.download(fraction), signal);
+      await this.#stream({ yt, format, poToken: () => poToken, refresh }, partial, progress, signal);
       const cover = await this.#cover(list?.album?.cover ?? thumbnailOf(info), options.squareCover, signal);
       const lyrics = options.lyrics || options.lyricsFile ? await this.#lyrics(tags, info.basic_info.duration ?? 0, signal) : undefined;
       if (options.lyrics && lyrics) tags.lyrics = lyrics.plain;
@@ -317,9 +332,13 @@ export class InnertubeEngine implements Engine {
       await rename(converted, file);
       if (options.lyricsFile && lyrics?.synced) await writeFile(file.replace(/\.[^./\\]+$/, ".lrc"), lyrics.synced);
       await archive?.add(entry.videoId);
+      progress.saved(file);
       return file;
     } finally {
-      await Promise.all([rm(partial, { force: true }), rm(converted, { force: true })]);
+      // A paused song continues its download later.
+      if (isPause(signal) && existsSync(partial)) progress.keep(partial);
+      else await rm(partial, { force: true });
+      await rm(converted, { force: true });
     }
   }
 
@@ -338,38 +357,16 @@ export class InnertubeEngine implements Engine {
     return { info, tags };
   }
 
-  /** Streams the format into `path` part by part; a refused stream gets a new PO token once. */
-  async #stream(stream: StreamSource, path: string, onProgress: (fraction: number) => void, signal: AbortSignal) {
-    const total = stream.format.content_length ?? 0;
-    const file = await open(path, "w");
-    let received = 0;
-    let refreshed = false;
-    try {
-      let url = await recoverable(() => streamUrl(stream), signal);
-      for (;;) {
-        const end = received + CHUNK_BYTES - 1;
-        const response = await this.#options.fetch(`${url}&range=${received}-${total ? Math.min(end, total - 1) : end}`, { signal });
-        if (response.status === HTTP_FORBIDDEN && !refreshed) {
-          refreshed = true;
-          await stream.refresh();
-          url = await recoverable(() => streamUrl(stream), signal);
-          continue;
-        }
-        if (!response.ok || !response.body) throw new RecoverableError(`the stream answered HTTP ${response.status}`);
-        const before = received;
-        for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
-          await file.write(chunk);
-          received += chunk.byteLength;
-          if (total) onProgress(received / total);
-        }
-        const done = total ? received >= total : received - before < CHUNK_BYTES;
-        if (done) break;
-        if (received === before) throw new RecoverableError("the stream ended early");
-      }
-    } finally {
-      await file.close();
-    }
-    onProgress(1);
+  async #stream(stream: StreamSource, path: string, progress: SongProgress, signal: AbortSignal) {
+    await downloadStream({
+      url: () => recoverable(() => streamUrl(stream), signal),
+      refresh: () => stream.refresh(),
+      total: stream.format.content_length ?? 0,
+      path,
+      fetch: this.#options.fetch,
+      onBytes: (received, total) => progress.download(received, total),
+      signal,
+    });
   }
 
   async #lyrics(tags: Tags, durationSeconds: number, signal: AbortSignal) {
@@ -413,6 +410,59 @@ async function streamUrl({ yt, format, poToken }: StreamSource) {
   const token = poToken();
   if (token && url.searchParams.get("sabr") !== "1") url.searchParams.set("pot", token);
   return url.href;
+}
+
+export interface StreamDownload {
+  /** The stream's URL; asked again after `refresh`. */
+  url(): Promise<string>;
+  /** Gets a new PO token, after the stream refused the last one. */
+  refresh(): Promise<unknown>;
+  /** The stream's size in bytes; 0 when unknown. */
+  total: number;
+  path: string;
+  fetch(url: string, init: { signal: AbortSignal }): Promise<Response>;
+  onBytes(received: number, total: number): void;
+  signal: AbortSignal;
+}
+
+/**
+ * Streams into `path` part by part, as the site's player does (with its `range`
+ * parameter), continuing a part a paused download left; a refused stream gets
+ * a new PO token once.
+ */
+export async function downloadStream({ url: urlOf, refresh, total, path, fetch, onBytes, signal }: StreamDownload) {
+  const left = await partSize(path);
+  const resumes = left > 0 && (!total || left <= total);
+  const file = await open(path, resumes ? "a" : "w");
+  let received = resumes ? left : 0;
+  let refreshed = false;
+  onBytes(received, total);
+  try {
+    if (total && received >= total) return;
+    let url = await urlOf();
+    for (;;) {
+      const end = received + CHUNK_BYTES - 1;
+      const response = await fetch(`${url}&range=${received}-${total ? Math.min(end, total - 1) : end}`, { signal });
+      if (response.status === HTTP_FORBIDDEN && !refreshed) {
+        refreshed = true;
+        await refresh();
+        url = await urlOf();
+        continue;
+      }
+      if (!response.ok || !response.body) throw new RecoverableError(`the stream answered HTTP ${response.status}`);
+      const before = received;
+      for await (const chunk of response.body as unknown as AsyncIterable<Uint8Array>) {
+        await file.write(chunk);
+        received += chunk.byteLength;
+        onBytes(received, total);
+      }
+      const done = total ? received >= total : received - before < CHUNK_BYTES;
+      if (done) break;
+      if (received === before) throw new RecoverableError("the stream ended early");
+    }
+  } finally {
+    await file.close();
+  }
 }
 
 /**
@@ -506,32 +556,64 @@ function headerThumbnails(header: YTMusic.Album["header"]) {
 
 const thumbnailOf = (info: YTMusic.TrackInfo | YT.VideoInfo) => largest(info.basic_info.thumbnail ?? []);
 
-/** How a song's progress counts towards its job's. */
-function songProgress(progress: Progress, position: number, count: number): SongProgress {
-  const overall = (fraction: number) => (position + fraction) / Math.max(1, count);
+/** A song's own progress, which the queue shows per song. */
+function songUpdates(progress: Progress, entry: Entry) {
+  const update = (fields: Omit<SongUpdate, "index">) => progress.song({ index: entry.index, ...fields });
   return {
-    download: (fraction) => progress.download(overall(fraction * DOWNLOAD_SHARE)),
+    started: () => update({ status: "active", videoId: entry.videoId, title: entry.title }),
+    bytes: (bytes: number, total: number) => update(total ? { bytes, total } : { bytes }),
+    saved: (file: string) => update({ status: "done", file }),
+    skipped: () => update({ status: "skipped" }),
+    keep: (file: string) => progress.partial(file),
+  };
+}
+
+/** How a song's progress counts towards its job's. */
+function songProgress(progress: Progress, entry: Entry, position: number, count: number): SongProgress {
+  const overall = (fraction: number) => (position + fraction) / Math.max(1, count);
+  const song = songUpdates(progress, entry);
+  return {
+    ...song,
+    download: (bytes, total) => {
+      song.bytes(bytes, total);
+      if (total) progress.download(overall((bytes / total) * DOWNLOAD_SHARE));
+    },
     convert: (fraction) => progress.converting(overall(DOWNLOAD_SHARE + fraction * (1 - DOWNLOAD_SHARE))),
   };
 }
 
 /** A playlist's progress: the sum of its songs', which download side by side. */
-function listProgress(progress: Progress, count: number) {
-  const songs = new Array<number>(count).fill(0);
-  const overall = () => songs.reduce((sum, fraction) => sum + fraction, 0) / Math.max(1, count);
+function listProgress(progress: Progress, wanted: readonly Entry[]) {
+  const songs = new Array<number>(wanted.length).fill(0);
+  const overall = () => songs.reduce((sum, fraction) => sum + fraction, 0) / Math.max(1, wanted.length);
   return {
-    song: (position: number): SongProgress => ({
-      download: (fraction) => {
-        songs[position] = fraction * DOWNLOAD_SHARE;
-        progress.download(overall());
-      },
-      convert: (fraction) => {
-        songs[position] = DOWNLOAD_SHARE + fraction * (1 - DOWNLOAD_SHARE);
-        progress.converting(overall());
-      },
-    }),
+    song: (position: number): SongProgress => {
+      const song = songUpdates(progress, wanted[position]!);
+      return {
+        ...song,
+        download: (bytes, total) => {
+          song.bytes(bytes, total);
+          if (!total) return;
+          songs[position] = (bytes / total) * DOWNLOAD_SHARE;
+          progress.download(overall());
+        },
+        convert: (fraction) => {
+          songs[position] = DOWNLOAD_SHARE + fraction * (1 - DOWNLOAD_SHARE);
+          progress.converting(overall());
+        },
+      };
+    },
     done: (position: number) => {
       songs[position] = 1;
     },
   };
+}
+
+/** The size of a partial download a paused job left, or 0. */
+async function partSize(path: string) {
+  try {
+    return (await stat(path)).size;
+  } catch {
+    return 0;
+  }
 }

@@ -1,11 +1,17 @@
 /** @jsxImportSource @pear/sdk */
-// The downloader's own toast: YTM's can't hold a "Show" button.
+// The downloader's own toast: YTM's can't hold a "Show" or "Downloads" button.
 
-import type { Ctx, MenuOption } from "./types.ts";
+import type { Ctx } from "./types.ts";
 
 const TOAST_DURATION_MS = 6000;
 
-export type ShowToast = (message: string, action?: MenuOption) => void;
+/** A button in the toast. */
+export interface ToastAction {
+  label: string;
+  run(): void;
+}
+
+export type ShowToast = (message: string, action?: ToastAction) => void;
 
 export function createToast(ctx: Ctx): ShowToast {
   const toast = <div class="pear-dl-toast" role="status" hidden />;

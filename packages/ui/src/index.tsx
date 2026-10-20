@@ -2,14 +2,13 @@
 // sidebar. Both render into shadow roots so YTM's styles can't leak in and
 // ours can't leak out.
 
-import { keepMounted, shadowHost } from "@pear/sdk/dom";
+import { containScroll, shadowHost, sidebarEntry } from "@pear/sdk/dom";
 import type { Translate } from "@pear/sdk/i18n";
-import { selectors } from "@pear/sdk/selectors";
 import { render } from "preact";
-import { Icon } from "./icons.tsx";
+import { ICON_PATHS } from "./icons.tsx";
 import { Settings, type SettingsModel } from "./settings.tsx";
 import { UI_STRINGS } from "./strings.ts";
-import { entryStyles, overlayStyles } from "./styles.ts";
+import { overlayStyles } from "./styles.ts";
 
 export { HostState, type SettingsModel, setMessage, settingsModel } from "./model.ts";
 
@@ -74,62 +73,21 @@ function createOverlay(close: () => void) {
     if (event.key === "Escape") close();
   });
   // The page behind doesn't scroll either: over the scrim, or past the end of the dialog's lists.
-  host.addEventListener(
-    "wheel",
-    (event) => {
-      event.stopPropagation();
-      if (!scrollsInside(event)) event.preventDefault();
-    },
-    { passive: false },
-  );
+  containScroll(host);
   document.body.append(host);
   return container;
 }
 
-/** Whether something in the overlay under the pointer can still scroll the way the wheel turns. */
-function scrollsInside(event: WheelEvent) {
-  const vertical = Math.abs(event.deltaY) >= Math.abs(event.deltaX);
-  const delta = vertical ? event.deltaY : event.deltaX;
-  for (const target of event.composedPath()) {
-    if (!(target instanceof HTMLElement) || target.localName === "pear-settings") break;
-    const style = getComputedStyle(target);
-    if (!/auto|scroll/.test(vertical ? style.overflowY : style.overflowX)) continue;
-    const position = vertical ? target.scrollTop : target.scrollLeft;
-    const room = vertical ? target.scrollHeight - target.clientHeight : target.scrollWidth - target.clientWidth;
-    if (delta < 0 ? position > 0 : position < room - 1) return true;
-  }
-  return false;
-}
-
 /** A "Settings" entry at the end of the sidebar's primary section, in both the full and the mini guide. */
 function mountSidebarEntries(open: () => void, t: Translate) {
-  const guides = [
-    ["guide.full", false],
-    ["guide.mini", true],
-  ] as const;
-  for (const [guide, mini] of guides) {
-    // YTM renders the guides late and re-renders them on some navigations; keep the entries in place.
-    keepMounted(sidebarEntry(open, t, mini), (entry) => {
-      const items = document.querySelector(selectors[guide])?.querySelector(selectors["guide.primary_items"]);
-      items?.append(entry);
-    });
-  }
-}
-
-function sidebarEntry(open: () => void, t: Translate, mini: boolean) {
-  const { host, root } = shadowHost("pear-settings-entry", entryStyles);
-  host.toggleAttribute("mini", mini);
-  render(
-    <button
-      type="button"
-      title={t("settings-ui.open-hint", UI_STRINGS["settings-ui.open-hint"])}
-      aria-label={t("settings-ui.open", UI_STRINGS["settings-ui.open"])}
-      onClick={open}
-    >
-      <Icon name="settings" size={24} />
-      <span>{t("settings-ui.title", UI_STRINGS["settings-ui.title"])}</span>
-    </button>,
-    root,
-  );
-  return host;
+  // The core's entry lives as long as the page.
+  const page = { onCleanup() {} };
+  sidebarEntry(page, {
+    name: "settings",
+    label: t("settings-ui.title", UI_STRINGS["settings-ui.title"]),
+    icon: ICON_PATHS.settings,
+    title: t("settings-ui.open-hint", UI_STRINGS["settings-ui.open-hint"]),
+    ariaLabel: t("settings-ui.open", UI_STRINGS["settings-ui.open"]),
+    onClick: open,
+  });
 }

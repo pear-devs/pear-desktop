@@ -825,14 +825,7 @@
         "download-playlist": "Download playlist",
         "presets": "Presets",
         "skip-existing": "Skip existing files",
-        "download-song": "Download song",
-        "download-album": "Download album",
-        "cancel-all": "Cancel downloads",
-        "cancel": "Cancel download",
-        "recent": "Recent downloads",
-        "show": "Show “{{title}}” in its folder",
-        "retry": "Retry “{{title}}”",
-        "download-liked": "Download liked songs"
+        "download-album": "Download album"
       },
       "name": "Downloader",
       "renderer": {
@@ -992,12 +985,12 @@
         "failed": "Download failed: {{error}}",
         "saved-many": "Saved {{count}} songs from “{{title}}”",
         "saved": "Saved “{{title}}”",
-        "show": "Show"
+        "show": "Show",
+        "downloads": "Downloads"
       },
       "labels": {
         "album": "album",
-        "playlist": "playlist",
-        "liked": "liked songs"
+        "playlist": "playlist"
       },
       "actions": {
         "openFolder": {
@@ -1009,6 +1002,56 @@
         },
         "cancel": {
           "label": "Cancel all downloads"
+        },
+        "openDownloads": {
+          "label": "Show downloads"
+        }
+      },
+      "downloads": "Downloads",
+      "popover": {
+        "views": {
+          "all": "All",
+          "downloading": "Downloading",
+          "finished": "Finished",
+          "failed": "Failed",
+          "cancelled": "Cancelled"
+        },
+        "views-label": "Show",
+        "empty": {
+          "all": "Nothing downloaded yet",
+          "downloading": "Nothing is downloading",
+          "finished": "No finished downloads",
+          "failed": "No failed downloads",
+          "cancelled": "No cancelled downloads"
+        },
+        "collapse": "Hide the songs",
+        "expand": "Show the songs",
+        "pause": "Pause",
+        "resume": "Resume",
+        "cancel": "Cancel",
+        "retry": "Retry",
+        "remove": "Remove",
+        "show": "Show in folder",
+        "status": {
+          "queued": "Queued",
+          "paused": "Paused",
+          "failed": "Failed",
+          "cancelled": "Cancelled",
+          "converting": "Converting",
+          "starting": "Starting",
+          "left": "{{time}} left",
+          "downloading": "Downloading",
+          "skipped": "Already downloaded"
+        },
+        "size-of": "{{downloaded}} of {{size}}",
+        "open-folder": "Open folder",
+        "resume-all": "Resume all",
+        "pause-all": "Pause all",
+        "clear-finished": "Clear finished",
+        "time": {
+          "seconds": "{{count}} s",
+          "minutes": "{{count}} min",
+          "hours": "{{hours}} h {{minutes}} min"
         }
       }
     },

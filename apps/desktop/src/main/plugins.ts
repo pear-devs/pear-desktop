@@ -4,6 +4,7 @@
 import type { App, BrowserWindow, BrowserWindowConstructorOptions, Session } from "electron";
 import { interpolate, type Translate } from "@pear/sdk/i18n";
 import { type AnyPlugin, type HostContext, type HostPlayer, type RpcMethod, supportsPlatform } from "@pear/sdk";
+import type { MenuItems } from "./menu-items.ts";
 import { CleanupStack, createLogger, errorMessage, timerSet } from "@pear/sdk/util";
 import { v } from "@pear/sdk/rpc";
 import type { HostEvent, PluginMeta, PluginState } from "@pear/sdk/protocol";
@@ -41,6 +42,8 @@ export interface HostEnvironment {
   openSettings(): void;
   /** Shows the main window and brings it to the front. */
   focusWindow(): void;
+  /** Plugins' items in the app and tray menus. */
+  menuItems: MenuItems;
   /** Sends a plugin event to API server WebSocket clients. */
   broadcast(plugin: string, event: string, data: unknown): void;
   /** Subscribes to app protocol commands. */
@@ -304,6 +307,11 @@ export class PluginHost {
       player: scopedPlayer(env, cleanups),
       openSettings: () => env.openSettings(),
       focusWindow: () => env.focusWindow(),
+      addMenuItem: (item) => {
+        if (!instance.stopped) cleanups.add(env.menuItems.add(item));
+      },
+      pluginMenuItems: () => env.menuItems.items,
+      onMenuItemsChange: (listener) => cleanups.add(env.menuItems.onChange(listener)),
       listen: (target, event, listener) => {
         target.on(event, listener);
         cleanups.add(() => target.removeListener(event, listener));

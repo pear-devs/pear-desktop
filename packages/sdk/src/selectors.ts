@@ -117,6 +117,8 @@ export const selectors = {
   "browse.background": "ytmusic-browse-response #background",
   "browse.gradient": "ytmusic-browse-response .background-gradient",
   "browse.action_buttons": "ytmusic-responsive-header-renderer #action-buttons",
+  /** An album's or playlist's title, in its page's header. */
+  "browse.title": "ytmusic-responsive-header-renderer h1",
   "browse.continuations": "#browse-page #continuations",
   "browse.tracklist":
     "#browse-page ytmusic-playlist-shelf-renderer, #browse-page ytmusic-shelf-renderer:nth-last-child(1 of ytmusic-shelf-renderer)",

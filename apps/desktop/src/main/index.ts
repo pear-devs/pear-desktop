@@ -11,7 +11,8 @@ import { CoreOptions } from "./core-options.ts";
 import { loadI18n, resolveLanguage } from "./i18n.ts";
 import { setupIpc } from "./ipc.ts";
 import { MainWindow } from "./main-window.ts";
-import { setApplicationMenu } from "./menu.ts";
+import { type MenuEnvironment, setApplicationMenu } from "./menu.ts";
+import { MenuItems } from "./menu-items.ts";
 import { setupNet } from "./net.ts";
 import { PageRequests } from "./page-requests.ts";
 import { PlayerMirror } from "./player.ts";
@@ -36,6 +37,7 @@ function main() {
   const core = new CoreOptions(settings, plugins.t, mainWindow);
   const player = new PlayerMirror((action) => send({ type: "player-control", action }));
   const requests = new PageRequests(send);
+  const menuItems = new MenuItems();
   // pear-desktop's app protocol: links control playback; plugins hear about them too.
   const links = new ProtocolLinks((action) => player.control(action));
   let api: ApiServer | undefined;
@@ -72,11 +74,12 @@ function main() {
       },
     });
     core.start();
-    setApplicationMenu({
+    const menu: MenuEnvironment = {
       platform: process.platform,
       t: plugins.t,
       window: () => mainWindow.window,
       openSettings,
+      pluginItems: () => menuItems.items,
       alwaysOnTop: () => settings.core("window").alwaysOnTop,
       setAlwaysOnTop: (alwaysOnTop) => core.set("window", { alwaysOnTop }),
       settingsPath: settings.path,
@@ -84,7 +87,9 @@ function main() {
         app.relaunch();
         app.quit();
       },
-    });
+    };
+    setApplicationMenu(menu);
+    menuItems.onChange(() => setApplicationMenu(menu));
     await seedConsent(session.defaultSession);
     await applyProxy(settings);
 
@@ -108,6 +113,7 @@ function main() {
       send,
       openSettings,
       focusWindow: () => focusWindow(window),
+      menuItems,
       broadcast: (plugin, event, data) => api?.broadcastPluginEvent(plugin, event, data),
       onProtocol: (listener) => links.listen(listener),
       // The Proxy plugin resets to the system proxy when turned off; the core option takes over again.

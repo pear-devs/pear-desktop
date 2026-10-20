@@ -1,11 +1,12 @@
 // The yt-dlp engine: runs yt-dlp for a job and reads its progress (host only).
 
 import { type ChildProcess, execFile, spawn } from "node:child_process";
+import { existsSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import { createInterface } from "node:readline";
 import type { ReadyTools } from "../tools.ts";
 import { type ArgsOptions, buildArgs, overallProgress, parseDestination, parseLine } from "../ytdlp.ts";
-import type { Engine, EngineJob, EngineResult, Progress } from "./types.ts";
+import { type Engine, type EngineJob, type EngineResult, isPause, type Progress } from "./types.ts";
 
 export interface YtDlpOptions {
   /** The tools for the next job; may download them first. */
@@ -50,6 +51,7 @@ export class YtDlpEngine implements Engine {
     const errors: string[] = [];
     const started = new Set<string>();
     let item = { index: 1, count: 1 };
+    let listed = false;
     const onLine = (line: string) => {
       const destination = parseDestination(line);
       if (destination) started.add(destination);
@@ -58,17 +60,25 @@ export class YtDlpEngine implements Engine {
       switch (event.type) {
         case "item":
           item = event;
-          return progress.item(event.index, event.count, event.title);
+          // The list's length comes with its first song; the others appear as yt-dlp gets to them.
+          if (!listed && event.count > 1) progress.songs(Array.from({ length: event.count }, (_, i) => ({ index: i + 1 })));
+          listed = true;
+          progress.item(event.index, event.count, event.title);
+          return progress.song({ index: event.index, status: "active", videoId: event.videoId, title: event.title });
+        case "file":
+          started.add(event.file);
+          return;
         case "progress":
-          return progress.download(overallProgress(item.index, item.count, event.fraction));
+          progress.song({ index: item.index, bytes: event.bytes, ...(event.total ? { total: event.total } : {}) });
+          return progress.download(overallProgress(item.index, item.count, event.total ? event.bytes / event.total : 0));
         case "convert":
           return progress.converting();
         case "done":
           files.push(event.file);
-          return;
+          return progress.song({ index: item.index, status: "done", file: event.file });
         case "error":
           errors.push(event.message);
-          return;
+          return progress.song({ index: item.index, status: "failed", error: event.message });
         case "warning":
           this.#options.log.warn("yt-dlp:", event.message);
           return;
@@ -82,12 +92,15 @@ export class YtDlpEngine implements Engine {
         child.once("error", reject);
         child.once("close", resolve);
       });
+      // Stopped (cancelled or paused): what it saved so far is the queue's to judge.
+      signal.throwIfAborted();
       // Playlists may have a few unavailable items; that's still a success.
       if (code !== 0 && files.length === 0) return { files, error: errors.at(-1) ?? `yt-dlp exited with code ${code}` };
       return { files };
     } finally {
       signal.removeEventListener("abort", kill);
-      if (signal.aborted) await removePartial(started, files);
+      if (isPause(signal)) await keepPartial(started, files, progress);
+      else if (signal.aborted) await removePartial(started, files);
     }
   }
 }
@@ -105,6 +118,19 @@ export function killTree(child: ChildProcess) {
     process.kill(-child.pid, "SIGTERM");
   } catch {
     child.kill();
+  }
+}
+
+/**
+ * A paused yt-dlp continues its parts later (--continue, its default); files it
+ * was converting or hadn't finished go, as they'd pass for done ones.
+ */
+async function keepPartial(started: Set<string>, finished: readonly string[], progress: Progress) {
+  const unfinished = [...started].filter((file) => !finished.includes(file));
+  await Promise.all(unfinished.map((file) => rm(file, { force: true }).catch(() => {})));
+  for (const file of started) {
+    if (existsSync(`${file}.part`)) progress.partial(`${file}.part`);
+    if (existsSync(`${file}.ytdl`)) progress.partial(`${file}.ytdl`);
   }
 }
 

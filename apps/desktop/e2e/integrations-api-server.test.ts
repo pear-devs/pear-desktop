@@ -245,12 +245,12 @@ test("plugins' RPC methods are callable, validated, documented and follow the pl
       timeout: 30_000,
     })
     .toMatchObject({ plugin: "downloader", data: { active: expect.objectContaining({ id }) } });
-  expect(await (await call("downloader/queue")).json()).toMatchObject({ queued: 0, recent: [] });
+  expect(await (await call("downloader/queue")).json()).toEqual([expect.objectContaining({ id, status: "active" })]);
   expect((await call("downloader/cancel")).status).toBe(204);
   await expect
     .poll(() => ws.messages.find((m) => m.type === "PLUGIN_EVENT" && m.event === "result"), { timeout: 30_000 })
     .toMatchObject({ plugin: "downloader", data: expect.objectContaining({ cancelled: true }) });
-  expect(await (await call("downloader/queue")).json()).toMatchObject({ queued: 0, recent: [expect.objectContaining({ id, cancelled: true })] });
+  expect(await (await call("downloader/queue")).json()).toEqual([expect.objectContaining({ id, status: "cancelled" })]);
 
   // Disabling the plugin takes its methods away live.
   await setEnabled(page, "sponsorblock", false);
