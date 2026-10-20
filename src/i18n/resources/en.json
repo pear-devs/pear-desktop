@@ -181,7 +181,8 @@
                 }
               }
             }
-          }
+          },
+          "settings": "Settings…"
         }
       },
       "plugins": {
@@ -1781,8 +1782,8 @@
         "label": "Swap the like and dislike buttons"
       },
       "usePodcastParticipantAsArtist": {
-        "label": "Show podcast hosts as the artist",
-        "description": "In the player bar, notifications and integrations."
+        "label": "Show the listed participant as a podcast's artist",
+        "description": "Off: the channel that publishes it, usually the host. Used in notifications and integrations."
       },
       "customWindowTitle": {
         "label": "Window title",

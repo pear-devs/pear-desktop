@@ -7,6 +7,7 @@ import type { Bridge } from "@pear/sdk/protocol";
 import { mountSettings, type SettingsController } from "@pear/ui";
 import plugins from "virtual:pear/page-plugins";
 import { registerApiHandlers } from "./api.ts";
+import { Appearance } from "./appearance.ts";
 import { domReady } from "./dom.ts";
 import { Player } from "./player.ts";
 import { PluginRunner } from "./plugins.ts";
@@ -64,8 +65,11 @@ function publish(state: NowPlaying, urgent: boolean) {
   }
 }
 
-const player = new Player(publish);
+const player = new Player(publish, () => runner.core("appearance").config);
 const runner = new PluginRunner(plugins, bridge, player);
+const appearance = new Appearance();
+appearance.apply(runner.core("appearance"));
+appearance.setThemes(bridge.bootstrap.themes);
 
 bridge.onEvent((event) => {
   switch (event.type) {
@@ -78,7 +82,14 @@ bridge.onEvent((event) => {
     case "plugin-request":
       return void runner.request(event.id, event.event, event.payload, event.requestId);
     case "core-state":
-      return runner.applyCore(event.section, event.state);
+      runner.applyCore(event.section, event.state);
+      if (event.section === "appearance") {
+        appearance.apply(event.state);
+        player.refreshTrack();
+      }
+      return;
+    case "themes":
+      return appearance.setThemes(event.css);
     case "player-control":
       return player.control(event.action);
     case "ui":

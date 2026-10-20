@@ -64,6 +64,8 @@ export interface Bootstrap {
   strings: Record<string, string>;
   /** Plugins supported on this platform, in settings-UI form. */
   catalog: PluginInfo[];
+  /** The CSS of the user's theme files (appearance.themes), in order. */
+  themes: string[];
 }
 
 export type UiAction = "toggle-settings" | "open-settings" | "close-settings";
@@ -75,6 +77,8 @@ export type HostEvent =
   | { type: "plugin-error"; id: string; message: string }
   | { type: "plugin-request"; id: string; event: string; payload: unknown; requestId: number }
   | { type: "core-state"; section: CoreSection; state: CoreState }
+  /** The theme files changed (the list or a file's contents). */
+  | { type: "themes"; css: string[] }
   | { type: "player-control"; action: PlayerAction }
   | { type: "ui"; action: UiAction };
 

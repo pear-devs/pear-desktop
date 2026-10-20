@@ -27,6 +27,10 @@ export const selectors = {
   "player_bar.volume_button": "ytmusic-player-bar .volume.ytmusic-player-bar",
   "player_bar.progress": "ytmusic-player-bar #progress-bar",
   "player_bar.like_buttons": "ytmusic-player-bar #like-button-renderer",
+  /** The like/dislike pair's element, wherever it is. */
+  like_buttons: "ytmusic-like-button-renderer",
+  /** Likes and the track menu; YTM hides them in narrow windows. */
+  "player_bar.middle_buttons": "ytmusic-player-bar .middle-controls-buttons",
   "player_bar.like": "ytmusic-player-bar #like-button-renderer #button-shape-like button",
   "player_bar.dislike": "ytmusic-player-bar #like-button-renderer #button-shape-dislike button",
   "player_bar.repeat": "ytmusic-player-bar #right-controls .repeat",
@@ -59,7 +63,10 @@ export const selectors = {
   "dialog.you_there": "ytmusic-you-there-renderer",
   "lyrics.tab": "ytmusic-player-page tp-yt-paper-tab:nth-of-type(2)",
   "lyrics.container": "ytmusic-description-shelf-renderer",
-  "upgrade.button": "ytmusic-guide-entry-renderer:last-child, tp-yt-paper-item.ytmusic-guide-entry-renderer[href*='music_premium']",
+  /** Sidebar entries; each carries its renderer data (`.data`: browse id, icon type). */
+  "guide.entry": "ytmusic-guide-entry-renderer",
+  /** The sidebar's "Upgrade" entry, which the core marks (it can only be told apart by its data). */
+  "upgrade.button": "ytmusic-guide-entry-renderer[pear-upgrade]",
 
   // ---- integrations (api-server, discord, scrobbler, notifications, …)
   "integrations.fullscreen": "ytmusic-player-bar[player-fullscreened]",

@@ -97,8 +97,8 @@ export const APPEARANCE = {
   ),
   swapLikeButtonsOrder: config.bool(false, { label: "Swap the like and dislike buttons", group: "Interface" }),
   usePodcastParticipantAsArtist: config.bool(false, {
-    label: "Show podcast hosts as the artist",
-    description: "In the player bar, notifications and integrations.",
+    label: "Show the listed participant as a podcast's artist",
+    description: "Off: the channel that publishes it, usually the host. Used in notifications and integrations.",
     group: "Interface",
   }),
   customWindowTitle: config.string("", {

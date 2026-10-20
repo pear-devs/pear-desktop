@@ -31,7 +31,9 @@ export interface IpcEnvironment {
   onRuntimeBootstrap(sender: Electron.WebContents): void;
   core: {
     states(): Record<CoreSection, CoreState>;
-    setConfig(section: CoreSection, patch: Record<string, unknown>): Promise<void>;
+    setConfig(section: CoreSection, patch: Record<string, unknown>): void | Promise<void>;
+    /** The theme files' CSS. */
+    themes(): string[];
   };
 }
 
@@ -101,6 +103,7 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
         chrome: process.versions.chrome,
         node: process.versions.node,
       },
+      themes: core.themes(),
       language: plugins.i18n?.language ?? "en",
       strings: plugins.i18n?.strings ?? {},
       catalog: plugins.plugins.map((plugin) => {

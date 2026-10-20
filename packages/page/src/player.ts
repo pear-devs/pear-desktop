@@ -52,9 +52,12 @@ export class Player implements PagePlayer {
   #ready: Promise<YTPlayerApi>;
   #state: NowPlaying = { ...IDLE };
   #publish: (state: NowPlaying, urgent: boolean) => void;
+  #options: () => Record<string, unknown>;
 
-  constructor(publish: (state: NowPlaying, urgent: boolean) => void) {
+  /** `options` is the core's appearance section (usePodcastParticipantAsArtist). */
+  constructor(publish: (state: NowPlaying, urgent: boolean) => void, options: () => Record<string, unknown> = () => ({})) {
     this.#publish = publish;
+    this.#options = options;
     this.#ready = this.#findApi().then((api) => {
       this.#api = api;
       this.#attach(api);
@@ -123,6 +126,15 @@ export class Player implements PagePlayer {
       case "repeat":
         return click("player_bar.repeat");
     }
+  }
+
+  /** Re-reads the current track's metadata (an option that changes it was toggled). */
+  refreshTrack() {
+    const api = this.#api;
+    const current = this.#state.track;
+    if (!api || !current) return;
+    const track = this.#readTrack(api);
+    if (track?.videoId === current.videoId && track.artist !== current.artist) this.#update({ track }, true);
   }
 
   async #findApi(): Promise<YTPlayerApi> {
@@ -260,6 +272,10 @@ export class Player implements PagePlayer {
       url: `https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/watch?v=${videoId}`,
       mediaType: MEDIA_TYPES[details?.musicVideoType ?? ""] ?? "other",
     };
+    // Episodes name the show as their author; the channel owner is the host (a person).
+    const host = response?.microformat?.microformatDataRenderer?.pageOwnerDetails?.name;
+    // Like pear-desktop: the channel owner (usually the host) unless the option asks for the listed participant.
+    if (track.mediaType === "podcast" && host && this.#options().usePodcastParticipantAsArtist !== true) track.artist = host;
     if (sameTrack && metadata.album) track.album = metadata.album;
     const artworkUrl = artwork ?? thumbnail;
     if (artworkUrl) track.artworkUrl = artworkUrl;
