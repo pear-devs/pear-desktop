@@ -32,6 +32,26 @@ function backend(results: Partial<Record<ProviderId, LyricResult | null | Error>
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("LyricsStore", () => {
+  test("an inactive store looks lyrics up only once they are wanted, once per track", async () => {
+    const api = backend({ YTMusic: synced });
+    const store = new LyricsStore(api, options, false);
+    store.load(track);
+    await settle();
+    expect(api.search).not.toHaveBeenCalled();
+    store.setActive(true);
+    await settle();
+    expect(api.search).toHaveBeenCalledTimes(PROVIDERS.length);
+    expect(store.shown).toMatchObject({ provider: "YTMusic" });
+    store.setActive(false);
+    store.setActive(true);
+    expect(api.search).toHaveBeenCalledTimes(PROVIDERS.length);
+    // The next track waits while inactive.
+    store.setActive(false);
+    store.load({ ...track, videoId: "def" });
+    await settle();
+    expect(api.search).toHaveBeenCalledTimes(PROVIDERS.length);
+  });
+
   test("shows the richest result regardless of provider order", async () => {
     const store = new LyricsStore(backend({ LRCLib: null, YTMusic: synced, LyricsGenius: plain }), options);
     store.load(track);

@@ -175,5 +175,7 @@ test("Megalobiz lyrics as pear-desktop's preferred provider; Musixmatch says it 
   await lyrics(page).locator('.dot[aria-label="MusixMatch"]').click();
   await expect(lyrics(page)).toHaveAttribute("data-state", "error");
   await expect(lyrics(page).locator(".error-detail")).toContainText("user token");
+  // The provider's message, not Electron's IPC wrapper around it.
+  await expect(lyrics(page).locator(".error-detail")).not.toContainText("invoking remote method");
   await expect(lyrics(page).locator(".retry")).toBeVisible();
 });

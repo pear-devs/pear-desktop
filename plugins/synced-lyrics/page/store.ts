@@ -7,7 +7,7 @@
 // this track, and a starred provider is always shown for its track.
 
 import type { Track } from "@pear/sdk";
-import { errorMessage } from "@pear/sdk/util";
+import { remoteErrorMessage } from "@pear/sdk/util";
 import { PROVIDERS, resultRank, type LyricLine, type LyricResult, type ProviderId, type SearchQuery } from "../types.ts";
 
 export type ProviderState =
@@ -62,10 +62,15 @@ export class LyricsStore {
   #listeners = new Set<() => void>();
   #generation = 0;
   #shownKey = "";
+  /** Whether lyrics are wanted (the tab is open); searches wait until then. */
+  #active: boolean;
+  /** The track (by generation) whose searches have started. */
+  #searched = -1;
 
-  constructor(backend: Backend, options: Options) {
+  constructor(backend: Backend, options: Options, active = true) {
     this.#backend = backend;
     this.#options = options;
+    this.#active = active;
     this.selected = options.preferred === "auto" ? PROVIDERS[0] : options.preferred;
   }
 
@@ -93,7 +98,7 @@ export class LyricsStore {
 
   load(track: Track | null, force = false) {
     if (!force && track?.videoId === this.track?.videoId) return;
-    const generation = ++this.#generation;
+    ++this.#generation;
     this.track = track;
     this.providers = initialProviders();
     this.manual = false;
@@ -102,8 +107,20 @@ export class LyricsStore {
     this.#shownKey = "";
     this.shown = null;
     this.#emit();
-    if (!track) return;
-    for (const id of PROVIDERS) void this.#search(id, track, generation);
+    this.#searchAll();
+  }
+
+  /** While inactive, a track's lyrics are only looked up once they become wanted. */
+  setActive(active: boolean) {
+    this.#active = active;
+    this.#searchAll();
+  }
+
+  #searchAll() {
+    const { track } = this;
+    if (!this.#active || !track || this.#searched === this.#generation) return;
+    this.#searched = this.#generation;
+    for (const id of PROVIDERS) void this.#search(id, track, this.#generation);
   }
 
   retry(provider: ProviderId) {
@@ -168,7 +185,8 @@ export class LyricsStore {
     try {
       state = { status: "done", result: await this.#backend.search(provider, query) };
     } catch (error) {
-      state = { status: "error", message: errorMessage(error) };
+      // Searches run in the host; the message is the provider's, without the IPC wrapper.
+      state = { status: "error", message: remoteErrorMessage(error) };
     }
     if (generation !== this.#generation) return;
     this.providers = { ...this.providers, [provider]: state };

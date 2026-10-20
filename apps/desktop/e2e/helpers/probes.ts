@@ -13,6 +13,8 @@ declare global {
   }
   // Main-process probe state.
   var __notifications: { title: string; body: string }[] | undefined;
+  /** Uncaught errors in the main process, collected by tests that expect none. */
+  var __mainErrors: string[] | undefined;
   var __trayProbe: { images: number[]; menu: string[] } | undefined;
 }
 

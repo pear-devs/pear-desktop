@@ -73,4 +73,16 @@ describe("WebRequestRouter", () => {
     expect(scoped.getUserAgent()).toBe("ua");
     expect(scoped.webRequest).not.toBe(session.webRequest);
   });
+
+  test("scoped session's getters see the session itself (native ones refuse the proxy)", () => {
+    const { session } = fakeSession();
+    const cookies = {};
+    Object.defineProperty(session, "cookies", {
+      get(this: unknown) {
+        if (this !== session) throw new TypeError("Illegal invocation");
+        return cookies;
+      },
+    });
+    expect(new WebRequestRouter(session).scopedSession("p").cookies).toBe(cookies);
+  });
 });

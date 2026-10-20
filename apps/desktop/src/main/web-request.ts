@@ -61,9 +61,10 @@ export class WebRequestRouter {
   scopedSession(owner: string, active?: () => boolean): Session {
     const webRequest = this.scoped(owner, active);
     return new Proxy(this.#session, {
-      get(target, property, receiver) {
+      get(target, property) {
         if (property === "webRequest") return webRequest;
-        const value = Reflect.get(target, property, receiver);
+        // The session itself as `this`: native getters (cookies, protocol…) refuse the proxy.
+        const value = Reflect.get(target, property, target);
         return typeof value === "function" ? value.bind(target) : value;
       },
     });

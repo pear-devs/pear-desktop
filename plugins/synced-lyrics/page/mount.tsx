@@ -20,9 +20,6 @@ interface Commands {
 
 type Ctx = PageContextOf<typeof schema, Commands>;
 
-/** Behind YTM's dark theme when nothing opaque is found. */
-const FALLBACK_BACKGROUND = "#030303";
-
 const storeOptions = (config: LyricsConfig): Options => ({
   preferred: config.preferredProvider,
   inexact: config.showLyricsEvenIfInexact,
@@ -62,6 +59,7 @@ export function mountLyrics(ctx: Ctx) {
     if (next === open) return;
     open = next;
     element.toggleAttribute("open", open);
+    store.setActive(open);
     draw();
   };
   attachToLyricsTab(ctx, element, setOpen);
@@ -98,6 +96,8 @@ function createStore(ctx: Ctx) {
       },
     },
     storeOptions(ctx.config),
+    // Nothing is looked up until the Lyrics tab opens (and then only for the tracks shown).
+    false,
   );
 }
 
@@ -126,7 +126,6 @@ function attachToLyricsTab(ctx: Ctx, element: HTMLElement, setOpen: (open: boole
     const panel = ctx.$("lyrics.panel");
     if (panel && element.parentElement !== panel) {
       panel.append(element);
-      element.style.setProperty("--panel-bg", backgroundOf(panel));
     }
     const tab = ctx.$("lyrics.tab");
     if (tab && tab !== observedTab) {
@@ -137,13 +136,4 @@ function attachToLyricsTab(ctx: Ctx, element: HTMLElement, setOpen: (open: boole
   };
   ctx.observe("player.page", { childList: true, subtree: true }, attach);
   void ctx.waitFor("player.page").then(attach, () => {});
-}
-
-/** The first opaque background behind `element`, so sticky headers can cover scrolled lines. */
-function backgroundOf(element: Element | null) {
-  for (; element; element = element.parentElement) {
-    const color = getComputedStyle(element).backgroundColor;
-    if (color && color !== "transparent" && !/rgba\(.*,\s*0\)$/.test(color)) return color;
-  }
-  return FALLBACK_BACKGROUND;
 }

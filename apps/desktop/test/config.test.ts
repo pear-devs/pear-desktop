@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { config, definePlugin } from "@pear/sdk";
@@ -269,5 +269,24 @@ describe("files from before pear-desktop 3.12", () => {
   test("3.12+ files are left to the 4.0.0 migration", () => {
     const { config: result } = migrated312({ plugins: { adblocker: { enabled: true } } });
     expect(result.plugins?.adblocker).toEqual({ enabled: true });
+  });
+});
+
+describe("a damaged config.json", () => {
+  test("is kept next to the new one before defaults replace it", () => {
+    const dir = profile();
+    writeFileSync(join(dir, "config.json"), '{"plugins": {"tray": {"enabled": fal');
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const settings = new Settings(dir, PLUGINS, "4.0.0");
+    expect(settings.plugin("tray")?.enabled).toBe(true);
+    const backups = readdirSync(dir).filter((name) => name.startsWith("config.json.damaged-"));
+    expect(backups).toHaveLength(1);
+    expect(readFileSync(join(dir, backups[0]!), "utf8")).toBe('{"plugins": {"tray": {"enabled": fal');
+  });
+
+  test("a fresh profile has nothing to keep", () => {
+    const dir = profile();
+    new Settings(dir, PLUGINS, "4.0.0");
+    expect(readdirSync(dir).filter((name) => name.includes("damaged"))).toEqual([]);
   });
 });

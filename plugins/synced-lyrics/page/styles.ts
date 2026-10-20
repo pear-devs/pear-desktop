@@ -57,7 +57,7 @@ export const lyricsStyles = css`
     height: 5em;
     margin-bottom: 8px;
     font-size: 14px;
-    background: color-mix(in srgb, var(--panel-bg, #030303) 80%, transparent);
+    /* No color of its own, as pear-desktop: themes, album colors and ambient glows show through. */
     backdrop-filter: blur(5px);
     border-bottom: 1px solid rgb(255 255 255 / 0.1);
     transition: transform 325ms ease-in-out;

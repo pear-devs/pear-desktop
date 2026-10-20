@@ -5,6 +5,9 @@ import { Menu, nativeImage, Tray, type MenuItemConstructorOptions } from "electr
 
 /** The tray icon's size in px; drawn at twice that for high-DPI screens. */
 const ICON_SIZE = 32;
+/** macOS menu bar icons are 16 points, as pear-desktop's. */
+const MAC_ICON_SIZE = 16;
+const isMac = process.platform === "darwin";
 
 const schema = {
   closeToTray: config.bool(false, {
@@ -78,8 +81,14 @@ export default definePlugin({
       });
       tray.on("double-click", () => void claimed("pear:tray-double-click"));
 
-      closeToTray(ctx, hideWindow);
-      return () => tray.destroy();
+      const quitting = watchQuit(ctx);
+      closeToTray(ctx, hideWindow, quitting);
+      return () => {
+        // Turned off with the window hidden in it, which then could never come back.
+        // Shown first: showing updates the tray (its "show" listener), so it must still exist.
+        if (!quitting() && !window.isDestroyed() && !window.isVisible()) showWindow();
+        tray.destroy();
+      };
     },
     // Both options are read when used; no restart needed.
     onConfigChange() {},
@@ -87,8 +96,11 @@ export default definePlugin({
 });
 
 function trayImage(paused: boolean) {
-  const pixels = ICON_SIZE * 2;
-  return nativeImage.createFromBitmap(trayIconBitmap(pixels, paused), { width: pixels, height: pixels, scaleFactor: 2 });
+  const pixels = (isMac ? MAC_ICON_SIZE : ICON_SIZE) * 2;
+  const image = nativeImage.createFromBitmap(trayIconBitmap(pixels, paused), { width: pixels, height: pixels, scaleFactor: 2 });
+  // A template image: macOS draws it in the menu bar's own color, so it shows on light and dark bars.
+  if (isMac) image.setTemplateImage(true);
+  return image;
 }
 
 // pear-desktop's tray texts and translations (main.tray.*).
@@ -131,14 +143,21 @@ function menu(ctx: Ctx, state: NowPlaying, toggleWindow: () => void): MenuItemCo
   ];
 }
 
-/** With closeToTray, closing the window hides it instead (quitting still closes it). */
-function closeToTray(ctx: Ctx, hideWindow: () => void) {
+/** Whether the app is quitting; known before plugins stop, since quitting stops them. */
+function watchQuit(ctx: Ctx) {
   let quitting = false;
-  ctx.listen(ctx.app, "before-quit", () => {
+  const onQuit = () => {
     quitting = true;
-  });
+  };
+  ctx.app.prependListener("before-quit", onQuit);
+  ctx.onCleanup(() => ctx.app.removeListener("before-quit", onQuit));
+  return () => quitting;
+}
+
+/** With closeToTray, closing the window hides it instead (quitting still closes it). */
+function closeToTray(ctx: Ctx, hideWindow: () => void, quitting: () => boolean) {
   ctx.listen(ctx.window, "close", (event: Electron.Event) => {
-    if (!ctx.config.closeToTray || quitting) return;
+    if (!ctx.config.closeToTray || quitting()) return;
     event.preventDefault();
     hideWindow();
   });

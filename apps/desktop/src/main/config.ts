@@ -10,7 +10,7 @@
 // ones fall back to defaults instead of crashing anything. Keys this version
 // doesn't know are kept, for older versions and future migrations.
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { type AnyPlugin, type ConfigOf, type ConfigShape, isEnabledByDefault, normalizeConfig } from "@pear/sdk";
 import { CORE_SECTIONS, type CoreSection } from "@pear/sdk/core-config";
@@ -179,10 +179,30 @@ function placedPosition(position: unknown): { x: number; y: number } | undefined
 }
 
 function readJson(path: string): StoredConfig | undefined {
+  let text: string;
   try {
-    const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
-    return isRecord(parsed) ? (parsed as StoredConfig) : undefined;
+    text = readFileSync(path, "utf8");
   } catch {
+    // Not there yet: a fresh profile.
     return undefined;
+  }
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    if (isRecord(parsed)) return parsed as StoredConfig;
+  } catch {
+    // Damaged; kept below.
+  }
+  keepDamaged(path);
+  return undefined;
+}
+
+/** A config.json that can't be read is about to be replaced by defaults; keep it next to it, to recover settings by hand. */
+function keepDamaged(path: string) {
+  const backup = `${path}.damaged-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+  try {
+    copyFileSync(path, backup);
+    console.warn(`[pear] ${path} couldn't be read; starting from defaults, the old file is at ${backup}`);
+  } catch (error) {
+    console.error(`[pear] ${path} couldn't be read, nor kept`, error);
   }
 }
