@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { app, BrowserWindow, nativeImage, screen, session } from "electron";
 import { pearIconBitmap } from "@pear/sdk/icon";
+import type { CoreSection } from "@pear/sdk/core-config";
 import { CHANNEL, type HostEvent } from "@pear/sdk/protocol";
 import hostPlugins from "virtual:pear/host-plugins";
 import { chromeUserAgent, isGoogleAuth, YTM_ORIGIN } from "../shared/user-agent.ts";
@@ -12,6 +13,7 @@ import { setupNet } from "./net.ts";
 import { PageRequests } from "./page-requests.ts";
 import { PlayerMirror } from "./player.ts";
 import { PluginHost } from "./plugins.ts";
+import { openSettingsWindow, registerSettingsScheme, serveSettings, settingsWindowContents } from "./settings-window.ts";
 import { WebRequestRouter } from "./web-request.ts";
 
 const YTM_URL = `${YTM_ORIGIN}/`;
@@ -28,6 +30,9 @@ app.setName(APP_ID);
 app.commandLine.appendSwitch("class", APP_ID);
 if (process.platform === "win32") app.setAppUserModelId(APP_ID);
 
+/** `--settings` opens the standalone settings window (also in an already running instance). */
+const SETTINGS_FLAG = "--settings";
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
@@ -37,16 +42,46 @@ if (!app.requestSingleInstanceLock()) {
 function main() {
   const settings = new Settings(app.getPath("userData"), hostPlugins);
   const plugins = new PluginHost(hostPlugins, settings, process.platform);
+  if (!settings.core("advanced").hardwareAcceleration) app.disableHardwareAcceleration();
+  registerSettingsScheme();
   const features = plugins.beforeReady(app);
   if (features.enabled.size > 0) app.commandLine.appendSwitch("enable-features", [...features.enabled].join(","));
   if (features.disabled.size > 0) app.commandLine.appendSwitch("disable-features", [...features.disabled].join(","));
 
   let mainWindow: BrowserWindow | undefined;
+  // Whether the page runtime of the current main-window page is up (it can show the in-page settings).
+  let runtimeUp = false;
   let electronUserAgent = "";
   let ytmUserAgent = "";
 
   const send = (event: HostEvent) => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(CHANNEL.event, event);
+    // The standalone settings window only follows state, not page-runtime traffic.
+    if (event.type === "plugin-state" || event.type === "plugin-error" || event.type === "core-state") {
+      settingsWindowContents()?.send(CHANNEL.event, event);
+    }
+  };
+
+  /** The in-page overlay when YTM is up, otherwise the standalone window. */
+  const openSettings = () => {
+    const window = mainWindow;
+    if (!window || window.isDestroyed() || !runtimeUp) return void openSettingsWindow();
+    if (window.isMinimized()) window.restore();
+    window.show();
+    window.focus();
+    send({ type: "ui", action: "open-settings" });
+  };
+
+  /** Applies the core options that take effect live. */
+  const applyCore = (section: CoreSection) => {
+    const window = mainWindow;
+    if (section === "window" && window && !window.isDestroyed()) {
+      const options = settings.core("window");
+      window.setAlwaysOnTop(options.alwaysOnTop);
+      if (process.platform === "win32" || process.platform === "darwin") {
+        app.setLoginItemSettings({ openAtLogin: options.startAtLogin, args: [] });
+      }
+    }
   };
   const player = new PlayerMirror((action) => send({ type: "player-control", action }));
   const requests = new PageRequests(send);
@@ -59,6 +94,7 @@ function main() {
       minWidth: 360,
       minHeight: 300,
       backgroundColor: "#030303",
+      alwaysOnTop: settings.core("window").alwaysOnTop,
       title: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063",
       icon: nativeImage.createFromBitmap(pearIconBitmap(256), { width: 256, height: 256 }),
       autoHideMenuBar: true,
@@ -77,6 +113,8 @@ function main() {
     });
     if (saved?.maximized) window.maximize();
     window.once("ready-to-show", () => {
+      // Hidden starts only make sense with a tray icon to bring the window back.
+      if (settings.core("window").startHidden && settings.plugin("tray")?.enabled) return;
       window.show();
       console.info(`[pear] startup: window shown after ${Math.round(performance.now())}ms`);
     });
@@ -85,8 +123,9 @@ function main() {
     window.webContents.on("will-prevent-unload", (event) => event.preventDefault());
 
     // Keep navigator.userAgent consistent with the UA header per destination.
-    window.webContents.on("did-start-navigation", ({ url, isMainFrame }) => {
+    window.webContents.on("did-start-navigation", ({ url, isMainFrame, isSameDocument }) => {
       if (!isMainFrame) return;
+      if (!isSameDocument) runtimeUp = false;
       const userAgent = isGoogleAuth(url) ? electronUserAgent : ytmUserAgent;
       if (window.webContents.getUserAgent() !== userAgent) window.webContents.setUserAgent(userAgent);
     });
@@ -105,11 +144,13 @@ function main() {
     window.on("maximize", saveBounds);
     window.on("unmaximize", saveBounds);
 
-    window.loadURL(resumeUrl(settings.lastUrl));
+    window.webContents.on("render-process-gone", () => (runtimeUp = false));
+    window.loadURL(startUrl(settings.core("general"), settings.lastUrl));
     return window;
   }
 
-  app.on("second-instance", () => {
+  app.on("second-instance", (_, argv) => {
+    if (argv.includes(SETTINGS_FLAG)) return void openSettingsWindow();
     if (!mainWindow) return;
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.show();
@@ -123,15 +164,27 @@ function main() {
     app.userAgentFallback = ytmUserAgent;
     const router = new WebRequestRouter(session.defaultSession);
     setupNet(router.scoped("core"), { electronUserAgent });
+    serveSettings();
     setupIpc({
       plugins,
       player,
       requests,
+      settingsPath: settings.path,
+      onRuntimeBootstrap: (sender) => {
+        if (mainWindow && sender === mainWindow.webContents) runtimeUp = true;
+      },
       core: {
-        states: () => ({ apiServer: api?.state() ?? { config: settings.core("apiServer") } }),
+        states: () => ({
+          general: { config: settings.core("general") },
+          window: { config: settings.core("window") },
+          advanced: { config: settings.core("advanced") },
+          apiServer: api?.state() ?? { config: settings.core("apiServer") },
+        }),
         async setConfig(section, patch) {
           settings.setCore(section, patch);
-          if (section === "apiServer") await api?.apply();
+          if (section === "apiServer") return void (await api?.apply());
+          applyCore(section);
+          send({ type: "core-state", section, state: { config: settings.core(section) } });
         },
       },
     });
@@ -154,9 +207,12 @@ function main() {
       player,
       requests,
       send,
+      openSettings,
       broadcast: (plugin, event, data) => api?.broadcastPluginEvent(plugin, event, data),
     });
+    applyCore("window");
     void api.apply();
+    if (process.argv.includes(SETTINGS_FLAG)) openSettingsWindow();
   });
 
   app.on("before-quit", () => {
@@ -174,11 +230,11 @@ function main() {
   });
 }
 
-/** Restores the last YTM page, but never auto-resumes into a specific track. */
-function resumeUrl(lastUrl: string | undefined) {
-  const url = lastUrl ? URL.parse(lastUrl) : null;
-  if (!url || url.origin !== YTM_ORIGIN || url.pathname === "/watch") return YTM_URL;
-  return url.toString();
+/** The last YTM page (never straight into a track) if enabled, otherwise the starting page. */
+function startUrl(general: { restoreLastPage: boolean; startingPage: string }, lastUrl: string | undefined) {
+  const last = general.restoreLastPage && lastUrl ? URL.parse(lastUrl) : null;
+  if (last && last.origin === YTM_ORIGIN && last.pathname !== "/watch") return last.toString();
+  return new URL(general.startingPage, YTM_URL).toString();
 }
 
 function windowBounds(saved: WindowState | undefined) {

@@ -44,6 +44,10 @@ export const selectors = {
   "nav_bar.search_box": "ytmusic-search-box",
 
   "guide.sidebar": "ytmusic-guide-renderer",
+  /** The full and the collapsed ("mini") sidebar; each has its own primary section. */
+  "guide.full": "#guide-renderer",
+  "guide.mini": "#mini-guide-renderer",
+  "guide.primary_items": "ytmusic-guide-section-renderer[is-primary] > #items",
   "browse.header": "#header.ytmusic-item-section-renderer",
   tabs: "ytmusic-tabs",
   "tabs.stuck": "ytmusic-tabs.stuck",

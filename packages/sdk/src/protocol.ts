@@ -1,8 +1,12 @@
 // Internal wire protocol between the main process, the preload and the page
 // runtime. Plugins never use this directly.
 
+import type { ConfigShape } from "./config.ts";
 import type { CoreSection } from "./core-config.ts";
 import type { NowPlaying, PlayerAction } from "./player.ts";
+
+/** Origin of the standalone settings window (served by the host). */
+export const SETTINGS_ORIGIN = "pear://settings";
 
 export const CHANNEL = {
   invoke: "pear:invoke",
@@ -28,6 +32,23 @@ export interface CoreState {
   error?: string;
 }
 
+/** What the settings UI shows about a plugin (sent by the host, so it works without the page). */
+export interface PluginInfo {
+  id: string;
+  name: string;
+  description?: string;
+  config: ConfigShape;
+}
+
+export interface AppInfo {
+  version: string;
+  platform: string;
+  arch: string;
+  electron: string;
+  chrome: string;
+  node: string;
+}
+
 export interface Bootstrap {
   version: string;
   platform: string;
@@ -37,6 +58,9 @@ export interface Bootstrap {
   /** Host-side errors so far, by plugin id. */
   errors: Record<string, string>;
   core: Record<CoreSection, CoreState>;
+  app: AppInfo;
+  /** Plugins supported on this platform, in settings-UI form. */
+  catalog: PluginInfo[];
 }
 
 export type UiAction = "toggle-settings" | "open-settings" | "close-settings";
@@ -61,6 +85,9 @@ export interface CoreCommands {
   "plugin:invoke"(id: string, command: string, args: unknown[]): unknown;
   "plugin:respond"(requestId: number, ok: boolean, value: unknown): void;
   "core:set-config"(section: CoreSection, patch: Record<string, unknown>): void;
+  /** Reveals config.json in the file manager. */
+  "app:show-settings-file"(): void;
+  "app:toggle-devtools"(): void;
   "player:update"(state: NowPlaying): void;
 }
 

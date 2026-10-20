@@ -1,48 +1,59 @@
-import type { Field } from "@pear/sdk";
+// One settings row per config field (Material 3 controls): switches inline,
+// everything else below the label. The control is picked from the field kind
+// and its `variant`.
+
+import type { Field, NumberField, SelectField } from "@pear/sdk";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { toAccelerator } from "./accelerator.ts";
 
-interface FieldProps<F extends Field = Field> {
-  field: F;
+interface FieldProps {
+  /** Unique within the dialog; used for ids. */
+  name: string;
+  field: Field;
   value: unknown;
   onChange(value: unknown): void;
 }
 
-export function FieldEditor({ name, ...props }: FieldProps & { name: string }) {
-  const { field } = props;
+export function SettingsField({ name, field, value, onChange }: FieldProps) {
   const id = `field-${name}`;
   return (
-    <div class="field">
-      <label class="field-label" for={id}>
-        {field.label}
-        {field.description && <small>{field.description}</small>}
-      </label>
-      <Control id={id} {...props} />
+    <div class="field" data-field={name}>
+      <div class="field-row">
+        <div class="field-text">
+          <div class="label-line">
+            <label class="field-label" for={id} id={`${id}-label`}>
+              {field.label}
+            </label>
+            {field.restart && (
+              <span class="pill" title="Applies after a restart">
+                restart
+              </span>
+            )}
+          </div>
+          {field.description && <div class="field-desc">{field.description}</div>}
+        </div>
+        {field.kind === "bool" && (
+          <Switch id={id} checked={value === true} label={field.label} onChange={onChange} />
+        )}
+        {field.kind === "shortcut" && <ShortcutRecorder id={id} value={String(value ?? "")} onChange={onChange} />}
+      </div>
+      {field.kind === "number" && (
+        <div class="field-control">
+          <NumberControl id={id} field={field} value={Number(value)} onChange={onChange} />
+        </div>
+      )}
+      {field.kind === "string" && (
+        <div class="field-control">
+          <TextControl id={id} secret={field.secret ?? false} placeholder={field.placeholder} value={value} onChange={onChange} />
+        </div>
+      )}
+      {field.kind === "select" && (
+        <div class="field-control">
+          <SelectControl id={id} field={field} value={String(value)} onChange={onChange} />
+        </div>
+      )}
     </div>
   );
-}
-
-function Control({ id, field, value, onChange }: FieldProps & { id: string }) {
-  switch (field.kind) {
-    case "bool":
-      return <Switch id={id} checked={value === true} onChange={onChange} label={field.label} />;
-    case "number":
-      return <NumberControl id={id} field={field} value={value} onChange={onChange} />;
-    case "string":
-      return <TextControl id={id} secret={field.secret ?? false} placeholder={field.placeholder} value={value} onChange={onChange} />;
-    case "select":
-      return (
-        <select id={id} value={String(value)} onChange={(e) => onChange(e.currentTarget.value)}>
-          {field.options.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      );
-    case "shortcut":
-      return <ShortcutRecorder id={id} value={String(value ?? "")} onChange={onChange} />;
-  }
 }
 
 export function Switch(props: { id?: string; checked: boolean; label: string; onChange(checked: boolean): void }) {
@@ -55,7 +66,9 @@ export function Switch(props: { id?: string; checked: boolean; label: string; on
       aria-checked={props.checked}
       aria-label={props.label}
       onClick={() => props.onChange(!props.checked)}
-    />
+    >
+      <span class="switch-thumb" />
+    </button>
   );
 }
 
@@ -69,55 +82,117 @@ function useDebounced(onChange: (value: unknown) => void, delay = 200) {
   };
 }
 
-function NumberControl({ id, field, value, onChange }: FieldProps<Extract<Field, { kind: "number" }>> & { id: string }) {
-  const [draft, setDraft] = useState(Number(value));
-  useEffect(() => setDraft(Number(value)), [value]);
+function useDraft<T>(value: T) {
+  const [draft, setDraft] = useState(value);
+  useEffect(() => setDraft(value), [value]);
+  return [draft, setDraft] as const;
+}
+
+const MAX_SLIDER_STEPS = 1000;
+
+function NumberControl({ id, field, value, onChange }: { id: string; field: NumberField; value: number; onChange(v: unknown): void }) {
+  const [draft, setDraft] = useDraft(value);
   const commit = useDebounced(onChange);
-  const update = (next: number) => {
+  const step = field.step ?? 1;
+  const clamp = (next: number) => Math.min(field.max ?? Infinity, Math.max(field.min ?? -Infinity, next));
+  const update = (next: number, debounce = true) => {
     if (!Number.isFinite(next)) return;
-    setDraft(next);
-    commit(next);
+    const clamped = clamp(next);
+    setDraft(clamped);
+    if (debounce) commit(clamped);
+    else onChange(clamped);
   };
   const unit = field.unit ?? "";
-  if (field.min !== undefined && field.max !== undefined) {
+  const bounded = field.min !== undefined && field.max !== undefined;
+  const slider = field.variant === "slider" || (field.variant !== "stepper" && bounded && (field.max! - field.min!) / step <= MAX_SLIDER_STEPS);
+
+  if (slider && bounded) {
+    const progress = ((draft - field.min!) / (field.max! - field.min!)) * 100;
     return (
-      <div class="range">
-        <input
-          id={id}
-          type="range"
-          min={field.min}
-          max={field.max}
-          step={field.step ?? 1}
-          value={draft}
-          onInput={(e) => update(e.currentTarget.valueAsNumber)}
-        />
-        <output for={id}>
+      <div class="slider-row">
+        <div class="slider-track" style={{ "--progress": `${progress}%` }}>
+          <input
+            id={id}
+            class="slider"
+            type="range"
+            min={field.min}
+            max={field.max}
+            step={step}
+            value={draft}
+            aria-valuetext={`${draft}${unit}`}
+            onInput={(e) => update(e.currentTarget.valueAsNumber)}
+          />
+        </div>
+        <output class="slider-value" for={id}>
           {draft}
-          {unit}
+          {unit && ` ${unit}`}
         </output>
       </div>
     );
   }
   return (
-    <input
-      id={id}
-      type="number"
-      value={draft}
-      {...(field.min !== undefined ? { min: field.min } : {})}
-      {...(field.max !== undefined ? { max: field.max } : {})}
-      step={field.step ?? 1}
-      onInput={(e) => update(e.currentTarget.valueAsNumber)}
-    />
+    <div class="stepper">
+      <button type="button" class="stepper-button" aria-label={`Decrease ${field.label}`} onClick={() => update(draft - step, false)}>
+        −
+      </button>
+      <input
+        id={id}
+        class="stepper-input"
+        type="number"
+        value={draft}
+        {...(field.min !== undefined ? { min: field.min } : {})}
+        {...(field.max !== undefined ? { max: field.max } : {})}
+        step={step}
+        onInput={(e) => update(e.currentTarget.valueAsNumber)}
+      />
+      {unit && <span class="stepper-unit">{unit}</span>}
+      <button type="button" class="stepper-button" aria-label={`Increase ${field.label}`} onClick={() => update(draft + step, false)}>
+        +
+      </button>
+    </div>
+  );
+}
+
+const MAX_CHIPS = 8;
+
+function SelectControl({ id, field, value, onChange }: { id: string; field: SelectField; value: string; onChange(v: unknown): void }) {
+  const chips = field.variant === "chips" || (field.variant !== "dropdown" && field.options.length <= MAX_CHIPS);
+  if (!chips) {
+    return (
+      <select id={id} class="dropdown" value={value} onChange={(e) => onChange(e.currentTarget.value)}>
+        {field.options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  return (
+    <div class="chips" id={id} role="radiogroup" aria-labelledby={`${id}-label`}>
+      {field.options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          role="radio"
+          class="chip"
+          aria-checked={o.value === value}
+          onClick={() => onChange(o.value)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
 function TextControl(props: { id: string; secret: boolean; placeholder: string | undefined; value: unknown; onChange(v: unknown): void }) {
-  const [draft, setDraft] = useState(String(props.value ?? ""));
-  useEffect(() => setDraft(String(props.value ?? "")), [props.value]);
+  const [draft, setDraft] = useDraft(String(props.value ?? ""));
   const commit = useDebounced(props.onChange, 400);
   return (
     <input
       id={props.id}
+      class="text"
       type={props.secret ? "password" : "text"}
       autocomplete="off"
       spellcheck={false}
@@ -137,7 +212,7 @@ function ShortcutRecorder({ id, value, onChange }: { id: string; value: string; 
     <button
       id={id}
       type="button"
-      class="button shortcut"
+      class="outlined shortcut"
       data-recording={recording}
       title="Click, then press a key combination. Backspace clears, Escape cancels."
       onClick={() => setRecording(true)}

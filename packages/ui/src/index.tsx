@@ -1,12 +1,14 @@
-// The in-page settings overlay and its nav-bar launcher. Both render into
-// shadow roots so YTM's styles can't leak in and ours can't leak out.
+// The in-page settings overlay and its "Settings" entry in YTM's
+// sidebar. Both render into shadow roots so YTM's styles can't leak in and
+// ours can't leak out.
 
 import { selectors } from "@pear/sdk/selectors";
 import { render } from "preact";
-import { PearIcon, Settings, type SettingsModel } from "./settings.tsx";
-import { launcherStyles, overlayStyles } from "./styles.ts";
+import { Icon } from "./icons.tsx";
+import { Settings, type SettingsModel } from "./settings.tsx";
+import { entryStyles, overlayStyles } from "./styles.ts";
 
-export type { SettingsModel } from "./settings.tsx";
+export type { SettingsModel } from "./model.ts";
 
 export interface SettingsController {
   open(): void;
@@ -26,9 +28,7 @@ export function mountSettings(model: SettingsModel): SettingsController {
     if (root) return root;
     const host = document.createElement("pear-settings");
     root = host.attachShadow({ mode: "open" });
-    const style = new CSSStyleSheet();
-    style.replaceSync(overlayStyles);
-    root.adoptedStyleSheets = [style];
+    root.adoptedStyleSheets = [sheet(overlayStyles)];
     container = document.createElement("div");
     root.append(container);
     // Keep YTM's global shortcuts (space, j/k, …) from firing while typing here.
@@ -76,40 +76,45 @@ export function mountSettings(model: SettingsModel): SettingsController {
     true,
   );
 
-  void mountLauncher(controller);
+  mountSidebarEntries(controller);
   return controller;
 }
 
-async function mountLauncher(controller: SettingsController) {
-  const container = await waitFor(selectors["nav_bar.right"]);
-  const host = document.createElement("pear-launcher");
-  const root = host.attachShadow({ mode: "open" });
+function sheet(css: string) {
   const style = new CSSStyleSheet();
-  style.replaceSync(launcherStyles);
-  root.adoptedStyleSheets = [style];
-  render(
-    <button type="button" title="Pear Desktop settings (Ctrl+,)" aria-label="Pear Desktop settings" onClick={() => controller.toggle()}>
-      <PearIcon size={24} />
-    </button>,
-    root,
-  );
-  container.prepend(host);
-  // YTM re-renders its nav bar on some navigations; put the launcher back.
-  new MutationObserver(() => {
-    if (!host.isConnected) document.querySelector(selectors["nav_bar.right"])?.prepend(host);
-  }).observe(document.body, { childList: true, subtree: true });
+  style.replaceSync(css);
+  return style;
 }
 
-function waitFor(selector: string): Promise<Element> {
-  return new Promise((resolve) => {
-    const check = () => {
-      const element = document.querySelector(selector);
-      if (!element) return false;
-      resolve(element);
-      return true;
-    };
-    if (check()) return;
-    const observer = new MutationObserver(() => check() && observer.disconnect());
-    observer.observe(document, { childList: true, subtree: true });
-  });
+/** A "Settings" entry at the end of the sidebar's primary section, in both the full and the mini guide. */
+function mountSidebarEntries(controller: SettingsController) {
+  const entries = new Map<string, HTMLElement>();
+  const create = (mini: boolean) => {
+    const host = document.createElement("pear-settings-entry");
+    host.toggleAttribute("mini", mini);
+    const shadow = host.attachShadow({ mode: "open" });
+    shadow.adoptedStyleSheets = [sheet(entryStyles)];
+    render(
+      <button type="button" title="Pear Desktop settings (Ctrl+,)" aria-label="Pear Desktop settings" onClick={() => controller.open()}>
+        <Icon name="settings" size={24} />
+        <span>Settings</span>
+      </button>,
+      shadow,
+    );
+    return host;
+  };
+  // YTM renders the guides late and re-renders them on some navigations; keep the entries in place.
+  const place = () => {
+    for (const [name, mini] of [["guide.full", false], ["guide.mini", true]] as const) {
+      const items = document.querySelector(selectors[name])?.querySelector(selectors["guide.primary_items"]);
+      if (!items) continue;
+      let entry = entries.get(name);
+      if (entry?.parentElement === items) continue;
+      entry ??= create(mini);
+      entries.set(name, entry);
+      items.append(entry);
+    }
+  };
+  place();
+  new MutationObserver(place).observe(document.body, { childList: true, subtree: true });
 }

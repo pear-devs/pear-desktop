@@ -11,7 +11,9 @@ a desktop client for YTM with a plugin system, built on Electron.
 - **One selector registry** (`packages/sdk/src/selectors.ts`): when YT
   Music changes its markup, fix it there once.
 - **Live everything**: enable, disable and configure plugins from the in-page
-  settings (<kbd>Ctrl</kbd>+<kbd>,</kbd>) without restarting.
+  settings (<kbd>Ctrl</kbd>+<kbd>,</kbd> or *Settings* in the sidebar) without
+  restarting. The same settings open in their own window from the tray or with
+  `pear --settings`, even when YTM doesn't load.
 - **Built-in API server** (off by default): the pear-desktop v1 REST + WebSocket
   API for remotes and overlays, plus RPC methods that plugins expose with
   `host.rpc` (validated with valibot, documented at `/swagger`).

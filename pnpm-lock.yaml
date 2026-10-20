@@ -96,6 +96,9 @@ importers:
       '@pear/page':
         specifier: workspace:*
         version: link:../page
+      '@pear/ui':
+        specifier: workspace:*
+        version: link:../ui
       magic-string:
         specifier: ^1.4.3
         version: 1.4.3
@@ -195,28 +198,6 @@ importers:
       electron:
         specifier: ^44.9.0
         version: 44.9.0
-
-  plugins/api-server:
-    dependencies:
-      '@pear/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
-      ws:
-        specifier: ^8.21.0
-        version: 8.22.0
-    devDependencies:
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.19.2
-      '@types/ws':
-        specifier: ^8.18.1
-        version: 8.18.2
-      electron:
-        specifier: ^44.9.0
-        version: 44.9.0
-      vitest:
-        specifier: ^5.0.5
-        version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
 
   plugins/audio-compressor:
     dependencies:

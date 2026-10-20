@@ -24,6 +24,8 @@ export interface HostEnvironment {
   player: PlayerMirror;
   requests: PageRequests;
   send(event: HostEvent): void;
+  /** The in-page settings, or the standalone window when the page isn't up. */
+  openSettings(): void;
   /** Sends a plugin event to API server WebSocket clients. */
   broadcast(plugin: string, event: string, data: unknown): void;
 }
@@ -274,12 +276,7 @@ export class PluginHost {
         }) as HostContext<unknown>["player"]["on"],
         control: (action) => player.control(action),
       },
-      openSettings: () => {
-        if (env.window.isMinimized()) env.window.restore();
-        env.window.show();
-        env.window.focus();
-        env.send({ type: "ui", action: "open-settings" });
-      },
+      openSettings: () => env.openSettings(),
       emit: (event, payload) => env.send({ type: "plugin-event", id, event, payload }),
       api: {
         broadcast: (event, data) => {

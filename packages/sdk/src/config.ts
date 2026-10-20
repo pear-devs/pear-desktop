@@ -4,6 +4,12 @@
 interface FieldMeta {
   label: string;
   description?: string;
+  /** Heading the settings UI groups consecutive fields under. */
+  group?: string;
+  /** Changes apply only after a restart: shown as a "restart" pill, and offered in the restart banner. */
+  restart?: boolean;
+  /** Only shown on these platforms (default: all). */
+  platforms?: readonly ("linux" | "win32" | "darwin")[];
 }
 
 interface FieldBase<K extends string, T> extends FieldMeta {
@@ -18,6 +24,8 @@ export interface NumberField extends FieldBase<"number", number> {
   max?: number;
   step?: number;
   unit?: string;
+  /** Default: a slider when bounded with at most 1000 steps, else a stepper. */
+  variant?: "slider" | "stepper";
 }
 
 export interface StringField extends FieldBase<"string", string> {
@@ -33,6 +41,8 @@ export interface SelectOption<T extends string> {
 
 export interface SelectField<T extends string = string> extends FieldBase<"select", T> {
   options: readonly SelectOption<T>[];
+  /** Default: chips for up to 8 options, else a dropdown. */
+  variant?: "chips" | "dropdown";
 }
 
 /** An Electron accelerator such as "CmdOrCtrl+Shift+P"; empty means unset. */
@@ -44,7 +54,8 @@ export type ConfigShape = Record<string, Field>;
 
 export type ConfigOf<S extends ConfigShape> = { -readonly [K in keyof S]: S[K]["default"] };
 
-type NumberMeta = FieldMeta & Pick<NumberField, "min" | "max" | "step" | "unit">;
+type NumberMeta = FieldMeta & Pick<NumberField, "min" | "max" | "step" | "unit" | "variant">;
+type SelectMeta = FieldMeta & Pick<SelectField, "variant">;
 type StringMeta = FieldMeta & Pick<StringField, "placeholder" | "secret">;
 
 export const config = {
@@ -62,7 +73,7 @@ export const config = {
   select: <const O extends readonly SelectOption<string>[]>(
     defaultValue: O[number]["value"],
     options: O,
-    meta: FieldMeta,
+    meta: SelectMeta,
   ): SelectField<O[number]["value"]> => ({ kind: "select", default: defaultValue, options, ...meta }),
   shortcut: (defaultValue: string, meta: FieldMeta): ShortcutField => ({
     kind: "shortcut",

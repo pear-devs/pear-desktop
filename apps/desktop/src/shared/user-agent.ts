@@ -14,3 +14,9 @@ export const YTM_ORIGIN = "https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0
 export function isGoogleAuth(url: string) {
   return URL.parse(url)?.origin === GOOGLE_AUTH_ORIGIN;
 }
+
+/** Whether a URL is the standalone settings window (Node's URL gives custom schemes a "null" origin). */
+export function isSettingsUrl(url: string) {
+  const parsed = URL.parse(url);
+  return parsed?.protocol === "pear:" && parsed.host === "settings";
+}

@@ -5,6 +5,8 @@
 // - `virtual:pear/page-runtime` (preload): the page runtime plus every plugin
 //   split for the page, bundled by Rolldown into one self-contained IIFE string
 //   that the preload runs in YTM's main world.
+// - `virtual:pear/settings-app` (main process): the standalone settings window's
+//   script (the settings UI over the bridge), bundled the same way.
 // - Build-time macros (`with { type: "macro" }`) run in both bundles.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -21,6 +23,7 @@ export { splitPlugin, type SplitTarget } from "./split.ts";
 const HOST_PLUGINS_ID = "virtual:pear/host-plugins";
 const PAGE_PLUGINS_ID = "virtual:pear/page-plugins";
 const PAGE_RUNTIME_ID = "virtual:pear/page-runtime";
+const SETTINGS_APP_ID = "virtual:pear/settings-app";
 // The id keeps ending in ".ts" (`&lang.ts`): the macro analyzer picks its
 // parser from the extension and would parse TypeScript as JavaScript otherwise.
 const SPLIT_QUERY = /\?pear=(host|page)&lang\.ts$/;
@@ -32,6 +35,8 @@ export interface PearPluginOptions {
   pluginsDir: string;
   /** Entry of the page runtime. Defaults to @pear/page. */
   pageEntry?: string;
+  /** Entry of the standalone settings window. Defaults to @pear/ui/standalone. */
+  settingsEntry?: string;
   /** Only include these plugin ids (tests). */
   only?: readonly string[];
 }
@@ -59,12 +64,13 @@ function splitTransform(code: string, id: string) {
 
 export default function pear(options: PearPluginOptions): Plugin[] {
   const pageEntry = options.pageEntry ?? fileURLToPath(import.meta.resolve("@pear/page"));
+  const settingsEntry = options.settingsEntry ?? fileURLToPath(import.meta.resolve("@pear/ui/standalone"));
 
   const plugin: Plugin = {
     name: "pear",
     enforce: "pre",
     resolveId(id) {
-      if (id === HOST_PLUGINS_ID || id === PAGE_RUNTIME_ID) return `\0${id}`;
+      if (id === HOST_PLUGINS_ID || id === PAGE_RUNTIME_ID || id === SETTINGS_APP_ID) return `\0${id}`;
     },
     load(id) {
       if (id === `\0${HOST_PLUGINS_ID}`) {
@@ -72,8 +78,8 @@ export default function pear(options: PearPluginOptions): Plugin[] {
         this.addWatchFile(options.pluginsDir);
         return registryModule(files, "host");
       }
-      if (id === `\0${PAGE_RUNTIME_ID}`) {
-        return bundlePage(pageEntry, options).then(({ code, watchFiles }) => {
+      if (id === `\0${PAGE_RUNTIME_ID}` || id === `\0${SETTINGS_APP_ID}`) {
+        return bundlePage(id === `\0${PAGE_RUNTIME_ID}` ? pageEntry : settingsEntry, options).then(({ code, watchFiles }) => {
           for (const file of watchFiles) this.addWatchFile(file);
           return `export default ${JSON.stringify(code)};`;
         });

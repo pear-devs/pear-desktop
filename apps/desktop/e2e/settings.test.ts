@@ -1,4 +1,5 @@
-// Milestone 3: the settings overlay drives plugins live and persists to disk.
+// The settings dialog (in-page overlay and standalone window) drives plugins
+// and core options live and persists them to disk.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -7,13 +8,21 @@ import { launchApp, mainWindow } from "./launch.ts";
 
 const overlay = (page: Page) => page.locator("pear-settings");
 const pluginRow = (page: Page, id: string) => overlay(page).locator(`[data-plugin="${id}"]`);
+const section = (page: Page, name: string) => overlay(page).getByRole("navigation").getByRole("button", { name }).click();
 const enabled = (page: Page, id: string) =>
   page.evaluate((id) => window.__pearRuntime!.plugins.state(id)?.enabled, id);
 const pluginConfig = (page: Page, id: string) =>
   page.evaluate((id) => window.__pearRuntime!.plugins.state(id)?.config, id);
-const savedSettings = (userData: string) => JSON.parse(readFileSync(join(userData, "config.json"), "utf8"));
+/** config.json as saved so far ({} until the first debounced write). */
+const savedSettings = (userData: string) => {
+  try {
+    return JSON.parse(readFileSync(join(userData, "config.json"), "utf8"));
+  } catch {
+    return {};
+  }
+};
 
-test("opens from the shortcut and the nav-bar launcher, closes with Escape", async () => {
+test("opens from the shortcut and the sidebar entry, closes with Escape", async () => {
   const app = await launchApp();
   try {
     const page = await mainWindow(app);
@@ -23,10 +32,12 @@ test("opens from the shortcut and the nav-bar launcher, closes with Escape", asy
     await page.keyboard.press("Control+,");
     await expect(dialog).toBeVisible();
     await expect(overlay(page).getByRole("searchbox")).toBeFocused();
+    // Opens on General, like pear-desktop's settings.
+    await expect(overlay(page).getByRole("navigation").getByRole("button", { name: "General" })).toHaveAttribute("aria-current", "page");
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
 
-    await page.locator("pear-launcher").getByRole("button", { name: "Pear Desktop settings" }).click();
+    await page.locator("pear-settings-entry").first().getByRole("button", { name: "Pear Desktop settings" }).click();
     await expect(dialog).toBeVisible();
     await overlay(page).getByRole("button", { name: "Close settings" }).click();
     await expect(dialog).toBeHidden();
@@ -74,32 +85,106 @@ test("toggles and configures plugins live, persisting to config.json", async () 
   }
 });
 
-test("the built-in API server section starts and stops the server", async () => {
+test("the API server under Advanced starts and stops the server", async () => {
   const port = 30000 + Math.floor(Math.random() * 20000);
   const app = await launchApp({ core: { apiServer: { port } } });
   try {
     const page = await mainWindow(app);
     await page.waitForFunction(() => window.__pearRuntime?.settings);
     await page.keyboard.press("Control+,");
-    const section = overlay(page).locator('[data-core="apiServer"]');
-    await overlay(page).getByRole("searchbox").fill("api");
-    await expect(section).toBeVisible();
+    await section(page, "Advanced");
+    const enable = overlay(page).getByRole("switch", { name: "Enable the API server" });
+    const status = overlay(page).locator("[data-status]");
 
     const docStatus = async () => (await fetch(`http://127.0.0.1:${port}/doc`).catch(() => null))?.status ?? "down";
     expect(await docStatus()).toBe("down");
-    await section.getByRole("switch", { name: "Enable API server" }).click();
+    await enable.click();
     await expect.poll(docStatus).toBe(200);
-    await expect(section.locator("[data-status]")).toContainText(`http://127.0.0.1:${port}`);
+    await expect(status).toContainText(`http://127.0.0.1:${port}`);
     await expect
       .poll(() => savedSettings(app.userData).plugins?.["api-server"], { timeout: 5000 })
       .toMatchObject({ enabled: true, port });
+    await expect(overlay(page).getByLabel("Hostname")).toHaveValue("127.0.0.1");
 
-    await section.getByRole("button", { name: "Configure API server" }).click();
-    await expect(section.getByLabel("Hostname")).toHaveValue("127.0.0.1");
-
-    await section.getByRole("switch", { name: "Enable API server" }).click();
+    await enable.click();
     await expect.poll(docStatus).toBe("down");
-    await expect(section.locator("[data-status]")).toHaveCount(0);
+    await expect(status).toHaveCount(0);
+  } finally {
+    await app.close();
+  }
+});
+
+test("core options apply live; restart-only ones offer a restart", async () => {
+  const app = await launchApp();
+  try {
+    const page = await mainWindow(app);
+    await page.waitForFunction(() => window.__pearRuntime?.settings);
+    await page.keyboard.press("Control+,");
+    const isOnTop = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isAlwaysOnTop());
+
+    await section(page, "Window & Tray");
+    expect(await isOnTop()).toBe(false);
+    await overlay(page).getByRole("switch", { name: "Always on top" }).click();
+    await expect.poll(isOnTop).toBe(true);
+    // The tray plugin is configured where it belongs thematically.
+    await expect(pluginRow(page, "tray")).toBeVisible();
+
+    await section(page, "General");
+    await overlay(page).getByRole("radio", { name: "Explore" }).click();
+    await expect.poll(() => savedSettings(app.userData).options?.startingPage, { timeout: 5000 }).toBe("/explore");
+    await expect(overlay(page).getByRole("radio", { name: "Explore" })).toHaveAttribute("aria-checked", "true");
+
+    await section(page, "Advanced");
+    const banner = overlay(page).getByRole("status").filter({ hasText: "restart" });
+    await expect(banner).toHaveCount(0);
+    await overlay(page).getByRole("switch", { name: "Hardware acceleration" }).click();
+    await expect(banner).toBeVisible();
+    await expect(banner.getByRole("button", { name: "Restart now" })).toBeVisible();
+    // Closing and reopening the dialog keeps the pending restart.
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Control+,");
+    await expect(banner).toBeVisible();
+    await banner.getByRole("button", { name: "Later" }).click();
+    await expect(banner).toHaveCount(0);
+
+    // Search spans core options and plugins.
+    await overlay(page).getByRole("searchbox").fill("always on top");
+    await expect(overlay(page).getByRole("switch", { name: "Always on top" })).toBeVisible();
+    await expect(overlay(page).locator("[data-plugin]")).toHaveCount(0);
+  } finally {
+    await app.close();
+  }
+});
+
+test("opens on the starting page when the last page isn't reopened", async () => {
+  const app = await launchApp({ core: { general: { restoreLastPage: false, startingPage: "/explore" } } });
+  try {
+    const page = await mainWindow(app);
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/explore");
+  } finally {
+    await app.close();
+  }
+});
+
+test("the standalone settings window changes settings without the page", async () => {
+  const app = await launchApp();
+  try {
+    const page = await mainWindow(app);
+    const next = app.waitForEvent("window");
+    // What `pear --settings` does in a running instance.
+    await app.evaluate(({ app }) => app.emit("second-instance", {}, ["pear", "--settings"], ""));
+    const standalone = await next;
+    expect(standalone.url()).toBe("pear://settings/");
+    const dialog = standalone.locator("pear-settings");
+    await dialog.getByRole("navigation").getByRole("button", { name: "Plugins" }).click();
+    await dialog.locator('[data-plugin="clock"]').getByRole("switch", { name: "Enable Clock" }).click();
+
+    // The main window's page follows, and the change is saved.
+    await expect.poll(() => enabled(page, "clock")).toBe(true);
+    await expect.poll(() => savedSettings(app.userData).plugins?.clock?.enabled, { timeout: 5000 }).toBe(true);
+    await expect(dialog.locator('[data-plugin="clock"]').getByRole("switch")).toHaveAttribute("aria-checked", "true");
+    // It can't impersonate the page runtime.
+    await expect(standalone.evaluate(() => window.__pear!.invoke("player:update", {} as never))).rejects.toThrow(/page runtime/);
   } finally {
     await app.close();
   }
@@ -111,6 +196,7 @@ test("records a global shortcut and registers it with the OS", async () => {
     const page = await mainWindow(app);
     await page.waitForFunction(() => window.__pearRuntime?.settings);
     await page.keyboard.press("Control+,");
+    await section(page, "Plugins");
     await pluginRow(page, "shortcuts").getByRole("button", { name: "Configure Global shortcuts" }).click();
     const recorder = pluginRow(page, "shortcuts").getByLabel("Play / pause");
     await recorder.click();
@@ -123,7 +209,7 @@ test("records a global shortcut and registers it with the OS", async () => {
       .toBe(true);
 
     // Disabling the plugin releases it.
-    await pluginRow(page, "shortcuts").getByRole("switch").click();
+    await pluginRow(page, "shortcuts").getByRole("switch", { name: "Enable Global shortcuts" }).click();
     await expect
       .poll(() => app.evaluate(({ globalShortcut }) => globalShortcut.isRegistered("Ctrl+Alt+Shift+F9")))
       .toBe(false);

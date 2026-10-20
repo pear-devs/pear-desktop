@@ -14,7 +14,8 @@
     "rolldown": "~1.2.12",
     "oxc-parser": "~0.154.0",
     "magic-string": "^1.4.3",
-    "unplugin-macros": "^0.23.3"
+    "unplugin-macros": "^0.23.3",
+    "@pear/ui": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

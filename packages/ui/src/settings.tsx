@@ -1,250 +1,401 @@
-import type { AnyPlugin, ConfigShape } from "@pear/sdk";
-import { embed } from "@pear/sdk/macros" with { type: "macro" };
-import { CORE_SECTIONS, type CoreSection } from "@pear/sdk/core-config";
-import type { CoreState, PluginMeta, PluginState } from "@pear/sdk/protocol";
-import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { FieldEditor, Switch } from "./fields.tsx";
+// The settings dialog: a sidebar with search and sections (General, Window &
+// Tray, Advanced, Plugins, About) and the selected section's cards. Shared by
+// the in-page overlay and the standalone settings window.
 
-/** What the overlay needs from the page runtime. */
-export interface SettingsModel {
-  readonly version: string;
-  readonly plugins: readonly AnyPlugin[];
-  state(id: string): PluginState | undefined;
-  error(id: string): string | undefined;
-  meta(id: string): PluginMeta | undefined;
-  subscribe(listener: () => void): () => void;
-  setEnabled(id: string, enabled: boolean): Promise<unknown>;
-  setConfig(id: string, patch: Record<string, unknown>): Promise<unknown>;
-  relaunch(): Promise<unknown>;
-  core(section: CoreSection): CoreState | undefined;
-  setCoreConfig(section: CoreSection, patch: Record<string, unknown>): Promise<unknown>;
+import type { ConfigShape, Field } from "@pear/sdk";
+import { CORE_SECTIONS, type CoreSection } from "@pear/sdk/core-config";
+import type { PluginInfo } from "@pear/sdk/protocol";
+import type { ComponentChildren } from "preact";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { SettingsField, Switch } from "./fields.tsx";
+import { Icon, type IconName, PearIcon } from "./icons.tsx";
+import type { SettingsModel } from "./model.ts";
+
+export type { SettingsModel } from "./model.ts";
+
+type Block =
+  /** A core settings section, one card per field group. */
+  | { kind: "core"; section: CoreSection; title?: string }
+  /** A plugin's card, embedded where it belongs thematically. */
+  | { kind: "plugin"; id: string; title: string }
+  | { kind: "developer" };
+
+type SectionId = "general" | "window" | "advanced" | "plugins" | "about";
+
+interface Section {
+  id: SectionId;
+  icon: IconName;
+  label: string;
+  sub: string;
+  blocks: Block[];
 }
 
-/** The core's own sections, listed above the plugins. */
-const CORE_ITEMS: { section: CoreSection; name: string; description: string }[] = [
+const SECTIONS: Section[] = [
   {
-    section: "apiServer",
-    name: "API server",
-    description: "A local HTTP and WebSocket API for remotes, stream overlays and scripts, including plugins' RPC methods.",
+    id: "general",
+    icon: "settings",
+    label: "General",
+    sub: "Startup",
+    blocks: [{ kind: "core", section: "general" }],
   },
+  {
+    id: "window",
+    icon: "window",
+    label: "Window & Tray",
+    sub: "Window behaviour and system tray",
+    blocks: [
+      { kind: "core", section: "window" },
+      { kind: "plugin", id: "tray", title: "Tray" },
+      { kind: "plugin", id: "in-app-menu", title: "Title bar" },
+    ],
+  },
+  {
+    id: "advanced",
+    icon: "tune",
+    label: "Advanced",
+    sub: "Performance, API server and developer tools",
+    blocks: [
+      { kind: "core", section: "advanced" },
+      { kind: "core", section: "apiServer", title: "API server" },
+      { kind: "developer" },
+    ],
+  },
+  { id: "plugins", icon: "puzzle", label: "Plugins", sub: "Enable plugins and configure them", blocks: [] },
+  { id: "about", icon: "info", label: "About", sub: "Versions and app info", blocks: [] },
 ];
 
-type Filter = "all" | "enabled" | "disabled";
+interface Group {
+  title: string | undefined;
+  fields: [key: string, field: Field][];
+}
+
+/** Consecutive fields with the same `group` form a card; fields for other platforms are left out. */
+function groupFields(shape: ConfigShape, platform: string, filter?: (key: string, field: Field) => boolean): Group[] {
+  const groups: Group[] = [];
+  for (const [key, field] of Object.entries(shape)) {
+    if (field.platforms && !(field.platforms as readonly string[]).includes(platform)) continue;
+    if (filter && !filter(key, field)) continue;
+    const last = groups.at(-1);
+    if (last && last.title === field.group) last.fields.push([key, field]);
+    else groups.push({ title: field.group, fields: [[key, field]] });
+  }
+  return groups;
+}
+
+const matches = (needle: string, ...parts: (string | undefined)[]) =>
+  parts.some((part) => part?.toLowerCase().includes(needle));
+
+const fieldMatches = (needle: string) => (_: string, field: Field) => matches(needle, field.label, field.description);
+
+// Restart-pending changes outlive the dialog (closing and reopening it keeps the banner).
+const pendingRestarts = new WeakMap<SettingsModel, Set<string>>();
 
 function useModel(model: SettingsModel) {
   const [, setTick] = useState(0);
   useEffect(() => model.subscribe(() => setTick((t) => t + 1)), [model]);
 }
 
-export function Settings({ model, onClose }: { model: SettingsModel; onClose(): void }) {
+export function Settings({ model, onClose, standalone = false }: { model: SettingsModel; onClose(): void; standalone?: boolean }) {
   useModel(model);
+  const [active, setActive] = useState<SectionId>("general");
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
-  const [open, setOpen] = useState<string | undefined>();
+  const [expanded, setExpanded] = useState<string | undefined>();
+  const [dismissed, setDismissed] = useState(false);
+  const [, setPendingTick] = useState(0);
   const search = useRef<HTMLInputElement>(null);
-  // Plugins whose enabled state differs from launch and that only fully apply after a restart.
-  const initial = useRef(new Map(model.plugins.map((p) => [p.id, model.state(p.id)?.enabled ?? false])));
-
   useEffect(() => search.current?.focus(), []);
 
+  let pending = pendingRestarts.get(model);
+  if (!pending) pendingRestarts.set(model, (pending = new Set()));
+  const flagRestart = (key: string) => {
+    if (pending.has(key)) return;
+    pending.add(key);
+    setDismissed(false);
+    setPendingTick((t) => t + 1);
+  };
+
   const plugins = useMemo(() => [...model.plugins].sort((a, b) => a.name.localeCompare(b.name)), [model.plugins]);
+  const platform = model.app.platform;
   const needle = query.trim().toLowerCase();
-  const visible = plugins.filter((plugin) => {
-    const enabled = model.state(plugin.id)?.enabled ?? false;
-    if (filter === "enabled" && !enabled) return false;
-    if (filter === "disabled" && enabled) return false;
-    return !needle || `${plugin.name} ${plugin.description ?? ""} ${plugin.id}`.toLowerCase().includes(needle);
-  });
-  const coreVisible = CORE_ITEMS.filter(
-    (item) => filter === "all" && (!needle || `${item.name} ${item.description}`.toLowerCase().includes(needle)),
-  );
+  const section = SECTIONS.find((s) => s.id === active)!;
   const enabledCount = plugins.filter((p) => model.state(p.id)?.enabled).length;
-  const restartPending = plugins.some(
-    (p) => model.meta(p.id)?.restartRequired && initial.current.get(p.id) !== (model.state(p.id)?.enabled ?? false),
+
+  const setCore = (sectionId: CoreSection, key: string, field: Field, value: unknown) => {
+    void model.setCoreConfig(sectionId, { [key]: value });
+    if (field.restart) flagRestart(`core:${sectionId}.${key}`);
+  };
+  const setPluginConfig = (plugin: PluginInfo, key: string, field: Field, value: unknown) => {
+    void model.setConfig(plugin.id, { [key]: value });
+    if (field.restart) flagRestart(`plugin:${plugin.id}.${key}`);
+  };
+  const setPluginEnabled = (plugin: PluginInfo, enabled: boolean) => {
+    void model.setEnabled(plugin.id, enabled);
+    if (model.meta(plugin.id)?.restartRequired) flagRestart(`plugin:${plugin.id}`);
+  };
+
+  const coreCards = (sectionId: CoreSection, title?: string, filter?: (key: string, field: Field) => boolean) => {
+    const state = model.core(sectionId);
+    if (!state) return null;
+    const groups = groupFields(CORE_SECTIONS[sectionId] as ConfigShape, platform, filter);
+    return groups.map((group, index) => (
+      <CardGroup
+        key={`${sectionId}-${index}`}
+        title={[title, group.title].filter(Boolean).join(" · ") || undefined}
+        data-core={sectionId}
+      >
+        {group.fields.map(([key, field]) => (
+          <SettingsField
+            key={key}
+            name={`core-${sectionId}-${key}`}
+            field={field}
+            value={state.config[key]}
+            onChange={(value) => setCore(sectionId, key, field, value)}
+          />
+        ))}
+        {index === 0 && (state.status || state.error) && (
+          <div class="card-status" data-status={state.status ? "" : undefined} data-error={state.error ? "" : undefined}>
+            {state.error ?? `Listening on ${state.status} · API docs at ${state.status}/swagger`}
+          </div>
+        )}
+      </CardGroup>
+    ));
+  };
+
+  const pluginCard = (plugin: PluginInfo, options: { forceOpen?: boolean; filter?: (key: string, field: Field) => boolean } = {}) => (
+    <PluginCard
+      key={plugin.id}
+      plugin={plugin}
+      model={model}
+      platform={platform}
+      open={options.forceOpen ?? expanded === plugin.id}
+      {...(options.filter ? { filter: options.filter } : {})}
+      onToggleOpen={() => setExpanded(expanded === plugin.id ? undefined : plugin.id)}
+      onEnabled={(enabled) => setPluginEnabled(plugin, enabled)}
+      onConfig={(key, field, value) => setPluginConfig(plugin, key, field, value)}
+    />
   );
+
+  const renderBlock = (block: Block) => {
+    switch (block.kind) {
+      case "core":
+        return coreCards(block.section, block.title);
+      case "plugin": {
+        const plugin = plugins.find((p) => p.id === block.id);
+        return plugin && (
+          <div class="group" key={block.id}>
+            <div class="group-title">{block.title}</div>
+            {pluginCard(plugin)}
+          </div>
+        );
+      }
+      case "developer":
+        return (
+          <CardGroup key="developer" title="Developer">
+            <div class="field actions">
+              <button type="button" class="outlined" onClick={() => void model.toggleDevTools()}>
+                Toggle developer tools
+              </button>
+              <button type="button" class="outlined" onClick={() => void model.showSettingsFile()}>
+                Show config.json
+              </button>
+            </div>
+          </CardGroup>
+        );
+    }
+  };
+
+  const searchResults = () => {
+    const blocks: ComponentChildren[] = [];
+    for (const s of SECTIONS) {
+      for (const block of s.blocks) {
+        if (block.kind !== "core") continue;
+        blocks.push(coreCards(block.section, [s.label, block.title].filter(Boolean).join(" · "), fieldMatches(needle)));
+      }
+    }
+    for (const plugin of plugins) {
+      if (matches(needle, plugin.name, plugin.description, plugin.id)) {
+        blocks.push(pluginCard(plugin));
+        continue;
+      }
+      const filter = fieldMatches(needle);
+      if (groupFields(plugin.config, platform, filter).length > 0) blocks.push(pluginCard(plugin, { forceOpen: true, filter }));
+    }
+    const any = blocks.flat().some(Boolean);
+    return any ? blocks : <div class="empty">No settings match “{query.trim()}”.</div>;
+  };
 
   return (
     <div
-      class="backdrop"
+      class="root"
+      data-standalone={standalone}
       onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (!standalone && e.target === e.currentTarget) onClose();
       }}
     >
-      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="pear-title">
-        <header>
-          <div class="brand">
-            <PearIcon />
-            <h1 id="pear-title">Pear Desktop</h1>
-            <span>Settings</span>
+      <div class="dialog" role="dialog" aria-modal={!standalone} aria-labelledby="pear-title">
+        <aside class="sidebar">
+          <div class="sidebar-head">
+            <div class="sidebar-title" id="pear-title">
+              Settings
+            </div>
+            <div class="sidebar-subtitle">
+              <PearIcon size={14} /> Pear Desktop
+            </div>
           </div>
-          <input
-            ref={search}
-            class="search"
-            type="search"
-            placeholder="Search plugins"
-            aria-label="Search plugins"
-            value={query}
-            onInput={(e) => setQuery(e.currentTarget.value)}
-          />
-          <button type="button" class="icon-button" aria-label="Close settings" onClick={onClose}>
-            <CloseIcon />
-          </button>
-        </header>
-
-        {restartPending && (
-          <div class="banner" role="status">
-            Some changes take full effect after a restart.
-            <button type="button" class="button primary" onClick={() => void model.relaunch()}>
-              Restart now
+          <label class="search">
+            <Icon name="search" />
+            <input
+              ref={search}
+              type="search"
+              placeholder="Search settings"
+              aria-label="Search settings"
+              value={query}
+              onInput={(e) => setQuery(e.currentTarget.value)}
+            />
+          </label>
+          <nav class="nav" aria-label="Settings sections">
+            {SECTIONS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                class="nav-item"
+                aria-current={!needle && active === s.id ? "page" : undefined}
+                onClick={() => {
+                  setActive(s.id);
+                  setQuery("");
+                  setExpanded(undefined);
+                }}
+              >
+                <Icon name={s.icon} />
+                <span class="nav-label">{s.label}</span>
+                {s.id === "plugins" && (
+                  <span class="nav-count">
+                    {enabledCount}/{plugins.length}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
+          <div class="sidebar-foot">
+            <span>v{model.app.version}</span>
+            <button type="button" class="link" onClick={() => void model.showSettingsFile()}>
+              Show config.json
             </button>
           </div>
-        )}
+        </aside>
 
-        <div class="toolbar" role="group" aria-label="Filter plugins">
-          {(["all", "enabled", "disabled"] as const).map((f) => (
-            <button key={f} type="button" class="chip" aria-pressed={filter === f} onClick={() => setFilter(f)}>
-              {f[0]!.toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-          <span class="count">
-            {enabledCount} of {plugins.length} enabled
-          </span>
-        </div>
+        <section class="main">
+          <header class="header">
+            <div class="header-text">
+              <div class="header-title">{needle ? "Search results" : section.label}</div>
+              <div class="header-sub">{needle ? `Matching “${query.trim()}”` : section.sub}</div>
+            </div>
+            {!standalone && (
+              <button type="button" class="icon-button" aria-label="Close settings" onClick={onClose}>
+                <Icon name="close" size={22} />
+              </button>
+            )}
+          </header>
 
-        <div class="list">
-          {coreVisible.map((item) => (
-            <CoreItem
-              key={item.section}
-              {...item}
-              model={model}
-              open={open === `core:${item.section}`}
-              onToggleOpen={() => setOpen(open === `core:${item.section}` ? undefined : `core:${item.section}`)}
-            />
-          ))}
-          {visible.length === 0 && <div class="empty">No plugins match “{query}”.</div>}
-          {visible.map((plugin) => (
-            <PluginItem
-              key={plugin.id}
-              plugin={plugin}
-              model={model}
-              open={open === plugin.id}
-              onToggleOpen={() => setOpen(open === plugin.id ? undefined : plugin.id)}
-            />
-          ))}
-        </div>
+          {pending.size > 0 && !dismissed && (
+            <div class="restart" role="status">
+              <Icon name="schedule" />
+              <span class="restart-text">Some changes need a restart to take effect.</span>
+              <button type="button" class="restart-later" onClick={() => setDismissed(true)}>
+                Later
+              </button>
+              <button type="button" class="restart-now" onClick={() => void model.relaunch()}>
+                Restart now
+              </button>
+            </div>
+          )}
 
-        <footer>
-          <span>Pear Desktop {model.version}</span>
-          <span>
-            <kbd>Ctrl</kbd> <kbd>,</kbd> toggles this window
-          </span>
-        </footer>
+          <div class="body">
+            {needle ? (
+              searchResults()
+            ) : active === "plugins" ? (
+              plugins.map((plugin) => pluginCard(plugin))
+            ) : active === "about" ? (
+              <About model={model} enabled={plugins.filter((p) => model.state(p.id)?.enabled).map((p) => p.name)} />
+            ) : (
+              section.blocks.map(renderBlock)
+            )}
+          </div>
+        </section>
       </div>
     </div>
   );
 }
 
-function PluginItem(props: { plugin: AnyPlugin; model: SettingsModel; open: boolean; onToggleOpen(): void }) {
+function CardGroup(props: { title: string | undefined; children: ComponentChildren; "data-core"?: string }) {
+  return (
+    <div class="group" data-core={props["data-core"]}>
+      {props.title && <div class="group-title">{props.title}</div>}
+      <div class="card">{props.children}</div>
+    </div>
+  );
+}
+
+function PluginCard(props: {
+  plugin: PluginInfo;
+  model: SettingsModel;
+  platform: string;
+  open: boolean;
+  filter?: (key: string, field: Field) => boolean;
+  onToggleOpen(): void;
+  onEnabled(enabled: boolean): void;
+  onConfig(key: string, field: Field, value: unknown): void;
+}) {
   const { plugin, model, open } = props;
   const state = model.state(plugin.id);
   const enabled = state?.enabled ?? false;
   const error = model.error(plugin.id);
-  const fields = Object.entries((plugin.config ?? {}) as ConfigShape);
-  const configurable = fields.length > 0;
+  const groups = groupFields(plugin.config, props.platform, props.filter);
+  const configurable = groupFields(plugin.config, props.platform).length > 0;
 
   return (
-    <section class="plugin" data-open={open} data-plugin={plugin.id}>
-      <div class="plugin-row">
-        <div class="plugin-main">
-          <div class="plugin-name">
-            {plugin.name}
-            {model.meta(plugin.id)?.restartRequired && <span class="badge">restart to apply</span>}
-            {error && enabled && <span class="badge error">error</span>}
-          </div>
-          {plugin.description && <div class="plugin-description">{plugin.description}</div>}
-        </div>
-        {configurable && (
-          <button
-            type="button"
-            class="icon-button expand"
-            aria-expanded={open}
-            aria-label={`Configure ${plugin.name}`}
-            onClick={props.onToggleOpen}
-          >
-            <ChevronIcon />
-          </button>
-        )}
-        <Switch
-          checked={enabled}
-          label={`Enable ${plugin.name}`}
-          onChange={(next) => void model.setEnabled(plugin.id, next)}
-        />
+    <section class="card plugin" data-plugin={plugin.id} data-open={open}>
+      <div class="plugin-head">
+        <button
+          type="button"
+          class="plugin-toggle"
+          disabled={!configurable}
+          aria-expanded={configurable ? open : undefined}
+          aria-label={`Configure ${plugin.name}`}
+          onClick={props.onToggleOpen}
+        >
+          <span class="field-text">
+            <span class="label-line">
+              <span class="field-label">{plugin.name}</span>
+              {model.meta(plugin.id)?.restartRequired && (
+                <span class="pill" title="Enabling or disabling applies after a restart">
+                  restart
+                </span>
+              )}
+              {error && enabled && <span class="pill error">error</span>}
+            </span>
+            {plugin.description && <span class="field-desc">{plugin.description}</span>}
+          </span>
+          {configurable && <Icon name={open ? "chevronDown" : "chevronRight"} />}
+        </button>
+        <Switch checked={enabled} label={`Enable ${plugin.name}`} onChange={props.onEnabled} />
       </div>
       {error && enabled && <p class="error-text">{error}</p>}
-      {open && configurable && state && (
-        <div class="fields">
-          {fields.map(([key, field]) => (
-            <FieldEditor
-              key={key}
-              name={`${plugin.id}-${key}`}
-              field={field}
-              value={state.config[key]}
-              onChange={(value) => void model.setConfig(plugin.id, { [key]: value })}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function CoreItem(props: {
-  section: CoreSection;
-  name: string;
-  description: string;
-  model: SettingsModel;
-  open: boolean;
-  onToggleOpen(): void;
-}) {
-  const { section, name, model, open } = props;
-  const state = model.core(section);
-  if (!state) return null;
-  const enabled = state.config.enabled === true;
-  // "enabled" is the switch in the row; the rest are the fields.
-  const fields = Object.entries(CORE_SECTIONS[section] as ConfigShape).filter(([key]) => key !== "enabled");
-
-  return (
-    <section class="plugin core" data-open={open} data-core={section}>
-      <div class="plugin-row">
-        <div class="plugin-main">
-          <div class="plugin-name">
-            {name}
-            <span class="badge">built in</span>
-            {state.error && <span class="badge error">error</span>}
-          </div>
-          <div class="plugin-description">{props.description}</div>
-          {state.status && (
-            <div class="plugin-description" data-status>
-              Listening on {state.status} · docs at {state.status}/swagger
+      {open && state && groups.length > 0 && (
+        <div class="plugin-body">
+          {groups.map((group, index) => (
+            <div key={index} class="plugin-group">
+              {group.title && <div class="plugin-group-title">{group.title}</div>}
+              {group.fields.map(([key, field]) => (
+                <SettingsField
+                  key={key}
+                  name={`${plugin.id}-${key}`}
+                  field={field}
+                  value={state.config[key]}
+                  onChange={(value) => props.onConfig(key, field, value)}
+                />
+              ))}
             </div>
-          )}
-        </div>
-        <button type="button" class="icon-button expand" aria-expanded={open} aria-label={`Configure ${name}`} onClick={props.onToggleOpen}>
-          <ChevronIcon />
-        </button>
-        <Switch checked={enabled} label={`Enable ${name}`} onChange={(next) => void model.setCoreConfig(section, { enabled: next })} />
-      </div>
-      {state.error && <p class="error-text">{state.error}</p>}
-      {open && (
-        <div class="fields">
-          {fields.map(([key, field]) => (
-            <FieldEditor
-              key={key}
-              name={`core-${section}-${key}`}
-              field={field}
-              value={state.config[key]}
-              onChange={(value) => void model.setCoreConfig(section, { [key]: value })}
-            />
           ))}
         </div>
       )}
@@ -252,24 +403,57 @@ function CoreItem(props: {
   );
 }
 
-const APP_ICON = embed("generated/icons/png/128x128.png");
-
-export function PearIcon({ size = 22 }: { size?: number }) {
-  return <img src={`data:image/png;base64,${APP_ICON}`} width={size} height={size} alt="" aria-hidden="true" />;
-}
-
-function CloseIcon() {
+function About({ model, enabled }: { model: SettingsModel; enabled: string[] }) {
+  const { app } = model;
+  const [copied, setCopied] = useState(false);
+  const rows: [string, string][] = [
+    ["Pear Desktop", `v${app.version}`],
+    ["Electron", app.electron],
+    ["Chromium", app.chrome],
+    ["Node.js", app.node],
+    ["Platform", `${app.platform} (${app.arch})`],
+  ];
+  const debugInfo = [
+    ...rows.map(([label, value]) => `${label}: ${value}`),
+    `Enabled plugins: ${enabled.join(", ") || "none"}`,
+  ].join("\n");
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="currentColor" d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12l5.6 5.6-1.4 1.4-5.6-5.6L6.4 19 5 17.6l5.6-5.6L5 6.4z" />
-    </svg>
-  );
-}
-
-function ChevronIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="currentColor" d="M7.4 8.6 12 13.2l4.6-4.6L18 10l-6 6-6-6z" />
-    </svg>
+    <div class="about">
+      <div class="about-header">
+        <PearIcon size={88} />
+        <div class="about-name">Pear Desktop</div>
+        <div class="about-version">v{app.version}</div>
+        <div class="about-tagline">A desktop client for YTM, with plugins.</div>
+      </div>
+      <CardGroup title="Versions">
+        <dl class="about-grid">
+          {rows.map(([label, value]) => (
+            <div key={label} class="about-row">
+              <dt>{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      </CardGroup>
+      <CardGroup title="Actions">
+        <div class="field actions">
+          <button
+            type="button"
+            class="outlined"
+            onClick={() =>
+              void navigator.clipboard.writeText(debugInfo).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              })
+            }
+          >
+            {copied ? "Copied!" : "Copy debug info"}
+          </button>
+          <button type="button" class="outlined" onClick={() => void model.showSettingsFile()}>
+            Show config.json
+          </button>
+        </div>
+      </CardGroup>
+    </div>
   );
 }

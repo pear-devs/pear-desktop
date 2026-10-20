@@ -40,6 +40,7 @@ async function setup(enabled = true) {
     player: { state: {}, on: () => () => {}, control() {} } as never,
     requests: {} as never,
     send() {},
+    openSettings() {},
     broadcast,
   });
   if (enabled) await host.setEnabled("greeter", true);

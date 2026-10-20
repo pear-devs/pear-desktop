@@ -77,8 +77,21 @@ export class PluginRunner {
     handlers.set(event, handler);
   }
 
-  get plugins(): readonly AnyPlugin[] {
-    return [...this.#plugins.values()];
+  /** What the settings UI lists (from the host, which knows every plugin's schema). */
+  get plugins() {
+    return this.#bridge.bootstrap.catalog;
+  }
+
+  get app() {
+    return this.#bridge.bootstrap.app;
+  }
+
+  showSettingsFile() {
+    return this.#bridge.invoke("app:show-settings-file");
+  }
+
+  toggleDevTools() {
+    return this.#bridge.invoke("app:toggle-devtools");
   }
 
   state(id: string) {

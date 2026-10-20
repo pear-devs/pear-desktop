@@ -43,6 +43,9 @@ export default definePlugin({
     token: config.string("", { label: "API token", secret: true }),
     enabled: config.bool(true, { label: "Thing" }),
     key: config.shortcut("", { label: "Shortcut" }),
+    // Every field also takes: group (card heading), restart (needs a restart:
+    // shows a pill and the restart banner), platforms (["win32", "darwin"]).
+    // Numbers: variant "slider" | "stepper"; selects: variant "chips" | "dropdown".
   },
   host: {
     beforeReady(ctx) {},         // before app ready: ctx.disableFeatures("X")

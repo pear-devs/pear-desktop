@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _electron as electron, type ElectronApplication, type Page } from "@playwright/test";
@@ -26,6 +26,8 @@ export async function launchApp(options: LaunchOptions = {}) {
     writeFileSync(join(userData, "config.json"), JSON.stringify(configFile(options)));
   }
   const app = await electron.launch({ args: ["."], env: { ...process.env, PEAR_USER_DATA: userData } });
+  // Profiles are ~40 MB each, and /tmp is often RAM-backed.
+  app.on("close", () => rmSync(userData, { recursive: true, force: true }));
   return Object.assign(app, { userData });
 }
 

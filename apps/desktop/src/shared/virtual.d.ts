@@ -8,3 +8,9 @@ declare module "virtual:pear/host-plugins" {
   const plugins: readonly AnyPlugin[];
   export default plugins;
 }
+
+declare module "virtual:pear/settings-app" {
+  /** The standalone settings window's script, as an IIFE string. */
+  const code: string;
+  export default code;
+}
