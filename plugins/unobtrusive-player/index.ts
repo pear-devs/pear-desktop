@@ -16,7 +16,7 @@ export default definePlugin({
     html.pear-unobtrusive-did-play:not(.pear-unobtrusive-ad) sel(player.page) * {
       visibility: hidden !important;
     }
-    html.pear-unobtrusive-did-play sel(player_bar.toggle_player_page) {
+    html.pear-unobtrusive-did-play sel(player_bar.player_page_arrow) {
       transform: rotate(180deg) !important;
     }
   `,

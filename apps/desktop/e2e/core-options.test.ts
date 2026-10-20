@@ -8,6 +8,7 @@ import { expect, test } from "./fixtures.ts";
 import { startConnectProxy, YTM_HOST } from "./helpers/network.ts";
 import { waitForTrackPlaying } from "./helpers/playback.ts";
 import { coreError, setCore } from "./helpers/plugins.ts";
+import { sel } from "./helpers/player-bar.ts";
 import { overlay } from "./helpers/settings.ts";
 import { isAlwaysOnTop } from "./helpers/window.ts";
 import { mainWindow, playTestTrack } from "./launch.ts";
@@ -112,17 +113,20 @@ test("appearance tweaks: Upgrade button, like buttons", async ({ launch }) => {
 
   await playTestTrack(page);
   await waitForTrackPlaying(page);
-  const likes = page.locator("ytmusic-player-bar #like-button-renderer");
+  const likes = page.locator(sel("player_bar.like_buttons"));
   await expect(likes).toBeHidden();
   await setCore(page, "appearance", { likeButtons: "" });
   await expect(likes).toBeVisible();
 
   // Swapped: dislike first.
   const order = () =>
-    page.evaluate(() => {
-      const left = (selector: string) => document.querySelector(`ytmusic-player-bar #like-button-renderer ${selector}`)!.getBoundingClientRect().x;
-      return left("#button-shape-like") < left("#button-shape-dislike") ? "like-first" : "dislike-first";
-    });
+    page.evaluate(
+      ([like, dislike]) => {
+        const left = (selector: string) => document.querySelector(selector)!.getBoundingClientRect().x;
+        return left(like) < left(dislike) ? "like-first" : "dislike-first";
+      },
+      [sel("player_bar.like"), sel("player_bar.dislike")] as const,
+    );
   expect(await order()).toBe("like-first");
   await setCore(page, "appearance", { swapLikeButtonsOrder: true });
   await expect.poll(order).toBe("dislike-first");
@@ -140,7 +144,7 @@ test("themes apply on top of \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music, f
   const theme = join(dir, "theme.css");
   const second = join(dir, "second.css");
   writeFileSync(theme, "ytmusic-nav-bar { outline: 3px solid rgb(1, 2, 3) !important; }");
-  writeFileSync(second, "ytmusic-player-bar { outline: 2px solid rgb(4, 5, 6) !important; }");
+  writeFileSync(second, "ytmusic-app-layout { outline: 2px solid rgb(4, 5, 6) !important; }");
   const app = await launch({ core: { appearance: { themes: [theme] } } });
   const page = await mainWindow(app);
   const outline = (selector: string) =>
@@ -155,7 +159,7 @@ test("themes apply on top of \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music, f
   await expect.poll(() => outline("ytmusic-nav-bar"), { timeout: THEME_RELOAD_MS }).toBe("rgb(7, 8, 9)");
 
   await setCore(page, "appearance", { themes: [theme, second] });
-  await expect.poll(() => outline("ytmusic-player-bar")).toBe("rgb(4, 5, 6)");
+  await expect.poll(() => outline("ytmusic-app-layout")).toBe("rgb(4, 5, 6)");
   await setCore(page, "appearance", { themes: [second] });
   await expect.poll(() => outline("ytmusic-nav-bar")).not.toBe("rgb(7, 8, 9)");
 

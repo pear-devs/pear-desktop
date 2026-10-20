@@ -14,6 +14,8 @@ const PIP_ICON =
   "M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z";
 // The popup menu that opens right after a click on the player bar's menu button is the track's menu.
 const MENU_CLICK_WINDOW_MS = 2000;
+// YTM's own clean-up after its full screen happens within this.
+const SETTLE_MS = 500;
 
 export function startPage(ctx: Ctx) {
   const mode = fullScreenMode(ctx);
@@ -76,6 +78,16 @@ function fullScreenMode(ctx: Ctx) {
     }
     ctx.$("player_bar.expanding_menu")?.removeEventListener("mouseleave", closeMenu);
     if (document.fullscreenElement) void document.exitFullscreen();
+    ctx.setTimeout(revealBars, SETTLE_MS);
+  };
+  // The new player bar's layout hides the nav bar and the player bar (inline
+  // visibility) in full screen; left in the small window, it doesn't show them again.
+  const revealBars = () => {
+    if (document.fullscreenElement) return;
+    for (const name of ["nav_bar", "player_bar"] as const) {
+      const bar = ctx.$(name);
+      if (bar?.style.visibility === "hidden") bar.style.removeProperty("visibility");
+    }
   };
 
   const mode = {
@@ -105,7 +117,10 @@ function handleKeys(ctx: Ctx, mode: { readonly active: boolean }, toggle: () => 
   const onKeydown = (event: KeyboardEvent) => {
     if (isEditable(event.target)) return;
     if (mode.active && event.key === "Escape") {
+      // Not YTM's own Escape too: it would leave its full screen while the window is still
+      // small, which breaks the new player bar's layout. The host leaves it after resizing.
       event.preventDefault();
+      event.stopPropagation();
       void ctx.host.invoke("exit");
       return;
     }

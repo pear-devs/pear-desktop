@@ -3,6 +3,7 @@ import { waitForTrackPlaying } from "./helpers/playback.ts";
 import { pluginConfig, setConfig, setEnabled } from "./helpers/plugins.ts";
 import { recordCalls } from "./helpers/probes.ts";
 import { playTestTrack } from "./launch.ts";
+import { inBar } from "./helpers/player-bar.ts";
 
 test("captions-selector lists caption tracks and switches them through the player API", async ({ page }) => {
   test.setTimeout(180_000);
@@ -32,7 +33,7 @@ test("captions-selector lists caption tracks and switches them through the playe
   });
 
   await setEnabled(page, "captions-selector", true);
-  const button = page.locator("ytmusic-player-bar .pear-captions-button");
+  const button = page.locator(inBar(".pear-captions-button"));
   await expect(button).toBeVisible({ timeout: 15_000 });
   expect(await calls()).toContainEqual(["loadModule", "captions"]);
   await button.click();

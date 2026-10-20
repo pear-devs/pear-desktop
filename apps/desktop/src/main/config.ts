@@ -2,7 +2,7 @@
 // so existing installs keep their settings:
 //
 //   plugins.<id>        { enabled, ...config }      (the API server: plugins.api-server)
-//   options.*           the core sections (general, window, appearance, advanced)
+//   options.*           the core sections (general, window, appearance, advanced, site)
 //   url, window-size, window-position, window-maximized
 //   __internal__.migrations.version                 like electron-store
 //

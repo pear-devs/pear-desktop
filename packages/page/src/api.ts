@@ -2,6 +2,7 @@
 // elements can answer (queue, search, likes, fullscreen, song details).
 // Registered once; costs nothing while the server is off.
 
+import type { LikeStatus } from "@pear/sdk";
 import { selectors, type SelectorName } from "@pear/sdk/selectors";
 import { readSongDetails } from "@pear/sdk/song-details";
 import { YTM_NAME } from "@pear/sdk/util";
@@ -46,18 +47,35 @@ const plain = <T,>(value: T): T => (value === undefined ? value : JSON.parse(JSO
 export function registerApiHandlers(runner: PluginRunner, player: Player) {
   const handle: Handle = (event, handler) => runner.handleCore(event, handler);
   handle("details", () => (player.api ? readSongDetails(player.api) : null));
-  handle("like", (status) => $<LikeButtons>("player_bar.like_buttons")?.updateLikeStatus?.(status as string));
+  handle("like", (status) => setLikeStatus(player, status as string));
   registerFullscreen(handle);
   registerQueue(handle);
   handle("search", search);
 }
+
+/** "LIKE" or "DISLIKE": sets it, like the buttons do (pressing an active one again would clear it). */
+function setLikeStatus(player: Player, status: string) {
+  const classic = $<LikeButtons>("player_bar.like_buttons");
+  if (classic?.updateLikeStatus) return classic.updateLikeStatus(status);
+  const wanted = LIKE_BUTTONS[status];
+  if (wanted && player.state.like !== wanted.status) $(wanted.button)?.click();
+}
+
+const LIKE_BUTTONS: Record<string, { status: LikeStatus; button: SelectorName }> = {
+  LIKE: { status: "like", button: "player_bar.like" },
+  DISLIKE: { status: "dislike", button: "player_bar.dislike" },
+};
 
 function registerFullscreen(handle: Handle) {
   const isFullscreen = () => !!$("integrations.fullscreen");
   handle("fullscreen", isFullscreen);
   handle("fullscreen:set", (fullscreen) => {
     if (isFullscreen() === fullscreen) return;
-    $(fullscreen ? "integrations.fullscreen_button" : "integrations.exit_fullscreen_button")?.click();
+    if (fullscreen) return $("integrations.fullscreen_button")?.click();
+    // The new player bar's layout has no exit button; Escape (exitFullscreen) is how it leaves.
+    const exit = $("integrations.exit_fullscreen_button");
+    if (exit) exit.click();
+    else void document.exitFullscreen().catch(() => {});
   });
 }
 

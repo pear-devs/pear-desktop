@@ -2259,6 +2259,20 @@
       "keyPath": {
         "label": "Private key file",
         "placeholder": "/path/to/key.pem"
+      },
+      "playerBar": {
+        "label": "Player bar",
+        "description": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063 is trying a new player bar on some users. The one it didn't choose for you works, but without like buttons: it only sends them for its choice.",
+        "options": {
+          "": "Site's choice",
+          "classic": "Classic",
+          "new": "New"
+        }
+      },
+      "siteFlags": {
+        "label": "Feature flag overrides",
+        "description": "One flag per entry, as name=value (true, false, a number or text). Unknown names do nothing.",
+        "placeholder": "flag_name=false"
       }
     },
     "groups": {
@@ -2281,7 +2295,8 @@
       "vudio": "Vudio",
       "wave": "Wave",
       "custom-format": "Custom format",
-      "lyrics": "Lyrics"
+      "lyrics": "Lyrics",
+      "site-features": "Site features"
     },
     "title": "Settings",
     "search-placeholder": "Search settings",
@@ -2315,7 +2330,8 @@
       "tray": "Tray",
       "title-bar": "Title bar",
       "api-server": "API server",
-      "developer": "Developer"
+      "developer": "Developer",
+      "site-flags": "Site feature flags"
     },
     "toggle-devtools": "Toggle developer tools",
     "sections": {
@@ -2353,6 +2369,14 @@
       "copied": "Copied!",
       "enabled-plugins": "Enabled plugins: {{plugins}}",
       "none": "none"
+    },
+    "site-flags": {
+      "hint": "The flags \u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063 sent this session. Switching one adds it to the overrides above, after a restart. Most only change what the server sends, so overriding them does nothing.",
+      "filter": "Filter flags",
+      "empty": "No flags match.",
+      "more": "{{count}} more; narrow the filter to see them.",
+      "overridden": "overridden",
+      "reset": "Remove the override of {{name}}"
     }
   }
 }

@@ -2,7 +2,7 @@
 // YTM; `bridgeModel` implements it over the bare bridge for the
 // standalone settings window.
 
-import type { CoreSection } from "@pear/sdk/core-config";
+import type { CoreSection, Flags } from "@pear/sdk/core-config";
 import { type Translate, translator } from "@pear/sdk/i18n";
 import type {
   AppInfo,
@@ -35,6 +35,8 @@ export interface SettingsModel {
   toggleDevTools(): Promise<unknown>;
   /** Runs one of the plugin's settings actions (its host command of that name). */
   runAction(id: string, name: string): Promise<unknown>;
+  /** YTM's feature flags as it served them; only in YTM's page. */
+  siteFlags?(): Readonly<Flags>;
 }
 
 /** The model's commands, each a request to the host. */

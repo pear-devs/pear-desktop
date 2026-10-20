@@ -51,6 +51,7 @@ export class CoreOptions {
       window: this.state("window"),
       appearance: this.state("appearance"),
       advanced: this.state("advanced"),
+      site: this.state("site"),
     };
   }
 

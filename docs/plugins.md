@@ -236,6 +236,12 @@ Elements of YTM's page are found by name, for example
 `packages/sdk/src/selectors.ts`. If you need an element that isn't there, add
 it to that file.
 
+YTM has two player bars: the classic one, and a new one it gives some users.
+Each `player_bar.*` name matches either, so a plugin using the names works on
+both. A few exist in one layout only (`player_bar.expand_volume`,
+`player_bar.volume_popup`…); their comments say so. To try your plugin on both,
+pick one under Settings → Advanced → Site features → Player bar.
+
 ## Styles
 
 ```ts
@@ -424,6 +430,14 @@ ctx.t("plugins.my-plugin.saved", "Saved");
 ```ts
 ctx.$(".right-controls-buttons");             // type error
 ctx.$("player_bar.right_controls_buttons");   // works
+```
+
+**Don't write YTM's class names into your code.** `"ytmusic-player-bar .title"`
+finds nothing for users with the new player bar; the selector name does:
+
+```ts
+document.querySelector("ytmusic-player-bar .title"); // classic bar only
+ctx.$("player_bar.title");                           // either bar
 ```
 
 **JSX event names are capitalised once.** It's `onKeydown`, `onPointerdown`

@@ -45,7 +45,7 @@ const MEDIA_TYPES: Record<string, MediaType> = {
 
 const REPEAT_MODES: Record<string, RepeatMode> = { NONE: "none", ALL: "all", ONE: "one" };
 
-/** The like buttons' `like-status` attribute. */
+/** The classic like buttons' `like-status` attribute. */
 const LIKE_STATUS: Record<string, LikeStatus> = { LIKE: "like", DISLIKE: "dislike" };
 
 /** Sends states to the host: `now` at once, `batched` at most once in a while (position-only updates). */
@@ -54,9 +54,14 @@ export interface StatePublisher {
   batched(state: NowPlaying): void;
 }
 
+/** The classic player bar. */
 interface PlayerBarElement extends HTMLElement {
-  getState?(): { queue?: { repeatMode?: string } };
   updateVolume?(volume: number): void;
+}
+
+/** <ytmusic-app>, whose store holds the queue's modes in either player-bar layout. */
+interface AppElement extends HTMLElement {
+  getState?(): { queue?: { repeatMode?: string; shuffleEnabled?: boolean } };
 }
 
 export class Player implements PagePlayer {
@@ -139,10 +144,13 @@ export class Player implements PagePlayer {
   }
 
   #setVolume(api: YTPlayerApi, volume: number) {
-    // YTM's slider value is what users see; updateVolume applies YTM's
-    // perceptual curve to the actual audio (e.g. 37 → 12%) and persists it.
+    // YTM's slider value is what users see; the classic bar's updateVolume
+    // applies YTM's perceptual curve to the actual audio (e.g. 37 → 12%) and
+    // persists it. The new bar's slider only listens to its own input events.
     const bar = document.querySelector<PlayerBarElement>(selectors.player_bar);
+    const slider = document.querySelector<HTMLInputElement>(selectors["player_bar.volume_slider"]);
     if (bar?.updateVolume) bar.updateVolume(volume);
+    else if (slider instanceof HTMLInputElement) setSlider(slider, volume);
     else api.setVolume(volume);
   }
 
@@ -239,8 +247,10 @@ export class Player implements PagePlayer {
 
   /** The volume as YTM's slider shows it (before its perceptual curve). */
   #readVolume() {
-    const slider = document.querySelector<HTMLElement & { value?: number }>(selectors["player_bar.volume_slider"]);
-    if (typeof slider?.value === "number") return Math.round(slider.value);
+    // A paper-slider's value is a number, a range input's a string.
+    const slider = document.querySelector<HTMLElement & { value?: number | string }>(selectors["player_bar.volume_slider"]);
+    const value = slider?.value === "" ? NaN : Number(slider?.value);
+    if (Number.isFinite(value)) return Math.round(value);
     return this.#api?.getVolume() ?? 100;
   }
 
@@ -258,11 +268,10 @@ export class Player implements PagePlayer {
 
   #observeControls() {
     const read = () => {
-      const bar = document.querySelector<PlayerBarElement>(selectors.player_bar);
-      const repeat = REPEAT_MODES[bar?.getState?.().queue?.repeatMode ?? ""] ?? this.#state.repeat;
-      const shuffle = bar?.hasAttribute("shuffle-on") ?? false;
-      const likeStatus = document.querySelector(selectors["player_bar.like_buttons"])?.getAttribute("like-status");
-      const like = LIKE_STATUS[likeStatus ?? ""] ?? "none";
+      const queue = document.querySelector<AppElement>(selectors.app)?.getState?.().queue;
+      const repeat = REPEAT_MODES[queue?.repeatMode ?? ""] ?? this.#state.repeat;
+      const shuffle = queue?.shuffleEnabled ?? document.querySelector(selectors.player_bar)?.hasAttribute("shuffle-on") ?? false;
+      const like = readLikeStatus();
       const s = this.#state;
       if (repeat !== s.repeat || shuffle !== s.shuffle || like !== s.like) this.#publishNow({ repeat, shuffle, like });
     };
@@ -270,7 +279,7 @@ export class Player implements PagePlayer {
       new MutationObserver(read).observe(bar, {
         attributes: true,
         subtree: true,
-        attributeFilter: ["shuffle-on", "like-status", "title", "aria-label", "repeat-mode"],
+        attributeFilter: ["shuffle-on", "like-status", "title", "aria-label", "aria-pressed", "repeat-mode"],
       });
       read();
     });
@@ -324,6 +333,23 @@ export class Player implements PagePlayer {
     this.#emitter.emit("change", this.#state);
     return this.#state;
   }
+}
+
+/** The playing track's like status: the classic bar's attribute, or which of the new bar's buttons is pressed. */
+function readLikeStatus(): LikeStatus {
+  const classic = document.querySelector(selectors["player_bar.like_buttons"])?.getAttribute("like-status");
+  if (classic) return LIKE_STATUS[classic] ?? "none";
+  const pressed = (name: SelectorName) => document.querySelector(selectors[name])?.getAttribute("aria-pressed") === "true";
+  if (pressed("player_bar.like")) return "like";
+  if (pressed("player_bar.dislike")) return "dislike";
+  return "none";
+}
+
+/** Moves a range input the way a user would, so the page's own listeners apply it. */
+function setSlider(slider: HTMLInputElement, value: number) {
+  slider.value = String(value);
+  slider.dispatchEvent(new Event("input", { bubbles: true }));
+  slider.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
 /** Clicks the player bar's own button, so YTM does what it does on a click; `fallback` while it isn't there. */

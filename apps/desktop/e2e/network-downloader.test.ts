@@ -12,6 +12,7 @@ import { pause } from "./helpers/playback.ts";
 import { invoke, pluginError, pluginStatus, setConfig } from "./helpers/plugins.ts";
 import { openSettings, pluginRow, searchbox } from "./helpers/settings.ts";
 import { mainWindow, playTestTrack, TEST_TRACK } from "./launch.ts";
+import { inBar } from "./helpers/player-bar.ts";
 
 // Rick Astley, "Whenever You Need Somebody": an album page that works logged out.
 const ALBUM_URL = ytmUrl("/playlist?list=OLAK5uy_nmDUsWOMoEcz0SsVqUwir0oxu-k1oUyXE");
@@ -59,7 +60,7 @@ async function launchDownloader({ launch, tempDir }: Setup, config: Record<strin
 async function downloadButton(page: Page) {
   await playTestTrack(page);
   await pause(page);
-  const button = page.locator("ytmusic-player-bar .pear-dl-button");
+  const button = page.locator(inBar(".pear-dl-button"));
   await expect(button).toBeVisible({ timeout: 15_000 });
   return { button, toast: page.locator(".pear-dl-toast") };
 }

@@ -12,6 +12,7 @@ import { Appearance } from "./appearance.ts";
 import { domReady } from "./dom.ts";
 import { Player, type StatePublisher } from "./player.ts";
 import { PluginRunner } from "./plugins.ts";
+import { overrideSiteFlags, type SiteFlags, siteOverrides } from "./site-flags.ts";
 
 export interface RuntimeMarker {
   /** performance.now() at the moment the runtime executed. */
@@ -26,6 +27,8 @@ export interface Runtime {
   readonly marker: RuntimeMarker;
   readonly player: Player;
   readonly plugins: PluginRunner;
+  /** YTM's feature flags as served, and the overrides the settings applied. */
+  readonly siteFlags: SiteFlags;
   /** Available once the document has loaded. */
   readonly settings: SettingsController | undefined;
 }
@@ -45,6 +48,9 @@ const marker: RuntimeMarker = {
 
 const bridge = window.__pear;
 if (!bridge) throw new Error("[pear] bridge missing; preload did not expose __pear");
+
+// First: YTM's config script runs right after the runtime.
+const siteFlags = overrideSiteFlags(siteOverrides(bridge.bootstrap.core.site.config));
 
 // Position-only updates are batched; everything else goes to the host at once.
 const POSITION_PUBLISH_MS = 1000;
@@ -85,7 +91,7 @@ setThemes(bridge.bootstrap.themes);
 
 let settings: SettingsController | undefined;
 const settingsReady = domReady().then(() => {
-  settings = mountSettings(runner.settings);
+  settings = mountSettings({ ...runner.settings, siteFlags: () => siteFlags.served });
   return settings;
 });
 
@@ -121,6 +127,7 @@ window.__pearRuntime = Object.freeze({
   marker,
   player,
   plugins: runner,
+  siteFlags,
   get settings() {
     return settings;
   },

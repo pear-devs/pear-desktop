@@ -45,6 +45,9 @@ export default definePlugin({
       opacity: 1;
       transition-duration: 0.1s;
     }
+    sel(player_bar.volume_popup).pear-volume-reveal {
+      display: flex !important;
+    }
   `,
   host: {
     start(ctx) {
@@ -78,7 +81,8 @@ export default definePlugin({
       // The slider position is the volume users see; YTM may map it onto a
       // different player volume (a loudness curve), so steps follow the slider.
       const position = () => {
-        const value = Number(ctx.$<HTMLElement & { value?: number }>("player_bar.volume_slider")?.value);
+        // A number on the classic bar's paper-slider, a string on the new bar's range input.
+        const value = Number(ctx.$<HTMLElement & { value?: number | string }>("player_bar.volume_slider")?.value);
         return Number.isFinite(value) ? value : api.getVolume();
       };
       const change = (direction: number) => {
@@ -118,15 +122,18 @@ function volumeHud(ctx: Ctx) {
   };
 }
 
-// YTM shows the slider only while hovered; keep it out while scrolling.
+// YTM shows the slider only while hovered; keep it out while scrolling. The
+// classic bar shows it with its own "on-hover" class, the new one shows a popup.
 function sliderReveal(ctx: Ctx) {
-  const hide = debounce((slider: HTMLElement) => slider.classList.remove("on-hover"), SLIDER_MS);
+  const hide = debounce((element: HTMLElement, name: string) => element.classList.remove(name), SLIDER_MS);
   ctx.onCleanup(hide.cancel);
   return () => {
-    const slider = ctx.$("player_bar.volume_slider");
-    if (!slider) return;
-    slider.classList.add("on-hover");
-    hide(slider);
+    const popup = ctx.$("player_bar.volume_popup");
+    const element = popup ?? ctx.$("player_bar.volume_slider");
+    if (!element) return;
+    const name = popup ? "pear-volume-reveal" : "on-hover";
+    element.classList.add(name);
+    hide(element, name);
   };
 }
 

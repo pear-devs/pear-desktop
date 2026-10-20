@@ -12,6 +12,7 @@ import type { SettingsModel } from "../model.ts";
 import { useText } from "../strings.ts";
 import { type FieldFilter, type Group, groupFields, hasFields } from "./groups.ts";
 import { type Block, joinTitles } from "./sections.ts";
+import { SiteFlagsCard } from "./site-flags.tsx";
 import type { Dialog } from "./state.ts";
 
 export function CardGroup(props: { title: string | undefined; children: ComponentChildren; "data-core"?: string }) {
@@ -89,6 +90,10 @@ export function BlockView({ dialog, block }: { dialog: Dialog; block: Block }) {
           </div>
         </CardGroup>
       );
+    case "site-flags": {
+      const served = dialog.model.siteFlags?.();
+      return served ? <SiteFlagsCard dialog={dialog} served={served} /> : null;
+    }
   }
 }
 

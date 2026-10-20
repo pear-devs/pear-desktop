@@ -1,5 +1,6 @@
 // Getting a track to play in a logged-out session, past YTM's pre-roll ads.
 
+import { selectors } from "@pear/sdk/selectors";
 import type { Page } from "@playwright/test";
 
 /** Long enough for two pre-roll ads and a slow start. */
@@ -25,13 +26,13 @@ export async function waitForTrackPlaying(page: Page, timeout = TRACK_PLAYING_TI
     window.__pearPlayingSince = undefined;
   });
   await page.waitForFunction(
-    (stableMs) => {
+    ({ stableMs, middleButtons }) => {
       const { state } = window.__pearRuntime!.player;
       const video = document.querySelector("video");
       if (state.ad && video?.duration) video.currentTime = video.duration;
       if (video?.paused) void video.play().catch(() => {});
       // During ads the player bar hides the track controls (likes, menu).
-      const controls = document.querySelector("ytmusic-player-bar .middle-controls-buttons");
+      const controls = document.querySelector(middleButtons);
       const playing = !state.ad && !!state.track && state.status === "playing" && !!video && !video.paused && state.positionSeconds > 0;
       if (!playing || (controls && !controls.checkVisibility())) {
         window.__pearPlayingSince = undefined;
@@ -40,7 +41,7 @@ export async function waitForTrackPlaying(page: Page, timeout = TRACK_PLAYING_TI
       window.__pearPlayingSince ??= Date.now();
       return Date.now() - window.__pearPlayingSince > stableMs;
     },
-    STABLE_MS,
+    { stableMs: STABLE_MS, middleButtons: selectors["player_bar.middle_buttons"] },
     { timeout, polling: POLL_MS },
   );
 }

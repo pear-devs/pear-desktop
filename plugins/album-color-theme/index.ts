@@ -93,7 +93,7 @@ const THEME = css`
     --iron-icon-fill-color: rgb(255 255 255 / 0.5) !important;
   }
   html.pear-album-color sel(player_bar),
-  html.pear-album-color .time-info.ytmusic-player-bar {
+  html.pear-album-color sel(player_bar.time) {
     color: rgb(255 255 255 / 0.5) !important;
   }
   html.pear-album-color .volume-slider.ytmusic-player-bar,
@@ -124,6 +124,12 @@ const SEEKBAR = css`
     --paper-slider-active-color: linear-gradient(to right, var(--paper-progress-active-color-1) 80%, var(--paper-progress-active-color-2) 100%) !important;
     --paper-slider-knob-color: var(--paper-progress-active-color-1) !important;
     --paper-slider-knob-start-color: var(--paper-progress-active-color-2) !important;
+    /* The new player bar paints its range input with these. */
+    --yt-sys-color-baseline--static-brand-red: var(--paper-progress-active-color-1) !important;
+    --yt-sys-color-baseline--static-magenta: var(--paper-progress-active-color-2) !important;
+  }
+  html.pear-album-color sel(player_bar.progress)::-webkit-slider-thumb {
+    background-color: var(--paper-progress-active-color-1) !important;
   }
 `;
 

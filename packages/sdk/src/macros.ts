@@ -14,15 +14,18 @@ export function sel(name: SelectorName): string {
 
 /**
  * Validates and minifies CSS at build time. `sel(name)` inside the CSS text is
- * replaced with the registry selector, e.g. css`sel(nav_bar.background) { … }`.
- * Interpolation is not supported: macros only accept static input.
+ * replaced with the registry selector, e.g. css`sel(nav_bar.background) { … }`;
+ * a selector list (one entry per YTM layout) becomes `:is(a, b)`, so
+ * `sel(player_bar) svg` means "an svg in either". Interpolation is not
+ * supported: macros only accept static input.
  */
 export function css(strings: TemplateStringsArray | string, ...values: unknown[]): string {
   if (values.length > 0) throw new Error("[pear] css`` macro does not support interpolation; use sel(name) in the CSS text");
   const source = typeof strings === "string" ? strings : strings.join("");
   const resolved = source.replace(/\bsel\(\s*([\w.-]+)\s*\)/g, (_, name: string) => {
     if (!isSelectorName(name)) throw new Error(unknownSelector(name));
-    return selectors[name];
+    const selector: string = selectors[name];
+    return selector.includes(",") ? `:is(${selector})` : selector;
   });
   assertBalanced(resolved);
   const { code, warnings } = transform({

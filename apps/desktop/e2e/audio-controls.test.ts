@@ -7,6 +7,7 @@ import { pluginConfig, setConfig, setEnabled } from "./helpers/plugins.ts";
 import { recordCalls } from "./helpers/probes.ts";
 import { playTestTrack } from "./launch.ts";
 import type { Page } from "@playwright/test";
+import { inBar, sel } from "./helpers/player-bar.ts";
 
 const PLAYING_TEST_MS = 240_000;
 
@@ -19,7 +20,7 @@ test.describe("pickers", () => {
     await waitForTrackPlaying(page);
     const rate = () => page.evaluate(() => document.querySelector("video")!.playbackRate);
 
-    const speedButton = page.locator("ytmusic-player-bar .pear-speed-button");
+    const speedButton = page.locator(inBar(".pear-speed-button"));
     await expect(speedButton).toHaveText("1×");
     await speedButton.click();
     await page.locator(".pear-speed-popover button", { hasText: "1.5×" }).click();
@@ -70,14 +71,20 @@ test.describe("pickers", () => {
 
 // The slider position: YTM may map it through a loudness curve onto the player volume.
 const sliderVolume = (page: Page) =>
-  page.evaluate(() => Number(document.querySelector<HTMLElement & { value: number }>("ytmusic-player-bar #volume-slider")!.value));
+  page.evaluate(
+    (slider) => Number(document.querySelector<HTMLElement & { value: number | string }>(slider)!.value),
+    sel("player_bar.volume_slider"),
+  );
 
 /** A wheel turn over YTM's own volume slider. */
 const wheel = (page: Page, deltaY: number) =>
-  page.evaluate((deltaY) => {
-    const slider = document.querySelector("ytmusic-player-bar #volume-slider")!;
-    slider.dispatchEvent(new WheelEvent("wheel", { deltaY, bubbles: true, cancelable: true, composed: true }));
-  }, deltaY);
+  page.evaluate(
+    ([deltaY, selector]) => {
+      const slider = document.querySelector(selector)!;
+      slider.dispatchEvent(new WheelEvent("wheel", { deltaY, bubbles: true, cancelable: true, composed: true }));
+    },
+    [deltaY, sel("player_bar.volume_slider")] as const,
+  );
 
 /** A volume with room for steps up: the current one, or 10 below it near the top. */
 async function startVolume(page: Page) {
@@ -105,7 +112,7 @@ test.describe("volume", () => {
     await wheel(page, -100);
     await expect.poll(volume).toBe(base + 2);
     await expect(page.locator(".pear-volume-hud")).toHaveText(`${base + 2}%`);
-    await expect.poll(() => page.locator("ytmusic-player-bar #volume-slider").getAttribute("title")).toBe(`${base + 2}%`);
+    await expect.poll(() => page.locator(sel("player_bar.volume_slider")).getAttribute("title")).toBe(`${base + 2}%`);
 
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await page.keyboard.press("ArrowDown");
@@ -162,16 +169,16 @@ test("custom-output-device routes the shared graph to the chosen device", async 
   const device = outputs[0]!;
 
   await setEnabled(page, "custom-output-device", true);
-  const button = page.locator("ytmusic-player-bar .pear-output-button");
+  const button = page.locator(inBar(".pear-output-button"));
   await expect
     .poll(() =>
-      page.evaluate(() => ({
-        button: !!document.querySelector("ytmusic-player-bar .pear-output-button"),
+      page.evaluate(([button, row]) => ({
+        button: !!document.querySelector(button),
         anywhere: !!document.querySelector(".pear-output-button"),
-        row: !!document.querySelector("ytmusic-player-bar #right-controls .right-controls-buttons"),
+        row: !!document.querySelector(row),
         enabled: window.__pearRuntime!.plugins.state("custom-output-device")?.enabled,
         error: window.__pearRuntime!.plugins.error("custom-output-device") ?? null,
-      })),
+      }), [inBar(".pear-output-button"), sel("player_bar.right_controls_buttons")] as const),
     )
     .toMatchObject({ button: true });
   await button.click();

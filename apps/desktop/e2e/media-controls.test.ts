@@ -5,6 +5,7 @@ import { ytmUrl } from "@pear/sdk/util";
 import { expect, test } from "./fixtures.ts";
 import { playerStatus } from "./helpers/playback.ts";
 import { playTestTrack, TEST_TRACK } from "./launch.ts";
+import { sel } from "./helpers/player-bar.ts";
 
 // D-Bus proxy methods are generated at runtime from introspection.
 interface DBusDaemon {
@@ -76,10 +77,10 @@ test("MPRIS reflects the track and controls playback", async ({ app, page, defer
   const root = (name: string) => props.Get("org.mpris.MediaPlayer2", name).then((v) => v.value);
   expect(await root("CanSetFullscreen")).toBe(true);
   await props.Set("org.mpris.MediaPlayer2", "Fullscreen", new dbus.Variant("b", true));
-  await expect(page.locator("ytmusic-player-bar[player-fullscreened]")).toBeAttached();
+  await expect(page.locator(sel("integrations.fullscreen"))).toBeAttached();
   await expect.poll(() => root("Fullscreen")).toBe(true);
   await props.Set("org.mpris.MediaPlayer2", "Fullscreen", new dbus.Variant("b", false));
-  await expect(page.locator("ytmusic-player-bar[player-fullscreened]")).toHaveCount(0);
+  await expect(page.locator(sel("integrations.fullscreen"))).toHaveCount(0);
   await expect.poll(() => root("Fullscreen")).toBe(false);
 
   // OpenUri opens YTM links in the window (and nothing else).

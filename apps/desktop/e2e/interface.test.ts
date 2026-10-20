@@ -7,6 +7,7 @@ import { pluginConfig, setConfig, setEnabled } from "./helpers/plugins.ts";
 import "./helpers/probes.ts";
 import { screenshot } from "./helpers/window.ts";
 import { mainWindow, playTestTrack } from "./launch.ts";
+import { sel, showLikeStatus } from "./helpers/player-bar.ts";
 
 /** YTM's own page background, without the album color. */
 const YTM_BACKGROUND = "rgb(3, 3, 3)";
@@ -66,7 +67,7 @@ test("album colors, ambient glow and the video switch on the player page", async
   const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(await background()).not.toBe(YTM_BACKGROUND);
   // pear-desktop's fixes: secondary texts stay half white on any tint.
-  await expect(page.locator("ytmusic-player-bar .time-info")).toHaveCSS("color", "rgba(255, 255, 255, 0.5)");
+  await expect(page.locator(sel("player_bar.time"))).toHaveCSS("color", "rgba(255, 255, 255, 0.5)");
 
   // The music video gets a glow canvas behind it that follows the video.
   const canvas = page.locator("#song-video .player-wrapper canvas.pear-ambient");
@@ -175,9 +176,7 @@ test("album actions, unobtrusive playback and skipping disliked tracks", async (
 
   // Disliking the playing track (simulated: YTM reflects it on the player bar) skips it.
   const first = await page.evaluate(() => window.__pearRuntime!.player.state.track!.videoId);
-  await page.evaluate(() =>
-    document.querySelector("ytmusic-player-bar #like-button-renderer")!.setAttribute("like-status", "DISLIKE"),
-  );
+  await showLikeStatus(page, "DISLIKE");
   await expect
     .poll(() => page.evaluate(() => window.__pearRuntime!.player.state.track?.videoId), { timeout: 30_000 })
     .not.toBe(first);

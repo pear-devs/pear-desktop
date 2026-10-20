@@ -134,6 +134,68 @@ export const ADVANCED = {
   }),
 };
 
+/**
+ * YTM's feature flags, set as the page loads (see packages/page/src/site-flags.ts).
+ * YTM tries new designs on some users first, chosen per visitor.
+ */
+export const SITE = {
+  playerBar: config.select(
+    "",
+    [
+      { value: "", label: "Site's choice" },
+      { value: "classic", label: "Classic" },
+      { value: "new", label: "New" },
+    ],
+    {
+      label: "Player bar",
+      description: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music is trying a new player bar on some users. The one it didn't choose for you works, but without like buttons: it only sends them for its choice.",
+      group: "Site features",
+      restart: true,
+    },
+  ),
+  siteFlags: config.list([], {
+    label: "Feature flag overrides",
+    description: "One flag per entry, as name=value (true, false, a number or text). Unknown names do nothing.",
+    placeholder: "flag_name=false",
+    group: "Site features",
+    restart: true,
+  }),
+};
+
+export type FlagValue = boolean | number | string;
+export type Flags = Record<string, FlagValue>;
+
+const FLAG_NAME = /^[\w.-]+$/;
+
+/** A `siteFlags` entry, "name=value", as [name, value] with true/false and numbers typed like YTM's. */
+export function parseFlagOverride(entry: string): [string, FlagValue] | undefined {
+  const separator = entry.indexOf("=");
+  const name = (separator === -1 ? entry : entry.slice(0, separator)).trim();
+  if (!FLAG_NAME.test(name)) return undefined;
+  // A bare name turns the flag on.
+  if (separator === -1) return [name, true];
+  const raw = entry.slice(separator + 1).trim();
+  if (raw === "true" || raw === "false") return [name, raw === "true"];
+  if (raw !== "" && Number.isFinite(Number(raw))) return [name, Number(raw)];
+  return [name, raw];
+}
+
+/** The overrides a `siteFlags` list asks for; later entries win. */
+export function flagOverrides(entries: readonly string[]): Flags {
+  const flags: Flags = {};
+  for (const entry of entries) {
+    const parsed = parseFlagOverride(entry);
+    if (parsed) flags[parsed[0]] = parsed[1];
+  }
+  return flags;
+}
+
+/** `siteFlags` with `name` set to `value`, or without it when `value` is undefined. */
+export function withFlagOverride(entries: readonly string[], name: string, value: FlagValue | undefined): string[] {
+  const others = entries.filter((entry) => parseFlagOverride(entry)?.[0] !== name);
+  return value === undefined ? others : [...others, `${name}=${value}`];
+}
+
 /** pear-desktop's API server port, which companion apps expect by default. */
 export const DEFAULT_API_PORT = 26538;
 const MAX_PORT = 65535;
@@ -180,6 +242,7 @@ export const CORE_SECTIONS = {
   window: WINDOW,
   appearance: APPEARANCE,
   advanced: ADVANCED,
+  site: SITE,
   apiServer: API_SERVER,
 } as const;
 

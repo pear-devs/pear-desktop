@@ -7,6 +7,7 @@ import { setConfig, setEnabled } from "./helpers/plugins.ts";
 import { overlay } from "./helpers/settings.ts";
 import { screenshot, windowInfo } from "./helpers/window.ts";
 import { mainWindow, playTestTrack } from "./launch.ts";
+import { inBar, sel } from "./helpers/player-bar.ts";
 
 /** picture-in-picture's small window. */
 const PIP_SIZE = { width: 450, height: 275 };
@@ -168,7 +169,7 @@ test("picture in picture shrinks the window and restores it", async ({ launch })
   const before = await windowInfo(app);
 
   // From the track's menu…
-  await page.locator("ytmusic-player-bar ytmusic-menu-renderer.menu yt-button-shape button").click();
+  await page.locator(sel("player_bar.menu_button")).click();
   const item = page.locator("ytmusic-menu-popup-renderer .pear-pip-item");
   await expect(item).toBeVisible();
   await item.click();
@@ -183,10 +184,10 @@ test("picture in picture shrinks the window and restores it", async ({ launch })
   await page.waitForTimeout(SETTLE_MS);
   expect((await windowInfo(app)).bounds.width).toBe(PIP_SIZE.width);
   // pear-desktop's small-window styling: no track info or menu in the bar.
-  for (const info of await page.locator("ytmusic-player-bar .content-info-wrapper, ytmusic-player-controls .content-info-wrapper").all()) {
+  for (const info of await page.locator(`${inBar(".content-info-wrapper")}, ytmusic-player-controls .content-info-wrapper`).all()) {
     await expect(info).toBeHidden();
   }
-  for (const menu of await page.locator("ytmusic-player-bar ytmusic-menu-renderer").all()) await expect(menu).toBeHidden();
+  for (const menu of await page.locator(inBar("ytmusic-menu-renderer")).all()) await expect(menu).toBeHidden();
   // "f" would leave YTM's full screen; in the small window it does nothing.
   await page.keyboard.press("f");
   await page.waitForTimeout(SETTLE_MS);

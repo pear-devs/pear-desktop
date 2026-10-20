@@ -117,9 +117,13 @@ export default definePlugin({
     ctx.onCleanup(schedule.cancel);
     ctx.host.handle("fullscreen", (fullscreen) => {
       if (!!ctx.$("integrations.fullscreen") === fullscreen) return;
-      ctx.$(fullscreen ? "integrations.fullscreen_button" : "integrations.exit_fullscreen_button")?.click();
+      if (fullscreen) return ctx.$("integrations.fullscreen_button")?.click();
+      // The new player bar's layout has no exit button; Escape (exitFullscreen) is how it leaves.
+      const exit = ctx.$("integrations.exit_fullscreen_button");
+      if (exit) exit.click();
+      else void document.exitFullscreen().catch(() => {});
     });
-    ctx.observe("player_bar", { attributes: true, attributeFilter: ["player-fullscreened"] }, () => schedule());
+    ctx.observe("app.layout", { attributes: true, attributeFilter: ["player-fullscreened"] }, () => schedule());
     ctx.observe("queue", { childList: true, subtree: true, attributes: true, attributeFilter: ["selected"] }, () => schedule());
     ctx.player.on("trackChange", () => schedule());
     report();

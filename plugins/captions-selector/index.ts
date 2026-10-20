@@ -106,6 +106,12 @@ export default definePlugin({
     };
     ctx.player.on("trackChange", onTrack);
     ctx.onCleanup(() => api.unloadModule("captions"));
+    // The tracks can come later than the delay (at startup, for one); the player says when its modules change.
+    const onApiChange = () => {
+      if (!ctx.config.disableCaptions && tracks.length === 0) loadTracks();
+    };
+    api.addEventListener("onApiChange", onApiChange);
+    ctx.onCleanup(() => api.removeEventListener("onApiChange", onApiChange));
 
     ctx.mount(button, (element) => {
       const container = ctx.$("player_bar.right_controls_buttons");

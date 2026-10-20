@@ -38,7 +38,7 @@ export default definePlugin({
     /* pear-desktop's small-window styling of YTM's full-screen player. */
     /* Newer YTM draws its full-screen controls with ytmusic-player-controls. */
     html.pear-pip sel(player_bar) svg,
-    html.pear-pip sel(player_bar) .time-info,
+    html.pear-pip sel(player_bar.time),
     html.pear-pip sel(player_bar) yt-formatted-string,
     html.pear-pip sel(player_bar) .yt-formatted-string,
     html.pear-pip ytmusic-player-controls svg,

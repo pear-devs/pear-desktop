@@ -14,7 +14,14 @@ const STYLES = {
   forceLikeButtons: css`sel(player_bar.middle_buttons), sel(player_bar.like_buttons) { display: inherit !important; }`,
   hideLikeButtons: css`sel(player_bar.like_buttons) { display: none !important; }`,
   // As specific as YTM's own display rule, so its narrow-window rule still wins.
-  swapLikeButtonsOrder: css`sel(like_buttons):where(sel(player_bar.like_buttons)) { display: inline-flex; flex-direction: row-reverse; }`,
+  // The new player bar's pair is one pill: its rounded ends and divider swap too.
+  swapLikeButtonsOrder: css`
+    sel(like_buttons):where(sel(player_bar.like_buttons)) { display: inline-flex; flex-direction: row-reverse; }
+    sel(player_bar.like_pair) { flex-direction: row-reverse; }
+    sel(player_bar.like_pair) like-button-view-model button { border-radius: 0 16px 16px 0 !important; }
+    sel(player_bar.like_pair) dislike-button-view-model button { border-radius: 16px 0 0 16px !important; }
+    sel(player_bar.like_pair) like-button-view-model button::after { left: 0 !important; right: auto !important; }
+  `,
 };
 
 type Tweak = keyof typeof STYLES;

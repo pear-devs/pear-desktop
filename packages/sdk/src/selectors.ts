@@ -27,40 +27,66 @@ export const selectors = {
   "player.native_av_toggle": "ytmusic-player-page #av-id",
 
   // ---- player bar
-  player_bar: "ytmusic-player-bar",
+  // Two layouts: the classic <ytmusic-player-bar>, and the new one YTM tries on
+  // some users (`.ytMusicMiniPlayerHost`, behind the music_web_enable_wiz_miniplayer
+  // flag; the "Player bar" site setting picks one). Each entry matches either.
+  // The new layout's player page has a second bar of its own (`.top-player-bar`,
+  // shown in small windows and full screen), hence the `ytmusic-app-layout >`.
+  player_bar: "ytmusic-player-bar, ytmusic-app-layout > .ytMusicMiniPlayerHost",
+  /** Present only in the new layout. */
+  "player_bar.new": "ytmusic-app-layout > .ytMusicMiniPlayerHost",
   "player_bar.background": "#player-bar-background",
-  "player_bar.title": "ytmusic-player-bar .title",
-  "player_bar.byline": "ytmusic-player-bar .byline",
-  "player_bar.thumbnail": "ytmusic-player-bar .thumbnail img",
-  "player_bar.progress": "ytmusic-player-bar #progress-bar",
-  "player_bar.left_controls": "ytmusic-player-bar .left-controls",
-  "player_bar.play_pause": "ytmusic-player-bar #play-pause-button",
-  "player_bar.previous": "ytmusic-player-bar .previous-button",
-  "player_bar.next": "ytmusic-player-bar .next-button",
-  "player_bar.middle_controls": "ytmusic-player-bar .middle-controls",
+  "player_bar.title": "ytmusic-player-bar .title, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytmusicTrackInfoTitle",
+  "player_bar.byline": "ytmusic-player-bar .byline, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytmusicTrackInfoByline",
+  "player_bar.thumbnail": "ytmusic-player-bar .thumbnail img, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytmusicTrackInfoThumbnail",
+  "player_bar.progress": "ytmusic-player-bar #progress-bar, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytMusicMiniPlayerProgressBar",
+  "player_bar.time": "ytmusic-player-bar .time-info, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytMusicMiniPlayerTimeInfo",
+  /** Previous, play/pause and next. */
+  "player_bar.left_controls": "ytmusic-player-bar .left-controls, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytmusicPlayerControlsMainControls",
+  "player_bar.play_pause": "ytmusic-player-bar #play-pause-button, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytmusicPlayerControlsPlayPauseButton button",
+  "player_bar.previous": "ytmusic-player-bar .previous-button, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytmusicPlayerControlsPreviousButton button",
+  "player_bar.next": "ytmusic-player-bar .next-button, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytmusicPlayerControlsNextButton button",
+  /** The track info (and, in the classic layout, the likes and the track menu). */
+  "player_bar.middle_controls": "ytmusic-player-bar .middle-controls, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytMusicMiniPlayerLeftSection",
   /** Likes and the track menu; YTM hides them in narrow windows. */
-  "player_bar.middle_buttons": "ytmusic-player-bar .middle-controls-buttons",
-  "player_bar.like_buttons": "ytmusic-player-bar #like-button-renderer",
-  "player_bar.like": "ytmusic-player-bar #like-button-renderer #button-shape-like button",
-  "player_bar.dislike": "ytmusic-player-bar #like-button-renderer #button-shape-dislike button",
-  "player_bar.menu_button": "ytmusic-player-bar ytmusic-menu-renderer.menu yt-button-shape button",
-  "player_bar.right_controls": "ytmusic-player-bar #right-controls",
-  "player_bar.right_controls_buttons": "ytmusic-player-bar #right-controls .right-controls-buttons",
-  "player_bar.volume_slider": "ytmusic-player-bar #volume-slider",
-  "player_bar.volume_button": "ytmusic-player-bar .volume.ytmusic-player-bar",
+  "player_bar.middle_buttons": "ytmusic-player-bar .middle-controls-buttons, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytMusicMiniPlayerActionBar",
+  "player_bar.like_buttons": "ytmusic-player-bar #like-button-renderer, ytmusic-app-layout > .ytMusicMiniPlayerHost segmented-like-dislike-button-view-model",
+  "player_bar.like":
+    "ytmusic-player-bar #like-button-renderer #button-shape-like button, ytmusic-app-layout > .ytMusicMiniPlayerHost like-button-view-model button",
+  "player_bar.dislike":
+    "ytmusic-player-bar #like-button-renderer #button-shape-dislike button, ytmusic-app-layout > .ytMusicMiniPlayerHost dislike-button-view-model button",
+  "player_bar.menu_button": "ytmusic-player-bar ytmusic-menu-renderer.menu yt-button-shape button, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytMusicMiniPlayerMenuButton button",
+  "player_bar.right_controls": "ytmusic-player-bar #right-controls, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytMusicMiniPlayerRightSection",
+  /** Where plugins put their player-bar buttons (prepended). */
+  "player_bar.right_controls_buttons": "ytmusic-player-bar #right-controls .right-controls-buttons, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytMusicMiniPlayerRightSection",
+  /** The volume slider: a paper-slider (classic) or a range input (new); both have a `value` from 0 to 100. */
+  "player_bar.volume_slider": "ytmusic-player-bar #volume-slider, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytMusicMiniPlayerVolumePopup input",
+  /** The volume button (with its slider, in the new layout). */
+  "player_bar.volume_button": "ytmusic-player-bar .volume.ytmusic-player-bar, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytMusicMiniPlayerVolumeWrapper",
+  /** New layout only: the slider's popup, which YTM shows while the volume button is hovered. */
+  "player_bar.volume_popup": "ytmusic-app-layout > .ytMusicMiniPlayerHost .ytMusicMiniPlayerVolumePopup",
+  /** Classic layout only: the volume button shown in narrow windows. */
   "player_bar.expand_volume": "ytmusic-player-bar #expand-volume",
-  "player_bar.volume_sliders": "ytmusic-player-bar #volume-slider, ytmusic-player-bar #expand-volume-slider",
-  "player_bar.repeat": "ytmusic-player-bar #right-controls .repeat",
-  "player_bar.shuffle": "ytmusic-player-bar .shuffle",
-  "player_bar.captions": "ytmusic-player-bar .right-controls-buttons .captions",
+  "player_bar.volume_sliders":
+    "ytmusic-player-bar #volume-slider, ytmusic-player-bar #expand-volume-slider, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytMusicMiniPlayerVolumePopup input",
+  "player_bar.repeat": "ytmusic-player-bar #right-controls .repeat, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytmusicPlayerControlsRepeatButton button",
+  "player_bar.shuffle": "ytmusic-player-bar .shuffle, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytmusicPlayerControlsShuffleButton button",
+  "player_bar.captions": 'ytmusic-player-bar .right-controls-buttons .captions, ytmusic-app-layout > .ytMusicMiniPlayerHost .ytMusicMiniPlayerRightSection > [client-ve-type="16500"]',
+  /** Classic layout only: the menu of buttons that don't fit narrow windows. */
   "player_bar.expanding_menu": "ytmusic-player-bar #expanding-menu",
-  "player_bar.toggle_player_page": "ytmusic-player-bar .toggle-player-page-button",
-  /** The like/dislike pair's element, wherever it is. */
+  /** Opens and closes the player page; in the new layout, a click on the bar itself does. */
+  "player_bar.toggle_player_page": "ytmusic-player-bar .toggle-player-page-button, ytmusic-app-layout > .ytMusicMiniPlayerHost",
+  /** Classic layout only: the arrow that toggles the player page (the new layout has none). */
+  "player_bar.player_page_arrow": "ytmusic-player-bar .toggle-player-page-button",
+  /** New layout only: the row holding the like and dislike halves of the pill. */
+  "player_bar.like_pair": "ytmusic-app-layout > .ytMusicMiniPlayerHost .ytSegmentedLikeDislikeButtonViewModelSegmentedButtonsWrapper",
+  /** The classic like/dislike pair's element, wherever it is. */
   like_buttons: "ytmusic-like-button-renderer",
 
   // ---- fullscreen
-  "integrations.fullscreen": "ytmusic-player-bar[player-fullscreened]",
+  "integrations.fullscreen": "ytmusic-app-layout[player-fullscreened]",
   "integrations.fullscreen_button": ".fullscreen-button",
+  /** Classic layout only; the new one leaves fullscreen with the Escape key (document.exitFullscreen). */
   "integrations.exit_fullscreen_button": ".exit-fullscreen-button",
 
   // ---- nav bar
