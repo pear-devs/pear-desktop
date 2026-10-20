@@ -185,12 +185,22 @@ export class Tools {
     this.#options.onChange();
   }
 
-  /** One line for the settings. */
-  describe(): string {
+  /** The ffmpeg program to convert with, if there is one (yt-dlp is given its folder instead). */
+  get ffmpegProgram(): string | undefined {
+    if (!this.ffmpeg) return undefined;
+    const name = process.platform === "win32" ? "ffmpeg.exe" : "ffmpeg";
+    const { location } = this.ffmpeg;
+    if (!location) return findExecutable("ffmpeg");
+    return isExecutable(location) ? location : join(location, name);
+  }
+
+  /** One line for the settings: the built-in engine's, or yt-dlp's when only it downloads. */
+  describe(engine: "auto" | "yt-dlp" = "yt-dlp"): string {
     const { t } = this.#options;
     const setup = visibleSetup(this.setup);
     if (setup) return setupTitle(setup, t);
     if (this.failure) return this.failure;
+    if (engine === "auto") return this.#describeBuiltIn();
     const missing = [!this.ytDlp && "yt-dlp", !this.ffmpeg && "ffmpeg"].filter(Boolean) as Tool[];
     if (missing.length === 2) {
       return t(
@@ -203,16 +213,33 @@ export class Tools {
         tool: missing[0],
       });
     }
-    const source = (which: ToolSource) =>
-      which === "configured"
-        ? t("plugins.downloader.setup.source-configured", "set in the settings")
-        : which === "system"
-          ? t("plugins.downloader.setup.source-system", "installed on this computer")
-          : t("plugins.downloader.setup.source-managed", "downloaded automatically");
+    const source = (which: ToolSource) => this.#source(which);
     return t("plugins.downloader.setup.ready", "Using yt-dlp {{version}} ({{ytDlpSource}}) and ffmpeg ({{ffmpegSource}}).", {
       version: this.capabilities?.version ?? "",
       ytDlpSource: source(this.ytDlp!.source),
       ffmpegSource: source(this.ffmpeg!.source),
+    });
+  }
+
+  #source(which: ToolSource) {
+    const { t } = this.#options;
+    if (which === "configured") return t("plugins.downloader.setup.source-configured", "set in the settings");
+    if (which === "system") return t("plugins.downloader.setup.source-system", "installed on this computer");
+    return t("plugins.downloader.setup.source-managed", "downloaded automatically");
+  }
+
+  /** ffmpeg.wasm counts as built in; yt-dlp is the fallback, downloaded when first needed. */
+  #describeBuiltIn() {
+    const { t } = this.#options;
+    const converter = this.ffmpeg
+      ? t("plugins.downloader.setup.converter-ffmpeg", "ffmpeg ({{source}})", { source: this.#source(this.ffmpeg.source) })
+      : t("plugins.downloader.setup.converter-built-in", "the built-in ffmpeg");
+    const fallback = this.ytDlp
+      ? t("plugins.downloader.setup.fallback-ready", "yt-dlp ({{source}}) takes over when that fails", { source: this.#source(this.ytDlp.source) })
+      : t("plugins.downloader.setup.fallback-missing", "yt-dlp is downloaded when that fails");
+    return t("plugins.downloader.setup.ready-built-in", "Downloading with the built-in downloader, converting with {{converter}}; {{fallback}}.", {
+      converter,
+      fallback,
     });
   }
 

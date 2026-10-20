@@ -22,6 +22,8 @@ export interface DownloadTarget {
   videoId: string;
   /** Download this playlist or album instead of the single track. */
   playlistId?: string;
+  /** Only these positions of the playlist (1-based), e.g. the ones another engine couldn't do. */
+  items?: number[];
 }
 
 export interface Capabilities {
@@ -124,7 +126,9 @@ export function buildArgs(options: ArgsOptions): string[] {
   }
   // Album positions become track numbers.
   if (isAlbum(options.target.playlistId)) args.push("--parse-metadata", "%(playlist_index)s:%(track_number)s");
-  if (playlist && options.playlistLimit > 0) args.push("--playlist-end", String(options.playlistLimit));
+  const items = options.target.items;
+  if (playlist && items?.length) args.push("--playlist-items", items.join(","));
+  else if (playlist && options.playlistLimit > 0) args.push("--playlist-end", String(options.playlistLimit));
   if (options.ffmpegPath) args.push("--ffmpeg-location", options.ffmpegPath);
   args.push("--", url);
   return args;

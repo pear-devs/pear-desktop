@@ -4,7 +4,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, wri
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
-import { DownloadQueue } from "../downloads.ts";
+import { DownloadQueue, type QueueOptions } from "../downloads.ts";
+import { YtDlpEngine, type YtDlpOptions } from "../engines/ytdlp.ts";
 import {
   describeFailure,
   ffmpegSource,
@@ -182,11 +183,17 @@ describe("Installer", () => {
   });
 });
 
+/** A queue of yt-dlp jobs. */
+function queueWith(options: Pick<YtDlpOptions, "prepare" | "argsFor"> & Omit<QueueOptions, "engines">) {
+  const engine = new YtDlpEngine(options);
+  return new DownloadQueue({ ...options, engines: () => [engine] });
+}
+
 describe("DownloadQueue", () => {
   test("cancelling while the tools are being downloaded aborts that", async () => {
     let aborted = false;
     const results: unknown[] = [];
-    const queue = new DownloadQueue({
+    const queue = queueWith({
       prepare: (signal) =>
         new Promise((_, reject) =>
           signal.addEventListener("abort", () => {
@@ -211,7 +218,7 @@ describe("DownloadQueue", () => {
 
   test("a failed install fails the job with its message", async () => {
     const results: { error?: string }[] = [];
-    const queue = new DownloadQueue({
+    const queue = queueWith({
       prepare: () => Promise.reject(new Error("Couldn't download yt-dlp (net::ERR_INTERNET_DISCONNECTED).")),
       argsFor: () => {
         throw new Error("not reached");

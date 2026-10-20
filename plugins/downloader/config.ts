@@ -66,6 +66,18 @@ export const downloaderConfig = {
     description: "Leave empty to use the download folder.",
     group: "Automatic downloads",
   }),
+  engine: config.select(
+    "auto",
+    [
+      { value: "auto", label: "Built in, then yt-dlp" },
+      { value: "yt-dlp", label: "Only yt-dlp" },
+    ],
+    {
+      label: "Download with",
+      description: "The built-in downloader needs no other program; yt-dlp takes over for songs it can't get. The Custom format always uses yt-dlp.",
+      group: "Programs",
+    },
+  ),
   ytDlpPath: config.string("", {
     label: "yt-dlp",
     placeholder: "Found automatically",

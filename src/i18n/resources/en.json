@@ -916,6 +916,14 @@
         "useSession": {
           "label": "Download with my account",
           "description": "Lets downloads reach private playlists, liked songs and age-restricted songs, as pear-desktop did."
+        },
+        "engine": {
+          "label": "Download with",
+          "description": "The built-in downloader needs no other program; yt-dlp takes over for songs it can't get. The Custom format always uses yt-dlp.",
+          "options": {
+            "auto": "Built in, then yt-dlp",
+            "yt-dlp": "Only yt-dlp"
+          }
         }
       },
       "errors": {
@@ -939,7 +947,12 @@
         "source-configured": "set in the settings",
         "source-system": "installed on this computer",
         "source-managed": "downloaded automatically",
-        "ready": "Using yt-dlp {{version}} ({{ytDlpSource}}) and ffmpeg ({{ffmpegSource}})."
+        "ready": "Using yt-dlp {{version}} ({{ytDlpSource}}) and ffmpeg ({{ffmpegSource}}).",
+        "converter-ffmpeg": "ffmpeg ({{source}})",
+        "converter-built-in": "the built-in ffmpeg",
+        "fallback-ready": "yt-dlp ({{source}}) takes over when that fails",
+        "fallback-missing": "yt-dlp is downloaded when that fails",
+        "ready-built-in": "Downloading with the built-in downloader, converting with {{converter}}; {{fallback}}."
       },
       "progress": {
         "converting": "Converting “{{title}}” – {{percent}}%",

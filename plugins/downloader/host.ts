@@ -4,11 +4,18 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { type HostContextOf, livePosition, type NowPlaying, type Track } from "@pear/sdk";
-import { net } from "electron";
+import { YTM_ORIGIN } from "@pear/sdk/util";
+import { nativeImage, net } from "electron";
 import type { downloaderConfig } from "./config.ts";
+import { chooseConverter, type Converter, type Cover, WasmConverter, type WasmFFmpeg } from "./convert.ts";
 import { isSiteCookie, toNetscape } from "./cookies.ts";
 import { DownloadQueue, type QueueState } from "./downloads.ts";
+import { type BuiltInJobOptions, InnertubeEngine, InnertubeSession, type PoTokenAnswer } from "./engines/innertube.ts";
+import type { Engine } from "./engines/types.ts";
+import { YtDlpEngine } from "./engines/ytdlp.ts";
 import { Installer } from "./install.ts";
+import { ffmpegCoreDir } from "./macros.ts" with { type: "macro" };
+import type { PoTokenRequest } from "./potoken.ts";
 import { expandHome, type SetupState, type ToolSource, Tools } from "./tools.ts";
 import { type Capabilities, canEmbedCover } from "./ytdlp.ts";
 
@@ -33,6 +40,10 @@ const UPDATE_DELAY_MS = 15_000;
 const UPDATE_AFTER_FAILURE_MS = 60 * 60 * 1000;
 /** Progress comes per network chunk; the page and the settings need a few updates a second. */
 const PUBLISH_INTERVAL_MS = 250;
+/** BotGuard takes a few seconds in the page; a page that is loading takes longer to answer. */
+const PO_TOKEN_TIMEOUT_MS = 60_000;
+/** The cover's JPEG quality. */
+const COVER_QUALITY = 92;
 /** The taskbar shows at least a sliver while a download runs. */
 const MIN_TASKBAR_PROGRESS = 0.01;
 /** `setProgressBar` value that removes the bar. */
@@ -61,7 +72,11 @@ export async function startHost(ctx: Ctx) {
   downloaders.set(ctx, { queue, tools });
   // Everything but the tool paths is read per download.
   const toolsKey = toolsKeyOf(ctx.config);
-  ctx.onConfigChange((config) => (toolsKeyOf(config) === toolsKey ? undefined : "restart"));
+  ctx.onConfigChange((config) => {
+    if (toolsKeyOf(config) !== toolsKey) return "restart";
+    // The status line names the engine.
+    publisher.flush();
+  });
   ctx.setTimeout(() => void tools.update(), UPDATE_DELAY_MS);
   ctx.onCleanup(() => {
     queue.dispose();
@@ -139,7 +154,7 @@ class Publisher {
     this.#timer = undefined;
     this.#published = Date.now();
     const ctx = this.#ctx;
-    ctx.setStatus(this.#tools.describe());
+    ctx.setStatus(this.#tools.describe(ctx.config.engine));
     const downloader = downloaders.get(ctx);
     if (!downloader) return;
     ctx.emit("state", stateOf(downloader));
@@ -158,8 +173,34 @@ class Publisher {
 // ---------------------------------------------------------------- queue
 
 function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, publish: () => void) {
-  let coverWarned = false;
+  const ytDlp = createYtDlpEngine(ctx, tools, autoJobs);
+  const builtIn = createBuiltInEngine(ctx, tools, autoJobs);
   return new DownloadQueue({
+    engines: () => enginesFor(ctx.config, builtIn, ytDlp),
+    onState: publish,
+    onResult: (result) => {
+      autoJobs.delete(result.id);
+      if (result.error && !result.cancelled) {
+        ctx.log.warn(`${result.label}: ${result.error}`);
+        // The site changes; a newer yt-dlp often fixes failing downloads.
+        void tools.update(UPDATE_AFTER_FAILURE_MS);
+      }
+      ctx.emit("result", result);
+      ctx.api.broadcast("result", result);
+    },
+    log: ctx.log,
+  });
+}
+
+/** The built-in engine first, then yt-dlp; only yt-dlp when chosen, or for the Custom format's ffmpeg arguments. */
+export function enginesFor(config: Pick<Config, "engine" | "format">, builtIn: Engine, ytDlp: Engine): Engine[] {
+  if (config.engine === "yt-dlp" || config.format === "custom") return [ytDlp];
+  return [builtIn, ytDlp];
+}
+
+function createYtDlpEngine(ctx: Ctx, tools: Tools, autoJobs: Set<number>) {
+  let coverWarned = false;
+  return new YtDlpEngine({
     prepare: (signal) => tools.ready(signal),
     cookies: sessionCookies(ctx),
     argsFor: (ready, id) => {
@@ -182,19 +223,68 @@ function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, publish: () 
         customExtension: config.customExtension,
       };
     },
-    onState: publish,
-    onResult: (result) => {
-      autoJobs.delete(result.id);
-      if (result.error && !result.cancelled) {
-        ctx.log.warn(`${result.label}: ${result.error}`);
-        // The site changes; a newer yt-dlp often fixes failing downloads.
-        void tools.update(UPDATE_AFTER_FAILURE_MS);
-      }
-      ctx.emit("result", result);
-      ctx.api.broadcast("result", result);
-    },
     log: ctx.log,
   });
+}
+
+function createBuiltInEngine(ctx: Ctx, tools: Tools, autoJobs: Set<number>) {
+  const session = new InnertubeSession({
+    fetch: (input, init) => ctx.session.fetch(input, init),
+    cookie: () => accountCookie(ctx),
+    poToken: (request: PoTokenRequest) => ctx.request<PoTokenAnswer>("poToken", request, { timeout: PO_TOKEN_TIMEOUT_MS }),
+    log: ctx.log,
+  });
+  const wasm = new WasmConverter({ create: () => createWasmFFmpeg(ctx) });
+  return new InnertubeEngine({
+    session,
+    jobOptions: (id): BuiltInJobOptions => {
+      const { config } = ctx;
+      return {
+        folder: downloadFolder(ctx, autoJobs.has(id)),
+        // The Custom format never gets here (enginesFor).
+        format: config.format === "custom" ? "source" : config.format,
+        template: config.template,
+        playlistFolders: config.playlistFolders,
+        playlistLimit: config.playlistMaxItems,
+        skipExisting: config.skipExisting,
+        squareCover: config.squareCover,
+      };
+    },
+    converter: (): Converter => chooseConverter(tools.ffmpegProgram, () => wasm),
+    cover: (url, square, signal) => fetchCover(ctx, url, square, signal),
+    fetch: (url, init) => ctx.session.fetch(url, init),
+    log: ctx.log,
+  });
+}
+
+/** The cookies of a signed-in session, for the built-in engine; none when signed out or not wanted. */
+async function accountCookie(ctx: Ctx) {
+  if (!ctx.config.useSession) return undefined;
+  const cookies = await ctx.session.cookies.get({ url: YTM_ORIGIN });
+  if (!cookies.some((cookie) => cookie.name === "SAPISID")) return undefined;
+  return cookies.map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
+}
+
+/** ffmpeg.wasm's core: in the app's resources when packaged, in node_modules otherwise. */
+async function createWasmFFmpeg(ctx: Ctx): Promise<WasmFFmpeg> {
+  const dir = ctx.app.isPackaged ? join(process.resourcesPath, "ffmpeg-core") : ffmpegCoreDir();
+  const { createFFmpeg } = await import("@ffmpeg.wasm/main");
+  return createFFmpeg({ corePath: join(dir, "ffmpeg-core.js"), log: false }) as unknown as WasmFFmpeg;
+}
+
+/** The cover art as a JPEG; the site's video thumbnails are 16:9 with the square cover in the middle. */
+async function fetchCover(ctx: Ctx, url: string, square: boolean, signal: AbortSignal): Promise<Cover | undefined> {
+  const response = await ctx.session.fetch(url, { signal });
+  if (!response.ok) throw new Error(`${url} answered HTTP ${response.status}`);
+  let image = nativeImage.createFromBuffer(Buffer.from(await response.arrayBuffer()));
+  if (image.isEmpty()) return undefined;
+  const { width, height } = image.getSize();
+  if (square && width !== height) {
+    const side = Math.min(width, height);
+    image = image.crop({ x: Math.floor((width - side) / 2), y: Math.floor((height - side) / 2), width: side, height: side });
+  }
+  const size = image.getSize();
+  return { data: image.toJPEG(COVER_QUALITY), width: size.width, height: size.height };
 }
 
 /** Automatic downloads go to their own folder when one is set. */

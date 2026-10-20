@@ -3,6 +3,7 @@
 import { remoteErrorMessage } from "@pear/sdk/util";
 import type { JobResult } from "../downloads.ts";
 import type { DownloaderState } from "../host.ts";
+import { type PoTokenRequest, poTokens } from "../potoken.ts";
 import { visibleSetup } from "../progress.ts";
 import type { DownloadTarget } from "../ytdlp.ts";
 import { downloadButton, showState } from "./button.tsx";
@@ -58,6 +59,11 @@ export function startPage(ctx: Ctx) {
   ctx.host.invoke("state").then(apply, () => {});
 
   popupEntry(ctx, startDownload);
+
+  // The built-in engine's PO tokens.
+  const tokens = poTokens();
+  ctx.host.handle("poToken", (request) => tokens.answer(request as PoTokenRequest));
+  ctx.onCleanup(() => tokens.dispose());
 
   // Before the volume button; YTM may re-render or replace the player bar while starting up.
   ctx.mount(menu.root, (root) => {

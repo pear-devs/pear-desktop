@@ -1,13 +1,11 @@
-// Runs yt-dlp jobs one after another and reports their progress (host only).
+// The download queue: one job at a time, each tried with the engines in order
+// (the built-in one, then yt-dlp), with progress for the UI (host only).
 
-import { type ChildProcess, spawn } from "node:child_process";
-import { mkdir } from "node:fs/promises";
-import { createInterface } from "node:readline";
 import { errorMessage } from "@pear/sdk/util";
-import type { ReadyTools } from "./tools.ts";
-import { buildArgs, type ArgsOptions, type DownloadTarget, overallProgress, parseLine } from "./ytdlp.ts";
+import { type Engine, type EngineJob, type EngineResult, isRecoverable, type Progress } from "./engines/types.ts";
+import { type DownloadTarget, overallProgress } from "./ytdlp.ts";
 
-// yt-dlp reports many times a second; the UI needs a few updates.
+// Engines report many times a second; the UI needs a few updates.
 const PROGRESS_INTERVAL_MS = 250;
 
 export interface JobState {
@@ -30,6 +28,8 @@ export interface JobResult {
   files: string[];
   error?: string;
   cancelled?: boolean;
+  /** The engine that did (the rest of) the job. */
+  engine?: Engine["name"];
 }
 
 interface Job {
@@ -39,12 +39,8 @@ interface Job {
 }
 
 export interface QueueOptions {
-  /** The tools for the next job; may download them first. */
-  prepare(signal: AbortSignal): Promise<ReadyTools>;
-  /** Called per job, so config changes apply to the next download. */
-  argsFor(tools: ReadyTools, jobId: number): Omit<ArgsOptions, "target">;
-  /** A cookies file for this job (removed when it ends), if there is a session to share. */
-  cookies?(): Promise<{ path: string; dispose(): Promise<void> } | undefined>;
+  /** The engines for a job, tried in order; read per job, so config changes apply to the next download. */
+  engines(jobId: number): Engine[];
   onState(state: QueueState): void;
   onResult(result: JobResult): void;
   log: { warn(...args: unknown[]): void };
@@ -53,7 +49,7 @@ export interface QueueOptions {
 export class DownloadQueue {
   #options: QueueOptions;
   #pending: Job[] = [];
-  #active: { job: Job; state: JobState; child: ChildProcess | undefined; cancelled: boolean; abort: AbortController } | undefined;
+  #active: { job: Job; state: JobState; cancelled: boolean; abort: AbortController } | undefined;
   #nextId = 1;
   #disposed = false;
 
@@ -79,7 +75,6 @@ export class DownloadQueue {
     if (this.#active) {
       this.#active.cancelled = true;
       this.#active.abort.abort();
-      this.#active.child?.kill();
     }
     this.#emit();
   }
@@ -98,9 +93,10 @@ export class DownloadQueue {
     const job = this.#pending.shift();
     if (!job) return;
     const state: JobState = { id: job.id, label: job.label, progress: 0, stage: "starting" };
-    this.#active = { job, state, child: undefined, cancelled: false, abort: new AbortController() };
+    const abort = new AbortController();
+    this.#active = { job, state, cancelled: false, abort };
     this.#emit();
-    const result = await this.#run(job, state).catch((error: unknown) => ({
+    const result = await this.#run(job, state, abort.signal).catch((error: unknown) => ({
       id: job.id,
       label: job.label,
       files: [],
@@ -113,70 +109,59 @@ export class DownloadQueue {
     void this.#next();
   }
 
-  async #run(job: Job, state: JobState): Promise<JobResult> {
-    const tools = await this.#options.prepare(this.#active!.abort.signal);
-    const options: ArgsOptions = { ...this.#options.argsFor(tools, job.id), target: job.target };
-    await mkdir(options.folder, { recursive: true });
-    // Cancelled before yt-dlp started: there is no process to kill, so don't start one.
-    if (this.#active?.cancelled) return { id: job.id, label: job.label, files: [] };
-    const cookies = await this.#options.cookies?.().catch(() => undefined);
-    if (cookies) options.cookiesFile = cookies.path;
-    try {
-      return await this.#spawn(job, state, tools, options);
-    } finally {
-      await cookies?.dispose().catch(() => {});
-    }
-  }
-
-  async #spawn(job: Job, state: JobState, tools: ReadyTools, options: ArgsOptions): Promise<JobResult> {
-    const child = spawn(tools.ytDlp, buildArgs(options), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
-    if (this.#active) this.#active.child = child;
-
-    const files: string[] = [];
-    const errors: string[] = [];
-    let item = { index: 1, count: 1 };
-    let lastEmit = 0;
-    const onLine = (line: string) => {
-      const event = parseLine(line);
-      if (!event) return;
-      switch (event.type) {
-        case "item":
-          item = event;
-          state.item = event;
-          state.stage = "downloading";
-          state.progress = overallProgress(event.index, event.count, 0);
-          return this.#emit();
-        case "progress": {
-          state.stage = "downloading";
-          state.progress = overallProgress(item.index, item.count, event.fraction);
-          if (Date.now() - lastEmit < PROGRESS_INTERVAL_MS && event.fraction < 1) return;
-          lastEmit = Date.now();
-          return this.#emit();
-        }
-        case "convert":
-          state.stage = "converting";
-          return this.#emit();
-        case "done":
-          files.push(event.file);
-          return;
-        case "error":
-          errors.push(event.message);
-          return;
-        case "warning":
-          this.#options.log.warn("yt-dlp:", event.message);
-          return;
+  /** Tries the engines in order; one that can't do (part of) the job hands it to the next. */
+  async #run(job: Job, state: JobState, signal: AbortSignal): Promise<JobResult> {
+    const engines = this.#options.engines(job.id);
+    const saved: string[] = [];
+    let target = job.target;
+    for (const [index, engine] of engines.entries()) {
+      try {
+        const result = await engine.download({ ...job, target }, this.#progress(state), signal);
+        return { ...resultOf(job, [...saved, ...result.files], result), engine: engine.name };
+      } catch (error) {
+        const next = engines[index + 1];
+        if (!next || !isRecoverable(error) || signal.aborted) throw error;
+        this.#options.log.warn(`${engine.name} couldn't download ${job.label} (${error.message}); trying ${next.name}`);
+        saved.push(...error.files);
+        if (error.items) target = { ...target, items: error.items };
+        state.stage = "starting";
+        this.#emit();
       }
-    };
-    createInterface({ input: child.stdout }).on("line", onLine);
-    createInterface({ input: child.stderr }).on("line", onLine);
-
-    const code = await new Promise<number | null>((resolve, reject) => {
-      child.once("error", reject);
-      child.once("close", resolve);
-    });
-    const result: JobResult = { id: job.id, label: job.label, files };
-    // Playlists may have a few unavailable items; that's still a success.
-    if (code !== 0 && files.length === 0) result.error = errors.at(-1) ?? `yt-dlp exited with code ${code}`;
-    return result;
+    }
+    return { id: job.id, label: job.label, files: saved };
   }
+
+  #progress(state: JobState): Progress {
+    let lastEmit = 0;
+    return {
+      item: (index, count, title) => {
+        state.item = { index, count, title };
+        state.stage = "downloading";
+        state.progress = overallProgress(index, count, 0);
+        this.#emit();
+      },
+      download: (fraction) => {
+        state.stage = "downloading";
+        state.progress = Math.min(1, fraction);
+        if (Date.now() - lastEmit < PROGRESS_INTERVAL_MS && fraction < 1) return;
+        lastEmit = Date.now();
+        this.#emit();
+      },
+      converting: (fraction) => {
+        const started = state.stage !== "converting";
+        state.stage = "converting";
+        if (fraction !== undefined) state.progress = Math.min(1, fraction);
+        if (!started && Date.now() - lastEmit < PROGRESS_INTERVAL_MS) return;
+        lastEmit = Date.now();
+        this.#emit();
+      },
+    };
+  }
+}
+
+function resultOf(job: EngineJob, files: string[], result: EngineResult): JobResult {
+  const jobResult: JobResult = { id: job.id, label: job.label, files };
+  // Some items failing is still a success while others were saved.
+  if (result.error && files.length === 0) jobResult.error = result.error;
+  return jobResult;
 }

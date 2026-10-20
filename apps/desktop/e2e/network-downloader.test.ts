@@ -1,5 +1,6 @@
-// downloader: a real yt-dlp download from the player-bar button, with tags and
-// cover art; and downloading yt-dlp (and ffmpeg) when they aren't installed.
+// downloader: a real download from the player-bar button with the built-in
+// engine, with tags and cover art (native ffmpeg, and ffmpeg.wasm when there is
+// none); the yt-dlp engine, downloading yt-dlp (and ffmpeg) when they aren't installed.
 
 import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -79,7 +80,9 @@ test("downloader saves the current song as a tagged mp3 from the player bar", as
   await expect(toast.getByRole("button", { name: "Show" })).toBeVisible();
   await expect(button).not.toHaveAttribute("data-busy");
 
-  expect(await status(page)).toMatch(/^Using yt-dlp \S+ \(installed on this computer\) and ffmpeg \(installed on this computer\)\.$/);
+  expect(await status(page)).toBe(
+    "Downloading with the built-in downloader, converting with ffmpeg (installed on this computer); yt-dlp (installed on this computer) takes over when that fails.",
+  );
 
   const files = readdirSync(folder);
   expect(files).toHaveLength(1);
@@ -105,7 +108,11 @@ test("downloader downloads yt-dlp when it isn't installed, and says so when offl
   test.setTimeout(240_000);
   const ffmpeg = whichTool("ffmpeg");
   test.skip(!ffmpeg || !hasTool("ffprobe"), "needs ffmpeg (only yt-dlp is downloaded here)");
-  const { app, page, folder } = await launchDownloader({ launch, tempDir }, { format: "opus", ffmpegPath: dirname(ffmpeg!) }, NO_SYSTEM_TOOLS);
+  const { app, page, folder } = await launchDownloader(
+    { launch, tempDir },
+    { engine: "yt-dlp", format: "opus", ffmpegPath: dirname(ffmpeg!) },
+    NO_SYSTEM_TOOLS,
+  );
   await expect.poll(() => status(page), { timeout: 20_000 }).toBe(
     "yt-dlp isn't installed; it will be downloaded the first time you download a song.",
   );
@@ -161,7 +168,7 @@ test("downloader downloads yt-dlp when it isn't installed, and says so when offl
 test("downloader downloads yt-dlp and ffmpeg when neither is installed", async ({ launch, tempDir }) => {
   test.skip(process.env.PEAR_E2E_FFMPEG_DOWNLOAD !== "1", "set PEAR_E2E_FFMPEG_DOWNLOAD=1 to download ffmpeg");
   test.setTimeout(600_000);
-  const { app, page, folder } = await launchDownloader({ launch, tempDir }, { format: "mp3" }, NO_SYSTEM_TOOLS);
+  const { app, page, folder } = await launchDownloader({ launch, tempDir }, { engine: "yt-dlp", format: "mp3" }, NO_SYSTEM_TOOLS);
   await expect.poll(() => status(page), { timeout: 20_000 }).toBe(
     "yt-dlp and ffmpeg aren't installed; they will be downloaded the first time you download a song.",
   );
@@ -173,6 +180,32 @@ test("downloader downloads yt-dlp and ffmpeg when neither is installed", async (
   expect(info.sources).toEqual({ ytDlp: "managed", ffmpeg: "managed" });
   expect(info.ffmpeg).toBe(join(app.userData, "bin", "ffmpeg"));
   expect(readdirSync(folder)).toEqual([expect.stringMatching(/\.mp3$/)]);
+});
+
+test("downloader converts with ffmpeg.wasm when there is no ffmpeg, without downloading anything", async ({ launch, tempDir }) => {
+  test.skip(!hasTool("ffprobe"), "needs ffprobe to check the file");
+  test.setTimeout(150_000);
+  const { app, page, folder } = await launchDownloader({ launch, tempDir }, { format: "mp3" }, NO_SYSTEM_TOOLS);
+  await expect.poll(() => status(page), { timeout: 20_000 }).toBe(
+    "Downloading with the built-in downloader, converting with the built-in ffmpeg; yt-dlp is downloaded when that fails.",
+  );
+  const { button, toast } = await downloadButton(page);
+  await button.click();
+  await expect(toast).toContainText("Saved", { timeout: 120_000 });
+  // Neither yt-dlp nor ffmpeg was needed.
+  expect(existsSync(join(app.userData, "bin"))).toBe(false);
+  const files = readdirSync(folder);
+  expect(files).toEqual([expect.stringMatching(/\.mp3$/)]);
+  const { format, streams } = ffprobe<{ format: { tags: Record<string, string> }; streams: { codec_type: string; width?: number; height?: number }[] }>(
+    join(folder, files[0]!),
+    "-show_format",
+    "-show_streams",
+  );
+  expect(format.tags.title).toBeTruthy();
+  expect(format.tags.artist).toBeTruthy();
+  // node-id3 wrote the cover, square.
+  const cover = streams.find((s) => s.codec_type === "video");
+  expect(cover?.width).toBe(cover?.height);
 });
 
 test("downloader adds Download to the menus of songs and albums, as pear-desktop", async ({ launch, tempDir }) => {

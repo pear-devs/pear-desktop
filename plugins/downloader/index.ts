@@ -10,7 +10,7 @@ import type { DownloadTarget } from "./ytdlp.ts";
 export default definePlugin({
   id: "downloader",
   name: "Downloader",
-  description: "Saves songs, albums and playlists as tagged audio files with cover art, using yt-dlp.",
+  description: "Saves songs, albums and playlists as tagged audio files with cover art.",
   config: downloaderConfig,
   host: {
     start: startHost,
