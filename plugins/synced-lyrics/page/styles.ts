@@ -22,47 +22,107 @@ export const lyricsStyles = css`
   *, *::before, *::after { box-sizing: border-box; }
   button { font: inherit; color: inherit; }
 
-  .root { position: relative; min-height: 100%; padding-bottom: 40vh; }
+  /* Lines reach 10px past the edges (hover background); keep the panel from scrolling sideways. */
+  .root { position: relative; min-height: 100%; padding-bottom: 40vh; overflow-x: clip; overflow-clip-margin: 10px; }
   .root.effect-scale { --inactive-weight: 500; --active-weight: 700; --inactive-scale: 1; --active-scale: 1.06; }
   .root.effect-offset { --inactive-weight: 500; --active-weight: 700; --inactive-scale: 1; --active-shift: 14px; }
   .root.effect-focus { --inactive-weight: 600; --active-weight: 700; --inactive-scale: 1; --inactive-blur: 1.6px; }
 
+  /* pear-desktop's lyrics picker. */
   .picker {
     position: sticky;
     top: 0;
     z-index: 2;
     display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 12px 0;
-    margin-bottom: 4px;
-    background: var(--panel-bg, #030303);
-    box-shadow: 0 10px 12px -2px var(--panel-bg, #030303);
-  }
-  .chip {
-    display: inline-flex;
     align-items: center;
+    justify-content: space-around;
+    height: 5em;
+    margin-bottom: 8px;
+    font-size: 14px;
+    background: color-mix(in srgb, var(--panel-bg, #030303) 80%, transparent);
+    backdrop-filter: blur(5px);
+    border-bottom: 1px solid rgb(255 255 255 / 0.1);
+    transition: transform 325ms ease-in-out;
+  }
+  .picker[data-hidden] { transform: translateY(-100%); }
+  .icon { width: 24px; height: 24px; flex: none; }
+  .arrow, .star {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    border: 0;
+    border-radius: 25%;
+    background: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  .arrow:hover, .star:hover { background-color: hsl(0 0% 100% / 0.1); }
+  .star { padding: 4px; color: var(--faint); }
+  .star[aria-pressed="true"] { color: var(--fg); }
+  .picker-content { display: flex; flex-direction: column; align-items: center; justify-content: space-around; width: 50%; }
+  .picker-track { display: flex; width: 100%; overflow: hidden; }
+  .picker-item {
+    display: flex;
+    flex: none;
+    width: 100%;
     gap: 6px;
-    padding: 3px 9px;
-    border: 1px solid rgb(255 255 255 / 0.12);
-    border-radius: 999px;
-    background: rgb(255 255 255 / 0.04);
-    color: var(--faint);
-    font-size: 12px;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.25s ease-in-out;
+  }
+  .picker-item .icon { width: 19px; height: 19px; }
+  .picker-item .name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .picker-item[data-status="error"] > .icon { color: #ff8a80; }
+  .picker-item[data-status="none"] > .icon { color: #f0c000; }
+  .spinner {
+    width: 16px;
+    height: 16px;
+    margin: 2px;
+    border: 2px solid rgb(255 255 255 / 0.25);
+    border-top-color: var(--fg);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .dots { display: flex; gap: 0; margin: 4px 0 0; padding: 0; list-style: none; }
+  .dot {
+    display: block;
+    width: 7px;
+    height: 7px;
+    margin: 0 4px;
+    padding: 0;
+    border: 1px solid #6e7c7c7f;
+    border-radius: 50%;
+    background: black;
+    cursor: pointer;
+  }
+  .dot[aria-current] { background: white; }
+
+  .kaomoji { padding: 32px 0; text-align: center; font-size: 18px; color: var(--faint); user-select: none; }
+  .error pre {
+    margin: 1em 0 0;
+    padding: 0.5em;
+    max-width: 100%;
+    border-radius: 8px;
+    background: rgb(255 255 255 / 0.06);
+    font-size: 14px;
+    white-space: pre-wrap;
+  }
+  .error-title { color: #58f000; font-family: serif; }
+  .error-detail { color: #f0a500; font-family: monospace; overflow-x: auto; }
+  .retry {
+    width: 100%;
+    margin-top: 1em;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 18px;
+    background: rgb(255 255 255 / 0.1);
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
   }
-  .chip:hover:not(:disabled, [aria-checked="true"]) { background: rgb(255 255 255 / 0.1); color: var(--fg); }
-  .chip:disabled { cursor: default; opacity: 0.55; }
-  .chip[aria-checked="true"] { background: var(--fg); border-color: var(--fg); color: #0f0f0f; opacity: 1; }
-  .chip .kind { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.7; }
-  .chip .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.5; }
-  .chip[data-status="found"] .dot { background: var(--accent); opacity: 1; }
-  .chip[aria-checked="true"] .dot { background: #4b6b00; }
-  .chip[data-status="error"] .dot { background: #ff8a80; opacity: 1; }
-  .chip[data-status="loading"] .dot { animation: pulse 900ms ease-in-out infinite alternate; }
-  @keyframes pulse { from { opacity: 0.2; } to { opacity: 0.9; } }
+  .retry:hover { background: rgb(255 255 255 / 0.2); }
 
   .lines { display: flex; flex-direction: column; gap: 2px; }
   .line {
@@ -175,16 +235,6 @@ export const lyricsStyles = css`
 
   .source { margin-top: 28px; color: var(--faint); font-size: 12px; }
   .source a { color: inherit; text-decoration: underline; }
-
-  .skeleton { display: flex; flex-direction: column; gap: 18px; padding-top: 8px; }
-  .skeleton span {
-    height: calc(var(--size) * 0.8);
-    border-radius: 8px;
-    background: linear-gradient(90deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.05));
-    background-size: 200% 100%;
-    animation: shimmer 1.4s ease-in-out infinite;
-  }
-  @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 
   .message { padding: 48px 8px; text-align: center; color: var(--faint); }
   .message .glyph { font-size: 40px; line-height: 1; margin-bottom: 12px; opacity: 0.6; }

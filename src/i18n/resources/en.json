@@ -1673,7 +1673,17 @@
       "musixmatch": {
         "no-token": "Musixmatch only gives lyrics to signed-in apps: set a Musixmatch user token in the settings",
         "token-rejected": "Musixmatch rejected the user token (expired, or asking for a captcha)"
-      }
+      },
+      "nothing-playing": "Nothing playing",
+      "found": {
+        "words": "Word-synced lyrics",
+        "synced": "Synced lyrics",
+        "plain": "Lyrics, not time-synced"
+      },
+      "picker": "Lyrics provider",
+      "previous": "Previous provider",
+      "star": "Always use {{provider}} for this song",
+      "next": "Next provider"
     },
     "taskbar-mediacontrol": {
       "description": "Control playback from your Windows taskbar",

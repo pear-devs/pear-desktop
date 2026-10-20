@@ -46,8 +46,65 @@ describe("LyricsStore", () => {
     store.load(track);
     await settle();
     expect(store.shown).toMatchObject({ provider: "LyricsGenius", synced: false, texts: ["hi", "there"] });
-    store.pick("LRCLib");
+    store.select("LRCLib");
     expect(store.shown?.provider).toBe("LRCLib");
+  });
+
+  test("follows the best provider until switched by hand, like pear-desktop's picker", async () => {
+    const store = new LyricsStore(backend({ YTMusic: null, LRCLib: synced, LyricsGenius: plain }), options);
+    store.load(track);
+    // Before any results: the first provider.
+    expect(store.selected).toBe("YTMusic");
+    expect(store.current.status).toBe("loading");
+    await settle();
+    expect(store.selected).toBe("LRCLib");
+
+    // The arrows go through every provider, wrapping around, whatever they found.
+    store.step(1);
+    expect(store.selected).toBe("MusixMatch");
+    expect(store.current).toEqual({ status: "done", result: null });
+    expect(store.shown).toBeNull();
+    store.step(-2);
+    expect(store.selected).toBe("YTMusic");
+    store.step(-1);
+    expect(store.selected).toBe("LyricsGenius");
+    expect(store.shown).toMatchObject({ provider: "LyricsGenius", synced: false });
+
+    // A new track follows the best provider again.
+    store.load({ ...track, videoId: "next" });
+    await settle();
+    expect(store.selected).toBe("LRCLib");
+  });
+
+  test("a starred provider is always shown for its track, in pear-desktop's storage format", async () => {
+    const storage = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => void storage.set(key, value),
+      removeItem: (key: string) => void storage.delete(key),
+    });
+    try {
+      const store = new LyricsStore(backend({ YTMusic: synced, LyricsGenius: plain }), options);
+      store.load(track);
+      await settle();
+      expect(store.selected).toBe("YTMusic");
+      store.select("LyricsGenius");
+      store.toggleStar();
+      expect(storage.get("ytmd-sl-starred-abc")).toBe(JSON.stringify({ provider: "LyricsGenius" }));
+
+      store.load({ ...track, videoId: "other" });
+      await settle();
+      expect(store.selected).toBe("YTMusic");
+      store.load(track);
+      expect(store.selected).toBe("LyricsGenius");
+      await settle();
+      expect(store.shown?.provider).toBe("LyricsGenius");
+
+      store.toggleStar();
+      expect(storage.has("ytmd-sl-starred-abc")).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   test("reports errors and retries a provider", async () => {

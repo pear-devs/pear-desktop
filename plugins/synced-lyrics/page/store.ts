@@ -1,5 +1,10 @@
 // Page-side lyrics state: per-provider results for the current track, which one
-// is shown, and its romanization. Framework-free; the view subscribes to it.
+// is selected in the picker, and its romanization. Framework-free; the view
+// subscribes to it.
+//
+// Selection works like pear-desktop's: the picker follows the best provider
+// (the preferred one when it has lyrics) until the user switches by hand for
+// this track, and a starred provider is always shown for its track.
 
 import type { Track } from "@pear/sdk";
 import { PROVIDERS, resultRank, type LyricLine, type LyricResult, type ProviderId, type SearchQuery } from "../types.ts";
@@ -34,13 +39,19 @@ export interface Shown {
   romanized: (string | null)[];
 }
 
-const PICK_KEY = "pear:synced-lyrics:pick:";
+// pear-desktop's key and format, so stars carry over.
+const starKey = (videoId: string) => `ytmd-sl-starred-${videoId}`;
 
 export class LyricsStore {
   track: Track | null = null;
   providers = initialProviders();
-  /** The user's explicit choice for this track. */
-  manual: ProviderId | null = null;
+  /** The provider in the picker; kept from track to track. */
+  selected: ProviderId;
+  /** Whether the user switched provider by hand for this track. */
+  manual = false;
+  /** The provider always shown for this track. */
+  starred: ProviderId | null = null;
+  /** The selected provider's lyrics, when it has some. */
   shown: Shown | null = null;
 
   #options: Options;
@@ -52,6 +63,7 @@ export class LyricsStore {
   constructor(backend: Backend, options: Options) {
     this.#backend = backend;
     this.#options = options;
+    this.selected = options.preferred === "auto" ? PROVIDERS[0] : options.preferred;
   }
 
   subscribe(listener: () => void) {
@@ -61,6 +73,11 @@ export class LyricsStore {
 
   get loading() {
     return PROVIDERS.some((id) => this.providers[id].status === "loading");
+  }
+
+  /** The selected provider's search. */
+  get current(): ProviderState {
+    return this.providers[this.selected];
   }
 
   setOptions(options: Options) {
@@ -76,7 +93,9 @@ export class LyricsStore {
     const generation = ++this.#generation;
     this.track = track;
     this.providers = initialProviders();
-    this.manual = track ? readPick(track.videoId) : null;
+    this.manual = false;
+    this.starred = track ? readStar(track.videoId) : null;
+    if (this.starred) this.selected = this.starred;
     this.#shownKey = "";
     this.shown = null;
     this.#emit();
@@ -91,30 +110,43 @@ export class LyricsStore {
     void this.#search(provider, this.track, this.#generation);
   }
 
-  pick(provider: ProviderId) {
-    if (!this.track) return;
-    this.manual = provider;
-    writePick(this.track.videoId, provider);
+  /** Switches to a provider by hand (the picker's arrows and dots). */
+  select(provider: ProviderId) {
+    this.manual = true;
+    this.selected = provider;
     this.#update();
   }
 
-  /** Which provider is displayed: the user's pick, the preferred one, or the richest result. */
+  /** Moves the picker by `step` providers, wrapping around. */
+  step(step: number) {
+    const index = PROVIDERS.indexOf(this.selected);
+    this.select(PROVIDERS[(index + step + PROVIDERS.length) % PROVIDERS.length]!);
+  }
+
+  /** Stars the selected provider for this track, or unstars it. */
+  toggleStar() {
+    if (!this.track) return;
+    this.starred = this.starred === this.selected ? null : this.selected;
+    writeStar(this.track.videoId, this.starred);
+    this.#emit();
+  }
+
+  /** The provider to follow automatically: the preferred one when it has lyrics, or the richest result. */
   choose(): ProviderId | null {
-    const has = (id: ProviderId) => {
-      const state = this.providers[id];
-      return state.status === "done" && resultRank(state.result) > 0;
-    };
-    if (this.manual && has(this.manual)) return this.manual;
     const preferred = this.#options.preferred;
-    if (preferred !== "auto" && has(preferred)) return preferred;
+    if (preferred !== "auto" && this.#rank(preferred) > 0) return preferred;
     let best: ProviderId | null = null;
     let bestRank = 0;
     for (const id of PROVIDERS) {
-      const state = this.providers[id];
-      const rank = state.status === "done" ? resultRank(state.result) : 0;
+      const rank = this.#rank(id);
       if (rank > bestRank) [best, bestRank] = [id, rank];
     }
     return best;
+  }
+
+  #rank(provider: ProviderId) {
+    const state = this.providers[provider];
+    return state.status === "done" ? resultRank(state.result) : 0;
   }
 
   async #search(provider: ProviderId, track: Track, generation: number) {
@@ -138,10 +170,16 @@ export class LyricsStore {
   }
 
   #update() {
-    const provider = this.choose();
-    const state = provider ? this.providers[provider] : undefined;
-    const result = state?.status === "done" ? state.result : null;
-    if (!provider || !result) {
+    if (this.starred) this.selected = this.starred;
+    else if (!this.manual) {
+      const auto = this.choose();
+      // Only move to something better, so the picker doesn't jump between equals.
+      if (auto && (auto === this.#options.preferred || this.#rank(auto) > this.#rank(this.selected))) this.selected = auto;
+    }
+    const provider = this.selected;
+    const state = this.providers[provider];
+    const result = state.status === "done" && resultRank(state.result) > 0 ? state.result : null;
+    if (!result) {
       this.shown = null;
       this.#shownKey = "";
       return this.#emit();
@@ -190,18 +228,19 @@ function initialProviders(): Record<ProviderId, ProviderState> {
   return Object.fromEntries(PROVIDERS.map((id) => [id, { status: "loading" }])) as Record<ProviderId, ProviderState>;
 }
 
-// localStorage can be unavailable (or throw); a forgotten pick is harmless.
-function readPick(videoId: string): ProviderId | null {
+// localStorage can be unavailable (or throw); a forgotten star is harmless.
+function readStar(videoId: string): ProviderId | null {
   try {
-    const value = localStorage.getItem(PICK_KEY + videoId);
-    return (PROVIDERS as readonly string[]).includes(value ?? "") ? (value as ProviderId) : null;
+    const value = JSON.parse(localStorage.getItem(starKey(videoId)) ?? "null") as { provider?: unknown } | null;
+    return (PROVIDERS as readonly unknown[]).includes(value?.provider) ? (value!.provider as ProviderId) : null;
   } catch {
     return null;
   }
 }
 
-function writePick(videoId: string, provider: ProviderId) {
+function writeStar(videoId: string, provider: ProviderId | null) {
   try {
-    localStorage.setItem(PICK_KEY + videoId, provider);
+    if (provider) localStorage.setItem(starKey(videoId), JSON.stringify({ provider }));
+    else localStorage.removeItem(starKey(videoId));
   } catch {}
 }

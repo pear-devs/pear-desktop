@@ -1,8 +1,10 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useLayoutEffect, useRef, useState } from "preact/hooks";
 import { lineAt } from "../lrc.ts";
-import { PROVIDER_NAMES, PROVIDERS, resultRank, type LyricLine, type ProviderId } from "../types.ts";
+import { PROVIDER_NAMES, PROVIDERS, resultRank, type LyricLine } from "../types.ts";
 import type { LyricsStore, ProviderState } from "./store.ts";
+
+type Translate = (key: string, fallback: string, vars?: Record<string, unknown>) => string;
 
 export type LineEffect = "fancy" | "scale" | "offset" | "focus";
 export type GapText = "dots" | "note" | "dash" | "none";
@@ -25,6 +27,7 @@ export interface ViewProps {
   scroller(): HTMLElement | null;
   /** Opens the lyrics' page at the provider in the browser. */
   openSource(url: string): void;
+  t: Translate;
 }
 
 /** While the user scrolls the lyrics themselves, stop following the current line. */
@@ -36,28 +39,38 @@ function useStore(store: LyricsStore) {
 }
 
 export function LyricsView(props: ViewProps) {
-  const { store, options } = props;
+  const { store, options, t } = props;
   useStore(store);
   const shown = store.shown;
   const track = store.track;
+  const current = store.current;
 
+  // The selected provider's lyrics, or what it is doing (pear-desktop's kaomoji).
   let body;
-  if (!track) body = <Message title="Nothing playing" />;
+  if (!track) body = <Message title={t("plugins.synced-lyrics.nothing-playing", "Nothing playing")} />;
   else if (shown?.synced) body = <SyncedLyrics {...props} key={`${track.videoId}:${shown.provider}`} />;
   else if (shown) body = <PlainLyrics texts={shown.texts} romanized={shown.romanized} />;
-  else if (store.loading) body = <Skeleton />;
+  else if (current.status === "loading") body = <LoadingKaomoji />;
+  else if (current.status === "error")
+    body = (
+      <div class="error">
+        <pre class="error-title">{t("plugins.synced-lyrics.errors.fetch", "An error occurred while fetching the lyrics.")}</pre>
+        <pre class="error-detail">{current.message}</pre>
+        <button type="button" class="retry" onClick={() => store.retry(store.selected)}>
+          {t("plugins.synced-lyrics.refetch-btn.normal", "Refetch lyrics")}
+        </button>
+      </div>
+    );
   else
     body = (
-      <Message title="No lyrics found" detail={`${track.title} · ${track.artist}`}>
-        {PROVIDERS.some((id) => store.providers[id].status === "error") && (
-          <p class="hint">Some providers could not be reached. Retry them above.</p>
-        )}
-      </Message>
+      <div class="kaomoji" role="status" aria-label={t("plugins.synced-lyrics.errors.not-found", "No lyrics found for this song.")}>
+        ＼(〇_ｏ)／
+      </div>
     );
 
   return (
-    <div class={`root effect-${options.effect}`} data-state={shown ? (shown.synced ? "synced" : "plain") : store.loading ? "loading" : "empty"}>
-      {track && <Picker store={store} />}
+    <div class={`root effect-${options.effect}`} data-state={viewState(store)}>
+      {track && <Picker store={store} scroller={props.scroller} t={t} />}
       {body}
       {shown && (
         <footer class="source">
@@ -82,51 +95,177 @@ export function LyricsView(props: ViewProps) {
   );
 }
 
-function Picker({ store }: { store: LyricsStore }) {
-  const current = store.shown?.provider;
+export function viewState(store: LyricsStore) {
+  if (store.shown) return store.shown.synced ? "synced" : "plain";
+  if (!store.track) return "empty";
+  return { loading: "loading", error: "error", done: "empty" }[store.current.status];
+}
+
+// Material icons, as pear-desktop's picker uses.
+const ICONS = {
+  left: "M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z",
+  right: "M10 6 8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z",
+  found: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z",
+  error: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z",
+  none: "M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z",
+  star: "M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z",
+  starBorder:
+    "M22 9.24l-7.19-.62L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21 12 17.27 18.18 21l-1.63-7.03L22 9.24zM12 15.4l-3.76 2.27 1-4.28-3.32-2.88 4.38-.38L12 6.1l1.71 4.04 4.38.38-3.32 2.88 1 4.28L12 15.4z",
+};
+
+const Icon = ({ path }: { path: string }) => (
+  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+    <path d={path} fill="currentColor" />
+  </svg>
+);
+
+function status(state: ProviderState) {
+  if (state.status !== "done") return state.status;
+  return resultRank(state.result) > 0 ? "found" : "none";
+}
+
+function describe(state: ProviderState, t: Translate) {
+  switch (state.status) {
+    case "loading":
+      return t("plugins.synced-lyrics.refetch-btn.fetching", "Fetching...");
+    case "error":
+      return state.message;
+    case "done":
+      switch (resultRank(state.result)) {
+        case 3:
+          return t("plugins.synced-lyrics.found.words", "Word-synced lyrics");
+        case 2:
+          return t("plugins.synced-lyrics.found.synced", "Synced lyrics");
+        case 1:
+          return t("plugins.synced-lyrics.found.plain", "Lyrics, not time-synced");
+        default:
+          return t("plugins.synced-lyrics.errors.not-found", "No lyrics found for this song.");
+      }
+  }
+}
+
+/**
+ * pear-desktop's lyrics picker: arrows either side of the provider's name (with
+ * what it found, sliding from one to the next), a star to always show that
+ * provider for this track, and a dot per provider. Slides away while the
+ * lyrics are scrolled, and back when the pointer comes near.
+ */
+function Picker({ store, scroller, t }: { store: LyricsStore; scroller(): HTMLElement | null; t: Translate }) {
+  const index = PROVIDERS.indexOf(store.selected);
+  const ref = useRef<HTMLDivElement>(null);
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    const container = scroller();
+    const picker = ref.current;
+    if (!container || !picker) return;
+    let pointerY = Number.POSITIVE_INFINITY;
+    const sync = () => {
+      const height = picker.offsetHeight;
+      const top = container.getBoundingClientRect().top;
+      setHidden(container.scrollTop > height && pointerY - top - 5 > height);
+    };
+    const onPointer = (event: PointerEvent) => {
+      pointerY = event.clientY;
+      sync();
+    };
+    const onLeave = () => {
+      pointerY = Number.POSITIVE_INFINITY;
+      sync();
+    };
+    container.addEventListener("scroll", sync, { passive: true });
+    container.addEventListener("pointermove", onPointer, { passive: true });
+    container.addEventListener("pointerleave", onLeave);
+    sync();
+    return () => {
+      container.removeEventListener("scroll", sync);
+      container.removeEventListener("pointermove", onPointer);
+      container.removeEventListener("pointerleave", onLeave);
+    };
+  }, []);
+
+  const starred = store.starred === store.selected;
   return (
-    <div class="picker" role="radiogroup" aria-label="Lyrics provider">
-      {PROVIDERS.map((id) => {
-        const state = store.providers[id];
-        const usable = state.status === "done" && resultRank(state.result) > 0;
-        return (
-          <button
-            key={id}
-            type="button"
-            role="radio"
-            class="chip"
-            aria-checked={current === id}
-            data-provider={id}
-            data-status={state.status === "done" ? (usable ? "found" : "none") : state.status}
-            disabled={state.status === "loading" || (state.status === "done" && !usable)}
-            title={describe(state)}
-            onClick={() => (state.status === "error" ? store.retry(id) : store.pick(id))}
-          >
-            <span class="dot" aria-hidden="true" />
-            {PROVIDER_NAMES[id]}
-            {usable && current === id && <span class="kind">{kind(state)}</span>}
-            {state.status === "error" && <span class="kind">retry</span>}
-          </button>
-        );
-      })}
+    <div
+      class="picker"
+      ref={ref}
+      data-hidden={hidden || undefined}
+      data-selected={store.selected}
+      role="group"
+      aria-label={t("plugins.synced-lyrics.picker", "Lyrics provider")}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") store.step(event.key === "ArrowLeft" ? -1 : 1);
+      }}
+    >
+      <button type="button" class="arrow previous" aria-label={t("plugins.synced-lyrics.previous", "Previous provider")} onClick={() => store.step(-1)}>
+        <Icon path={ICONS.left} />
+      </button>
+      <div class="picker-content">
+        <div class="picker-track">
+          {PROVIDERS.map((id, i) => {
+            const state = store.providers[id];
+            const current = i === index;
+            return (
+              <div
+                key={id}
+                class="picker-item"
+                data-provider={id}
+                data-status={status(state)}
+                aria-hidden={!current}
+                title={describe(state, t)}
+                style={{ transform: `translateX(${index * -100}%)` }}
+              >
+                {state.status === "loading" ? <span class="spinner" aria-hidden="true" /> : <Icon path={ICONS[status(state) as "found" | "none" | "error"]} />}
+                <span class="name">{PROVIDER_NAMES[id]}</span>
+                <button
+                  type="button"
+                  class="star"
+                  tabIndex={current ? 0 : -1}
+                  aria-pressed={current && starred}
+                  aria-label={t("plugins.synced-lyrics.star", "Always use {{provider}} for this song", { provider: PROVIDER_NAMES[id] })}
+                  onClick={() => store.toggleStar()}
+                >
+                  <Icon path={store.starred === id ? ICONS.star : ICONS.starBorder} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+        <ul class="dots">
+          {PROVIDERS.map((id, i) => (
+            <li key={id}>
+              <button
+                type="button"
+                class="dot"
+                aria-current={i === index || undefined}
+                aria-label={PROVIDER_NAMES[id]}
+                tabIndex={-1}
+                onClick={() => store.select(id)}
+              />
+            </li>
+          ))}
+        </ul>
+      </div>
+      <button type="button" class="arrow next" aria-label={t("plugins.synced-lyrics.next", "Next provider")} onClick={() => store.step(1)}>
+        <Icon path={ICONS.right} />
+      </button>
     </div>
   );
 }
 
-function kind(state: ProviderState) {
-  if (state.status !== "done") return "";
-  return ["", "plain", "synced", "words"][resultRank(state.result)];
-}
+const LOADING_FRAMES = ["(>_<)", "{ (>_<) }", "{{ (>_<) }}", "{{{ (>_<) }}}", "{{ (>_<) }}", "{ (>_<) }"];
 
-function describe(state: ProviderState) {
-  switch (state.status) {
-    case "loading":
-      return "Searching…";
-    case "error":
-      return `Failed: ${state.message}. Click to retry.`;
-    case "done":
-      return resultRank(state.result) ? `Found ${kind(state)} lyrics` : "No lyrics for this track";
-  }
+function LoadingKaomoji() {
+  const [frame, setFrame] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setFrame((n) => n + 1), 500);
+    return () => clearInterval(timer);
+  }, []);
+  return (
+    <div class="kaomoji" role="status" aria-busy="true">
+      {LOADING_FRAMES[frame % LOADING_FRAMES.length]}
+    </div>
+  );
 }
 
 function SyncedLyrics({ store, options, now, seek, scroller }: ViewProps) {
@@ -291,16 +430,6 @@ function PlainLyrics({ texts, romanized }: { texts: string[]; romanized: (string
           <div key={i} class="spacer" />
         ),
       )}
-    </div>
-  );
-}
-
-function Skeleton() {
-  return (
-    <div class="skeleton" aria-busy="true" aria-label="Searching for lyrics">
-      {[78, 62, 88, 54, 70, 46].map((width, i) => (
-        <span key={i} style={{ width: `${width}%`, animationDelay: `${i * 90}ms` }} />
-      ))}
     </div>
   );
 }

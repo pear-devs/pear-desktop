@@ -6,7 +6,7 @@ import { render } from "preact";
 import type { LyricResult, ProviderId, SearchQuery } from "../types.ts";
 import { LyricsStore, type Options } from "./store.ts";
 import { lyricsStyles } from "./styles.ts";
-import { LyricsView, type GapText, type LineEffect, type ViewOptions } from "./view.tsx";
+import { LyricsView, viewState, type GapText, type LineEffect, type ViewOptions } from "./view.tsx";
 
 export interface LyricsConfig {
   preferredProvider: "auto" | ProviderId;
@@ -74,10 +74,11 @@ export function mountLyrics(ctx: PageContext<LyricsConfig, Commands>): LyricsCon
   const scroller = () => element.parentElement;
   const openSource = (url: string) => void ctx.host.invoke("openSource", url).catch((error) => ctx.log.warn("could not open", url, error));
 
+  const t = (key: string, fallback: string, vars?: Record<string, unknown>) => ctx.t(key, fallback, vars);
   let options = viewOptions(ctx.config);
   let open = false;
   const draw = () =>
-    render(open ? <LyricsView store={store} options={options} now={now} seek={seek} scroller={scroller} openSource={openSource} /> : null, root);
+    render(open ? <LyricsView store={store} options={options} now={now} seek={seek} scroller={scroller} openSource={openSource} t={t} /> : null, root);
 
   const setOpen = (next: boolean) => {
     if (next === open) return;
@@ -124,7 +125,7 @@ export function mountLyrics(ctx: PageContext<LyricsConfig, Commands>): LyricsCon
   store.load(ctx.player.state.track);
 
   const unsubscribe = store.subscribe(() => {
-    element.dataset.state = store.shown ? (store.shown.synced ? "synced" : "plain") : store.loading ? "loading" : "empty";
+    element.dataset.state = viewState(store);
   });
 
   ctx.onCleanup(() => {
