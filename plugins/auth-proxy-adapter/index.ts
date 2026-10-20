@@ -59,8 +59,7 @@ export default definePlugin({
             event.preventDefault();
             callback(proxy.username, proxy.password);
           };
-          ctx.app.on("login", onLogin);
-          ctx.onCleanup(() => ctx.app.off("login", onLogin));
+          ctx.listen(ctx.app, "login", onLogin);
         }
 
         await session.setProxy({ mode: "fixed_servers", proxyRules: rules, proxyBypassRules: config.bypass });

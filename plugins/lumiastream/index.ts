@@ -1,7 +1,8 @@
 // Sends song changes, play/pause and progress to Lumia Stream's local media API.
 
-import { definePlugin, livePosition, type NowPlaying } from "@pear/sdk";
+import { definePlugin, livePosition, type NowPlaying, type Track } from "@pear/sdk";
 import { readSongDetails, type SongDetails } from "@pear/sdk/song-details";
+import { isPlaying } from "@pear/sdk/util";
 import { net } from "electron";
 
 const PORT = 39231;
@@ -15,7 +16,38 @@ const HEADERS = {
   "Access-Control-Allow-Origin": "*",
 };
 
-const isPaused = (state: NowPlaying) => state.ad || (state.status !== "playing" && state.status !== "buffering");
+/** How long the page part gets to answer with the track's details. */
+const DETAILS_TIMEOUT_MS = 5000;
+/** A position jump bigger than this (beyond normal playback) is a seek. */
+const SEEK_THRESHOLD_S = 1.5;
+
+const isPaused = (state: NowPlaying) => state.ad || !isPlaying(state);
+
+type EventType = "switchSong" | "playPause";
+
+/** Lumia's media event, in pear-desktop's shape. */
+function mediaEvent(eventType: EventType, state: NowPlaying, track: Track, details: SongDetails | undefined) {
+  const extra = details?.videoId === track.videoId ? details : undefined;
+  const paused = isPaused(state);
+  return {
+    origin: "\u0079\u006f\u0075\u0074\u0075\u0062\u0065music",
+    eventType,
+    url: track.url,
+    videoId: track.videoId,
+    ...(track.playlistId ? { playlistId: track.playlistId } : {}),
+    cover: track.artworkUrl ?? null,
+    cover_url: track.artworkUrl ?? null,
+    album_url: track.artworkUrl ?? null,
+    title: track.title,
+    artists: [track.artist],
+    status: paused ? "stopped" : "playing",
+    isPaused: paused,
+    progress: Math.round(livePosition(state) * 1000),
+    duration: Math.round(track.durationSeconds * 1000),
+    album: track.album ?? null,
+    ...(extra?.views !== undefined ? { views: extra.views } : {}),
+  };
+}
 
 export default definePlugin({
   id: "lumiastream",
@@ -26,32 +58,15 @@ export default definePlugin({
       let details: SongDetails | undefined;
       let unreachable = false;
       let stopped = false;
-      ctx.onCleanup(() => (stopped = true));
+      ctx.onCleanup(() => {
+        stopped = true;
+      });
 
-      const post = (eventType: "switchSong" | "playPause") => {
+      const post = (eventType: EventType) => {
         const state = ctx.player.state;
         const track = state.track;
         if (stopped || !track || (!track.title && !track.artist)) return;
-        const extra = details?.videoId === track.videoId ? details : undefined;
-        const paused = isPaused(state);
-        const data = {
-          origin: "\u0079\u006f\u0075\u0074\u0075\u0062\u0065music",
-          eventType,
-          url: track.url,
-          videoId: track.videoId,
-          ...(track.playlistId ? { playlistId: track.playlistId } : {}),
-          cover: track.artworkUrl ?? null,
-          cover_url: track.artworkUrl ?? null,
-          album_url: track.artworkUrl ?? null,
-          title: track.title,
-          artists: [track.artist],
-          status: paused ? "stopped" : "playing",
-          isPaused: paused,
-          progress: Math.round(livePosition(state) * 1000),
-          duration: Math.round(track.durationSeconds * 1000),
-          album: track.album ?? null,
-          ...(extra?.views !== undefined ? { views: extra.views } : {}),
-        };
+        const data = mediaEvent(eventType, state, track, details);
         net
           .fetch(`http://127.0.0.1:${PORT}/api/media`, {
             method: "POST",
@@ -68,33 +83,36 @@ export default definePlugin({
           });
       };
 
+      // Views come from the page part; resend once they're known.
+      const fetchDetails = (videoId: string) => {
+        ctx
+          .request<SongDetails | null>("details", undefined, { timeout: DETAILS_TIMEOUT_MS })
+          .then((result) => {
+            if (result?.videoId !== videoId || ctx.player.state.track?.videoId !== videoId) return;
+            details = result;
+            post("switchSong");
+          })
+          .catch(() => {});
+      };
+
       ctx.player.on("change", (state, previous) => {
-        if (state.track && state.track.videoId !== previous.track?.videoId) {
-          const videoId = state.track.videoId;
+        if (!state.track) return;
+        const seeked = Math.abs(livePosition(previous, state.updatedAt) - state.positionSeconds) > SEEK_THRESHOLD_S;
+        if (state.track.videoId !== previous.track?.videoId) {
           details = undefined;
           post("switchSong");
-          // Views come from the page part; resend once they're known.
-          ctx
-            .request<SongDetails | null>("details", undefined, { timeout: 5000 })
-            .then((result) => {
-              if (result?.videoId !== videoId || ctx.player.state.track?.videoId !== videoId) return;
-              details = result;
-              post("switchSong");
-            })
-            .catch(() => {});
-        } else if (state.track && isPaused(state) !== isPaused(previous)) {
+          fetchDetails(state.track.videoId);
+        } else if (isPaused(state) !== isPaused(previous)) {
           post("playPause");
-        } else if (state.track && Math.abs(livePosition(previous, state.updatedAt) - state.positionSeconds) > 1.5) {
-          // A seek.
+        } else if (seeked) {
           post("switchSong");
         }
       });
       if (ctx.player.state.track) post("switchSong");
       // Like pear-desktop, keep Lumia's progress current: an update every second while playing.
-      const ticker = setInterval(() => {
+      ctx.setInterval(() => {
         if (!isPaused(ctx.player.state)) post("switchSong");
       }, PROGRESS_MS);
-      ctx.onCleanup(() => clearInterval(ticker));
     },
   },
   page: (ctx) => {

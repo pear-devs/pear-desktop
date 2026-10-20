@@ -1,8 +1,11 @@
 import { definePlugin, type NowPlaying, type PlayerAction } from "@pear/sdk";
 import { pearIconBitmap } from "@pear/sdk/icon";
+import { isPlaying } from "@pear/sdk/util";
 import { nativeImage, net, type NativeImage, TouchBar } from "electron";
 
 const ARTWORK_HEIGHT = 23;
+/** The app icon's bitmap size, shown while there is no artwork. */
+const FALLBACK_SIZE = 64;
 
 export default definePlugin({
   id: "touchbar",
@@ -13,7 +16,7 @@ export default definePlugin({
     start(ctx) {
       const { TouchBarButton, TouchBarLabel, TouchBarSpacer, TouchBarSegmentedControl, TouchBarScrubber } = TouchBar;
       const fallbackIcon = nativeImage
-        .createFromBitmap(pearIconBitmap(64), { width: 64, height: 64 })
+        .createFromBitmap(pearIconBitmap(FALLBACK_SIZE), { width: FALLBACK_SIZE, height: FALLBACK_SIZE })
         .resize({ height: ARTWORK_HEIGHT });
 
       const title = new TouchBarLabel({ label: "" });
@@ -70,7 +73,7 @@ export default definePlugin({
 
       const update = (state: NowPlaying, previous?: NowPlaying) => {
         title.label = state.track ? `${state.track.title} — ${state.track.artist}` : "";
-        playPause.label = state.status === "playing" || state.status === "buffering" ? "⏸" : "▶️";
+        playPause.label = isPlaying(state) ? "⏸" : "▶️";
         if (state.track?.artworkUrl !== previous?.track?.artworkUrl) void loadArtwork(state.track?.artworkUrl);
       };
       update(ctx.player.state);

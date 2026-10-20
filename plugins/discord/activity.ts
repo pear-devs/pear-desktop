@@ -1,6 +1,7 @@
 // Builds the Rich Presence payload from the player state (pure, unit-tested).
 
 import { livePosition, type NowPlaying } from "@pear/sdk";
+import { isPlaying } from "@pear/sdk/util";
 import type { SongDetails } from "@pear/sdk/song-details";
 import type { SetActivity } from "@xhayper/discord-rpc";
 
@@ -20,16 +21,18 @@ export interface ActivityOptions {
 const GITHUB_URL = "https://github.com/pear-devs/pear-desktop";
 // Discord rejects fields shorter than 2 characters; pad with an invisible Hangul filler.
 const FILLER = "ㅤ";
+const MIN_FIELD = 2;
+const MAX_FIELD = 128;
 
 /** Trims to Discord's 128-character limit and pads to its 2-character minimum. */
 export function sanitize(input: string | undefined, fallback = "Unknown") {
   let text = input?.trim() || fallback;
-  if (text.length > 128) text = `${text.slice(0, 125)}...`;
-  return text.length < 2 ? text.padEnd(2, FILLER) : text;
+  if (text.length > MAX_FIELD) text = `${text.slice(0, MAX_FIELD - 3)}...`;
+  return text.length < MIN_FIELD ? text.padEnd(MIN_FIELD, FILLER) : text;
 }
 
 export function isPaused(state: NowPlaying) {
-  return state.ad || (state.status !== "playing" && state.status !== "buffering");
+  return state.ad || !isPlaying(state);
 }
 
 /** The activity to show, or null to clear it. */

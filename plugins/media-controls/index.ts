@@ -4,7 +4,8 @@
 // plugin is Linux-only.
 
 import MprisPlayer, { type LoopStatus, type Position } from "@jellybrick/mpris-service";
-import { definePlugin, livePosition, type NowPlaying, type RepeatMode } from "@pear/sdk";
+import { definePlugin, livePosition, type HostContext, type NowPlaying, type RepeatMode, type Track } from "@pear/sdk";
+import { debounce, isPlaying, YTM_NAME } from "@pear/sdk/util";
 import { openableUrl } from "./open.ts";
 
 /** What only the page knows: YTM's full-screen player and where the queue is at. */
@@ -25,6 +26,15 @@ const LOOP_STATUS: Record<RepeatMode, LoopStatus> = {
 };
 // YTM's repeat button cycles none → all → one.
 const REPEAT_CYCLE: readonly RepeatMode[] = ["none", "all", "one"];
+/** A position jump bigger than this (beyond normal playback) is a seek. */
+const SEEK_THRESHOLD_S = 1.5;
+/** The page reports the queue position once YTM's re-rendering settles. */
+const NAV_REPORT_DELAY_MS = 200;
+
+type Ctx = HostContext<{}>;
+
+/** Per running host part: applies what the page reports. */
+const navReceivers = new WeakMap<object, (nav: PageNav) => void>();
 
 export default definePlugin({
   id: "media-controls",
@@ -39,24 +49,7 @@ export default definePlugin({
     },
     start(ctx) {
       let state = ctx.player.state;
-
-      class PearMpris extends MprisPlayer {
-        override getPosition() {
-          return secToMicro(livePosition(state));
-        }
-      }
-      const mpris = new PearMpris({
-        name: "\u0059\u006f\u0075\u0074\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063",
-        identity: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063",
-        supportedInterfaces: ["player"],
-      });
-      mpris.canRaise = true;
-      mpris.canQuit = false;
-      mpris.desktopEntry = "\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063";
-      mpris.supportedUriSchemes = ["https"];
-      mpris.supportedMimeTypes = [];
-      mpris.canSeek = true;
-      mpris.canSetFullscreen = true;
+      const mpris = createMpris(() => state);
       // pear-desktop's rules: previous unless at the queue's start; next while
       // tracks follow (autoplay adds them) or the queue repeats.
       let nav: PageNav = { fullscreen: false, before: 0, after: 1 };
@@ -67,74 +60,19 @@ export default definePlugin({
         if (mpris.canGoNext !== canGoNext) mpris.canGoNext = canGoNext;
         if (mpris.fullscreen !== nav.fullscreen) mpris.fullscreen = nav.fullscreen;
       };
-      navs.set(ctx, (next) => {
+      navReceivers.set(ctx, (next) => {
         nav = next;
         applyNav();
       });
-      ctx.onCleanup(() => navs.delete(ctx));
+      ctx.onCleanup(() => navReceivers.delete(ctx));
       applyNav();
 
-      const trackId = (videoId: string) => mpris.objectPath(`track/${videoId.replace(/[^A-Za-z0-9_]/g, "_")}`);
-      const control = ctx.player.control;
-
-      mpris.on("play", () => control({ type: "play" }));
-      mpris.on("pause", () => control({ type: "pause" }));
-      mpris.on("playpause", () => control({ type: "toggle" }));
-      mpris.on("stop", () => control({ type: "pause" }));
-      mpris.on("next", () => control({ type: "next" }));
-      mpris.on("previous", () => control({ type: "previous" }));
-      mpris.on("seek", (offset: number) => control({ type: "seekBy", seconds: microToSec(offset) }));
-      mpris.on("position", (event: Position) => {
-        if (state.track && event.trackId === trackId(state.track.videoId)) {
-          control({ type: "seek", seconds: microToSec(event.position) });
-        }
-      });
-      mpris.on("volume", (volume: number) => control({ type: "volume", value: volume * 100 }));
-      mpris.on("shuffle", (shuffle: boolean) => {
-        if (shuffle !== state.shuffle) control({ type: "shuffle" });
-      });
-      mpris.on("loopStatus", (status: LoopStatus) => {
-        const target = REPEAT_CYCLE.find((mode) => LOOP_STATUS[mode] === status) ?? "none";
-        const presses = (REPEAT_CYCLE.indexOf(target) - REPEAT_CYCLE.indexOf(state.repeat) + 3) % 3;
-        for (let i = 0; i < presses; i++) control({ type: "repeat" });
-      });
-      mpris.on("raise", () => {
-        ctx.window.show();
-        ctx.window.focus();
-      });
-      mpris.on("fullscreen", (fullscreen: boolean) => {
-        ctx.request("fullscreen", fullscreen).catch((error: unknown) => ctx.log.warn("could not change full screen", error));
-      });
-      mpris.on("open", ({ uri }: { uri: string }) => {
-        const url = openableUrl(uri);
-        if (url) void ctx.window.loadURL(url);
-        else ctx.log.warn("not opening a non-YTM link");
-      });
-      mpris.on("error", (error: Error) => ctx.log.error("MPRIS error", error));
+      handleRequests(ctx, mpris, () => state);
 
       const apply = (next: NowPlaying, previous: NowPlaying | undefined) => {
         state = next;
-        const track = next.track;
-        const old = previous?.track;
-        if (!previous || track?.videoId !== old?.videoId || track?.title !== old?.title || track?.artworkUrl !== old?.artworkUrl) {
-          mpris.metadata = track
-            ? {
-                "mpris:trackid": trackId(track.videoId),
-                "mpris:length": secToMicro(track.durationSeconds),
-                "xesam:title": track.title,
-                "xesam:artist": [track.artist],
-                "xesam:url": track.url,
-                ...(track.album ? { "xesam:album": track.album } : {}),
-                ...(track.artworkUrl ? { "mpris:artUrl": track.artworkUrl } : {}),
-              }
-            : {};
-        }
-        const status =
-          next.status === "playing" || next.status === "buffering"
-            ? MprisPlayer.PLAYBACK_STATUS_PLAYING
-            : track
-              ? MprisPlayer.PLAYBACK_STATUS_PAUSED
-              : MprisPlayer.PLAYBACK_STATUS_STOPPED;
+        if (!previous || metadataChanged(previous.track, next.track)) mpris.metadata = metadata(mpris, next.track);
+        const status = playbackStatus(next);
         if (mpris.playbackStatus !== status) mpris.playbackStatus = status;
         const volume = next.muted ? 0 : next.volume / 100;
         if (mpris.volume !== volume) mpris.volume = volume;
@@ -143,7 +81,7 @@ export default definePlugin({
         applyNav();
 
         // Tell clients about jumps (seeks, track changes) so their progress bars resync.
-        if (previous && Math.abs(livePosition(previous, next.updatedAt) - next.positionSeconds) > 1.5) {
+        if (previous && Math.abs(livePosition(previous, next.updatedAt) - next.positionSeconds) > SEEK_THRESHOLD_S) {
           mpris.seeked(secToMicro(next.positionSeconds));
         }
       };
@@ -156,7 +94,7 @@ export default definePlugin({
     },
     commands: {
       nav(next: PageNav) {
-        navs.get(this)?.(next);
+        navReceivers.get(this)?.(next);
       },
     },
   },
@@ -175,28 +113,104 @@ export default definePlugin({
       last = key;
       void ctx.host.invoke("nav", nav);
     };
-    let scheduled: ReturnType<typeof setTimeout> | undefined;
-    const schedule = () => {
-      clearTimeout(scheduled);
-      scheduled = setTimeout(report, 200);
-    };
+    const schedule = debounce(report, NAV_REPORT_DELAY_MS);
+    ctx.onCleanup(schedule.cancel);
     ctx.host.handle("fullscreen", (fullscreen) => {
       if (!!ctx.$("integrations.fullscreen") === fullscreen) return;
       ctx.$(fullscreen ? "integrations.fullscreen_button" : "integrations.exit_fullscreen_button")?.click();
     });
-    const observer = new MutationObserver(schedule);
-    void ctx.waitFor("player_bar").then((bar) => observer.observe(bar, { attributes: true, attributeFilter: ["player-fullscreened"] }));
-    void ctx.waitFor("queue").then((queue) =>
-      observer.observe(queue, { childList: true, subtree: true, attributes: true, attributeFilter: ["selected"] }),
-    );
-    ctx.player.on("trackChange", schedule);
+    ctx.observe("player_bar", { attributes: true, attributeFilter: ["player-fullscreened"] }, () => schedule());
+    ctx.observe("queue", { childList: true, subtree: true, attributes: true, attributeFilter: ["selected"] }, () => schedule());
+    ctx.player.on("trackChange", () => schedule());
     report();
-    return () => {
-      clearTimeout(scheduled);
-      observer.disconnect();
-    };
   },
 });
 
-/** Per running host part: applies what the page reports. */
-const navs = new WeakMap<object, (nav: PageNav) => void>();
+/** The MPRIS player; its position is read live from `state()`. */
+function createMpris(state: () => NowPlaying) {
+  class PearMpris extends MprisPlayer {
+    override getPosition() {
+      return secToMicro(livePosition(state()));
+    }
+  }
+  const mpris = new PearMpris({
+    name: "\u0059\u006f\u0075\u0074\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063",
+    identity: YTM_NAME,
+    supportedInterfaces: ["player"],
+  });
+  mpris.canRaise = true;
+  mpris.canQuit = false;
+  mpris.desktopEntry = "\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063";
+  mpris.supportedUriSchemes = ["https"];
+  mpris.supportedMimeTypes = [];
+  mpris.canSeek = true;
+  mpris.canSetFullscreen = true;
+  return mpris;
+}
+
+const trackId = (mpris: MprisPlayer, videoId: string) => mpris.objectPath(`track/${videoId.replace(/[^A-Za-z0-9_]/g, "_")}`);
+
+/** What desktop widgets ask of the player. */
+function handleRequests(ctx: Ctx, mpris: MprisPlayer, state: () => NowPlaying) {
+  const control = ctx.player.control;
+  mpris.on("play", () => control({ type: "play" }));
+  mpris.on("pause", () => control({ type: "pause" }));
+  mpris.on("playpause", () => control({ type: "toggle" }));
+  mpris.on("stop", () => control({ type: "pause" }));
+  mpris.on("next", () => control({ type: "next" }));
+  mpris.on("previous", () => control({ type: "previous" }));
+  mpris.on("seek", (offset: number) => control({ type: "seekBy", seconds: microToSec(offset) }));
+  mpris.on("position", (event: Position) => {
+    const { track } = state();
+    if (track && event.trackId === trackId(mpris, track.videoId)) {
+      control({ type: "seek", seconds: microToSec(event.position) });
+    }
+  });
+  mpris.on("volume", (volume: number) => control({ type: "volume", value: volume * 100 }));
+  mpris.on("shuffle", (shuffle: boolean) => {
+    if (shuffle !== state().shuffle) control({ type: "shuffle" });
+  });
+  mpris.on("loopStatus", (status: LoopStatus) => {
+    for (let i = 0; i < repeatPresses(state().repeat, status); i++) control({ type: "repeat" });
+  });
+  mpris.on("raise", () => ctx.focusWindow());
+  mpris.on("fullscreen", (fullscreen: boolean) => {
+    ctx.request("fullscreen", fullscreen).catch((error: unknown) => ctx.log.warn("could not change full screen", error));
+  });
+  mpris.on("open", ({ uri }: { uri: string }) => {
+    const url = openableUrl(uri);
+    if (url) void ctx.window.loadURL(url);
+    else ctx.log.warn("not opening a non-YTM link");
+  });
+  mpris.on("error", (error: Error) => ctx.log.error("MPRIS error", error));
+}
+
+/** How many presses of YTM's repeat button get from `current` to `status`. */
+function repeatPresses(current: RepeatMode, status: LoopStatus) {
+  const target = REPEAT_CYCLE.find((mode) => LOOP_STATUS[mode] === status) ?? "none";
+  const steps = REPEAT_CYCLE.indexOf(target) - REPEAT_CYCLE.indexOf(current);
+  return (steps + REPEAT_CYCLE.length) % REPEAT_CYCLE.length;
+}
+
+function metadataChanged(old: Track | null | undefined, track: Track | null | undefined) {
+  return track?.videoId !== old?.videoId || track?.title !== old?.title || track?.artworkUrl !== old?.artworkUrl;
+}
+
+function metadata(mpris: MprisPlayer, track: Track | null | undefined) {
+  if (!track) return {};
+  return {
+    "mpris:trackid": trackId(mpris, track.videoId),
+    "mpris:length": secToMicro(track.durationSeconds),
+    "xesam:title": track.title,
+    "xesam:artist": [track.artist],
+    "xesam:url": track.url,
+    ...(track.album ? { "xesam:album": track.album } : {}),
+    ...(track.artworkUrl ? { "mpris:artUrl": track.artworkUrl } : {}),
+  };
+}
+
+function playbackStatus(state: NowPlaying) {
+  if (isPlaying(state)) return MprisPlayer.PLAYBACK_STATUS_PLAYING;
+  if (state.track) return MprisPlayer.PLAYBACK_STATUS_PAUSED;
+  return MprisPlayer.PLAYBACK_STATUS_STOPPED;
+}

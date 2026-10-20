@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { minutes, type ToastContent, toastStyleFromNumber, toastXml } from "../toast.ts";
+import { type ToastContent, toastStyleFromNumber, toastXml } from "../toast.ts";
 
 const content: ToastContent = {
   style: "logo",
@@ -45,6 +45,6 @@ describe("Windows toast XML", () => {
     expect(toastStyleFromNumber(1)).toBe("logo");
     expect(toastStyleFromNumber(4)).toBe("banner_top_custom");
     expect(toastStyleFromNumber(9)).toBeUndefined();
-    expect(minutes(59)).toBe("0:59");
+    expect(toastXml({ ...content, style: "banner_top_custom", elapsedSeconds: 59 })).toContain("0:59 / 3:20");
   });
 });

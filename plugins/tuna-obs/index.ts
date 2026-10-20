@@ -1,6 +1,6 @@
 // Feeds OBS's Tuna plugin (its "web server" source) with the current song.
 
-import { config, definePlugin, livePosition, type NowPlaying } from "@pear/sdk";
+import { config, definePlugin, livePosition, type NowPlaying, type Track } from "@pear/sdk";
 import { readSongDetails, type SongDetails } from "@pear/sdk/song-details";
 import { net } from "electron";
 
@@ -10,6 +10,28 @@ const HEADERS = {
   "Access-Control-Allow-Headers": "*",
   "Access-Control-Allow-Origin": "*",
 };
+
+/** How long the page part gets to answer with the track's details. */
+const DETAILS_TIMEOUT_MS = 5000;
+
+/** Tuna's song data, in pear-desktop's shape. */
+function songData(state: NowPlaying, track: Track, details: SongDetails | undefined) {
+  const extra = details?.videoId === track.videoId ? details : undefined;
+  return {
+    album: track.album ?? null,
+    album_url: track.artworkUrl ?? "",
+    artists: [track.artist],
+    cover: track.artworkUrl ?? "",
+    cover_url: track.artworkUrl ?? "",
+    duration: Math.round(track.durationSeconds * 1000),
+    progress: Math.round(livePosition(state) * 1000),
+    status: state.status === "playing" && !state.ad ? "playing" : "stopped",
+    title: track.title,
+    alternativeTitle: extra?.alternativeTitle ?? "",
+    url: track.url,
+    tags: extra?.tags ?? [],
+  };
+}
 
 export default definePlugin({
   id: "tuna-obs",
@@ -28,75 +50,61 @@ export default definePlugin({
     start(ctx) {
       let details: SongDetails | undefined;
       // While Tuna isn't reachable, probe it with cheap OPTIONS requests instead of full posts ("lite mode").
-      let lite = false;
-      let busy = false;
-      let again = false;
+      let probing = false;
+      let sending = false;
+      /** Something changed while a request was out: send once more after it. */
+      let resend = false;
       let stopped = false;
 
       const send = async () => {
         const state = ctx.player.state;
         const track = state.track;
         if (!track) return;
-        const extra = details?.videoId === track.videoId ? details : undefined;
-        const data = {
-          album: track.album ?? null,
-          album_url: track.artworkUrl ?? "",
-          artists: [track.artist],
-          cover: track.artworkUrl ?? "",
-          cover_url: track.artworkUrl ?? "",
-          duration: Math.round(track.durationSeconds * 1000),
-          progress: Math.round(livePosition(state) * 1000),
-          status: state.status === "playing" && !state.ad ? "playing" : "stopped",
-          title: track.title,
-          alternativeTitle: extra?.alternativeTitle ?? "",
-          url: track.url,
-          tags: extra?.tags ?? [],
-        };
+        const body = probing ? {} : { body: JSON.stringify({ data: songData(state, track, details) }) };
         try {
-          await net.fetch(`http://127.0.0.1:${ctx.config.port}/`, {
-            method: lite ? "OPTIONS" : "POST",
-            headers: HEADERS,
-            ...(lite ? {} : { body: JSON.stringify({ data }) }),
-          });
-          if (lite) {
-            lite = false;
-            again = true;
+          await net.fetch(`http://127.0.0.1:${ctx.config.port}/`, { method: probing ? "OPTIONS" : "POST", headers: HEADERS, ...body });
+          if (probing) {
+            probing = false;
+            resend = true;
             ctx.log.info(`Tuna is reachable on port ${ctx.config.port}`);
           }
         } catch {
-          if (!lite) ctx.log.info(`Tuna isn't reachable on port ${ctx.config.port}; waiting for it`);
-          lite = true;
+          if (!probing) ctx.log.info(`Tuna isn't reachable on port ${ctx.config.port}; waiting for it`);
+          probing = true;
         }
       };
       // One request at a time; changes meanwhile are coalesced into one more.
       const post = () => {
         if (stopped) return;
-        if (busy) {
-          again = true;
+        if (sending) {
+          resend = true;
           return;
         }
-        busy = true;
+        sending = true;
         void send().finally(() => {
-          busy = false;
-          if (!again) return;
-          again = false;
+          sending = false;
+          if (!resend) return;
+          resend = false;
           post();
         });
       };
-      ctx.onCleanup(() => (stopped = true));
+      ctx.onCleanup(() => {
+        stopped = true;
+      });
+
+      const fetchDetails = (videoId: string) => {
+        ctx
+          .request<SongDetails | null>("details", undefined, { timeout: DETAILS_TIMEOUT_MS })
+          .then((result) => {
+            if (result?.videoId !== videoId) return;
+            details = result;
+            post();
+          })
+          .catch(() => {});
+      };
 
       ctx.player.on("change", (state, previous) => {
-        if (state.track && state.track.videoId !== previous.track?.videoId) {
-          const videoId = state.track.videoId;
-          ctx
-            .request<SongDetails | null>("details", undefined, { timeout: 5000 })
-            .then((result) => {
-              if (result?.videoId !== videoId) return;
-              details = result;
-              post();
-            })
-            .catch(() => {});
-        }
+        if (state.track && state.track.videoId !== previous.track?.videoId) fetchDetails(state.track.videoId);
         post();
       });
       post();

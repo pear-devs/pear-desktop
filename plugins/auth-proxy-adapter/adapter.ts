@@ -4,6 +4,7 @@
 import { createServer, type AddressInfo, type Socket } from "node:net";
 import { SocksClient } from "socks";
 import type { Logger } from "@pear/sdk";
+import { errorMessage } from "@pear/sdk/util";
 
 export interface Upstream {
   host: string;
@@ -30,7 +31,7 @@ export function startAdapter(upstream: Upstream, listen: { host: string; port: n
     client.on("close", () => sockets.delete(client));
     client.on("error", () => client.destroy());
     void handle(client, upstream).catch((error: unknown) => {
-      log.warn("SOCKS connection failed:", error instanceof Error ? error.message : error);
+      log.warn("SOCKS connection failed:", errorMessage(error));
       client.destroy();
     });
   });

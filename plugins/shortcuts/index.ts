@@ -51,8 +51,7 @@ export default definePlugin({
           case "volumeDown":
             return ctx.player.control({ type: "volume", value: state.volume - VOLUME_STEP });
           case "showWindow":
-            ctx.window.show();
-            return ctx.window.focus();
+            return ctx.focusWindow();
           default:
             return ctx.player.control(ACTIONS[name].action);
         }
@@ -88,9 +87,7 @@ export default definePlugin({
           return;
         }
       };
-      const contents = ctx.window.webContents;
-      contents.on("before-input-event", onInput);
-      ctx.onCleanup(() => contents.off("before-input-event", onInput));
+      ctx.listen(ctx.window.webContents, "before-input-event", onInput);
 
       if (failed.length > 0) {
         throw new Error(`couldn't register ${failed.join(", ")} (invalid or used by another app)`);

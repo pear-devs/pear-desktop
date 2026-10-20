@@ -2,6 +2,7 @@
 
 import { createServer } from "node:http";
 import { config, definePlugin, livePosition, type NowPlaying } from "@pear/sdk";
+import { isPlaying } from "@pear/sdk/util";
 
 const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" };
 
@@ -10,7 +11,7 @@ function songInfo(state: NowPlaying) {
   return {
     player: {
       hasSong: !!(track?.title && track.artist),
-      isPaused: state.ad || (state.status !== "playing" && state.status !== "buffering"),
+      isPaused: state.ad || !isPlaying(state),
       seekbarCurrentPosition: Math.floor(livePosition(state)),
     },
     track: {

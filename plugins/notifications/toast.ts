@@ -2,6 +2,8 @@
 // that open its app protocol. See
 // https://learn.microsoft.com/en-us/windows/apps/design/shell/tiles-and-notifications/toast-schema
 
+import { formatDuration } from "@pear/sdk/util";
+
 export const TOAST_STYLES = [
   "logo",
   "banner_centered_top",
@@ -50,14 +52,13 @@ const escape = (text: string) =>
 
 const fileUri = (path: string) => escape(`file:///${path.replace(/\\/g, "/").replace(/^\/+/, "")}`);
 
-export const minutes = (seconds: number) => {
-  const whole = Math.max(0, Math.floor(seconds));
-  return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
-};
-
-// Shorter titles get a bigger font in the centered styles.
-const titleStyle = (title: string) =>
-  title.length <= 13 ? "Header" : title.length <= 22 ? "Subheader" : title.length <= 26 ? "Title" : "Subtitle";
+// Shorter titles get a bigger font in the centered styles: the first style whose length fits.
+const TITLE_STYLES: [maxLength: number, style: string][] = [
+  [13, "Header"],
+  [22, "Subheader"],
+  [26, "Title"],
+];
+const titleStyle = (title: string) => TITLE_STYLES.find(([max]) => title.length <= max)?.[1] ?? "Subtitle";
 
 export function toastXml(content: ToastContent): string {
   const { style, paused } = content;
@@ -85,7 +86,7 @@ export function toastXml(content: ToastContent): string {
       break;
     case "banner_top_custom": {
       const album = content.album ? `<text hint-style="captionSubtle" hint-wrap="true" hint-align="right">${escape(content.album)}</text>` : "";
-      const time = `<text hint-style="captionSubtle" hint-wrap="true" hint-align="right">${minutes(content.elapsedSeconds)} / ${minutes(content.durationSeconds)}</text>`;
+      const time = `<text hint-style="captionSubtle" hint-wrap="true" hint-align="right">${formatDuration(content.elapsedSeconds)} / ${formatDuration(content.durationSeconds)}</text>`;
       body = `<image id="1" src="${image}" name="Image" /><text>ㅤ</text><group><subgroup><text hint-style="body">${title}</text><text hint-style="captionSubtle">${artist}</text></subgroup><subgroup hint-textStacking="bottom">${album}${time}</subgroup></group>`;
       break;
     }

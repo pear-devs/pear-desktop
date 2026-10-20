@@ -1,10 +1,12 @@
 import { definePlugin, type NowPlaying } from "@pear/sdk";
+import { isPlaying } from "@pear/sdk/util";
 import { nativeImage, nativeTheme, type NativeImage, type ThumbarButton } from "electron";
 
 type Point = readonly [number, number];
 type Icon = "play" | "pause" | "next" | "previous";
 
 // Glyphs as polygons in a 16×16 design space, rasterized in code so no asset files are needed.
+const DESIGN_SIZE = 16;
 const GLYPHS: Record<Icon, Point[][]> = {
   play: [[[4, 2.5], [13.5, 8], [4, 13.5]]],
   pause: [
@@ -21,6 +23,7 @@ const GLYPHS: Record<Icon, Point[][]> = {
   ],
 };
 
+/** The buttons' bitmap size: 16 px at scale factor 2. */
 const SIZE = 32;
 const SAMPLES = 4;
 
@@ -38,7 +41,7 @@ export default definePlugin({
         if (window.isDestroyed()) return;
         // Nothing to control until a track is loaded.
         if (!state.track) return void window.setThumbarButtons([]);
-        const playing = state.status === "playing" || state.status === "buffering";
+        const playing = isPlaying(state);
         const buttons: ThumbarButton[] = [
           { tooltip: ctx.t("main.tray.previous", "Previous"), icon: icons.previous, click: () => ctx.player.control({ type: "previous" }) },
           {
@@ -52,22 +55,18 @@ export default definePlugin({
       };
 
       ctx.player.on("change", (state, previous) => {
-        const wasPlaying = previous.status === "playing" || previous.status === "buffering";
-        const isPlaying = state.status === "playing" || state.status === "buffering";
-        if (!!state.track !== !!previous.track || wasPlaying !== isPlaying) update(state);
+        const trackChanged = !!state.track !== !!previous.track;
+        if (trackChanged || isPlaying(previous) !== isPlaying(state)) update(state);
       });
       const onTheme = () => {
         icons = renderIcons();
         update();
       };
+      ctx.listen(nativeTheme, "updated", onTheme);
       // Windows forgets the buttons when the window is hidden.
-      const onShow = () => update();
-      nativeTheme.on("updated", onTheme);
-      window.on("show", onShow);
+      ctx.listen(window, "show", () => update());
       update();
       ctx.onCleanup(() => {
-        nativeTheme.off("updated", onTheme);
-        window.off("show", onShow);
         if (!window.isDestroyed()) window.setThumbarButtons([]);
       });
     },
@@ -86,7 +85,7 @@ function renderIcons(): Record<Icon, NativeImage> {
 /** BGRA, premultiplied, antialiased by supersampling. */
 function rasterize(polygons: Point[][], [r, g, b]: [number, number, number]) {
   const buffer = Buffer.alloc(SIZE * SIZE * 4);
-  const scale = 16 / SIZE;
+  const scale = DESIGN_SIZE / SIZE;
   for (let py = 0; py < SIZE; py++) {
     for (let px = 0; px < SIZE; px++) {
       let hits = 0;
@@ -109,11 +108,13 @@ function rasterize(polygons: Point[][], [r, g, b]: [number, number, number]) {
 }
 
 function inside(polygon: Point[], x: number, y: number) {
+  // Even-odd rule: count the edges a ray to the right crosses.
   let result = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+  for (let i = 0; i < polygon.length; i++) {
     const [xi, yi] = polygon[i]!;
-    const [xj, yj] = polygon[j]!;
-    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) result = !result;
+    const [xj, yj] = polygon[(i + polygon.length - 1) % polygon.length]!;
+    const spansY = yi > y !== yj > y;
+    if (spansY && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) result = !result;
   }
   return result;
 }
