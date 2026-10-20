@@ -65,7 +65,8 @@ export type HostMessage =
   | { type: "room"; room: RoomState }
   | { type: "playback"; playback: Playback | null }
   | { type: "pong"; t: number }
-  | { type: "notice"; text: string }
+  /** `key` (plugins.music-together.*) lets the guest show it in its own language; `text` is the English. */
+  | { type: "notice"; text: string; key?: string }
   | { type: "closed" };
 
 export const HOST_ID = "host";

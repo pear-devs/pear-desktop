@@ -11,9 +11,11 @@ const STRIKE = "M3.3 2 2 3.3 20.7 22l1.3-1.3z";
 const CONTINUATION_WAIT_MS = 1500;
 const MAX_CONTINUATIONS = 100;
 
+type Translate = (key: string, fallback?: string, vars?: Readonly<Record<string, unknown>>) => string;
+
 interface Action {
   id: string;
-  label: string;
+  label: (t: Translate) => string;
   icon: string[];
   /** The rows' buttons this action clicks, and whether they must be pressed already. */
   button: SelectorName;
@@ -21,10 +23,10 @@ interface Action {
 }
 
 const ACTIONS: readonly Action[] = [
-  { id: "like", label: "Like all", icon: [THUMB_UP], button: "browse.track_like", pressed: false },
-  { id: "unlike", label: "Remove all likes", icon: [THUMB_UP, STRIKE], button: "browse.track_like", pressed: true },
-  { id: "dislike", label: "Dislike all", icon: [THUMB_DOWN], button: "browse.track_dislike", pressed: false },
-  { id: "undislike", label: "Remove all dislikes", icon: [THUMB_DOWN, STRIKE], button: "browse.track_dislike", pressed: true },
+  { id: "like", label: (t) => t("plugins.album-actions.like", "Like all"), icon: [THUMB_UP], button: "browse.track_like", pressed: false },
+  { id: "unlike", label: (t) => t("plugins.album-actions.unlike", "Remove all likes"), icon: [THUMB_UP, STRIKE], button: "browse.track_like", pressed: true },
+  { id: "dislike", label: (t) => t("plugins.album-actions.dislike", "Dislike all"), icon: [THUMB_DOWN], button: "browse.track_dislike", pressed: false },
+  { id: "undislike", label: (t) => t("plugins.album-actions.undislike", "Remove all dislikes"), icon: [THUMB_DOWN, STRIKE], button: "browse.track_dislike", pressed: true },
 ];
 
 export default definePlugin({
@@ -114,7 +116,11 @@ export default definePlugin({
         // The icon fills up with the share of tracks that are liked (or disliked).
         const pressed = action.pressed ? pending : total - pending;
         button.style.setProperty("--pear-done", `${total === 0 ? 0 : Math.round((pressed / total) * 100)}%`);
-        const label = `${action.label} (${pending} of ${total})`;
+        const label = ctx.t("plugins.album-actions.progress", "{{action}} ({{pending}} of {{total}})", {
+          action: action.label(ctx.t),
+          pending,
+          total,
+        });
         button.title = label;
         button.setAttribute("aria-label", label);
       }

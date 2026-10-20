@@ -46,7 +46,7 @@ test("captions-selector lists caption tracks and switches them through the playe
     expect(await calls()).toContainEqual(["loadModule", "captions"]);
     await button.click();
     const items = page.locator(".pear-captions-popover button");
-    await expect(items).toHaveText(["Off", "English", "German"]);
+    await expect(items).toHaveText(["None", "English", "German"]);
     await items.nth(2).click();
     expect(await calls()).toContainEqual(["setOption", "captions", "track", { languageCode: "de" }]);
     await expect.poll(async () => (await pluginConfig(page, "captions-selector"))?.lastCaptionsCode).toBe("de");

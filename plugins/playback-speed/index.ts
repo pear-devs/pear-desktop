@@ -83,10 +83,11 @@ export default definePlugin({
     async start(ctx) {
       let speed = clamp(ctx.config.speed);
       let saveTimer: ReturnType<typeof setTimeout> | undefined;
+      const title = ctx.t("plugins.playback-speed.title", "Playback speed");
 
       const button = document.createElement("button");
       button.className = "pear-speed-button";
-      button.title = "Playback speed";
+      button.title = title;
       const popover = document.createElement("div");
       popover.className = "pear-speed-popover";
       popover.popover = "auto";
@@ -94,13 +95,13 @@ export default definePlugin({
 
       const label = document.createElement("span");
       const header = document.createElement("header");
-      header.append("Playback speed", label);
+      header.append(title, label);
       const slider = document.createElement("input");
       slider.type = "range";
       slider.min = "0.25";
       slider.max = "2";
       slider.step = "0.05";
-      slider.setAttribute("aria-label", "Playback speed");
+      slider.setAttribute("aria-label", title);
       const presets = document.createElement("div");
       presets.className = "pear-speed-presets";
       const presetButtons = PRESETS.map((value) => {

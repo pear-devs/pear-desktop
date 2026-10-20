@@ -30,16 +30,16 @@ test("in-app menu turns the top bar into a title bar with the app menu", async (
     await trigger.click();
     const menu = page.locator("pear-app-menu").getByRole("menu");
     await expect(menu).toBeVisible();
-    for (const label of ["Settings…", "Reload", "Developer tools", "Zoom in", "Zoom out", "Actual size", "Quit"]) {
+    for (const label of ["Settings…", "Reload", "Toggle DevTools", "Zoom In", "Zoom Out", "Actual Size", "Exit"]) {
       await expect(menu.getByRole("menuitem", { name: new RegExp(`^${label}`) })).toBeVisible();
     }
     await page.waitForTimeout(300);
     await screenshot(page, "in-app-menu");
-    await menu.getByRole("menuitem", { name: /^Zoom in/ }).click();
+    await menu.getByRole("menuitem", { name: /^Zoom In/ }).click();
     await expect(menu).toBeHidden();
     await expect.poll(async () => (await windowInfo(app)).zoom).toBe(0.5);
     await trigger.click();
-    await menu.getByRole("menuitem", { name: /^Actual size/ }).click();
+    await menu.getByRole("menuitem", { name: /^Actual Size/ }).click();
     await expect.poll(async () => (await windowInfo(app)).zoom).toBe(0);
 
     // Keyboard: F10 opens with focus on the first entry, arrows move, Escape closes.

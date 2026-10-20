@@ -160,7 +160,7 @@ describe("music together", () => {
     expect(guest.hostName).toBe("Hosty");
     expect(host.participants.map((p) => p.name)).toEqual(["Hosty", "Alice"]);
     expect(guest.room?.participants.map((p) => p.name)).toEqual(["Hosty", "Alice"]);
-    expect(toasts).toEqual(["Alice joined"]);
+    expect(toasts).toEqual(["Alice joined Music Together"]);
 
     expect(player.videoId).toBe("song-a");
     // Loading starts at 0; the next sync seeks to the host's position.
@@ -322,7 +322,7 @@ describe("music together", () => {
     await flush();
     expect(alice.guest.status).toBe("closed");
     expect(host.participants.map((p) => p.name)).toEqual(["Hosty", "Bob"]);
-    expect(toasts).toContain("Alice left");
+    expect(toasts).toContain("Alice left Music Together");
     expect(bob.guest.room?.participants.map((p) => p.name)).toEqual(["Hosty", "Bob"]);
 
     host.close();

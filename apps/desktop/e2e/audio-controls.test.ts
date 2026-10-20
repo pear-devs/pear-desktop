@@ -165,11 +165,11 @@ test("custom-output-device routes the shared graph to the chosen device", async 
     const sinks = () =>
       page.evaluate(() => ({ context: (window.__audioProbe!.context as (AudioContext & { sinkId: string }) | undefined)?.sinkId }));
     await expect.poll(sinks).toEqual({ context: device.id });
-    expect((await pluginConfig(page, "custom-output-device"))?.device).toBe(device.label);
+    expect((await pluginConfig(page, "custom-output-device"))?.output).toBe(device.label);
 
-    await setConfig(page, "custom-output-device", { device: "" });
+    await setConfig(page, "custom-output-device", { output: "" });
     await expect.poll(sinks).toEqual({ context: "" });
-    await setConfig(page, "custom-output-device", { device: device.label });
+    await setConfig(page, "custom-output-device", { output: device.label });
     await expect.poll(sinks).toEqual({ context: device.id });
     await setEnabled(page, "custom-output-device", false);
     await expect.poll(sinks).toEqual({ context: "" });

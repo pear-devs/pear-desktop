@@ -17,7 +17,7 @@ export default definePlugin({
       step: 100,
       unit: "ms",
     }),
-    quality: config.number(50, { label: "Quality", min: 10, max: 500, step: 10, unit: "px" }),
+    quality: config.number(50, { label: "Quality", min: 10, max: 1000, step: 10, unit: "px" }),
     size: config.number(100, { label: "Size", min: 100, max: 300, step: 5, unit: "%" }),
     buffer: config.number(30, { label: "Frame rate", min: 1, max: 60, step: 1, unit: "fps" }),
     opacity: config.number(100, { label: "Opacity", min: 0, max: 100, step: 5, unit: "%" }),

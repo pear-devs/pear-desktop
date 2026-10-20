@@ -10,7 +10,7 @@ export default definePlugin({
   name: "Precise volume",
   description: "Change the volume in fine steps with the scroll wheel or arrow keys, with a volume readout.",
   config: {
-    steps: config.number(1, { label: "Step", min: 1, max: 20, step: 1, unit: "%" }),
+    steps: config.number(1, { label: "Step", min: 1, max: 100, step: 1, unit: "%" }),
     wheel: config.bool(true, { label: "Scroll over the player to change volume" }),
     arrowsShortcut: config.bool(true, { label: "Arrow up / down change volume" }),
     showHud: config.bool(true, { label: "Show the volume while changing it" }),

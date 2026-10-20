@@ -11,7 +11,7 @@ export default definePlugin({
   name: "Custom output device",
   description: "Play through a chosen audio device instead of the system default.",
   config: {
-    device: config.string("", {
+    output: config.string("", {
       label: "Output device",
       description: "The device's name; pick one from the speaker button in the player bar. Empty uses the system default.",
       placeholder: "System default",
@@ -100,7 +100,7 @@ export default definePlugin({
 
       let applied: string | undefined;
       const apply = async () => {
-        const id = await resolve(ctx.config.device);
+        const id = await resolve(ctx.config.output);
         // An unplugged device: stay on the current output until it's back.
         if (id === undefined || id === (applied ?? "") || ctx.signal.aborted) return;
         applied = id;
@@ -120,8 +120,9 @@ export default definePlugin({
 
       const button = document.createElement("button");
       button.className = "pear-output-button";
-      button.title = "Output device";
-      button.setAttribute("aria-label", "Output device");
+      const buttonLabel = ctx.t("plugins.custom-output-device.menu.device-selector", "Select Device");
+      button.title = buttonLabel;
+      button.setAttribute("aria-label", buttonLabel);
       button.append(icon(ICON));
       const popover = document.createElement("div");
       popover.className = "pear-output-popover";
@@ -132,15 +133,15 @@ export default definePlugin({
       const render = async () => {
         const devices = await outputs();
         const heading = document.createElement("h2");
-        heading.textContent = "Play on";
-        const current = ctx.config.device;
+        heading.textContent = ctx.t("plugins.custom-output-device.heading", "Play on");
+        const current = ctx.config.output;
         const item = (label: string, value: string, checked: boolean) => {
           const element = document.createElement("button");
           element.setAttribute("role", "menuitemradio");
           element.setAttribute("aria-checked", String(checked));
           element.textContent = label;
           element.addEventListener("click", () => {
-            ctx.setConfig({ device: value });
+            ctx.setConfig({ output: value });
             void apply();
             popover.hidePopover();
           });
@@ -148,9 +149,9 @@ export default definePlugin({
         };
         popover.replaceChildren(
           heading,
-          item("System default", "", !current),
+          item(ctx.t("plugins.custom-output-device.system-default", "System default"), "", !current),
           ...devices.map((d, i) => {
-            const label = d.label || `Output ${i + 1}`;
+            const label = d.label || ctx.t("plugins.custom-output-device.unnamed-output", "Output {{number}}", { number: i + 1 });
             return item(label, d.label || d.deviceId, current === d.label || current === d.deviceId);
           }),
         );

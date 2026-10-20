@@ -168,7 +168,7 @@ export default definePlugin({
           modal: true,
           width: 520,
           height: 680,
-          title: "Authorize Pear Desktop on Last.fm",
+          title: ctx.t("plugins.scrobbler.auth-window.title", "Authorize Pear Desktop on Last.fm"),
           autoHideMenuBar: true,
           minimizable: false,
           maximizable: false,
@@ -199,9 +199,12 @@ export default definePlugin({
           authDeclined = true;
           void dialog.showMessageBox(ctx.window, {
             type: "warning",
-            title: "Last.fm",
-            message: "Pear Desktop wasn't authorized on Last.fm",
-            detail: "Scrobbling to Last.fm stays off until you authorize. Turn the Last.fm option off and on to try again.",
+            title: ctx.t("plugins.scrobbler.dialog.lastfm.auth-failed.title", "Authentication Failed"),
+            message: ctx.t("plugins.scrobbler.dialog.lastfm.not-authorized.message", "Pear Desktop wasn't authorized on Last.fm"),
+            detail: ctx.t(
+              "plugins.scrobbler.dialog.lastfm.not-authorized.detail",
+              "Scrobbling to Last.fm stays off until you authorize. Turn the Last.fm option off and on to try again.",
+            ),
           });
         });
         void window.loadURL(lastFm.authUrl(ctx.config.lastfmApiKey, token));

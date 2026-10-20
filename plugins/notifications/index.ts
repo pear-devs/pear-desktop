@@ -68,7 +68,7 @@ export default definePlugin({
         close();
         const interactive = supportsActions && ctx.config.interactive;
         const notification = new Notification({
-          title: track.title || "Playing",
+          title: track.title || ctx.t("plugins.notifications.playing", "Playing"),
           body: track.artist,
           ...(icon ? { icon } : {}),
           silent: true,
@@ -76,9 +76,12 @@ export default definePlugin({
           ...(interactive
             ? {
                 actions: [
-                  { type: "button", text: "Previous" },
-                  { type: "button", text: paused ? "Play" : "Pause" },
-                  { type: "button", text: "Next" },
+                  { type: "button", text: ctx.t("plugins.notifications.buttons.previous", "Previous") },
+                  {
+                    type: "button",
+                    text: paused ? ctx.t("plugins.notifications.buttons.play", "Play") : ctx.t("plugins.notifications.buttons.pause", "Pause"),
+                  },
+                  { type: "button", text: ctx.t("plugins.notifications.buttons.next", "Next") },
                 ],
               }
             : {}),

@@ -107,8 +107,9 @@ export default definePlugin({
 
     const button = document.createElement("button");
     button.className = "pear-captions-button";
-    button.title = "Captions language";
-    button.setAttribute("aria-label", "Captions language");
+    const buttonLabel = ctx.t("plugins.captions-selector.templates.title", "Open captions selector");
+    button.title = buttonLabel;
+    button.setAttribute("aria-label", buttonLabel);
     button.hidden = true;
     button.append(icon(ICON));
     const popover = document.createElement("div");
@@ -129,7 +130,7 @@ export default definePlugin({
     const render = () => {
       const current = api.getOption("captions", "track")?.languageCode;
       const heading = document.createElement("h2");
-      heading.textContent = "Captions";
+      heading.textContent = ctx.t("plugins.captions-selector.heading", "Captions");
       const item = (label: string, checked: boolean, track: CaptionTrack | undefined) => {
         const element = document.createElement("button");
         element.setAttribute("role", "menuitemradio");
@@ -140,7 +141,7 @@ export default definePlugin({
       };
       popover.replaceChildren(
         heading,
-        item("Off", !current, undefined),
+        item(ctx.t("plugins.captions-selector.prompt.selector.none", "None"), !current, undefined),
         ...tracks.map((track) =>
           item(track.displayName ?? track.languageName ?? track.languageCode, track.languageCode === current, track),
         ),

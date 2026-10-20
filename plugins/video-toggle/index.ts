@@ -144,9 +144,9 @@ export default definePlugin({
       container.className = "pear-video-toggle";
       const group = document.createElement("div");
       group.setAttribute("role", "radiogroup");
-      group.setAttribute("aria-label", "Show");
-      const songButton = choice("Song", () => setVideoState(false));
-      const videoButton = choice("Video", () => setVideoState(true));
+      group.setAttribute("aria-label", ctx.t("plugins.video-toggle.templates.group", "Show"));
+      const songButton = choice(ctx.t("plugins.video-toggle.templates.button-song", "Song"), () => setVideoState(false));
+      const videoButton = choice(ctx.t("plugins.video-toggle.templates.button-video", "Video"), () => setVideoState(true));
       group.append(songButton, videoButton);
       container.append(group);
       // Clicks on the player would toggle playback.

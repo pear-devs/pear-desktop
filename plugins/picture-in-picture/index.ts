@@ -236,7 +236,7 @@ export default definePlugin({
     item.className = "pear-pip-item";
     item.setAttribute("role", "option");
     item.tabIndex = -1;
-    item.append(icon(PIP_ICON), "Picture in picture");
+    item.append(icon(PIP_ICON), ctx.t("plugins.picture-in-picture.templates.button", "Picture-in-picture"));
     item.addEventListener("click", (event) => {
       event.stopPropagation();
       // Close YTM's menu the way it closes itself.

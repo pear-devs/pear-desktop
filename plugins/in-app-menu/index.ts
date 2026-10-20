@@ -124,19 +124,34 @@ export default definePlugin({
 
     const mod = isMac ? "⌘" : "Ctrl+";
     const entries: (MenuEntry | null)[] = [
-      { label: "Settings…", action: "settings", accelerator: `${mod},` },
+      { label: ctx.t("main.tray.settings", "Settings…"), action: "settings", accelerator: `${mod},` },
       null,
-      { label: "Reload", action: "reload", accelerator: `${mod}R` },
-      { label: "Developer tools", action: "devtools", accelerator: isMac ? "⌥⌘I" : "Ctrl+Shift+I" },
+      { label: ctx.t("main.menu.view.submenu.reload", "Reload"), action: "reload", accelerator: `${mod}R` },
+      {
+        label: ctx.t("main.menu.options.submenu.advanced-options.submenu.toggle-dev-tools", "Toggle DevTools"),
+        action: "devtools",
+        accelerator: isMac ? "⌥⌘I" : "Ctrl+Shift+I",
+      },
       null,
-      { label: "Zoom in", action: "zoomIn", accelerator: `${mod}+` },
-      { label: "Zoom out", action: "zoomOut", accelerator: `${mod}-` },
-      { label: "Actual size", action: "zoomReset", accelerator: `${mod}0` },
-      { label: "Full screen", action: "fullscreen", accelerator: isMac ? "⌃⌘F" : "F11", checked: (s) => s.fullscreen },
-      { label: "Always on top", action: "alwaysOnTop", checked: (s) => s.alwaysOnTop },
+      { label: ctx.t("main.menu.view.submenu.zoom-in", "Zoom In"), action: "zoomIn", accelerator: `${mod}+` },
+      { label: ctx.t("main.menu.view.submenu.zoom-out", "Zoom Out"), action: "zoomOut", accelerator: `${mod}-` },
+      { label: ctx.t("main.menu.view.submenu.reset-zoom", "Actual Size"), action: "zoomReset", accelerator: `${mod}0` },
+      {
+        label: ctx.t("main.menu.view.submenu.toggle-fullscreen", "Toggle Full Screen"),
+        action: "fullscreen",
+        accelerator: isMac ? "⌃⌘F" : "F11",
+        checked: (s) => s.fullscreen,
+      },
+      { label: ctx.t("main.menu.options.submenu.always-on-top", "Always on top"), action: "alwaysOnTop", checked: (s) => s.alwaysOnTop },
       null,
-      { label: "Restart", action: "restart" },
-      { label: isMac ? "Quit \u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063" : "Quit", action: "quit", accelerator: `${mod}Q` },
+      { label: ctx.t("main.menu.navigation.submenu.restart", "Restart App"), action: "restart" },
+      {
+        label: isMac
+          ? ctx.t("plugins.in-app-menu.menu.quit-app", "Quit {{applicationName}}", { applicationName: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063" })
+          : ctx.t("main.menu.navigation.submenu.quit", "Exit"),
+        action: "quit",
+        accelerator: `${mod}Q`,
+      },
     ];
 
     const run = (action: WindowAction) => void ctx.host.invoke("run", action);
@@ -144,7 +159,7 @@ export default definePlugin({
     // The menu: a trigger in the top bar's left corner and a popup panel.
     const menuHost = document.createElement("pear-app-menu");
     const menuRoot = shadow(menuHost);
-    const trigger = button("trigger", "Application menu", ICONS.menu);
+    const trigger = button("trigger", ctx.t("plugins.in-app-menu.menu.application-menu", "Application menu"), ICONS.menu);
     trigger.setAttribute("aria-haspopup", "menu");
     trigger.setAttribute("aria-expanded", "false");
     const panel = document.createElement("div");
@@ -246,9 +261,9 @@ export default definePlugin({
       const controlsRoot = shadow(controlsHost);
       const controls = document.createElement("div");
       controls.className = "controls";
-      maximizeButton = button("maximize", "Maximize", ICONS.maximize);
-      const minimize = button("minimize", "Minimize", ICONS.minimize);
-      const closeButton = button("close", "Close", ICONS.close);
+      maximizeButton = button("maximize", ctx.t("plugins.in-app-menu.window.maximize", "Maximize"), ICONS.maximize);
+      const minimize = button("minimize", ctx.t("plugins.in-app-menu.window.minimize", "Minimize"), ICONS.minimize);
+      const closeButton = button("close", ctx.t("plugins.in-app-menu.window.close", "Close"), ICONS.close);
       minimize.addEventListener("click", () => run("minimize"));
       maximizeButton.addEventListener("click", () => run("toggleMaximize"));
       closeButton.addEventListener("click", () => run("close"));
@@ -260,7 +275,9 @@ export default definePlugin({
     const applyState = () => {
       updateChecks();
       if (!maximizeButton) return;
-      const label = state.maximized ? "Restore" : "Maximize";
+      const label = state.maximized
+        ? ctx.t("plugins.in-app-menu.window.restore", "Restore")
+        : ctx.t("plugins.in-app-menu.window.maximize", "Maximize");
       maximizeButton.title = label;
       maximizeButton.setAttribute("aria-label", label);
       maximizeButton.replaceChildren(svg(state.maximized ? ICONS.restore : ICONS.maximize));

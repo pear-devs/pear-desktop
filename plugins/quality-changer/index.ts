@@ -90,8 +90,10 @@ export default definePlugin({
 
     const button = document.createElement("button");
     button.className = "pear-quality-button";
-    button.title = "Video quality";
-    button.setAttribute("aria-label", "Video quality");
+    // pear-desktop's text and translations.
+    const buttonLabel = ctx.t("plugins.quality-changer.renderer.quality-settings-button.label", "Open player quality changer");
+    button.title = buttonLabel;
+    button.setAttribute("aria-label", buttonLabel);
     button.append(icon(ICON));
     const popover = document.createElement("div");
     popover.className = "pear-quality-popover";
@@ -106,13 +108,13 @@ export default definePlugin({
       const labels = api.getAvailableQualityLabels?.() ?? [];
       const current = api.getPlaybackQuality();
       const heading = document.createElement("h2");
-      heading.textContent = "Quality";
+      heading.textContent = ctx.t("plugins.quality-changer.popover.heading", "Quality");
       const items = levels.map((level, i) => {
         const item = document.createElement("button");
         item.setAttribute("role", "menuitemradio");
         item.setAttribute("aria-checked", String(level === current));
         item.dataset.quality = level;
-        item.textContent = level === "auto" ? "Auto" : (labels[i] ?? level);
+        item.textContent = level === "auto" ? ctx.t("plugins.quality-changer.popover.auto", "Auto") : (labels[i] ?? level);
         item.addEventListener("click", () => {
           api.setPlaybackQualityRange(level, level);
           api.setPlaybackQuality?.(level);
@@ -122,7 +124,7 @@ export default definePlugin({
       });
       if (items.length === 0) {
         const empty = document.createElement("p");
-        empty.textContent = "Not available for this track";
+        empty.textContent = ctx.t("plugins.quality-changer.popover.unavailable", "Not available for this track");
         popover.replaceChildren(heading, empty);
       } else {
         popover.replaceChildren(heading, ...items);

@@ -40,13 +40,13 @@ export default definePlugin({
         if (!state.track) return void window.setThumbarButtons([]);
         const playing = state.status === "playing" || state.status === "buffering";
         const buttons: ThumbarButton[] = [
-          { tooltip: "Previous", icon: icons.previous, click: () => ctx.player.control({ type: "previous" }) },
+          { tooltip: ctx.t("main.tray.previous", "Previous"), icon: icons.previous, click: () => ctx.player.control({ type: "previous" }) },
           {
-            tooltip: playing ? "Pause" : "Play",
+            tooltip: playing ? ctx.t("plugins.taskbar-mediacontrol.pause", "Pause") : ctx.t("plugins.taskbar-mediacontrol.play", "Play"),
             icon: playing ? icons.pause : icons.play,
             click: () => ctx.player.control({ type: "toggle" }),
           },
-          { tooltip: "Next", icon: icons.next, click: () => ctx.player.control({ type: "next" }) },
+          { tooltip: ctx.t("main.tray.next", "Next"), icon: icons.next, click: () => ctx.player.control({ type: "next" }) },
         ];
         window.setThumbarButtons(buttons);
       };

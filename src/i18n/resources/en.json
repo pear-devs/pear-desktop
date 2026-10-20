@@ -224,7 +224,12 @@
     },
     "album-actions": {
       "description": "Adds Undislike, Dislike, Like, and Unlike buttons to apply this to all songs in a playlist or album",
-      "name": "Album Actions"
+      "name": "Album Actions",
+      "like": "Like all",
+      "unlike": "Remove all likes",
+      "dislike": "Dislike all",
+      "undislike": "Remove all dislikes",
+      "progress": "{{action}} ({{pending}} of {{total}})"
     },
     "album-color-theme": {
       "description": "Applies a dynamic theme and visual effects based on the album color palette",
@@ -511,7 +516,8 @@
           "description": "Language code, remembered when you pick captions.",
           "placeholder": "en"
         }
-      }
+      },
+      "heading": "Captions"
     },
     "clock": {
       "description": "Add a clock to the navigation bar",
@@ -593,15 +599,18 @@
         }
       },
       "settings": {
-        "device": {
+        "showPicker": {
+          "label": "Device picker in the player bar"
+        },
+        "output": {
           "label": "Output device",
           "description": "The device's name; pick one from the speaker button in the player bar. Empty uses the system default.",
           "placeholder": "System default"
-        },
-        "showPicker": {
-          "label": "Device picker in the player bar"
         }
-      }
+      },
+      "heading": "Play on",
+      "system-default": "System default",
+      "unnamed-output": "Output {{number}}"
     },
     "disable-autoplay": {
       "description": "Makes song start in \"paused\" mode",
@@ -922,7 +931,9 @@
     "in-app-menu": {
       "description": "Gives menu-bars a fancy, dark or album-color look",
       "menu": {
-        "hide-dom-window-controls": "Hide DOM window controls"
+        "hide-dom-window-controls": "Hide DOM window controls",
+        "quit-app": "Quit {{applicationName}}",
+        "application-menu": "Application menu"
       },
       "name": "In-App Menu",
       "settings": {
@@ -930,6 +941,12 @@
           "label": "Show window buttons",
           "description": "Minimize, maximize and close on Linux. Turn off if your window manager provides its own."
         }
+      },
+      "window": {
+        "maximize": "Maximize",
+        "minimize": "Minimize",
+        "close": "Close",
+        "restore": "Restore"
       }
     },
     "lumiastream": {
@@ -989,7 +1006,17 @@
         "permission-changed": "Music Together permission changed to \"{{permission}}\"",
         "remove-song-failed": "Failed to remove song",
         "user-connected": "{{name}} joined Music Together",
-        "user-disconnected": "{{name}} left Music Together"
+        "user-disconnected": "{{name}} left Music Together",
+        "already-queued": "That song is already in the queue",
+        "queue-full": "The queue is full",
+        "suggested": "{{name}} suggested {{title}}",
+        "no-suggestions": "The host isn't taking suggestions",
+        "host-controls": "Only the host controls playback",
+        "left": "You left the session",
+        "host-ended": "The host ended the session",
+        "now-host-only": "The host now controls the music alone",
+        "now-suggest": "You can now suggest songs",
+        "now-control": "You can now control playback"
       },
       "settings": {
         "displayName": {
@@ -1006,6 +1033,56 @@
             "control": "Full control"
           }
         }
+      },
+      "ui": {
+        "starting": "Starting session…",
+        "host-failed": "Couldn't start a session: {{error}}",
+        "invalid-code": "That doesn't look like a session code",
+        "joining": "Joining…",
+        "join-failed": "Couldn't join: {{error}}",
+        "permission": {
+          "host-only": "Only you control the music",
+          "suggest": "Guests can add songs to the queue",
+          "control": "Guests can also play, pause, seek and skip"
+        },
+        "permission-label": {
+          "suggest": "Suggest"
+        },
+        "close": "Close",
+        "intro": "Listen in sync with friends. Everyone hears what the host plays.",
+        "start": "Start a session",
+        "or-join": "or join one",
+        "session-code": "Session code",
+        "join": "Join",
+        "hosting": "Hosting",
+        "end": "End session",
+        "copied": "Copied",
+        "copy": "Copy",
+        "code-hint": "Friends join with this code from their Pear Desktop.",
+        "guests-can": "Guests can",
+        "guest-permissions": "Guest permissions",
+        "queue-empty-host": "Songs you or your guests add play next.",
+        "add": "Add to queue",
+        "with-host": "With {{name}}",
+        "connecting": "Connecting…",
+        "leave": "Leave",
+        "in-sync": "In sync",
+        "syncing": "Syncing…",
+        "session": "Session {{code}}",
+        "queue-empty-listen": "The host picks the music.",
+        "queue-empty-guest": "Suggest a song and it plays next.",
+        "suggest": "Suggest",
+        "listening": "Listening",
+        "you": "you",
+        "host": "host",
+        "up-next": "Up next",
+        "added-by": "added by {{name}}",
+        "play-item": "Play {{title}} now",
+        "play-now": "Play now",
+        "remove-item": "Remove {{title}}",
+        "remove": "Remove",
+        "link-placeholder": "Paste a \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music link",
+        "song-link": "Song link"
       }
     },
     "navigation": {
@@ -1062,6 +1139,13 @@
           "label": "Update after play/pause from the notification",
           "description": "Show it again with the opposite button after using its play/pause button."
         }
+      },
+      "playing": "Playing",
+      "buttons": {
+        "previous": "Previous",
+        "play": "Play",
+        "pause": "Pause",
+        "next": "Next"
       }
     },
     "performance-improvement": {
@@ -1124,7 +1208,8 @@
           "label": "Preserve pitch",
           "description": "Off: faster sounds higher, like a record."
         }
-      }
+      },
+      "title": "Playback speed"
     },
     "precise-volume": {
       "description": "Control the volume precisely using mousewheel/hotkeys, with a custom HUD and customizable volume steps",
@@ -1185,6 +1270,11 @@
         "quality-settings-button": {
           "label": "Open player quality changer"
         }
+      },
+      "popover": {
+        "heading": "Quality",
+        "auto": "Auto",
+        "unavailable": "Not available for this track"
       }
     },
     "scrobbler": {
@@ -1194,6 +1284,10 @@
           "auth-failed": {
             "message": "Failed to authenticate with Last.fm\nHide the popup until the next restart.",
             "title": "Authentication Failed"
+          },
+          "not-authorized": {
+            "message": "Pear Desktop wasn't authorized on Last.fm",
+            "detail": "Scrobbling to Last.fm stays off until you authorize. Turn the Last.fm option off and on to try again."
           }
         }
       },
@@ -1262,6 +1356,9 @@
           "label": "Use the canonical artist",
           "description": "Prefer the track's first tag as the artist (e.g. “DECO*27” instead of “DECO*27 & marasy”)."
         }
+      },
+      "auth-window": {
+        "title": "Authorize Pear Desktop on Last.fm"
       }
     },
     "shortcuts": {
@@ -1355,7 +1452,7 @@
           "label": "Filler tangents",
           "description": "Off-topic jokes and tangents."
         },
-        "apiUrl": {
+        "apiURL": {
           "label": "API server",
           "placeholder": "https://sponsor.ajay.app"
         }
@@ -1453,9 +1550,6 @@
           "description": "Used whenever it has lyrics; otherwise word-synced beats line-synced beats plain.",
           "options": {
             "auto": "Best available",
-            "lrclib": "LRCLIB",
-            "ytmusic": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music",
-            "genius": "Genius",
             "LRCLib": "LRCLIB",
             "YTMusic": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music",
             "MusixMatch": "Musixmatch",
@@ -1516,7 +1610,9 @@
     },
     "taskbar-mediacontrol": {
       "description": "Control playback from your Windows taskbar",
-      "name": "Taskbar Media Control"
+      "name": "Taskbar Media Control",
+      "pause": "Pause",
+      "play": "Play"
     },
     "touchbar": {
       "description": "Adds a TouchBar widget for macOS users",
@@ -1606,7 +1702,8 @@
       "name": "Video Toggle",
       "templates": {
         "button-song": "Song",
-        "button-video": "Video"
+        "button-video": "Video",
+        "group": "Show"
       },
       "settings": {
         "mode": {

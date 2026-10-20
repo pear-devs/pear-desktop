@@ -2,6 +2,7 @@
 // and broadcasts its playback, and guests that mirror it. Tested with in-memory
 // links and fake players.
 
+import { interpolate, type Translate } from "@pear/sdk/i18n";
 import {
   HOST_ID,
   isGuestMessage,
@@ -66,6 +67,10 @@ const REQUEST_GRACE_MS = 2500;
 const MAX_NAME = 32;
 const MAX_QUEUE = 100;
 
+/** English with `{{var}}` placeholders filled in: the default when no translator is given. */
+const english: Translate = (key, fallback, vars) => interpolate(fallback ?? key, vars);
+const NOTICE_PREFIX = "plugins.music-together.";
+
 abstract class Observable {
   #listeners = new Set<() => void>();
   #toastListeners = new Set<(text: string) => void>();
@@ -124,14 +129,17 @@ export class HostSession extends Observable {
   #lastSentAt = 0;
   #cleanups: (() => void)[] = [];
   #closed = false;
+  #t: Translate;
 
   constructor(options: {
     player: PlayerPort;
     name: string;
     permission: Permission;
     resolve: (videoId: string) => Promise<TrackInfo>;
+    t?: Translate;
   }) {
     super();
+    this.#t = options.t ?? english;
     this.#player = options.player;
     this.#name = options.name;
     this.permission = options.permission;
@@ -159,7 +167,7 @@ export class HostSession extends Observable {
     });
     link.onClose(() => {
       if (!this.#guests.delete(link.peerId) || !guest.name) return;
-      this.toast(`${guest.name} left`);
+      this.toast(this.#t("plugins.music-together.toast.user-disconnected", "{{name}} left Music Together", { name: guest.name }));
       this.#broadcastRoom();
     });
   }
@@ -176,15 +184,15 @@ export class HostSession extends Observable {
 
   /** Adds a track to the room queue (the host's own additions use this too). */
   async suggest(videoId: string, by = HOST_ID) {
-    const from = this.participants.find((p) => p.id === by)?.name ?? "Someone";
+    const from = this.participants.find((p) => p.id === by)?.name ?? this.#t("plugins.music-together.internal.unknown-user", "Unknown User");
     if (this.queue.some((item) => item.videoId === videoId)) {
-      return this.#notice(by, "That song is already in the queue");
+      return this.#notice(by, (t) => t("plugins.music-together.toast.already-queued", "That song is already in the queue"));
     }
-    if (this.queue.length >= MAX_QUEUE) return this.#notice(by, "The queue is full");
+    if (this.queue.length >= MAX_QUEUE) return this.#notice(by, (t) => t("plugins.music-together.toast.queue-full", "The queue is full"));
     const info = await this.#resolve(videoId).catch(() => ({ title: videoId, artist: "" }));
     if (this.#closed) return;
     this.queue = [...this.queue, { id: String(this.#nextItemId++), videoId, ...info, by }];
-    if (by !== HOST_ID) this.toast(`${from} suggested ${info.title}`);
+    if (by !== HOST_ID) this.toast(this.#t("plugins.music-together.toast.suggested", "{{name}} suggested {{title}}", { name: from, title: info.title }));
     this.#broadcastRoom();
   }
 
@@ -224,7 +232,7 @@ export class HostSession extends Observable {
         room: this.room,
         playback: toPlayback(this.#player.snapshot()),
       } satisfies HostMessage);
-      if (first) this.toast(`${guest.name} joined`);
+      if (first) this.toast(this.#t("plugins.music-together.toast.user-connected", "{{name}} joined Music Together", { name: guest.name }));
       return this.#broadcastRoom();
     }
     if (!guest.name) return;
@@ -232,7 +240,7 @@ export class HostSession extends Observable {
       case "ping":
         return guest.link.send({ type: "pong", t: message.t } satisfies HostMessage);
       case "suggest":
-        if (this.permission === "host-only") return this.#notice(peerId, "The host isn't taking suggestions");
+        if (this.permission === "host-only") return this.#notice(peerId, (t) => t("plugins.music-together.toast.no-suggestions", "The host isn't taking suggestions"));
         return this.suggest(message.videoId, peerId);
       case "control":
         return this.#control(peerId, message.action);
@@ -243,7 +251,7 @@ export class HostSession extends Observable {
     const own = action.type === "removeItem" && this.queue.find((i) => i.id === action.id)?.by === peerId;
     if (this.permission !== "control" && !own) {
       // Resend the truth so the guest's player snaps back.
-      this.#notice(peerId, "Only the host controls playback");
+      this.#notice(peerId, (t) => t("plugins.music-together.toast.host-controls", "Only the host controls playback"));
       return this.#guests.get(peerId)?.link.send({
         type: "playback",
         playback: toPlayback(this.#player.snapshot()),
@@ -292,9 +300,12 @@ export class HostSession extends Observable {
     for (const { link, name } of this.#guests.values()) if (name) link.send(message);
   }
 
-  #notice(peerId: string, text: string) {
-    if (peerId === HOST_ID) return this.toast(text);
-    this.#guests.get(peerId)?.link.send({ type: "notice", text } satisfies HostMessage);
+  /** Guests get the English and the key, to show it in their own language. */
+  #notice(peerId: string, message: (t: Translate) => string) {
+    if (peerId === HOST_ID) return this.toast(message(this.#t));
+    let key: string | undefined;
+    const text = message((k, fallback, vars) => ((key = k), english(k, fallback, vars)));
+    this.#guests.get(peerId)?.link.send({ type: "notice", text, ...(key ? { key } : {}) } satisfies HostMessage);
   }
 }
 
@@ -331,14 +342,17 @@ export class GuestSession extends Observable {
   #lastLocal: LocalPlayback | null = null;
   #cleanups: (() => void)[] = [];
 
-  constructor(options: { link: Link; player: PlayerPort; name: string }) {
+  #t: Translate;
+
+  constructor(options: { link: Link; player: PlayerPort; name: string; t?: Translate }) {
     super();
+    this.#t = options.t ?? english;
     this.#link = options.link;
     this.#player = options.player;
     this.#link.onMessage((message) => {
       if (isHostMessage(message)) this.#handle(message);
     });
-    this.#link.onClose(() => this.#end(this.closeReason || "Connection to the host was lost"));
+    this.#link.onClose(() => this.#end(this.closeReason || this.#t("plugins.music-together.toast.disconnected", "Music Together disconnected")));
     this.#send({ type: "hello", name: cleanName(options.name) });
 
     this.#cleanups.push(this.#player.subscribe(() => this.#onLocalChange()));
@@ -373,7 +387,7 @@ export class GuestSession extends Observable {
   }
 
   leave() {
-    this.closeReason = "You left the session";
+    this.closeReason = this.#t("plugins.music-together.toast.left", "You left the session");
     this.#link.close();
     this.#end(this.closeReason);
   }
@@ -390,7 +404,7 @@ export class GuestSession extends Observable {
       case "room": {
         const before = this.room?.permission;
         this.room = message.room;
-        if (before && before !== message.room.permission) this.toast(permissionToast(message.room.permission));
+        if (before && before !== message.room.permission) this.toast(permissionToast(message.room.permission, this.#t));
         break;
       }
       case "playback":
@@ -402,10 +416,10 @@ export class GuestSession extends Observable {
         return;
       }
       case "notice":
-        this.toast(message.text);
+        this.toast(message.key?.startsWith(NOTICE_PREFIX) ? this.#t(message.key, message.text) : message.text);
         return;
       case "closed":
-        this.closeReason = "The host ended the session";
+        this.closeReason = this.#t("plugins.music-together.toast.host-ended", "The host ended the session");
         this.#link.close();
         return this.#end(this.closeReason);
     }
@@ -503,14 +517,14 @@ export class GuestSession extends Observable {
   }
 }
 
-function permissionToast(permission: Permission) {
+function permissionToast(permission: Permission, t: Translate) {
   switch (permission) {
     case "host-only":
-      return "The host now controls the music alone";
+      return t("plugins.music-together.toast.now-host-only", "The host now controls the music alone");
     case "suggest":
-      return "You can now suggest songs";
+      return t("plugins.music-together.toast.now-suggest", "You can now suggest songs");
     case "control":
-      return "You can now control playback";
+      return t("plugins.music-together.toast.now-control", "You can now control playback");
   }
 }
 

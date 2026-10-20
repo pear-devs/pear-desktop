@@ -24,7 +24,7 @@ export default definePlugin({
     ...(Object.fromEntries(
       Object.entries(CATEGORIES).map(([id, c]) => [id, config.bool(c.on, { label: c.label, description: c.description })]),
     ) as { [K in Category]: ReturnType<typeof config.bool> }),
-    apiUrl: config.string("https://sponsor.ajay.app", {
+    apiURL: config.string("https://sponsor.ajay.app", {
       label: "API server",
       placeholder: "https://sponsor.ajay.app",
     }),
@@ -79,10 +79,10 @@ export default definePlugin({
 });
 
 /** Skip submissions for a video, looked up by hash prefix so the server never learns which video plays. */
-async function fetchSegments(ctx: HostContext<{ [K in Category]: boolean } & { apiUrl: string }>, videoId: string) {
+async function fetchSegments(ctx: HostContext<{ [K in Category]: boolean } & { apiURL: string }>, videoId: string) {
   const categories = (Object.keys(CATEGORIES) as Category[]).filter((c) => ctx.config[c]);
   if (categories.length === 0) return [];
-  const base = (ctx.config.apiUrl || "https://sponsor.ajay.app").replace(/\/+$/, "");
+  const base = (ctx.config.apiURL || "https://sponsor.ajay.app").replace(/\/+$/, "");
   const prefix = createHash("sha256").update(videoId).digest("hex").slice(0, 4);
   const query = new URLSearchParams({ categories: JSON.stringify(categories), actionTypes: '["skip"]' });
   const response = await net.fetch(`${base}/api/skipSegments/${prefix}?${query}`);

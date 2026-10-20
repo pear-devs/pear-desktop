@@ -21,8 +21,8 @@ test("clock and navigation buttons live in the top bar", async () => {
     await setConfig(page, "clock", { displaySeconds: false, hour12: true });
     await expect(clock).toHaveText(/^\d{1,2}:\d{2}\s?[AP]M$/i);
 
-    const back = page.locator("#left-content .pear-navigation button[aria-label='Back']");
-    const forward = page.locator("#left-content .pear-navigation button[aria-label='Forward']");
+    const back = page.locator("#left-content .pear-navigation button[aria-label='Go to previous page']");
+    const forward = page.locator("#left-content .pear-navigation button[aria-label='Go to next page']");
     await expect(back).toBeVisible();
     await expect(forward).toBeDisabled();
     await page.locator("ytmusic-guide-entry-renderer", { hasText: "Explore" }).first().click();

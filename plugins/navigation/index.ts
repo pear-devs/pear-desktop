@@ -54,8 +54,9 @@ export default definePlugin({
   page: async (ctx) => {
     const container = document.createElement("div");
     container.className = "pear-navigation";
-    const back = button("Back", CHEVRON_LEFT, () => history.back());
-    const forward = button("Forward", CHEVRON_RIGHT, () => history.forward());
+    // pear-desktop's texts and translations.
+    const back = button(ctx.t("plugins.navigation.templates.back.title", "Go to previous page"), CHEVRON_LEFT, () => history.back());
+    const forward = button(ctx.t("plugins.navigation.templates.forward.title", "Go to next page"), CHEVRON_RIGHT, () => history.forward());
     container.append(back, forward);
     ctx.onCleanup(() => container.remove());
 
