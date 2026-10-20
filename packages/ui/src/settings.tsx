@@ -10,14 +10,15 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { SettingsField, Switch } from "./fields.tsx";
 import { Icon, type IconName, PearIcon } from "./icons.tsx";
 import type { SettingsModel } from "./model.ts";
+import { localize, type Text, TranslateContext, type UiKey, useText } from "./strings.ts";
 
 export type { SettingsModel } from "./model.ts";
 
 type Block =
   /** A core settings section, one card per field group. */
-  | { kind: "core"; section: CoreSection; title?: string }
+  | { kind: "core"; section: CoreSection; title?: UiKey }
   /** A plugin's card, embedded where it belongs thematically. */
-  | { kind: "plugin"; id: string; title: string }
+  | { kind: "plugin"; id: string; title: UiKey }
   | { kind: "developer" };
 
 type SectionId = "general" | "appearance" | "window" | "advanced" | "plugins" | "about";
@@ -25,50 +26,45 @@ type SectionId = "general" | "appearance" | "window" | "advanced" | "plugins" | 
 interface Section {
   id: SectionId;
   icon: IconName;
-  label: string;
-  sub: string;
   blocks: Block[];
 }
+
+const sectionText = (text: Text, id: SectionId) => ({
+  label: text(`settings-ui.sections.${id}.label`),
+  sub: text(`settings-ui.sections.${id}.sub`),
+});
 
 const SECTIONS: Section[] = [
   {
     id: "general",
     icon: "settings",
-    label: "General",
-    sub: "Startup and updates",
     blocks: [{ kind: "core", section: "general" }],
   },
   {
     id: "appearance",
     icon: "palette",
-    label: "Appearance",
-    sub: "Interface, window title and themes",
     blocks: [{ kind: "core", section: "appearance" }],
   },
   {
     id: "window",
     icon: "window",
-    label: "Window & Tray",
-    sub: "Window behaviour and system tray",
     blocks: [
       { kind: "core", section: "window" },
-      { kind: "plugin", id: "tray", title: "Tray" },
-      { kind: "plugin", id: "in-app-menu", title: "Title bar" },
+      { kind: "plugin", id: "tray", title: "settings-ui.blocks.tray" },
+      { kind: "plugin", id: "in-app-menu", title: "settings-ui.blocks.title-bar" },
     ],
   },
   {
     id: "advanced",
     icon: "tune",
-    label: "Advanced",
-    sub: "Performance, network, API server and developer tools",
     blocks: [
       { kind: "core", section: "advanced" },
-      { kind: "core", section: "apiServer", title: "API server" },
+      { kind: "core", section: "apiServer", title: "settings-ui.blocks.api-server" },
       { kind: "developer" },
     ],
   },
-  { id: "plugins", icon: "puzzle", label: "Plugins", sub: "Enable plugins and configure them", blocks: [] },
-  { id: "about", icon: "info", label: "About", sub: "Versions and app info", blocks: [] },
+  { id: "plugins", icon: "puzzle", blocks: [] },
+  { id: "about", icon: "info", blocks: [] },
 ];
 
 interface Group {
@@ -77,9 +73,15 @@ interface Group {
 }
 
 /** Consecutive fields with the same `group` form a card; fields for other platforms are left out. */
-function groupFields(shape: ConfigShape, platform: string, filter?: (key: string, field: Field) => boolean): Group[] {
+function groupFields(
+  shape: ConfigShape,
+  platform: string,
+  filter?: (key: string, field: Field) => boolean,
+  localized?: (key: string, field: Field) => Field,
+): Group[] {
   const groups: Group[] = [];
-  for (const [key, field] of Object.entries(shape)) {
+  for (const [key, original] of Object.entries(shape)) {
+    const field = localized ? localized(key, original) : original;
     if (field.platforms && !(field.platforms as readonly string[]).includes(platform)) continue;
     if (filter && !filter(key, field)) continue;
     const last = groups.at(-1);
@@ -102,8 +104,18 @@ function useModel(model: SettingsModel) {
   useEffect(() => model.subscribe(() => setTick((t) => t + 1)), [model]);
 }
 
-export function Settings({ model, onClose, standalone = false }: { model: SettingsModel; onClose(): void; standalone?: boolean }) {
+export function Settings(props: { model: SettingsModel; onClose(): void; standalone?: boolean }) {
+  return (
+    <TranslateContext.Provider value={props.model.t}>
+      <Dialog {...props} />
+    </TranslateContext.Provider>
+  );
+}
+
+function Dialog({ model, onClose, standalone = false }: { model: SettingsModel; onClose(): void; standalone?: boolean }) {
   useModel(model);
+  const text = useText();
+  const coreField = (key: string, field: Field) => localize(model.t, "core", key, field);
   const [active, setActive] = useState<SectionId>("general");
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<string | undefined>();
@@ -125,6 +137,7 @@ export function Settings({ model, onClose, standalone = false }: { model: Settin
   const platform = model.app.platform;
   const needle = query.trim().toLowerCase();
   const section = SECTIONS.find((s) => s.id === active)!;
+  const sectionLabels = sectionText(text, active);
   const enabledCount = plugins.filter((p) => model.state(p.id)?.enabled).length;
 
   const setCore = (sectionId: CoreSection, key: string, field: Field, value: unknown) => {
@@ -143,7 +156,7 @@ export function Settings({ model, onClose, standalone = false }: { model: Settin
   const coreCards = (sectionId: CoreSection, title?: string, filter?: (key: string, field: Field) => boolean) => {
     const state = model.core(sectionId);
     if (!state) return null;
-    const groups = groupFields(CORE_SECTIONS[sectionId] as ConfigShape, platform, filter);
+    const groups = groupFields(CORE_SECTIONS[sectionId] as ConfigShape, platform, filter, coreField);
     return groups.map((group, index) => (
       <CardGroup
         key={`${sectionId}-${index}`}
@@ -161,7 +174,7 @@ export function Settings({ model, onClose, standalone = false }: { model: Settin
         ))}
         {index === 0 && (state.status || state.error) && (
           <div class="card-status" data-status={state.status ? "" : undefined} data-error={state.error ? "" : undefined}>
-            {state.error ?? `Listening on ${state.status} · API docs at ${state.status}/swagger`}
+            {state.error ?? text("settings-ui.api-server-status", { address: state.status })}
           </div>
         )}
       </CardGroup>
@@ -185,25 +198,25 @@ export function Settings({ model, onClose, standalone = false }: { model: Settin
   const renderBlock = (block: Block) => {
     switch (block.kind) {
       case "core":
-        return coreCards(block.section, block.title);
+        return coreCards(block.section, block.title && text(block.title));
       case "plugin": {
         const plugin = plugins.find((p) => p.id === block.id);
         return plugin && (
           <div class="group" key={block.id}>
-            <div class="group-title">{block.title}</div>
+            <div class="group-title">{text(block.title)}</div>
             {pluginCard(plugin)}
           </div>
         );
       }
       case "developer":
         return (
-          <CardGroup key="developer" title="Developer">
+          <CardGroup key="developer" title={text("settings-ui.blocks.developer")}>
             <div class="field actions">
               <button type="button" class="outlined" onClick={() => void model.toggleDevTools()}>
-                Toggle developer tools
+                {text("settings-ui.toggle-devtools")}
               </button>
               <button type="button" class="outlined" onClick={() => void model.showSettingsFile()}>
-                Show config.json
+                {text("settings-ui.show-config")}
               </button>
             </div>
           </CardGroup>
@@ -216,7 +229,8 @@ export function Settings({ model, onClose, standalone = false }: { model: Settin
     for (const s of SECTIONS) {
       for (const block of s.blocks) {
         if (block.kind !== "core") continue;
-        blocks.push(coreCards(block.section, [s.label, block.title].filter(Boolean).join(" · "), fieldMatches(needle)));
+        const label = sectionText(text, s.id).label;
+        blocks.push(coreCards(block.section, [label, block.title && text(block.title)].filter(Boolean).join(" · "), fieldMatches(needle)));
       }
     }
     for (const plugin of plugins) {
@@ -225,10 +239,11 @@ export function Settings({ model, onClose, standalone = false }: { model: Settin
         continue;
       }
       const filter = fieldMatches(needle);
-      if (groupFields(plugin.config, platform, filter).length > 0) blocks.push(pluginCard(plugin, { forceOpen: true, filter }));
+      const localized = (key: string, field: Field) => localize(model.t, plugin.id, key, field);
+      if (groupFields(plugin.config, platform, filter, localized).length > 0) blocks.push(pluginCard(plugin, { forceOpen: true, filter }));
     }
     const any = blocks.flat().some(Boolean);
-    return any ? blocks : <div class="empty">No settings match “{query.trim()}”.</div>;
+    return any ? blocks : <div class="empty">{text("settings-ui.no-match", { query: query.trim() })}</div>;
   };
 
   return (
@@ -243,7 +258,7 @@ export function Settings({ model, onClose, standalone = false }: { model: Settin
         <aside class="sidebar">
           <div class="sidebar-head">
             <div class="sidebar-title" id="pear-title">
-              Settings
+              {text("settings-ui.title")}
             </div>
             <div class="sidebar-subtitle">
               <PearIcon size={14} /> Pear Desktop
@@ -254,13 +269,13 @@ export function Settings({ model, onClose, standalone = false }: { model: Settin
             <input
               ref={search}
               type="search"
-              placeholder="Search settings"
-              aria-label="Search settings"
+              placeholder={text("settings-ui.search-placeholder")}
+              aria-label={text("settings-ui.search-placeholder")}
               value={query}
               onInput={(e) => setQuery(e.currentTarget.value)}
             />
           </label>
-          <nav class="nav" aria-label="Settings sections">
+          <nav class="nav" aria-label={text("settings-ui.sections-label")}>
             {SECTIONS.map((s) => (
               <button
                 key={s.id}
@@ -274,7 +289,7 @@ export function Settings({ model, onClose, standalone = false }: { model: Settin
                 }}
               >
                 <Icon name={s.icon} />
-                <span class="nav-label">{s.label}</span>
+                <span class="nav-label">{sectionText(text, s.id).label}</span>
                 {s.id === "plugins" && (
                   <span class="nav-count">
                     {enabledCount}/{plugins.length}
@@ -286,7 +301,7 @@ export function Settings({ model, onClose, standalone = false }: { model: Settin
           <div class="sidebar-foot">
             <span>v{model.app.version}</span>
             <button type="button" class="link" onClick={() => void model.showSettingsFile()}>
-              Show config.json
+              {text("settings-ui.show-config")}
             </button>
           </div>
         </aside>
@@ -294,11 +309,11 @@ export function Settings({ model, onClose, standalone = false }: { model: Settin
         <section class="main">
           <header class="header">
             <div class="header-text">
-              <div class="header-title">{needle ? "Search results" : section.label}</div>
-              <div class="header-sub">{needle ? `Matching “${query.trim()}”` : section.sub}</div>
+              <div class="header-title">{needle ? text("settings-ui.search-results") : sectionLabels.label}</div>
+              <div class="header-sub">{needle ? text("settings-ui.search-matching", { query: query.trim() }) : sectionLabels.sub}</div>
             </div>
             {!standalone && (
-              <button type="button" class="icon-button" aria-label="Close settings" onClick={onClose}>
+              <button type="button" class="icon-button" aria-label={text("settings-ui.close")} onClick={onClose}>
                 <Icon name="close" size={22} />
               </button>
             )}
@@ -307,12 +322,12 @@ export function Settings({ model, onClose, standalone = false }: { model: Settin
           {pending.size > 0 && !dismissed && (
             <div class="restart" role="status">
               <Icon name="schedule" />
-              <span class="restart-text">Some changes need a restart to take effect.</span>
+              <span class="restart-text">{text("settings-ui.restart-banner")}</span>
               <button type="button" class="restart-later" onClick={() => setDismissed(true)}>
-                Later
+                {text("settings-ui.later")}
               </button>
               <button type="button" class="restart-now" onClick={() => void model.relaunch()}>
-                Restart now
+                {text("settings-ui.restart-now")}
               </button>
             </div>
           )}
@@ -354,10 +369,12 @@ function PluginCard(props: {
   onConfig(key: string, field: Field, value: unknown): void;
 }) {
   const { plugin, model, open } = props;
+  const text = useText();
+  const localized = (key: string, field: Field) => localize(model.t, plugin.id, key, field);
   const state = model.state(plugin.id);
   const enabled = state?.enabled ?? false;
   const error = model.error(plugin.id);
-  const groups = groupFields(plugin.config, props.platform, props.filter);
+  const groups = groupFields(plugin.config, props.platform, props.filter, localized);
   const configurable = groupFields(plugin.config, props.platform).length > 0;
 
   return (
@@ -368,24 +385,24 @@ function PluginCard(props: {
           class="plugin-toggle"
           disabled={!configurable}
           aria-expanded={configurable ? open : undefined}
-          aria-label={`Configure ${plugin.name}`}
+          aria-label={text("settings-ui.configure", { name: plugin.name })}
           onClick={props.onToggleOpen}
         >
           <span class="field-text">
             <span class="label-line">
               <span class="field-label">{plugin.name}</span>
               {model.meta(plugin.id)?.restartRequired && (
-                <span class="pill" title="Enabling or disabling applies after a restart">
-                  restart
+                <span class="pill" title={text("settings-ui.restart-plugin-hint")}>
+                  {text("settings-ui.restart-pill")}
                 </span>
               )}
-              {error && enabled && <span class="pill error">error</span>}
+              {error && enabled && <span class="pill error">{text("settings-ui.error-pill")}</span>}
             </span>
             {plugin.description && <span class="field-desc">{plugin.description}</span>}
           </span>
           {configurable && <Icon name={open ? "chevronDown" : "chevronRight"} />}
         </button>
-        <Switch checked={enabled} label={`Enable ${plugin.name}`} onChange={props.onEnabled} />
+        <Switch checked={enabled} label={text("settings-ui.enable", { name: plugin.name })} onChange={props.onEnabled} />
       </div>
       {error && enabled && <p class="error-text">{error}</p>}
       {open && state && groups.length > 0 && (
@@ -412,17 +429,18 @@ function PluginCard(props: {
 
 function About({ model, enabled }: { model: SettingsModel; enabled: string[] }) {
   const { app } = model;
+  const text = useText();
   const [copied, setCopied] = useState(false);
   const rows: [string, string][] = [
     ["Pear Desktop", `v${app.version}`],
     ["Electron", app.electron],
     ["Chromium", app.chrome],
     ["Node.js", app.node],
-    ["Platform", `${app.platform} (${app.arch})`],
+    [text("settings-ui.about.platform"), `${app.platform} (${app.arch})`],
   ];
   const debugInfo = [
     ...rows.map(([label, value]) => `${label}: ${value}`),
-    `Enabled plugins: ${enabled.join(", ") || "none"}`,
+    text("settings-ui.about.enabled-plugins", { plugins: enabled.join(", ") || text("settings-ui.about.none") }),
   ].join("\n");
   return (
     <div class="about">
@@ -430,9 +448,9 @@ function About({ model, enabled }: { model: SettingsModel; enabled: string[] }) 
         <PearIcon size={88} />
         <div class="about-name">Pear Desktop</div>
         <div class="about-version">v{app.version}</div>
-        <div class="about-tagline">A desktop client for YTM, with plugins.</div>
+        <div class="about-tagline">{text("settings-ui.about.tagline")}</div>
       </div>
-      <CardGroup title="Versions">
+      <CardGroup title={text("settings-ui.about.versions")}>
         <dl class="about-grid">
           {rows.map(([label, value]) => (
             <div key={label} class="about-row">
@@ -442,7 +460,7 @@ function About({ model, enabled }: { model: SettingsModel; enabled: string[] }) 
           ))}
         </dl>
       </CardGroup>
-      <CardGroup title="Actions">
+      <CardGroup title={text("settings-ui.about.actions")}>
         <div class="field actions">
           <button
             type="button"
@@ -454,10 +472,10 @@ function About({ model, enabled }: { model: SettingsModel; enabled: string[] }) 
               })
             }
           >
-            {copied ? "Copied!" : "Copy debug info"}
+            {copied ? text("settings-ui.about.copied") : text("settings-ui.about.copy-debug")}
           </button>
           <button type="button" class="outlined" onClick={() => void model.showSettingsFile()}>
-            Show config.json
+            {text("settings-ui.show-config")}
           </button>
         </div>
       </CardGroup>

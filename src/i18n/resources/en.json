@@ -211,7 +211,9 @@
       "tooltip": {
         "default": "{{applicationName}}",
         "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
-      }
+      },
+      "hide": "Hide window",
+      "settings": "Settings…"
     }
   },
   "plugins": {
@@ -234,7 +236,15 @@
         },
         "enable-seekbar": "Enable seekbar theming"
       },
-      "name": "Album Color Theme"
+      "name": "Album Color Theme",
+      "settings": {
+        "ratio": {
+          "label": "Color strength"
+        },
+        "enableSeekbar": {
+          "label": "Color the progress bar"
+        }
+      }
     },
     "ambient-mode": {
       "description": "Applies a lighting effect by casting gentle colors from the video, into your screen’s background",
@@ -279,13 +289,44 @@
           "label": "Using fullscreen"
         }
       },
-      "name": "Ambient Mode"
+      "name": "Ambient Mode",
+      "settings": {
+        "interpolationTime": {
+          "label": "Transition smoothness",
+          "description": "How long the glow takes to follow the video."
+        },
+        "quality": {
+          "label": "Quality"
+        },
+        "size": {
+          "label": "Size"
+        },
+        "buffer": {
+          "label": "Frame rate"
+        },
+        "opacity": {
+          "label": "Opacity"
+        },
+        "blur": {
+          "label": "Blur"
+        },
+        "fullscreen": {
+          "label": "Fill the window",
+          "description": "Let the video's glow cover the whole player page."
+        }
+      }
     },
     "amuse": {
       "description": "Adds {{applicationName}} support for the Amuse now playing widget by 6K Labs",
       "name": "Amuse",
       "response": {
         "query": "Amuse API server is running. GET /query to get song info."
+      },
+      "settings": {
+        "port": {
+          "label": "Port",
+          "description": "Amuse expects 9863."
+        }
       }
     },
     "api-server": {
@@ -349,7 +390,24 @@
     },
     "audio-compressor": {
       "description": "Apply compression to audio (lowers the volume of the loudest parts of the signal and raises the volume of the softest parts)",
-      "name": "Audio Compressor"
+      "name": "Audio Compressor",
+      "settings": {
+        "threshold": {
+          "label": "Threshold"
+        },
+        "ratio": {
+          "label": "Ratio"
+        },
+        "knee": {
+          "label": "Knee"
+        },
+        "attack": {
+          "label": "Attack"
+        },
+        "release": {
+          "label": "Release"
+        }
+      }
     },
     "auth-proxy-adapter": {
       "description": "Support for the use of authentication proxy services",
@@ -373,11 +431,45 @@
           "title": "Proxy Port",
           "label": "Enter port for local proxy server (requires restart):"
         }
+      },
+      "settings": {
+        "url": {
+          "label": "Proxy address",
+          "description": "http://, https://, socks4:// or socks5://. Credentials may also be part of the address.",
+          "placeholder": "socks5://127.0.0.1:1080"
+        },
+        "username": {
+          "label": "Username"
+        },
+        "password": {
+          "label": "Password"
+        },
+        "bypass": {
+          "label": "Bypass list",
+          "description": "Comma-separated hosts that connect directly. <local> means plain hostnames such as localhost.",
+          "placeholder": "<local>, *.example.com"
+        },
+        "hostname": {
+          "label": "Adapter address",
+          "description": "Chromium can't log in to SOCKS proxies, so Pear Desktop runs a local adapter that does it. This is where it listens."
+        },
+        "port": {
+          "label": "Adapter port",
+          "description": "0 picks a free port."
+        }
       }
     },
     "blur-nav-bar": {
       "description": "Makes navigation bar transparent and blurry",
-      "name": "Blur Navigation Bar"
+      "name": "Blur Navigation Bar",
+      "settings": {
+        "blur": {
+          "label": "Blur radius"
+        },
+        "opacity": {
+          "label": "Background opacity"
+        }
+      }
     },
     "bypass-age-restrictions": {
       "description": "Bypass Music Player's age verification",
@@ -404,6 +496,20 @@
         "caption-changed": "Caption changed to {{language}}",
         "caption-disabled": "Captions disabled",
         "no-captions": "No captions available for this song"
+      },
+      "settings": {
+        "autoload": {
+          "label": "Load captions automatically",
+          "description": "Turns on the preferred language for every track that has it."
+        },
+        "disableCaptions": {
+          "label": "Never show captions"
+        },
+        "lastCaptionsCode": {
+          "label": "Preferred language",
+          "description": "Language code, remembered when you pick captions.",
+          "placeholder": "en"
+        }
       }
     },
     "clock": {
@@ -414,6 +520,14 @@
           "label": "Format",
           "display-seconds": "Display Seconds",
           "24-hour-format": "24-Hour Format"
+        }
+      },
+      "settings": {
+        "displaySeconds": {
+          "label": "Show seconds"
+        },
+        "hour12": {
+          "label": "12-hour format"
         }
       }
     },
@@ -441,6 +555,28 @@
           },
           "title": "Crossfade options"
         }
+      },
+      "settings": {
+        "fadeInDuration": {
+          "label": "Fade-in"
+        },
+        "fadeOutDuration": {
+          "label": "Fade-out"
+        },
+        "secondsBeforeEnd": {
+          "label": "Skip to the next track",
+          "description": "Seconds before the end; the fade-out finishes there."
+        },
+        "fadeScaling": {
+          "label": "Fade curve",
+          "options": {
+            "linear": "Linear",
+            "logarithmic": "Logarithmic (sounds even)"
+          }
+        },
+        "dynamicRange": {
+          "label": "Logarithmic range"
+        }
       }
     },
     "custom-output-device": {
@@ -454,6 +590,16 @@
           "label": "Choose the output media device to be used",
           "title": "Select Output Device"
         }
+      },
+      "settings": {
+        "device": {
+          "label": "Output device",
+          "description": "The device's name; pick one from the speaker button in the player bar. Empty uses the system default.",
+          "placeholder": "System default"
+        },
+        "showPicker": {
+          "label": "Device picker in the player bar"
+        }
       }
     },
     "disable-autoplay": {
@@ -461,7 +607,13 @@
       "menu": {
         "apply-once": "Applies only on startup"
       },
-      "name": "Disable Autoplay"
+      "name": "Disable Autoplay",
+      "settings": {
+        "applyOnce": {
+          "label": "Only after launch",
+          "description": "Pause just the first track after the app starts, then play normally."
+        }
+      }
     },
     "discord": {
       "backend": {
@@ -494,6 +646,48 @@
         "set-inactivity-timeout": {
           "label": "Enter inactivity timeout in seconds:",
           "title": "Set inactivity timeout"
+        }
+      },
+      "settings": {
+        "activityType": {
+          "label": "Activity type",
+          "options": {
+            "listening": "Listening to",
+            "playing": "Playing",
+            "watching": "Watching"
+          }
+        },
+        "statusDisplayType": {
+          "label": "Status text",
+          "description": "What your member-list status shows after the activity type.",
+          "options": {
+            "details": "Song title",
+            "state": "Artist",
+            "name": "App name"
+          }
+        },
+        "playButton": {
+          "label": "“Play on \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music” button"
+        },
+        "hideGitHubButton": {
+          "label": "Hide the GitHub button"
+        },
+        "hideDurationLeft": {
+          "label": "Hide elapsed and remaining time"
+        },
+        "hideWhenPaused": {
+          "label": "Hide while paused"
+        },
+        "activityTimeoutEnabled": {
+          "label": "Clear after a long pause",
+          "description": "Remove the activity when playback stays paused."
+        },
+        "activityTimeoutMinutes": {
+          "label": "Pause timeout"
+        },
+        "autoReconnect": {
+          "label": "Keep trying to connect",
+          "description": "Reconnect automatically when Discord starts or restarts."
         }
       }
     },
@@ -575,6 +769,56 @@
       },
       "templates": {
         "button": "Download"
+      },
+      "settings": {
+        "folder": {
+          "label": "Download folder",
+          "description": "Leave empty for a Pear Desktop folder in your Music folder.",
+          "placeholder": "Music/Pear Desktop"
+        },
+        "format": {
+          "label": "Format",
+          "options": {
+            "mp3": "MP3 (most compatible)",
+            "m4a": "M4A / AAC",
+            "opus": "Opus (best quality for size)"
+          }
+        },
+        "template": {
+          "label": "File name",
+          "description": "A yt-dlp output template, e.g. %(album)s/%(title)s.%(ext)s",
+          "placeholder": "%(artist,creator,uploader)s - %(title)s.%(ext)s"
+        },
+        "playlistFolders": {
+          "label": "Put albums and playlists in their own folder"
+        },
+        "playlistLimit": {
+          "label": "Most songs per playlist",
+          "description": "0 means no limit."
+        },
+        "skipExisting": {
+          "label": "Skip songs that are already downloaded"
+        },
+        "squareCover": {
+          "label": "Crop cover art to a square"
+        },
+        "autoDownload": {
+          "label": "Download everything I listen to",
+          "description": "Saves each song shortly before it ends."
+        },
+        "autoDownloadSeconds": {
+          "label": "…this long before the end"
+        },
+        "ytDlpPath": {
+          "label": "yt-dlp",
+          "description": "Path to the yt-dlp program.",
+          "placeholder": "Found automatically"
+        },
+        "ffmpegPath": {
+          "label": "ffmpeg",
+          "description": "Path to ffmpeg or its folder; yt-dlp needs it to convert audio.",
+          "placeholder": "Found automatically"
+        }
       }
     },
     "equalizer": {
@@ -587,7 +831,64 @@
           }
         }
       },
-      "name": "Equalizer"
+      "name": "Equalizer",
+      "settings": {
+        "preset": {
+          "label": "Preset",
+          "description": "Choosing a preset moves the bands; moving a band switches to Custom.",
+          "options": {
+            "flat": "Flat",
+            "bass-booster": "Bass booster",
+            "treble-booster": "Treble booster",
+            "vocal-booster": "Vocal booster",
+            "rock": "Rock",
+            "pop": "Pop",
+            "electronic": "Electronic",
+            "acoustic": "Acoustic",
+            "loudness": "Loudness",
+            "custom": "Custom"
+          }
+        },
+        "preamp": {
+          "label": "Preamp",
+          "description": "Lower it to avoid clipping when boosting."
+        },
+        "band32": {
+          "label": "32 Hz"
+        },
+        "band64": {
+          "label": "64 Hz"
+        },
+        "band125": {
+          "label": "125 Hz"
+        },
+        "band250": {
+          "label": "250 Hz"
+        },
+        "band500": {
+          "label": "500 Hz"
+        },
+        "band1000": {
+          "label": "1 kHz"
+        },
+        "band2000": {
+          "label": "2 kHz"
+        },
+        "band4000": {
+          "label": "4 kHz"
+        },
+        "band8000": {
+          "label": "8 kHz"
+        },
+        "band16000": {
+          "label": "16 kHz"
+        },
+        "filters": {
+          "label": "Extra filters (advanced)",
+          "description": "JSON list of biquad filters, e.g. [{\"type\":\"lowshelf\",\"frequency\":80,\"Q\":1,\"gain\":6}]",
+          "placeholder": "[]"
+        }
+      }
     },
     "exponential-volume": {
       "description": "Makes the volume slider exponential so it's easier to select lower volumes.",
@@ -598,7 +899,13 @@
       "menu": {
         "hide-dom-window-controls": "Hide DOM window controls"
       },
-      "name": "In-App Menu"
+      "name": "In-App Menu",
+      "settings": {
+        "windowControls": {
+          "label": "Show window buttons",
+          "description": "Minimize, maximize and close on Linux. Turn off if your window manager provides its own."
+        }
+      }
     },
     "lumiastream": {
       "description": "Adds Lumia Stream support",
@@ -658,6 +965,22 @@
         "remove-song-failed": "Failed to remove song",
         "user-connected": "{{name}} joined Music Together",
         "user-disconnected": "{{name}} left Music Together"
+      },
+      "settings": {
+        "displayName": {
+          "label": "Your name",
+          "description": "Shown to others in a session.",
+          "placeholder": "Guest 1234"
+        },
+        "defaultPermission": {
+          "label": "What guests can do",
+          "description": "Default for new sessions; change it any time while hosting.",
+          "options": {
+            "host-only": "Listen only",
+            "suggest": "Suggest songs",
+            "control": "Full control"
+          }
+        }
       }
     },
     "navigation": {
@@ -692,7 +1015,29 @@
         "toast-style": "Toast style",
         "unpause-notification": "Show notification on unpause"
       },
-      "name": "Notifications"
+      "name": "Notifications",
+      "settings": {
+        "unpauseNotification": {
+          "label": "Also notify when resuming"
+        },
+        "urgency": {
+          "label": "Priority",
+          "description": "Linux only: how prominently the desktop shows it.",
+          "options": {
+            "low": "Low",
+            "normal": "Normal",
+            "critical": "High"
+          }
+        },
+        "interactive": {
+          "label": "Playback buttons",
+          "description": "Windows and macOS: previous, play/pause and next buttons in the notification."
+        },
+        "refreshOnPlayPause": {
+          "label": "Update after play/pause from the notification",
+          "description": "Show it again with the opposite button after using its play/pause button."
+        }
+      }
     },
     "performance-improvement": {
       "description": "Improve performance by enabling experimental scripts",
@@ -719,6 +1064,25 @@
       "name": "Picture-in-picture",
       "templates": {
         "button": "Picture-in-picture"
+      },
+      "settings": {
+        "hotkey": {
+          "label": "Hotkey",
+          "description": "Works while the window is focused."
+        },
+        "useNativePiP": {
+          "label": "Use the browser's picture-in-picture",
+          "description": "Pops out just the video. Turn off to shrink the whole window, controls included."
+        },
+        "alwaysOnTop": {
+          "label": "Keep the small window on top"
+        },
+        "savePosition": {
+          "label": "Remember the small window's position"
+        },
+        "saveSize": {
+          "label": "Remember the small window's size"
+        }
       }
     },
     "playback-speed": {
@@ -726,6 +1090,15 @@
       "name": "Playback Speed",
       "templates": {
         "button": "Speed"
+      },
+      "settings": {
+        "speed": {
+          "label": "Speed"
+        },
+        "preservePitch": {
+          "label": "Preserve pitch",
+          "description": "Off: faster sounds higher, like a record."
+        }
       }
     },
     "precise-volume": {
@@ -748,6 +1121,26 @@
         "volume-steps": {
           "label": "Choose Volume Increase/Decrease Steps",
           "title": "Volume Steps"
+        }
+      },
+      "settings": {
+        "steps": {
+          "label": "Step"
+        },
+        "wheel": {
+          "label": "Scroll over the player to change volume"
+        },
+        "arrowsShortcut": {
+          "label": "Arrow up / down change volume"
+        },
+        "showHud": {
+          "label": "Show the volume while changing it"
+        },
+        "volumeUp": {
+          "label": "Global shortcut: volume up"
+        },
+        "volumeDown": {
+          "label": "Global shortcut: volume down"
         }
       }
     },
@@ -802,6 +1195,48 @@
             "title": "ListenBrainz token"
           }
         }
+      },
+      "settings": {
+        "lastfmEnabled": {
+          "label": "Last.fm",
+          "description": "Enabling opens a Last.fm window to authorize Pear Desktop."
+        },
+        "lastfmSessionKey": {
+          "label": "Last.fm session",
+          "description": "Filled in after authorizing. Clear it to authorize again (e.g. another account)."
+        },
+        "lastfmApiKey": {
+          "label": "Last.fm API key"
+        },
+        "lastfmSecret": {
+          "label": "Last.fm API secret"
+        },
+        "lastfmApiRoot": {
+          "label": "Last.fm API root"
+        },
+        "listenbrainzEnabled": {
+          "label": "ListenBrainz"
+        },
+        "listenbrainzToken": {
+          "label": "ListenBrainz user token",
+          "description": "From listenbrainz.org/settings."
+        },
+        "listenbrainzApiRoot": {
+          "label": "ListenBrainz API root",
+          "description": "Change it for a compatible self-hosted server."
+        },
+        "scrobbleOtherMedia": {
+          "label": "Scrobble other videos",
+          "description": "Also scrobble podcasts and user uploads, not only songs and official music videos."
+        },
+        "alternativeTitles": {
+          "label": "Use alternative titles",
+          "description": "Prefer \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music's alternative title when it has one (e.g. original-script titles)."
+        },
+        "alternativeArtist": {
+          "label": "Use the canonical artist",
+          "description": "Prefer the track's first tag as the artist (e.g. “DECO*27” instead of “DECO*27 & marasy”)."
+        }
       }
     },
     "shortcuts": {
@@ -821,6 +1256,29 @@
           "label": "Choose Global Keybinds for Songs Control:",
           "title": "Global Keybinds"
         }
+      },
+      "settings": {
+        "playPause": {
+          "label": "Play / pause"
+        },
+        "next": {
+          "label": "Next track"
+        },
+        "previous": {
+          "label": "Previous track"
+        },
+        "volumeUp": {
+          "label": "Volume up"
+        },
+        "volumeDown": {
+          "label": "Volume down"
+        },
+        "like": {
+          "label": "Like current track"
+        },
+        "showWindow": {
+          "label": "Show window"
+        }
       }
     },
     "skip-disliked-songs": {
@@ -829,11 +1287,54 @@
     },
     "skip-silences": {
       "description": "Automatically skip silences sections in songs",
-      "name": "Skip Silences"
+      "name": "Skip Silences",
+      "settings": {
+        "onlySkipBeginning": {
+          "label": "Only skip silence at the start of a track"
+        }
+      }
     },
     "sponsorblock": {
       "description": "Automatically Skips non-music parts like intro/outro or parts of music videos where the song isn't playing",
-      "name": "SponsorBlock"
+      "name": "SponsorBlock",
+      "settings": {
+        "music_offtopic": {
+          "label": "Non-music sections",
+          "description": "Talking, skits and intros in music videos."
+        },
+        "sponsor": {
+          "label": "Sponsors",
+          "description": "Paid promotions."
+        },
+        "selfpromo": {
+          "label": "Self-promotion",
+          "description": "Merch, donations and shout-outs."
+        },
+        "interaction": {
+          "label": "Interaction reminders",
+          "description": "“Like and subscribe”."
+        },
+        "intro": {
+          "label": "Intros",
+          "description": "Intermissions and intro animations."
+        },
+        "outro": {
+          "label": "Outros",
+          "description": "End cards and credits."
+        },
+        "preview": {
+          "label": "Previews and recaps",
+          "description": "Previews of what's coming up."
+        },
+        "filler": {
+          "label": "Filler tangents",
+          "description": "Off-topic jokes and tangents."
+        },
+        "apiUrl": {
+          "label": "API server",
+          "placeholder": "https://sponsor.ajay.app"
+        }
+      }
     },
     "synced-lyrics": {
       "description": "Provides synced lyrics to songs, using providers like LRClib.",
@@ -920,6 +1421,59 @@
         "duration-mismatch": "⚠️ - The lyrics may be out of sync due to a duration mismatch.",
         "inexact": "⚠️ - The lyrics for this song may not be exact",
         "instrumental": "⚠️ - This is an instrumental song"
+      },
+      "settings": {
+        "preferredProvider": {
+          "label": "Preferred provider",
+          "description": "Used whenever it has lyrics; otherwise word-synced beats line-synced beats plain.",
+          "options": {
+            "auto": "Best available",
+            "lrclib": "LRCLIB",
+            "ytmusic": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music",
+            "genius": "Genius"
+          }
+        },
+        "lineEffect": {
+          "label": "Current line effect",
+          "options": {
+            "fancy": "Fancy (glow)",
+            "scale": "Scale",
+            "offset": "Offset",
+            "focus": "Focus (blur others)"
+          }
+        },
+        "gapText": {
+          "label": "Instrumental breaks",
+          "options": {
+            "dots": "Animated dots",
+            "note": "♪",
+            "dash": "———",
+            "none": "Nothing"
+          }
+        },
+        "showTimeCodes": {
+          "label": "Show time codes"
+        },
+        "offsetMs": {
+          "label": "Timing offset",
+          "description": "Positive values show lines earlier."
+        },
+        "romanization": {
+          "label": "Romanize lyrics",
+          "description": "Japanese, Korean and Chinese. The Japanese dictionary (about 17 MB) downloads on first use."
+        },
+        "convertChinese": {
+          "label": "Chinese characters",
+          "options": {
+            "off": "Keep as is",
+            "s2t": "Simplified → Traditional",
+            "t2s": "Traditional → Simplified"
+          }
+        },
+        "showLyricsEvenIfInexact": {
+          "label": "Show lyrics even if inexact",
+          "description": "Also try looser searches; may occasionally match a different version of the song."
+        }
       }
     },
     "taskbar-mediacontrol": {
@@ -954,11 +1508,37 @@
             "none": "None"
           }
         }
+      },
+      "settings": {
+        "opacity": {
+          "label": "Background opacity"
+        },
+        "type": {
+          "label": "Material",
+          "description": "Blurs what's behind the window. Linux compositors only support plain transparency.",
+          "options": {
+            "none": "None (plain transparency)",
+            "mica": "Mica (Windows 11)",
+            "acrylic": "Acrylic (Windows 11)",
+            "tabbed": "Tabbed (Windows 11)",
+            "window": "Window (macOS)",
+            "fullscreen-ui": "Full-screen UI (macOS)",
+            "content": "Content (macOS)",
+            "under-window": "Under window (macOS)",
+            "under-page": "Under page (macOS)"
+          }
+        }
       }
     },
     "tuna-obs": {
       "description": "Integration with OBS's plugin Tuna",
-      "name": "Tuna OBS"
+      "name": "Tuna OBS",
+      "settings": {
+        "port": {
+          "label": "Tuna port",
+          "description": "The port of Tuna's web server source in OBS."
+        }
+      }
     },
     "unobtrusive-player": {
       "description": "Prevents the player from popping up when playing a song",
@@ -989,6 +1569,32 @@
       "templates": {
         "button-song": "Song",
         "button-video": "Video"
+      },
+      "settings": {
+        "mode": {
+          "label": "Switch",
+          "options": {
+            "custom": "Pear Desktop's switch",
+            "native": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music's switch",
+            "disabled": "No switch"
+          }
+        },
+        "align": {
+          "label": "Switch position",
+          "options": {
+            "left": "Left",
+            "middle": "Middle",
+            "right": "Right"
+          }
+        },
+        "hideVideo": {
+          "label": "Show cover art instead of video",
+          "description": "Remembered when you use the switch."
+        },
+        "forceHide": {
+          "label": "Hide the player completely",
+          "description": "The queue and lyrics take the whole player page."
+        }
       }
     },
     "visualizer": {
@@ -996,7 +1602,330 @@
       "menu": {
         "visualizer-type": "Visualizer Type"
       },
-      "name": "Visualizer"
+      "name": "Visualizer",
+      "settings": {
+        "type": {
+          "label": "Visualizer",
+          "options": {
+            "butterchurn": "Milkdrop (butterchurn)",
+            "bars": "Bars",
+            "wave": "Wave"
+          }
+        },
+        "preset": {
+          "label": "Milkdrop preset",
+          "options": {
+            "martin [shadow harlequins shape code] - fata morgana": "martin [shadow harlequins shape code] - fata morgana",
+            "_Aderrasi - Wanderer in Curved Space - mash0000 - faclempt kibitzing meshuggana schmaltz (Geiss color mix)": "_Aderrasi - Wanderer in Curved Space - mash0000 - faclemp…",
+            "_Mig_085": "_Mig_085",
+            "$$$ Royal - Mashup (197)": "$$$ Royal - Mashup (197)",
+            "$$$ Royal - Mashup (431)": "$$$ Royal - Mashup (431)",
+            "An AdamFX n Martin Infusion 2 flexi - Why The Sky Looks Diffrent Today - AdamFx n Martin Infusion - Tack Tile Disfunction B": "An AdamFX n Martin Infusion 2 flexi - Why The Sky Looks D…",
+            "Flexi - alien fish pond": "Flexi - alien fish pond",
+            "flexi - bouncing balls [double mindblob neon mix]": "flexi - bouncing balls [double mindblob neon mix]",
+            "Flexi - mindblob [shiny mix]": "Flexi - mindblob [shiny mix]",
+            "Flexi, fishbrain, Geiss + Martin - tokamak witchery": "Flexi, fishbrain, Geiss + Martin - tokamak witchery",
+            "Flexi, martin + geiss - dedicated to the sherwin maxawow": "Flexi, martin + geiss - dedicated to the sherwin maxawow",
+            "Geiss - Cauldron - painterly 2 (saturation remix)": "Geiss - Cauldron - painterly 2 (saturation remix)",
+            "Geiss - Reaction Diffusion 2": "Geiss - Reaction Diffusion 2",
+            "Geiss - Thumb Drum": "Geiss - Thumb Drum",
+            "Halfbreak - Funny Madness": "Halfbreak - Funny Madness",
+            "Martin - acid wiring": "Martin - acid wiring",
+            "martin - chain breaker": "martin - chain breaker",
+            "martin - extreme heat": "martin - extreme heat",
+            "martin - mandelbox explorer - high speed demo version": "martin - mandelbox explorer - high speed demo version",
+            "martin - reflections on black tiles": "martin - reflections on black tiles",
+            "martin - witchcraft reloaded": "martin - witchcraft reloaded",
+            "Milk Artist At our Best - FED - SlowFast Ft AdamFX n Martin - HD CosmoFX": "Milk Artist At our Best - FED - SlowFast Ft AdamFX n Mart…",
+            "MilkDrop2077": {
+              "R002": "MilkDrop2077.R002"
+            },
+            "ShadowHarlequin - LovelyShinySquares [ liquid starburst rmx ] - unchained + rovaster - luckless - martin - starfield sector": "ShadowHarlequin - LovelyShinySquares [ liquid starburst r…",
+            "shifter - liquid circuitry - conjugoth": "shifter - liquid circuitry - conjugoth",
+            "suksma - uninitialized variabowl (hydroponic chronic)": "suksma - uninitialized variabowl (hydroponic chronic)",
+            "Unchained - Rewop": "Unchained - Rewop",
+            "yin - 191 - Temporal singularities": "yin - 191 - Temporal singularities",
+            "Zylot - Paint Spill (Music Reactive Paint Mix)": "Zylot - Paint Spill (Music Reactive Paint Mix)"
+          }
+        },
+        "blendTimeInSeconds": {
+          "label": "Milkdrop preset blend time"
+        },
+        "songTitle": {
+          "label": "Milkdrop: show the track title on change"
+        },
+        "bars": {
+          "label": "Bars / wave detail"
+        },
+        "primary": {
+          "label": "Primary color",
+          "placeholder": "#49f3f7"
+        },
+        "secondary": {
+          "label": "Secondary color",
+          "placeholder": "#f76b1c"
+        }
+      }
+    },
+    "adblock": {
+      "name": "Ad blocker",
+      "description": "Blocks ad and tracker requests, and gets through player ads in a blink without cutting into the track.",
+      "settings": {
+        "blockRequests": {
+          "label": "Block ads and trackers",
+          "description": "Network filtering with Ghostery's engine and EasyList, EasyPrivacy and uBlock Origin lists."
+        },
+        "skipAds": {
+          "label": "Skip player ads",
+          "description": "Gets through the ads \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music still plays in a blink, muted."
+        },
+        "defaultLists": {
+          "label": "Use the default filter lists"
+        },
+        "additionalLists": {
+          "label": "Additional filter lists",
+          "description": "URLs of extra lists in Adblock Plus / uBlock syntax, separated by spaces or commas.",
+          "placeholder": "https://…/filters.txt"
+        },
+        "cache": {
+          "label": "Cache the filter engine",
+          "description": "Starts blocking instantly on launch; lists refresh in the background once a week."
+        }
+      }
+    },
+    "media-controls": {
+      "name": "Media controls",
+      "description": "Control playback from your desktop's media widgets and keys (MPRIS)."
+    },
+    "tray": {
+      "name": "Tray icon",
+      "description": "Playback controls and the current track in the system tray.",
+      "settings": {
+        "closeToTray": {
+          "label": "Close to tray",
+          "description": "Closing the window keeps music playing in the background."
+        },
+        "clickToToggle": {
+          "label": "Click toggles the window"
+        },
+        "clickPlayPause": {
+          "label": "Click plays and pauses",
+          "description": "Instead of toggling the window."
+        }
+      }
+    }
+  },
+  "settings-ui": {
+    "core": {
+      "resumeOnStart": {
+        "label": "Reopen the last page",
+        "description": "Start where you left off (never straight into playback)."
+      },
+      "startingPage": {
+        "label": "Starting page",
+        "description": "Used when the last page isn't reopened.",
+        "options": {
+          "": "Default",
+          "Home": "Home",
+          "Explore": "Explore",
+          "New Releases": "New Releases",
+          "Charts": "Charts",
+          "Moods & Genres": "Moods & Genres",
+          "Library": "Library",
+          "Playlists": "Playlists",
+          "Songs": "Songs",
+          "Albums": "Albums",
+          "Artists": "Artists",
+          "Subscribed Artists": "Subscribed Artists",
+          "Uploads": "Uploads",
+          "Uploaded Playlists": "Uploaded Playlists",
+          "Uploaded Songs": "Uploaded Songs",
+          "Uploaded Albums": "Uploaded Albums",
+          "Uploaded Artists": "Uploaded Artists",
+          "Mixed for you": "Mixed for you"
+        }
+      },
+      "language": {
+        "label": "Language"
+      },
+      "autoUpdates": {
+        "label": "Check for updates",
+        "description": "Tells you when a new version is out."
+      },
+      "alwaysOnTop": {
+        "label": "Always on top"
+      },
+      "hideMenu": {
+        "label": "Hide the menu bar",
+        "description": "Press Alt to show it."
+      },
+      "startAtLogin": {
+        "label": "Start at login"
+      },
+      "appVisible": {
+        "label": "Show the window at startup",
+        "description": "Off: start hidden in the tray (needs the Tray icon plugin; otherwise the window shows as usual)."
+      },
+      "removeUpgradeButton": {
+        "label": "Remove the Upgrade button"
+      },
+      "likeButtons": {
+        "label": "Like buttons",
+        "options": {
+          "": "Default",
+          "force": "Always show",
+          "hide": "Hide"
+        }
+      },
+      "swapLikeButtonsOrder": {
+        "label": "Swap the like and dislike buttons"
+      },
+      "usePodcastParticipantAsArtist": {
+        "label": "Show podcast hosts as the artist",
+        "description": "In the player bar, notifications and integrations."
+      },
+      "customWindowTitle": {
+        "label": "Window title",
+        "placeholder": "The page's title"
+      },
+      "themes": {
+        "label": "Themes",
+        "description": "CSS files applied on top of \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music.",
+        "placeholder": "/path/to/theme.css"
+      },
+      "disableHardwareAcceleration": {
+        "label": "Disable hardware acceleration",
+        "description": "Try this if video or animations flicker or the window stays black."
+      },
+      "autoResetAppCache": {
+        "label": "Clear the cache at startup"
+      },
+      "proxy": {
+        "label": "Proxy",
+        "description": "For proxies that need a username and password, use the Proxy plugin.",
+        "placeholder": "socks5://127.0.0.1:9999"
+      },
+      "enabled": {
+        "label": "Enable the API server",
+        "description": "Lets other apps control playback and read the current song over HTTP and WebSocket."
+      },
+      "hostname": {
+        "label": "Hostname",
+        "description": "127.0.0.1 accepts connections only from this computer; 0.0.0.0 from your network too."
+      },
+      "port": {
+        "label": "Port"
+      },
+      "authStrategy": {
+        "label": "Authorization",
+        "options": {
+          "AUTH_AT_FIRST": "Ask when a new client connects",
+          "NONE": "None (anyone who can reach the port)"
+        }
+      },
+      "authorizedClients": {
+        "label": "Authorized clients",
+        "description": "Client IDs that may use the API. Remove one to revoke it."
+      },
+      "secret": {
+        "label": "Token secret",
+        "description": "Signs access tokens; changing it signs every client out. Generated when empty."
+      },
+      "useHttps": {
+        "label": "Use HTTPS"
+      },
+      "certPath": {
+        "label": "Certificate file",
+        "placeholder": "/path/to/cert.pem"
+      },
+      "keyPath": {
+        "label": "Private key file",
+        "placeholder": "/path/to/key.pem"
+      }
+    },
+    "groups": {
+      "startup": "Startup",
+      "language": "Language",
+      "updates": "Updates",
+      "window": "Window",
+      "system": "System",
+      "interface": "Interface",
+      "themes": "Themes",
+      "performance": "Performance",
+      "network": "Network",
+      "access": "Access",
+      "https": "HTTPS"
+    },
+    "title": "Settings",
+    "search-placeholder": "Search settings",
+    "sections-label": "Settings sections",
+    "search-results": "Search results",
+    "search-matching": "Matching “{{query}}”",
+    "no-match": "No settings match “{{query}}”.",
+    "close": "Close settings",
+    "show-config": "Show config.json",
+    "restart-banner": "Some changes need a restart to take effect.",
+    "later": "Later",
+    "restart-now": "Restart now",
+    "restart-pill": "restart",
+    "restart-pill-hint": "Applies after a restart",
+    "restart-plugin-hint": "Enabling or disabling applies after a restart",
+    "error-pill": "error",
+    "configure": "Configure {{name}}",
+    "enable": "Enable {{name}}",
+    "add": "Add",
+    "remove": "Remove {{item}}",
+    "entry": "entry {{number}}",
+    "decrease": "Decrease {{label}}",
+    "increase": "Increase {{label}}",
+    "shortcut-recording": "Press keys…",
+    "shortcut-unset": "Not set",
+    "shortcut-hint": "Click, then press a key combination. Backspace clears, Escape cancels.",
+    "open": "Pear Desktop settings",
+    "open-hint": "Pear Desktop settings (Ctrl+,)",
+    "api-server-status": "Listening on {{address}} · API docs at {{address}}/swagger",
+    "blocks": {
+      "tray": "Tray",
+      "title-bar": "Title bar",
+      "api-server": "API server",
+      "developer": "Developer"
+    },
+    "toggle-devtools": "Toggle developer tools",
+    "sections": {
+      "general": {
+        "label": "General",
+        "sub": "Startup, language and updates"
+      },
+      "appearance": {
+        "label": "Appearance",
+        "sub": "Interface, window title and themes"
+      },
+      "window": {
+        "label": "Window & Tray",
+        "sub": "Window behaviour and system tray"
+      },
+      "advanced": {
+        "label": "Advanced",
+        "sub": "Performance, network, API server and developer tools"
+      },
+      "plugins": {
+        "label": "Plugins",
+        "sub": "Enable plugins and configure them"
+      },
+      "about": {
+        "label": "About",
+        "sub": "Versions and app info"
+      }
+    },
+    "about": {
+      "tagline": "A feature-rich desktop app for \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music",
+      "versions": "Versions",
+      "platform": "Platform",
+      "actions": "Actions",
+      "copy-debug": "Copy debug info",
+      "copied": "Copied!",
+      "enabled-plugins": "Enabled plugins: {{plugins}}",
+      "none": "none"
     }
   }
 }

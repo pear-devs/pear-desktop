@@ -12,6 +12,7 @@ import type {
   Unsubscribe,
 } from "@pear/sdk";
 import type { CoreSection } from "@pear/sdk/core-config";
+import { type Translate, translator } from "@pear/sdk/i18n";
 import type { Bridge, CoreState, PluginState } from "@pear/sdk/protocol";
 import { selectors } from "@pear/sdk/selectors";
 import { AudioGraph } from "./audio.ts";
@@ -39,6 +40,8 @@ export class PluginRunner {
   #handlers = new Map<string, Map<string, (payload: unknown) => unknown>>();
   #audio: Promise<AudioGraph> | undefined;
   #core: Record<CoreSection, CoreState>;
+  /** The active language's strings, from the host. */
+  readonly t: Translate;
   #bridge: Bridge;
   #player: Player;
 
@@ -54,6 +57,7 @@ export class PluginRunner {
     }
     for (const [id, message] of Object.entries(bridge.bootstrap.errors)) this.#hostErrors.set(id, message);
     this.#core = { ...bridge.bootstrap.core };
+    this.t = translator(bridge.bootstrap.strings);
   }
 
   /** A core settings section (e.g. the API server). */
@@ -359,6 +363,7 @@ export class PluginRunner {
         cleanups.push(fn);
       },
       signal: controller.signal,
+      t: runner.t,
       log,
     };
     return instance;

@@ -2,10 +2,12 @@
 // and config changes apply live in both processes, no restart needed.
 
 import type { App, BrowserWindow, BrowserWindowConstructorOptions, Session } from "electron";
+import { interpolate } from "@pear/sdk/i18n";
 import { type AnyPlugin, type Cleanup, type HostContext, type Logger, type RpcMethod, supportsPlatform } from "@pear/sdk";
 import { v } from "@pear/sdk/rpc";
 import type { HostEvent, PluginMeta, PluginState } from "@pear/sdk/protocol";
 import type { Settings } from "./config.ts";
+import type { I18n } from "./i18n.ts";
 import type { PageRequests } from "./page-requests.ts";
 import type { PlayerMirror } from "./player.ts";
 import type { WebRequestRouter } from "./web-request.ts";
@@ -46,6 +48,7 @@ export class PluginHost {
   #instances = new Map<string, Instance>();
   #errors = new Map<string, string>();
   #env: HostEnvironment | undefined;
+  #i18n: I18n | undefined;
 
   constructor(plugins: readonly AnyPlugin[], settings: Settings, platform: string) {
     // "core" addresses the core's own page handlers and webRequest listeners.
@@ -120,6 +123,15 @@ export class PluginHost {
       }
     }
     return { enabled, disabled };
+  }
+
+  /** The active language; set once the app is ready, before plugins start. */
+  setI18n(i18n: I18n) {
+    this.#i18n = i18n;
+  }
+
+  get i18n() {
+    return this.#i18n;
   }
 
   attach(env: HostEnvironment) {
@@ -284,6 +296,7 @@ export class PluginHost {
         },
       },
       onCleanup: (fn) => cleanups.push(fn),
+      t: (key, fallback, vars) => (host.#i18n ? host.#i18n.t(key, fallback, vars) : interpolate(fallback ?? key, vars)),
       log: logger(id),
     };
     return instance;

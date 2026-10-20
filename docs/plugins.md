@@ -98,6 +98,16 @@ Web Audio graph (`insert(input, output?, order?)`, `tap(node)`), `onCleanup`,
 Everything registered through `ctx` is cleaned up automatically when the plugin
 is disabled, so enabling and disabling never needs a restart.
 
+### Translations
+
+Plugin names, descriptions and settings fields are translated automatically
+(keys `plugins.<id>.name`, `plugins.<id>.settings.<field>.label`, …). For
+other texts use `ctx.t(key, english, vars?)` on either side, e.g.
+`ctx.t("plugins.downloader.saved", "Saved “{{title}}”", { title })`; reuse
+pear-desktop's existing keys where the meaning matches. Then run
+`nub run i18n`, which adds new English texts to `src/i18n/resources/en.json`
+for Weblate (CI checks it's up to date).
+
 ### Exposing RPC methods
 
 The API server is part of the core (off until enabled under *API server* in

@@ -3,11 +3,14 @@
 // standalone settings window.
 
 import type { CoreSection } from "@pear/sdk/core-config";
+import { type Translate, translator } from "@pear/sdk/i18n";
 import type { AppInfo, Bridge, CoreState, PluginInfo, PluginMeta, PluginState } from "@pear/sdk/protocol";
 
 export interface SettingsModel {
   readonly app: AppInfo;
   readonly plugins: readonly PluginInfo[];
+  /** The active language's strings. */
+  readonly t: Translate;
   state(id: string): PluginState | undefined;
   error(id: string): string | undefined;
   meta(id: string): PluginMeta | undefined;
@@ -43,6 +46,7 @@ export function bridgeModel(bridge: Bridge): SettingsModel {
   return {
     app: bootstrap.app,
     plugins: bootstrap.catalog,
+    t: translator(bootstrap.strings),
     state: (id) => states.get(id),
     error: (id) => errors.get(id),
     meta: (id) => bootstrap.meta[id],

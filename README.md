@@ -91,6 +91,7 @@ nub run typecheck
 nub run test         # unit tests
 nub run test:e2e     # builds, then drives the app against real YTM
 nub run dist:linux   # packages with electron-builder into pack/ (also dist:mac, dist:win, dist)
+nub run i18n         # adds new English texts to src/i18n/resources/en.json (Weblate's source)
 ```
 
 `PEAR_USER_DATA=/tmp/profile nub run dev` runs with a separate profile. Without

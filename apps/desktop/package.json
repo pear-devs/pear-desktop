@@ -20,6 +20,7 @@
     "typecheck": "tsc -p .",
     "test:e2e": "electron-vite build && playwright test",
     "test": "vitest run",
+    "i18n": "nub scripts/i18n.ts",
     "dist": "electron-vite build && electron-builder --win --mac --linux -p never",
     "dist:linux": "electron-vite build && electron-builder --linux -p never",
     "dist:linux:deb-arm64": "electron-vite build && electron-builder --linux deb:arm64 -p never",

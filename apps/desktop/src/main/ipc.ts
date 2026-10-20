@@ -101,12 +101,19 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
         chrome: process.versions.chrome,
         node: process.versions.node,
       },
-      catalog: plugins.plugins.map((plugin) => ({
-        id: plugin.id,
-        name: plugin.name,
-        ...(plugin.description ? { description: plugin.description } : {}),
-        config: plugin.config ?? {},
-      })),
+      language: plugins.i18n?.language ?? "en",
+      strings: plugins.i18n?.strings ?? {},
+      catalog: plugins.plugins.map((plugin) => {
+        // pear-desktop's translated plugin names and descriptions, where they exist.
+        const t = plugins.i18n?.t ?? ((_: string, fallback?: string) => fallback ?? "");
+        const description = plugin.description ? t(`plugins.${plugin.id}.description`, plugin.description) : undefined;
+        return {
+          id: plugin.id,
+          name: t(`plugins.${plugin.id}.name`, plugin.name),
+          ...(description ? { description } : {}),
+          config: plugin.config ?? {},
+        };
+      }),
     } satisfies Bootstrap;
   });
 }

@@ -36,6 +36,9 @@ jobs:
       - name: Check that package.json spells the app name escaped
         run: node scripts/escape-names.ts --check
 
+      - name: Check that en.json has every English text
+        run: nub run i18n --check
+
       # Only vite build without release if it is a fork, or it is a pull-request
       - name: Vite Build
         if: github.repository == 'pear-devs/pear-desktop' && github.event_name == 'pull_request'

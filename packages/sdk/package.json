@@ -10,7 +10,8 @@
     "./icon": "./src/icon.ts",
     "./song-details": "./src/song-details.ts",
     "./rpc": "./src/rpc.ts",
-    "./core-config": "./src/core-config.ts"
+    "./core-config": "./src/core-config.ts",
+    "./i18n": "./src/i18n.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",

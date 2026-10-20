@@ -58,13 +58,13 @@ test("toggles and configures plugins live, persisting to config.json", async () 
     await expect(overlay(page).locator("[data-plugin]")).toHaveCount(1);
 
     expect(await enabled(page, "blur-nav-bar")).toBe(false);
-    await pluginRow(page, "blur-nav-bar").getByRole("switch", { name: "Enable Blur navigation bar" }).click();
+    await pluginRow(page, "blur-nav-bar").getByRole("switch", { name: "Enable Blur Navigation Bar" }).click();
     await expect.poll(() => enabled(page, "blur-nav-bar")).toBe(true);
     await expect
       .poll(() => page.evaluate(() => getComputedStyle(document.querySelector("#nav-bar-background")!).backdropFilter))
       .toBe("blur(8px)");
 
-    await pluginRow(page, "blur-nav-bar").getByRole("button", { name: "Configure Blur navigation bar" }).click();
+    await pluginRow(page, "blur-nav-bar").getByRole("button", { name: "Configure Blur Navigation Bar" }).click();
     const slider = pluginRow(page, "blur-nav-bar").getByLabel("Blur radius");
     await slider.fill("12");
     await expect.poll(async () => (await pluginConfig(page, "blur-nav-bar"))?.blur).toBe(12);
@@ -197,7 +197,7 @@ test("records a global shortcut and registers it with the OS", async () => {
     await page.waitForFunction(() => window.__pearRuntime?.settings);
     await page.keyboard.press("Control+,");
     await section(page, "Plugins");
-    await pluginRow(page, "shortcuts").getByRole("button", { name: "Configure Global shortcuts" }).click();
+    await pluginRow(page, "shortcuts").getByRole("button", { name: "Configure Shortcuts (& MPRIS)" }).click();
     const recorder = pluginRow(page, "shortcuts").getByLabel("Play / pause");
     await recorder.click();
     await expect(recorder).toHaveText("Press keys…");
@@ -209,7 +209,7 @@ test("records a global shortcut and registers it with the OS", async () => {
       .toBe(true);
 
     // Disabling the plugin releases it.
-    await pluginRow(page, "shortcuts").getByRole("switch", { name: "Enable Global shortcuts" }).click();
+    await pluginRow(page, "shortcuts").getByRole("switch", { name: "Enable Shortcuts (& MPRIS)" }).click();
     await expect
       .poll(() => app.evaluate(({ globalShortcut }) => globalShortcut.isRegistered("Ctrl+Alt+Shift+F9")))
       .toBe(false);
@@ -256,6 +256,25 @@ test("an existing pear-desktop 3.x config.json is migrated in place", async () =
     expect(file.__internal__.migrations.version).toBe("4.0.0");
     // Options this version doesn't use yet are kept.
     expect(file.options.language).toBe("el");
+  } finally {
+    await app.close();
+  }
+});
+
+test("follows the chosen language, with English for untranslated texts", async () => {
+  const de = JSON.parse(readFileSync(join(import.meta.dirname, "../../../src/i18n/resources/de.json"), "utf8"));
+  const app = await launchApp({ core: { general: { language: "de" } } });
+  try {
+    const page = await mainWindow(app);
+    await page.waitForFunction(() => window.__pearRuntime?.settings);
+    // pear-desktop's translated plugin names.
+    const name = await page.evaluate(() => window.__pearRuntime!.plugins.plugins.find((p) => p.id === "clock")!.name);
+    expect(name).toBe(de.plugins.clock.name);
+    await page.keyboard.press("Control+,");
+    await overlay(page).getByRole("searchbox").fill(de.plugins.clock.name);
+    await expect(pluginRow(page, "clock")).toContainText(de.plugins.clock.name);
+    // Texts Weblate hasn't translated yet fall back to English.
+    expect(await page.evaluate(() => window.__pearRuntime!.plugins.t("settings-ui.no-such-key", "fallback"))).toBe("fallback");
   } finally {
     await app.close();
   }

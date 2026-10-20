@@ -2,6 +2,7 @@
 // overlay next to the plugins with the same field builders.
 
 import { config, type ConfigOf } from "./config.ts";
+import { languages } from "./macros.ts" with { type: "macro" };
 
 /**
  * Where YTM opens: pear-desktop's page names (stored as is) and the
@@ -49,6 +50,12 @@ export const GENERAL = {
     description: "Used when the last page isn't reopened.",
     group: "Startup",
     variant: "dropdown",
+  }),
+  language: config.select("", [{ value: "", label: "System default" }, ...languages()], {
+    label: "Language",
+    group: "Language",
+    variant: "dropdown",
+    restart: true,
   }),
   autoUpdates: config.bool(true, {
     label: "Check for updates",

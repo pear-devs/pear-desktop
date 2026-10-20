@@ -62,6 +62,12 @@ export interface HostContext<C> {
   };
   /** Runs when the plugin stops (disabled, restarted or app quit). */
   onCleanup(fn: Cleanup): void;
+  /**
+   * Translates a key from the translation files (src/i18n/resources), e.g.
+   * `t("plugins.<id>.saved", "Saved “{{title}}”", { title })`. The
+   * fallback is the English text; `nub run i18n` adds it to en.json.
+   */
+  t(key: string, fallback?: string, vars?: Readonly<Record<string, unknown>>): string;
   readonly log: Logger;
 }
 
@@ -169,6 +175,12 @@ export interface PageContext<C, Cmds extends AnyCommands> {
   onCleanup(fn: Cleanup): void;
   /** Aborted when the plugin stops. */
   readonly signal: AbortSignal;
+  /**
+   * Translates a key from the translation files (src/i18n/resources), e.g.
+   * `t("plugins.<id>.saved", "Saved “{{title}}”", { title })`. The
+   * fallback is the English text; `nub run i18n` adds it to en.json.
+   */
+  t(key: string, fallback?: string, vars?: Readonly<Record<string, unknown>>): string;
   readonly log: Logger;
 }
 

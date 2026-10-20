@@ -5,6 +5,7 @@
 import type { Field, ListField, MultiField, NumberField, SelectField } from "@pear/sdk";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { toAccelerator } from "./accelerator.ts";
+import { useText } from "./strings.ts";
 
 interface FieldProps {
   /** Unique within the dialog; used for ids. */
@@ -16,6 +17,7 @@ interface FieldProps {
 
 export function SettingsField({ name, field, value, onChange }: FieldProps) {
   const id = `field-${name}`;
+  const text = useText();
   return (
     <div class="field" data-field={name}>
       <div class="field-row">
@@ -25,8 +27,8 @@ export function SettingsField({ name, field, value, onChange }: FieldProps) {
               {field.label}
             </label>
             {field.restart && (
-              <span class="pill" title="Applies after a restart">
-                restart
+              <span class="pill" title={text("settings-ui.restart-pill-hint")}>
+                {text("settings-ui.restart-pill")}
               </span>
             )}
           </div>
@@ -101,6 +103,7 @@ function useDraft<T>(value: T) {
 const MAX_SLIDER_STEPS = 1000;
 
 function NumberControl({ id, field, value, onChange }: { id: string; field: NumberField; value: number; onChange(v: unknown): void }) {
+  const text = useText();
   const [draft, setDraft] = useDraft(value);
   const commit = useDebounced(onChange);
   const step = field.step ?? 1;
@@ -142,7 +145,7 @@ function NumberControl({ id, field, value, onChange }: { id: string; field: Numb
   }
   return (
     <div class="stepper">
-      <button type="button" class="stepper-button" aria-label={`Decrease ${field.label}`} onClick={() => update(draft - step, false)}>
+      <button type="button" class="stepper-button" aria-label={text("settings-ui.decrease", { label: field.label })} onClick={() => update(draft - step, false)}>
         −
       </button>
       <input
@@ -156,7 +159,7 @@ function NumberControl({ id, field, value, onChange }: { id: string; field: Numb
         onInput={(e) => update(e.currentTarget.valueAsNumber)}
       />
       {unit && <span class="stepper-unit">{unit}</span>}
-      <button type="button" class="stepper-button" aria-label={`Increase ${field.label}`} onClick={() => update(draft + step, false)}>
+      <button type="button" class="stepper-button" aria-label={text("settings-ui.increase", { label: field.label })} onClick={() => update(draft + step, false)}>
         +
       </button>
     </div>
@@ -220,6 +223,7 @@ function MultiControl({ id, field, value, onChange }: { id: string; field: Multi
 
 /** One row per entry; empty entries are dropped when saved. */
 function ListControl({ id, field, value, onChange }: { id: string; field: ListField; value: string[]; onChange(v: unknown): void }) {
+  const text = useText();
   const [rows, setRows] = useDraft(value);
   const commit = useDebounced((next) => onChange((next as string[]).map((v) => v.trim()).filter(Boolean)), 400);
   const update = (next: string[]) => {
@@ -239,13 +243,13 @@ function ListControl({ id, field, value, onChange }: { id: string; field: ListFi
             value={row}
             onInput={(e) => update(rows.map((v, i) => (i === index ? e.currentTarget.value : v)))}
           />
-          <button type="button" class="icon-button" aria-label={`Remove ${row || `entry ${index + 1}`}`} onClick={() => update(rows.filter((_, i) => i !== index))}>
+          <button type="button" class="icon-button" aria-label={text("settings-ui.remove", { item: row || text("settings-ui.entry", { number: index + 1 }) })} onClick={() => update(rows.filter((_, i) => i !== index))}>
             ×
           </button>
         </div>
       ))}
       <button type="button" class="outlined" onClick={() => setRows([...rows, ""])}>
-        Add
+        {text("settings-ui.add")}
       </button>
     </div>
   );
@@ -273,13 +277,14 @@ function TextControl(props: { id: string; secret: boolean; placeholder: string |
 
 function ShortcutRecorder({ id, value, onChange }: { id: string; value: string; onChange(v: unknown): void }) {
   const [recording, setRecording] = useState(false);
+  const text = useText();
   return (
     <button
       id={id}
       type="button"
       class="outlined shortcut"
       data-recording={recording}
-      title="Click, then press a key combination. Backspace clears, Escape cancels."
+      title={text("settings-ui.shortcut-hint")}
       onClick={() => setRecording(true)}
       onBlur={() => setRecording(false)}
       onKeyDown={(event) => {
@@ -296,7 +301,7 @@ function ShortcutRecorder({ id, value, onChange }: { id: string; value: string; 
         onChange(accelerator);
       }}
     >
-      {recording ? "Press keys…" : value || "Not set"}
+      {recording ? text("settings-ui.shortcut-recording") : value || text("settings-ui.shortcut-unset")}
     </button>
   );
 }

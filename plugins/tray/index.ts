@@ -38,7 +38,17 @@ export default definePlugin({
       const update = (state: NowPlaying) => {
         const track = state.track;
         const playing = state.status === "playing" || state.status === "buffering";
-        tray.setToolTip(track ? `${track.title} — ${track.artist}` : "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063");
+        // pear-desktop's tray texts and translations (main.tray.*).
+        const appName = "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063";
+        tray.setToolTip(
+          track
+            ? ctx.t("main.tray.tooltip.with-song-info", "{{applicationName}}: {{artist}} - {{title}}", {
+                applicationName: appName,
+                artist: track.artist,
+                title: track.title,
+              })
+            : ctx.t("main.tray.tooltip.default", "{{applicationName}}", { applicationName: appName }),
+        );
         tray.setContextMenu(
           Menu.buildFromTemplate([
             ...(track
@@ -48,14 +58,17 @@ export default definePlugin({
                   { type: "separator" as const },
                 ]
               : []),
-            { label: playing ? "Pause" : "Play", click: () => ctx.player.control({ type: "toggle" }) },
-            { label: "Next", click: () => ctx.player.control({ type: "next" }) },
-            { label: "Previous", click: () => ctx.player.control({ type: "previous" }) },
+            { label: ctx.t("main.tray.play-pause", playing ? "Pause" : "Play"), click: () => ctx.player.control({ type: "toggle" }) },
+            { label: ctx.t("main.tray.next", "Next"), click: () => ctx.player.control({ type: "next" }) },
+            { label: ctx.t("main.tray.previous", "Previous"), click: () => ctx.player.control({ type: "previous" }) },
             { type: "separator" },
-            { label: window.isVisible() ? "Hide window" : "Show window", click: toggleWindow },
-            { label: "Settings…", click: () => ctx.openSettings() },
+            {
+              label: window.isVisible() ? ctx.t("main.tray.hide", "Hide window") : ctx.t("main.tray.show", "Show window"),
+              click: toggleWindow,
+            },
+            { label: ctx.t("main.tray.settings", "Settings…"), click: () => ctx.openSettings() },
             { type: "separator" },
-            { label: "Quit", click: () => app.quit() },
+            { label: ctx.t("main.tray.quit", "Quit"), click: () => app.quit() },
           ]),
         );
       };

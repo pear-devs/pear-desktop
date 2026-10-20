@@ -2,7 +2,7 @@
 // Node while bundling and is replaced by its (serialized) return value, so a
 // mistake here fails the build instead of a user's session.
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { transform } from "lightningcss";
 import { isSelectorName, selectors, type SelectorName } from "./selectors.ts";
 
@@ -58,4 +58,26 @@ function unknownSelector(name: string) {
  */
 export function embed(asset: string): string {
   return readFileSync(new URL(`../../../assets/${asset}`, import.meta.url)).toString("base64");
+}
+
+const RESOURCES = new URL("../../../src/i18n/resources/", import.meta.url);
+
+/** Every translation file (pear-desktop's Weblate resources), by language code. */
+export function translations(): Record<string, unknown> {
+  return Object.fromEntries(
+    readdirSync(RESOURCES)
+      .filter((file) => file.endsWith(".json"))
+      .map((file) => [file.slice(0, -5), JSON.parse(readFileSync(new URL(file, RESOURCES), "utf8"))]),
+  );
+}
+
+/** The languages to offer: "English (English)", "Ελληνικά (Greek)", … sorted by code. */
+export function languages(): { value: string; label: string }[] {
+  return Object.entries(translations())
+    .map(([code, resource]) => {
+      const meta = (resource as { language?: { name?: string; "local-name"?: string } }).language;
+      const local = meta?.["local-name"] ?? code;
+      return { value: code, label: meta?.name && meta.name !== local ? `${local} (${meta.name})` : local };
+    })
+    .sort((a, b) => a.value.localeCompare(b.value));
 }

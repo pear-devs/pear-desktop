@@ -59,6 +59,9 @@ export interface Bootstrap {
   errors: Record<string, string>;
   core: Record<CoreSection, CoreState>;
   app: AppInfo;
+  /** The active language and its strings (English underneath). */
+  language: string;
+  strings: Record<string, string>;
   /** Plugins supported on this platform, in settings-UI form. */
   catalog: PluginInfo[];
 }

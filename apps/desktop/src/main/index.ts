@@ -8,6 +8,7 @@ import { chromeUserAgent, isGoogleAuth, YTM_ORIGIN } from "../shared/user-agent.
 import { ApiServer } from "./api/index.ts";
 import { Settings, type WindowState } from "./config.ts";
 import { seedConsent } from "./consent.ts";
+import { loadI18n, resolveLanguage } from "./i18n.ts";
 import { setupIpc } from "./ipc.ts";
 import { setupNet } from "./net.ts";
 import { PageRequests } from "./page-requests.ts";
@@ -159,6 +160,7 @@ function main() {
 
   app.whenReady().then(async () => {
     console.info(`[pear] startup: app ready after ${Math.round(performance.now())}ms`);
+    plugins.setI18n(loadI18n(resolveLanguage(settings.core("general").language, app.getLocale())));
     electronUserAgent = app.userAgentFallback;
     ytmUserAgent = chromeUserAgent(electronUserAgent);
     app.userAgentFallback = ytmUserAgent;

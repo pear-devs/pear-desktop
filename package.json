@@ -20,7 +20,8 @@
     "release:linux": "nub run --filter @pear/desktop release:linux",
     "release:mac": "nub run --filter @pear/desktop release:mac",
     "release:win": "nub run --filter @pear/desktop release:win",
-    "changelog": "nub dlx auto-changelog"
+    "changelog": "nub dlx auto-changelog",
+    "i18n": "nub run --filter @pear/desktop i18n"
   },
   "devDependencies": {
     "typescript": "^7.0.2"

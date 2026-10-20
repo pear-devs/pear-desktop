@@ -2,10 +2,12 @@
 // sidebar. Both render into shadow roots so YTM's styles can't leak in and
 // ours can't leak out.
 
+import type { Translate } from "@pear/sdk/i18n";
 import { selectors } from "@pear/sdk/selectors";
 import { render } from "preact";
 import { Icon } from "./icons.tsx";
 import { Settings, type SettingsModel } from "./settings.tsx";
+import { UI_STRINGS } from "./strings.ts";
 import { entryStyles, overlayStyles } from "./styles.ts";
 
 export type { SettingsModel } from "./model.ts";
@@ -76,7 +78,7 @@ export function mountSettings(model: SettingsModel): SettingsController {
     true,
   );
 
-  mountSidebarEntries(controller);
+  mountSidebarEntries(controller, model.t);
   return controller;
 }
 
@@ -87,7 +89,7 @@ function sheet(css: string) {
 }
 
 /** A "Settings" entry at the end of the sidebar's primary section, in both the full and the mini guide. */
-function mountSidebarEntries(controller: SettingsController) {
+function mountSidebarEntries(controller: SettingsController, t: Translate) {
   const entries = new Map<string, HTMLElement>();
   const create = (mini: boolean) => {
     const host = document.createElement("pear-settings-entry");
@@ -95,9 +97,14 @@ function mountSidebarEntries(controller: SettingsController) {
     const shadow = host.attachShadow({ mode: "open" });
     shadow.adoptedStyleSheets = [sheet(entryStyles)];
     render(
-      <button type="button" title="Pear Desktop settings (Ctrl+,)" aria-label="Pear Desktop settings" onClick={() => controller.open()}>
+      <button
+        type="button"
+        title={t("settings-ui.open-hint", UI_STRINGS["settings-ui.open-hint"])}
+        aria-label={t("settings-ui.open", UI_STRINGS["settings-ui.open"])}
+        onClick={() => controller.open()}
+      >
         <Icon name="settings" size={24} />
-        <span>Settings</span>
+        <span>{t("settings-ui.title", UI_STRINGS["settings-ui.title"])}</span>
       </button>,
       shadow,
     );
