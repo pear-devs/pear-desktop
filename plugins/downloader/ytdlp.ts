@@ -1,6 +1,8 @@
 // yt-dlp as a sidecar: argument building, output parsing and capability probing.
 // Pure functions (no Electron, no processes) so they are unit-testable.
 
+import { YTM_ORIGIN, ytmUrl } from "@pear/sdk/util";
+
 /**
  * "source": the audio as streamed (usually Opus), without re-encoding.
  * "custom": pear-desktop's Custom preset, with its own ffmpeg arguments and extension.
@@ -49,7 +51,6 @@ export interface ArgsOptions {
 }
 
 export const DEFAULT_TEMPLATE = "%(artist,creator,uploader)s - %(title)s.%(ext)s";
-const YTM = "https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com";
 
 // Prefer a source stream that needs no re-encoding.
 const FORMAT_SELECTORS: Record<AudioFormat, string> = {
@@ -79,11 +80,11 @@ export function canEmbedCover(format: AudioFormat, capabilities: Capabilities, c
   return capabilities.mutagen;
 }
 
-export function buildArgs(o: ArgsOptions): string[] {
-  const playlist = o.target.playlistId !== undefined;
-  const url = playlist ? `${YTM}/playlist?list=${o.target.playlistId}` : `${YTM}/watch?v=${o.target.videoId}`;
-  const template = (o.template.trim() || DEFAULT_TEMPLATE).replace(/^[/\\]+/, "");
-  const output = playlist && o.playlistFolders ? `%(playlist_title,playlist_id)s/${template}` : template;
+export function buildArgs(options: ArgsOptions): string[] {
+  const playlist = options.target.playlistId !== undefined;
+  const url = playlist ? ytmUrl(`/playlist?list=${options.target.playlistId}`) : ytmUrl(`/watch?v=${options.target.videoId}`);
+  const template = (options.template.trim() || DEFAULT_TEMPLATE).replace(/^[/\\]+/, "");
+  const output = playlist && options.playlistFolders ? `%(playlist_title,playlist_id)s/${template}` : template;
 
   const args = [
     "--newline",
@@ -99,35 +100,41 @@ export function buildArgs(o: ArgsOptions): string[] {
     "--print",
     "after_move:pear-done %(filepath)s",
     "--format",
-    FORMAT_SELECTORS[o.format],
+    FORMAT_SELECTORS[options.format],
     "--extract-audio",
     "--audio-format",
-    // "best" keeps the streamed codec and only remuxes it.
-    o.format === "source" ? "best" : o.format === "custom" ? customAudioFormat(o.customExtension ?? "") : o.format,
+    audioFormatArg(options),
     "--audio-quality",
     "0",
     "--embed-metadata",
     "--paths",
-    o.folder,
+    options.folder,
     "--output",
     output,
     playlist ? "--yes-playlist" : "--no-playlist",
-    o.skipExisting ? "--no-overwrites" : "--force-overwrites",
+    options.skipExisting ? "--no-overwrites" : "--force-overwrites",
   ];
   // pear-desktop's Custom preset: its ffmpeg arguments for the conversion.
-  if (o.format === "custom" && o.customArgs?.trim()) args.push("--postprocessor-args", `ExtractAudio+ffmpeg_o:${o.customArgs.trim()}`);
-  if (o.cookiesFile) args.push("--cookies", o.cookiesFile);
-  if (canEmbedCover(o.format, o.capabilities, o.customExtension)) {
+  if (options.format === "custom" && options.customArgs?.trim()) args.push("--postprocessor-args", `ExtractAudio+ffmpeg_o:${options.customArgs.trim()}`);
+  if (options.cookiesFile) args.push("--cookies", options.cookiesFile);
+  if (canEmbedCover(options.format, options.capabilities, options.customExtension)) {
     args.push("--embed-thumbnail", "--convert-thumbnails", "jpg");
     // YTM artwork comes as 16:9 with the square cover in the middle.
-    if (o.squareCover) args.push("--postprocessor-args", `ThumbnailsConvertor+ffmpeg_o:-vf "crop='min(iw,ih)':'min(iw,ih)'"`);
+    if (options.squareCover) args.push("--postprocessor-args", `ThumbnailsConvertor+ffmpeg_o:-vf "crop='min(iw,ih)':'min(iw,ih)'"`);
   }
   // Album positions become track numbers.
-  if (isAlbum(o.target.playlistId)) args.push("--parse-metadata", "%(playlist_index)s:%(track_number)s");
-  if (playlist && o.playlistLimit > 0) args.push("--playlist-end", String(o.playlistLimit));
-  if (o.ffmpegPath) args.push("--ffmpeg-location", o.ffmpegPath);
+  if (isAlbum(options.target.playlistId)) args.push("--parse-metadata", "%(playlist_index)s:%(track_number)s");
+  if (playlist && options.playlistLimit > 0) args.push("--playlist-end", String(options.playlistLimit));
+  if (options.ffmpegPath) args.push("--ffmpeg-location", options.ffmpegPath);
   args.push("--", url);
   return args;
+}
+
+/** yt-dlp's --audio-format; "best" keeps the streamed codec and only remuxes it. */
+function audioFormatArg(options: ArgsOptions) {
+  if (options.format === "source") return "best";
+  if (options.format === "custom") return customAudioFormat(options.customExtension ?? "");
+  return options.format;
 }
 
 export type OutputEvent =
@@ -187,7 +194,7 @@ export function overallProgress(index: number, count: number, fraction: number) 
 export function menuTarget(hrefs: readonly string[]): DownloadTarget | undefined {
   let videoId: string | undefined;
   for (const href of hrefs) {
-    const url = new URL(href, YTM);
+    const url = new URL(href, YTM_ORIGIN);
     const playlist = url.searchParams.get("playlist") ?? (url.pathname === "/playlist" ? url.searchParams.get("list") : null);
     if (playlist && isDownloadablePlaylist(playlist)) return { videoId: "", playlistId: playlist };
     videoId ??= url.searchParams.get("v") ?? undefined;

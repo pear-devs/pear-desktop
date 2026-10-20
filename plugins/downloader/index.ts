@@ -1,264 +1,19 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { config, definePlugin, livePosition } from "@pear/sdk";
+import { definePlugin } from "@pear/sdk";
+import { css } from "@pear/sdk/macros" with { type: "macro" };
 import { v } from "@pear/sdk/rpc";
-import { net, shell } from "electron";
-import { isSiteCookie, toNetscape } from "./cookies.ts";
-import { style } from "./style.ts";
-import { DownloadQueue } from "./downloads.ts";
-import type { JobResult, DownloadQueue as Queue, QueueState } from "./downloads.ts";
-import { Installer } from "./install.ts";
-import { expandHome, type SetupState, Tools } from "./tools.ts";
-import {
-  type AudioFormat,
-  canEmbedCover,
-  DEFAULT_TEMPLATE,
-  type DownloadTarget,
-  isAlbum,
-  isDownloadablePlaylist,
-  menuTarget,
-} from "./ytdlp.ts";
-
-interface Downloader {
-  queue: Queue;
-  tools: Tools;
-  /** Tool settings the tools were found with; changing them restarts the plugin. */
-  toolsKey: string;
-}
-
-/** What the page shows: the queue, and yt-dlp or ffmpeg being downloaded. */
-export interface DownloaderState extends QueueState {
-  setup?: SetupState | undefined;
-}
-
-// Per running host instance (commands get the same ctx as `start`).
-const downloaders = new WeakMap<object, Downloader>();
-
-function downloaderOf(ctx: { t(key: string, fallback?: string): string }) {
-  const downloader = downloaders.get(ctx);
-  if (!downloader) throw new Error(ctx.t("plugins.downloader.errors.starting", "the downloader is still starting"));
-  return downloader;
-}
-
-/** Tests set this to pretend yt-dlp and ffmpeg aren't installed. */
-const IGNORE_SYSTEM_TOOLS = "PEAR_DOWNLOADER_IGNORE_SYSTEM_TOOLS";
-/** Checking for a newer yt-dlp waits a little after startup. */
-const UPDATE_DELAY_MS = 15_000;
-/** After a failed download, a newer yt-dlp may fix it; check if the last check is this old. */
-const UPDATE_AFTER_FAILURE_MS = 60 * 60 * 1000;
-
-const ICON =
-  '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="currentColor" d="M11 4h2v8.17l3.09-3.08 1.41 1.41L12 16l-5.5-5.5 1.41-1.41L11 12.17V4Zm-6 14h14v2H5v-2Z"/></svg>';
+import { shell } from "electron";
+import { downloaderConfig } from "./config.ts";
+import { type DownloaderState, downloaderOf, startHost, stateOf, toolsInfo } from "./host.ts";
+import { startPage } from "./page/index.ts";
+import type { DownloadTarget } from "./ytdlp.ts";
 
 export default definePlugin({
   id: "downloader",
   name: "Downloader",
   description: "Saves songs, albums and playlists as tagged audio files with cover art, using yt-dlp.",
-  // Option names follow pear-desktop 3.x's where they mean the same (see PLUGIN_MIGRATIONS for the rest).
-  config: {
-    downloadFolder: config.string("", {
-      label: "Download folder",
-      placeholder: "Downloads",
-      description: "Leave empty for your Downloads folder, like pear-desktop.",
-    }),
-    format: config.select(
-      "mp3",
-      [
-        { value: "mp3", label: "MP3 (most compatible)" },
-        { value: "m4a", label: "M4A / AAC" },
-        { value: "opus", label: "Opus (best quality for size)" },
-        { value: "source", label: "As streamed (no conversion)" },
-        { value: "custom", label: "Custom" },
-      ],
-      { label: "Format" },
-    ),
-    // pear-desktop's Custom preset.
-    customArgs: config.string("", {
-      label: "ffmpeg arguments",
-      placeholder: "-b:a 320k",
-      description: "Passed to ffmpeg when converting, e.g. -b:a 320k.",
-      group: "Custom format",
-    }),
-    customExtension: config.string("", {
-      label: "Extension",
-      placeholder: "mp3",
-      description: "aac, alac, flac, m4a, mp3, opus, vorbis or wav; empty keeps the streamed format.",
-      group: "Custom format",
-    }),
-    useSession: config.bool(true, {
-      label: "Download with my account",
-      description: "Lets downloads reach private playlists, liked songs and age-restricted songs, as pear-desktop did.",
-    }),
-    template: config.string(DEFAULT_TEMPLATE, {
-      label: "File name",
-      placeholder: DEFAULT_TEMPLATE,
-      description: "A yt-dlp output template, e.g. %(album)s/%(title)s.%(ext)s",
-    }),
-    playlistFolders: config.bool(true, { label: "Put albums and playlists in their own folder" }),
-    playlistMaxItems: config.number(0, { label: "Most songs per playlist", min: 0, max: 5000, description: "0 means no limit." }),
-    skipExisting: config.bool(true, { label: "Skip songs that are already downloaded" }),
-    squareCover: config.bool(true, { label: "Crop cover art to a square" }),
-    autoDownload: config.bool(false, {
-      label: "Download everything I listen to",
-      description: "Saves each song shortly before it ends.",
-      group: "Automatic downloads",
-    }),
-    autoDownloadMode: config.select(
-      "seconds",
-      [
-        { value: "seconds", label: "Near the end" },
-        { value: "percent", label: "Once partly played" },
-      ],
-      { label: "When", group: "Automatic downloads" },
-    ),
-    autoDownloadSeconds: config.number(20, { label: "…this long before the end", min: 1, max: 600, unit: "s", group: "Automatic downloads" }),
-    autoDownloadPercent: config.number(10, { label: "…once this much has played", min: 1, max: 100, unit: "%", group: "Automatic downloads" }),
-    autoDownloadFolder: config.string("", {
-      label: "Folder for these",
-      placeholder: "The download folder",
-      description: "Leave empty to use the download folder.",
-      group: "Automatic downloads",
-    }),
-    ytDlpPath: config.string("", {
-      label: "yt-dlp",
-      placeholder: "Found automatically",
-      description: "Path to the yt-dlp program.",
-      group: "Programs",
-    }),
-    ffmpegPath: config.string("", {
-      label: "ffmpeg",
-      placeholder: "Found automatically",
-      description: "Path to ffmpeg or its folder; yt-dlp needs it to convert audio.",
-      group: "Programs",
-    }),
-  },
+  config: downloaderConfig,
   host: {
-    async start(ctx) {
-      // Programs missing from the computer are downloaded here when first needed.
-      const installer = new Installer({
-        dir: join(ctx.app.getPath("userData"), "bin"),
-        fetch: (url, init) => ctx.session.fetch(url, init),
-        resolveRedirect,
-        onProgress: (progress) => tools.progress(progress),
-      });
-      const tools: Tools = new Tools({
-        ytDlpPath: ctx.config.ytDlpPath,
-        ffmpegPath: ctx.config.ffmpegPath,
-        installer,
-        systemTools: process.env[IGNORE_SYSTEM_TOOLS] !== "1",
-        t: ctx.t,
-        log: ctx.log,
-        onChange: () => publish(),
-      });
-
-      // Progress comes per network chunk; the page and the settings need a few updates a second.
-      let published = 0;
-      let publishTimer: ReturnType<typeof setTimeout> | undefined;
-      const flush = () => {
-        clearTimeout(publishTimer);
-        publishTimer = undefined;
-        published = Date.now();
-        ctx.setStatus(tools.describe());
-        const downloader = downloaders.get(ctx);
-        if (downloader) {
-          ctx.emit("state", stateOf(downloader.queue, tools));
-          showProgress(downloader.queue.state);
-        }
-      };
-      // As pear-desktop: progress on the taskbar / dock icon, and how many downloads are left.
-      const showProgress = (state: QueueState) => {
-        if (ctx.window.isDestroyed()) return;
-        ctx.window.setProgressBar(state.active ? Math.max(0.01, state.active.progress) : -1);
-        ctx.app.setBadgeCount(state.active ? state.queued + 1 : 0);
-      };
-      ctx.onCleanup(() => showProgress({ active: undefined, queued: 0 }));
-      const publish = () => {
-        const wait = 250 - (Date.now() - published);
-        if (!tools.setup || wait <= 0) flush();
-        else publishTimer ??= setTimeout(flush, wait);
-      };
-      ctx.onCleanup(() => clearTimeout(publishTimer));
-
-      await tools.init();
-      const folder = (auto: boolean) =>
-        expandHome(((auto && ctx.config.autoDownloadFolder.trim()) || ctx.config.downloadFolder).trim()) ||
-        ctx.app.getPath("downloads");
-      const autoJobs = new Set<number>();
-      let coverWarned = false;
-      const cookieDir = join(ctx.app.getPath("userData"), "downloader");
-      let cookieFiles = 0;
-      const queue = new DownloadQueue({
-        prepare: (signal) => tools.ready(signal),
-        // The window's session, as pear-desktop downloaded with it; only the site's cookies, private to this user.
-        cookies: async () => {
-          if (!ctx.config.useSession) return undefined;
-          const cookies = (await ctx.session.cookies.get({})).filter(isSiteCookie);
-          if (cookies.length === 0) return undefined;
-          await mkdir(cookieDir, { recursive: true });
-          const path = join(cookieDir, `cookies-${process.pid}-${++cookieFiles}.txt`);
-          await writeFile(path, toNetscape(cookies), { mode: 0o600 });
-          return { path, dispose: () => rm(path, { force: true }) };
-        },
-        argsFor: (ready, id) => {
-          if (!coverWarned && !canEmbedCover(ctx.config.format, ready.capabilities, ctx.config.customExtension)) {
-            coverWarned = true;
-            ctx.log.warn(`cover art can't be embedded into ${ctx.config.format} files without mutagen (pip install mutagen)`);
-          }
-          return {
-            folder: folder(autoJobs.has(id)),
-            format: ctx.config.format,
-            template: ctx.config.template,
-            playlistFolders: ctx.config.playlistFolders,
-            playlistLimit: ctx.config.playlistMaxItems,
-            skipExisting: ctx.config.skipExisting,
-            squareCover: ctx.config.squareCover,
-            ffmpegPath: ready.ffmpegPath,
-            capabilities: ready.capabilities,
-            customArgs: ctx.config.customArgs,
-            customExtension: ctx.config.customExtension,
-          };
-        },
-        onState: () => publish(),
-        onResult: (result) => {
-          autoJobs.delete(result.id);
-          if (result.error && !result.cancelled) {
-            ctx.log.warn(`${result.label}: ${result.error}`);
-            // The site changes; a newer yt-dlp often fixes failing downloads.
-            void tools.update(UPDATE_AFTER_FAILURE_MS);
-          }
-          ctx.emit("result", result);
-          ctx.api.broadcast("result", result);
-        },
-        log: ctx.log,
-      });
-      downloaders.set(ctx, { queue, tools, toolsKey: toolsKey(ctx.config) });
-      const updateTimer = setTimeout(() => void tools.update(), UPDATE_DELAY_MS);
-      ctx.onCleanup(() => {
-        clearTimeout(updateTimer);
-        queue.dispose();
-        downloaders.delete(ctx);
-      });
-      flush();
-      if (tools.ytDlp) ctx.log.info(`yt-dlp ${tools.capabilities?.version ?? ""} at ${tools.ytDlp.path}`);
-
-      const autoDownloaded = new Set<string>();
-      ctx.player.on("change", (state) => {
-        const track = state.track;
-        if (!ctx.config.autoDownload || !track || state.ad || state.status !== "playing" || autoDownloaded.has(track.videoId)) return;
-        const position = livePosition(state);
-        const due =
-          ctx.config.autoDownloadMode === "percent"
-            ? position >= track.durationSeconds * (ctx.config.autoDownloadPercent / 100)
-            : track.durationSeconds - position <= ctx.config.autoDownloadSeconds;
-        if (!due) return;
-        autoDownloaded.add(track.videoId);
-        autoJobs.add(queue.add({ videoId: track.videoId }, track.title));
-      });
-    },
-    onConfigChange(config, ctx) {
-      // Everything else is read per download.
-      return downloaders.get(ctx)?.toolsKey === toolsKey(config) ? undefined : "restart";
-    },
+    start: startHost,
     commands: {
       /** Queues a download; defaults to the current track. Returns the job id. */
       download(target?: DownloadTarget, label?: string) {
@@ -272,19 +27,10 @@ export default definePlugin({
         downloaderOf(this).queue.cancel();
       },
       state(): DownloaderState {
-        const { queue, tools } = downloaderOf(this);
-        return stateOf(queue, tools);
+        return stateOf(downloaderOf(this));
       },
       info() {
-        const { tools } = downloaderOf(this);
-        const format = this.config.format as AudioFormat;
-        return {
-          ytDlp: tools.ytDlp?.path,
-          ffmpeg: tools.ffmpeg?.location,
-          sources: { ytDlp: tools.ytDlp?.source, ffmpeg: tools.ffmpeg?.source },
-          capabilities: tools.capabilities,
-          coverArt: tools.capabilities ? canEmbedCover(format, tools.capabilities, this.config.customExtension) : undefined,
-        };
+        return toolsInfo(downloaderOf(this), this.config);
       },
       reveal(file: string) {
         shell.showItemInFolder(file);
@@ -303,7 +49,7 @@ export default definePlugin({
         run({ videoId, playlistId }) {
           const { queue } = downloaderOf(this);
           const track = this.player.state.track;
-          const target = videoId || playlistId ? { videoId: videoId ?? "", ...(playlistId ? { playlistId } : {}) } : track && { videoId: track.videoId };
+          const target = requestedTarget(videoId, playlistId) ?? (track && { videoId: track.videoId });
           if (!target) throw new Error("nothing is playing");
           return { id: queue.add(target, track?.videoId === target.videoId ? track.title : (playlistId ?? target.videoId)) };
         },
@@ -312,8 +58,7 @@ export default definePlugin({
         summary: "The download queue, and yt-dlp or ffmpeg being downloaded",
         input: v.optional(v.object({})),
         run(): DownloaderState {
-          const { queue, tools } = downloaderOf(this);
-          return stateOf(queue, tools);
+          return stateOf(downloaderOf(this));
         },
       },
       cancel: {
@@ -325,279 +70,138 @@ export default definePlugin({
       },
     },
   },
-  style,
-  page: async (ctx) => {
-    const t = ctx.t;
-    const root = document.createElement("div");
-    root.className = "pear-dl";
-    const button = document.createElement("button");
-    button.className = "pear-dl-button";
-    button.innerHTML = ICON;
-    button.setAttribute("aria-haspopup", "menu");
-    button.setAttribute("aria-expanded", "false");
-    const menu = document.createElement("div");
-    menu.className = "pear-dl-menu";
-    menu.setAttribute("role", "menu");
-    menu.hidden = true;
-    root.append(button, menu);
-
-    const toast = document.createElement("div");
-    toast.className = "pear-dl-toast";
-    toast.setAttribute("role", "status");
-    toast.hidden = true;
-    document.body.append(toast);
-    ctx.onCleanup(() => {
-      root.remove();
-      toast.remove();
-    });
-
-    let state: DownloaderState = { active: undefined, queued: 0 };
-
-    const render = () => {
-      const active = state.active;
-      const setup = state.setup && !state.setup.update ? state.setup : undefined;
-      if (setup) {
-        // yt-dlp or ffmpeg being downloaded before the first song.
-        const fraction = setup.total ? setup.received / setup.total : 0;
-        button.dataset.busy = setup.stage === "downloading" ? "downloading" : "converting";
-        button.style.setProperty("--pear-dl-progress", String(fraction));
-        const vars = { tool: setup.tool, percent: Math.round(fraction * 100) };
-        button.title =
-          setup.stage === "extracting"
-            ? t("plugins.downloader.setup.extracting", "Unpacking {{tool}}…", vars)
-            : setup.stage === "verifying"
-              ? t("plugins.downloader.setup.verifying", "Checking {{tool}}…", vars)
-              : t("plugins.downloader.setup.downloading", "Downloading {{tool}}… {{percent}}%", vars);
-      } else if (active) {
-        button.dataset.busy = active.stage === "converting" ? "converting" : "downloading";
-        button.style.setProperty("--pear-dl-progress", String(active.progress));
-        const item = active.item && active.item.count > 1 ? ` (${active.item.index}/${active.item.count})` : "";
-        const vars = { title: active.label + item, percent: Math.round(active.progress * 100) };
-        const what =
-          active.stage === "converting"
-            ? t("plugins.downloader.progress.converting", "Converting “{{title}}” – {{percent}}%", vars)
-            : active.stage === "starting"
-              ? t("plugins.downloader.progress.starting", "Starting “{{title}}”", vars)
-              : t("plugins.downloader.progress.downloading", "Downloading “{{title}}” – {{percent}}%", vars);
-        const queued = state.queued > 0 ? `, ${t("plugins.downloader.progress.queued", "{{count}} more queued", { count: state.queued })}` : "";
-        button.title = what + queued;
-      } else {
-        delete button.dataset.busy;
-        button.title = t("plugins.downloader.templates.button", "Download");
-      }
-      button.setAttribute("aria-label", button.title);
-    };
-    render();
-
-    let toastTimer: ReturnType<typeof setTimeout> | undefined;
-    const showToast = (message: string, action?: { label: string; run(): void }) => {
-      toast.replaceChildren(Object.assign(document.createElement("span"), { textContent: message, title: message }));
-      if (action) {
-        const actionButton = Object.assign(document.createElement("button"), { textContent: action.label });
-        actionButton.addEventListener("click", () => {
-          action.run();
-          toast.hidden = true;
-        });
-        toast.append(actionButton);
-      }
-      toast.hidden = false;
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => (toast.hidden = true), 6000);
-    };
-    ctx.onCleanup(() => clearTimeout(toastTimer));
-
-    const start = async (target: DownloadTarget | undefined, label?: string) => {
-      closeMenu();
-      try {
-        await ctx.host.invoke("download", target, label);
-        if (state.active) {
-          showToast(t("plugins.downloader.toast.queued", "Queued “{{title}}”", { title: label ?? ctx.player.state.track?.title ?? "" }));
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message.replace(/^.*Error: /, "") : String(error);
-        showToast(t("plugins.downloader.toast.cannot-download", "Can't download: {{error}}", { error: message }));
-      }
-    };
-
-    const playlist = () => {
-      const fromPage = new URL(location.href).searchParams.get("list") ?? undefined;
-      const id = isDownloadablePlaylist(fromPage) ? fromPage : ctx.player.state.track?.playlistId;
-      return isDownloadablePlaylist(id) ? id : undefined;
-    };
-
-    const options = () => {
-      const track = ctx.player.state.track;
-      const items: { label: string; run(): void }[] = [];
-      if (track) {
-        items.push({ label: t("plugins.downloader.menu.download-song", "Download song"), run: () => void start({ videoId: track.videoId }, track.title) });
-      }
-      const list = playlist();
-      if (list) {
-        const album = isAlbum(list);
-        const label = album ? t("plugins.downloader.labels.album", "album") : t("plugins.downloader.labels.playlist", "playlist");
-        items.push({
-          label: album
-            ? t("plugins.downloader.menu.download-album", "Download album")
-            : t("plugins.downloader.menu.download-playlist", "Download playlist"),
-          run: () => void start({ videoId: track?.videoId ?? "", playlistId: list }, (album && track?.album) || label),
-        });
-      }
-      if (state.active) {
-        items.push({
-          label:
-            state.queued > 0
-              ? t("plugins.downloader.menu.cancel-all", "Cancel downloads")
-              : t("plugins.downloader.menu.cancel", "Cancel download"),
-          run: () => void ctx.host.invoke("cancel"),
-        });
-      }
-      return items;
-    };
-
-    function closeMenu() {
-      menu.hidden = true;
-      button.setAttribute("aria-expanded", "false");
+  style: css`
+    .pear-dl {
+      position: relative;
+      display: inline-flex;
     }
-    const openMenu = (items: { label: string; run(): void }[]) => {
-      menu.replaceChildren(
-        ...items.map((item) => {
-          const entry = Object.assign(document.createElement("button"), { textContent: item.label });
-          entry.setAttribute("role", "menuitem");
-          entry.addEventListener("click", (event) => {
-            event.stopPropagation();
-            closeMenu();
-            item.run();
-          });
-          return entry;
-        }),
-      );
-      menu.hidden = false;
-      button.setAttribute("aria-expanded", "true");
-      menu.querySelector("button")?.focus();
-    };
-
-    ctx.listen(button, "click", (event: MouseEvent) => {
-      event.stopPropagation();
-      if (!menu.hidden) return closeMenu();
-      const items = options();
-      if (items.length === 0) return showToast(t("plugins.downloader.toast.nothing-playing", "Play something to download it"));
-      // A lone song downloads right away; choices open a menu.
-      if (items.length === 1 && !state.active) return items[0]!.run();
-      openMenu(items);
-    });
-    ctx.listen(document, "click", (event: MouseEvent) => {
-      if (!menu.hidden && !root.contains(event.target as Node)) closeMenu();
-    });
-    ctx.listen(document, "keydown", (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !menu.hidden) {
-        closeMenu();
-        button.focus();
+    .pear-dl-button {
+      --pear-dl-progress: 0;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      margin: 0 4px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: none;
+      color: var(--ytmusic-text-secondary, #aaa);
+      cursor: pointer;
+    }
+    .pear-dl-button:hover,
+    .pear-dl-button:focus-visible,
+    .pear-dl-button[aria-expanded="true"] {
+      color: var(--ytmusic-text-primary, #fff);
+      background: rgb(255 255 255 / 0.1);
+      outline: none;
+    }
+    .pear-dl-button[data-busy]::before {
+      content: "";
+      position: absolute;
+      inset: 3px;
+      border-radius: 50%;
+      background: conic-gradient(#fff calc(var(--pear-dl-progress) * 1turn), rgb(255 255 255 / 0.15) 0);
+      mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+    }
+    .pear-dl-button[data-busy="converting"]::before {
+      animation: pear-dl-pulse 1s ease-in-out infinite alternate;
+    }
+    .pear-dl-button svg {
+      position: relative;
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
+    }
+    @keyframes pear-dl-pulse {
+      from {
+        opacity: 1;
       }
-    });
-
-    const apply = (next: DownloaderState) => {
-      const previous = state.setup;
-      state = next;
-      const setup = next.setup;
-      // Say once per program why the first download takes a while.
-      if (setup && !setup.update && setup.tool !== previous?.tool) {
-        showToast(
-          t("plugins.downloader.setup.toast", "Downloading {{tool}}, which saving songs needs. This happens only once.", { tool: setup.tool }),
-        );
+      to {
+        opacity: 0.35;
       }
-      render();
-    };
-    ctx.host.on("state", (payload) => apply(payload as DownloaderState));
-    ctx.host.on("result", (payload) => {
-      const result = payload as JobResult;
-      if (result.cancelled) return showToast(t("plugins.downloader.toast.cancelled", "Download cancelled"));
-      if (result.error) return showToast(t("plugins.downloader.toast.failed", "Download failed: {{error}}", { error: result.error }));
-      const [file] = result.files;
-      const count = result.files.length;
-      showToast(
-        count > 1
-          ? t("plugins.downloader.toast.saved-many", "Saved {{count}} songs from “{{title}}”", { count, title: result.label })
-          : t("plugins.downloader.toast.saved", "Saved “{{title}}”", { title: result.label }),
-        file ? { label: t("plugins.downloader.toast.show", "Show"), run: () => void ctx.host.invoke("reveal", file) } : undefined,
-      );
-    });
-    ctx.host.invoke("state").then(apply, () => {});
-
-    // pear-desktop's "Download" entry in YTM's menus of songs, albums and playlists
-    // (anywhere, without playing them).
-    const item = document.createElement("div");
-    item.className = "pear-dl-item";
-    item.setAttribute("role", "option");
-    item.tabIndex = -1;
-    item.innerHTML = ICON;
-    item.append(t("plugins.downloader.templates.button", "Download"));
-    let itemTarget: DownloadTarget | undefined;
-    item.addEventListener("click", () => {
-      const target = itemTarget;
-      // Close YTM's menu the way it closes itself.
-      document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-      (item.closest("tp-yt-iron-dropdown") as HTMLElement & { close?: () => void } | null)?.close?.();
-      if (!target) return;
-      const label = target.playlistId
-        ? isAlbum(target.playlistId)
-          ? t("plugins.downloader.labels.album", "album")
-          : t("plugins.downloader.labels.playlist", "playlist")
-        : target.videoId === ctx.player.state.track?.videoId
-          ? ctx.player.state.track.title
-          : target.videoId;
-      void start(target, label);
-    });
-    ctx.onCleanup(() => item.remove());
-    const placeItem = () => {
-      const listbox = ctx.$("popup.listbox");
-      if (!listbox) return;
-      const hrefs = [...listbox.querySelectorAll<HTMLAnchorElement>("a[href]")]
-        .filter((link) => !item.contains(link))
-        .map((link) => link.getAttribute("href") ?? "");
-      itemTarget = menuTarget(hrefs);
-      if (itemTarget && item.parentElement !== listbox) listbox.prepend(item);
-      else if (!itemTarget && item.isConnected) item.remove();
-    };
-    void ctx.waitFor("popup.container").then((container) => {
-      const menuObserver = new MutationObserver(placeItem);
-      menuObserver.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
-      ctx.onCleanup(() => menuObserver.disconnect());
-    }, () => {});
-
-    // Keep the button in the player bar, which YTM may re-render or replace
-    // entirely while starting up, so watch the document rather than the bar.
-    const place = () => {
-      if (root.isConnected) return;
-      const volume = ctx.$("player_bar.volume_button");
-      if (volume) volume.before(root);
-      else ctx.$("player_bar.right_controls_buttons")?.prepend(root);
-    };
-    await ctx.waitFor("player_bar");
-    place();
-    const observer = new MutationObserver(place);
-    observer.observe(document.body, { childList: true, subtree: true });
-    ctx.onCleanup(() => observer.disconnect());
-  },
+    }
+    .pear-dl-menu {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      right: 0;
+      z-index: 10;
+      min-width: 200px;
+      padding: 8px 0;
+      border-radius: 8px;
+      background: var(--ytmusic-menu-background, #212121);
+      box-shadow: 0 4px 16px rgb(0 0 0 / 0.5);
+    }
+    .pear-dl-menu[hidden] {
+      display: none;
+    }
+    .pear-dl-menu button {
+      display: block;
+      width: 100%;
+      padding: 10px 16px;
+      border: 0;
+      background: none;
+      color: var(--ytmusic-text-primary, #fff);
+      font: 400 14px Roboto, "Noto Naskh Arabic UI", Arial, sans-serif;
+      text-align: left;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .pear-dl-menu button:hover,
+    .pear-dl-menu button:focus-visible {
+      background: rgb(255 255 255 / 0.1);
+      outline: none;
+    }
+    .pear-dl-toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(var(--ytmusic-player-bar-height, 72px) + 16px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      max-width: min(560px, 90vw);
+      padding: 12px 16px;
+      border-radius: 6px;
+      background: #f1f1f1;
+      color: #0f0f0f;
+      font: 400 14px Roboto, Arial, sans-serif;
+      box-shadow: 0 4px 16px rgb(0 0 0 / 0.4);
+      transform: translate(-50%, 0);
+      transition:
+        opacity 0.2s,
+        transform 0.2s;
+    }
+    .pear-dl-toast[hidden] {
+      display: flex;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 12px);
+    }
+    .pear-dl-toast span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pear-dl-toast button {
+      flex: none;
+      padding: 0;
+      border: 0;
+      background: none;
+      color: #065fd4;
+      font: 500 14px Roboto, Arial, sans-serif;
+      cursor: pointer;
+    }
+  `,
+  page: startPage,
 });
 
-function stateOf(queue: Queue, tools: Tools): DownloaderState {
-  return { ...queue.state, setup: tools.setup };
-}
-
-/** Where a redirecting URL points; Electron's fetch doesn't tell the final URL. */
-function resolveRedirect(url: string) {
-  return new Promise<string>((resolve, reject) => {
-    const request = net.request({ url, redirect: "manual" });
-    request.on("redirect", (_status, _method, location) => {
-      resolve(location);
-      request.abort();
-    });
-    request.on("response", (response) => reject(new Error(`${url} answered HTTP ${response.statusCode} instead of redirecting`)));
-    request.on("error", reject);
-    request.end();
-  });
-}
-
-function toolsKey(config: { ytDlpPath: string; ffmpegPath: string }) {
-  return `${config.ytDlpPath}\n${config.ffmpegPath}`;
+/** The RPC's video or playlist, if it named one. */
+function requestedTarget(videoId: string | undefined, playlistId: string | undefined): DownloadTarget | undefined {
+  if (!videoId && !playlistId) return undefined;
+  const target: DownloadTarget = { videoId: videoId ?? "" };
+  if (playlistId) target.playlistId = playlistId;
+  return target;
 }

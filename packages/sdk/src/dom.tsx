@@ -66,6 +66,8 @@ export interface PickerOptions {
 /**
  * A button that opens a menu of choices in a popover, like YTM's own pickers.
  * The popover lives in <body> (so YTM's overflow can't clip it); mount `button` where it belongs.
+ * Its shared sheet is added after the plugin's `style`, so overrides name both classes:
+ * `.pear-picker-popover.pear-<name>-popover { … }`.
  */
 export function picker(ctx: Ctx, options: PickerOptions) {
   ctx.addStyle(PICKER_CSS);

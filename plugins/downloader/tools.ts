@@ -7,10 +7,11 @@ import { accessSync, constants, statSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { delimiter, dirname, isAbsolute, join } from "node:path";
+import type { Translate } from "@pear/sdk/i18n";
+import { errorMessage } from "@pear/sdk/util";
+import { setupTitle, visibleSetup } from "./progress.ts";
 import { describeFailure, type InstallProgress, type Installer, type Tool, updateDue } from "./install.ts";
 import { type Capabilities, parseProbe } from "./ytdlp.ts";
-
-type Translate = (key: string, fallback?: string, vars?: Readonly<Record<string, unknown>>) => string;
 
 export const expandHome = (path: string) => (path === "~" || path.startsWith("~/") ? join(homedir(), path.slice(1)) : path);
 
@@ -88,7 +89,7 @@ export interface ToolsOptions {
 }
 
 export class Tools {
-  #o: ToolsOptions;
+  #options: ToolsOptions;
   ytDlp: { path: string; source: ToolSource } | undefined;
   ffmpeg: { location: string; source: ToolSource } | undefined;
   capabilities: Capabilities | undefined;
@@ -100,14 +101,14 @@ export class Tools {
   #updating = false;
 
   constructor(options: ToolsOptions) {
-    this.#o = options;
+    this.#options = options;
   }
 
   /** Finds what is there already. Throws when a path set in the settings doesn't work. */
   async init() {
-    const { t, installer } = this.#o;
+    const { t, installer } = this.#options;
     await installer.tidy();
-    const ytDlpPath = expandHome(this.#o.ytDlpPath.trim());
+    const ytDlpPath = expandHome(this.#options.ytDlpPath.trim());
     if (ytDlpPath) {
       const resolved = isAbsolute(ytDlpPath) ? ytDlpPath : findExecutable(ytDlpPath);
       if (!resolved || !isExecutable(resolved)) {
@@ -115,22 +116,22 @@ export class Tools {
           t(
             "plugins.downloader.errors.yt-dlp-not-found",
             "yt-dlp was not found at “{{path}}”. Correct its path in the settings, or clear it to have yt-dlp downloaded automatically.",
-            { path: this.#o.ytDlpPath.trim() },
+            { path: this.#options.ytDlpPath.trim() },
           ),
         );
       }
       this.ytDlp = { path: resolved, source: "configured" };
     } else {
-      const system = this.#o.systemTools ? findExecutable("yt-dlp") : undefined;
+      const system = this.#options.systemTools ? findExecutable("yt-dlp") : undefined;
       if (system) this.ytDlp = { path: system, source: "system" };
       else if (installer.hasYtDlp) this.ytDlp = { path: installer.ytDlpPath, source: "managed" };
     }
 
-    const ffmpegPath = expandHome(this.#o.ffmpegPath.trim());
+    const ffmpegPath = expandHome(this.#options.ffmpegPath.trim());
     if (ffmpegPath) this.ffmpeg = { location: ffmpegPath, source: "configured" };
     else {
-      const ffmpeg = this.#o.systemTools ? findExecutable("ffmpeg") : undefined;
-      const ffprobe = this.#o.systemTools ? findExecutable("ffprobe") : undefined;
+      const ffmpeg = this.#options.systemTools ? findExecutable("ffmpeg") : undefined;
+      const ffprobe = this.#options.systemTools ? findExecutable("ffprobe") : undefined;
       // Their folder also covers the per-user folders yt-dlp's own PATH lookup misses.
       if (ffmpeg && ffprobe) this.ffmpeg = { location: dirname(ffmpeg) === dirname(ffprobe) ? dirname(ffmpeg) : "", source: "system" };
       else if (installer.hasFfmpeg) this.ffmpeg = { location: installer.ffmpegDir, source: "managed" };
@@ -142,13 +143,13 @@ export class Tools {
       } catch (error) {
         // A broken download is replaced on demand; anything else is the user's to fix.
         if (this.ytDlp.source !== "managed") throw error;
-        this.#o.log.warn("the downloaded yt-dlp doesn't run; it will be downloaded again", error);
+        this.#options.log.warn("the downloaded yt-dlp doesn't run; it will be downloaded again", error);
         await rm(this.ytDlp.path, { force: true });
         this.ytDlp = undefined;
       }
     }
     if (this.capabilities && !this.capabilities.ffmpeg) this.#forgetFfmpeg();
-    this.#o.onChange();
+    this.#options.onChange();
   }
 
   /** The tools for a download, installing the missing ones first. */
@@ -161,7 +162,7 @@ export class Tools {
 
   /** Updates a downloaded yt-dlp unless that was checked within `interval`. */
   async update(interval?: number) {
-    const { installer, log } = this.#o;
+    const { installer, log } = this.#options;
     if (this.ytDlp?.source !== "managed" || this.#updating || this.#preparing) return;
     if (!updateDue(installer.state, Date.now(), interval)) return;
     this.#updating = true;
@@ -171,29 +172,24 @@ export class Tools {
         log.info(`updated yt-dlp to ${this.capabilities?.version}`);
       }
     } catch (error) {
-      log.warn("couldn't update yt-dlp:", error instanceof Error ? error.message : error);
+      log.warn("couldn't update yt-dlp:", errorMessage(error));
     } finally {
       this.#updating = false;
-      this.#o.onChange();
+      this.#options.onChange();
     }
   }
 
   /** Progress from the installer. */
   progress(progress: InstallProgress | undefined) {
     this.setup = progress && { ...progress, update: this.#updating };
-    this.#o.onChange();
+    this.#options.onChange();
   }
 
   /** One line for the settings. */
   describe(): string {
-    const { t } = this.#o;
-    const setup = this.setup;
-    if (setup && !setup.update) {
-      const vars = { tool: setup.tool, percent: setup.total ? Math.round((setup.received / setup.total) * 100) : 0 };
-      if (setup.stage === "extracting") return t("plugins.downloader.setup.extracting", "Unpacking {{tool}}…", vars);
-      if (setup.stage === "verifying") return t("plugins.downloader.setup.verifying", "Checking {{tool}}…", vars);
-      return t("plugins.downloader.setup.downloading", "Downloading {{tool}}… {{percent}}%", vars);
-    }
+    const { t } = this.#options;
+    const setup = visibleSetup(this.setup);
+    if (setup) return setupTitle(setup, t);
     if (this.failure) return this.failure;
     const missing = [!this.ytDlp && "yt-dlp", !this.ffmpeg && "ffmpeg"].filter(Boolean) as Tool[];
     if (missing.length === 2) {
@@ -226,7 +222,7 @@ export class Tools {
   }
 
   async #install(signal: AbortSignal | undefined): Promise<ReadyTools> {
-    const { installer, t } = this.#o;
+    const { installer, t } = this.#options;
     this.failure = undefined;
     if (!this.ytDlp) {
       await this.#run("yt-dlp", (s) => installer.installYtDlp(s), signal);
@@ -246,13 +242,13 @@ export class Tools {
       }
       return this.#current()!;
     } finally {
-      this.#o.onChange();
+      this.#options.onChange();
     }
   }
 
   /** Runs an install step, turning failures into a message for people. */
   async #run<T>(tool: Tool, step: (signal?: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> {
-    const { t, installer, log } = this.#o;
+    const { t, installer, log } = this.#options;
     const update = this.#updating;
     if (!(tool === "yt-dlp" ? installer.supported.ytDlp : installer.supported.ffmpeg)) {
       throw new Error(
@@ -278,7 +274,7 @@ export class Tools {
           });
       if (!update) {
         this.failure = `${failure} ${hint}`;
-        this.#o.onChange();
+        this.#options.onChange();
       }
       throw new Error(`${failure} ${hint}`);
     }
@@ -292,14 +288,14 @@ export class Tools {
   #forgetFfmpeg() {
     if (this.ffmpeg?.source === "configured") {
       throw new Error(
-        this.#o.t(
+        this.#options.t(
           "plugins.downloader.errors.ffmpeg-not-usable",
           "yt-dlp can't use the ffmpeg at “{{path}}”. Correct its path in the settings, or clear it.",
-          { path: this.#o.ffmpegPath.trim() },
+          { path: this.#options.ffmpegPath.trim() },
         ),
       );
     }
-    this.#o.log.warn(`yt-dlp can't use ffmpeg at "${this.ffmpeg?.location || "PATH"}"; it will be downloaded`);
+    this.#options.log.warn(`yt-dlp can't use ffmpeg at "${this.ffmpeg?.location || "PATH"}"; it will be downloaded`);
     this.ffmpeg = undefined;
     this.capabilities = undefined;
   }

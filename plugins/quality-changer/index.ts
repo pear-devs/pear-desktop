@@ -15,16 +15,16 @@ export default definePlugin({
   id: "quality-changer",
   name: "Video quality changer",
   description: "Adds a quality picker to the top of the video player.",
-  // The shared picker's look, white like the video's other buttons.
+  // White like the video's other buttons. Both classes, since the picker's sheet comes after this one.
   style: css`
-    .pear-quality-button {
+    .pear-picker-button.pear-quality-button {
       color: #fff;
     }
-    .pear-quality-button:hover,
-    .pear-quality-button[aria-expanded="true"] {
+    .pear-picker-button.pear-quality-button:hover,
+    .pear-picker-button.pear-quality-button[aria-expanded="true"] {
       background: rgb(255 255 255 / 0.15);
     }
-    .pear-quality-popover {
+    .pear-picker-popover.pear-quality-popover {
       margin: 4px 0;
       max-height: 60vh;
     }

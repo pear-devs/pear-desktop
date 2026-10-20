@@ -20,6 +20,7 @@ import { createHash } from "node:crypto";
 import { createWriteStream, existsSync, readFileSync } from "node:fs";
 import { chmod, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { errorMessage } from "@pear/sdk/util";
 
 export type Tool = "yt-dlp" | "ffmpeg";
 
@@ -95,7 +96,7 @@ export const updateDue = (state: InstalledState, now: number, interval = UPDATE_
 
 /** Turns network failures into something a person can act on. */
 export function describeFailure(error: unknown): { message: string; offline: boolean } {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = errorMessage(error);
   const offline = /ERR_(INTERNET_DISCONNECTED|NAME_NOT_RESOLVED|NETWORK_CHANGED|NETWORK_IO_SUSPENDED|CONNECTION_\w+|TIMED_OUT|ADDRESS_UNREACHABLE|PROXY_\w+)|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|fetch failed/i.test(
     message,
   );
@@ -103,13 +104,13 @@ export function describeFailure(error: unknown): { message: string; offline: boo
 }
 
 export class Installer {
-  #o: InstallerOptions;
+  #options: InstallerOptions;
   #platform: string;
   #arch: string;
   #now: () => number;
 
   constructor(options: InstallerOptions) {
-    this.#o = options;
+    this.#options = options;
     this.#platform = options.platform ?? process.platform;
     this.#arch = options.arch ?? process.arch;
     this.#now = options.now ?? Date.now;
@@ -120,12 +121,12 @@ export class Installer {
   }
 
   get ytDlpPath() {
-    return join(this.#o.dir, `yt-dlp${this.#exe}`);
+    return join(this.#options.dir, `yt-dlp${this.#exe}`);
   }
 
   /** Passed to yt-dlp's --ffmpeg-location. */
   get ffmpegDir() {
-    return join(this.#o.dir, "ffmpeg");
+    return join(this.#options.dir, "ffmpeg");
   }
 
   get hasYtDlp() {
@@ -142,20 +143,20 @@ export class Installer {
 
   get state(): InstalledState {
     try {
-      return JSON.parse(readFileSync(join(this.#o.dir, "tools.json"), "utf8")) as InstalledState;
+      return JSON.parse(readFileSync(join(this.#options.dir, "tools.json"), "utf8")) as InstalledState;
     } catch {
       return {};
     }
   }
 
   async #save(patch: InstalledState) {
-    await writeFile(join(this.#o.dir, "tools.json"), `${JSON.stringify({ ...this.state, ...patch }, null, 2)}\n`);
+    await writeFile(join(this.#options.dir, "tools.json"), `${JSON.stringify({ ...this.state, ...patch }, null, 2)}\n`);
   }
 
   /** Removes leftovers of an interrupted install or of replacing a running yt-dlp.exe. */
   async tidy() {
     await Promise.all(
-      [`${this.ytDlpPath}.download`, `${this.ytDlpPath}.old`, join(this.#o.dir, "ffmpeg.download")].map((path) =>
+      [`${this.ytDlpPath}.download`, `${this.ytDlpPath}.old`, join(this.#options.dir, "ffmpeg.download")].map((path) =>
         rm(path, { recursive: true, force: true }).catch(() => {}),
       ),
     );
@@ -168,7 +169,7 @@ export class Installer {
   async installYtDlp(signal?: AbortSignal): Promise<boolean> {
     const asset = ytDlpAsset(this.#platform, this.#arch);
     if (!asset) throw new Error(`there is no yt-dlp build for ${this.#platform} ${this.#arch}`);
-    await mkdir(this.#o.dir, { recursive: true });
+    await mkdir(this.#options.dir, { recursive: true });
     const expected = (await this.#checksums(`${YT_DLP}/SHA2-256SUMS`, signal)).get(asset);
     if (!expected) throw new Error(`${asset} is missing from yt-dlp's checksums`);
     const now = this.#now();
@@ -185,7 +186,7 @@ export class Installer {
       await rename(temporary, this.ytDlpPath);
     } finally {
       await rm(temporary, { force: true });
-      this.#o.onProgress(undefined);
+      this.#options.onProgress(undefined);
     }
     await this.#save({ ytDlp: { sha256: expected, checked: now } });
     return true;
@@ -194,7 +195,7 @@ export class Installer {
   async installFfmpeg(signal?: AbortSignal): Promise<void> {
     const source = ffmpegSource(this.#platform, this.#arch);
     if (!source) throw new Error(`there is no ffmpeg build for ${this.#platform} ${this.#arch}`);
-    const work = join(this.#o.dir, "ffmpeg.download");
+    const work = join(this.#options.dir, "ffmpeg.download");
     await rm(work, { recursive: true, force: true });
     await mkdir(work, { recursive: true });
     try {
@@ -205,7 +206,7 @@ export class Installer {
         if (!expected) throw new Error(`${source.archive} is missing from the FFmpeg build's checksums`);
         const archive = join(work, source.archive);
         await this.#download("ffmpeg", `${FFMPEG_BUILDS}/${source.archive}`, archive, expected, signal);
-        this.#o.onProgress({ tool: "ffmpeg", stage: "extracting", received: 0, total: 0 });
+        this.#options.onProgress({ tool: "ffmpeg", stage: "extracting", received: 0, total: 0 });
         await this.#extract(archive, work, signal);
         await rm(archive, { force: true });
         bin = join(work, source.archive.replace(/\.(zip|tar\.xz)$/, ""), "bin");
@@ -216,12 +217,12 @@ export class Installer {
         let version = "";
         for (const program of ["ffmpeg", "ffprobe"]) {
           // e.g. /download/macos/arm64/1789931890_9.0.2/ffmpeg.zip
-          const url = new URL(await this.#o.resolveRedirect(`${MARTIN_RIEDL}/redirect/latest/macos/${source.arch}/release/${program}.zip`), MARTIN_RIEDL).href;
+          const url = new URL(await this.#options.resolveRedirect(`${MARTIN_RIEDL}/redirect/latest/macos/${source.arch}/release/${program}.zip`), MARTIN_RIEDL).href;
           const expected = (await this.#checksums(`${url}.sha256`, signal)).get(`${program}.zip`);
           if (!expected) throw new Error(`no checksum for ${url}`);
           const archive = join(work, `${program}.zip`);
           await this.#download("ffmpeg", url, archive, expected, signal);
-          this.#o.onProgress({ tool: "ffmpeg", stage: "extracting", received: 0, total: 0 });
+          this.#options.onProgress({ tool: "ffmpeg", stage: "extracting", received: 0, total: 0 });
           await this.#extract(archive, bin, signal);
           await rm(archive, { force: true });
           version = /\/\d+_([^/]+)\/[^/]+$/.exec(url)?.[1] ?? version;
@@ -237,12 +238,12 @@ export class Installer {
       await this.#save({ ffmpeg: { source: from, installed: this.#now() } });
     } finally {
       await rm(work, { recursive: true, force: true }).catch(() => {});
-      this.#o.onProgress(undefined);
+      this.#options.onProgress(undefined);
     }
   }
 
   async #get(url: string, signal: AbortSignal | undefined) {
-    const response = await this.#o.fetch(url, signal ? { signal } : {});
+    const response = await this.#options.fetch(url, signal ? { signal } : {});
     if (!response.ok) throw new Error(`${url} answered HTTP ${response.status}`);
     return response;
   }
@@ -270,13 +271,13 @@ export class Installer {
         hash.update(value);
         received += value.byteLength;
         if (!file.write(value)) await new Promise<void>((resolve) => file.once("drain", () => resolve()));
-        this.#o.onProgress({ tool, stage: "downloading", received, total });
+        this.#options.onProgress({ tool, stage: "downloading", received, total });
       }
     } finally {
       file.end();
       await closed;
     }
-    this.#o.onProgress({ tool, stage: "verifying", received, total });
+    this.#options.onProgress({ tool, stage: "verifying", received, total });
     const actual = hash.digest("hex");
     if (actual !== sha256) throw new Error(`the downloaded ${tool} is damaged (its checksum doesn't match); try again`);
   }

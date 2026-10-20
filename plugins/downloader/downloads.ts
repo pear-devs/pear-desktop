@@ -3,8 +3,12 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import { createInterface } from "node:readline";
+import { errorMessage } from "@pear/sdk/util";
 import type { ReadyTools } from "./tools.ts";
 import { buildArgs, type ArgsOptions, type DownloadTarget, overallProgress, parseLine } from "./ytdlp.ts";
+
+// yt-dlp reports many times a second; the UI needs a few updates.
+const PROGRESS_INTERVAL_MS = 250;
 
 export interface JobState {
   id: number;
@@ -100,7 +104,7 @@ export class DownloadQueue {
       id: job.id,
       label: job.label,
       files: [],
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage(error),
     }));
     const cancelled = this.#active?.cancelled ?? false;
     this.#active = undefined;
@@ -145,8 +149,7 @@ export class DownloadQueue {
         case "progress": {
           state.stage = "downloading";
           state.progress = overallProgress(item.index, item.count, event.fraction);
-          // yt-dlp reports many times a second; the UI needs a few updates.
-          if (Date.now() - lastEmit < 250 && event.fraction < 1) return;
+          if (Date.now() - lastEmit < PROGRESS_INTERVAL_MS && event.fraction < 1) return;
           lastEmit = Date.now();
           return this.#emit();
         }
