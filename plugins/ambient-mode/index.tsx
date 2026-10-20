@@ -137,8 +137,8 @@ function mountVideo(ctx: Ctx) {
   };
   let timer: ReturnType<typeof setInterval> | undefined;
   const run = () => {
-    clearInterval(timer);
-    timer = video.paused ? undefined : setInterval(draw, Math.max(1, Math.ceil(1000 / ctx.config.buffer)));
+    ctx.clearInterval(timer);
+    timer = video.paused ? undefined : ctx.setInterval(draw, Math.max(1, Math.ceil(1000 / ctx.config.buffer)));
   };
   applyStyle(ctx, canvas);
   canvas.classList.toggle("fullscreen", ctx.config.fullscreen);
@@ -153,7 +153,7 @@ function mountVideo(ctx: Ctx) {
   video.addEventListener("loadedmetadata", resize, { signal: removed.signal });
   wrapper.prepend(canvas);
   return () => {
-    clearInterval(timer);
+    ctx.clearInterval(timer);
     removed.abort();
     canvas.remove();
   };

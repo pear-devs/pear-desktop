@@ -26,7 +26,7 @@ export function createToast(ctx: Ctx): ShowToast {
       toast.append(<button onClick={run}>{action.label}</button>);
     }
     toast.hidden = false;
-    clearTimeout(timer);
+    ctx.clearTimeout(timer);
     timer = ctx.setTimeout(hide, TOAST_DURATION_MS);
   };
 }

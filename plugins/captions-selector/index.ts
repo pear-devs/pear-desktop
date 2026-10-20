@@ -95,7 +95,7 @@ export default definePlugin({
 
     let timer: ReturnType<typeof setTimeout> | undefined;
     const onTrack = () => {
-      clearTimeout(timer);
+      ctx.clearTimeout(timer);
       if (ctx.config.disableCaptions) {
         timer = ctx.setTimeout(() => api.unloadModule("captions"), UNLOAD_DELAY_MS);
         button.hidden = true;

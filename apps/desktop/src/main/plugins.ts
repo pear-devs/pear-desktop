@@ -4,7 +4,7 @@
 import type { App, BrowserWindow, BrowserWindowConstructorOptions, Session } from "electron";
 import { interpolate, type Translate } from "@pear/sdk/i18n";
 import { type AnyPlugin, type Cleanup, type HostContext, type HostPlayer, type RpcMethod, supportsPlatform } from "@pear/sdk";
-import { createLogger, errorMessage } from "@pear/sdk/util";
+import { createLogger, errorMessage, timerSet } from "@pear/sdk/util";
 import { v } from "@pear/sdk/rpc";
 import type { HostEvent, PluginMeta, PluginState } from "@pear/sdk/protocol";
 import type { Settings } from "./config.ts";
@@ -311,16 +311,7 @@ export class PluginHost {
         cleanups.push(() => target.removeListener(event, listener));
       },
       onConfigChange: (listener) => void instance.configListeners.push(listener as ConfigListener),
-      setTimeout: (fn, ms) => {
-        const timer = setTimeout(fn, ms);
-        cleanups.push(() => clearTimeout(timer));
-        return timer;
-      },
-      setInterval: (fn, ms) => {
-        const timer = setInterval(fn, ms);
-        cleanups.push(() => clearInterval(timer));
-        return timer;
-      },
+      ...timers(cleanups),
       setStatus: (message) => {
         if (!instance.stopped) this.#setStatus(id, message);
       },
@@ -336,6 +327,13 @@ export class PluginHost {
       log: createLogger(id),
     };
   }
+}
+
+/** setTimeout / setInterval, cleared when the plugin stops. */
+function timers(cleanups: Cleanup[]) {
+  const { clearAll, ...timers } = timerSet();
+  cleanups.push(clearAll);
+  return timers;
 }
 
 /** The player, with the plugin's listeners removed when it stops. */

@@ -58,7 +58,7 @@ export class Presence {
   /** The "Connect" action: try now instead of at the next retry. */
   connectNow() {
     if (this.#ready || this.#client) return;
-    clearTimeout(this.#retryTimer);
+    this.#ctx.clearTimeout(this.#retryTimer);
     this.#retryTimer = undefined;
     this.#retryDelay = RETRY_MIN_MS;
     this.#warned = false;
@@ -67,7 +67,7 @@ export class Presence {
 
   /** The "Clear activity" action. Hidden like after a long pause: back with the next track or when playback resumes. */
   clear() {
-    clearTimeout(this.#pauseTimer);
+    this.#ctx.clearTimeout(this.#pauseTimer);
     this.#idle = true;
     this.#shown = null;
     if (this.#ready && this.#client?.user) void this.#client.user.clearActivity().catch(() => {});
@@ -75,9 +75,6 @@ export class Presence {
 
   stop() {
     this.#stopped = true;
-    clearTimeout(this.#retryTimer);
-    clearTimeout(this.#updateTimer);
-    clearTimeout(this.#pauseTimer);
     const current = this.#client;
     this.#client = undefined;
     if (!current) return;
@@ -87,7 +84,7 @@ export class Presence {
 
   #scheduleRetry() {
     if (this.#stopped || !this.#ctx.config.autoReconnect || this.#retryTimer) return;
-    this.#retryTimer = setTimeout(() => {
+    this.#retryTimer = this.#ctx.setTimeout(() => {
       this.#retryTimer = undefined;
       this.#connect();
     }, this.#retryDelay);
@@ -149,7 +146,7 @@ export class Presence {
   }
 
   #send() {
-    clearTimeout(this.#updateTimer);
+    this.#ctx.clearTimeout(this.#updateTimer);
     this.#updateTimer = undefined;
     const user = this.#ready ? this.#client?.user : undefined;
     if (!user) return;
@@ -166,16 +163,16 @@ export class Presence {
     if (this.#updateTimer) return;
     const wait = this.#lastSentAt + MIN_UPDATE_INTERVAL_MS - Date.now();
     if (wait <= 0) this.#send();
-    else this.#updateTimer = setTimeout(() => this.#send(), wait);
+    else this.#updateTimer = this.#ctx.setTimeout(() => this.#send(), wait);
   }
 
   #armPauseTimeout() {
-    clearTimeout(this.#pauseTimer);
+    this.#ctx.clearTimeout(this.#pauseTimer);
     this.#pauseTimer = undefined;
     this.#idle = false;
     const { config, player } = this.#ctx;
     if (!player.state.track || !isPaused(player.state) || !config.activityTimeoutEnabled) return;
-    this.#pauseTimer = setTimeout(() => {
+    this.#pauseTimer = this.#ctx.setTimeout(() => {
       this.#idle = true;
       this.#update();
     }, config.activityTimeoutSeconds * 1000);

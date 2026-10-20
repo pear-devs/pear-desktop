@@ -120,24 +120,22 @@ class Publisher {
   readonly #ctx: Ctx;
   readonly #tools: Tools;
   #published = 0;
-  // A plain timer: it is set again and again, and cleared below.
   #timer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(ctx: Ctx, tools: Tools) {
     this.#ctx = ctx;
     this.#tools = tools;
     ctx.onCleanup(() => this.#showProgress({ active: undefined, queued: 0 }));
-    ctx.onCleanup(() => clearTimeout(this.#timer));
   }
 
   publish() {
     const wait = PUBLISH_INTERVAL_MS - (Date.now() - this.#published);
     if (!this.#tools.setup || wait <= 0) this.flush();
-    else this.#timer ??= setTimeout(() => this.flush(), wait);
+    else this.#timer ??= this.#ctx.setTimeout(() => this.flush(), wait);
   }
 
   flush() {
-    clearTimeout(this.#timer);
+    this.#ctx.clearTimeout(this.#timer);
     this.#timer = undefined;
     this.#published = Date.now();
     const ctx = this.#ctx;

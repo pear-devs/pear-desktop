@@ -48,6 +48,9 @@ interface CommonContext<C> {
   /** setTimeout / setInterval, cleared when the plugin stops. */
   setTimeout(fn: () => void, ms: number): ReturnType<typeof setTimeout>;
   setInterval(fn: () => void, ms: number): ReturnType<typeof setInterval>;
+  /** For timers from `ctx.setTimeout` / `ctx.setInterval`; plain clearTimeout works too, but the plugin then remembers the timer until it stops. */
+  clearTimeout(timer: ReturnType<typeof setTimeout> | undefined): void;
+  clearInterval(timer: ReturnType<typeof setInterval> | undefined): void;
   /** Runs when the plugin stops (disabled, restarted or app quit). */
   onCleanup(fn: Cleanup): void;
   /**

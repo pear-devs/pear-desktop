@@ -27,10 +27,10 @@ export default definePlugin({
       // One timer, re-armed on every player change.
       let tick: ReturnType<typeof setTimeout> | undefined;
       const schedule = () => {
-        clearTimeout(tick);
+        ctx.clearTimeout(tick);
         const wait = tracker.timeUntilScrobble();
         if (wait === null) return;
-        tick = setTimeout(() => {
+        tick = ctx.setTimeout(() => {
           tracker.tick();
           schedule();
         }, wait + THRESHOLD_SLACK_MS);
@@ -41,7 +41,6 @@ export default definePlugin({
         schedule();
       });
       tracker.update(ctx.player.state);
-      ctx.onCleanup(() => clearTimeout(tick));
 
       // Config changes keep the current play; they may ask for Last.fm authorization.
       const auth = lastFmAuthorizer(ctx, warn);

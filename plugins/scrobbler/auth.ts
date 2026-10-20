@@ -43,7 +43,7 @@ export function lastFmAuthorizer(ctx: Ctx, warn: Warn) {
     let authorized = false;
     // Last.fm has no redirect for desktop apps: poll until the token is approved.
     const poll = () => {
-      current.poll = setTimeout(async () => {
+      current.poll = ctx.setTimeout(async () => {
         try {
           const session = await lastFm.getSession(netFetch, credentials(ctx), token);
           authorized = true;
@@ -56,7 +56,7 @@ export function lastFmAuthorizer(ctx: Ctx, warn: Warn) {
       }, AUTH_POLL_MS);
     };
     window.on("closed", () => {
-      clearTimeout(current.poll);
+      ctx.clearTimeout(current.poll);
       if (auth === current) auth = undefined;
       if (authorized || stopped) return;
       // Don't reopen the window by itself; toggling Last.fm (or clearing the session) asks again.
@@ -72,7 +72,6 @@ export function lastFmAuthorizer(ctx: Ctx, warn: Warn) {
     const current = auth;
     auth = undefined;
     if (!current) return;
-    clearTimeout(current.poll);
     if (!current.window.isDestroyed()) current.window.close();
   });
 

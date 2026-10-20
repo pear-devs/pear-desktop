@@ -16,6 +16,7 @@ import { keepMounted, observe } from "@pear/sdk/dom";
 import type { Bridge } from "@pear/sdk/protocol";
 import { selectors } from "@pear/sdk/selectors";
 import { adoptSheet, dropSheets, styleSheet } from "@pear/sdk/stylesheets";
+import { timerSet } from "@pear/sdk/util";
 import type { AudioGraph } from "./audio.ts";
 import { waitForSelector } from "./dom.ts";
 import type { Player } from "./player.ts";
@@ -162,19 +163,10 @@ export function domHelpers(scope: Scope): DomHelpers {
 }
 
 /** setTimeout / setInterval, cleared when the plugin stops. */
-export function timers(track: Track): Pick<AnyContext, "setTimeout" | "setInterval"> {
-  return {
-    setTimeout(fn, ms) {
-      const timer = setTimeout(fn, ms);
-      track(() => clearTimeout(timer));
-      return timer;
-    },
-    setInterval(fn, ms) {
-      const timer = setInterval(fn, ms);
-      track(() => clearInterval(timer));
-      return timer;
-    },
-  };
+export function timers(track: Track): Pick<AnyContext, "setTimeout" | "setInterval" | "clearTimeout" | "clearInterval"> {
+  const { clearAll, ...timers } = timerSet();
+  track(clearAll);
+  return timers;
 }
 
 /** `map.get(key)`, creating the entry first if needed. */

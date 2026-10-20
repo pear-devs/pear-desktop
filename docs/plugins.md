@@ -148,7 +148,7 @@ host: {
 | `app`, `window`, `session` | Electron's app, the main window and its session |
 | `webRequest` | Electron's `webRequest`, shared fairly with other plugins |
 | `listen(emitter, event, fn)` | `emitter.on(event, fn)` that is removed when the plugin stops |
-| `setTimeout`, `setInterval` | timers that are cleared when the plugin stops |
+| `setTimeout`, `setInterval`, `clearTimeout`, `clearInterval` | timers that are cleared when the plugin stops |
 | `focusWindow()` | show the main window and bring it to the front |
 | `openSettings()` | open the settings |
 | `setStatus(text)` | a status line on the plugin's settings card (`""` clears it) |
@@ -175,7 +175,7 @@ host: {
 | `mount(element, name, "prepend" \| "append")` | put an element into the page and keep it there when YTM re-renders |
 | `observe(nameOrNode, options, fn)` | a `MutationObserver` |
 | `listen(target, type, fn)` | `addEventListener` |
-| `setTimeout`, `setInterval` | timers |
+| `setTimeout`, `setInterval`, `clearTimeout`, `clearInterval` | timers |
 | `addStyle(css)` | add CSS; returns `{ update, remove }` |
 | `toast(message)` | show a message in YTM's toast |
 | `audio()` | the shared audio graph, to add Web Audio nodes (see `plugins/equalizer`) |

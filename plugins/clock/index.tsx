@@ -41,16 +41,13 @@ export default definePlugin({
     };
     tick();
     // Tick on second boundaries so the display never lags behind the system clock.
-    // One timer re-armed each second (ctx.setTimeout would keep a cleanup per tick).
-    let timer: ReturnType<typeof setTimeout>;
     const schedule = () => {
-      timer = setTimeout(() => {
+      ctx.setTimeout(() => {
         tick();
         schedule();
       }, SECOND - (Date.now() % SECOND));
     };
     schedule();
-    ctx.onCleanup(() => clearTimeout(timer));
 
     // YTM re-renders the nav bar on some navigations.
     ctx.mount(clock, "nav_bar.right", "prepend");

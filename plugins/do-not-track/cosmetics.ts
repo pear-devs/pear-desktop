@@ -45,13 +45,10 @@ export function applyCosmetics(ctx: Ctx) {
     );
   };
   const schedule = () => {
-    timer ??= setTimeout(scan, DOM_SCAN_MS);
+    timer ??= ctx.setTimeout(scan, DOM_SCAN_MS);
   };
   const observer = new MutationObserver(schedule);
-  ctx.onCleanup(() => {
-    observer.disconnect();
-    clearTimeout(timer);
-  });
+  ctx.onCleanup(() => observer.disconnect());
 
   // The lists load in the host after startup; ask until they're there.
   const base = () => {
@@ -60,7 +57,7 @@ export function applyCosmetics(ctx: Ctx) {
       (result) => {
         if (ctx.signal.aborted) return;
         if (!result) {
-          setTimeout(base, COSMETICS_RETRY_MS);
+          ctx.setTimeout(base, COSMETICS_RETRY_MS);
           return;
         }
         add(result.styles);
@@ -68,7 +65,7 @@ export function applyCosmetics(ctx: Ctx) {
         observer.observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "id", "href"] });
         schedule();
       },
-      () => setTimeout(base, COSMETICS_RETRY_MS),
+      () => ctx.setTimeout(base, COSMETICS_RETRY_MS),
     );
   };
   base();

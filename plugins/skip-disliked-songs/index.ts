@@ -25,7 +25,7 @@ export default definePlugin({
       if (becameDisliked && settling === undefined) skipIfDisliked();
     });
     ctx.player.on("trackChange", () => {
-      clearTimeout(settling);
+      ctx.clearTimeout(settling);
       settling = ctx.setTimeout(() => {
         settling = undefined;
         skipIfDisliked();

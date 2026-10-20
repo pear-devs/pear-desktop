@@ -56,6 +56,41 @@ export function isPlaying(state: Pick<NowPlaying, "status">) {
   return state.status === "playing" || state.status === "buffering";
 }
 
+type Timer = ReturnType<typeof setTimeout>;
+
+/** The timers of a running plugin: `clearAll` clears the pending ones. Fired and cleared timers are forgotten. */
+export function timerSet() {
+  const pending = new Set<Timer>();
+  return {
+    setTimeout(fn: () => void, ms: number): Timer {
+      const timer = setTimeout(() => {
+        pending.delete(timer);
+        fn();
+      }, ms);
+      pending.add(timer);
+      return timer;
+    },
+    setInterval(fn: () => void, ms: number): Timer {
+      const timer = setInterval(fn, ms);
+      pending.add(timer);
+      return timer;
+    },
+    clearTimeout(timer: Timer | undefined) {
+      if (timer !== undefined) pending.delete(timer);
+      clearTimeout(timer);
+    },
+    clearInterval(timer: Timer | undefined) {
+      if (timer !== undefined) pending.delete(timer);
+      clearInterval(timer);
+    },
+    clearAll() {
+      // clearTimeout clears intervals too (they share one set of ids).
+      for (const timer of pending) clearTimeout(timer);
+      pending.clear();
+    },
+  };
+}
+
 export function createLogger(id: string): Logger {
   const prefix = `[pear:${id}]`;
   return {

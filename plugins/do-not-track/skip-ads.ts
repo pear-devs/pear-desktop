@@ -57,7 +57,7 @@ export function skipAds(ctx: Ctx) {
       rate: api.getPlaybackRate() || 1,
       muted: video.muted,
       fastForwarded: false,
-      timer: setInterval(tick, AD_TICK_MS),
+      timer: ctx.setInterval(tick, AD_TICK_MS),
     };
     ctx.log.info("ad started, skipping it");
     tick();
@@ -67,13 +67,13 @@ export function skipAds(ctx: Ctx) {
     const ended = adBreak;
     if (!ended) return;
     adBreak = undefined;
-    clearInterval(ended.timer);
+    ctx.clearInterval(ended.timer);
     const video = ctx.player.video();
     const api = ctx.player.api;
     if (!video || !api) return;
     video.playbackRate = ended.rate;
     video.muted = ended.muted;
-    if (ended.fastForwarded) setTimeout(() => rewind(ctx, api, ended), REWIND_DELAY_MS);
+    if (ended.fastForwarded) ctx.setTimeout(() => rewind(ctx, api, ended), REWIND_DELAY_MS);
   };
 
   ctx.player.on("adChange", (ad) => {

@@ -144,7 +144,7 @@ function createNotifier(ctx: Ctx) {
   const files = notificationFiles(ctx);
 
   const close = () => {
-    clearTimeout(closeTimer);
+    ctx.clearTimeout(closeTimer);
     current?.close();
     current = undefined;
   };
@@ -182,7 +182,7 @@ function createNotifier(ctx: Ctx) {
       }),
     });
     present(notification);
-    closeTimer = setTimeout(() => {
+    closeTimer = ctx.setTimeout(() => {
       if (current === notification) close();
     }, TOAST_CLOSE_MS);
   };
