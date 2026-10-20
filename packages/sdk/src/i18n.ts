@@ -19,14 +19,17 @@ export function translator(strings: Strings): Translate {
   return (key, fallback, vars) => interpolate(strings[key] || fallback || key, vars);
 }
 
+/** `{ a: { b: "x" } }` → `{ "a.b": "x" }`. */
 export function flatten(tree: unknown, prefix = "", out: Record<string, string> = {}): Record<string, string> {
   if (typeof tree === "string") {
     if (prefix) out[prefix] = tree;
   } else if (typeof tree === "object" && tree !== null) {
-    for (const [key, value] of Object.entries(tree)) flatten(value, prefix ? `${prefix}.${key}` : key, out);
+    for (const [key, value] of Object.entries(tree)) flatten(value, childKey(prefix, key), out);
   }
   return out;
 }
+
+const childKey = (prefix: string, key: string) => (prefix ? `${prefix}.${key}` : key);
 
 /** Where a settings field's texts live (label, description, placeholder, options.<value>). */
 export function fieldKey(owner: string, field: string) {
@@ -35,5 +38,11 @@ export function fieldKey(owner: string, field: string) {
 
 /** Group headings are shared by everything in the settings dialog. */
 export function groupKey(group: string) {
-  return `settings-ui.groups.${group.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+  return `settings-ui.groups.${slug(group)}`;
+}
+
+/** "Window & Tray" → "window-tray": runs of anything else become one dash, none at the ends. */
+function slug(text: string) {
+  const dashed = text.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  return dashed.replace(/^-|-$/g, "");
 }

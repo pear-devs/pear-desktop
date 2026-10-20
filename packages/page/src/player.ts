@@ -14,12 +14,14 @@ import {
   type Track,
   type Unsubscribe,
   type YTPlayerApi,
+  type YTPlayerResponse,
 } from "@pear/sdk";
-import { selectors } from "@pear/sdk/selectors";
+import { selectors, type SelectorName } from "@pear/sdk/selectors";
+import { clamp, sleep, ytmUrl } from "@pear/sdk/util";
 import { waitForSelector } from "./dom.ts";
 import { Emitter } from "./emitter.ts";
 
-type Events = {
+export type PlayerEvents = {
   trackLoading: (videoId: string) => void;
   trackChange: (track: Track) => void;
   statusChange: (status: PlaybackStatus) => void;
@@ -31,6 +33,8 @@ type Events = {
 
 // YTM sometimes never fires "dataupdated" after "dataloaded".
 const DATAUPDATED_FALLBACK_MS = 1500;
+// The player element exists before YTM upgrades it with the API methods.
+const API_POLL_MS = 50;
 
 const MEDIA_TYPES: Record<string, MediaType> = {
   MUSIC_VIDEO_TYPE_ATV: "audio",
@@ -41,22 +45,31 @@ const MEDIA_TYPES: Record<string, MediaType> = {
 
 const REPEAT_MODES: Record<string, RepeatMode> = { NONE: "none", ALL: "all", ONE: "one" };
 
+/** The like buttons' `like-status` attribute. */
+const LIKE_STATUS: Record<string, LikeStatus> = { LIKE: "like", DISLIKE: "dislike" };
+
+/** Sends states to the host: `now` at once, `batched` at most once in a while (position-only updates). */
+export interface StatePublisher {
+  now(state: NowPlaying): void;
+  batched(state: NowPlaying): void;
+}
+
 interface PlayerBarElement extends HTMLElement {
   getState?(): { queue?: { repeatMode?: string } };
   updateVolume?(volume: number): void;
 }
 
 export class Player implements PagePlayer {
-  #emitter = new Emitter<Events>();
+  #emitter = new Emitter<PlayerEvents>();
   #api: YTPlayerApi | null = null;
   #ready: Promise<YTPlayerApi>;
   #state: NowPlaying = { ...IDLE };
-  #publish: (state: NowPlaying, urgent: boolean) => void;
-  #options: () => Record<string, unknown>;
+  #publisher: StatePublisher;
+  /** The core's appearance section (usePodcastParticipantAsArtist). */
+  #options: Record<string, unknown>;
 
-  /** `options` is the core's appearance section (usePodcastParticipantAsArtist). */
-  constructor(publish: (state: NowPlaying, urgent: boolean) => void, options: () => Record<string, unknown> = () => ({})) {
-    this.#publish = publish;
+  constructor(publisher: StatePublisher, options: Record<string, unknown> = {}) {
+    this.#publisher = publisher;
     this.#options = options;
     this.#ready = this.#findApi().then((api) => {
       this.#api = api;
@@ -81,14 +94,13 @@ export class Player implements PagePlayer {
     return this.#api?.querySelector("video") ?? document.querySelector<HTMLVideoElement>(selectors["player.video"]);
   }
 
-  on<K extends keyof Events>(event: K, listener: Events[K]): Unsubscribe {
+  on<K extends keyof PlayerEvents>(event: K, listener: PlayerEvents[K]): Unsubscribe {
     return this.#emitter.on(event, listener);
   }
 
   control(action: PlayerAction) {
     const api = this.#api;
     if (!api) return;
-    const click = (name: keyof typeof selectors) => document.querySelector<HTMLElement>(selectors[name])?.click();
     switch (action.type) {
       case "play":
         return api.playVideo();
@@ -97,52 +109,53 @@ export class Player implements PagePlayer {
       case "toggle":
         return this.#state.status === "playing" ? api.pauseVideo() : api.playVideo();
       case "next":
-        return document.querySelector(selectors["player_bar.next"]) ? click("player_bar.next") : api.nextVideo();
+        return clickOr("player_bar.next", () => api.nextVideo());
       case "previous":
-        return document.querySelector(selectors["player_bar.previous"])
-          ? click("player_bar.previous")
-          : api.previousVideo();
+        return clickOr("player_bar.previous", () => api.previousVideo());
       case "seek":
         return api.seekTo(Math.max(0, action.seconds), true);
       case "seekBy":
         return api.seekTo(Math.max(0, api.getCurrentTime() + action.seconds), true);
-      case "volume": {
-        const volume = Math.round(Math.min(100, Math.max(0, action.value)));
-        // YTM's slider value is what users see; updateVolume applies YTM's
-        // perceptual curve to the actual audio (e.g. 37 → 12%) and persists it.
-        const bar = document.querySelector<PlayerBarElement>(selectors.player_bar);
-        if (bar?.updateVolume) bar.updateVolume(volume);
-        else api.setVolume(volume);
-        return;
-      }
+      case "volume":
+        return this.#setVolume(api, Math.round(clamp(action.value, 0, 100)));
       case "mute":
         return (action.muted ?? !api.isMuted()) ? api.mute() : api.unMute();
       case "like":
-        return click("player_bar.like");
+        return clickOr("player_bar.like");
       case "dislike":
-        return click("player_bar.dislike");
+        return clickOr("player_bar.dislike");
       case "shuffle":
-        return click("player_bar.shuffle");
+        return clickOr("player_bar.shuffle");
       case "repeat":
-        return click("player_bar.repeat");
+        return clickOr("player_bar.repeat");
     }
   }
 
-  /** Re-reads the current track's metadata (an option that changes it was toggled). */
-  refreshTrack() {
+  #setVolume(api: YTPlayerApi, volume: number) {
+    // YTM's slider value is what users see; updateVolume applies YTM's
+    // perceptual curve to the actual audio (e.g. 37 → 12%) and persists it.
+    const bar = document.querySelector<PlayerBarElement>(selectors.player_bar);
+    if (bar?.updateVolume) bar.updateVolume(volume);
+    else api.setVolume(volume);
+  }
+
+  /** New appearance options; re-reads the current track, whose artist they can change. */
+  setOptions(options: Record<string, unknown>) {
+    this.#options = options;
+    this.#refreshTrack();
+  }
+
+  #refreshTrack() {
     const api = this.#api;
     const current = this.#state.track;
     if (!api || !current) return;
     const track = this.#readTrack(api);
-    if (track?.videoId === current.videoId && track.artist !== current.artist) this.#update({ track }, true);
+    if (track?.videoId === current.videoId && track.artist !== current.artist) this.#publishNow({ track });
   }
 
   async #findApi(): Promise<YTPlayerApi> {
     const element = await waitForSelector<YTPlayerApi>(selectors["player.api"]);
-    // The element exists before YTM upgrades it with the API methods.
-    while (typeof element.getPlayerState !== "function") {
-      await new Promise((resolve) => setTimeout(resolve, 50));
-    }
+    while (typeof element.getPlayerState !== "function") await sleep(API_POLL_MS);
     return element;
   }
 
@@ -157,7 +170,7 @@ export class Player implements PagePlayer {
       const previous = this.#state;
       // Ads reload the content video; only a different track (or a replay) is a change.
       const isNew = previous.track?.videoId !== track.videoId || previous.status === "ended";
-      this.#update(isNew ? { track, positionSeconds: 0 } : { track }, true);
+      this.#publishNow(isNew ? { track, positionSeconds: 0 } : { track });
       if (isNew) this.#emitter.emit("trackChange", track);
     };
     api.addEventListener("videodatachange", (name: string, data?: { videoId?: string }) => {
@@ -180,13 +193,14 @@ export class Player implements PagePlayer {
 
     this.#observeControls();
     this.#observeAds(api);
-    this.#update({ volume: this.#readVolume(), muted: api.isMuted() }, true);
+    this.#publishNow({ volume: this.#readVolume(), muted: api.isMuted() });
   }
 
   #attachVideo(video: HTMLVideoElement) {
     const status = (next: PlaybackStatus) => () => {
       if (this.#state.status === next) return;
-      this.#update(this.#state.ad ? { status: next } : { status: next, positionSeconds: video.currentTime }, true);
+      // During ads the video's position is the ad's.
+      this.#publishNow(this.#state.ad ? { status: next } : { status: next, positionSeconds: video.currentTime });
       this.#emitter.emit("statusChange", next);
     };
     video.addEventListener("playing", status("playing"));
@@ -194,7 +208,7 @@ export class Player implements PagePlayer {
     video.addEventListener("waiting", status("buffering"));
     video.addEventListener("ended", status("ended"));
     video.addEventListener("seeked", () => {
-      if (!this.#state.ad) this.#update({ positionSeconds: video.currentTime }, true);
+      if (!this.#state.ad) this.#publishNow({ positionSeconds: video.currentTime });
     });
     let lastSecond = -1;
     video.addEventListener("timeupdate", () => {
@@ -202,13 +216,13 @@ export class Player implements PagePlayer {
       const second = Math.floor(video.currentTime);
       if (second === lastSecond) return;
       lastSecond = second;
-      this.#update({ positionSeconds: video.currentTime }, false);
+      this.#publishLater({ positionSeconds: video.currentTime });
       this.#emitter.emit("timeUpdate", video.currentTime);
     });
     video.addEventListener("volumechange", () => {
       const volume = this.#readVolume();
       const muted = this.#api?.isMuted() ?? video.muted;
-      this.#update({ volume, muted }, true);
+      this.#publishNow({ volume, muted });
       this.#emitter.emit("volumeChange", volume, muted);
     });
     if (!video.paused) status("playing")();
@@ -226,7 +240,7 @@ export class Player implements PagePlayer {
     const read = () => {
       const ad = api.classList.contains("ad-showing") || api.classList.contains("ad-interrupting");
       if (ad === this.#state.ad) return;
-      this.#update({ ad }, true);
+      this.#publishNow({ ad });
       this.#emitter.emit("adChange", ad);
     };
     new MutationObserver(read).observe(api, { attributes: true, attributeFilter: ["class"] });
@@ -239,9 +253,9 @@ export class Player implements PagePlayer {
       const repeat = REPEAT_MODES[bar?.getState?.().queue?.repeatMode ?? ""] ?? this.#state.repeat;
       const shuffle = bar?.hasAttribute("shuffle-on") ?? false;
       const likeStatus = document.querySelector(selectors["player_bar.like_buttons"])?.getAttribute("like-status");
-      const like: LikeStatus = likeStatus === "LIKE" ? "like" : likeStatus === "DISLIKE" ? "dislike" : "none";
+      const like = LIKE_STATUS[likeStatus ?? ""] ?? "none";
       const s = this.#state;
-      if (repeat !== s.repeat || shuffle !== s.shuffle || like !== s.like) this.#update({ repeat, shuffle, like }, true);
+      if (repeat !== s.repeat || shuffle !== s.shuffle || like !== s.like) this.#publishNow({ repeat, shuffle, like });
     };
     void waitForSelector(selectors.player_bar).then((bar) => {
       new MutationObserver(read).observe(bar, {
@@ -259,35 +273,70 @@ export class Player implements PagePlayer {
     const data = api.getVideoData();
     const videoId = details?.videoId ?? data.video_id;
     if (!videoId) return;
-    const metadata = navigator.mediaSession?.metadata;
-    const sameTrack = metadata && metadata.title === (details?.title ?? data.title);
-    const artwork = sameTrack ? largest(metadata.artwork.map((a) => ({ url: a.src, size: parseSize(a.sizes) }))) : undefined;
-    const thumbnails = details?.thumbnail?.thumbnails ?? [];
-    const thumbnail = largest(thumbnails.map((t) => ({ url: t.url, size: t.width * t.height })));
+    const title = details?.title ?? data.title;
+    const session = mediaSessionFor(title);
+    const mediaType = MEDIA_TYPES[details?.musicVideoType ?? ""] ?? "other";
     const track: Track = {
       videoId,
-      title: details?.title ?? data.title,
-      artist: (sameTrack && metadata.artist) || details?.author || data.author,
+      title,
+      artist: this.#artist(mediaType, session?.artist || details?.author || data.author, response),
       durationSeconds: Number(details?.lengthSeconds) || api.getDuration() || 0,
-      url: `https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/watch?v=${videoId}`,
-      mediaType: MEDIA_TYPES[details?.musicVideoType ?? ""] ?? "other",
+      url: ytmUrl(`/watch?v=${videoId}`),
+      mediaType,
     };
-    // Episodes name the show as their author; the channel owner is the host (a person).
-    const host = response?.microformat?.microformatDataRenderer?.pageOwnerDetails?.name;
-    // Like pear-desktop: the channel owner (usually the host) unless the option asks for the listed participant.
-    if (track.mediaType === "podcast" && host && this.#options().usePodcastParticipantAsArtist !== true) track.artist = host;
-    if (sameTrack && metadata.album) track.album = metadata.album;
-    const artworkUrl = artwork ?? thumbnail;
+    const artworkUrl = sessionArtwork(session) ?? largestThumbnail(response);
+    if (session?.album) track.album = session.album;
     if (artworkUrl) track.artworkUrl = artworkUrl;
     if (data.list) track.playlistId = data.list;
     return track;
   }
 
-  #update(patch: Partial<NowPlaying>, urgent: boolean) {
+  /**
+   * Episodes name the show as their author; like pear-desktop, their artist is the
+   * channel owner (usually the host, a person) unless the option asks for the listed participant.
+   */
+  #artist(mediaType: MediaType, listed: string, response: YTPlayerResponse | undefined) {
+    const host = response?.microformat?.microformatDataRenderer?.pageOwnerDetails?.name;
+    if (mediaType !== "podcast" || !host) return listed;
+    return this.#options.usePodcastParticipantAsArtist === true ? listed : host;
+  }
+
+  #publishNow(patch: Partial<NowPlaying>) {
+    this.#publisher.now(this.#apply(patch));
+  }
+
+  /** For position-only updates, which the host gets batched. */
+  #publishLater(patch: Partial<NowPlaying>) {
+    this.#publisher.batched(this.#apply(patch));
+  }
+
+  #apply(patch: Partial<NowPlaying>) {
     this.#state = { ...this.#state, ...patch, updatedAt: Date.now() };
     this.#emitter.emit("change", this.#state);
-    this.#publish(this.#state, urgent);
+    return this.#state;
   }
+}
+
+/** Clicks the player bar's own button, so YTM does what it does on a click; `fallback` while it isn't there. */
+function clickOr(name: SelectorName, fallback?: () => void) {
+  const button = document.querySelector<HTMLElement>(selectors[name]);
+  if (button) button.click();
+  else fallback?.();
+}
+
+/** The media session's metadata if it already describes this track: it has the album and the largest artwork. */
+function mediaSessionFor(title: string) {
+  const metadata = navigator.mediaSession?.metadata;
+  return metadata?.title === title ? metadata : undefined;
+}
+
+function sessionArtwork(metadata: MediaMetadata | undefined) {
+  return largest(metadata?.artwork.map((a) => ({ url: a.src, size: parseSize(a.sizes) })) ?? []);
+}
+
+function largestThumbnail(response: YTPlayerResponse | undefined) {
+  const thumbnails = response?.videoDetails?.thumbnail?.thumbnails ?? [];
+  return largest(thumbnails.map((t) => ({ url: t.url, size: t.width * t.height })));
 }
 
 function parseSize(sizes: string | undefined) {

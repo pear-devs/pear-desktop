@@ -16,7 +16,8 @@
     "./util": "./src/util.ts",
     "./jsx-runtime": "./src/jsx-runtime.ts",
     "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts",
-    "./dom": "./src/dom.tsx"
+    "./dom": "./src/dom.tsx",
+    "./stylesheets": "./src/stylesheets.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",

@@ -1,90 +1,68 @@
 // Runs page parts of plugins: start/stop on enable, live config updates,
 // per-plugin styles and automatic cleanup of everything a plugin registered.
 
-import type {
-  AnyPlugin,
-  Cleanup,
-  PageContext,
-  PagePartObject,
-  PagePlayer,
-  SelectorName,
-  Unsubscribe,
-} from "@pear/sdk";
+import type { AnyPlugin, PagePartObject } from "@pear/sdk";
 import type { CoreSection } from "@pear/sdk/core-config";
 import { type Translate, translator } from "@pear/sdk/i18n";
 import type { Bridge, CoreState, PluginState } from "@pear/sdk/protocol";
-import { selectors } from "@pear/sdk/selectors";
-import { createLogger, errorMessage } from "@pear/sdk/util";
+import { adoptSheet, styleSheet } from "@pear/sdk/stylesheets";
+import { createLogger, errorMessage, sleep } from "@pear/sdk/util";
+import { HostState, type SettingsModel, setMessage, settingsModel } from "@pear/ui";
 import { AudioGraph } from "./audio.ts";
-import { domReady, keepMounted, observe, waitForSelector } from "./dom.ts";
+import {
+  type AnyCommands,
+  type AnyConfig,
+  type AnyContext,
+  domHelpers,
+  type EventListener,
+  getOrCreate,
+  hostClient,
+  type RequestHandler,
+  Scope,
+  scopedAudio,
+  scopedPlayer,
+  styleHandle,
+  timers,
+} from "./context.ts";
+import { domReady } from "./dom.ts";
 import type { Player } from "./player.ts";
+import { showToast } from "./toast.ts";
 
-type AnyConfig = Record<string, unknown>;
-type AnyContext = PageContext<AnyConfig, Record<string, (...args: any[]) => unknown>>;
-type ConfigListener = (config: AnyConfig) => void | "restart";
+type PagePartOf = PagePartObject<AnyConfig, AnyCommands>;
 
 interface Instance {
-  controller: AbortController;
-  cleanups: Cleanup[];
-  sheets: CSSStyleSheet[];
-  /** Registered with `ctx.onConfigChange`; they replace restarting. */
-  configListeners: ConfigListener[];
+  scope: Scope;
   ctx: AnyContext;
 }
 
+// YTM adds the <video> a little after its player API.
+const VIDEO_POLL_MS = 100;
+
 export class PluginRunner {
   #plugins = new Map<string, AnyPlugin>();
-  #states = new Map<string, PluginState>();
   #instances = new Map<string, Instance>();
-  #listeners = new Map<string, Map<string, Set<(payload: unknown) => void>>>();
-  #errors = new Map<string, string>();
-  // Host errors are only cleared by the host (an empty message), not by restarting the page part.
-  #hostErrors = new Map<string, string>();
-  #statuses = new Map<string, string>();
-  #subscribers = new Set<() => void>();
-  #handlers = new Map<string, Map<string, (payload: unknown) => unknown>>();
+  /** States, host errors and status lines, as the host reports them. */
+  #host: HostState;
+  /** Page parts that failed to start; cleared when they start again (host errors only by the host). */
+  #pageErrors = new Map<string, string>();
+  #listeners = new Map<string, Map<string, Set<EventListener>>>();
+  #handlers = new Map<string, Map<string, RequestHandler>>();
   #audio: Promise<AudioGraph> | undefined;
-  #core: Record<CoreSection, CoreState>;
-  /** The active language's strings, from the host. */
-  readonly t: Translate;
   #bridge: Bridge;
   #player: Player;
+  /** The active language's strings, from the host. */
+  readonly t: Translate;
+  /** What the settings UI reads and changes. */
+  readonly settings: SettingsModel;
 
   constructor(plugins: readonly AnyPlugin[], bridge: Bridge, player: Player) {
     this.#bridge = bridge;
     this.#player = player;
-    for (const plugin of plugins) {
-      const state = bridge.bootstrap.plugins[plugin.id];
-      // Plugins the host doesn't run on this platform are not offered at all.
-      if (!state) continue;
-      this.#plugins.set(plugin.id, plugin);
-      this.#states.set(plugin.id, state);
-    }
-    for (const [id, message] of Object.entries(bridge.bootstrap.errors)) this.#hostErrors.set(id, message);
-    for (const [id, message] of Object.entries(bridge.bootstrap.statuses ?? {})) this.#statuses.set(id, message);
-    this.#core = { ...bridge.bootstrap.core };
+    this.#host = new HostState(bridge.bootstrap);
+    // Plugins the host doesn't run on this platform are not offered at all.
+    for (const plugin of plugins) if (this.#host.plugins.has(plugin.id)) this.#plugins.set(plugin.id, plugin);
     this.t = translator(bridge.bootstrap.strings);
-  }
-
-  /** A core settings section (e.g. the API server). */
-  core(section: CoreSection): CoreState {
-    return this.#core[section];
-  }
-
-  setCoreConfig(section: CoreSection, patch: Record<string, unknown>) {
-    return this.#bridge.invoke("core:set-config", section, patch);
-  }
-
-  applyCore(section: CoreSection, state: CoreState) {
-    this.#core[section] = state;
-    this.#notify();
-  }
-
-  /** Answers host requests for the core (id "core"), e.g. the API server's. */
-  handleCore(event: string, handler: (payload: unknown) => unknown) {
-    let handlers = this.#handlers.get("core");
-    if (!handlers) this.#handlers.set("core", (handlers = new Map()));
-    handlers.set(event, handler);
+    this.settings = settingsModel(bridge, this.#host, (id) => this.error(id));
   }
 
   /** What the settings UI lists (from the host, which knows every plugin's schema). */
@@ -92,103 +70,61 @@ export class PluginRunner {
     return this.#bridge.bootstrap.catalog;
   }
 
-  get app() {
-    return this.#bridge.bootstrap.app;
-  }
-
-  showSettingsFile() {
-    return this.#bridge.invoke("app:show-settings-file");
-  }
-
-  toggleDevTools() {
-    return this.#bridge.invoke("app:toggle-devtools");
-  }
-
-  runAction(id: string, name: string) {
-    return this.#bridge.invoke("plugin:invoke", id, name, []);
-  }
-
   state(id: string) {
-    return this.#states.get(id);
+    return this.#host.plugins.get(id);
   }
 
   error(id: string) {
-    return this.#hostErrors.get(id) ?? this.#errors.get(id);
+    return this.#host.errors.get(id) ?? this.#pageErrors.get(id);
   }
 
   /** The host part's status line (`ctx.setStatus`). */
   status(id: string) {
-    return this.#statuses.get(id);
+    return this.#host.statuses.get(id);
   }
 
   applyStatus(id: string, message: string) {
-    if (message) this.#statuses.set(id, message);
-    else this.#statuses.delete(id);
-    this.#notify();
-  }
-
-  meta(id: string) {
-    return this.#bridge.bootstrap.meta[id];
-  }
-
-  /** Notified on any state or error change (for the settings UI). */
-  subscribe(listener: () => void) {
-    this.#subscribers.add(listener);
-    return () => void this.#subscribers.delete(listener);
-  }
-
-  setEnabled(id: string, enabled: boolean) {
-    return this.#bridge.invoke("plugin:set-enabled", id, enabled);
-  }
-
-  setConfig(id: string, patch: Record<string, unknown>) {
-    return this.#bridge.invoke("plugin:set-config", id, patch);
-  }
-
-  relaunch() {
-    return this.#bridge.invoke("app:relaunch");
-  }
-
-  get version() {
-    return this.#bridge.bootstrap.version;
+    this.#host.setStatus(id, message);
   }
 
   reportError(id: string, message: string, source: "host" | "page" = "page") {
-    const errors = source === "host" ? this.#hostErrors : this.#errors;
-    if (message) errors.set(id, message);
-    else errors.delete(id);
-    this.#notify();
+    if (source === "host") return this.#host.setError(id, message);
+    setMessage(this.#pageErrors, id, message);
+    this.#host.notify();
   }
 
-  #notify() {
-    for (const subscriber of this.#subscribers) subscriber();
+  /** A core settings section (e.g. the API server). */
+  core(section: CoreSection): CoreState {
+    return this.#host.core[section];
+  }
+
+  applyCore(section: CoreSection, state: CoreState) {
+    this.#host.setCore(section, state);
+  }
+
+  /** Answers host requests for the core (id "core"), e.g. the API server's. */
+  handleCore(event: string, handler: RequestHandler) {
+    getOrCreate(this.#handlers, "core", () => new Map()).set(event, handler);
   }
 
   startEnabled() {
-    for (const [id, state] of this.#states) if (state.enabled) void this.#start(id);
+    for (const [id, state] of this.#host.plugins) if (state.enabled) void this.#start(id);
   }
 
   /** Applies a state pushed by the host (enable/disable or config change). */
   applyState(id: string, next: PluginState) {
     const plugin = this.#plugins.get(id);
-    const previous = this.#states.get(id);
-    this.#states.set(id, next);
-    this.#notify();
+    const previous = this.#host.plugins.get(id);
+    this.#host.setPlugin(id, next);
     if (!plugin) return;
     const instance = this.#instances.get(id);
     // Started (or not) for good when the page loaded; the restart banner covers the rest.
-    if (plugin.restartRequired && (!instance || !next.enabled)) return;
+    const settledAtLoad = plugin.restartRequired && (!instance || !next.enabled);
+    if (settledAtLoad) return;
     if (!next.enabled) return this.#stop(id);
     if (!instance) return void this.#start(id);
-    if (previous && sameConfig(previous.config, next.config)) return;
-
-    this.#renderStyle(plugin, instance);
-    const part = pagePart(plugin);
-    if (!part) return;
-    if (configChange(part, instance, next.config) === "restart") {
-      this.#stop(id);
-      void this.#start(id);
-    }
+    const configChanged = !previous || !sameConfig(previous.config, next.config);
+    if (configChanged) this.#applyConfig(plugin, instance, next.config);
   }
 
   /** Answers a host `ctx.request` with the page part's handler. */
@@ -201,18 +137,6 @@ export class PluginRunner {
     } catch (error) {
       await this.#bridge.invoke("plugin:respond", requestId, false, errorMessage(error));
     }
-  }
-
-  #audioGraph() {
-    this.#audio ??= this.#player.ready().then(async () => {
-      let video = this.#player.video();
-      while (!video) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        video = this.#player.video();
-      }
-      return new AudioGraph(video);
-    });
-    return this.#audio;
   }
 
   dispatch(id: string, event: string, payload: unknown) {
@@ -230,24 +154,25 @@ export class PluginRunner {
     if (!plugin || this.#instances.has(id)) return;
     const instance = this.#createInstance(plugin);
     this.#instances.set(id, instance);
-    if (this.#errors.delete(id)) this.#notify();
-    this.#renderStyle(plugin, instance);
-
+    if (this.#pageErrors.delete(id)) this.#host.notify();
+    this.#renderStyle(plugin, instance.scope);
     const part = pagePart(plugin);
-    if (!part) return;
+    if (part) await this.#run(id, part, instance);
+  }
+
+  async #run(id: string, part: PagePartOf, { scope, ctx }: Instance) {
     try {
       if (part.runAt !== "start") await domReady();
-      if (instance.controller.signal.aborted) return;
-      const cleanup = await part.start(instance.ctx);
-      if (typeof cleanup === "function") {
-        if (instance.controller.signal.aborted) cleanup();
-        else instance.cleanups.push(cleanup);
-      }
+      if (scope.signal.aborted) return;
+      const cleanup = await part.start(ctx);
+      if (typeof cleanup !== "function") return;
+      // Stopped while starting: nothing else will run the cleanup.
+      if (scope.signal.aborted) cleanup();
+      else scope.onStop(cleanup);
     } catch (error) {
-      if (!instance.controller.signal.aborted) {
-        console.error(`[pear:${id}] failed to start`, error);
-        this.reportError(id, `failed to start: ${errorMessage(error)}`);
-      }
+      if (scope.signal.aborted) return;
+      console.error(`[pear:${id}] failed to start`, error);
+      this.reportError(id, `failed to start: ${errorMessage(error)}`);
     }
   }
 
@@ -255,198 +180,97 @@ export class PluginRunner {
     const instance = this.#instances.get(id);
     if (!instance) return;
     this.#instances.delete(id);
-    instance.controller.abort(new DOMException(`plugin ${id} stopped`, "AbortError"));
-    for (const cleanup of instance.cleanups.reverse()) {
-      try {
-        cleanup();
-      } catch (error) {
-        console.error(`[pear:${id}] cleanup failed`, error);
-      }
-    }
-    this.#removeSheets(instance);
+    instance.scope.stop(id);
     this.#listeners.delete(id);
     this.#handlers.delete(id);
   }
 
-  #renderStyle(plugin: AnyPlugin, instance: Instance) {
-    if (!plugin.style) return;
-    const config = this.#states.get(plugin.id)?.config ?? {};
-    const css = typeof plugin.style === "function" ? plugin.style(config) : plugin.style;
-    const [sheet] = instance.sheets;
-    if (sheet) {
-      sheet.replaceSync(css);
-    } else {
-      instance.sheets.push(this.#addSheet(css));
+  /** Lets the running page part take a config change, or restarts it. */
+  #applyConfig(plugin: AnyPlugin, instance: Instance, config: AnyConfig) {
+    this.#renderStyle(plugin, instance.scope);
+    const part = pagePart(plugin);
+    if (part && configChange(part, instance, config) === "restart") {
+      this.#stop(plugin.id);
+      void this.#start(plugin.id);
     }
   }
 
-  #addSheet(css: string) {
-    const sheet = new CSSStyleSheet();
-    sheet.replaceSync(css);
-    document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
-    return sheet;
+  /** The plugin's `style`, for its current config. */
+  #renderStyle(plugin: AnyPlugin, scope: Scope) {
+    if (!plugin.style) return;
+    const config = this.#host.plugins.get(plugin.id)?.config ?? {};
+    const css = typeof plugin.style === "function" ? plugin.style(config) : plugin.style;
+    if (scope.pluginSheet) return scope.pluginSheet.replaceSync(css);
+    scope.pluginSheet = styleSheet(css);
+    adoptSheet(scope.pluginSheet);
   }
 
-  #removeSheets(instance: Instance) {
-    const removed = new Set(instance.sheets);
-    document.adoptedStyleSheets = document.adoptedStyleSheets.filter((sheet) => !removed.has(sheet));
-    instance.sheets = [];
+  #audioGraph() {
+    this.#audio ??= this.#video().then((video) => new AudioGraph(video));
+    return this.#audio;
+  }
+
+  async #video() {
+    await this.#player.ready();
+    for (;;) {
+      const video = this.#player.video();
+      if (video) return video;
+      await sleep(VIDEO_POLL_MS);
+    }
+  }
+
+  #setConfig(id: string, patch: Partial<AnyConfig>) {
+    const state = this.#host.plugins.get(id);
+    // Readable right away; the host confirms with a plugin-state event.
+    if (state) this.#host.plugins.set(id, { ...state, config: { ...state.config, ...patch } });
+    void this.#bridge.invoke("plugin:set-config", id, patch);
   }
 
   #createInstance(plugin: AnyPlugin): Instance {
-    const id = plugin.id;
-    const controller = new AbortController();
-    const cleanups: Cleanup[] = [];
-    const instance: Instance = { controller, cleanups, sheets: [], configListeners: [], ctx: undefined! };
-    const runner = this;
-    const bridge = this.#bridge;
-    const log = createLogger(id);
-    const listen = (target: EventTarget, type: string, listener: (event: any) => void, options?: AddEventListenerOptions) =>
-      target.addEventListener(type, listener, { ...options, signal: controller.signal });
-    const track = (unsubscribe: Unsubscribe) => {
-      cleanups.push(unsubscribe);
-      return unsubscribe;
-    };
-
-    // Same player, but listeners are removed when the plugin stops.
-    const player = this.#player;
-    const scopedPlayer: PagePlayer = {
-      get api() {
-        return player.api;
-      },
-      get state() {
-        return player.state;
-      },
-      ready: () => player.ready(),
-      video: () => player.video(),
-      on: ((event: never, listener: never) => track(player.on(event, listener))) as PagePlayer["on"],
-      control: (action) => player.control(action),
-    };
-
-    instance.ctx = {
+    const { id } = plugin;
+    const scope = new Scope();
+    const host = this.#host;
+    const listeners = getOrCreate(this.#listeners, id, () => new Map());
+    const handlers = getOrCreate(this.#handlers, id, () => new Map());
+    const ctx: AnyContext = {
       id,
       get config() {
-        return (runner.#states.get(id)?.config ?? {}) as Record<string, unknown>;
+        return host.plugins.get(id)?.config ?? {};
       },
-      setConfig(patch) {
-        const state = runner.#states.get(id);
-        if (state) runner.#states.set(id, { ...state, config: { ...state.config, ...patch } });
-        void bridge.invoke("plugin:set-config", id, patch);
-      },
-      player: scopedPlayer,
-      host: {
-        invoke: ((command: string, ...args: unknown[]) => bridge.invoke("plugin:invoke", id, command, args)) as any,
-        on(event, listener) {
-          let events = runner.#listeners.get(id);
-          if (!events) runner.#listeners.set(id, (events = new Map()));
-          let set = events.get(event);
-          if (!set) events.set(event, (set = new Set()));
-          set.add(listener);
-          return track(() => set.delete(listener));
-        },
-        handle(event, handler) {
-          let handlers = runner.#handlers.get(id);
-          if (!handlers) runner.#handlers.set(id, (handlers = new Map()));
-          handlers.set(event, handler);
-          return track(() => {
-            if (handlers.get(event) === handler) handlers.delete(event);
-          });
-        },
-      },
-      async audio() {
-        const graph = await runner.#audioGraph();
-        // Same graph, but stages and taps are removed when the plugin stops.
-        return {
-          context: graph.context,
-          source: graph.source,
-          video: graph.video,
-          insert: (input, output, order) => track(graph.insert(input, output, order)),
-          tap: (node) => track(graph.tap(node)),
-        };
-      },
-      sel: (name: SelectorName) => selectors[name],
-      $: (name: SelectorName, root: ParentNode = document) => root.querySelector(selectors[name]) as any,
-      $$: (name: SelectorName, root: ParentNode = document) => [...root.querySelectorAll(selectors[name])] as any,
-      waitFor: (name: SelectorName, options = {}) =>
-        waitForSelector(selectors[name], { ...options, signal: controller.signal }) as any,
-      mount(element: Element, place: SelectorName | ((element: Element) => void), position: "prepend" | "append" = "append") {
-        const put = typeof place === "function" ? place : (el: Element) => document.querySelector(selectors[place])?.[position](el);
-        track(keepMounted(element, put));
-      },
-      observe(target, options, callback) {
-        if (typeof target !== "string") return void track(observe(target, options, callback));
-        waitForSelector(selectors[target], { signal: controller.signal }).then(
-          (element) => track(observe(element, options, callback)),
-          () => {},
-        );
-      },
-      setTimeout(fn, ms) {
-        const timer = setTimeout(fn, ms);
-        track(() => clearTimeout(timer));
-        return timer;
-      },
-      setInterval(fn, ms) {
-        const timer = setInterval(fn, ms);
-        track(() => clearInterval(timer));
-        return timer;
-      },
-      onConfigChange(listener) {
-        instance.configListeners.push(listener as ConfigListener);
-      },
-      listen,
-      addStyle(css) {
-        const sheet = runner.#addSheet(css);
-        instance.sheets.push(sheet);
-        return {
-          update: (next) => sheet.replaceSync(next),
-          remove: () => {
-            instance.sheets = instance.sheets.filter((s) => s !== sheet);
-            document.adoptedStyleSheets = document.adoptedStyleSheets.filter((s) => s !== sheet);
-          },
-        };
-      },
+      setConfig: (patch) => this.#setConfig(id, patch),
+      onConfigChange: (listener) => void scope.configListeners.push(listener),
+      player: scopedPlayer(this.#player, scope.track),
+      host: hostClient(id, this.#bridge, listeners, handlers, scope.track),
+      audio: async () => scopedAudio(await this.#audioGraph(), scope.track),
+      ...domHelpers(scope),
+      ...timers(scope.track),
+      addStyle: (css) => styleHandle(scope, css),
       toast: showToast,
-      onCleanup(fn) {
-        cleanups.push(fn);
-      },
-      signal: controller.signal,
-      t: runner.t,
-      log,
+      onCleanup: (fn) => scope.onStop(fn),
+      signal: scope.signal,
+      t: this.t,
+      log: createLogger(id),
     };
-    return instance;
+    return { scope, ctx };
   }
 }
 
-function pagePart(plugin: AnyPlugin): PagePartObject<any, any> | undefined {
+function pagePart(plugin: AnyPlugin): PagePartOf | undefined {
   const page = plugin.page;
   if (!page) return;
   return typeof page === "function" ? { start: page } : page;
 }
 
-function sameConfig(a: Record<string, unknown>, b: Record<string, unknown>) {
+function sameConfig(a: AnyConfig, b: AnyConfig) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
 /** Lets the running page part take a config change; "restart" when it can't. */
-function configChange(part: PagePartObject<any, any>, instance: Instance, config: AnyConfig) {
-  if (instance.configListeners.length > 0) {
-    const results = instance.configListeners.map((listener) => listener(config));
+function configChange(part: PagePartOf, { scope, ctx }: Instance, config: AnyConfig) {
+  if (scope.configListeners.length > 0) {
+    const results = scope.configListeners.map((listener) => listener(config));
     return results.includes("restart") ? "restart" : undefined;
   }
-  if (part.onConfigChange) return part.onConfigChange(config, instance.ctx);
+  if (part.onConfigChange) return part.onConfigChange(config, ctx);
   return "restart";
-}
-
-interface ToastApp {
-  toastService?: { show(message: string): void };
-  handleAddToToastAction?(action: unknown): void;
-}
-
-/** YTM's own toast. pear-desktop used `toastService`, which newer YTM no longer has; its toast action does the same. */
-export function showToast(message: string) {
-  const app = document.querySelector("ytmusic-app") as ToastApp | null;
-  if (app?.toastService) return app.toastService.show(message);
-  app?.handleAddToToastAction?.({
-    addToToastAction: { item: { notificationTextRenderer: { successResponseText: { runs: [{ text: message }] } } } },
-  });
 }

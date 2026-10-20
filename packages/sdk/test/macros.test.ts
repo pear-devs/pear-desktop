@@ -2,6 +2,9 @@ import { describe, expect, test } from "vitest";
 import { css, sel } from "../src/macros.ts";
 import type { SelectorName } from "../src/selectors.ts";
 
+/** A template strings array, as a tagged template passes it. */
+const tsa = (...strings: string[]): TemplateStringsArray => Object.assign([...strings], { raw: strings });
+
 describe("sel", () => {
   test("resolves registry names", () => {
     expect(sel("player_bar")).toBe("ytmusic-player-bar");
@@ -13,10 +16,7 @@ describe("sel", () => {
 
 describe("css", () => {
   test("resolves sel() and minifies", () => {
-    const strings = Object.assign(["sel(nav_bar.divider) {\n  display: none !important;\n}"], {
-      raw: [""],
-    }) as unknown as TemplateStringsArray;
-    expect(css(strings)).toBe("#nav-bar-divider{display:none!important}");
+    expect(css(tsa("sel(nav_bar.divider) {\n  display: none !important;\n}"))).toBe("#nav-bar-divider{display:none!important}");
   });
   test("rejects unknown selectors", () => {
     expect(() => css("sel(bogus) { color: red }")).toThrow(/unknown selector "bogus"/);
@@ -28,8 +28,6 @@ describe("css", () => {
     expect(css('a::after { content: "}" }')).toBe('a:after{content:"}"}');
   });
   test("rejects interpolation", () => {
-    expect(() => css(Object.assign(["a{color:", "}"], { raw: [] }) as unknown as TemplateStringsArray, "red")).toThrow(
-      /interpolation/,
-    );
+    expect(() => css(tsa("a{color:", "}"), "red")).toThrow(/interpolation/);
   });
 });

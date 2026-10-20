@@ -24,11 +24,13 @@ const HOST_PLUGINS_ID = "virtual:pear/host-plugins";
 const PAGE_PLUGINS_ID = "virtual:pear/page-plugins";
 const PAGE_RUNTIME_ID = "virtual:pear/page-runtime";
 const SETTINGS_APP_ID = "virtual:pear/settings-app";
+const VIRTUAL_IDS = new Set([HOST_PLUGINS_ID, PAGE_RUNTIME_ID, SETTINGS_APP_ID]);
 // The id keeps ending in the file's extension (`&lang.ts`, `&lang.tsx`): the macro
 // analyzer picks its parser from it and would parse TypeScript as JavaScript otherwise.
-const SPLIT_QUERY = /\?pear=(host|page)&lang\.tsx?$/;
+const SPLIT_SUFFIX = String.raw`\?pear=(host|page)&lang\.tsx?`;
+const SPLIT_QUERY = new RegExp(`${SPLIT_SUFFIX}$`);
 // unplugin-macros' default filter rejects ids with a query (our split ids).
-const MACRO_OPTIONS = { include: [/\.[cm]?[jt]sx?(\?pear=(host|page)&lang\.tsx?)?$/] };
+const MACRO_OPTIONS = { include: [new RegExp(String.raw`\.[cm]?[jt]sx?(${SPLIT_SUFFIX})?$`)] };
 const ENTRY_NAMES = ["index.ts", "index.tsx"];
 
 export interface PearPluginOptions {
@@ -67,14 +69,17 @@ function splitTransform(code: string, id: string) {
 }
 
 export default function pear(options: PearPluginOptions): Plugin[] {
-  const pageEntry = options.pageEntry ?? fileURLToPath(import.meta.resolve("@pear/page"));
-  const settingsEntry = options.settingsEntry ?? fileURLToPath(import.meta.resolve("@pear/ui/standalone"));
+  // The virtual modules that are a bundle of their own, and its entry.
+  const bundleEntries: Record<string, string> = {
+    [`\0${PAGE_RUNTIME_ID}`]: options.pageEntry ?? fileURLToPath(import.meta.resolve("@pear/page")),
+    [`\0${SETTINGS_APP_ID}`]: options.settingsEntry ?? fileURLToPath(import.meta.resolve("@pear/ui/standalone")),
+  };
 
   const plugin: Plugin = {
     name: "pear",
     enforce: "pre",
     resolveId(id) {
-      if (id === HOST_PLUGINS_ID || id === PAGE_RUNTIME_ID || id === SETTINGS_APP_ID) return `\0${id}`;
+      if (VIRTUAL_IDS.has(id)) return `\0${id}`;
     },
     load(id) {
       if (id === `\0${HOST_PLUGINS_ID}`) {
@@ -82,8 +87,9 @@ export default function pear(options: PearPluginOptions): Plugin[] {
         this.addWatchFile(options.pluginsDir);
         return registryModule(files, "host");
       }
-      if (id === `\0${PAGE_RUNTIME_ID}` || id === `\0${SETTINGS_APP_ID}`) {
-        return bundlePage(id === `\0${PAGE_RUNTIME_ID}` ? pageEntry : settingsEntry, options).then(({ code, watchFiles }) => {
+      const entry = bundleEntries[id];
+      if (entry) {
+        return bundlePage(entry, options).then(({ code, watchFiles }) => {
           for (const file of watchFiles) this.addWatchFile(file);
           return `export default ${JSON.stringify(code)};`;
         });
@@ -123,7 +129,7 @@ export async function bundlePage(entry: string, options: PearPluginOptions) {
     write: false,
     platform: "browser",
     plugins: [pagePluginsPlugin(options), RolldownMacros(MACRO_OPTIONS)],
-    transform: { jsx: { runtime: "automatic", importSource: "preact" } },
+    // JSX: tsconfig.base.json's Preact, or the DOM runtime in files whose pragma asks for @pear/sdk.
     output: { format: "iife", minify: process.env.NODE_ENV === "production" },
   });
   const chunk = result.output.find((o) => o.type === "chunk" && o.isEntry);

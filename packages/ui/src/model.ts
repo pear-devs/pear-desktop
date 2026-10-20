@@ -4,7 +4,16 @@
 
 import type { CoreSection } from "@pear/sdk/core-config";
 import { type Translate, translator } from "@pear/sdk/i18n";
-import type { AppInfo, Bridge, CoreState, PluginInfo, PluginMeta, PluginState } from "@pear/sdk/protocol";
+import type {
+  AppInfo,
+  Bootstrap,
+  Bridge,
+  CoreState,
+  HostEvent,
+  PluginInfo,
+  PluginMeta,
+  PluginState,
+} from "@pear/sdk/protocol";
 
 export interface SettingsModel {
   readonly app: AppInfo;
@@ -28,42 +37,14 @@ export interface SettingsModel {
   runAction(id: string, name: string): Promise<unknown>;
 }
 
-/** A model over the bridge alone, for the standalone window (no page runtime). */
-export function bridgeModel(bridge: Bridge): SettingsModel {
-  const { bootstrap } = bridge;
-  const states = new Map(Object.entries(bootstrap.plugins));
-  const errors = new Map(Object.entries(bootstrap.errors));
-  const statuses = new Map(Object.entries(bootstrap.statuses ?? {}));
-  const core = { ...bootstrap.core };
-  const subscribers = new Set<() => void>();
-  const notify = () => subscribers.forEach((listener) => listener());
+/** The model's commands, each a request to the host. */
+type SettingsCommands = Pick<
+  SettingsModel,
+  "setEnabled" | "setConfig" | "setCoreConfig" | "relaunch" | "showSettingsFile" | "toggleDevTools" | "runAction"
+>;
 
-  bridge.onEvent((event) => {
-    if (event.type === "plugin-state") states.set(event.id, event.state);
-    else if (event.type === "plugin-error") {
-      if (event.message) errors.set(event.id, event.message);
-      else errors.delete(event.id);
-    } else if (event.type === "plugin-status") {
-      if (event.message) statuses.set(event.id, event.message);
-      else statuses.delete(event.id);
-    } else if (event.type === "core-state") core[event.section] = event.state;
-    else return;
-    notify();
-  });
-
+function bridgeCommands(bridge: Bridge): SettingsCommands {
   return {
-    app: bootstrap.app,
-    plugins: bootstrap.catalog,
-    t: translator(bootstrap.strings),
-    state: (id) => states.get(id),
-    error: (id) => errors.get(id),
-    status: (id) => statuses.get(id),
-    meta: (id) => bootstrap.meta[id],
-    core: (section) => core[section],
-    subscribe(listener) {
-      subscribers.add(listener);
-      return () => void subscribers.delete(listener);
-    },
     setEnabled: (id, enabled) => bridge.invoke("plugin:set-enabled", id, enabled),
     setConfig: (id, patch) => bridge.invoke("plugin:set-config", id, patch),
     setCoreConfig: (section, patch) => bridge.invoke("core:set-config", section, patch),
@@ -72,4 +53,105 @@ export function bridgeModel(bridge: Bridge): SettingsModel {
     toggleDevTools: () => bridge.invoke("app:toggle-devtools"),
     runAction: (id, name) => bridge.invoke("plugin:invoke", id, name, []),
   };
+}
+
+/**
+ * What the host says about plugins and the core: plugin states, host errors,
+ * status lines and core sections, from the bootstrap on. Setters notify subscribers.
+ */
+export class HostState {
+  readonly plugins: Map<string, PluginState>;
+  readonly errors: Map<string, string>;
+  readonly statuses: Map<string, string>;
+  readonly core: Record<CoreSection, CoreState>;
+  #subscribers = new Set<() => void>();
+
+  constructor(bootstrap: Bootstrap) {
+    this.plugins = new Map(Object.entries(bootstrap.plugins));
+    this.errors = new Map(Object.entries(bootstrap.errors));
+    this.statuses = new Map(Object.entries(bootstrap.statuses ?? {}));
+    this.core = { ...bootstrap.core };
+  }
+
+  setPlugin(id: string, state: PluginState) {
+    this.plugins.set(id, state);
+    this.notify();
+  }
+
+  /** An empty message clears the error. */
+  setError(id: string, message: string) {
+    setMessage(this.errors, id, message);
+    this.notify();
+  }
+
+  /** An empty message clears the status line. */
+  setStatus(id: string, message: string) {
+    setMessage(this.statuses, id, message);
+    this.notify();
+  }
+
+  setCore(section: CoreSection, state: CoreState) {
+    this.core[section] = state;
+    this.notify();
+  }
+
+  /** Applies a host event about any of the above; ignores the others. */
+  apply(event: HostEvent) {
+    switch (event.type) {
+      case "plugin-state":
+        return this.setPlugin(event.id, event.state);
+      case "plugin-error":
+        return this.setError(event.id, event.message);
+      case "plugin-status":
+        return this.setStatus(event.id, event.message);
+      case "core-state":
+        return this.setCore(event.section, event.state);
+    }
+  }
+
+  subscribe(listener: () => void) {
+    this.#subscribers.add(listener);
+    return () => void this.#subscribers.delete(listener);
+  }
+
+  notify() {
+    for (const listener of this.#subscribers) listener();
+  }
+}
+
+/** Sets `id`'s message; an empty one removes it. */
+export function setMessage(messages: Map<string, string>, id: string, message: string) {
+  if (message) messages.set(id, message);
+  else messages.delete(id);
+}
+
+/**
+ * The settings model over `host` and the bridge's commands. `error` defaults to
+ * the host's errors (the page runtime adds its own).
+ */
+export function settingsModel(
+  bridge: Bridge,
+  host: HostState,
+  error: (id: string) => string | undefined = (id) => host.errors.get(id),
+): SettingsModel {
+  const { bootstrap } = bridge;
+  return {
+    ...bridgeCommands(bridge),
+    app: bootstrap.app,
+    plugins: bootstrap.catalog,
+    t: translator(bootstrap.strings),
+    state: (id) => host.plugins.get(id),
+    error,
+    status: (id) => host.statuses.get(id),
+    meta: (id) => bootstrap.meta[id],
+    core: (section) => host.core[section],
+    subscribe: (listener) => host.subscribe(listener),
+  };
+}
+
+/** A model over the bridge alone, for the standalone window (no page runtime). */
+export function bridgeModel(bridge: Bridge): SettingsModel {
+  const host = new HostState(bridge.bootstrap);
+  bridge.onEvent((event) => host.apply(event));
+  return settingsModel(bridge, host);
 }

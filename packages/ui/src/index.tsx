@@ -2,6 +2,7 @@
 // sidebar. Both render into shadow roots so YTM's styles can't leak in and
 // ours can't leak out.
 
+import { keepMounted, shadowHost } from "@pear/sdk/dom";
 import type { Translate } from "@pear/sdk/i18n";
 import { selectors } from "@pear/sdk/selectors";
 import { render } from "preact";
@@ -10,7 +11,7 @@ import { Settings, type SettingsModel } from "./settings.tsx";
 import { UI_STRINGS } from "./strings.ts";
 import { entryStyles, overlayStyles } from "./styles.ts";
 
-export type { SettingsModel } from "./model.ts";
+export { HostState, type SettingsModel, setMessage, settingsModel } from "./model.ts";
 
 export interface SettingsController {
   open(): void;
@@ -20,108 +21,91 @@ export interface SettingsController {
 }
 
 export function mountSettings(model: SettingsModel): SettingsController {
-  let root: ShadowRoot | undefined;
   let container: HTMLElement | undefined;
   let isOpen = false;
   let returnFocus: Element | null = null;
 
-  // Built lazily on first open: nothing to pay for at startup.
-  const ensureRoot = () => {
-    if (root) return root;
-    const host = document.createElement("pear-settings");
-    root = host.attachShadow({ mode: "open" });
-    root.adoptedStyleSheets = [sheet(overlayStyles)];
-    container = document.createElement("div");
-    root.append(container);
-    // Keep YTM's global shortcuts (space, j/k, …) from firing while typing here.
-    for (const type of ["keydown", "keyup", "keypress"]) {
-      host.addEventListener(type, (event) => {
-        if ((event as KeyboardEvent).key === "Escape" && type === "keydown") controller.close();
-        event.stopPropagation();
-      });
-    }
-    document.body.append(host);
-    return root;
+  const close = () => {
+    if (!isOpen) return;
+    isOpen = false;
+    if (container) render(null, container);
+    if (returnFocus instanceof HTMLElement) returnFocus.focus();
   };
-
-  const controller: SettingsController = {
-    get isOpen() {
-      return isOpen;
-    },
-    open() {
-      if (isOpen) return;
-      ensureRoot();
-      isOpen = true;
-      returnFocus = document.activeElement;
-      render(<Settings model={model} onClose={() => controller.close()} />, container!);
-    },
-    close() {
-      if (!isOpen) return;
-      isOpen = false;
-      render(null, container!);
-      if (returnFocus instanceof HTMLElement) returnFocus.focus();
-    },
-    toggle() {
-      if (isOpen) controller.close();
-      else controller.open();
-    },
+  const open = () => {
+    if (isOpen) return;
+    // Built on first open: nothing to pay for at startup.
+    container ??= createOverlay(close);
+    isOpen = true;
+    returnFocus = document.activeElement;
+    render(<Settings model={model} onClose={close} />, container);
   };
+  const toggle = () => (isOpen ? close() : open());
 
   document.addEventListener(
     "keydown",
     (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key === ",") {
         event.preventDefault();
-        controller.toggle();
+        toggle();
       }
     },
     true,
   );
 
-  mountSidebarEntries(controller, model.t);
-  return controller;
+  mountSidebarEntries(open, model.t);
+  return {
+    get isOpen() {
+      return isOpen;
+    },
+    open,
+    close,
+    toggle,
+  };
 }
 
-function sheet(css: string) {
-  const style = new CSSStyleSheet();
-  style.replaceSync(css);
-  return style;
+/** The overlay's shadow host, in <body>; returns the element the dialog renders into. */
+function createOverlay(close: () => void) {
+  const { host, root } = shadowHost("pear-settings", overlayStyles);
+  const container = document.createElement("div");
+  root.append(container);
+  // Keep YTM's global shortcuts (space, j/k, …) from firing while typing here.
+  for (const type of ["keydown", "keyup", "keypress"]) host.addEventListener(type, (event) => event.stopPropagation());
+  host.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") close();
+  });
+  document.body.append(host);
+  return container;
 }
 
 /** A "Settings" entry at the end of the sidebar's primary section, in both the full and the mini guide. */
-function mountSidebarEntries(controller: SettingsController, t: Translate) {
-  const entries = new Map<string, HTMLElement>();
-  const create = (mini: boolean) => {
-    const host = document.createElement("pear-settings-entry");
-    host.toggleAttribute("mini", mini);
-    const shadow = host.attachShadow({ mode: "open" });
-    shadow.adoptedStyleSheets = [sheet(entryStyles)];
-    render(
-      <button
-        type="button"
-        title={t("settings-ui.open-hint", UI_STRINGS["settings-ui.open-hint"])}
-        aria-label={t("settings-ui.open", UI_STRINGS["settings-ui.open"])}
-        onClick={() => controller.open()}
-      >
-        <Icon name="settings" size={24} />
-        <span>{t("settings-ui.title", UI_STRINGS["settings-ui.title"])}</span>
-      </button>,
-      shadow,
-    );
-    return host;
-  };
-  // YTM renders the guides late and re-renders them on some navigations; keep the entries in place.
-  const place = () => {
-    for (const [name, mini] of [["guide.full", false], ["guide.mini", true]] as const) {
-      const items = document.querySelector(selectors[name])?.querySelector(selectors["guide.primary_items"]);
-      if (!items) continue;
-      let entry = entries.get(name);
-      if (entry?.parentElement === items) continue;
-      entry ??= create(mini);
-      entries.set(name, entry);
-      items.append(entry);
-    }
-  };
-  place();
-  new MutationObserver(place).observe(document.body, { childList: true, subtree: true });
+function mountSidebarEntries(open: () => void, t: Translate) {
+  const guides = [
+    ["guide.full", false],
+    ["guide.mini", true],
+  ] as const;
+  for (const [guide, mini] of guides) {
+    // YTM renders the guides late and re-renders them on some navigations; keep the entries in place.
+    keepMounted(sidebarEntry(open, t, mini), (entry) => {
+      const items = document.querySelector(selectors[guide])?.querySelector(selectors["guide.primary_items"]);
+      items?.append(entry);
+    });
+  }
+}
+
+function sidebarEntry(open: () => void, t: Translate, mini: boolean) {
+  const { host, root } = shadowHost("pear-settings-entry", entryStyles);
+  host.toggleAttribute("mini", mini);
+  render(
+    <button
+      type="button"
+      title={t("settings-ui.open-hint", UI_STRINGS["settings-ui.open-hint"])}
+      aria-label={t("settings-ui.open", UI_STRINGS["settings-ui.open"])}
+      onClick={open}
+    >
+      <Icon name="settings" size={24} />
+      <span>{t("settings-ui.title", UI_STRINGS["settings-ui.title"])}</span>
+    </button>,
+    root,
+  );
+  return host;
 }

@@ -3,7 +3,7 @@
 // and a page (YTM main world) part, like #[cfg] in Rust.
 
 import type { App, BrowserWindow, BrowserWindowConstructorOptions, Session, WebRequest } from "electron";
-import type { ConfigOf, ConfigShape } from "./config.ts";
+import { type ConfigOf, type ConfigShape, onPlatform } from "./config.ts";
 import type { NowPlaying, PlayerAction, Track, PlaybackStatus, Unsubscribe, YTPlayerApi } from "./player.ts";
 import type { RpcMethods, RpcSchemas } from "./rpc.ts";
 import type { SelectorName } from "./selectors.ts";
@@ -288,12 +288,12 @@ export function definePlugin<
 }
 
 export function supportsPlatform(plugin: AnyPlugin, platform: string) {
-  return !plugin.platforms || plugin.platforms.includes(platform as Platform);
+  return onPlatform(plugin.platforms, platform);
 }
 
 export function isEnabledByDefault(plugin: AnyPlugin, platform: string) {
   const value = plugin.enabledByDefault;
-  if (Array.isArray(value)) return value.includes(platform as Platform);
+  if (typeof value === "object") return onPlatform(value, platform);
   return value === true;
 }
 

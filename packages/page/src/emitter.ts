@@ -6,8 +6,8 @@ export class Emitter<Events extends Record<string, Listener>> {
   #listeners = new Map<keyof Events, Set<Listener>>();
 
   on<K extends keyof Events>(event: K, listener: Events[K]): Unsubscribe {
-    let set = this.#listeners.get(event);
-    if (!set) this.#listeners.set(event, (set = new Set()));
+    const set = this.#listeners.get(event) ?? new Set();
+    this.#listeners.set(event, set);
     set.add(listener);
     return () => set.delete(listener);
   }

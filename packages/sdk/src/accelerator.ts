@@ -14,7 +14,27 @@ export const fromInput = (input: { key: string; code: string; control: boolean; 
   metaKey: input.meta,
 });
 
-const ALIASES: Record<string, string> = {
+/**
+ * Accelerator key names that `KeyboardEvent.key` spells differently, and its
+ * spelling. Shared with the settings UI, which records shortcuts the other way round.
+ */
+export const ACCELERATOR_KEYS: Readonly<Record<string, string>> = {
+  Space: " ",
+  Plus: "+",
+  Esc: "Escape",
+  Return: "Enter",
+  Up: "ArrowUp",
+  Down: "ArrowDown",
+  Left: "ArrowLeft",
+  Right: "ArrowRight",
+  MediaNextTrack: "MediaTrackNext",
+  MediaPreviousTrack: "MediaTrackPrevious",
+  VolumeUp: "AudioVolumeUp",
+  VolumeDown: "AudioVolumeDown",
+  VolumeMute: "AudioVolumeMute",
+};
+
+const MODIFIER_ALIASES: Record<string, string> = {
   cmdorctrl: "ctrl",
   commandorcontrol: "ctrl",
   control: "ctrl",
@@ -23,17 +43,12 @@ const ALIASES: Record<string, string> = {
   super: "meta",
   option: "alt",
   altgr: "alt",
-  esc: "escape",
-  return: "enter",
-  space: " ",
-  plus: "+",
-  up: "arrowup",
-  down: "arrowdown",
-  left: "arrowleft",
-  right: "arrowright",
-  // Accelerator names of media keys, as keydown names them.
-  medianexttrack: "mediatracknext",
-  mediaprevioustrack: "mediatrackprevious",
+};
+
+/** Lower-cased accelerator part → the lower-cased name the match compares. */
+const ALIASES: Record<string, string> = {
+  ...MODIFIER_ALIASES,
+  ...Object.fromEntries(Object.entries(ACCELERATOR_KEYS).map(([name, key]) => [name.toLowerCase(), key.toLowerCase()])),
 };
 
 const MODIFIERS = ["ctrl", "alt", "shift", "meta"] as const;

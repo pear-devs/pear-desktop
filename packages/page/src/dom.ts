@@ -1,6 +1,6 @@
-export interface WaitOptions {
-  root?: ParentNode;
-  timeout?: number;
+import type { WaitForOptions } from "@pear/sdk";
+
+export interface WaitOptions extends WaitForOptions {
   signal?: AbortSignal;
 }
 
@@ -15,9 +15,8 @@ export function waitForSelector<E extends Element>(selector: string, options: Wa
       const element = root.querySelector<E>(selector);
       if (element) finish(() => resolve(element));
     });
-    const timer = options.timeout === undefined
-      ? undefined
-      : setTimeout(() => finish(() => reject(new Error(`[pear] timed out waiting for ${selector}`))), options.timeout);
+    const onTimeout = () => finish(() => reject(new Error(`[pear] timed out waiting for ${selector}`)));
+    const timer = options.timeout === undefined ? undefined : setTimeout(onTimeout, options.timeout);
     const onAbort = () => finish(() => reject(options.signal?.reason));
     function finish(settle: () => void) {
       observer.disconnect();
@@ -34,25 +33,4 @@ export function waitForSelector<E extends Element>(selector: string, options: Wa
 export function domReady(): Promise<void> {
   if (document.readyState !== "loading") return Promise.resolve();
   return new Promise((resolve) => document.addEventListener("DOMContentLoaded", () => resolve(), { once: true }));
-}
-
-/** Calls `place` whenever `element` is detached (now, and on any later DOM change). Returns a stop function. */
-export function keepMounted(element: Element, place: (element: Element) => void): () => void {
-  const ensure = () => {
-    if (!element.isConnected) place(element);
-  };
-  ensure();
-  // YTM may re-render or replace whole parts of the page, so watch the document.
-  const stop = observe(document, { childList: true, subtree: true }, ensure);
-  return () => {
-    stop();
-    element.remove();
-  };
-}
-
-/** A MutationObserver; returns its disconnect. */
-export function observe(target: Node, options: MutationObserverInit, callback: MutationCallback): () => void {
-  const observer = new MutationObserver(callback);
-  observer.observe(target, options);
-  return () => observer.disconnect();
 }

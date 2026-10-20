@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { fromInput, matchesAccelerator } from "../src/accelerator.ts";
+import { ACCELERATOR_KEYS, fromInput, matchesAccelerator } from "../src/accelerator.ts";
 
 const key = (key: string, init: Partial<KeyboardEvent> = {}) =>
   ({ key, code: init.code ?? "", ctrlKey: false, altKey: false, shiftKey: false, metaKey: false, ...init }) as KeyboardEvent;
@@ -32,4 +32,10 @@ test("media keys and Electron inputs", () => {
   const input = { key: "k", code: "KeyK", control: true, alt: false, shift: true, meta: false };
   expect(matchesAccelerator(fromInput(input), "Ctrl+Shift+K")).toBe(true);
   expect(matchesAccelerator(fromInput(input), "Ctrl+K")).toBe(false);
+});
+
+test("every named key matches the keydown it names", () => {
+  for (const [name, eventKey] of Object.entries(ACCELERATOR_KEYS)) {
+    expect(matchesAccelerator(key(eventKey), name)).toBe(true);
+  }
 });

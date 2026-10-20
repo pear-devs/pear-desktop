@@ -16,7 +16,7 @@ export default definePlugin({
     html.pear-unobtrusive-did-play:not(.pear-unobtrusive-ad) sel(player.page) * {
       visibility: hidden !important;
     }
-    html.pear-unobtrusive-did-play sel(player_bar.toggle_page) {
+    html.pear-unobtrusive-did-play sel(player_bar.toggle_player_page) {
       transform: rotate(180deg) !important;
     }
   `,
@@ -49,7 +49,7 @@ export default definePlugin({
       if (autoClosing || !root.classList.contains(DID_PLAY)) return;
       if (ctx.$("app.layout")?.getAttribute("player-ui-state") !== "PLAYER_PAGE_OPEN") return;
       autoClosing = true;
-      ctx.$("player_bar.toggle_page")?.click();
+      ctx.$("player_bar.toggle_player_page")?.click();
       // Keep the page hidden until YTM's close animation is over, then check
       // again: YTM ignores the toggle while it is still opening the page.
       timer = setTimeout(() => {

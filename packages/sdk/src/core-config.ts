@@ -134,6 +134,10 @@ export const ADVANCED = {
   }),
 };
 
+/** pear-desktop's API server port, which companion apps expect by default. */
+export const DEFAULT_API_PORT = 26538;
+const MAX_PORT = 65535;
+
 export const API_SERVER = {
   enabled: config.bool(false, {
     label: "Enable the API server",
@@ -144,7 +148,7 @@ export const API_SERVER = {
     group: "Network",
     description: "127.0.0.1 accepts connections only from this computer; 0.0.0.0 from your network too.",
   }),
-  port: config.number(26538, { label: "Port", group: "Network", min: 1, max: 65535, step: 1, variant: "stepper" }),
+  port: config.number(DEFAULT_API_PORT, { label: "Port", group: "Network", min: 1, max: MAX_PORT, step: 1, variant: "stepper" }),
   authStrategy: config.select(
     "AUTH_AT_FIRST",
     [

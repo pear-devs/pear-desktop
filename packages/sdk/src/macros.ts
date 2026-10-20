@@ -37,13 +37,19 @@ export function css(strings: TemplateStringsArray | string, ...values: unknown[]
   return new TextDecoder().decode(code);
 }
 
+const CSS_COMMENT = /\/\*[\s\S]*?\*\//g;
+/** A double- or single-quoted CSS string, escaped quotes included. */
+const CSS_STRING = /"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g;
+
 /** CSS error recovery silently accepts unbalanced braces; a typo should fail the build instead. */
 function assertBalanced(source: string) {
-  const stripped = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, '""');
+  // Braces in comments and strings (`content: "}"`) don't count.
+  const code = source.replace(CSS_COMMENT, "").replace(CSS_STRING, '""');
   let depth = 0;
-  for (const char of stripped) {
+  for (const char of code) {
     if (char === "{") depth++;
-    else if (char === "}" && --depth < 0) throw new Error("[pear] css: unexpected `}`");
+    if (char === "}") depth--;
+    if (depth < 0) throw new Error("[pear] css: unexpected `}`");
   }
   if (depth !== 0) throw new Error("[pear] css: unclosed `{`");
 }

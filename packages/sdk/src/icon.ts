@@ -5,10 +5,10 @@ import { nativeImage } from "electron";
 import { embed } from "./macros.ts" with { type: "macro" };
 
 const APP_ICON = embed("generated/icons/png/256x256.png");
-const TRAY_ICON = embed("tray.png");
-const TRAY_ICON_WHITE = embed("tray-white.png");
-const TRAY_PAUSED_ICON = embed("tray-paused.png");
-const TRAY_PAUSED_ICON_WHITE = embed("tray-paused-white.png");
+const TRAY_ICONS = {
+  playing: { other: embed("tray.png"), darwin: embed("tray-white.png") },
+  paused: { other: embed("tray-paused.png"), darwin: embed("tray-paused-white.png") },
+};
 
 function bitmap(base64: string, size: number): Buffer {
   const image = nativeImage.createFromBuffer(Buffer.from(base64, "base64"));
@@ -22,7 +22,6 @@ export function pearIconBitmap(size: number): Buffer {
 
 /** The tray icon; white on macOS, whose menu bar is dark or tinted. */
 export function trayIconBitmap(size: number, paused = false): Buffer {
-  const mac = process.platform === "darwin";
-  if (paused) return bitmap(mac ? TRAY_PAUSED_ICON_WHITE : TRAY_PAUSED_ICON, size);
-  return bitmap(mac ? TRAY_ICON_WHITE : TRAY_ICON, size);
+  const icons = paused ? TRAY_ICONS.paused : TRAY_ICONS.playing;
+  return bitmap(process.platform === "darwin" ? icons.darwin : icons.other, size);
 }

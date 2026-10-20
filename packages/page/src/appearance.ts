@@ -1,10 +1,11 @@
 // The core's appearance options that act on YTM's page (the Upgrade
-// button, like buttons) and the user's theme files. All of it applies live:
-// each tweak is a style sheet that comes and goes with its option.
+// button, like buttons). All of it applies live: each tweak is a style sheet
+// that comes and goes with its option. Theme files: @pear/sdk/stylesheets.
 
 import type { CoreState } from "@pear/sdk/protocol";
 import { css } from "@pear/sdk/macros" with { type: "macro" };
 import { selectors } from "@pear/sdk/selectors";
+import { adoptSheet, dropSheets, styleSheet } from "@pear/sdk/stylesheets";
 import { waitForSelector } from "./dom.ts";
 
 const STYLES = {
@@ -22,14 +23,17 @@ interface GuideEntry extends HTMLElement {
   data?: { navigationEndpoint?: { browseEndpoint?: { browseId?: string } }; icon?: { iconType?: string } };
 }
 
-/** YTM's Premium promotion: its browse page, shown with the app's own logo. */
+// YTM's Premium promotion: its browse page, shown with the app's own logo.
+const UPGRADE_BROWSE_ID = "SPunlimited";
+const UPGRADE_ICON = "\u0059\u004f\u0055\u0054\u0055\u0042\u0045_MUSIC_MONOCHROME";
+
 function isUpgradeEntry({ data }: GuideEntry) {
-  return data?.navigationEndpoint?.browseEndpoint?.browseId === "SPunlimited" || data?.icon?.iconType === "\u0059\u004f\u0055\u0054\u0055\u0042\u0045_MUSIC_MONOCHROME";
+  const opensUpgradePage = data?.navigationEndpoint?.browseEndpoint?.browseId === UPGRADE_BROWSE_ID;
+  return opensUpgradePage || data?.icon?.iconType === UPGRADE_ICON;
 }
 
 export class Appearance {
   #sheets = new Map<Tweak, CSSStyleSheet>();
-  #themes: CSSStyleSheet[] = [];
   #upgradeObserver: MutationObserver | undefined;
   #upgradeWait: AbortController | undefined;
 
@@ -43,29 +47,16 @@ export class Appearance {
     else this.#stopMarking();
   }
 
-  /** Replaces the theme sheets; they come after everything else, so themes win ties. */
-  setThemes(css: readonly string[]) {
-    const old = new Set(this.#themes);
-    this.#themes = css.map((text) => {
-      const sheet = new CSSStyleSheet();
-      sheet.replaceSync(text);
-      return sheet;
-    });
-    document.adoptedStyleSheets = [...document.adoptedStyleSheets.filter((sheet) => !old.has(sheet)), ...this.#themes];
-  }
-
   #toggle(tweak: Tweak, on: boolean) {
     const sheet = this.#sheets.get(tweak);
     if (on && !sheet) {
-      const added = new CSSStyleSheet();
-      added.replaceSync(STYLES[tweak]);
+      const added = styleSheet(STYLES[tweak]);
       this.#sheets.set(tweak, added);
       // Before the themes, so a theme can still restyle what a tweak shows.
-      const others = document.adoptedStyleSheets.filter((s) => !this.#themes.includes(s));
-      document.adoptedStyleSheets = [...others, added, ...this.#themes];
+      adoptSheet(added);
     } else if (!on && sheet) {
       this.#sheets.delete(tweak);
-      document.adoptedStyleSheets = document.adoptedStyleSheets.filter((s) => s !== sheet);
+      dropSheets([sheet]);
     }
   }
 
@@ -78,8 +69,10 @@ export class Appearance {
       }
     };
     // Entries are re-rendered in place (new data, new children) when the guide updates.
-    const observer = (this.#upgradeObserver = new MutationObserver(mark));
-    const wait = (this.#upgradeWait = new AbortController());
+    const observer = new MutationObserver(mark);
+    const wait = new AbortController();
+    this.#upgradeObserver = observer;
+    this.#upgradeWait = wait;
     for (const name of ["guide.full", "guide.mini"] as const) {
       waitForSelector(selectors[name], { signal: wait.signal }).then(
         (guide) => {

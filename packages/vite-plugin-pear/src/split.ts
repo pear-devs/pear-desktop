@@ -6,7 +6,23 @@
 // vice versa.
 
 import MagicString from "magic-string";
-import { parseSync } from "oxc-parser";
+import {
+  type ExportDefaultDeclaration,
+  type ImportDeclaration,
+  type ImportDeclarationSpecifier,
+  type Node,
+  type ObjectExpression,
+  type ParenthesizedExpression,
+  parseSync,
+  type Program,
+  type PropertyKey,
+  type Span,
+  type TSAsExpression,
+  type TSNonNullExpression,
+  type TSSatisfiesExpression,
+  type VariableDeclaration,
+  type VariableDeclarator,
+} from "oxc-parser";
 
 export type SplitTarget = "host" | "page";
 
@@ -14,8 +30,6 @@ const REMOVED_PROPERTIES: Record<SplitTarget, readonly string[]> = {
   host: ["page", "style"],
   page: ["host"],
 };
-
-type Node = { type: string; start: number; end: number; [key: string]: any };
 
 export function splitPlugin(code: string, filename: string, target: SplitTarget): string {
   const program = parse(code, filename);
@@ -25,7 +39,7 @@ export function splitPlugin(code: string, filename: string, target: SplitTarget)
   }
 
   const s = new MagicString(code);
-  for (const property of object.properties as Node[]) {
+  for (const property of object.properties) {
     if (property.type !== "Property" || property.computed) continue;
     const key = propertyName(property.key);
     if (key && REMOVED_PROPERTIES[target].includes(key)) removeListItem(s, code, property);
@@ -33,52 +47,58 @@ export function splitPlugin(code: string, filename: string, target: SplitTarget)
   return prune(s.toString(), filename);
 }
 
-function parse(code: string, filename: string): Node {
+function parse(code: string, filename: string): Program {
   const { program, errors } = parseSync(filename, code, { sourceType: "module" });
   if (errors.length > 0) {
     throw new Error(`[pear] ${filename}: ${errors.map((e) => e.message).join("; ")}`);
   }
-  return program as unknown as Node;
+  return program;
 }
 
-function unwrap(node: Node | null | undefined): Node | undefined {
-  while (node && (node.type === "TSAsExpression" || node.type === "TSSatisfiesExpression" || node.type === "ParenthesizedExpression")) {
-    node = node.expression;
-  }
-  return node ?? undefined;
+/** Wrappers that leave the expression inside as it is: `x as T`, `x satisfies T`, `x!`, `(x)`. */
+type Wrapper = TSAsExpression | TSSatisfiesExpression | TSNonNullExpression | ParenthesizedExpression;
+const WRAPPERS = new Set(["TSAsExpression", "TSSatisfiesExpression", "TSNonNullExpression", "ParenthesizedExpression"]);
+
+const isWrapper = (node: Node): node is Wrapper => WRAPPERS.has(node.type);
+
+function unwrap(node: Node): Node {
+  while (isWrapper(node)) node = node.expression;
+  return node;
 }
 
-function pluginObjectOf(node: Node | undefined): Node | undefined {
-  node = unwrap(node);
+/** The object literal of `{...}` or `definePlugin({...})`. */
+function pluginObjectOf(node: Node | null | undefined): ObjectExpression | undefined {
   if (!node) return;
-  if (node.type === "ObjectExpression") return node;
-  if (node.type === "CallExpression") return pluginObjectOf(node.arguments[0]);
+  const inner = unwrap(node);
+  if (inner.type === "ObjectExpression") return inner;
+  if (inner.type === "CallExpression") return pluginObjectOf(inner.arguments[0]);
 }
 
-function findPluginObject(program: Node): Node | undefined {
-  const exported = program.body.find((n: Node) => n.type === "ExportDefaultDeclaration")?.declaration as Node | undefined;
+function findPluginObject(program: Program): ObjectExpression | undefined {
+  const exported = program.body.find((n): n is ExportDefaultDeclaration => n.type === "ExportDefaultDeclaration")?.declaration;
   const direct = pluginObjectOf(exported);
   if (direct) return direct;
   if (exported?.type !== "Identifier") return;
   // `const plugin = definePlugin({...}); export default plugin;`
-  for (const statement of program.body as Node[]) {
-    const declaration = statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
-    if (declaration?.type !== "VariableDeclaration") continue;
-    for (const declarator of declaration.declarations as Node[]) {
-      if (declarator.id.type === "Identifier" && declarator.id.name === exported.name) {
-        return pluginObjectOf(declarator.init);
-      }
-    }
-  }
+  const declarator = topLevelDeclarators(program).find((d) => d.id.type === "Identifier" && d.id.name === exported.name);
+  return pluginObjectOf(declarator?.init);
 }
 
-function propertyName(key: Node): string | undefined {
+/** `const`/`let` declarators at the top level, exported ones included. */
+function topLevelDeclarators(program: Program): VariableDeclarator[] {
+  return program.body.flatMap((statement) => {
+    const declaration = statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
+    return declaration?.type === "VariableDeclaration" ? declaration.declarations : [];
+  });
+}
+
+function propertyName(key: PropertyKey): string | undefined {
   if (key.type === "Identifier") return key.name;
   if (key.type === "Literal" && typeof key.value === "string") return key.value;
 }
 
 /** Removes a node from a comma-separated list along with its trailing comma. */
-function removeListItem(s: MagicString, code: string, node: Node) {
+function removeListItem(s: MagicString, code: string, node: Span) {
   let end = node.end;
   const rest = /^\s*,/.exec(code.slice(end));
   if (rest) end += rest[0].length;
@@ -87,31 +107,26 @@ function removeListItem(s: MagicString, code: string, node: Node) {
 
 // ---------------------------------------------------------------- pruning
 
-interface Reference {
-  name: string;
-  start: number;
-}
+/** Pure whatever they contain: a function's body only runs when it is called. */
+const ALWAYS_PURE = new Set(["Literal", "Identifier", "ArrowFunctionExpression", "FunctionExpression", "ThisExpression"]);
 
 /** Expressions whose evaluation has no side effects, so an unused declaration of one can go. */
 function isPure(node: Node | null | undefined): boolean {
-  if (!node) return true;
+  if (!node || ALWAYS_PURE.has(node.type)) return true;
+  if (isWrapper(node)) return isPure(node.expression);
   switch (node.type) {
-    case "Literal":
-    case "Identifier":
-    case "ArrowFunctionExpression":
-    case "FunctionExpression":
-    case "ThisExpression":
-      return true;
     case "ClassExpression":
-      return !node.superClass || isPure(node.superClass);
+      return isPure(node.superClass);
     case "TemplateLiteral":
       return node.expressions.every(isPure);
     case "ArrayExpression":
-      return node.elements.every((e: Node | null) => !e || isPure(e.type === "SpreadElement" ? e.argument : e));
+      return node.elements.every(isPure);
     case "ObjectExpression":
-      return node.properties.every((p: Node) =>
-        p.type === "SpreadElement" ? isPure(p.argument) : (!p.computed || isPure(p.key)) && isPure(p.value),
-      );
+      return node.properties.every(isPure);
+    case "Property":
+      return (!node.computed || isPure(node.key)) && isPure(node.value);
+    case "SpreadElement":
+      return isPure(node.argument);
     case "MemberExpression":
       return isPure(node.object) && (!node.computed || isPure(node.property));
     case "UnaryExpression":
@@ -121,60 +136,67 @@ function isPure(node: Node | null | undefined): boolean {
       return isPure(node.left) && isPure(node.right);
     case "ConditionalExpression":
       return isPure(node.test) && isPure(node.consequent) && isPure(node.alternate);
-    case "TSAsExpression":
-    case "TSSatisfiesExpression":
-    case "TSNonNullExpression":
-    case "ParenthesizedExpression":
-      return isPure(node.expression);
     default:
       return false;
   }
 }
 
+/** Each pass can only free what the previous one removed; real plugins settle in two or three. */
+const MAX_PRUNE_PASSES = 20;
+
 function prune(code: string, filename: string): string {
-  for (let pass = 0; pass < 20; pass++) {
-    const program = parse(code, filename);
-    const references = collectReferences(program);
-    const isReferenced = (name: string, span: Node) =>
-      references.some((r) => r.name === name && (r.start < span.start || r.start >= span.end));
-
-    const s = new MagicString(code);
-    let changed = false;
-
-    for (const statement of program.body as Node[]) {
-      if (statement.type === "ImportDeclaration") {
-        const specifiers = statement.specifiers as Node[];
-        if (specifiers.length === 0) continue; // side-effect import: keep
-        const kept = specifiers.filter((spec) => isReferenced(spec.local.name, statement));
-        if (kept.length === specifiers.length) continue;
-        changed = true;
-        if (kept.length === 0) s.remove(statement.start, statement.end);
-        else s.overwrite(statement.start, statement.end, rebuildImport(code, statement, kept));
-      } else if (statement.type === "FunctionDeclaration" || statement.type === "ClassDeclaration") {
-        if (statement.id && !isReferenced(statement.id.name, statement)) {
-          s.remove(statement.start, statement.end);
-          changed = true;
-        }
-      } else if (statement.type === "VariableDeclaration") {
-        const declarators = statement.declarations as Node[];
-        const prunable = declarators.every(
-          (d) => d.id.type === "Identifier" && isPure(d.init),
-        );
-        if (prunable && declarators.every((d) => !isReferenced(d.id.name, statement))) {
-          s.remove(statement.start, statement.end);
-          changed = true;
-        }
-      }
-    }
-
-    if (!changed) return code;
-    code = s.toString();
+  for (let pass = 0; pass < MAX_PRUNE_PASSES; pass++) {
+    const pruned = prunePass(code, filename);
+    if (pruned === code) return code;
+    code = pruned;
   }
   return code;
 }
 
-function rebuildImport(code: string, statement: Node, kept: Node[]): string {
-  const text = (node: Node) => code.slice(node.start, node.end);
+/** Whether `name` is referenced anywhere but inside `span` (its own declaration). */
+type IsUsed = (name: string, span: Span) => boolean;
+
+/** Removes the unused top-level imports and declarations, once. */
+function prunePass(code: string, filename: string): string {
+  const program = parse(code, filename);
+  const references = collectReferences(program);
+  const isUsed: IsUsed = (name, span) => references.some((r) => r.name === name && (r.start < span.start || r.start >= span.end));
+
+  const s = new MagicString(code);
+  for (const statement of program.body) {
+    switch (statement.type) {
+      case "ImportDeclaration":
+        pruneImport(s, code, statement, isUsed);
+        break;
+      case "FunctionDeclaration":
+      case "ClassDeclaration":
+        if (statement.id && !isUsed(statement.id.name, statement)) s.remove(statement.start, statement.end);
+        break;
+      case "VariableDeclaration":
+        if (isUnusedPureDeclaration(statement, isUsed)) s.remove(statement.start, statement.end);
+        break;
+    }
+  }
+  return s.toString();
+}
+
+function pruneImport(s: MagicString, code: string, statement: ImportDeclaration, isUsed: IsUsed) {
+  const { specifiers } = statement;
+  // A side-effect import (`import "./x.css"`) stays.
+  if (specifiers.length === 0) return;
+  const kept = specifiers.filter((spec) => isUsed(spec.local.name, statement));
+  if (kept.length === specifiers.length) return;
+  if (kept.length === 0) s.remove(statement.start, statement.end);
+  else s.overwrite(statement.start, statement.end, rebuildImport(code, statement, kept));
+}
+
+/** `const a = …, b = …;` where nothing uses a or b and evaluating them does nothing. */
+function isUnusedPureDeclaration(statement: VariableDeclaration, isUsed: IsUsed) {
+  return statement.declarations.every((d) => d.id.type === "Identifier" && isPure(d.init) && !isUsed(d.id.name, statement));
+}
+
+function rebuildImport(code: string, statement: ImportDeclaration, kept: ImportDeclarationSpecifier[]): string {
+  const text = (node: Span) => code.slice(node.start, node.end);
   const defaults = kept.filter((spec) => spec.type !== "ImportSpecifier").map(text);
   const named = kept.filter((spec) => spec.type === "ImportSpecifier").map(text);
   const clause = [...defaults, ...(named.length > 0 ? [`{ ${named.join(", ")} }`] : [])].join(", ");
@@ -184,21 +206,27 @@ function rebuildImport(code: string, statement: Node, kept: Node[]): string {
   return `import ${typeKeyword}${clause} from ${tail}`;
 }
 
-function collectReferences(program: Node): Reference[] {
+interface Reference {
+  name: string;
+  start: number;
+}
+
+const isNode = (value: unknown): value is Node =>
+  typeof value === "object" && value !== null && typeof (value as { type?: unknown }).type === "string";
+
+/** Every identifier that names a binding, outside import declarations. */
+function collectReferences(program: Program): Reference[] {
   const references: Reference[] = [];
-  const visit = (node: unknown, parent: Node | undefined, key: string | undefined) => {
-    if (Array.isArray(node)) {
-      for (const child of node) visit(child, parent, key);
+  const visit = (value: unknown, parent: Node | undefined, key: string | undefined) => {
+    if (Array.isArray(value)) {
+      for (const child of value) visit(child, parent, key);
       return;
     }
-    if (!node || typeof node !== "object" || typeof (node as Node).type !== "string") return;
-    const n = node as Node;
-    if (n.type === "ImportDeclaration") return;
-    if ((n.type === "Identifier" || n.type === "JSXIdentifier") && !isPropertyName(parent, key)) {
-      references.push({ name: n.name, start: n.start });
-    }
-    for (const [childKey, child] of Object.entries(n)) {
-      if (childKey !== "type" && child && typeof child === "object") visit(child, n, childKey);
+    if (!isNode(value) || value.type === "ImportDeclaration") return;
+    const isIdentifier = value.type === "Identifier" || value.type === "JSXIdentifier";
+    if (isIdentifier && !isPropertyName(parent, key)) references.push({ name: value.name, start: value.start });
+    for (const [childKey, child] of Object.entries(value)) {
+      if (childKey !== "type" && child && typeof child === "object") visit(child, value, childKey);
     }
   };
   visit(program, undefined, undefined);

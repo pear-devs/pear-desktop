@@ -1,6 +1,8 @@
 // Config schema builders. A plugin's `config` is a record of fields; each field
 // carries its default and the metadata the settings UI is generated from.
 
+import type { Platform } from "./index.ts";
+
 interface FieldMeta {
   label: string;
   description?: string;
@@ -9,7 +11,7 @@ interface FieldMeta {
   /** Changes apply only after a restart: shown as a "restart" pill, and offered in the restart banner. */
   restart?: boolean;
   /** Only shown on these platforms (default: all). */
-  platforms?: readonly ("linux" | "win32" | "darwin")[];
+  platforms?: readonly Platform[];
 }
 
 interface FieldBase<K extends string, T> extends FieldMeta {
@@ -64,43 +66,43 @@ export type ConfigShape = Record<string, Field>;
 
 export type ConfigOf<S extends ConfigShape> = { -readonly [K in keyof S]: S[K]["default"] };
 
-type NumberMeta = FieldMeta & Pick<NumberField, "min" | "max" | "step" | "unit" | "variant">;
-type SelectMeta = FieldMeta & Pick<SelectField, "variant">;
-type StringMeta = FieldMeta & Pick<StringField, "placeholder" | "secret">;
+/** What a builder takes besides the default (and a select's options). */
+type Meta<F extends Field> = Omit<F, "kind" | "default" | "options">;
+
+/** The builder of one field kind: `(default, meta) => field`. */
+function builder<F extends Field>(kind: F["kind"]) {
+  // TypeScript can't relate the spread back to the generic F; it is F by construction.
+  return (defaultValue: F["default"], meta: Meta<F>) => ({ kind, default: defaultValue, ...meta }) as F;
+}
+
+type Options = readonly SelectOption<string>[];
+type ValueOf<O extends Options> = O[number]["value"];
 
 export const config = {
-  bool: (defaultValue: boolean, meta: FieldMeta): BoolField => ({ kind: "bool", default: defaultValue, ...meta }),
-  number: (defaultValue: number, meta: NumberMeta): NumberField => ({
-    kind: "number",
+  bool: builder<BoolField>("bool"),
+  number: builder<NumberField>("number"),
+  string: builder<StringField>("string"),
+  shortcut: builder<ShortcutField>("shortcut"),
+  list: builder<ListField>("list"),
+  select: <const O extends Options>(defaultValue: ValueOf<O>, options: O, meta: Meta<SelectField>): SelectField<ValueOf<O>> => ({
+    kind: "select",
     default: defaultValue,
+    options,
     ...meta,
   }),
-  string: (defaultValue: string, meta: StringMeta): StringField => ({
-    kind: "string",
+  multi: <const O extends Options>(defaultValue: ValueOf<O>[], options: O, meta: Meta<MultiField>): MultiField<ValueOf<O>> => ({
+    kind: "multi",
     default: defaultValue,
+    options,
     ...meta,
   }),
-  select: <const O extends readonly SelectOption<string>[]>(
-    defaultValue: O[number]["value"],
-    options: O,
-    meta: SelectMeta,
-  ): SelectField<O[number]["value"]> => ({ kind: "select", default: defaultValue, options, ...meta }),
-  shortcut: (defaultValue: string, meta: FieldMeta): ShortcutField => ({
-    kind: "shortcut",
-    default: defaultValue,
-    ...meta,
-  }),
-  list: (defaultValue: string[], meta: FieldMeta & Pick<ListField, "placeholder">): ListField => ({
-    kind: "list",
-    default: defaultValue,
-    ...meta,
-  }),
-  multi: <const O extends readonly SelectOption<string>[]>(
-    defaultValue: O[number]["value"][],
-    options: O,
-    meta: FieldMeta,
-  ): MultiField<O[number]["value"]> => ({ kind: "multi", default: defaultValue, options, ...meta }),
 };
+
+/** Whether a `platforms` list (absent: every platform) includes `platform`. */
+export function onPlatform(platforms: readonly Platform[] | undefined, platform: string) {
+  const list: readonly string[] | undefined = platforms;
+  return !list || list.includes(platform);
+}
 
 export function defaultsOf<S extends ConfigShape>(shape: S): ConfigOf<S> {
   return Object.fromEntries(Object.entries(shape).map(([key, field]) => [key, field.default])) as ConfigOf<S>;

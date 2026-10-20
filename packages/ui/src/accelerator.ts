@@ -1,22 +1,9 @@
 // Converts a keydown into an Electron accelerator string ("Ctrl+Shift+P").
 
-const NAMED_KEYS: Record<string, string> = {
-  " ": "Space",
-  ArrowUp: "Up",
-  ArrowDown: "Down",
-  ArrowLeft: "Left",
-  ArrowRight: "Right",
-  Escape: "Esc",
-  Enter: "Return",
-  "+": "Plus",
-  MediaPlayPause: "MediaPlayPause",
-  MediaTrackNext: "MediaNextTrack",
-  MediaTrackPrevious: "MediaPreviousTrack",
-  MediaStop: "MediaStop",
-  AudioVolumeUp: "VolumeUp",
-  AudioVolumeDown: "VolumeDown",
-  AudioVolumeMute: "VolumeMute",
-};
+import { ACCELERATOR_KEYS } from "@pear/sdk/accelerator";
+
+/** `KeyboardEvent.key` → accelerator name, for the keys the two spell differently. */
+const NAMED_KEYS = Object.fromEntries(Object.entries(ACCELERATOR_KEYS).map(([name, key]) => [key, name]));
 
 const MODIFIER_KEYS = new Set(["Control", "Shift", "Alt", "Meta", "AltGraph", "OS"]);
 

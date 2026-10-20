@@ -3,13 +3,14 @@
 // scripts. Boots the player facade and the plugin runner.
 
 import type { NowPlaying } from "@pear/sdk";
-import type { Bridge } from "@pear/sdk/protocol";
+import type { Bridge, UiAction } from "@pear/sdk/protocol";
+import { setThemes } from "@pear/sdk/stylesheets";
 import { mountSettings, type SettingsController } from "@pear/ui";
 import plugins from "virtual:pear/page-plugins";
 import { registerApiHandlers } from "./api.ts";
 import { Appearance } from "./appearance.ts";
 import { domReady } from "./dom.ts";
-import { Player } from "./player.ts";
+import { Player, type StatePublisher } from "./player.ts";
 import { PluginRunner } from "./plugins.ts";
 
 export interface RuntimeMarker {
@@ -47,29 +48,46 @@ if (!bridge) throw new Error("[pear] bridge missing; preload did not expose __pe
 
 // Position-only updates are batched; everything else goes to the host at once.
 const POSITION_PUBLISH_MS = 1000;
-let lastPublished = 0;
-let pending: ReturnType<typeof setTimeout> | undefined;
-let latest: NowPlaying | undefined;
-function publish(state: NowPlaying, urgent: boolean) {
-  latest = state;
+
+function hostPublisher(bridge: Bridge): StatePublisher {
+  let lastSent = 0;
+  let pending: ReturnType<typeof setTimeout> | undefined;
+  let latest: NowPlaying | undefined;
   const send = () => {
     pending = undefined;
-    lastPublished = Date.now();
-    if (latest) void bridge!.invoke("player:update", latest);
+    lastSent = Date.now();
+    if (latest) void bridge.invoke("player:update", latest);
   };
-  if (urgent || Date.now() - lastPublished >= POSITION_PUBLISH_MS) {
+  const now = (state: NowPlaying) => {
+    latest = state;
     clearTimeout(pending);
     send();
-  } else {
+  };
+  const batched = (state: NowPlaying) => {
+    if (Date.now() - lastSent >= POSITION_PUBLISH_MS) return now(state);
+    latest = state;
     pending ??= setTimeout(send, POSITION_PUBLISH_MS);
-  }
+  };
+  return { now, batched };
 }
 
-const player = new Player(publish, () => runner.core("appearance").config);
+const UI_ACTIONS: Record<UiAction, (settings: SettingsController) => void> = {
+  "open-settings": (settings) => settings.open(),
+  "close-settings": (settings) => settings.close(),
+  "toggle-settings": (settings) => settings.toggle(),
+};
+
+const player = new Player(hostPublisher(bridge), bridge.bootstrap.core.appearance.config);
 const runner = new PluginRunner(plugins, bridge, player);
 const appearance = new Appearance();
 appearance.apply(runner.core("appearance"));
-appearance.setThemes(bridge.bootstrap.themes);
+setThemes(bridge.bootstrap.themes);
+
+let settings: SettingsController | undefined;
+const settingsReady = domReady().then(() => {
+  settings = mountSettings(runner.settings);
+  return settings;
+});
 
 bridge.onEvent((event) => {
   switch (event.type) {
@@ -85,25 +103,17 @@ bridge.onEvent((event) => {
       return void runner.request(event.id, event.event, event.payload, event.requestId);
     case "core-state":
       runner.applyCore(event.section, event.state);
-      if (event.section === "appearance") {
-        appearance.apply(event.state);
-        player.refreshTrack();
-      }
-      return;
+      if (event.section !== "appearance") return;
+      appearance.apply(event.state);
+      return player.setOptions(event.state.config);
     case "themes":
-      return appearance.setThemes(event.css);
+      return setThemes(event.css);
     case "player-control":
       return player.control(event.action);
     case "ui":
-      return void domReady().then(() => {
-        if (event.action === "open-settings") settings?.open();
-        else if (event.action === "close-settings") settings?.close();
-        else settings?.toggle();
-      });
+      return void settingsReady.then(UI_ACTIONS[event.action]);
   }
 });
-
-let settings: SettingsController | undefined;
 
 window.__pearRuntime = Object.freeze({
   marker,
@@ -117,6 +127,3 @@ console.info("[pear] runtime injected", marker);
 
 registerApiHandlers(runner, player);
 runner.startEnabled();
-void domReady().then(() => {
-  settings = mountSettings(runner);
-});

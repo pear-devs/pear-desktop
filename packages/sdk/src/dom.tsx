@@ -4,6 +4,7 @@
 
 import type { PageContext, SelectorName } from "./index.ts";
 import type { Child } from "./jsx-runtime.ts";
+import { styleSheet } from "./stylesheets.ts";
 
 type Ctx = Pick<PageContext<unknown, {}>, "addStyle" | "onCleanup" | "listen" | "observe" | "$">;
 
@@ -21,9 +22,7 @@ export function Icon({ path }: { path: string | readonly string[] }) {
 export function shadowHost(tag: string, css: string) {
   const host = document.createElement(tag);
   const root = host.attachShadow({ mode: "open" });
-  const sheet = new CSSStyleSheet();
-  sheet.replaceSync(css);
-  root.adoptedStyleSheets = [sheet];
+  root.adoptedStyleSheets = [styleSheet(css)];
   return { host, root };
 }
 
@@ -31,6 +30,27 @@ export function shadowHost(tag: string, css: string) {
 export function isolateKeys(element: EventTarget, signal: AbortSignal) {
   const stop = (event: Event) => event.stopPropagation();
   for (const type of ["keydown", "keyup", "keypress"]) element.addEventListener(type, stop, { signal });
+}
+
+/** Calls `place` whenever `element` is detached (now, and on any later DOM change). Returns a stop function. */
+export function keepMounted(element: Element, place: (element: Element) => void): () => void {
+  const ensure = () => {
+    if (!element.isConnected) place(element);
+  };
+  ensure();
+  // YTM may re-render or replace whole parts of the page, so watch the document.
+  const stop = observe(document, { childList: true, subtree: true }, ensure);
+  return () => {
+    stop();
+    element.remove();
+  };
+}
+
+/** A MutationObserver; returns its disconnect. */
+export function observe(target: Node, options: MutationObserverInit, callback: MutationCallback): () => void {
+  const observer = new MutationObserver(callback);
+  observer.observe(target, options);
+  return () => observer.disconnect();
 }
 
 // ---------------------------------------------------------------- player-bar picker
