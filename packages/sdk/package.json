@@ -12,7 +12,11 @@
     "./rpc": "./src/rpc.ts",
     "./core-config": "./src/core-config.ts",
     "./i18n": "./src/i18n.ts",
-    "./accelerator": "./src/accelerator.ts"
+    "./accelerator": "./src/accelerator.ts",
+    "./util": "./src/util.ts",
+    "./jsx-runtime": "./src/jsx-runtime.ts",
+    "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts",
+    "./dom": "./src/dom.tsx"
   },
   "scripts": {
     "typecheck": "tsc -p .",

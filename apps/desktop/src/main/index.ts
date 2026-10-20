@@ -22,6 +22,7 @@ import { openSettingsWindow, registerSettingsScheme, serveSettings, settingsWind
 import { Themes } from "./themes.ts";
 import { CHECK_DELAY_MS, checkForUpdates, shouldCheck } from "./updates.ts";
 import { WebRequestRouter } from "./web-request.ts";
+import { focusWindow } from "./windows.ts";
 
 const YTM_URL = `${YTM_ORIGIN}/`;
 const APP_NAME = "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063";
@@ -294,6 +295,7 @@ function main() {
       requests,
       send,
       openSettings,
+      focusWindow: () => focusWindow(window),
       broadcast: (plugin, event, data) => api?.broadcastPluginEvent(plugin, event, data),
       onProtocol: (listener) => {
         protocolListeners.add(listener);

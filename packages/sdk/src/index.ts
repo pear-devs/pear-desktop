@@ -16,6 +16,8 @@ export type { SelectorName } from "./selectors.ts";
 export type Platform = "linux" | "win32" | "darwin";
 export type Cleanup = () => void;
 type MaybePromise<T> = T | Promise<T>;
+/** What `start` may return: nothing, or a cleanup to run when the plugin stops. */
+type StartResult = MaybePromise<void | Cleanup>;
 
 export interface Logger {
   info(...args: unknown[]): void;
@@ -23,7 +25,44 @@ export interface Logger {
   error(...args: unknown[]): void;
 }
 
-type AnyCommands = Record<string, (...args: any[]) => unknown>;
+// `object`, not a Record: plugins describe their commands with interfaces, which have no index signature.
+type AnyCommands = object;
+type Args<F> = F extends (...args: infer A) => unknown ? A : never;
+type Result<F> = F extends (...args: any[]) => infer R ? Awaited<R> : never;
+
+/** Calls a command by name, with its parameters and result types. */
+export type Invoke<Cmds> = <K extends keyof Cmds & string>(name: K, ...args: Args<Cmds[K]>) => Promise<Result<Cmds[K]>>;
+
+/** The parts of a running plugin's context both sides share. */
+interface CommonContext<C> {
+  readonly id: string;
+  /** Always the current config. */
+  readonly config: Readonly<C>;
+  setConfig(patch: Partial<C>): void;
+  /**
+   * Called with the new config instead of restarting the plugin; return "restart"
+   * to restart anyway. Registered from `start`, so it sees `start`'s variables.
+   */
+  onConfigChange(listener: (config: Readonly<C>) => void | "restart"): void;
+  /** setTimeout / setInterval, cleared when the plugin stops. */
+  setTimeout(fn: () => void, ms: number): ReturnType<typeof setTimeout>;
+  setInterval(fn: () => void, ms: number): ReturnType<typeof setInterval>;
+  /** Runs when the plugin stops (disabled, restarted or app quit). */
+  onCleanup(fn: Cleanup): void;
+  /**
+   * Translates a key from the translation files (src/i18n/resources), e.g.
+   * `t("plugins.<id>.saved", "Saved “{{title}}”", { title })`. The
+   * fallback is the English text; `nub run i18n` adds it to en.json.
+   */
+  t(key: string, fallback?: string, vars?: Readonly<Record<string, unknown>>): string;
+  readonly log: Logger;
+}
+
+/** Node-style event emitters: Electron's app, windows, nativeTheme… */
+export interface Emitter {
+  on(event: string, listener: (...args: any[]) => void): unknown;
+  removeListener(event: string, listener: (...args: any[]) => void): unknown;
+}
 
 // ---------------------------------------------------------------- host side
 
@@ -34,11 +73,7 @@ export interface HostPlayer {
   control(action: PlayerAction): void;
 }
 
-export interface HostContext<C> {
-  readonly id: string;
-  /** Always the current config. */
-  readonly config: Readonly<C>;
-  setConfig(patch: Partial<C>): void;
+export interface HostContext<C> extends CommonContext<C> {
   readonly app: App;
   readonly window: BrowserWindow;
   /** The default session, except `webRequest` is this plugin's (see `webRequest`). */
@@ -53,6 +88,10 @@ export interface HostContext<C> {
   request<T = unknown>(event: string, payload?: unknown, options?: { timeout?: number }): Promise<T>;
   /** Opens the in-page settings overlay (focusing the window). */
   openSettings(): void;
+  /** Shows the main window and brings it to the front (restoring it if minimized). */
+  focusWindow(): void;
+  /** `target.on(event, listener)`, removed when the plugin stops. */
+  listen(target: Emitter, event: string, listener: (...args: any[]) => void): void;
   /**
    * A short line on the plugin's settings card saying what it is doing, e.g.
    * "Downloading ffmpeg… 40%"; an empty string clears it, and so does stopping.
@@ -70,15 +109,6 @@ export interface HostContext<C> {
    * links, e.g. from Windows notification buttons), after the core applied them.
    */
   onProtocol(listener: (command: string, args: string[]) => void): void;
-  /** Runs when the plugin stops (disabled, restarted or app quit). */
-  onCleanup(fn: Cleanup): void;
-  /**
-   * Translates a key from the translation files (src/i18n/resources), e.g.
-   * `t("plugins.<id>.saved", "Saved “{{title}}”", { title })`. The
-   * fallback is the English text; `nub run i18n` adds it to en.json.
-   */
-  t(key: string, fallback?: string, vars?: Readonly<Record<string, unknown>>): string;
-  readonly log: Logger;
 }
 
 export interface BeforeReadyContext<C> {
@@ -92,8 +122,8 @@ export interface BeforeReadyContext<C> {
 export interface HostPart<C, Cmds extends AnyCommands, Rpc extends RpcSchemas = {}> {
   /** Runs before `app.whenReady()` when enabled at launch (command-line switches). Changes need a restart. */
   beforeReady?(ctx: BeforeReadyContext<C>): void;
-  start?(ctx: HostContext<C>): MaybePromise<void | Cleanup>;
-  /** Default: restart the host part. */
+  start?(ctx: HostContext<C>): StartResult;
+  /** Default: restart the host part (unless `start` registered `ctx.onConfigChange`). */
   onConfigChange?(config: Readonly<C>, ctx: HostContext<C>): void | "restart";
   /** Options merged into the main window's constructor when enabled at launch (frame, transparency…). */
   windowOptions?(config: Readonly<C>): BrowserWindowConstructorOptions;
@@ -127,10 +157,7 @@ export interface PagePlayer {
 }
 
 export interface HostClient<Cmds extends AnyCommands> {
-  invoke<K extends keyof Cmds & string>(
-    name: K,
-    ...args: Parameters<Cmds[K]>
-  ): Promise<Awaited<ReturnType<Cmds[K]>>>;
+  invoke: Invoke<Cmds>;
   on(event: string, listener: (payload: unknown) => void): Unsubscribe;
   /** Answers `ctx.request(event)` from the host part. */
   handle(event: string, handler: (payload: unknown) => unknown): Unsubscribe;
@@ -159,10 +186,7 @@ export interface WaitForOptions {
   timeout?: number;
 }
 
-export interface PageContext<C, Cmds extends AnyCommands> {
-  readonly id: string;
-  readonly config: Readonly<C>;
-  setConfig(patch: Partial<C>): void;
+export interface PageContext<C, Cmds extends AnyCommands> extends CommonContext<C> {
   readonly player: PagePlayer;
   readonly host: HostClient<Cmds>;
   /** Registry selector by name. */
@@ -171,6 +195,16 @@ export interface PageContext<C, Cmds extends AnyCommands> {
   $$<E extends Element = HTMLElement>(name: SelectorName, root?: ParentNode): E[];
   /** Resolves with the first element matching the registry selector. */
   waitFor<E extends Element = HTMLElement>(name: SelectorName, options?: WaitForOptions): Promise<E>;
+  /**
+   * Keeps `element` in the page while the plugin runs: YTM re-renders and
+   * replaces parts of it, so it is put back whenever it gets detached.
+   * `place` puts it somewhere (and may do nothing while the spot isn't there yet);
+   * or name a registry selector to prepend or append it to.
+   */
+  mount(element: Element, place: (element: Element) => void): void;
+  mount(element: Element, parent: SelectorName, position?: "prepend" | "append"): void;
+  /** A MutationObserver on `target` (or the element a selector names, once it exists), disconnected when the plugin stops. */
+  observe(target: Node | SelectorName, options: MutationObserverInit, callback: MutationCallback): void;
   /** addEventListener that is removed automatically when the plugin stops. */
   listen<T extends EventTarget>(
     target: T,
@@ -184,16 +218,8 @@ export interface PageContext<C, Cmds extends AnyCommands> {
   addStyle(css: string): StyleHandle;
   /** Shows a message in YTM's own toast (bottom left), as pear-desktop's plugins do. */
   toast(message: string): void;
-  onCleanup(fn: Cleanup): void;
   /** Aborted when the plugin stops. */
   readonly signal: AbortSignal;
-  /**
-   * Translates a key from the translation files (src/i18n/resources), e.g.
-   * `t("plugins.<id>.saved", "Saved “{{title}}”", { title })`. The
-   * fallback is the English text; `nub run i18n` adds it to en.json.
-   */
-  t(key: string, fallback?: string, vars?: Readonly<Record<string, unknown>>): string;
-  readonly log: Logger;
 }
 
 export interface StyleHandle {
@@ -204,13 +230,13 @@ export interface StyleHandle {
 export interface PagePartObject<C, Cmds extends AnyCommands> {
   /** "idle" (default) waits for DOMContentLoaded; "start" runs before YTM's scripts. */
   runAt?: "start" | "idle";
-  start(ctx: PageContext<C, Cmds>): MaybePromise<void | Cleanup>;
-  /** Default: restart the page part. */
+  start(ctx: PageContext<C, Cmds>): StartResult;
+  /** Default: restart the page part (unless `start` registered `ctx.onConfigChange`). */
   onConfigChange?(config: Readonly<C>, ctx: PageContext<C, Cmds>): void | "restart";
 }
 
 export type PagePart<C, Cmds extends AnyCommands> =
-  | ((ctx: PageContext<C, Cmds>) => MaybePromise<void | Cleanup>)
+  | ((ctx: PageContext<C, Cmds>) => StartResult)
   | PagePartObject<C, Cmds>;
 
 // ---------------------------------------------------------------- plugin
@@ -249,6 +275,10 @@ export interface PluginDef<S extends ConfigShape, Cmds extends AnyCommands, Rpc 
 
 export type AnyPlugin = PluginDef<any, any, any>;
 
+/** The contexts of a plugin with config schema `S`, for code split into modules. */
+export type HostContextOf<S extends ConfigShape> = HostContext<ConfigOf<S>>;
+export type PageContextOf<S extends ConfigShape, Cmds extends AnyCommands = {}> = PageContext<ConfigOf<S>, Cmds>;
+
 export function definePlugin<
   const S extends ConfigShape = {},
   Cmds extends AnyCommands = {},
@@ -258,10 +288,17 @@ export function definePlugin<
 }
 
 export function supportsPlatform(plugin: AnyPlugin, platform: string) {
-  return !plugin.platforms || (plugin.platforms as readonly string[]).includes(platform);
+  return !plugin.platforms || plugin.platforms.includes(platform as Platform);
 }
 
 export function isEnabledByDefault(plugin: AnyPlugin, platform: string) {
   const value = plugin.enabledByDefault;
-  return Array.isArray(value) ? (value as readonly string[]).includes(platform) : value === true;
+  if (Array.isArray(value)) return value.includes(platform as Platform);
+  return value === true;
+}
+
+/** The plugin's settings buttons (`actions`), by command name. */
+export function pluginActions(plugin: AnyPlugin): [name: string, action: PluginAction][] {
+  const actions: Record<string, PluginAction | undefined> = plugin.actions ?? {};
+  return Object.entries(actions).filter((entry): entry is [string, PluginAction] => entry[1] !== undefined);
 }

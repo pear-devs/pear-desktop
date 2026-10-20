@@ -41,6 +41,7 @@ async function setup(enabled = true) {
     requests: {} as never,
     send() {},
     openSettings() {},
+    focusWindow() {},
     broadcast,
     onProtocol: () => () => {},
   });

@@ -1,6 +1,6 @@
 // The pear "macro compiler" as a Vite plugin.
 //
-// - Discovers plugins (`plugins/<id>/index.ts`).
+// - Discovers plugins (`plugins/<id>/index.ts`, or `index.tsx`).
 // - `virtual:pear/host-plugins` (main process): every plugin, split for the host.
 // - `virtual:pear/page-runtime` (preload): the page runtime plus every plugin
 //   split for the page, bundled by Rolldown into one self-contained IIFE string
@@ -24,11 +24,12 @@ const HOST_PLUGINS_ID = "virtual:pear/host-plugins";
 const PAGE_PLUGINS_ID = "virtual:pear/page-plugins";
 const PAGE_RUNTIME_ID = "virtual:pear/page-runtime";
 const SETTINGS_APP_ID = "virtual:pear/settings-app";
-// The id keeps ending in ".ts" (`&lang.ts`): the macro analyzer picks its
-// parser from the extension and would parse TypeScript as JavaScript otherwise.
-const SPLIT_QUERY = /\?pear=(host|page)&lang\.ts$/;
+// The id keeps ending in the file's extension (`&lang.ts`, `&lang.tsx`): the macro
+// analyzer picks its parser from it and would parse TypeScript as JavaScript otherwise.
+const SPLIT_QUERY = /\?pear=(host|page)&lang\.tsx?$/;
 // unplugin-macros' default filter rejects ids with a query (our split ids).
-const MACRO_OPTIONS = { include: [/\.[cm]?[jt]sx?(\?pear=(host|page)&lang\.ts)?$/] };
+const MACRO_OPTIONS = { include: [/\.[cm]?[jt]sx?(\?pear=(host|page)&lang\.tsx?)?$/] };
+const ENTRY_NAMES = ["index.ts", "index.tsx"];
 
 export interface PearPluginOptions {
   /** Directory containing one folder per plugin. */
@@ -44,14 +45,17 @@ export interface PearPluginOptions {
 export function discoverPlugins({ pluginsDir, only }: PearPluginOptions): string[] {
   if (!existsSync(pluginsDir)) return [];
   return readdirSync(pluginsDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && existsSync(join(pluginsDir, entry.name, "index.ts")))
-    .filter((entry) => !only || only.includes(entry.name))
-    .map((entry) => resolve(pluginsDir, entry.name, "index.ts"))
+    .filter((entry) => entry.isDirectory() && (!only || only.includes(entry.name)))
+    .map((entry) => ENTRY_NAMES.map((name) => resolve(pluginsDir, entry.name, name)).find((file) => existsSync(file)))
+    .filter((file) => file !== undefined)
     .sort();
 }
 
+const extensionOf = (file: string) => (file.endsWith(".tsx") ? "tsx" : "ts");
+
 function registryModule(files: readonly string[], target: SplitTarget) {
-  const imports = files.map((file, i) => `import p${i} from ${JSON.stringify(`${file}?pear=${target}&lang.ts`)};`);
+  const splitId = (file: string) => `${file}?pear=${target}&lang.${extensionOf(file)}`;
+  const imports = files.map((file, i) => `import p${i} from ${JSON.stringify(splitId(file))};`);
   return `${imports.join("\n")}\nexport default [${files.map((_, i) => `p${i}`).join(", ")}];\n`;
 }
 
@@ -102,7 +106,8 @@ function pagePluginsPlugin(options: PearPluginOptions): RolldownPlugin {
     load(id) {
       if (id === `\0${PAGE_PLUGINS_ID}`) return registryModule(discoverPlugins(options), "page");
       if (SPLIT_QUERY.test(id)) {
-        return { code: readFileSync(id.replace(SPLIT_QUERY, ""), "utf8"), moduleType: "ts" };
+        const file = id.replace(SPLIT_QUERY, "");
+        return { code: readFileSync(file, "utf8"), moduleType: extensionOf(file) };
       }
     },
     transform(code, id) {

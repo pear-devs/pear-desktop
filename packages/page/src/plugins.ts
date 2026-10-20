@@ -4,7 +4,6 @@
 import type {
   AnyPlugin,
   Cleanup,
-  Logger,
   PageContext,
   PagePartObject,
   PagePlayer,
@@ -15,16 +14,21 @@ import type { CoreSection } from "@pear/sdk/core-config";
 import { type Translate, translator } from "@pear/sdk/i18n";
 import type { Bridge, CoreState, PluginState } from "@pear/sdk/protocol";
 import { selectors } from "@pear/sdk/selectors";
+import { createLogger, errorMessage } from "@pear/sdk/util";
 import { AudioGraph } from "./audio.ts";
-import { domReady, waitForSelector } from "./dom.ts";
+import { domReady, keepMounted, observe, waitForSelector } from "./dom.ts";
 import type { Player } from "./player.ts";
 
-type AnyContext = PageContext<Record<string, unknown>, Record<string, (...args: any[]) => unknown>>;
+type AnyConfig = Record<string, unknown>;
+type AnyContext = PageContext<AnyConfig, Record<string, (...args: any[]) => unknown>>;
+type ConfigListener = (config: AnyConfig) => void | "restart";
 
 interface Instance {
   controller: AbortController;
   cleanups: Cleanup[];
   sheets: CSSStyleSheet[];
+  /** Registered with `ctx.onConfigChange`; they replace restarting. */
+  configListeners: ConfigListener[];
   ctx: AnyContext;
 }
 
@@ -181,8 +185,7 @@ export class PluginRunner {
     this.#renderStyle(plugin, instance);
     const part = pagePart(plugin);
     if (!part) return;
-    const result = part.onConfigChange ? part.onConfigChange(next.config, instance.ctx) : "restart";
-    if (result === "restart") {
+    if (configChange(part, instance, next.config) === "restart") {
       this.#stop(id);
       void this.#start(id);
     }
@@ -196,7 +199,7 @@ export class PluginRunner {
       const value = await handler(payload);
       await this.#bridge.invoke("plugin:respond", requestId, true, value);
     } catch (error) {
-      await this.#bridge.invoke("plugin:respond", requestId, false, error instanceof Error ? error.message : String(error));
+      await this.#bridge.invoke("plugin:respond", requestId, false, errorMessage(error));
     }
   }
 
@@ -243,7 +246,7 @@ export class PluginRunner {
     } catch (error) {
       if (!instance.controller.signal.aborted) {
         console.error(`[pear:${id}] failed to start`, error);
-        this.reportError(id, `failed to start: ${error instanceof Error ? error.message : String(error)}`);
+        this.reportError(id, `failed to start: ${errorMessage(error)}`);
       }
     }
   }
@@ -294,10 +297,10 @@ export class PluginRunner {
     const id = plugin.id;
     const controller = new AbortController();
     const cleanups: Cleanup[] = [];
-    const instance: Instance = { controller, cleanups, sheets: [], ctx: undefined! };
+    const instance: Instance = { controller, cleanups, sheets: [], configListeners: [], ctx: undefined! };
     const runner = this;
     const bridge = this.#bridge;
-    const log = logger(id);
+    const log = createLogger(id);
     const listen = (target: EventTarget, type: string, listener: (event: any) => void, options?: AddEventListenerOptions) =>
       target.addEventListener(type, listener, { ...options, signal: controller.signal });
     const track = (unsubscribe: Unsubscribe) => {
@@ -366,6 +369,30 @@ export class PluginRunner {
       $$: (name: SelectorName, root: ParentNode = document) => [...root.querySelectorAll(selectors[name])] as any,
       waitFor: (name: SelectorName, options = {}) =>
         waitForSelector(selectors[name], { ...options, signal: controller.signal }) as any,
+      mount(element: Element, place: SelectorName | ((element: Element) => void), position: "prepend" | "append" = "append") {
+        const put = typeof place === "function" ? place : (el: Element) => document.querySelector(selectors[place])?.[position](el);
+        track(keepMounted(element, put));
+      },
+      observe(target, options, callback) {
+        if (typeof target !== "string") return void track(observe(target, options, callback));
+        waitForSelector(selectors[target], { signal: controller.signal }).then(
+          (element) => track(observe(element, options, callback)),
+          () => {},
+        );
+      },
+      setTimeout(fn, ms) {
+        const timer = setTimeout(fn, ms);
+        track(() => clearTimeout(timer));
+        return timer;
+      },
+      setInterval(fn, ms) {
+        const timer = setInterval(fn, ms);
+        track(() => clearInterval(timer));
+        return timer;
+      },
+      onConfigChange(listener) {
+        instance.configListeners.push(listener as ConfigListener);
+      },
       listen,
       addStyle(css) {
         const sheet = runner.#addSheet(css);
@@ -400,13 +427,14 @@ function sameConfig(a: Record<string, unknown>, b: Record<string, unknown>) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-function logger(id: string): Logger {
-  const prefix = `[pear:${id}]`;
-  return {
-    info: (...args) => console.info(prefix, ...args),
-    warn: (...args) => console.warn(prefix, ...args),
-    error: (...args) => console.error(prefix, ...args),
-  };
+/** Lets the running page part take a config change; "restart" when it can't. */
+function configChange(part: PagePartObject<any, any>, instance: Instance, config: AnyConfig) {
+  if (instance.configListeners.length > 0) {
+    const results = instance.configListeners.map((listener) => listener(config));
+    return results.includes("restart") ? "restart" : undefined;
+  }
+  if (part.onConfigChange) return part.onConfigChange(config, instance.ctx);
+  return "restart";
 }
 
 interface ToastApp {

@@ -3,7 +3,8 @@
 
 import type { App, BrowserWindow, BrowserWindowConstructorOptions, Session } from "electron";
 import { interpolate } from "@pear/sdk/i18n";
-import { type AnyPlugin, type Cleanup, type HostContext, type Logger, type RpcMethod, supportsPlatform } from "@pear/sdk";
+import { type AnyPlugin, type Cleanup, type HostContext, type RpcMethod, supportsPlatform } from "@pear/sdk";
+import { createLogger, errorMessage } from "@pear/sdk/util";
 import { v } from "@pear/sdk/rpc";
 import type { HostEvent, PluginMeta, PluginState } from "@pear/sdk/protocol";
 import type { Settings } from "./config.ts";
@@ -12,9 +13,14 @@ import type { PageRequests } from "./page-requests.ts";
 import type { PlayerMirror } from "./player.ts";
 import type { WebRequestRouter } from "./web-request.ts";
 
+type AnyConfig = Record<string, unknown>;
+type ConfigListener = (config: AnyConfig) => void | "restart";
+
 interface Instance {
-  ctx: HostContext<Record<string, unknown>>;
+  ctx: HostContext<AnyConfig>;
   cleanups: Cleanup[];
+  /** Registered with `ctx.onConfigChange`; they replace restarting. */
+  configListeners: ConfigListener[];
   stopped: boolean;
 }
 
@@ -28,6 +34,8 @@ export interface HostEnvironment {
   send(event: HostEvent): void;
   /** The in-page settings, or the standalone window when the page isn't up. */
   openSettings(): void;
+  /** Shows the main window and brings it to the front. */
+  focusWindow(): void;
   /** Sends a plugin event to API server WebSocket clients. */
   broadcast(plugin: string, event: string, data: unknown): void;
   /** Subscribes to app protocol commands. */
@@ -113,8 +121,8 @@ export class PluginHost {
   }
 
   #reportError(id: string, what: string, error: unknown) {
-    logger(id).error(what, error);
-    const message = `${what}: ${error instanceof Error ? error.message : String(error)}`;
+    createLogger(id).error(what, error);
+    const message = `${what}: ${errorMessage(error)}`;
     this.#errors.set(id, message);
     this.#env?.send({ type: "plugin-error", id, message });
   }
@@ -171,16 +179,9 @@ export class PluginHost {
     if (JSON.stringify(state.config) === before) return state;
 
     const instance = this.#instances.get(id);
-    if (instance && plugin.host) {
-      const result = plugin.host.onConfigChange
-        ? plugin.host.onConfigChange(state.config, instance.ctx)
-        : plugin.host.start
-          ? "restart"
-          : undefined;
-      if (result === "restart") {
-        this.#stop(id);
-        await this.#start(plugin);
-      }
+    if (instance && configChange(plugin, instance, state.config) === "restart") {
+      this.#stop(id);
+      await this.#start(plugin);
     }
     this.#broadcast(id, state);
     return state;
@@ -279,7 +280,7 @@ export class PluginHost {
     const settings = this.#settings;
     const host = this;
     const cleanups: Cleanup[] = [];
-    const instance: Instance = { cleanups, stopped: false, ctx: undefined! };
+    const instance: Instance = { cleanups, configListeners: [], stopped: false, ctx: undefined! };
     const player = env.player;
     instance.ctx = {
       id,
@@ -304,6 +305,22 @@ export class PluginHost {
         control: (action) => player.control(action),
       },
       openSettings: () => env.openSettings(),
+      focusWindow: () => env.focusWindow(),
+      listen: (target, event, listener) => {
+        target.on(event, listener);
+        cleanups.push(() => target.removeListener(event, listener));
+      },
+      onConfigChange: (listener) => void instance.configListeners.push(listener as ConfigListener),
+      setTimeout: (fn, ms) => {
+        const timer = setTimeout(fn, ms);
+        cleanups.push(() => clearTimeout(timer));
+        return timer;
+      },
+      setInterval: (fn, ms) => {
+        const timer = setInterval(fn, ms);
+        cleanups.push(() => clearInterval(timer));
+        return timer;
+      },
       setStatus: (message) => {
         if (!instance.stopped) host.#setStatus(id, message);
       },
@@ -316,17 +333,20 @@ export class PluginHost {
       onProtocol: (listener) => void cleanups.push(env.onProtocol(listener)),
       onCleanup: (fn) => cleanups.push(fn),
       t: (key, fallback, vars) => (host.#i18n ? host.#i18n.t(key, fallback, vars) : interpolate(fallback ?? key, vars)),
-      log: logger(id),
+      log: createLogger(id),
     };
     return instance;
   }
 }
 
-function logger(id: string): Logger {
-  const prefix = `[pear:${id}]`;
-  return {
-    info: (...args) => console.info(prefix, ...args),
-    warn: (...args) => console.warn(prefix, ...args),
-    error: (...args) => console.error(prefix, ...args),
-  };
+/** Lets the running host part take a config change; "restart" when it can't. */
+function configChange(plugin: AnyPlugin, instance: Instance, config: AnyConfig) {
+  const host = plugin.host;
+  if (!host) return;
+  if (instance.configListeners.length > 0) {
+    const results = instance.configListeners.map((listener) => listener(config));
+    return results.includes("restart") ? "restart" : undefined;
+  }
+  if (host.onConfigChange) return host.onConfigChange(config, instance.ctx);
+  if (host.start) return "restart";
 }
