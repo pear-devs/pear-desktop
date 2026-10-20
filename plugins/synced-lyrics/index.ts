@@ -38,6 +38,7 @@ export default definePlugin({
       "dots",
       [
         { value: "dots", label: "Animated dots" },
+        { value: "bullets", label: "•••" },
         { value: "note", label: "♪" },
         { value: "dash", label: "———" },
         { value: "none", label: "Nothing" },

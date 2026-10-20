@@ -7,6 +7,7 @@ import { CHANNEL, type CoreState, type HostEvent } from "@pear/sdk/protocol";
 import hostPlugins from "virtual:pear/host-plugins";
 import { chromeUserAgent, isGoogleAuth, YTM_ORIGIN } from "../shared/user-agent.ts";
 import { ApiServer } from "./api/index.ts";
+import { hideOnClose, onActivate } from "./close.ts";
 import { Settings, type WindowState } from "./config.ts";
 import { seedConsent } from "./consent.ts";
 import { loadI18n, resolveLanguage } from "./i18n.ts";
@@ -259,6 +260,7 @@ function main() {
     await applyProxy(settings.core("advanced").proxy, Boolean(settings.plugin("auth-proxy-adapter")?.enabled));
     mainWindow = createWindow();
     const window = mainWindow;
+    if (process.platform === "darwin") hideOnClose(app, window);
     api = new ApiServer({
       settings,
       plugins,
@@ -311,9 +313,7 @@ function main() {
     if (process.platform !== "darwin") app.quit();
   });
 
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow();
-  });
+  app.on("activate", () => onActivate(mainWindow, () => void (mainWindow = createWindow())));
 }
 
 /**

@@ -215,7 +215,8 @@ export interface PluginDef<S extends ConfigShape, Cmds extends AnyCommands, Rpc 
   authors?: readonly string[];
   /** Default: all platforms. */
   platforms?: readonly Platform[];
-  enabledByDefault?: boolean;
+  /** Enabled on a fresh profile; or only on these platforms. Default: false. */
+  enabledByDefault?: boolean | readonly Platform[];
   /**
    * Enabling or disabling only applies after a restart (shown in settings).
    * The page part then starts only if the plugin was enabled when the page
@@ -243,4 +244,9 @@ export function definePlugin<
 
 export function supportsPlatform(plugin: AnyPlugin, platform: string) {
   return !plugin.platforms || (plugin.platforms as readonly string[]).includes(platform);
+}
+
+export function isEnabledByDefault(plugin: AnyPlugin, platform: string) {
+  const value = plugin.enabledByDefault;
+  return Array.isArray(value) ? (value as readonly string[]).includes(platform) : value === true;
 }

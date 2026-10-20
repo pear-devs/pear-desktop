@@ -48,6 +48,8 @@ export default definePlugin({
   id: "in-app-menu",
   name: "In-app menu",
   description: "Replaces the system title bar: the top bar moves the window and holds the app menu.",
+  // As in pear-desktop.
+  enabledByDefault: ["win32"],
   config: {
     windowControls: config.bool(true, {
       label: "Show window buttons",

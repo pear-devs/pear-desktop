@@ -10,9 +10,9 @@
 // ones fall back to defaults instead of crashing anything. Keys this version
 // doesn't know are kept, for older versions and future migrations.
 
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { type AnyPlugin, type ConfigOf, type ConfigShape, normalizeConfig } from "@pear/sdk";
+import { type AnyPlugin, type ConfigOf, type ConfigShape, isEnabledByDefault, normalizeConfig } from "@pear/sdk";
 import { CORE_SECTIONS, type CoreSection } from "@pear/sdk/core-config";
 import type { PluginState } from "@pear/sdk/protocol";
 import { migrate, type StoredConfig } from "./migrations.ts";
@@ -42,17 +42,21 @@ export class Settings {
   #core: CoreConfigs;
   #writeTimer: ReturnType<typeof setTimeout> | undefined;
 
-  constructor(userData: string, plugins: readonly AnyPlugin[], appVersion: string) {
+  constructor(userData: string, plugins: readonly AnyPlugin[], appVersion: string, platform: string = process.platform) {
     this.path = join(userData, CONFIG_FILE);
-    const { config, migrated } = migrate(readJson(this.path), appVersion);
+    const { config, migrated, files } = migrate(readJson(this.path), appVersion);
     this.#data = config;
+    for (const [name, contents] of Object.entries(files)) {
+      const path = join(userData, name);
+      if (!existsSync(path)) writeFileSync(path, JSON.stringify(contents));
+    }
     this.#core = Object.fromEntries(
       Object.entries(CORE_SECTIONS).map(([name, shape]) => [name, normalizeConfig(shape, this.#coreSource(name as CoreSection))]),
     ) as CoreConfigs;
     for (const plugin of plugins) {
       const entry = this.#data.plugins?.[plugin.id];
       this.#plugins.set(plugin.id, {
-        enabled: typeof entry?.enabled === "boolean" ? entry.enabled : (plugin.enabledByDefault ?? false),
+        enabled: typeof entry?.enabled === "boolean" ? entry.enabled : isEnabledByDefault(plugin, platform),
         config: plugin.config ? normalizeConfig(plugin.config, entry) : {},
       });
     }

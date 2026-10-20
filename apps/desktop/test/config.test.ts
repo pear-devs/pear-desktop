@@ -12,7 +12,10 @@ const tray = definePlugin({
   id: "tray",
   name: "Tray icon",
   enabledByDefault: true,
-  config: { clickPlayPause: config.bool(false, { label: "Click toggles playback" }) },
+  config: {
+    closeToTray: config.bool(false, { label: "Close to tray" }),
+    clickPlayPause: config.bool(false, { label: "Click toggles playback" }),
+  },
 });
 const lyrics = definePlugin({
   id: "synced-lyrics",
@@ -23,6 +26,7 @@ const lyrics = definePlugin({
   },
 });
 const clock = definePlugin({ id: "clock", name: "Clock", enabledByDefault: false });
+const menu = definePlugin({ id: "in-app-menu", name: "In-app menu", enabledByDefault: ["win32"] });
 /** The downloader's options that pear-desktop 3.x had (or has a migration for). */
 const downloader = definePlugin({
   id: "downloader",
@@ -110,11 +114,39 @@ describe("config.json from pear-desktop 3.x", () => {
   });
 
   test("moves the tray option onto the tray plugin", () => {
-    expect(settings.plugin("tray")).toEqual({ enabled: true, config: { clickPlayPause: true } });
+    // With the tray on, pear-desktop hid the window when it was closed.
+    expect(settings.plugin("tray")).toEqual({ enabled: true, config: { closeToTray: true, clickPlayPause: true } });
+    const off = (options: Record<string, unknown>) =>
+      migrate({ options, __internal__: { migrations: { version: "3.12.0" } } }, "4.0.0").config.plugins?.tray;
+    expect(off({ tray: false })).toEqual({ enabled: false });
+    expect(off({})).toBeUndefined();
   });
 
   test("reads the API server where the plugin kept it", () => {
     expect(settings.core("apiServer")).toMatchObject({ enabled: true, port: 9000, authorizedClients: ["remote"], secret: "s3cret" });
+  });
+
+  test("the API server keeps listening on every interface, pear-desktop's default", () => {
+    const apiServer = (entry: Record<string, unknown>) =>
+      new Settings(profile({ plugins: { "api-server": entry }, __internal__: { migrations: { version: "3.12.0" } } }), PLUGINS, "4.0.0").core(
+        "apiServer",
+      );
+    expect(apiServer({ enabled: true, authorizedClients: ["phone"] })).toMatchObject({ enabled: true, hostname: "0.0.0.0" });
+    expect(apiServer({ enabled: true, hostname: "127.0.0.1" })).toMatchObject({ hostname: "127.0.0.1" });
+    // Never set up in pear-desktop, or a new profile: this machine only.
+    expect(new Settings(profile({ __internal__: { migrations: { version: "3.12.0" } } }), PLUGINS, "4.0.0").core("apiServer")).toMatchObject({
+      hostname: "127.0.0.1",
+    });
+    expect(new Settings(profile(), PLUGINS, "4.0.0").core("apiServer")).toMatchObject({ hostname: "127.0.0.1" });
+  });
+
+  test("performance-improvement stays on unless it was turned off (on by default in pear-desktop)", () => {
+    const performance = (plugins: Record<string, unknown>) =>
+      migrate({ plugins, __internal__: { migrations: { version: "3.12.0" } } } as never, "4.0.0").config.plugins?.["performance-improvement"];
+    expect(performance({})).toEqual({ enabled: true });
+    expect(performance({ "performance-improvement": { enabled: false } })).toEqual({ enabled: false });
+    // New profiles: off, the rewrite's default.
+    expect(migrate(undefined, "4.0.0").config.plugins).toBeUndefined();
   });
 
   test("maps the downloader's presets and download-on-finish settings", () => {
@@ -209,6 +241,16 @@ describe("migrations", () => {
     expect(format({})).toBeUndefined();
   });
 
+  test("downloader: overwriting stays pear-desktop's default for its users", () => {
+    const downloaderOf = (entry: Record<string, unknown>) =>
+      new Settings(profile({ plugins: { downloader: entry }, __internal__: { migrations: { version: "3.12.0" } } }), PLUGINS, "4.0.0").plugin(
+        "downloader",
+      )!.config;
+    expect(downloaderOf({ enabled: true })).toMatchObject({ skipExisting: false });
+    expect(downloaderOf({ enabled: true, skipExisting: true })).toMatchObject({ skipExisting: true });
+    expect(new Settings(profile(), PLUGINS, "4.0.0").plugin("downloader")!.config).toMatchObject({ skipExisting: true });
+  });
+
   test("download on finish without a folder or mode keeps the defaults", () => {
     const entry = migrate(
       { plugins: { downloader: { enabled: false, downloadOnFinish: { enabled: false, seconds: 5 } } }, __internal__: { migrations: { version: "3.12.0" } } },
@@ -217,6 +259,35 @@ describe("migrations", () => {
     expect(entry).toMatchObject({ autoDownload: false, autoDownloadSeconds: 5 });
     expect(entry).not.toHaveProperty("autoDownloadMode");
     expect(entry).not.toHaveProperty("autoDownloadFolder");
+  });
+
+  test("picture-in-picture: the small window's saved bounds move to their own file", () => {
+    const old = (entry: Record<string, unknown>) => ({ plugins: { "picture-in-picture": entry }, __internal__: { migrations: { version: "3.12.0" } } });
+    expect(migrate(old({ "pip-position": [120.4, 80], "pip-size": [640, 360] }) as never, "4.0.0").files).toEqual({
+      "picture-in-picture.json": { x: 120, y: 80, width: 640, height: 360 },
+    });
+    expect(migrate(old({ "pip-position": "broken", "pip-size": [0, 0] }) as never, "4.0.0").files).toEqual({});
+
+    // Written next to config.json, unless the rewrite already saved bounds there.
+    const dir = profile(old({ enabled: true, "pip-position": [5, 6] }));
+    new Settings(dir, PLUGINS, "4.0.0");
+    expect(JSON.parse(readFileSync(join(dir, "picture-in-picture.json"), "utf8"))).toEqual({ x: 5, y: 6 });
+    const kept = profile(old({ enabled: true, "pip-position": [5, 6] }));
+    writeFileSync(join(kept, "picture-in-picture.json"), '{"x":1}');
+    new Settings(kept, PLUGINS, "4.0.0");
+    expect(readFileSync(join(kept, "picture-in-picture.json"), "utf8")).toBe('{"x":1}');
+  });
+
+  test("a plugin can be enabled by default on some platforms only", () => {
+    const enabled = (platform: string, stored?: unknown) => new Settings(profile(stored), [menu], "4.0.0", platform).plugin("in-app-menu")!.enabled;
+    expect(enabled("win32")).toBe(true);
+    expect(enabled("linux")).toBe(false);
+    expect(enabled("darwin")).toBe(false);
+    // pear-desktop's Windows users who never turned it off keep it; a stored choice wins.
+    const old = (plugins: unknown) => ({ plugins, __internal__: { migrations: { version: "3.12.0" } } });
+    expect(enabled("win32", old({}))).toBe(true);
+    expect(enabled("win32", old({ "in-app-menu": { enabled: false } }))).toBe(false);
+    expect(enabled("linux", old({ "in-app-menu": { enabled: true } }))).toBe(true);
   });
 
   test("versions compare numerically", () => {

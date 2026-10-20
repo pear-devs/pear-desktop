@@ -1639,7 +1639,8 @@
             "dots": "Animated dots",
             "note": "♪",
             "dash": "———",
-            "none": "Nothing"
+            "none": "Nothing",
+            "bullets": "•••"
           }
         },
         "showTimeCodes": {

@@ -7,7 +7,7 @@ import type { LyricsStore, ProviderState } from "./store.ts";
 type Translate = (key: string, fallback: string, vars?: Record<string, unknown>) => string;
 
 export type LineEffect = "fancy" | "scale" | "offset" | "focus";
-export type GapText = "dots" | "note" | "dash" | "none";
+export type GapText = "dots" | "bullets" | "note" | "dash" | "none";
 
 export interface ViewOptions {
   effect: LineEffect;
@@ -404,6 +404,15 @@ function GapMark({ kind }: { kind: GapText }) {
           <i />
           <i />
           <i />
+        </span>
+      );
+    case "bullets":
+      // pear-desktop's "•••": the bullets appear one by one through the break.
+      return (
+        <span class="text gap-bullets" aria-label="Instrumental">
+          <i>•</i>
+          <i>•</i>
+          <i>•</i>
         </span>
       );
     case "note":

@@ -26,9 +26,9 @@ function migrated(plugins: Record<string, Json>, options: Json = {}) {
 /** Applies one plugin's conversion twice: the second run must change nothing. */
 function twice(id: string, entry: Json, config: StoredConfig = {}) {
   const once = structuredClone(entry);
-  PLUGIN_MIGRATIONS[id]!(once, config);
+  PLUGIN_MIGRATIONS[id]!(once, config, {});
   const again = structuredClone(once);
-  PLUGIN_MIGRATIONS[id]!(again, config);
+  PLUGIN_MIGRATIONS[id]!(again, config, {});
   expect(again).toEqual(once);
   return once;
 }
@@ -92,9 +92,9 @@ describe("pear-desktop plugin options", () => {
     expect(twice("discord", { statusDisplayType: 0 })).toMatchObject({ statusDisplayType: "name" });
     expect(twice("discord", { statusDisplayType: 2 })).toMatchObject({ statusDisplayType: "details" });
     expect(twice("discord", { statusDisplayType: 7 })).toMatchObject({ statusDisplayType: 7 });
-    // A zero timeout cleared the activity right when playback paused.
-    expect(twice("discord", { activityTimeoutTime: 0 })).toMatchObject({ hideWhenPaused: true });
-    expect(twice("discord", { activityTimeoutTime: 0, activityTimeoutEnabled: false })).not.toHaveProperty("hideWhenPaused");
+    // pear-desktop never armed a zero timeout: the activity stayed while paused.
+    expect(twice("discord", { activityTimeoutTime: 0 })).toEqual({ activityTimeoutTime: 0, activityTimeoutEnabled: false });
+    expect(twice("discord", { activityTimeoutTime: 0, activityTimeoutEnabled: true })).not.toHaveProperty("hideWhenPaused");
     expect(twice("discord", { activityTimeoutTime: 999 * 60_000 })).toMatchObject({ activityTimeoutMinutes: 240 });
     expect(twice("discord", { activityTimeoutTime: 1000 })).toMatchObject({ activityTimeoutMinutes: 1 });
   });
@@ -188,7 +188,8 @@ describe("pear-desktop plugin options", () => {
 
   test("runs on the stored entry only, never on a missing or broken one", () => {
     expect(migrated({ visualizer: "broken" as unknown as Json }).visualizer).toBe("broken");
-    expect(migrated({})).toEqual({});
+    // Only performance-improvement, on by default in pear-desktop, gets an entry.
+    expect(migrated({})).toEqual({ "performance-improvement": { enabled: true } });
   });
 });
 
@@ -439,9 +440,12 @@ describe("a pear-desktop 3.12 config.json, loaded with the real plugins", () => 
 describe("synced-lyrics", () => {
   test("gap text and Chinese conversion map onto the rewrite's values", () => {
     expect(twice("synced-lyrics", { defaultTextString: ["•", "••", "•••"], convertChineseCharacter: "traditionalToSimplified" })).toMatchObject({
-      gapText: "dots",
+      gapText: "bullets",
       convertChinese: "t2s",
     });
+    expect(twice("synced-lyrics", { defaultTextString: [".", "..", "..."] })).toMatchObject({ gapText: "dots" });
+    // Not stored: pear-desktop's default, ♪ (the rewrite's own default is dots).
+    expect(twice("synced-lyrics", { enabled: true })).toMatchObject({ gapText: "note" });
     expect(twice("synced-lyrics", { defaultTextString: "♪", convertChineseCharacter: "disabled" })).toMatchObject({ gapText: "note", convertChinese: "off" });
     expect(twice("synced-lyrics", { defaultTextString: " " })).toMatchObject({ gapText: "none" });
     // Same names and values: nothing to convert.

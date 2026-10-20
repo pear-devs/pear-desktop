@@ -241,7 +241,12 @@ test("an existing pear-desktop 3.x config.json is migrated in place", async () =
       "window-position": { x: -1, y: -1 },
       url: "https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/watch?v=dQw4w9WgXcQ",
       options: { tray: false, alwaysOnTop: true, resumeOnStart: false, startingPage: "Explore", language: "el" },
-      plugins: { clock: { enabled: true }, "blur-nav-bar": { enabled: true, blur: 20 } },
+      plugins: {
+        clock: { enabled: true },
+        "blur-nav-bar": { enabled: true, blur: 20 },
+        "api-server": { enabled: false, authorizedClients: ["phone"] },
+        "picture-in-picture": { "pip-position": [30, 40] },
+      },
       __internal__: { migrations: { version: "3.12.0" } },
     },
   });
@@ -256,6 +261,24 @@ test("an existing pear-desktop 3.x config.json is migrated in place", async () =
     expect(file.__internal__.migrations.version).toBe("4.0.0");
     // Options this version doesn't use yet are kept.
     expect(file.options.language).toBe("el");
+    // pear-desktop's defaults where the rewrite's differ: performance-improvement on,
+    // the API server on every interface; and PiP's saved position in its own file.
+    expect(await enabled(page, "performance-improvement")).toBe(true);
+    expect(file.plugins["api-server"].hostname).toBe("0.0.0.0");
+    expect(JSON.parse(readFileSync(join(app.userData, "picture-in-picture.json"), "utf8"))).toEqual({ x: 30, y: 40 });
+  } finally {
+    await app.close();
+  }
+});
+
+test("pear-desktop's tray users keep close-to-tray", async () => {
+  const app = await launchApp({ config: { options: { tray: true }, __internal__: { migrations: { version: "3.12.0" } } } });
+  try {
+    await mainWindow(app);
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.close());
+    await expect
+      .poll(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((w) => ({ visible: w.isVisible() }))))
+      .toEqual([{ visible: false }]);
   } finally {
     await app.close();
   }

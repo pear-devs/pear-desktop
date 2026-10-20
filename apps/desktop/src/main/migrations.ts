@@ -19,7 +19,10 @@ export interface StoredConfig {
   [key: string]: unknown;
 }
 
-type Migration = (config: StoredConfig) => void;
+/** Files next to config.json a migration creates (name -> JSON), written only if missing. */
+export type MigratedFiles = Record<string, unknown>;
+
+type Migration = (config: StoredConfig, files: MigratedFiles) => void;
 
 const plugin = (config: StoredConfig, id: string): Json => {
   config.plugins ??= {};
@@ -42,21 +45,30 @@ const MIGRATIONS: [version: string, migration: Migration][] = [
     // pear-desktop 3.x -> the rewrite. Most of the file already means the same:
     // plugin ids, options and their values were kept on purpose. What moved:
     "4.0.0",
-    (config) => {
+    (config, files) => {
       const options = config.options ?? {};
       // The tray was an app option; it is a plugin now.
       if (typeof options.tray === "boolean") plugin(config, "tray").enabled = options.tray;
+      // With the tray on, closing the window only hid it; that is an option of its own now.
+      if (options.tray === true) setNew(plugin(config, "tray"), "closeToTray", true);
+      // The API server listened on every interface by default (phone remotes); the rewrite's
+      // default is this machine only. pear-desktop didn't store defaults, so set it for its users.
+      const apiServer = config.plugins?.["api-server"];
+      if (isRecord(apiServer)) setNew(apiServer, "hostname", "0.0.0.0");
+      // On by default in pear-desktop (off in the rewrite): keep it for everyone who didn't turn it off.
+      const performance = plugin(config, "performance-improvement");
+      if (performance.enabled !== false) performance.enabled = true;
       if (typeof options.trayClickPlayPause === "boolean") plugin(config, "tray").clickPlayPause = options.trayClickPlayPause;
-      migratePlugins(config);
+      migratePlugins(config, files);
     },
   ],
 ];
 
 /** Plugin options renamed or reshaped by the rewrite (pear-desktop 3.x -> 4.0.0). */
-function migratePlugins(config: StoredConfig) {
+function migratePlugins(config: StoredConfig, files: MigratedFiles) {
   const entries = config.plugins ?? {};
   for (const [id, migrate] of Object.entries(PLUGIN_MIGRATIONS)) {
-    if (isRecord(entries[id])) migrate(entries[id], config);
+    if (isRecord(entries[id])) migrate(entries[id], config, files);
   }
 }
 
@@ -65,10 +77,11 @@ function migratePlugins(config: StoredConfig) {
 // missing; old values are type-checked, and keys the rewrite already has are
 // never overwritten, so running one twice changes nothing. Old keys stay in the
 // file (unknown keys are kept), like everything else this version doesn't read.
-type PluginMigration = (entry: Json, config: StoredConfig) => void;
+type PluginMigration = (entry: Json, config: StoredConfig, files: MigratedFiles) => void;
 
 const isRecord = (value: unknown): value is Json => typeof value === "object" && value !== null && !Array.isArray(value);
 const isNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
+const isPair = (value: unknown): value is [number, number] => Array.isArray(value) && value.length === 2 && value.every(isNumber);
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 /** Sets a new key, unless the entry already has one. */
@@ -96,9 +109,10 @@ function flattenStrings(entry: Json, from: unknown, keys: Readonly<Record<string
   }
 }
 
-// ---- pear-desktop 3.x plugin options: all plugins but downloader, synced-lyrics,
-// do-not-track, performance-improvement and tray (migrated by their own blocks).
-// Plugins not listed kept every option under the same key and value format.
+// ---- pear-desktop 3.x plugin options: all plugins but downloader and synced-lyrics
+// (their own blocks below). do-not-track (3.12.0), tray, api-server and
+// performance-improvement (4.0.0) are handled in MIGRATIONS above. Plugins not
+// listed kept every option under the same key and value format.
 
 /** discord's "Play on <app>" button option: the app's name, kept escaped like pear-desktop does. */
 const DISCORD_PLAY_BUTTON = "playOn\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063";
@@ -139,9 +153,9 @@ const PEAR_DESKTOP_PLUGINS: Record<string, PluginMigration> = {
     if (typeof entry[DISCORD_PLAY_BUTTON] === "boolean") setNew(entry, "playButton", entry[DISCORD_PLAY_BUTTON]);
     const timeout = entry.activityTimeoutTime;
     if (isNumber(timeout)) {
-      // Milliseconds; 0 cleared the activity as soon as playback paused.
+      // Milliseconds; pear-desktop only armed the timeout for values above 0, so 0 never cleared it.
       if (timeout > 0) setNew(entry, "activityTimeoutMinutes", clamp(Math.round(timeout / 60_000), 1, 240));
-      else if (entry.activityTimeoutEnabled !== false) setNew(entry, "hideWhenPaused", true);
+      else entry.activityTimeoutEnabled = false;
     }
     const status = entry.statusDisplayType;
     if (isNumber(status) && DISCORD_STATUS_DISPLAY[status]) entry.statusDisplayType = DISCORD_STATUS_DISPLAY[status];
@@ -155,6 +169,15 @@ const PEAR_DESKTOP_PLUGINS: Record<string, PluginMigration> = {
   },
   "in-app-menu": (entry) => {
     if (typeof entry.hideDOMWindowControls === "boolean") setNew(entry, "windowControls", !entry.hideDOMWindowControls);
+  },
+  "picture-in-picture": (entry, _config, files) => {
+    // The small window's last position and size; the rewrite keeps them in a file of their own.
+    const [position, size] = [entry["pip-position"], entry["pip-size"]];
+    const bounds = {
+      ...(isPair(position) ? { x: Math.round(position[0]), y: Math.round(position[1]) } : {}),
+      ...(isPair(size) && size[0] > 0 && size[1] > 0 ? { width: Math.round(size[0]), height: Math.round(size[1]) } : {}),
+    };
+    if (Object.keys(bounds).length > 0) files["picture-in-picture.json"] ??= bounds;
   },
   "precise-volume": (entry) => {
     flattenStrings(entry, entry.globalShortcuts, { volumeUp: "volumeUp", volumeDown: "volumeDown" });
@@ -206,12 +229,13 @@ const PEAR_DESKTOP_PLUGINS: Record<string, PluginMigration> = {
 // showLyricsEvenIfInexact keep their names and values)
 const SYNCED_LYRICS: Record<string, PluginMigration> = {
   "synced-lyrics": (entry) => {
-    // defaultTextString: what fills instrumental gaps.
+    // defaultTextString: what fills instrumental gaps; ♪ by default in pear-desktop
+    // (which didn't store defaults), animated dots in the rewrite.
     const gap = entry.defaultTextString;
-    if (gap === "♪") setNew(entry, "gapText", "note");
+    if (gap === undefined || gap === "♪") setNew(entry, "gapText", "note");
     else if (gap === "———") setNew(entry, "gapText", "dash");
     else if (gap === " " || gap === "") setNew(entry, "gapText", "none");
-    else if (Array.isArray(gap)) setNew(entry, "gapText", "dots");
+    else if (Array.isArray(gap)) setNew(entry, "gapText", gap.some((frame) => typeof frame === "string" && frame.includes("•")) ? "bullets" : "dots");
     const convert = { simplifiedToTraditional: "s2t", traditionalToSimplified: "t2s", disabled: "off" } as const;
     const chinese = entry.convertChineseCharacter;
     if (typeof chinese === "string" && Object.hasOwn(convert, chinese)) {
@@ -225,6 +249,8 @@ const DOWNLOADER: Record<string, PluginMigration> = {
   // Same names: downloadFolder, skipExisting, playlistMaxItems. The old keys stay
   // (unknown keys are kept), so going back to 3.x still finds them.
   downloader(entry) {
+    // Off by default in pear-desktop (on in the rewrite, for new profiles).
+    setNew(entry, "skipExisting", false);
     // FFmpeg presets became yt-dlp audio formats.
     if (entry.format === undefined && typeof entry.selectedPreset === "string") {
       const custom = (entry.customPresetSetting ?? {}) as { extension?: unknown };
@@ -272,18 +298,22 @@ export function compareVersions(a: string, b: string) {
 }
 
 /** Runs the migrations a stored config needs; a missing file starts fresh. */
-export function migrate(stored: StoredConfig | undefined, appVersion: string): { config: StoredConfig; migrated: boolean } {
+export function migrate(
+  stored: StoredConfig | undefined,
+  appVersion: string,
+): { config: StoredConfig; migrated: boolean; files: MigratedFiles } {
   const config: StoredConfig = structuredClone(stored ?? {});
+  const files: MigratedFiles = {};
   const previous = stored ? (config.__internal__?.migrations?.version ?? "0.0.0") : appVersion;
   for (const [version, migration] of MIGRATIONS) {
-    if (compareVersions(version, previous) > 0 && compareVersions(version, appVersion) <= 0) migration(config);
+    if (compareVersions(version, previous) > 0 && compareVersions(version, appVersion) <= 0) migration(config, files);
   }
   const migrated = !stored || previous !== appVersion;
   // Never record an older version than the one that wrote the file (a downgrade).
   if (compareVersions(appVersion, previous) >= 0) {
     config.__internal__ = { ...config.__internal__, migrations: { ...config.__internal__?.migrations, version: appVersion } };
   }
-  return { config, migrated };
+  return { config, migrated, files };
 }
 
 export { PLUGIN_MIGRATIONS };

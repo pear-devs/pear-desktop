@@ -200,6 +200,9 @@ export const lyricsStyles = css`
   .line[data-state="active"] .gap-dots i:nth-child(2) { opacity: clamp(0.35, calc(var(--p, 0) * 3 - 1), 1); }
   .line[data-state="active"] .gap-dots i:nth-child(3) { opacity: clamp(0.35, calc(var(--p, 0) * 3 - 2), 1); }
   .line[data-state="active"] .gap-dots { animation: breathe 2.4s ease-in-out infinite; }
+  .gap-bullets i { font-style: normal; }
+  .line[data-state="active"] .gap-bullets i:nth-child(2) { opacity: clamp(0, calc((var(--p, 0) * 3 - 1) * 100), 1); }
+  .line[data-state="active"] .gap-bullets i:nth-child(3) { opacity: clamp(0, calc((var(--p, 0) * 3 - 2) * 100), 1); }
   @keyframes breathe { 50% { transform: scale(1.12); } }
 
   .plain .line {
