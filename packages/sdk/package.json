@@ -8,14 +8,18 @@
     "./selectors": "./src/selectors.ts",
     "./protocol": "./src/protocol.ts",
     "./icon": "./src/icon.ts",
-    "./song-details": "./src/song-details.ts"
+    "./song-details": "./src/song-details.ts",
+    "./rpc": "./src/rpc.ts",
+    "./core-config": "./src/core-config.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",
     "test": "vitest run"
   },
   "dependencies": {
-    "lightningcss": "^1.33.0"
+    "@valibot/to-json-schema": "^1.8.0",
+    "lightningcss": "^1.33.0",
+    "valibot": "^1.5.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

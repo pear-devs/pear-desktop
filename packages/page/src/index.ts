@@ -6,6 +6,7 @@ import type { NowPlaying } from "@pear/sdk";
 import type { Bridge } from "@pear/sdk/protocol";
 import { mountSettings, type SettingsController } from "@pear/ui";
 import plugins from "virtual:pear/page-plugins";
+import { registerApiHandlers } from "./api.ts";
 import { domReady } from "./dom.ts";
 import { Player } from "./player.ts";
 import { PluginRunner } from "./plugins.ts";
@@ -76,6 +77,8 @@ bridge.onEvent((event) => {
       return runner.reportError(event.id, event.message, "host");
     case "plugin-request":
       return void runner.request(event.id, event.event, event.payload, event.requestId);
+    case "core-state":
+      return runner.applyCore(event.section, event.state);
     case "player-control":
       return player.control(event.action);
     case "ui":
@@ -99,6 +102,7 @@ window.__pearRuntime = Object.freeze({
 });
 console.info("[pear] runtime injected", marker);
 
+registerApiHandlers(runner, player);
 runner.startEnabled();
 void domReady().then(() => {
   settings = mountSettings(runner);

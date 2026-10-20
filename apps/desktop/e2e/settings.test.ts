@@ -62,13 +62,44 @@ test("toggles and configures plugins live, persisting to config.json", async () 
       .toBe("blur(12px)");
 
     await expect
-      .poll(() => savedSettings(app.userData).plugins["blur-nav-bar"], { timeout: 5000 })
+      .poll(() => savedSettings(app.userData).plugins?.["blur-nav-bar"], { timeout: 5000 })
       .toMatchObject({ enabled: true, blur: 12 });
 
     // Keys typed in the overlay don't reach YTM (space would toggle playback).
     await overlay(page).getByRole("searchbox").fill("");
     await overlay(page).getByRole("searchbox").press("Space");
     await expect(overlay(page).getByRole("searchbox")).toHaveValue(" ");
+  } finally {
+    await app.close();
+  }
+});
+
+test("the built-in API server section starts and stops the server", async () => {
+  const port = 30000 + Math.floor(Math.random() * 20000);
+  const app = await launchApp({ core: { apiServer: { port } } });
+  try {
+    const page = await mainWindow(app);
+    await page.waitForFunction(() => window.__pearRuntime?.settings);
+    await page.keyboard.press("Control+,");
+    const section = overlay(page).locator('[data-core="apiServer"]');
+    await overlay(page).getByRole("searchbox").fill("api");
+    await expect(section).toBeVisible();
+
+    const docStatus = async () => (await fetch(`http://127.0.0.1:${port}/doc`).catch(() => null))?.status ?? "down";
+    expect(await docStatus()).toBe("down");
+    await section.getByRole("switch", { name: "Enable API server" }).click();
+    await expect.poll(docStatus).toBe(200);
+    await expect(section.locator("[data-status]")).toContainText(`http://127.0.0.1:${port}`);
+    await expect
+      .poll(() => savedSettings(app.userData).plugins?.["api-server"], { timeout: 5000 })
+      .toMatchObject({ enabled: true, port });
+
+    await section.getByRole("button", { name: "Configure API server" }).click();
+    await expect(section.getByLabel("Hostname")).toHaveValue("127.0.0.1");
+
+    await section.getByRole("switch", { name: "Enable API server" }).click();
+    await expect.poll(docStatus).toBe("down");
+    await expect(section.locator("[data-status]")).toHaveCount(0);
   } finally {
     await app.close();
   }

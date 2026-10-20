@@ -27,7 +27,8 @@ export interface Route {
   method: Method;
   path: string;
   summary: string;
-  body?: BodySchema;
+  /** A schema checked before `handle`, or "json" for any JSON body the handler checks itself. */
+  body?: BodySchema | "json";
   /** Reachable without a token. */
   public?: boolean;
   handle(request: RouteRequest): Reply | Promise<Reply>;
@@ -84,6 +85,18 @@ export interface Backend {
   setFullscreen(fullscreen: boolean): Promise<void>;
   /** Issues an access token for a client, asking the user if needed; null when denied. */
   authorize(id: string, remoteAddress: string): Promise<string | null>;
+  /** RPC methods of the running plugins. */
+  rpcMethods(): readonly RpcInfo[];
+  /** Calls a plugin's RPC method with the (unchecked) JSON body. */
+  callRpc(plugin: string, method: string, body: unknown): Promise<Reply>;
+}
+
+export interface RpcInfo {
+  plugin: string;
+  name: string;
+  summary?: string;
+  /** JSON schema of the input, for the OpenAPI document. */
+  input?: unknown;
 }
 
 const MUSIC_VIDEO_TYPES: Record<string, MediaTypeName> = {
@@ -322,6 +335,20 @@ export function createRoutes(backend: Backend): Route[] {
     }),
     pageAction("DELETE", "/queue", "Clear the queue", () => backend.page("queue:clear")),
     {
+      method: "GET",
+      path: `${API}/plugins`,
+      summary: "List the RPC methods of the running plugins",
+      handle: () =>
+        ok(backend.rpcMethods().map(({ plugin, name, summary }) => ({ plugin, method: name, summary, path: rpcPath(plugin, name) }))),
+    },
+    {
+      method: "POST",
+      path: `${API}/plugins/{plugin}/{method}`,
+      summary: "Call a plugin's RPC method (see the per-method entries)",
+      body: "json",
+      handle: ({ params, body }) => backend.callRpc(params.plugin!, params.method!, body),
+    },
+    {
       method: "POST",
       path: `${API}/search`,
       summary: "Search \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music (raw innertube response)",
@@ -330,6 +357,8 @@ export function createRoutes(backend: Backend): Route[] {
     },
   ];
 }
+
+export const rpcPath = (plugin: string, method: string) => `${API}/plugins/${plugin}/${method}`;
 
 /** Validates a JSON body against a schema; returns an error message or null. */
 export function validateBody(schema: BodySchema, body: unknown): string | null {
@@ -356,7 +385,7 @@ export function validateBody(schema: BodySchema, body: unknown): string | null {
 }
 
 /** An OpenAPI 3.1 document for the route table. */
-export function openApiDocument(routes: readonly Route[], title: string) {
+export function openApiDocument(routes: readonly Route[], title: string, rpc: readonly RpcInfo[] = []) {
   const paths: Record<string, Record<string, unknown>> = {};
   for (const route of routes) {
     const params = [...route.path.matchAll(/\{(\w+)\}/g)].map(([, name]) => ({
@@ -371,8 +400,22 @@ export function openApiDocument(routes: readonly Route[], title: string) {
       ...(params.length ? { parameters: params } : {}),
       responses: { 200: { description: "Success" }, 204: { description: "No content" } },
     };
-    if (route.body) operation.requestBody = { required: true, content: { "application/json": { schema: jsonSchema(route.body) } } };
+    if (route.body && route.body !== "json") operation.requestBody = { required: true, content: { "application/json": { schema: jsonSchema(route.body) } } };
     (paths[route.path] ??= {})[route.method.toLowerCase()] = operation;
+  }
+  for (const method of rpc) {
+    paths[rpcPath(method.plugin, method.name)] = {
+      post: {
+        summary: method.summary ?? `${method.plugin}: ${method.name}`,
+        tags: [`plugin: ${method.plugin}`],
+        ...(method.input ? { requestBody: { required: true, content: { "application/json": { schema: method.input } } } } : {}),
+        responses: {
+          200: { description: "The method's result" },
+          400: { description: "Invalid input" },
+          503: { description: "Plugin disabled" },
+        },
+      },
+    };
   }
   paths[`${API}/ws`] = {
     get: {

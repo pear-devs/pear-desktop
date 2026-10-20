@@ -1,6 +1,8 @@
 import { app, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent } from "electron";
-import { type Bootstrap, CHANNEL, type CoreCommandName, type CoreCommands } from "@pear/sdk/protocol";
+import { isCoreSection, type CoreSection } from "@pear/sdk/core-config";
+import { type Bootstrap, CHANNEL, type CoreCommandName, type CoreCommands, type CoreState } from "@pear/sdk/protocol";
 import { YTM_ORIGIN } from "../shared/user-agent.ts";
+import type { PageRequests } from "./page-requests.ts";
 import type { PlayerMirror } from "./player.ts";
 import type { PluginHost } from "./plugins.ts";
 
@@ -11,7 +13,17 @@ function isTrustedSender(event: IpcMainInvokeEvent | IpcMainEvent) {
 
 type Handlers = { [K in CoreCommandName]: (...args: Parameters<CoreCommands[K]>) => unknown };
 
-export function setupIpc(plugins: PluginHost, player: PlayerMirror) {
+export interface IpcEnvironment {
+  plugins: PluginHost;
+  player: PlayerMirror;
+  requests: PageRequests;
+  core: {
+    states(): Record<CoreSection, CoreState>;
+    setConfig(section: CoreSection, patch: Record<string, unknown>): Promise<void>;
+  };
+}
+
+export function setupIpc({ plugins, player, requests, core }: IpcEnvironment) {
   const handlers: Handlers = {
     ping: (message) => `pong: ${message}`,
     "app:version": () => app.getVersion(),
@@ -28,7 +40,12 @@ export function setupIpc(plugins: PluginHost, player: PlayerMirror) {
       if (!Array.isArray(args)) throw new Error("[pear] plugin invoke args must be an array");
       return plugins.invoke(String(id), String(command), args);
     },
-    "plugin:respond": (requestId, ok, value) => plugins.respond(Number(requestId), Boolean(ok), value),
+    "plugin:respond": (requestId, ok, value) => requests.respond(Number(requestId), Boolean(ok), value),
+    "core:set-config": async (section, patch) => {
+      if (!isCoreSection(String(section))) throw new Error(`[pear] unknown settings section: ${String(section)}`);
+      if (typeof patch !== "object" || patch === null) throw new Error("[pear] config patch must be an object");
+      await core.setConfig(section, patch);
+    },
     "player:update": (state) => player.update(state),
   };
 
@@ -52,6 +69,7 @@ export function setupIpc(plugins: PluginHost, player: PlayerMirror) {
       plugins: plugins.states(),
       meta: plugins.meta(),
       errors: plugins.errors(),
+      core: core.states(),
     } satisfies Bootstrap;
   });
 }

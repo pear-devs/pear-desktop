@@ -5,10 +5,12 @@
 import type { App, BrowserWindow, BrowserWindowConstructorOptions, Session, WebRequest } from "electron";
 import type { ConfigOf, ConfigShape } from "./config.ts";
 import type { NowPlaying, PlayerAction, Track, PlaybackStatus, Unsubscribe, YTPlayerApi } from "./player.ts";
+import type { RpcMethods, RpcSchemas } from "./rpc.ts";
 import type { SelectorName } from "./selectors.ts";
 
 export * from "./config.ts";
 export * from "./player.ts";
+export type { RpcMethod, RpcSchemas } from "./rpc.ts";
 export type { SelectorName } from "./selectors.ts";
 
 export type Platform = "linux" | "win32" | "darwin";
@@ -53,6 +55,11 @@ export interface HostContext<C> {
   openSettings(): void;
   /** Sends an event to this plugin's page part (`ctx.host.on`). */
   emit(event: string, payload?: unknown): void;
+  /** The core API server. */
+  readonly api: {
+    /** Sends `{ type: "PLUGIN_EVENT", plugin, event, data }` to WebSocket clients; a no-op while the server is off. */
+    broadcast(event: string, data?: unknown): void;
+  };
   /** Runs when the plugin stops (disabled, restarted or app quit). */
   onCleanup(fn: Cleanup): void;
   readonly log: Logger;
@@ -66,7 +73,7 @@ export interface BeforeReadyContext<C> {
   disableFeatures(...features: string[]): void;
 }
 
-export interface HostPart<C, Cmds extends AnyCommands> {
+export interface HostPart<C, Cmds extends AnyCommands, Rpc extends RpcSchemas = {}> {
   /** Runs before `app.whenReady()` when enabled at launch (command-line switches). Changes need a restart. */
   beforeReady?(ctx: BeforeReadyContext<C>): void;
   start?(ctx: HostContext<C>): MaybePromise<void | Cleanup>;
@@ -76,6 +83,11 @@ export interface HostPart<C, Cmds extends AnyCommands> {
   windowOptions?(config: Readonly<C>): BrowserWindowConstructorOptions;
   /** Typed commands the page part can call with `ctx.host.invoke`. `this` is the host context. */
   commands?: Cmds & ThisType<HostContext<C>>;
+  /**
+   * Methods other apps can call through the API server, as
+   * `POST /api/v1/plugins/<id>/<name>` with a JSON body checked against `input`.
+   */
+  rpc?: RpcMethods<Rpc, HostContext<C>>;
 }
 
 // ---------------------------------------------------------------- page side
@@ -179,7 +191,7 @@ export type PagePart<C, Cmds extends AnyCommands> =
 
 // ---------------------------------------------------------------- plugin
 
-export interface PluginDef<S extends ConfigShape, Cmds extends AnyCommands> {
+export interface PluginDef<S extends ConfigShape, Cmds extends AnyCommands, Rpc extends RpcSchemas = {}> {
   id: string;
   name: string;
   description?: string;
@@ -188,17 +200,19 @@ export interface PluginDef<S extends ConfigShape, Cmds extends AnyCommands> {
   platforms?: readonly Platform[];
   enabledByDefault?: boolean;
   config?: S;
-  host?: HostPart<ConfigOf<S>, Cmds>;
+  host?: HostPart<ConfigOf<S>, Cmds, Rpc>;
   page?: PagePart<ConfigOf<S>, Cmds>;
   /** CSS applied while enabled; usually the result of the `css` macro. */
   style?: string | ((config: Readonly<ConfigOf<S>>) => string);
 }
 
-export type AnyPlugin = PluginDef<any, any>;
+export type AnyPlugin = PluginDef<any, any, any>;
 
-export function definePlugin<const S extends ConfigShape = {}, Cmds extends AnyCommands = {}>(
-  def: PluginDef<S, Cmds>,
-): PluginDef<S, Cmds> {
+export function definePlugin<
+  const S extends ConfigShape = {},
+  Cmds extends AnyCommands = {},
+  Rpc extends RpcSchemas = {},
+>(def: PluginDef<S, Cmds, Rpc>): PluginDef<S, Cmds, Rpc> {
   return def;
 }
 

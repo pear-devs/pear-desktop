@@ -4,10 +4,12 @@ import { pearIconBitmap } from "@pear/sdk/icon";
 import { CHANNEL, type HostEvent } from "@pear/sdk/protocol";
 import hostPlugins from "virtual:pear/host-plugins";
 import { chromeUserAgent, isGoogleAuth, YTM_ORIGIN } from "../shared/user-agent.ts";
+import { ApiServer } from "./api/index.ts";
 import { Settings, type WindowState } from "./config.ts";
 import { seedConsent } from "./consent.ts";
 import { setupIpc } from "./ipc.ts";
 import { setupNet } from "./net.ts";
+import { PageRequests } from "./page-requests.ts";
 import { PlayerMirror } from "./player.ts";
 import { PluginHost } from "./plugins.ts";
 import { WebRequestRouter } from "./web-request.ts";
@@ -47,6 +49,8 @@ function main() {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(CHANNEL.event, event);
   };
   const player = new PlayerMirror((action) => send({ type: "player-control", action }));
+  const requests = new PageRequests(send);
+  let api: ApiServer | undefined;
 
   function createWindow() {
     const saved = settings.window;
@@ -119,13 +123,44 @@ function main() {
     app.userAgentFallback = ytmUserAgent;
     const router = new WebRequestRouter(session.defaultSession);
     setupNet(router.scoped("core"), { electronUserAgent });
-    setupIpc(plugins, player);
+    setupIpc({
+      plugins,
+      player,
+      requests,
+      core: {
+        states: () => ({ apiServer: api?.state() ?? { config: settings.core("apiServer") } }),
+        async setConfig(section, patch) {
+          settings.setCore(section, patch);
+          if (section === "apiServer") await api?.apply();
+        },
+      },
+    });
     await seedConsent(session.defaultSession);
     mainWindow = createWindow();
-    plugins.attach({ app, window: mainWindow, session: session.defaultSession, router, player, send });
+    const window = mainWindow;
+    api = new ApiServer({
+      settings,
+      plugins,
+      player,
+      requests,
+      window,
+      publish: (state) => send({ type: "core-state", section: "apiServer", state }),
+    });
+    plugins.attach({
+      app,
+      window,
+      session: session.defaultSession,
+      router,
+      player,
+      requests,
+      send,
+      broadcast: (plugin, event, data) => api?.broadcastPluginEvent(plugin, event, data),
+    });
+    void api.apply();
   });
 
   app.on("before-quit", () => {
+    api?.stop();
     plugins.stopAll();
     settings.flush();
   });

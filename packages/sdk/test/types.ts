@@ -1,6 +1,7 @@
 // Compile-time contract of the SDK, checked by `tsc` (nub run typecheck).
 
 import { config, definePlugin } from "../src/index.ts";
+import { v } from "../src/rpc.ts";
 
 definePlugin({
   id: "typed",
@@ -34,5 +35,35 @@ definePlugin({
     // @ts-expect-error config values keep their types
     const wrong: string = ctx.config.count;
     void [sum, mode, wrong];
+  },
+});
+
+// RPC: the input type comes from the valibot schema; `this` is the host context.
+definePlugin({
+  id: "rpc",
+  name: "RPC",
+  config: { prefix: config.string("x", { label: "Prefix" }) },
+  host: {
+    rpc: {
+      greet: {
+        summary: "Greets someone",
+        input: v.object({ name: v.string(), times: v.optional(v.number()) }),
+        run({ name, times }) {
+          const prefix: string = this.config.prefix;
+          const count: number | undefined = times;
+          // @ts-expect-error name is a string
+          const wrong: number = name;
+          void [count, wrong];
+          return `${prefix} ${name}`;
+        },
+      },
+      noInput: {
+        input: v.optional(v.object({})),
+        run(input) {
+          // @ts-expect-error unknown field
+          void input?.missing;
+        },
+      },
+    },
   },
 });

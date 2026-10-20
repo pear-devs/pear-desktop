@@ -6,19 +6,23 @@ import { _electron as electron, type ElectronApplication, type Page } from "@pla
 export interface LaunchOptions {
   /** Initial plugin states, written to config.json before launch. */
   plugins?: Record<string, { enabled: boolean; config?: Record<string, unknown> }>;
+  /** Initial core settings sections, e.g. `{ apiServer: { enabled: true } }`. */
+  core?: Record<string, Record<string, unknown>>;
 }
 
 /** The options above in config.json's layout (see src/main/config.ts). */
-function configFile({ plugins = {} }: LaunchOptions) {
+function configFile({ plugins = {}, core = {} }: LaunchOptions) {
+  const { apiServer, ...options } = core;
   const entries: Record<string, Record<string, unknown>> = {};
   for (const [id, { enabled, config }] of Object.entries(plugins)) entries[id] = { enabled, ...config };
-  return { plugins: entries };
+  if (apiServer) entries["api-server"] = apiServer;
+  return { plugins: entries, options: Object.assign({}, ...Object.values(options)) };
 }
 
 /** Launch the built app with a fresh, isolated profile. */
 export async function launchApp(options: LaunchOptions = {}) {
   const userData = mkdtempSync(join(tmpdir(), "pear-e2e-"));
-  if (options.plugins) {
+  if (options.plugins || options.core) {
     writeFileSync(join(userData, "config.json"), JSON.stringify(configFile(options)));
   }
   const app = await electron.launch({ args: ["."], env: { ...process.env, PEAR_USER_DATA: userData } });

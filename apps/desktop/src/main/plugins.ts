@@ -2,9 +2,11 @@
 // and config changes apply live in both processes, no restart needed.
 
 import type { App, BrowserWindow, BrowserWindowConstructorOptions, Session } from "electron";
-import { type AnyPlugin, type Cleanup, type HostContext, type Logger, supportsPlatform } from "@pear/sdk";
+import { type AnyPlugin, type Cleanup, type HostContext, type Logger, type RpcMethod, supportsPlatform } from "@pear/sdk";
+import { v } from "@pear/sdk/rpc";
 import type { HostEvent, PluginMeta, PluginState } from "@pear/sdk/protocol";
 import type { Settings } from "./config.ts";
+import type { PageRequests } from "./page-requests.ts";
 import type { PlayerMirror } from "./player.ts";
 import type { WebRequestRouter } from "./web-request.ts";
 
@@ -20,10 +22,20 @@ export interface HostEnvironment {
   session: Session;
   router: WebRequestRouter;
   player: PlayerMirror;
+  requests: PageRequests;
   send(event: HostEvent): void;
+  /** Sends a plugin event to API server WebSocket clients. */
+  broadcast(plugin: string, event: string, data: unknown): void;
 }
 
-const REQUEST_TIMEOUT_MS = 10_000;
+/** An exposed method, as listed by the API server. */
+export interface RpcEntry {
+  plugin: string;
+  name: string;
+  method: RpcMethod;
+}
+
+export type RpcResult = { ok: true; value: unknown } | { ok: false; status: 400 | 404 | 503; error: string };
 
 export class PluginHost {
   readonly plugins: readonly AnyPlugin[];
@@ -32,10 +44,10 @@ export class PluginHost {
   #instances = new Map<string, Instance>();
   #errors = new Map<string, string>();
   #env: HostEnvironment | undefined;
-  #requests = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
-  #nextRequestId = 1;
 
   constructor(plugins: readonly AnyPlugin[], settings: Settings, platform: string) {
+    // "core" addresses the core's own page handlers and webRequest listeners.
+    if (plugins.some((plugin) => plugin.id === "core")) throw new Error('[pear] the plugin id "core" is reserved');
     this.plugins = plugins.filter((plugin) => supportsPlatform(plugin, platform));
     this.#byId = new Map(this.plugins.map((plugin) => [plugin.id, plugin]));
     this.#settings = settings;
@@ -71,15 +83,6 @@ export class PluginHost {
       }
     }
     return merged;
-  }
-
-  /** Settles a `ctx.request` with the page part's answer. */
-  respond(requestId: number, ok: boolean, value: unknown) {
-    const pending = this.#requests.get(requestId);
-    if (!pending) return;
-    this.#requests.delete(requestId);
-    if (ok) pending.resolve(value);
-    else pending.reject(new Error(String(value)));
   }
 
   errors(): Record<string, string> {
@@ -165,6 +168,36 @@ export class PluginHost {
     return handler.apply(instance.ctx, args);
   }
 
+  /** RPC methods of the plugins running right now. */
+  rpcMethods(): RpcEntry[] {
+    const entries: RpcEntry[] = [];
+    for (const id of this.#instances.keys()) {
+      const rpc = this.#byId.get(id)?.host?.rpc as Record<string, RpcMethod> | undefined;
+      for (const [name, method] of Object.entries(rpc ?? {})) entries.push({ plugin: id, name, method });
+    }
+    return entries;
+  }
+
+  /** Calls an RPC method with an untrusted JSON body, validating it first. */
+  async callRpc(id: string, name: string, body: unknown): Promise<RpcResult> {
+    const rpc = this.#byId.get(id)?.host?.rpc as Record<string, RpcMethod> | undefined;
+    const method = rpc && Object.hasOwn(rpc, name) ? rpc[name] : undefined;
+    if (!method) return { ok: false, status: 404, error: `no RPC method "${name}" on plugin "${id}"` };
+    const instance = this.#instances.get(id);
+    if (!instance) return { ok: false, status: 503, error: `plugin "${id}" is disabled` };
+    const parsed = v.safeParse(method.input, body);
+    if (!parsed.success) {
+      const error = parsed.issues
+        .map((issue) => {
+          const path = v.getDotPath(issue);
+          return path ? `${path}: ${issue.message}` : issue.message;
+        })
+        .join("; ");
+      return { ok: false, status: 400, error };
+    }
+    return { ok: true, value: await method.run.call(instance.ctx, parsed.output) };
+  }
+
   stopAll() {
     for (const id of [...this.#instances.keys()]) this.#stop(id);
   }
@@ -229,25 +262,7 @@ export class PluginHost {
       window: env.window,
       session: env.router.scopedSession(id),
       webRequest: env.router.scoped(id),
-      request: (event, payload, options) =>
-        new Promise((resolve, reject) => {
-          const requestId = host.#nextRequestId++;
-          const timer = setTimeout(() => {
-            host.#requests.delete(requestId);
-            reject(new Error(`[pear] ${id}: page did not answer "${event}"`));
-          }, options?.timeout ?? REQUEST_TIMEOUT_MS);
-          host.#requests.set(requestId, {
-            resolve: (value) => {
-              clearTimeout(timer);
-              resolve(value as never);
-            },
-            reject: (error) => {
-              clearTimeout(timer);
-              reject(error);
-            },
-          });
-          env.send({ type: "plugin-request", id, event, payload, requestId });
-        }),
+      request: (event, payload, options) => env.requests.request(id, event, payload, options),
       player: {
         get state() {
           return player.state;
@@ -266,6 +281,11 @@ export class PluginHost {
         env.send({ type: "ui", action: "open-settings" });
       },
       emit: (event, payload) => env.send({ type: "plugin-event", id, event, payload }),
+      api: {
+        broadcast: (event, data) => {
+          if (!instance.stopped) env.broadcast(id, event, data);
+        },
+      },
       onCleanup: (fn) => cleanups.push(fn),
       log: logger(id),
     };

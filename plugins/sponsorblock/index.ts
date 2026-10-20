@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { config, definePlugin } from "@pear/sdk";
+import { config, definePlugin, type HostContext } from "@pear/sdk";
+import { v } from "@pear/sdk/rpc";
 import { net } from "electron";
 import { skipTarget, type Submission, usableSegments } from "./segments.ts";
 
@@ -30,19 +31,17 @@ export default definePlugin({
   },
   host: {
     commands: {
-      /** Skip submissions for a video, looked up by hash prefix so the server never learns which video plays. */
-      async segments(videoId: string): Promise<Submission[]> {
-        const categories = (Object.keys(CATEGORIES) as Category[]).filter((c) => this.config[c]);
-        if (categories.length === 0) return [];
-        const base = (this.config.apiUrl || "https://sponsor.ajay.app").replace(/\/+$/, "");
-        const prefix = createHash("sha256").update(videoId).digest("hex").slice(0, 4);
-        const query = new URLSearchParams({ categories: JSON.stringify(categories), actionTypes: '["skip"]' });
-        const response = await net.fetch(`${base}/api/skipSegments/${prefix}?${query}`);
-        // 404 means no segments for any video with this prefix.
-        if (response.status === 404) return [];
-        if (!response.ok) throw new Error(`SponsorBlock answered ${response.status}`);
-        const videos = (await response.json()) as { videoID: string; segments: Submission[] }[];
-        return videos.find((v) => v.videoID === videoId)?.segments ?? [];
+      segments(videoId: string) {
+        return fetchSegments(this, videoId);
+      },
+    },
+    rpc: {
+      segments: {
+        summary: "Skip segments of a video, for the enabled categories",
+        input: v.object({ videoId: v.pipe(v.string(), v.regex(/^[\w-]{11}$/, "not a video id")) }),
+        run({ videoId }) {
+          return fetchSegments(this, videoId);
+        },
       },
     },
   },
@@ -78,3 +77,18 @@ export default definePlugin({
     });
   },
 });
+
+/** Skip submissions for a video, looked up by hash prefix so the server never learns which video plays. */
+async function fetchSegments(ctx: HostContext<{ [K in Category]: boolean } & { apiUrl: string }>, videoId: string) {
+  const categories = (Object.keys(CATEGORIES) as Category[]).filter((c) => ctx.config[c]);
+  if (categories.length === 0) return [];
+  const base = (ctx.config.apiUrl || "https://sponsor.ajay.app").replace(/\/+$/, "");
+  const prefix = createHash("sha256").update(videoId).digest("hex").slice(0, 4);
+  const query = new URLSearchParams({ categories: JSON.stringify(categories), actionTypes: '["skip"]' });
+  const response = await net.fetch(`${base}/api/skipSegments/${prefix}?${query}`);
+  // 404 means no segments for any video with this prefix.
+  if (response.status === 404) return [];
+  if (!response.ok) throw new Error(`SponsorBlock answered ${response.status}`);
+  const videos = (await response.json()) as { videoID: string; segments: Submission[] }[];
+  return videos.find((video) => video.videoID === videoId)?.segments ?? [];
+}

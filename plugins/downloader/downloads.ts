@@ -107,6 +107,8 @@ export class DownloadQueue {
   async #run(job: Job, state: JobState): Promise<JobResult> {
     const options = { ...this.#options.argsFor(job.target), target: job.target };
     await mkdir(options.folder, { recursive: true });
+    // Cancelled before yt-dlp started: there is no process to kill, so don't start one.
+    if (this.#active?.cancelled) return { id: job.id, label: job.label, files: [] };
     const child = spawn(this.#options.ytDlp, buildArgs(options), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
     if (this.#active) this.#active.child = child;
 

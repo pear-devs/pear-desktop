@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { config, definePlugin, livePosition } from "@pear/sdk";
+import { v } from "@pear/sdk/rpc";
 import { shell } from "electron";
 import { style } from "./style.ts";
 import { DownloadQueue } from "./downloads.ts";
@@ -103,6 +104,7 @@ export default definePlugin({
         onResult: (result) => {
           if (result.error && !result.cancelled) ctx.log.warn(`${result.label}: ${result.error}`);
           ctx.emit("result", result);
+          ctx.api.broadcast("result", result);
         },
         log: ctx.log,
       });
@@ -151,6 +153,39 @@ export default definePlugin({
       },
       reveal(file: string) {
         shell.showItemInFolder(file);
+      },
+    },
+    rpc: {
+      download: {
+        summary: "Queue a download (default: the current track); returns the job id",
+        input: v.optional(
+          v.object({
+            videoId: v.optional(v.pipe(v.string(), v.regex(/^[\w-]{11}$/, "not a video id"))),
+            playlistId: v.optional(v.pipe(v.string(), v.regex(/^[\w-]+$/, "not a playlist id"))),
+          }),
+          {},
+        ),
+        run({ videoId, playlistId }) {
+          const { queue } = downloaderOf(this);
+          const track = this.player.state.track;
+          const target = videoId || playlistId ? { videoId: videoId ?? "", ...(playlistId ? { playlistId } : {}) } : track && { videoId: track.videoId };
+          if (!target) throw new Error("nothing is playing");
+          return { id: queue.add(target, track?.videoId === target.videoId ? track.title : (playlistId ?? target.videoId)) };
+        },
+      },
+      state: {
+        summary: "The download queue",
+        input: v.optional(v.object({})),
+        run(): QueueState {
+          return downloaderOf(this).queue.state;
+        },
+      },
+      cancel: {
+        summary: "Cancel the running download",
+        input: v.optional(v.object({})),
+        run() {
+          downloaderOf(this).queue.cancel();
+        },
       },
     },
   },
@@ -312,17 +347,18 @@ export default definePlugin({
       () => {},
     );
 
-    // Keep the button in the player bar, which YTM may re-render.
+    // Keep the button in the player bar, which YTM may re-render or replace
+    // entirely while starting up, so watch the document rather than the bar.
     const place = () => {
       if (root.isConnected) return;
       const volume = ctx.$("player_bar.volume_button");
       if (volume) volume.before(root);
       else ctx.$("player_bar.right_controls_buttons")?.prepend(root);
     };
-    const bar = await ctx.waitFor("player_bar");
+    await ctx.waitFor("player_bar");
     place();
     const observer = new MutationObserver(place);
-    observer.observe(bar, { childList: true, subtree: true });
+    observer.observe(document.body, { childList: true, subtree: true });
     ctx.onCleanup(() => observer.disconnect());
   },
 });

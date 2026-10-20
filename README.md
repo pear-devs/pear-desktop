@@ -12,6 +12,9 @@ a desktop client for YTM with a plugin system, built on Electron.
   Music changes its markup, fix it there once.
 - **Live everything**: enable, disable and configure plugins from the in-page
   settings (<kbd>Ctrl</kbd>+<kbd>,</kbd>) without restarting.
+- **Built-in API server** (off by default): the pear-desktop v1 REST + WebSocket
+  API for remotes and overlays, plus RPC methods that plugins expose with
+  `host.rpc` (validated with valibot, documented at `/swagger`).
 
 ## Plugins
 
@@ -22,7 +25,6 @@ a desktop client for YTM with a plugin system, built on Electron.
 | `album-color-theme` | Album color theme | Tints the interface with the colors of the current track's artwork. |
 | `ambient-mode` | Ambient mode | Surrounds the video or cover art with a soft glow of its own colors. |
 | `amuse` | Amuse | Show the current song in the Amuse now-playing widget by 6K Labs. |
-| `api-server` | API server | A local HTTP and WebSocket API to control playback and read the current song from other apps. |
 | `audio-compressor` | Audio compressor | Evens out loud and quiet parts with a dynamics compressor. |
 | `auth-proxy-adapter` | Proxy | Sends all traffic through an HTTP or SOCKS proxy, including ones that need a username and password. |
 | `blur-nav-bar` | Blur navigation bar | Makes the top bar translucent with a blur behind it. |

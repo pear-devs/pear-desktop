@@ -1,7 +1,8 @@
 // Persistent settings: pear-desktop's config.json in userData, in its layout,
 // so existing installs keep their settings:
 //
-//   plugins.<id>        { enabled, ...config }
+//   plugins.<id>        { enabled, ...config }      (the API server: plugins.api-server)
+//   options.*           the core sections (general, window, appearance, advanced)
 //   url, window-size, window-position, window-maximized
 //
 // Values are normalized against their schema on load, so stale or hand-edited
@@ -10,7 +11,8 @@
 
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { type AnyPlugin, normalizeConfig } from "@pear/sdk";
+import { type AnyPlugin, type ConfigOf, type ConfigShape, normalizeConfig } from "@pear/sdk";
+import { CORE_SECTIONS, type CoreSection } from "@pear/sdk/core-config";
 import type { PluginState } from "@pear/sdk/protocol";
 
 export interface WindowState {
@@ -21,6 +23,7 @@ export interface WindowState {
   maximized: boolean;
 }
 
+type CoreConfigs = { [K in CoreSection]: ConfigOf<(typeof CORE_SECTIONS)[K]> };
 type Json = Record<string, unknown>;
 
 interface StoredConfig {
@@ -34,6 +37,8 @@ interface StoredConfig {
 }
 
 export const CONFIG_FILE = "config.json";
+/** The API server is a core section, stored where pear-desktop's plugin kept it. */
+const API_SERVER_PLUGIN = "api-server";
 const WRITE_DELAY_MS = 300;
 
 const isRecord = (value: unknown): value is Json => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -42,11 +47,15 @@ export class Settings {
   readonly path: string;
   #data: StoredConfig;
   #plugins = new Map<string, PluginState>();
+  #core: CoreConfigs;
   #writeTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(userData: string, plugins: readonly AnyPlugin[]) {
     this.path = join(userData, CONFIG_FILE);
     this.#data = readJson(this.path) ?? {};
+    this.#core = Object.fromEntries(
+      Object.entries(CORE_SECTIONS).map(([name, shape]) => [name, normalizeConfig(shape, this.#coreSource(name as CoreSection))]),
+    ) as CoreConfigs;
     for (const plugin of plugins) {
       const entry = this.#data.plugins?.[plugin.id];
       this.#plugins.set(plugin.id, {
@@ -72,6 +81,26 @@ export class Settings {
     };
     this.#plugins.set(plugin.id, next);
     this.#putPlugin(plugin.id, { enabled: next.enabled, ...next.config });
+    return next;
+  }
+
+  core<K extends CoreSection>(section: K): CoreConfigs[K] {
+    return this.#core[section];
+  }
+
+  allCore(): CoreConfigs {
+    return this.#core;
+  }
+
+  setCore<K extends CoreSection>(section: K, patch: Partial<CoreConfigs[K]>): CoreConfigs[K] {
+    const shape: ConfigShape = CORE_SECTIONS[section];
+    const next = normalizeConfig(shape, { ...this.#core[section], ...patch }) as CoreConfigs[K];
+    this.#core[section] = next;
+    if (section === "apiServer") this.#putPlugin(API_SERVER_PLUGIN, next);
+    else {
+      this.#data.options = { ...this.#data.options, ...next };
+      this.#scheduleWrite();
+    }
     return next;
   }
 
@@ -115,6 +144,10 @@ export class Settings {
     if (this.#writeTimer === undefined) return;
     clearTimeout(this.#writeTimer);
     this.#write();
+  }
+
+  #coreSource(section: CoreSection): unknown {
+    return section === "apiServer" ? this.#data.plugins?.[API_SERVER_PLUGIN] : this.#data.options;
   }
 
   #putPlugin(id: string, values: Json) {

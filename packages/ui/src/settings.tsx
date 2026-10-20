@@ -1,6 +1,7 @@
 import type { AnyPlugin, ConfigShape } from "@pear/sdk";
 import { embed } from "@pear/sdk/macros" with { type: "macro" };
-import type { PluginMeta, PluginState } from "@pear/sdk/protocol";
+import { CORE_SECTIONS, type CoreSection } from "@pear/sdk/core-config";
+import type { CoreState, PluginMeta, PluginState } from "@pear/sdk/protocol";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { FieldEditor, Switch } from "./fields.tsx";
 
@@ -15,7 +16,18 @@ export interface SettingsModel {
   setEnabled(id: string, enabled: boolean): Promise<unknown>;
   setConfig(id: string, patch: Record<string, unknown>): Promise<unknown>;
   relaunch(): Promise<unknown>;
+  core(section: CoreSection): CoreState | undefined;
+  setCoreConfig(section: CoreSection, patch: Record<string, unknown>): Promise<unknown>;
 }
+
+/** The core's own sections, listed above the plugins. */
+const CORE_ITEMS: { section: CoreSection; name: string; description: string }[] = [
+  {
+    section: "apiServer",
+    name: "API server",
+    description: "A local HTTP and WebSocket API for remotes, stream overlays and scripts, including plugins' RPC methods.",
+  },
+];
 
 type Filter = "all" | "enabled" | "disabled";
 
@@ -43,6 +55,9 @@ export function Settings({ model, onClose }: { model: SettingsModel; onClose(): 
     if (filter === "disabled" && enabled) return false;
     return !needle || `${plugin.name} ${plugin.description ?? ""} ${plugin.id}`.toLowerCase().includes(needle);
   });
+  const coreVisible = CORE_ITEMS.filter(
+    (item) => filter === "all" && (!needle || `${item.name} ${item.description}`.toLowerCase().includes(needle)),
+  );
   const enabledCount = plugins.filter((p) => model.state(p.id)?.enabled).length;
   const restartPending = plugins.some(
     (p) => model.meta(p.id)?.restartRequired && initial.current.get(p.id) !== (model.state(p.id)?.enabled ?? false),
@@ -97,6 +112,15 @@ export function Settings({ model, onClose }: { model: SettingsModel; onClose(): 
         </div>
 
         <div class="list">
+          {coreVisible.map((item) => (
+            <CoreItem
+              key={item.section}
+              {...item}
+              model={model}
+              open={open === `core:${item.section}`}
+              onToggleOpen={() => setOpen(open === `core:${item.section}` ? undefined : `core:${item.section}`)}
+            />
+          ))}
           {visible.length === 0 && <div class="empty">No plugins match “{query}”.</div>}
           {visible.map((plugin) => (
             <PluginItem
@@ -166,6 +190,60 @@ function PluginItem(props: { plugin: AnyPlugin; model: SettingsModel; open: bool
               field={field}
               value={state.config[key]}
               onChange={(value) => void model.setConfig(plugin.id, { [key]: value })}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function CoreItem(props: {
+  section: CoreSection;
+  name: string;
+  description: string;
+  model: SettingsModel;
+  open: boolean;
+  onToggleOpen(): void;
+}) {
+  const { section, name, model, open } = props;
+  const state = model.core(section);
+  if (!state) return null;
+  const enabled = state.config.enabled === true;
+  // "enabled" is the switch in the row; the rest are the fields.
+  const fields = Object.entries(CORE_SECTIONS[section] as ConfigShape).filter(([key]) => key !== "enabled");
+
+  return (
+    <section class="plugin core" data-open={open} data-core={section}>
+      <div class="plugin-row">
+        <div class="plugin-main">
+          <div class="plugin-name">
+            {name}
+            <span class="badge">built in</span>
+            {state.error && <span class="badge error">error</span>}
+          </div>
+          <div class="plugin-description">{props.description}</div>
+          {state.status && (
+            <div class="plugin-description" data-status>
+              Listening on {state.status} · docs at {state.status}/swagger
+            </div>
+          )}
+        </div>
+        <button type="button" class="icon-button expand" aria-expanded={open} aria-label={`Configure ${name}`} onClick={props.onToggleOpen}>
+          <ChevronIcon />
+        </button>
+        <Switch checked={enabled} label={`Enable ${name}`} onChange={(next) => void model.setCoreConfig(section, { enabled: next })} />
+      </div>
+      {state.error && <p class="error-text">{state.error}</p>}
+      {open && (
+        <div class="fields">
+          {fields.map(([key, field]) => (
+            <FieldEditor
+              key={key}
+              name={`core-${section}-${key}`}
+              field={field}
+              value={state.config[key]}
+              onChange={(value) => void model.setCoreConfig(section, { [key]: value })}
             />
           ))}
         </div>

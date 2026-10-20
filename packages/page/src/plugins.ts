@@ -11,7 +11,8 @@ import type {
   SelectorName,
   Unsubscribe,
 } from "@pear/sdk";
-import type { Bridge, PluginState } from "@pear/sdk/protocol";
+import type { CoreSection } from "@pear/sdk/core-config";
+import type { Bridge, CoreState, PluginState } from "@pear/sdk/protocol";
 import { selectors } from "@pear/sdk/selectors";
 import { AudioGraph } from "./audio.ts";
 import { domReady, waitForSelector } from "./dom.ts";
@@ -37,6 +38,7 @@ export class PluginRunner {
   #subscribers = new Set<() => void>();
   #handlers = new Map<string, Map<string, (payload: unknown) => unknown>>();
   #audio: Promise<AudioGraph> | undefined;
+  #core: Record<CoreSection, CoreState>;
   #bridge: Bridge;
   #player: Player;
 
@@ -51,6 +53,28 @@ export class PluginRunner {
       this.#states.set(plugin.id, state);
     }
     for (const [id, message] of Object.entries(bridge.bootstrap.errors)) this.#hostErrors.set(id, message);
+    this.#core = { ...bridge.bootstrap.core };
+  }
+
+  /** A core settings section (e.g. the API server). */
+  core(section: CoreSection): CoreState {
+    return this.#core[section];
+  }
+
+  setCoreConfig(section: CoreSection, patch: Record<string, unknown>) {
+    return this.#bridge.invoke("core:set-config", section, patch);
+  }
+
+  applyCore(section: CoreSection, state: CoreState) {
+    this.#core[section] = state;
+    this.#notify();
+  }
+
+  /** Answers host requests for the core (id "core"), e.g. the API server's. */
+  handleCore(event: string, handler: (payload: unknown) => unknown) {
+    let handlers = this.#handlers.get("core");
+    if (!handlers) this.#handlers.set("core", (handlers = new Map()));
+    handlers.set(event, handler);
   }
 
   get plugins(): readonly AnyPlugin[] {

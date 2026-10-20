@@ -32,6 +32,9 @@ importers:
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
+      '@types/ws':
+        specifier: ^8.18.2
+        version: 8.18.2
       electron:
         specifier: ^44.9.0
         version: 44.9.0
@@ -44,6 +47,9 @@ importers:
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
+      ws:
+        specifier: ^8.22.0
+        version: 8.22.0
 
   packages/page:
     dependencies:
@@ -56,9 +62,15 @@ importers:
 
   packages/sdk:
     dependencies:
+      '@valibot/to-json-schema':
+        specifier: ^1.8.0
+        version: 1.8.0(valibot@1.5.0(typescript@7.0.2))
       lightningcss:
         specifier: ^1.33.0
         version: 1.33.0
+      valibot:
+        specifier: ^1.5.0
+        version: 1.5.0(typescript@7.0.2)
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
@@ -1282,6 +1294,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@valibot/to-json-schema@1.8.0':
+    resolution: {integrity: sha512-a0M+uwCuQZEPAo65NYkFSJ14O5c213KoSZmPdoCfuFvUhfULi4T2Z6Tpjv6lTVMW9RoLm74RpRAjNEa43KcN+g==}
+    peerDependencies:
+      valibot: ^1.5.0
+
   '@vitest/mocker@5.0.5':
     resolution: {integrity: sha512-xLL3lkDegJZw+MGoGaCCsFayDZthGgpAtr3Vziyfc4p7xH89K7KRPcRBBh/kEYm0Aqkt5DtTmkYpBtRV/FrHZg==}
     peerDependencies:
@@ -1876,6 +1893,14 @@ packages:
     peerDependencies:
       browserslist: '>= 4.21.0'
 
+  valibot@1.5.0:
+    resolution: {integrity: sha512-nil6AkP2TChWL43Z5uJ6GTxX01CUA+g8LWUM+N/rB9NBbkUMaUsi9PUNzlUPgoKASgmx9f7eGOYpJ04/fSa6FQ==}
+    peerDependencies:
+      typescript: '>=5'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   vite@8.3.4:
     resolution: {integrity: sha512-IftLE8phJhdNRIGNEV4JCCvfNScoZQVfcXaN8TQropWGJtOHcu+iAB9pHcuGvmEb/kddw0LBe/jS8ztdC6xdiQ==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -2445,6 +2470,10 @@ snapshots:
   '@typescript/typescript-win32-x64@7.0.2':
     optional: true
 
+  '@valibot/to-json-schema@1.8.0(valibot@1.5.0(typescript@7.0.2))':
+    dependencies:
+      valibot: 1.5.0(typescript@7.0.2)
+
   '@vitest/mocker@5.0.5(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))':
     dependencies:
       '@jridgewell/trace-mapping': 0.3.31
@@ -2919,6 +2948,10 @@ snapshots:
       browserslist: 4.29.3
       escalade: 3.2.0
       picocolors: 1.1.1
+
+  valibot@1.5.0(typescript@7.0.2):
+    dependencies:
+      typescript: 7.0.2
 
   vite@8.3.4(@types/node@24.19.2):
     dependencies:

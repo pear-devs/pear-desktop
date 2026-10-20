@@ -7,7 +7,7 @@ import { createServer as createHttpsServer } from "node:https";
 import type { Duplex } from "node:stream";
 import { type WebSocket, WebSocketServer } from "ws";
 import { verifyToken } from "./jwt.ts";
-import { API_VERSION, openApiDocument, type Reply, type Route, validateBody } from "./routes.ts";
+import { API_VERSION, openApiDocument, type Reply, type Route, type RpcInfo, validateBody } from "./routes.ts";
 
 export interface AuthConfig {
   authStrategy: "AUTH_AT_FIRST" | "NONE";
@@ -20,6 +20,8 @@ export interface ServerOptions {
   port: number;
   https?: { certPath: string; keyPath: string };
   routes: readonly Route[];
+  /** Rebuilt per request, since plugins come and go. */
+  rpcMethods(): readonly RpcInfo[];
   auth(): AuthConfig;
   /** A client connected to the WebSocket (already authenticated). */
   onSocket(socket: WebSocket): void;
@@ -68,7 +70,6 @@ export async function startServer(options: ServerOptions) {
     });
     return { route, pattern: new RegExp(`^${source}$`), names };
   });
-  const doc = openApiDocument(options.routes, "Pear Desktop API Server");
 
   const send = (res: ServerResponse, { status, body }: Reply) => {
     if (body === undefined || status === 204) {
@@ -85,7 +86,9 @@ export async function startServer(options: ServerOptions) {
     const url = new URL(req.url ?? "/", "http://localhost");
     const method = req.method ?? "GET";
     if (method === "OPTIONS") return send(res, { status: 204 });
-    if (method === "GET" && url.pathname === "/doc") return send(res, { status: 200, body: doc });
+    if (method === "GET" && url.pathname === "/doc") {
+      return send(res, { status: 200, body: openApiDocument(options.routes, "Pear Desktop API Server", options.rpcMethods()) });
+    }
     if (method === "GET" && url.pathname === "/swagger") return send(res, { status: 200, body: SWAGGER_HTML });
 
     let match: { route: Route; params: Record<string, string> } | undefined;
@@ -110,12 +113,16 @@ export async function startServer(options: ServerOptions) {
     if (route.body) {
       let parsed: unknown;
       try {
-        parsed = JSON.parse(await readBody(req));
+        const text = await readBody(req);
+        // RPC methods without input may be called with an empty body.
+        parsed = route.body === "json" && text.trim() === "" ? undefined : JSON.parse(text);
       } catch {
         return send(res, { status: 400, body: { error: "invalid JSON body" } });
       }
-      const error = validateBody(route.body, parsed);
-      if (error) return send(res, { status: 400, body: { error } });
+      if (route.body !== "json") {
+        const error = validateBody(route.body, parsed);
+        if (error) return send(res, { status: 400, body: { error } });
+      }
       body = parsed as Record<string, unknown>;
     }
     send(res, await route.handle({ params, body, remoteAddress: req.socket.remoteAddress ?? "unknown" }));

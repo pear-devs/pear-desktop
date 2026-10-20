@@ -1,5 +1,9 @@
-// api-server: REST endpoints, auth and WebSocket updates against a real track.
+// The core API server: REST endpoints, auth, WebSocket updates against a real
+// track, and plugins' RPC methods.
 
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { closeApp, waitForTrackPlaying } from "./integrations-helpers.ts";
 import { launchApp, mainWindow, playTestTrack, TEST_TRACK } from "./launch.ts";
@@ -26,7 +30,7 @@ test("REST endpoints and WebSocket reflect and control playback", async () => {
   const port = randomPort();
   const base = `http://127.0.0.1:${port}`;
   const app = await launchApp({
-    plugins: { "api-server": { enabled: true, config: { hostname: "127.0.0.1", port, authStrategy: "NONE" } } },
+    core: { apiServer: { enabled: true, hostname: "127.0.0.1", port, authStrategy: "NONE" } },
   });
   let ws: ReturnType<typeof connect> | undefined;
   try {
@@ -97,10 +101,10 @@ test("REST endpoints and WebSocket reflect and control playback", async () => {
     expect(Array.isArray((await queue.json()).items)).toBe(true);
 
     // Disabling stops the server live; enabling brings it back.
-    await page.evaluate(() => window.__pear!.invoke("plugin:set-enabled", "api-server", false));
+    await page.evaluate(() => window.__pear!.invoke("core:set-config", "apiServer", { enabled: false }));
     await expect.poll(() => ws!.closed()?.code).toBe(1001);
     await expect.poll(async () => (await api("/song").catch(() => null))?.status ?? "down").toBe("down");
-    await page.evaluate(() => window.__pear!.invoke("plugin:set-enabled", "api-server", true));
+    await page.evaluate(() => window.__pear!.invoke("core:set-config", "apiServer", { enabled: true }));
     await expect.poll(async () => (await api("/song").catch(() => null))?.status).toBe(200);
   } finally {
     ws?.socket.close();
@@ -112,10 +116,14 @@ test("requires a token for authorized clients unless auth is off", async () => {
   const port = randomPort();
   const base = `http://127.0.0.1:${port}`;
   const app = await launchApp({
-    plugins: {
-      "api-server": {
+    core: {
+      apiServer: {
         enabled: true,
-        config: { hostname: "127.0.0.1", port, authStrategy: "AUTH_AT_FIRST", authorizedClients: "e2e-remote", secret: "e2e-secret" },
+        hostname: "127.0.0.1",
+        port,
+        authStrategy: "AUTH_AT_FIRST",
+        authorizedClients: "e2e-remote",
+        secret: "e2e-secret",
       },
     },
   });
@@ -142,11 +150,93 @@ test("requires a token for authorized clients unless auth is off", async () => {
 
     // Revoking the client in settings applies live.
     const page = await app.firstWindow();
-    await page.evaluate(() => window.__pear!.invoke("plugin:set-config", "api-server", { authorizedClients: "" }));
+    await page.evaluate(() => window.__pear!.invoke("core:set-config", "apiServer", { authorizedClients: "" }));
     await expect
       .poll(async () => (await fetch(`${base}/api/v1/volume`, { headers: { Authorization: `Bearer ${accessToken}` } })).status)
       .toBe(401);
   } finally {
+    await closeApp(app);
+  }
+});
+
+test("is off by default", async () => {
+  const app = await launchApp();
+  try {
+    await mainWindow(app);
+    const page = await app.firstWindow();
+    const state = await page.evaluate(() => window.__pearRuntime!.plugins.core("apiServer"));
+    expect(state.config).toMatchObject({ enabled: false, hostname: "127.0.0.1", port: 26538 });
+    expect(state.status).toBeUndefined();
+  } finally {
+    await closeApp(app);
+  }
+});
+
+test("plugins' RPC methods are callable, validated, documented and follow the plugin's state", async () => {
+  test.setTimeout(120_000);
+  const port = randomPort();
+  const base = `http://127.0.0.1:${port}`;
+  const folder = mkdtempSync(join(tmpdir(), "pear-e2e-rpc-"));
+  const app = await launchApp({
+    core: { apiServer: { enabled: true, hostname: "127.0.0.1", port, authStrategy: "NONE" } },
+    plugins: {
+      sponsorblock: { enabled: true },
+      downloader: { enabled: true, config: { folder } },
+    },
+  });
+  let ws: ReturnType<typeof connect> | undefined;
+  try {
+    const page = await mainWindow(app);
+    const call = (path: string, body?: unknown) =>
+      fetch(`${base}/api/v1/plugins/${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    await expect.poll(async () => (await fetch(`${base}/doc`).catch(() => null))?.status).toBe(200);
+
+    const listed = await (await fetch(`${base}/api/v1/plugins`)).json();
+    expect(listed).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ plugin: "sponsorblock", method: "segments", path: "/api/v1/plugins/sponsorblock/segments" }),
+        expect.objectContaining({ plugin: "downloader", method: "download" }),
+      ]),
+    );
+    const doc = await (await fetch(`${base}/doc`)).json();
+    expect(doc.paths["/api/v1/plugins/sponsorblock/segments"].post.requestBody.content["application/json"].schema).toMatchObject({
+      properties: { videoId: { type: "string" } },
+      required: ["videoId"],
+    });
+
+    // A real lookup against SponsorBlock: an array of segments (possibly empty).
+    const segments = await call("sponsorblock/segments", { videoId: TEST_TRACK });
+    expect(segments.status).toBe(200);
+    expect(Array.isArray(await segments.json())).toBe(true);
+
+    const invalid = await call("sponsorblock/segments", { videoId: "not a video" });
+    expect(invalid.status).toBe(400);
+    expect((await invalid.json()).error).toContain("videoId: not a video id");
+    expect((await call("sponsorblock/segments")).status).toBe(400);
+    expect((await call("sponsorblock/missing", {})).status).toBe(404);
+
+    // Plugin events reach WebSocket clients: a cancelled download reports its result.
+    ws = connect(`ws://127.0.0.1:${port}/api/v1/ws`);
+    await expect.poll(() => ws!.messages[0]?.type).toBe("PLAYER_INFO");
+    const download = await call("downloader/download", { videoId: TEST_TRACK });
+    expect(download.status).toBe(200);
+    expect(await download.json()).toMatchObject({ id: expect.anything() });
+    expect((await call("downloader/cancel")).status).toBe(204);
+    await expect
+      .poll(() => ws!.messages.find((m) => m.type === "PLUGIN_EVENT"), { timeout: 30_000 })
+      .toMatchObject({ plugin: "downloader", event: "result", data: expect.objectContaining({ cancelled: true }) });
+
+    // Disabling the plugin takes its methods away live.
+    await page.evaluate(() => window.__pear!.invoke("plugin:set-enabled", "sponsorblock", false));
+    expect((await call("sponsorblock/segments", { videoId: TEST_TRACK })).status).toBe(503);
+    const after = await (await fetch(`${base}/doc`)).json();
+    expect(after.paths["/api/v1/plugins/sponsorblock/segments"]).toBeUndefined();
+  } finally {
+    ws?.socket.close();
     await closeApp(app);
   }
 });
