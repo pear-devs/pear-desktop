@@ -157,6 +157,15 @@ describe("romanization", () => {
     expect(detectScripts(["愛してる", "永遠", "hello"])).toEqual(["ja", "ja", null]);
   });
 
+  test("Thai, Bengali and Hindi, per line, as pear-desktop", async () => {
+    expect(detectScripts(["สวัสดี", "আমি তোমায় ভালোবাসি", "मैं तुमसे प्यार करता हूँ", "hello"])).toEqual(["th", "bn", "hi", null]);
+    const romanizer = new Romanizer("/nonexistent", () => Promise.reject(new Error("no network in tests")));
+    const [th, bn, hi] = await romanizer.romanize(["สวัสดี", "আমি", "प्यार"]);
+    expect(th).toMatch(/^[a-z ]+$/);
+    expect(bn).toBe("ami");
+    expect(hi).toBe("pyara");
+  });
+
   test("romanizes Korean and Chinese without network", async () => {
     const romanizer = new Romanizer("/nonexistent", () => Promise.reject(new Error("no network in tests")));
     const [ko, zh, en] = await romanizer.romanize(["사랑해", "我爱你", "plain English"]);

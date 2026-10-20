@@ -10,7 +10,7 @@
 // track, as Musixmatch's matcher always answers with *some* track.
 
 import { parseLrc } from "../lrc.ts";
-import { artistSimilarity, titleSimilarity } from "../match.ts";
+import { queryArtistSimilarity, queryTitleSimilarity } from "../match.ts";
 import type { LyricResult, SearchQuery } from "../types.ts";
 import { getJson, type Fetch } from "./http.ts";
 
@@ -88,7 +88,8 @@ export async function musixmatch(query: SearchQuery, fetch: Fetch, options: Musi
     app_id: APP_ID,
     format: "json",
     usertoken: token,
-    q_track: query.title,
+    // pear-desktop asked for the title in its original language when YTM has one.
+    q_track: query.alternativeTitle || query.title,
     q_artist: query.artist,
     q_duration: String(Math.round(query.durationSeconds)),
     namespace: "lyrics_richsynched",
@@ -124,7 +125,7 @@ export function parseMacro(data: Envelope<MacroBody>, query: SearchQuery): Lyric
     | undefined;
   if (!track || track.track_id === FALLBACK_TRACK_ID || track.instrumental === 1) return null;
   const minArtist = query.inexact ? 0.75 : 0.85;
-  if (titleSimilarity(track.track_name, query.title) < 0.8 || artistSimilarity(track.artist_name, query.artist) < minArtist) return null;
+  if (queryTitleSimilarity(track.track_name, query) < 0.8 || queryArtistSimilarity(track.artist_name, query) < minArtist) return null;
 
   const lyrics = bodyOf(calls["track.lyrics.get"])?.lyrics as { lyrics_body?: string; instrumental?: number } | undefined;
   if (lyrics?.instrumental === 1) return null;

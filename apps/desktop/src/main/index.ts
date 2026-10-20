@@ -17,6 +17,7 @@ import { setupNet } from "./net.ts";
 import { PageRequests } from "./page-requests.ts";
 import { PlayerMirror } from "./player.ts";
 import { PluginHost } from "./plugins.ts";
+import { findProtocolLink, parseProtocolLink, type ProtocolCommand, protocolActions, registerProtocol } from "./protocol.ts";
 import { openSettingsWindow, registerSettingsScheme, serveSettings, settingsWindowContents } from "./settings-window.ts";
 import { Themes } from "./themes.ts";
 import { CHECK_DELAY_MS, checkForUpdates, shouldCheck } from "./updates.ts";
@@ -201,7 +202,22 @@ function main() {
     return window;
   }
 
+  // pear-desktop's app protocol: links control playback; plugins hear about them too.
+  const protocolListeners = new Set<(command: string, args: string[]) => void>();
+  const runProtocol = ({ command, args }: ProtocolCommand) => {
+    for (const action of protocolActions({ command, args })) player.control(action);
+    for (const listener of protocolListeners) listener(command, args);
+  };
+  app.on("open-url", (event, url) => {
+    const parsed = parseProtocolLink(url);
+    if (!parsed) return;
+    event.preventDefault();
+    runProtocol(parsed);
+  });
+
   app.on("second-instance", (_, argv) => {
+    const link = findProtocolLink(argv);
+    if (link) return void runProtocol(link);
     if (argv.includes(SETTINGS_FLAG)) return void openSettingsWindow();
     if (!mainWindow) return;
     if (mainWindow.isMinimized()) mainWindow.restore();
@@ -279,7 +295,12 @@ function main() {
       send,
       openSettings,
       broadcast: (plugin, event, data) => api?.broadcastPluginEvent(plugin, event, data),
+      onProtocol: (listener) => {
+        protocolListeners.add(listener);
+        return () => void protocolListeners.delete(listener);
+      },
     });
+    registerProtocol(app);
     applyCore("window");
     void api.apply();
     if (process.argv.includes(SETTINGS_FLAG)) openSettingsWindow();

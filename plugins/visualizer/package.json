@@ -6,9 +6,11 @@
     "typecheck": "tsc -p ."
   },
   "dependencies": {
+    "@foobar404/wave": "2.0.5",
     "@pear/sdk": "workspace:*",
     "butterchurn": "3.0.0-beta.5",
-    "butterchurn-presets": "3.0.0-beta.4"
+    "butterchurn-presets": "3.0.0-beta.4",
+    "vudio": "2.1.1"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

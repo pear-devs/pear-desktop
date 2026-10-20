@@ -11,11 +11,18 @@ const HANGUL = /[ᄀ-ᇿ㄰-㆏가-힯]/;
 const HAN = /[㐀-䶿一-鿿豈-﫿]/;
 const HAN_RUN = /[㐀-䶿一-鿿豈-﫿]+/g;
 
-export type Script = "ja" | "ko" | "zh";
+// pear-desktop's other scripts (Unicode blocks).
+const THAI = /[\u0E00-\u0E7F]/;
+const BENGALI = /[\u0980-\u09FF]/;
+const DEVANAGARI = /[\u0900-\u097F]/;
+
+export type Script = "ja" | "ko" | "zh" | "th" | "bn" | "hi";
 
 /**
- * Decides per song rather than per line: a kanji-only line in a Japanese song is
- * Japanese, not Chinese (per-line guessing is how romanization regressed upstream).
+ * Per line, except for kanji: decided per song, since a kanji-only line in a
+ * Japanese song is Japanese, not Chinese (per-line guessing is how
+ * romanization regressed upstream). Thai, Bengali and Devanagari (Hindi) are
+ * unambiguous per line, as pear-desktop romanized them.
  */
 export function detectScripts(lines: readonly string[]): (Script | null)[] {
   const japanese = lines.some((line) => KANA.test(line));
@@ -23,6 +30,9 @@ export function detectScripts(lines: readonly string[]): (Script | null)[] {
     if (HANGUL.test(line)) return "ko";
     if (KANA.test(line) || (japanese && HAN.test(line))) return "ja";
     if (HAN.test(line)) return "zh";
+    if (THAI.test(line)) return "th";
+    if (BENGALI.test(line)) return "bn";
+    if (DEVANAGARI.test(line)) return "hi";
     return null;
   });
 }
@@ -88,6 +98,12 @@ export class Romanizer {
         }));
         return kuroshiro.convert(line, { to: "romaji", mode: "spaced" });
       }
+      case "th":
+        return romanizeThai(line);
+      case "bn":
+        return romanizeIndic(line, "bengali");
+      case "hi":
+        return romanizeIndic(line, "devanagari");
     }
   }
 
@@ -117,6 +133,27 @@ export class Romanizer {
         await rename(temporary, target);
       }),
     );
+  }
+}
+
+/** pear-desktop's Thai romanization: word by word where the platform can segment Thai. */
+async function romanizeThai(line: string) {
+  const { romanize } = await import("@dehoist/romanize-thai");
+  const segmenter = Intl.Segmenter.supportedLocalesOf("th").includes("th") ? new Intl.Segmenter("th", { granularity: "word" }) : null;
+  if (!segmenter) return romanize(line);
+  return Array.from(segmenter.segment(line), (segment) => (segment.isWordLike ? romanize(segment.segment) : segment.segment.trim()))
+    .join(" ")
+    .trim();
+}
+
+/** pear-desktop's Bengali and Hindi romanization: IAST through Sanscript, without the accents. */
+async function romanizeIndic(line: string, scheme: "bengali" | "devanagari") {
+  const Sanscript = defaultExport(await import("@indic-transliteration/sanscript")) as { t(text: string, from: string, to: string): string };
+  try {
+    const out = Sanscript.t(line, scheme, "iast").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return scheme === "bengali" ? out.replace(/[\u09BC\u09BE-\u09CD]/g, "").toLowerCase() : out.replace(/[^a-zA-Z\s]/g, "") || line;
+  } catch {
+    return line;
   }
 }
 

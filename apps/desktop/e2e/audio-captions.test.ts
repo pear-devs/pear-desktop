@@ -50,10 +50,15 @@ test("captions-selector lists caption tracks and switches them through the playe
     await items.nth(2).click();
     expect(await calls()).toContainEqual(["setOption", "captions", "track", { languageCode: "de" }]);
     await expect.poll(async () => (await pluginConfig(page, "captions-selector"))?.lastCaptionsCode).toBe("de");
+    // Confirmed in YTM's own toast, as pear-desktop does.
+    await expect(page.getByText("Caption changed to German")).toBeVisible();
     await button.click();
     await expect(items.nth(2)).toHaveAttribute("aria-checked", "true");
     await items.first().click();
     expect(await calls()).toContainEqual(["setOption", "captions", "track", {}]);
+    await expect(page.getByText("Captions disabled")).toBeVisible();
+    // None forgets the language, so autoload doesn't bring captions back on the next track.
+    await expect.poll(async () => (await pluginConfig(page, "captions-selector"))?.lastCaptionsCode).toBe("");
 
     await setConfig(page, "captions-selector", { disableCaptions: true });
     await expect.poll(async () => (await calls()).some((c) => c[0] === "unloadModule")).toBe(true);

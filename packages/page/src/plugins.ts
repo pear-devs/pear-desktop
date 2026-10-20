@@ -100,6 +100,10 @@ export class PluginRunner {
     return this.#bridge.invoke("app:toggle-devtools");
   }
 
+  runAction(id: string, name: string) {
+    return this.#bridge.invoke("plugin:invoke", id, name, []);
+  }
+
   state(id: string) {
     return this.#states.get(id);
   }
@@ -374,6 +378,7 @@ export class PluginRunner {
           },
         };
       },
+      toast: showToast,
       onCleanup(fn) {
         cleanups.push(fn);
       },
@@ -402,4 +407,18 @@ function logger(id: string): Logger {
     warn: (...args) => console.warn(prefix, ...args),
     error: (...args) => console.error(prefix, ...args),
   };
+}
+
+interface ToastApp {
+  toastService?: { show(message: string): void };
+  handleAddToToastAction?(action: unknown): void;
+}
+
+/** YTM's own toast. pear-desktop used `toastService`, which newer YTM no longer has; its toast action does the same. */
+export function showToast(message: string) {
+  const app = document.querySelector("ytmusic-app") as ToastApp | null;
+  if (app?.toastService) return app.toastService.show(message);
+  app?.handleAddToToastAction?.({
+    addToToastAction: { item: { notificationTextRenderer: { successResponseText: { runs: [{ text: message }] } } } },
+  });
 }

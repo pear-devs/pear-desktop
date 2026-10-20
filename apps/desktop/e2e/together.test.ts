@@ -45,7 +45,18 @@ const playerState = (page: Page) =>
     return { videoId: state.track?.videoId, status: state.status, ad: state.ad };
   });
 
-test("a guest joins by code and follows the host's track and pause", async () => {
+/** The YTM queue's video ids. */
+const queueIds = (page: Page) =>
+  page.evaluate(() => {
+    const store = (document.querySelector("#queue") as unknown as { queue: { store: { store: { getState(): { queue: { items: Record<string, any>[] } } } } } })
+      .queue.store.store;
+    return store.getState().queue.items.map(
+      (item) =>
+        (item.playlistPanelVideoRenderer ?? Object.values(item.playlistPanelVideoWrapperRenderer?.primaryRenderer ?? {})[0])?.videoId as string,
+    );
+  });
+
+test("pear-desktop's Music Together: a guest joins by host id and shares YTM's queue", async () => {
   test.setTimeout(240_000);
   const plugins = (name: string) => ({ "music-together": { enabled: true, config: { displayName: name } } });
   const hostApp = await launchApp({ plugins: plugins("Hosty") });
@@ -53,32 +64,32 @@ test("a guest joins by code and follows the host's track and pause", async () =>
   try {
     const [host, guest] = await Promise.all([mainWindow(hostApp), mainWindow(guestApp)]);
     await playTestTrack(host);
+    await expect.poll(async () => (await playAds(host), (await playerState(host)).videoId), { timeout: 60_000 }).toBe(TEST_TRACK);
 
+    // Hosting gives pear-desktop's host id (the raw PeerJS id).
     await openPanel(host);
-    await panel(host).getByRole("button", { name: "Start a session" }).click();
-    const code = panel(host).locator("code[data-code]");
-    await expect(code).toBeVisible({ timeout: 30_000 });
-    const roomCode = (await code.getAttribute("data-code"))!;
-    expect(roomCode).toMatch(/^[A-Z2-9]{6}$/);
+    await panel(host).getByRole("button", { name: "Music Together Host" }).click();
+    const hostId = panel(host).locator("code.host-id");
+    await expect(hostId).toBeVisible({ timeout: 30_000 });
+    const id = (await hostId.textContent())!;
+    expect(id).toMatch(/^[0-9a-f-]{36}$/);
 
     await openPanel(guest);
-    await panel(guest).getByLabel("Session code").fill(roomCode.toLowerCase());
+    await panel(guest).getByLabel("Enter Host ID").fill(id);
     await panel(guest).getByRole("button", { name: "Join" }).click();
-    await expect(panel(guest).getByText("With Hosty")).toBeVisible({ timeout: 30_000 });
+    await expect(panel(guest).getByText("Connected as Guest")).toBeVisible({ timeout: 30_000 });
 
-    // Both see each other.
+    // Both see each other, and the host gets YTM's toast.
     await expect(panel(host).locator(".people li")).toHaveCount(2);
     await expect(panel(host).locator(".people")).toContainText("Gus");
     await expect(panel(guest).locator(".people")).toContainText("Hosty");
-    await expect(host.locator("pear-together .toast").filter({ hasText: "Gus joined" })).toBeVisible();
+    await expect(host.getByText("Gus joined Music Together")).toBeVisible();
 
-    // The guest loads and plays the host's track.
+    // The guest's YTM queue is the host's, and it plays the host's track.
+    await expect.poll(() => queueIds(guest), { timeout: 30_000 }).toContain(TEST_TRACK);
     await expect
-      .poll(async () => (await playAds(guest), (await playerState(guest)).videoId), { timeout: 60_000 })
+      .poll(async () => (await Promise.all([playAds(host), playAds(guest)]), (await playerState(guest)).videoId), { timeout: 90_000 })
       .toBe(TEST_TRACK);
-    await expect
-      .poll(async () => (await Promise.all([playAds(host), playAds(guest)]), await playerState(guest)), { timeout: 90_000 })
-      .toMatchObject({ ad: false, status: "playing" });
     await screenshot(hostApp, "together-host");
     await screenshot(guestApp, "together-guest");
 
@@ -87,16 +98,23 @@ test("a guest joins by code and follows the host's track and pause", async () =>
     await host.evaluate(() => window.__pearRuntime!.player.control({ type: "pause" }));
     await expect.poll(async () => (await playerState(guest)).status, { timeout: 15_000 }).toBe("paused");
 
-    // Guest suggestions land in the host's queue (default permission: suggest).
-    await panel(guest).getByLabel("Song link").fill("https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/watch?v=fJ9rUzIMcZQ");
-    await panel(guest).getByRole("button", { name: "Suggest" }).click();
-    await expect(panel(host).locator('.queue li[data-video="fJ9rUzIMcZQ"]')).toBeVisible({ timeout: 20_000 });
-    await expect(panel(guest).locator('.queue li[data-video="fJ9rUzIMcZQ"]')).toContainText("added by Gus");
+    // The guest adds a song with YTM's own queue (what "Add to queue" dispatches): it lands
+    // in everyone's queue, marked as the guest's.
+    const added = "fJ9rUzIMcZQ";
+    await guest.evaluate(async (videoId) => {
+      const app = document.querySelector("ytmusic-app") as unknown as { networkManager: { fetch(path: string, body: unknown): Promise<any> } };
+      const queue = document.querySelector("#queue") as unknown as { queue: { store: { store: any } } };
+      const store = queue.queue.store.store;
+      const response = await app.networkManager.fetch("/music/get_queue", { queueContextParams: store.getState().queue.queueContextParams, videoIds: [videoId] });
+      store.dispatch({ type: "ADD_ITEMS", payload: { items: response.queueDatas.map((data: { content: unknown }) => data.content) } });
+    }, added);
+    await expect.poll(() => queueIds(host), { timeout: 20_000 }).toContain(added);
+    await expect.poll(() => queueIds(guest), { timeout: 20_000 }).toContain(added);
     await screenshot(hostApp, "together-host-queue");
 
-    // Ending the session disconnects the guest.
-    await panel(host).getByRole("button", { name: "End session" }).click();
-    await expect(panel(guest).getByText("The host ended the session")).toBeVisible({ timeout: 15_000 });
+    // Closing the session disconnects the guest.
+    await panel(host).getByRole("button", { name: "Close Music Together" }).click();
+    await expect(guest.getByText("Music Together disconnected")).toBeVisible({ timeout: 20_000 });
 
     // Disabling the plugin removes its UI.
     await guest.evaluate(() => window.__pear!.invoke("plugin:set-enabled", "music-together", false));

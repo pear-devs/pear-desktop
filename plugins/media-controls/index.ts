@@ -5,6 +5,15 @@
 
 import MprisPlayer, { type LoopStatus, type Position } from "@jellybrick/mpris-service";
 import { definePlugin, livePosition, type NowPlaying, type RepeatMode } from "@pear/sdk";
+import { openableUrl } from "./open.ts";
+
+/** What only the page knows: YTM's full-screen player and where the queue is at. */
+interface PageNav {
+  fullscreen: boolean;
+  /** Tracks before and after the playing one (autoplay's included). */
+  before: number;
+  after: number;
+}
 
 const secToMicro = (seconds: number) => Math.round(seconds * 1e6);
 const microToSec = (micro: number | bigint) => Number(micro) / 1e6;
@@ -46,9 +55,24 @@ export default definePlugin({
       mpris.desktopEntry = "\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063";
       mpris.supportedUriSchemes = ["https"];
       mpris.supportedMimeTypes = [];
-      mpris.canGoNext = true;
-      mpris.canGoPrevious = true;
       mpris.canSeek = true;
+      mpris.canSetFullscreen = true;
+      // pear-desktop's rules: previous unless at the queue's start; next while
+      // tracks follow (autoplay adds them) or the queue repeats.
+      let nav: PageNav = { fullscreen: false, before: 0, after: 1 };
+      const applyNav = () => {
+        const canGoPrevious = nav.before > 0;
+        const canGoNext = nav.after > 0 || state.repeat === "all";
+        if (mpris.canGoPrevious !== canGoPrevious) mpris.canGoPrevious = canGoPrevious;
+        if (mpris.canGoNext !== canGoNext) mpris.canGoNext = canGoNext;
+        if (mpris.fullscreen !== nav.fullscreen) mpris.fullscreen = nav.fullscreen;
+      };
+      navs.set(ctx, (next) => {
+        nav = next;
+        applyNav();
+      });
+      ctx.onCleanup(() => navs.delete(ctx));
+      applyNav();
 
       const trackId = (videoId: string) => mpris.objectPath(`track/${videoId.replace(/[^A-Za-z0-9_]/g, "_")}`);
       const control = ctx.player.control;
@@ -77,6 +101,14 @@ export default definePlugin({
       mpris.on("raise", () => {
         ctx.window.show();
         ctx.window.focus();
+      });
+      mpris.on("fullscreen", (fullscreen: boolean) => {
+        ctx.request("fullscreen", fullscreen).catch((error: unknown) => ctx.log.warn("could not change full screen", error));
+      });
+      mpris.on("open", ({ uri }: { uri: string }) => {
+        const url = openableUrl(uri);
+        if (url) void ctx.window.loadURL(url);
+        else ctx.log.warn("not opening a non-YTM link");
       });
       mpris.on("error", (error: Error) => ctx.log.error("MPRIS error", error));
 
@@ -108,6 +140,7 @@ export default definePlugin({
         if (mpris.volume !== volume) mpris.volume = volume;
         if (mpris.loopStatus !== LOOP_STATUS[next.repeat]) mpris.loopStatus = LOOP_STATUS[next.repeat];
         if (mpris.shuffle !== next.shuffle) mpris.shuffle = next.shuffle;
+        applyNav();
 
         // Tell clients about jumps (seeks, track changes) so their progress bars resync.
         if (previous && Math.abs(livePosition(previous, next.updatedAt) - next.positionSeconds) > 1.5) {
@@ -121,5 +154,49 @@ export default definePlugin({
         (mpris as unknown as { _bus?: { disconnect(): void } })._bus?.disconnect();
       };
     },
+    commands: {
+      nav(next: PageNav) {
+        navs.get(this)?.(next);
+      },
+    },
+  },
+  page(ctx) {
+    let last = "";
+    const report = () => {
+      const items = ctx.$$("queue.item");
+      const index = items.findIndex((item) => item.hasAttribute("selected"));
+      const nav: PageNav = {
+        fullscreen: !!ctx.$("integrations.fullscreen"),
+        before: Math.max(0, index),
+        after: index < 0 ? items.length : items.length - index - 1,
+      };
+      const key = JSON.stringify(nav);
+      if (key === last) return;
+      last = key;
+      void ctx.host.invoke("nav", nav);
+    };
+    let scheduled: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      clearTimeout(scheduled);
+      scheduled = setTimeout(report, 200);
+    };
+    ctx.host.handle("fullscreen", (fullscreen) => {
+      if (!!ctx.$("integrations.fullscreen") === fullscreen) return;
+      ctx.$(fullscreen ? "integrations.fullscreen_button" : "integrations.exit_fullscreen_button")?.click();
+    });
+    const observer = new MutationObserver(schedule);
+    void ctx.waitFor("player_bar").then((bar) => observer.observe(bar, { attributes: true, attributeFilter: ["player-fullscreened"] }));
+    void ctx.waitFor("queue").then((queue) =>
+      observer.observe(queue, { childList: true, subtree: true, attributes: true, attributeFilter: ["selected"] }),
+    );
+    ctx.player.on("trackChange", schedule);
+    report();
+    return () => {
+      clearTimeout(scheduled);
+      observer.disconnect();
+    };
   },
 });
+
+/** Per running host part: applies what the page reports. */
+const navs = new WeakMap<object, (nav: PageNav) => void>();

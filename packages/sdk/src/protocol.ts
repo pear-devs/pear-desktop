@@ -38,6 +38,8 @@ export interface PluginInfo {
   name: string;
   description?: string;
   config: ConfigShape;
+  /** Settings buttons (`PluginDef.actions`), translated. */
+  actions?: { name: string; label: string; description?: string }[];
 }
 
 export interface AppInfo {

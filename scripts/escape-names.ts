@@ -23,8 +23,9 @@ export function escapeNames(json: string): string {
 }
 
 const git = (...args: string[]) => execFileSync("git", args, { encoding: "utf8" });
-// pear-desktop's own files, kept as it wrote them.
-const isUpstream = (path: string) => path === "changelog.md" || path.startsWith(".github/");
+// pear-desktop's own files, kept as it wrote them; and the lockfile, which is generated
+// and names third-party packages (YAML has no escapes for them).
+const isUpstream = (path: string) => path === "changelog.md" || path.startsWith(".github/") || path === "pnpm-lock.yaml";
 const isJson = (path: string) => path.endsWith(".json");
 const isText = (path: string) => /\.(m|c)?(ts|tsx|js|jsx|json|md|ya?ml|css|html|txt)$/.test(path);
 

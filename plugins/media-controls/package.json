@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc -p ."
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
   },
   "dependencies": {
     "@pear/sdk": "workspace:*",
@@ -11,6 +12,7 @@
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "electron": "^44.9.0"
+    "electron": "^44.9.0",
+    "vitest": "^5.0.5"
   }
 }

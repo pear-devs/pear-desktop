@@ -20,7 +20,7 @@ interface Stats {
 async function serveList() {
   const server = createServer((_, response) => {
     response.writeHead(200, { "content-type": "text/plain" });
-    response.end("[Adblock Plus 2.0]\n||music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/pear-dnt-probe^\n");
+    response.end("[Adblock Plus 2.0]\n||music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/pear-dnt-probe^\nmusic.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com##.pear-dnt-cosmetic-probe\n##.pear-dnt-generic-probe\n");
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}/list.txt`, close: () => server.close() };
@@ -53,6 +53,26 @@ test("with blocklists: blocks requests and caches the engine", async () => {
     expect(await probe(page, "pear-dnt-probe")).toBe("blocked");
     expect(await probe(page, "pear-dnt-other")).toBe("through");
     expect((await stats()).blocked).toBe(before + 1);
+    // The lists' element hiding applies too (site-specific and generic rules), and playback is fine.
+    const hidden = (className: string) =>
+      page!.evaluate((className) => {
+        if (!document.body) return null;
+        let element = document.querySelector(`.${className}`) as HTMLElement | null;
+        if (!element) {
+          element = Object.assign(document.createElement("div"), { className, textContent: "probe" });
+          document.body.append(element);
+        }
+        return getComputedStyle(element).display === "none";
+      }, className);
+    await expect.poll(() => hidden("pear-dnt-cosmetic-probe"), { timeout: 20_000 }).toBe(true);
+    await expect.poll(() => hidden("pear-dnt-generic-probe"), { timeout: 20_000 }).toBe(true);
+    expect(await hidden("pear-dnt-not-filtered")).toBe(false);
+    await playTestTrack(page);
+    await expect
+      .poll(() => page!.evaluate(() => (window.__pearRuntime!.player.state.status === "playing" ? window.__pearRuntime!.player.state.positionSeconds : 0)), {
+        timeout: 60_000,
+      })
+      .toBeGreaterThan(1);
     // The engine is cached for the next launch.
     const cache = join(app.userData, "tb_cache");
     expect(existsSync(cache) && readdirSync(cache).some((f) => /^engine-\w+\.bin$/.test(f))).toBe(true);

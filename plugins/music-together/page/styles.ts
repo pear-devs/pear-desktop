@@ -228,4 +228,10 @@ export const panelStyles = css`
     animation: toast 180ms ease-out;
   }
   @keyframes toast { from { opacity: 0; transform: translateY(8px); } }
+  .host-id {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font: 500 12px ui-monospace, monospace;
+  }
 `;

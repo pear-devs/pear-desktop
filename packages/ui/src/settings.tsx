@@ -376,7 +376,8 @@ function PluginCard(props: {
   const error = model.error(plugin.id);
   const status = model.status(plugin.id);
   const groups = groupFields(plugin.config, props.platform, props.filter, localized);
-  const configurable = groupFields(plugin.config, props.platform).length > 0;
+  const actions = plugin.actions ?? [];
+  const configurable = groupFields(plugin.config, props.platform).length > 0 || actions.length > 0;
 
   return (
     <section class="card plugin" data-plugin={plugin.id} data-open={open}>
@@ -407,8 +408,9 @@ function PluginCard(props: {
       </div>
       {error && enabled && <p class="error-text">{error}</p>}
       {status && enabled && !error && <p class="status-text" role="status">{status}</p>}
-      {open && state && groups.length > 0 && (
+      {open && state && (groups.length > 0 || (enabled && actions.length > 0)) && (
         <div class="plugin-body">
+          {enabled && actions.length > 0 && <PluginActions id={plugin.id} actions={actions} model={model} />}
           {groups.map((group, index) => (
             <div key={index} class="plugin-group">
               {group.title && <div class="plugin-group-title">{group.title}</div>}
@@ -481,6 +483,38 @@ function About({ model, enabled }: { model: SettingsModel; enabled: string[] }) 
           </button>
         </div>
       </CardGroup>
+    </div>
+  );
+}
+
+/** The plugin's settings buttons (e.g. "Connect"); each runs its host command. */
+function PluginActions(props: { id: string; actions: NonNullable<PluginInfo["actions"]>; model: SettingsModel }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const run = async (name: string) => {
+    setBusy(name);
+    setFailed(null);
+    try {
+      await props.model.runAction(props.id, name);
+    } catch (error) {
+      setFailed(error instanceof Error ? error.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, "") : String(error));
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <div class="plugin-group plugin-actions">
+      {props.actions.map((action) => (
+        <div key={action.name} class="field" data-action={action.name}>
+          <div class="field-row">
+            <div class="field-text">{action.description && <div class="field-desc">{action.description}</div>}</div>
+            <button type="button" class="outlined" disabled={busy !== null} onClick={() => void run(action.name)}>
+              {action.label}
+            </button>
+          </div>
+        </div>
+      ))}
+      {failed && <p class="error-text">{failed}</p>}
     </div>
   );
 }

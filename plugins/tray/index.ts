@@ -21,23 +21,34 @@ export default definePlugin({
   host: {
     start(ctx) {
       const size = 32;
-      const icon = nativeImage.createFromBitmap(trayIconBitmap(size * 2), {
-        width: size * 2,
-        height: size * 2,
-        scaleFactor: 2,
-      });
-      const tray = new Tray(icon);
+      const image = (paused: boolean) =>
+        nativeImage.createFromBitmap(trayIconBitmap(size * 2, paused), { width: size * 2, height: size * 2, scaleFactor: 2 });
+      // pear-desktop's icons: a paused variant while a track is paused.
+      const icons = { playing: image(false), paused: image(true) };
+      const tray = new Tray(icons.playing);
+      let shownIcon: keyof typeof icons = "playing";
       const { window, app } = ctx;
       const showWindow = () => {
         if (window.isMinimized()) window.restore();
         window.show();
         window.focus();
+        app.dock?.show();
       };
-      const toggleWindow = () => (window.isVisible() && window.isFocused() ? window.hide() : showWindow());
+      // As pear-desktop: on macOS a window hidden to the tray leaves the Dock too.
+      const hideWindow = () => {
+        window.hide();
+        app.dock?.hide();
+      };
+      const toggleWindow = () => (window.isVisible() && window.isFocused() ? hideWindow() : showWindow());
 
       const update = (state: NowPlaying) => {
         const track = state.track;
         const playing = state.status === "playing" || state.status === "buffering";
+        const icon = track && state.status === "paused" ? "paused" : "playing";
+        if (icon !== shownIcon) {
+          tray.setImage(icons[icon]);
+          shownIcon = icon;
+        }
         // pear-desktop's tray texts and translations (main.tray.*).
         const appName = "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063";
         tray.setToolTip(
@@ -68,6 +79,13 @@ export default definePlugin({
             },
             { label: ctx.t("main.tray.settings", "Settings…"), click: () => ctx.openSettings() },
             { type: "separator" },
+            {
+              label: ctx.t("main.tray.restart", "Restart App"),
+              click: () => {
+                app.relaunch();
+                app.quit();
+              },
+            },
             { label: ctx.t("main.tray.quit", "Quit"), click: () => app.quit() },
           ]),
         );
@@ -77,7 +95,7 @@ export default definePlugin({
       ctx.player.on("change", (state, previous) => {
         const wasPlaying = previous.status === "playing" || previous.status === "buffering";
         const isPlaying = state.status === "playing" || state.status === "buffering";
-        if (state.track !== previous.track || wasPlaying !== isPlaying) update(state);
+        if (state.track !== previous.track || wasPlaying !== isPlaying || state.status !== previous.status) update(state);
       });
       const refresh = () => update(ctx.player.state);
       window.on("show", refresh);
@@ -87,10 +105,18 @@ export default definePlugin({
         window.off("hide", refresh);
       });
 
+      // Another plugin may claim clicks (notifications' tray controls on Windows, as in pear-desktop).
+      const claimed = (event: string) => {
+        const claim = { claimed: false };
+        (app as unknown as NodeJS.EventEmitter).emit(event, claim);
+        return claim.claimed;
+      };
       tray.on("click", () => {
+        if (claimed("pear:tray-click")) return;
         if (ctx.config.clickPlayPause) ctx.player.control({ type: "toggle" });
         else if (ctx.config.clickToToggle) toggleWindow();
       });
+      tray.on("double-click", () => void claimed("pear:tray-double-click"));
 
       let quitting = false;
       const onBeforeQuit = () => {
@@ -99,7 +125,7 @@ export default definePlugin({
       const onClose = (event: Electron.Event) => {
         if (!ctx.config.closeToTray || quitting) return;
         event.preventDefault();
-        window.hide();
+        hideWindow();
       };
       app.on("before-quit", onBeforeQuit);
       window.on("close", onClose);

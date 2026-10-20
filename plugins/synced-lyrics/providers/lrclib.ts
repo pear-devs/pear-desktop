@@ -1,6 +1,6 @@
 import { parse as parseYaml } from "yaml";
 import { finishLines, parseLrc } from "../lrc.ts";
-import { artistSimilarity, titleSimilarity } from "../match.ts";
+import { queryArtistSimilarity, queryTitleSimilarity } from "../match.ts";
 import type { LyricLine, LyricResult, LyricWord, SearchQuery } from "../types.ts";
 import { getJson, type Fetch } from "./http.ts";
 
@@ -31,6 +31,8 @@ export async function lrclib(query: SearchQuery, fetch: Fetch): Promise<LyricRes
   let entries = await search(exact);
   if (entries.length === 0 && query.album) entries = await search({ track_name: query.title, artist_name: query.artist });
   if (entries.length === 0 && query.inexact) entries = await search({ q: `${query.title} ${query.artist}` });
+  // As pear-desktop: the title in its original language, then the title alone.
+  if (entries.length === 0 && query.inexact && query.alternativeTitle) entries = await search({ q: query.alternativeTitle });
   if (entries.length === 0 && query.inexact) entries = await search({ q: query.title });
 
   const best = pick(entries, query);
@@ -55,8 +57,8 @@ export function pick(entries: readonly Entry[], query: SearchQuery): Entry | und
   const candidates = entries.filter(
     (entry) =>
       Math.abs(entry.duration - query.durationSeconds) <= MAX_DURATION_DIFF &&
-      artistSimilarity(entry.artistName, query.artist) >= minArtist &&
-      (query.inexact || titleSimilarity(entry.trackName, query.title) >= 0.8),
+      queryArtistSimilarity(entry.artistName, query) >= minArtist &&
+      (query.inexact || queryTitleSimilarity(entry.trackName, query) >= 0.8),
   );
   const score = (entry: Entry) =>
     // Seconds off, rounded so that richer lyrics win between near-identical durations.

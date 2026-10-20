@@ -1,8 +1,20 @@
 // yt-dlp as a sidecar: argument building, output parsing and capability probing.
 // Pure functions (no Electron, no processes) so they are unit-testable.
 
-/** "source": the audio as streamed (usually Opus), without re-encoding. */
-export type AudioFormat = "opus" | "m4a" | "mp3" | "source";
+/**
+ * "source": the audio as streamed (usually Opus), without re-encoding.
+ * "custom": pear-desktop's Custom preset, with its own ffmpeg arguments and extension.
+ */
+export type AudioFormat = "opus" | "m4a" | "mp3" | "source" | "custom";
+
+/** The extensions yt-dlp can convert audio to (--audio-format). */
+export const YTDLP_AUDIO_FORMATS = ["aac", "alac", "flac", "m4a", "mp3", "opus", "vorbis", "wav"] as const;
+
+/** The extension a custom preset converts to, or "best" (keep the streamed codec). */
+export const customAudioFormat = (extension: string) => {
+  const ext = extension.trim().replace(/^\./, "").toLowerCase();
+  return (YTDLP_AUDIO_FORMATS as readonly string[]).includes(ext) ? ext : "best";
+};
 
 export interface DownloadTarget {
   videoId: string;
@@ -29,6 +41,11 @@ export interface ArgsOptions {
   squareCover: boolean;
   ffmpegPath: string;
   capabilities: Capabilities;
+  /** The custom preset's ffmpeg arguments and extension (format "custom"). */
+  customArgs?: string;
+  customExtension?: string;
+  /** A Netscape cookies file with the signed-in session, for private playlists and age-restricted tracks. */
+  cookiesFile?: string;
 }
 
 export const DEFAULT_TEMPLATE = "%(artist,creator,uploader)s - %(title)s.%(ext)s";
@@ -40,6 +57,7 @@ const FORMAT_SELECTORS: Record<AudioFormat, string> = {
   m4a: "bestaudio[ext=m4a]/bestaudio/best",
   mp3: "bestaudio/best",
   source: "bestaudio/best",
+  custom: "bestaudio/best",
 };
 
 /** Radios and mixes ("RD…") are endless, except YTM's curated "RDCLAK…" playlists. */
@@ -49,7 +67,11 @@ export const isDownloadablePlaylist = (playlistId: string | undefined): playlist
 export const isAlbum = (playlistId: string | undefined) => !!playlistId?.startsWith("OLAK5uy_");
 
 /** yt-dlp writes cover art into opus/ogg (and reliably into m4a) only through mutagen or AtomicParsley. */
-export function canEmbedCover(format: AudioFormat, capabilities: Capabilities) {
+export function canEmbedCover(format: AudioFormat, capabilities: Capabilities, customExtension = "") {
+  if (format === "custom") {
+    const ext = customAudioFormat(customExtension);
+    return ext === "mp3" || ext === "flac" ? capabilities.ffmpeg : capabilities.mutagen;
+  }
   if (format === "mp3") return capabilities.ffmpeg;
   // Opus or M4A, whichever was streamed: mutagen writes both.
   if (format === "source") return capabilities.mutagen;
@@ -81,7 +103,7 @@ export function buildArgs(o: ArgsOptions): string[] {
     "--extract-audio",
     "--audio-format",
     // "best" keeps the streamed codec and only remuxes it.
-    o.format === "source" ? "best" : o.format,
+    o.format === "source" ? "best" : o.format === "custom" ? customAudioFormat(o.customExtension ?? "") : o.format,
     "--audio-quality",
     "0",
     "--embed-metadata",
@@ -92,7 +114,10 @@ export function buildArgs(o: ArgsOptions): string[] {
     playlist ? "--yes-playlist" : "--no-playlist",
     o.skipExisting ? "--no-overwrites" : "--force-overwrites",
   ];
-  if (canEmbedCover(o.format, o.capabilities)) {
+  // pear-desktop's Custom preset: its ffmpeg arguments for the conversion.
+  if (o.format === "custom" && o.customArgs?.trim()) args.push("--postprocessor-args", `ExtractAudio+ffmpeg_o:${o.customArgs.trim()}`);
+  if (o.cookiesFile) args.push("--cookies", o.cookiesFile);
+  if (canEmbedCover(o.format, o.capabilities, o.customExtension)) {
     args.push("--embed-thumbnail", "--convert-thumbnails", "jpg");
     // YTM artwork comes as 16:9 with the square cover in the middle.
     if (o.squareCover) args.push("--postprocessor-args", `ThumbnailsConvertor+ffmpeg_o:-vf "crop='min(iw,ih)':'min(iw,ih)'"`);
@@ -156,4 +181,16 @@ export function parseProbe(output: string): Capabilities {
 export function overallProgress(index: number, count: number, fraction: number) {
   const total = Math.max(1, count);
   return Math.min(1, (Math.max(1, index) - 1 + fraction) / total);
+}
+
+/** What a YTM menu's links point at, as pear-desktop read them: a playlist or album, else a track. */
+export function menuTarget(hrefs: readonly string[]): DownloadTarget | undefined {
+  let videoId: string | undefined;
+  for (const href of hrefs) {
+    const url = new URL(href, YTM);
+    const playlist = url.searchParams.get("playlist") ?? (url.pathname === "/playlist" ? url.searchParams.get("list") : null);
+    if (playlist && isDownloadablePlaylist(playlist)) return { videoId: "", playlistId: playlist };
+    videoId ??= url.searchParams.get("v") ?? undefined;
+  }
+  return videoId ? { videoId } : undefined;
 }

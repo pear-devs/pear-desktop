@@ -118,12 +118,20 @@ export default definePlugin({
     popover.setAttribute("role", "menu");
     button.popoverTargetElement = popover;
 
+    // As pear-desktop: the choice is remembered (None forgets it) and confirmed in a toast.
     const select = (track: CaptionTrack | undefined) => {
       if (track) {
         ctx.setConfig({ lastCaptionsCode: track.languageCode });
         api.setOption("captions", "track", { languageCode: track.languageCode });
+        ctx.toast(
+          ctx.t("plugins.captions-selector.toast.caption-changed", "Caption changed to {{language}}", {
+            language: track.displayName ?? track.languageName ?? track.languageCode,
+          }),
+        );
       } else {
+        ctx.setConfig({ lastCaptionsCode: "" });
         api.setOption("captions", "track", {});
+        ctx.toast(ctx.t("plugins.captions-selector.toast.caption-disabled", "Captions disabled"));
       }
       popover.hidePopover();
     };
@@ -152,6 +160,10 @@ export default definePlugin({
       if (open) render();
       button.setAttribute("aria-expanded", String(open));
     });
+    // The button only shows when there are captions; say so if they vanished meanwhile.
+    button.addEventListener("click", () => {
+      if (tracks.length === 0) ctx.toast(ctx.t("plugins.captions-selector.toast.no-captions", "No captions available for this song"));
+    });
 
     let timer: ReturnType<typeof setTimeout> | undefined;
     const onTrack = () => {
@@ -175,6 +187,7 @@ export default definePlugin({
 
     ctx.onCleanup(() => {
       clearTimeout(timer);
+      api.unloadModule("captions");
       button.remove();
       popover.remove();
     });

@@ -58,6 +58,19 @@ export function artistSimilarity(a: string, b: string) {
   return best;
 }
 
+/** Like pear-desktop: the track's artist, or one of its tags (often the artist's canonical name). */
+export function queryArtistSimilarity(name: string, query: { artist: string; tags?: readonly string[] }) {
+  let best = artistSimilarity(name, query.artist);
+  for (const tag of query.tags ?? []) if (best < 1) best = Math.max(best, artistSimilarity(name, tag));
+  return best;
+}
+
+/** The track's title, or its title in the original language. */
+export function queryTitleSimilarity(name: string, query: { title: string; alternativeTitle?: string }) {
+  const best = titleSimilarity(name, query.title);
+  return query.alternativeTitle ? Math.max(best, titleSimilarity(name, query.alternativeTitle)) : best;
+}
+
 export function titleSimilarity(a: string, b: string) {
   const x = normalize(a);
   const y = normalize(b);

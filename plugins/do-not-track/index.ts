@@ -2,7 +2,8 @@ import { join } from "node:path";
 import { config, definePlugin } from "@pear/sdk";
 import { net } from "electron";
 import { adStrategy, FAST_FORWARD_RATE, rewindTarget } from "./ads.ts";
-import { enableBlocking, loadEngine } from "./engine.ts";
+import { cosmetics, enableBlocking, loadEngine } from "./engine.ts";
+import type { CosmeticsRequest } from "./engine.ts";
 import { cachedSources, chooseLists, fetchSources } from "./lists.ts";
 import { installPruner } from "./prune.ts";
 import { dismissPromos, hidePromoCss } from "./promo.ts";
@@ -61,6 +62,21 @@ export default definePlugin({
       description: "Only use the additional blocklists.",
       group: "Blocklists",
     }),
+    // pear-desktop applied the lists' cosmetic filters too; their scriptlets for the video
+    // site can desync playback, so those are opt-in.
+    cosmeticFilters: config.select(
+      "styles",
+      [
+        { value: "off", label: "Off" },
+        { value: "styles", label: "Hide elements" },
+        { value: "all", label: "Hide elements and run scriptlets" },
+      ],
+      {
+        label: "Cosmetic filters",
+        description: "The lists' element hiding; scriptlets may cut the start of tracks.",
+        group: "Blocklists",
+      },
+    ),
   },
   host: {
     async start(ctx) {
@@ -82,6 +98,8 @@ export default definePlugin({
       ctx.log.info(`${lists.length} blocklist(s) ready in ${Math.round(performance.now() - started)}ms`);
       // ctx.webRequest is this plugin's own: it composes with the core's and other plugins' listeners.
       enableBlocking(ctx.webRequest, () => engine, () => void stats.blocked++);
+      engines.set(ctx, () => engine);
+      ctx.onCleanup(() => engines.delete(ctx));
       Object.assign(stats, { active: true, lists: lists.length });
 
       let stopped = false;
@@ -109,6 +127,12 @@ export default definePlugin({
       stats() {
         return { ...stats };
       },
+      /** The blocklists' cosmetic filters for the page (null until the lists are loaded). */
+      cosmetics(request: CosmeticsRequest) {
+        const engine = engines.get(this)?.();
+        if (!engine || this.config.cosmeticFilters === "off") return null;
+        return cosmetics(engine, request, this.config.cosmeticFilters === "all");
+      },
     },
   },
   page: {
@@ -116,6 +140,7 @@ export default definePlugin({
     runAt: "start",
     start(ctx) {
       if (ctx.config.blocker === IN_PLAYER) ctx.onCleanup(installPruner());
+      if (ctx.config.blocker === WITH_BLOCKLISTS && ctx.config.cosmeticFilters !== "off") applyCosmetics(ctx);
 
       // The Premium reminder YTM shows once ads are skipped.
       ctx.addStyle(hidePromoCss(ctx.sel("promo.mealbar")));
@@ -193,4 +218,83 @@ export default definePlugin({
     },
   },
 });
+
+/** Per running host part: its current engine. */
+const engines = new WeakMap<object, () => import("@ghostery/adblocker").FiltersEngine>();
+
+const COSMETICS_RETRY_MS = 1000;
+const DOM_SCAN_MS = 2000;
+
+interface CosmeticsContext {
+  host: { invoke(name: "cosmetics", request: CosmeticsRequest): Promise<{ styles: string; scripts: string[] } | null> };
+  addStyle(css: string): { update(css: string): void };
+  signal: AbortSignal;
+  onCleanup(fn: () => void): void;
+  log: { warn(...args: unknown[]): void };
+}
+
+/**
+ * Applies the lists' cosmetic filters to the page, as Ghostery's preload does:
+ * the page's base and hostname rules, then rules for the classes, ids and links
+ * that appear.
+ */
+function applyCosmetics(ctx: CosmeticsContext) {
+  const style = ctx.addStyle("");
+  let css = "";
+  const add = (styles: string) => {
+    if (!styles) return;
+    css += `\n${styles}`;
+    style.update(css);
+  };
+  const runScriptlets = async (scripts: string[]) => {
+    // The page's CSP is lifted: a blob module runs in the main world.
+    for (const script of scripts) {
+      const url = URL.createObjectURL(new Blob([script], { type: "text/javascript" }));
+      await import(/* @vite-ignore */ url).catch((error: unknown) => ctx.log.warn("scriptlet failed", error));
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  const seen = { classes: new Set<string>(), ids: new Set<string>(), hrefs: new Set<string>() };
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const scan = () => {
+    timer = undefined;
+    if (ctx.signal.aborted || !document.documentElement) return;
+    const fresh = { classes: [] as string[], ids: [] as string[], hrefs: [] as string[] };
+    for (const element of document.querySelectorAll("[class],[id],a[href]")) {
+      for (const name of element.classList) if (!seen.classes.has(name)) seen.classes.add(name), fresh.classes.push(name);
+      if (element.id && !seen.ids.has(element.id)) seen.ids.add(element.id), fresh.ids.push(element.id);
+      const href = element instanceof HTMLAnchorElement ? element.href : "";
+      if (href && !seen.hrefs.has(href)) seen.hrefs.add(href), fresh.hrefs.push(href);
+    }
+    if (!fresh.classes.length && !fresh.ids.length && !fresh.hrefs.length) return;
+    ctx.host.invoke("cosmetics", { url: location.href, base: false, ...fresh }).then(
+      (result) => result && add(result.styles),
+      () => {},
+    );
+  };
+  const schedule = () => (timer ??= setTimeout(scan, DOM_SCAN_MS));
+  const observer = new MutationObserver(schedule);
+  ctx.onCleanup(() => {
+    observer.disconnect();
+    clearTimeout(timer);
+  });
+
+  // The lists load in the host after startup; ask until they're there.
+  const base = () => {
+    if (ctx.signal.aborted) return;
+    ctx.host.invoke("cosmetics", { url: location.href, base: true }).then(
+      (result) => {
+        if (ctx.signal.aborted) return;
+        if (!result) return void setTimeout(base, COSMETICS_RETRY_MS);
+        add(result.styles);
+        void runScriptlets(result.scripts);
+        observer.observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "id", "href"] });
+        schedule();
+      },
+      () => setTimeout(base, COSMETICS_RETRY_MS),
+    );
+  };
+  base();
+}
 

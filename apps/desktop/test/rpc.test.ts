@@ -42,6 +42,7 @@ async function setup(enabled = true) {
     send() {},
     openSettings() {},
     broadcast,
+    onProtocol: () => () => {},
   });
   if (enabled) await host.setEnabled("greeter", true);
   return { host, broadcast };

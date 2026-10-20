@@ -23,6 +23,8 @@ export interface Options {
 
 export interface Backend {
   search(provider: ProviderId, query: SearchQuery): Promise<LyricResult | null>;
+  /** The playing track's original-language title and tags, when the page knows them. */
+  details?(videoId: string): { alternativeTitle?: string; tags: string[] } | null;
   romanize(lines: string[]): Promise<(string | null)[]>;
   convertChinese(lines: string[], mode: "s2t" | "t2s"): Promise<string[]>;
 }
@@ -158,6 +160,9 @@ export class LyricsStore {
       inexact: this.#options.inexact,
     };
     if (track.album) query.album = track.album;
+    const details = this.#backend.details?.(track.videoId);
+    if (details?.alternativeTitle && details.alternativeTitle !== track.title) query.alternativeTitle = details.alternativeTitle;
+    if (details?.tags.length) query.tags = details.tags;
     let state: ProviderState;
     try {
       state = { status: "done", result: await this.#backend.search(provider, query) };

@@ -24,6 +24,8 @@ export interface SettingsModel {
   relaunch(): Promise<unknown>;
   showSettingsFile(): Promise<unknown>;
   toggleDevTools(): Promise<unknown>;
+  /** Runs one of the plugin's settings actions (its host command of that name). */
+  runAction(id: string, name: string): Promise<unknown>;
 }
 
 /** A model over the bridge alone, for the standalone window (no page runtime). */
@@ -68,5 +70,6 @@ export function bridgeModel(bridge: Bridge): SettingsModel {
     relaunch: () => bridge.invoke("app:relaunch"),
     showSettingsFile: () => bridge.invoke("app:show-settings-file"),
     toggleDevTools: () => bridge.invoke("app:toggle-devtools"),
+    runAction: (id, name) => bridge.invoke("plugin:invoke", id, name, []),
   };
 }

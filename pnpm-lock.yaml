@@ -259,6 +259,9 @@ importers:
       '@pear/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
+      youtubei.js:
+        specifier: 17.2.0
+        version: 17.2.0
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
@@ -414,6 +417,9 @@ importers:
       electron:
         specifier: ^44.9.0
         version: 44.9.0
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
 
   plugins/music-together:
     dependencies:
@@ -462,6 +468,9 @@ importers:
       electron:
         specifier: ^44.9.0
         version: 44.9.0
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
 
   plugins/performance-improvement:
     dependencies:
@@ -488,9 +497,6 @@ importers:
       electron:
         specifier: ^44.9.0
         version: 44.9.0
-      vitest:
-        specifier: ^5.0.5
-        version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
 
   plugins/playback-speed:
     dependencies:
@@ -604,6 +610,12 @@ importers:
 
   plugins/synced-lyrics:
     dependencies:
+      '@dehoist/romanize-thai':
+        specifier: 1.0.0
+        version: 1.0.0
+      '@indic-transliteration/sanscript':
+        specifier: 1.3.3
+        version: 1.3.3
       '@pear/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -735,6 +747,9 @@ importers:
 
   plugins/visualizer:
     dependencies:
+      '@foobar404/wave':
+        specifier: 2.0.5
+        version: 2.0.5
       '@pear/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk
@@ -744,6 +759,9 @@ importers:
       butterchurn-presets:
         specifier: 3.0.0-beta.4
         version: 3.0.0-beta.4
+      vudio:
+        specifier: 2.1.1
+        version: 2.1.1
     devDependencies:
       '@types/node':
         specifier: ^24.0.0
@@ -838,6 +856,12 @@ packages:
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
     engines: {node: '>=6.9.0'}
 
+  '@bufbuild/protobuf@2.16.0':
+    resolution: {integrity: sha512-FWa0sPlqYGJgpTs6OxBRcL/AW4JT0OIO+W1ajerluoTVh8CV0B7XM1qsNCRgnkSCkRCgOICKHRQlY17jrsm0+Q==}
+
+  '@dehoist/romanize-thai@1.0.0':
+    resolution: {integrity: sha512-6SqD4vyZ48otnypLXMh901CeQetoP5ptYOaIr58N6zDqjjoN0bHszMb5d/6AXJJQf8kIvbmSWBeuDrbAWLajPQ==}
+
   '@discordjs/collection@2.1.1':
     resolution: {integrity: sha512-LiSusze9Tc7qF03sLCujF5iZp7K+vRNEDBZ86FT9aQAv3vxMLihUvKvpsCWiQ2DJq1tVckopKm1rxomgNUc9hg==}
     engines: {node: '>=18'}
@@ -899,6 +923,9 @@ packages:
     engines: {node: '>=14.14'}
     hasBin: true
 
+  '@foobar404/wave@2.0.5':
+    resolution: {integrity: sha512-V/ydadtv5ObCw8aEg+Qy3YSq1eyinEWzJfRI43Ovmj7VmAvEdWAdL7MatoMbiIVYPATkNDVF7GOxX1xirxM9dA==}
+
   '@ghostery/adblocker-content@2.20.1':
     resolution: {integrity: sha512-1vBDzEzoi4ZE9xjL3akAn0PiIA2KIeQ1K0JCpRIjPPWy8GoqN1saV2Md2jRSZPuXv9iENMKRPn1TetEE0MbUXw==}
 
@@ -910,6 +937,12 @@ packages:
 
   '@ghostery/url-parser@1.3.1':
     resolution: {integrity: sha512-QKqGi+7aDQ4RcyHyCwgEk6B9vWnsBP4Q7htaN0zPJV3ATqTKEQDtSTb9c/AN586oJUDs24YXKcwFYwNweY/YjQ==}
+
+  '@indic-transliteration/common_maps@1.0.6':
+    resolution: {integrity: sha512-OYX+SrpK26FjVZNphOdsQc9Ph0yFDtoWsU7INjhEhhWvGqzxF3Mqi0fF0buUsB4jpRWJe+7U+u9PO4fsTP/lfg==}
+
+  '@indic-transliteration/sanscript@1.3.3':
+    resolution: {integrity: sha512-zNGeARmQTPIlubwgEhl/JumpwTPHrdT/cNsQeCL+G67SQmjJe3qRnMIYghXiVt7+KDso/pU1Ky2ZfD/RBISfJQ==}
 
   '@isaacs/fs-minipass@4.0.1':
     resolution: {integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w==}
@@ -1970,6 +2003,9 @@ packages:
       picomatch:
         optional: true
 
+  fflate@0.8.3:
+    resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
+
   filelist@1.0.6:
     resolution: {integrity: sha512-5giy2PkLYY1cP39p17Ech+2xlpTRL9HLspOfEgm0L6CwBXBTgsK5ou0JtzYuepxkaQ/tvhCFIJ5uXo0OrM2DxA==}
 
@@ -2313,6 +2349,10 @@ packages:
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
+
+  meriyah@6.1.4:
+    resolution: {integrity: sha512-Sz8FzjzI0kN13GK/6MVEsVzMZEPvOhnmmI1lU5+/1cGOiK3QUahntrNNtdVeihrO7t9JpoH75iMNXg6R6uWflQ==}
+    engines: {node: '>=18.0.0'}
 
   mime-db@1.52.0:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
@@ -2745,6 +2785,9 @@ packages:
     resolution: {integrity: sha512-e0votIpp4Uo2AJYSzVHV6xCcawuiez3DzqDAbrTc3YxBkplN6e+dM13ZeIcZnDg/QpSuU2zfZ3rzwY8ukEnaXw==}
     engines: {node: '>=14.14'}
 
+  toml@2.3.6:
+    resolution: {integrity: sha512-gVweAectJU3ebq//Ferr2JUY4WKSDe5N+z0FvjDncLGyHmIDoxgY/2Ie4qfEIDm4IS7OA6Rmdm7pdEEdMcV/xQ==}
+
   truncate-utf8-bytes@1.0.2:
     resolution: {integrity: sha512-95Pu1QXQvruGEhv62XCMO3Mm90GscOCClvrIUwCM0PYOXK3kaF3l3sIHxx71ThJfcbM2O5Au6SO3AWCSEfW4mQ==}
 
@@ -2954,6 +2997,9 @@ packages:
       utf-8-validate:
         optional: true
 
+  vudio@2.1.1:
+    resolution: {integrity: sha512-VkFQcFt/b/kpF5Eg5Sq+oXUo1Zp5aRFF4BSmIrOzau5o+5WMWwX9ae/EGJZstCyZFiCTU5iw1Y+u2BCGW6Y6Jw==}
+
   webcrypto-core@1.9.2:
     resolution: {integrity: sha512-gsXecm82UQNlTBURJGuqOWy1Ww08S3kZUcr3aOJS02Pk0xLtkfeUAVC0u0xhgdonFme80edSJUIJyuvL/7250Q==}
 
@@ -3046,6 +3092,9 @@ packages:
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
+
+  youtubei.js@17.2.0:
+    resolution: {integrity: sha512-XLNsgRKO1h7t4i9tIMWSQSeWdD7Ujkk5v1m5YCaumaHMhu/xuLqtO3M0Hq7CXNup9HlJ1NGrT1Y+HLIHnL6Ujg==}
 
   yuku-analyzer@0.19.0:
     resolution: {integrity: sha512-Iu7DV5cWOQ3ERSA7oBquz/RT5IEGsUyUeCivYs9lQaZ4nSjM31yD17mH616JKcTyVoVWYivsFZ+twT3UyBosTA==}
@@ -3179,6 +3228,10 @@ snapshots:
       '@babel/helper-string-parser': 7.29.7
       '@babel/helper-validator-identifier': 7.29.7
 
+  '@bufbuild/protobuf@2.16.0': {}
+
+  '@dehoist/romanize-thai@1.0.0': {}
+
   '@discordjs/collection@2.1.1': {}
 
   '@discordjs/rest@2.6.3':
@@ -3292,6 +3345,8 @@ snapshots:
       - supports-color
     optional: true
 
+  '@foobar404/wave@2.0.5': {}
+
   '@ghostery/adblocker-content@2.20.1':
     dependencies:
       '@ghostery/adblocker-extended-selectors': 2.20.1
@@ -3311,6 +3366,13 @@ snapshots:
   '@ghostery/url-parser@1.3.1':
     dependencies:
       tldts-experimental: 7.4.18
+
+  '@indic-transliteration/common_maps@1.0.6': {}
+
+  '@indic-transliteration/sanscript@1.3.3':
+    dependencies:
+      '@indic-transliteration/common_maps': 1.0.6
+      toml: 2.3.6
 
   '@isaacs/fs-minipass@4.0.1':
     dependencies:
@@ -4254,6 +4316,8 @@ snapshots:
     dependencies:
       picomatch: 4.0.7
 
+  fflate@0.8.3: {}
+
   filelist@1.0.6:
     dependencies:
       minimatch: 5.1.9
@@ -4582,6 +4646,8 @@ snapshots:
     optional: true
 
   math-intrinsics@1.1.0: {}
+
+  meriyah@6.1.4: {}
 
   mime-db@1.52.0: {}
 
@@ -4996,6 +5062,8 @@ snapshots:
 
   tmp@0.2.7: {}
 
+  toml@2.3.6: {}
+
   truncate-utf8-bytes@1.0.2:
     dependencies:
       utf8-byte-length: 1.0.5
@@ -5134,6 +5202,8 @@ snapshots:
     transitivePeerDependencies:
       - msw
 
+  vudio@2.1.1: {}
+
   webcrypto-core@1.9.2:
     dependencies:
       '@peculiar/asn1-schema': 2.11.0
@@ -5199,6 +5269,12 @@ snapshots:
       yargs-parser: 21.1.1
 
   yocto-queue@0.1.0: {}
+
+  youtubei.js@17.2.0:
+    dependencies:
+      '@bufbuild/protobuf': 2.16.0
+      fflate: 0.8.3
+      meriyah: 6.1.4
 
   yuku-analyzer@0.19.0:
     dependencies:

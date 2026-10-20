@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { config, definePlugin } from "@pear/sdk";
 import { css } from "@pear/sdk/macros" with { type: "macro" };
 import type { Rectangle } from "electron";
-import { matchesAccelerator } from "./accelerator.ts";
+import { matchesAccelerator } from "@pear/sdk/accelerator";
 
 const PIP_ICON =
   "M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z";
@@ -139,6 +139,36 @@ export default definePlugin({
     },
   },
   style: css`
+    /* pear-desktop's small-window styling of YTM's full-screen player. */
+    /* Newer YTM draws its full-screen controls with ytmusic-player-controls. */
+    html.pear-pip sel(player_bar) svg,
+    html.pear-pip sel(player_bar) .time-info,
+    html.pear-pip sel(player_bar) yt-formatted-string,
+    html.pear-pip sel(player_bar) .yt-formatted-string,
+    html.pear-pip ytmusic-player-controls svg,
+    html.pear-pip ytmusic-player-controls .time-info {
+      filter: drop-shadow(2px 4px 6px black);
+      color: white !important;
+      fill: white !important;
+    }
+    html.pear-pip ytmusic-player-expanding-menu {
+      border-radius: 30px;
+      background-color: rgb(0 0 0 / 0.3);
+      backdrop-filter: blur(5px) brightness(20%);
+    }
+    html.pear-pip sel(player_bar) .content-info-wrapper,
+    html.pear-pip sel(player_bar) .thumbnail-image-wrapper,
+    html.pear-pip sel(player_bar) ytmusic-menu-renderer,
+    html.pear-pip ytmusic-player-controls .content-info-wrapper,
+    html.pear-pip ytmusic-player-controls ytmusic-menu-renderer,
+    html.pear-pip .video-switch-button,
+    html.pear-pip .pear-video-toggle {
+      display: none !important;
+    }
+    /* The bar stays clickable under the drag strip. */
+    html.pear-pip sel(player_bar) {
+      -webkit-app-region: no-drag;
+    }
     .pear-pip-drag {
       position: fixed;
       top: 0;
@@ -176,15 +206,34 @@ export default definePlugin({
     const dragStrip = document.createElement("div");
     dragStrip.className = "pear-pip-drag";
     let pip = false;
+    // As pear-desktop: double-clicking the video doesn't leave full screen (and so the small
+    // window), and the expanding menu closes once the pointer leaves it.
+    type Player = HTMLElement & { onDoubleClick_?: (() => void) | undefined };
+    let doubleClick: { player: Player; original: (() => void) | undefined } | undefined;
+    const closeMenu = () => ctx.$("player_bar.middle_controls")?.click();
     const setPip = (active: boolean) => {
       pip = active;
       root.classList.toggle("pear-pip", active);
       const fullscreen = ctx.$("player.container")?.getAttribute("player-ui-state") === "FULLSCREEN";
+      const menu = ctx.$("player_bar.expanding_menu");
       if (active) {
+        // YTM's full-screen player lives on the player page.
+        if (!ctx.$("player.page_open")) ctx.$("player_bar.toggle_player_page")?.click();
         if (!fullscreen) ctx.$("player.fullscreen_button")?.click();
         document.body.append(dragStrip);
+        const player = ctx.$<Player>("player.container");
+        if (player && !doubleClick) {
+          doubleClick = { player, original: player.onDoubleClick_ };
+          player.onDoubleClick_ = () => {};
+        }
+        menu?.addEventListener("mouseleave", closeMenu);
       } else {
         dragStrip.remove();
+        if (doubleClick) {
+          doubleClick.player.onDoubleClick_ = doubleClick.original;
+          doubleClick = undefined;
+        }
+        menu?.removeEventListener("mouseleave", closeMenu);
         if (document.fullscreenElement) void document.exitFullscreen();
       }
     };
@@ -222,6 +271,12 @@ export default definePlugin({
         if (pip && event.key === "Escape") {
           event.preventDefault();
           void ctx.host.invoke("exit");
+          return;
+        }
+        // YTM's "f" would leave full screen and break the small window.
+        if (pip && event.key.toLowerCase() === "f" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+          event.preventDefault();
+          event.stopPropagation();
           return;
         }
         if (!matchesAccelerator(event, ctx.config.hotkey, isMac)) return;

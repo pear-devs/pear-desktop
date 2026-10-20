@@ -113,6 +113,29 @@ export const shadowStyles = css`
   .item[aria-checked="true"] .check {
     visibility: visible;
   }
+  .item:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+  .item[aria-expanded="true"] {
+    background: rgb(255 255 255 / 0.1);
+  }
+  .item .label {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    white-space: nowrap;
+  }
+  .item .label small {
+    color: #8f8f8f;
+    font-size: 11px;
+  }
+  .item > svg:last-child {
+    justify-self: end;
+    width: 18px;
+    height: 18px;
+    color: #8f8f8f;
+  }
   .item kbd {
     justify-self: end;
     color: #8f8f8f;

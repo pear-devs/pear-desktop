@@ -1,10 +1,11 @@
-// Sends song changes and play/pause to Lumia Stream's local media API.
+// Sends song changes, play/pause and progress to Lumia Stream's local media API.
 
 import { definePlugin, livePosition, type NowPlaying } from "@pear/sdk";
 import { readSongDetails, type SongDetails } from "@pear/sdk/song-details";
 import { net } from "electron";
 
 const PORT = 39231;
+const PROGRESS_MS = 1000;
 /** Lumia Stream's public token for this integration. */
 const TOKEN = "lsmedia_ytmsI7812";
 const HEADERS = {
@@ -83,9 +84,17 @@ export default definePlugin({
             .catch(() => {});
         } else if (state.track && isPaused(state) !== isPaused(previous)) {
           post("playPause");
+        } else if (state.track && Math.abs(livePosition(previous, state.updatedAt) - state.positionSeconds) > 1.5) {
+          // A seek.
+          post("switchSong");
         }
       });
       if (ctx.player.state.track) post("switchSong");
+      // Like pear-desktop, keep Lumia's progress current: an update every second while playing.
+      const ticker = setInterval(() => {
+        if (!isPaused(ctx.player.state)) post("switchSong");
+      }, PROGRESS_MS);
+      ctx.onCleanup(() => clearInterval(ticker));
     },
   },
   page: (ctx) => {

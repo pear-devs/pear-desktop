@@ -1,7 +1,9 @@
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { config, definePlugin, livePosition } from "@pear/sdk";
 import { v } from "@pear/sdk/rpc";
 import { net, shell } from "electron";
+import { isSiteCookie, toNetscape } from "./cookies.ts";
 import { style } from "./style.ts";
 import { DownloadQueue } from "./downloads.ts";
 import type { JobResult, DownloadQueue as Queue, QueueState } from "./downloads.ts";
@@ -14,6 +16,7 @@ import {
   type DownloadTarget,
   isAlbum,
   isDownloadablePlaylist,
+  menuTarget,
 } from "./ytdlp.ts";
 
 interface Downloader {
@@ -65,9 +68,27 @@ export default definePlugin({
         { value: "m4a", label: "M4A / AAC" },
         { value: "opus", label: "Opus (best quality for size)" },
         { value: "source", label: "As streamed (no conversion)" },
+        { value: "custom", label: "Custom" },
       ],
       { label: "Format" },
     ),
+    // pear-desktop's Custom preset.
+    customArgs: config.string("", {
+      label: "ffmpeg arguments",
+      placeholder: "-b:a 320k",
+      description: "Passed to ffmpeg when converting, e.g. -b:a 320k.",
+      group: "Custom format",
+    }),
+    customExtension: config.string("", {
+      label: "Extension",
+      placeholder: "mp3",
+      description: "aac, alac, flac, m4a, mp3, opus, vorbis or wav; empty keeps the streamed format.",
+      group: "Custom format",
+    }),
+    useSession: config.bool(true, {
+      label: "Download with my account",
+      description: "Lets downloads reach private playlists, liked songs and age-restricted songs, as pear-desktop did.",
+    }),
     template: config.string(DEFAULT_TEMPLATE, {
       label: "File name",
       placeholder: DEFAULT_TEMPLATE,
@@ -139,8 +160,18 @@ export default definePlugin({
         published = Date.now();
         ctx.setStatus(tools.describe());
         const downloader = downloaders.get(ctx);
-        if (downloader) ctx.emit("state", stateOf(downloader.queue, tools));
+        if (downloader) {
+          ctx.emit("state", stateOf(downloader.queue, tools));
+          showProgress(downloader.queue.state);
+        }
       };
+      // As pear-desktop: progress on the taskbar / dock icon, and how many downloads are left.
+      const showProgress = (state: QueueState) => {
+        if (ctx.window.isDestroyed()) return;
+        ctx.window.setProgressBar(state.active ? Math.max(0.01, state.active.progress) : -1);
+        ctx.app.setBadgeCount(state.active ? state.queued + 1 : 0);
+      };
+      ctx.onCleanup(() => showProgress({ active: undefined, queued: 0 }));
       const publish = () => {
         const wait = 250 - (Date.now() - published);
         if (!tools.setup || wait <= 0) flush();
@@ -154,10 +185,22 @@ export default definePlugin({
         ctx.app.getPath("downloads");
       const autoJobs = new Set<number>();
       let coverWarned = false;
+      const cookieDir = join(ctx.app.getPath("userData"), "downloader");
+      let cookieFiles = 0;
       const queue = new DownloadQueue({
         prepare: (signal) => tools.ready(signal),
+        // The window's session, as pear-desktop downloaded with it; only the site's cookies, private to this user.
+        cookies: async () => {
+          if (!ctx.config.useSession) return undefined;
+          const cookies = (await ctx.session.cookies.get({})).filter(isSiteCookie);
+          if (cookies.length === 0) return undefined;
+          await mkdir(cookieDir, { recursive: true });
+          const path = join(cookieDir, `cookies-${process.pid}-${++cookieFiles}.txt`);
+          await writeFile(path, toNetscape(cookies), { mode: 0o600 });
+          return { path, dispose: () => rm(path, { force: true }) };
+        },
         argsFor: (ready, id) => {
-          if (!coverWarned && !canEmbedCover(ctx.config.format, ready.capabilities)) {
+          if (!coverWarned && !canEmbedCover(ctx.config.format, ready.capabilities, ctx.config.customExtension)) {
             coverWarned = true;
             ctx.log.warn(`cover art can't be embedded into ${ctx.config.format} files without mutagen (pip install mutagen)`);
           }
@@ -171,6 +214,8 @@ export default definePlugin({
             squareCover: ctx.config.squareCover,
             ffmpegPath: ready.ffmpegPath,
             capabilities: ready.capabilities,
+            customArgs: ctx.config.customArgs,
+            customExtension: ctx.config.customExtension,
           };
         },
         onState: () => publish(),
@@ -238,7 +283,7 @@ export default definePlugin({
           ffmpeg: tools.ffmpeg?.location,
           sources: { ytDlp: tools.ytDlp?.source, ffmpeg: tools.ffmpeg?.source },
           capabilities: tools.capabilities,
-          coverArt: tools.capabilities ? canEmbedCover(format, tools.capabilities) : undefined,
+          coverArt: tools.capabilities ? canEmbedCover(format, tools.capabilities, this.config.customExtension) : undefined,
         };
       },
       reveal(file: string) {
@@ -477,6 +522,47 @@ export default definePlugin({
       );
     });
     ctx.host.invoke("state").then(apply, () => {});
+
+    // pear-desktop's "Download" entry in YTM's menus of songs, albums and playlists
+    // (anywhere, without playing them).
+    const item = document.createElement("div");
+    item.className = "pear-dl-item";
+    item.setAttribute("role", "option");
+    item.tabIndex = -1;
+    item.innerHTML = ICON;
+    item.append(t("plugins.downloader.templates.button", "Download"));
+    let itemTarget: DownloadTarget | undefined;
+    item.addEventListener("click", () => {
+      const target = itemTarget;
+      // Close YTM's menu the way it closes itself.
+      document.body.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      (item.closest("tp-yt-iron-dropdown") as HTMLElement & { close?: () => void } | null)?.close?.();
+      if (!target) return;
+      const label = target.playlistId
+        ? isAlbum(target.playlistId)
+          ? t("plugins.downloader.labels.album", "album")
+          : t("plugins.downloader.labels.playlist", "playlist")
+        : target.videoId === ctx.player.state.track?.videoId
+          ? ctx.player.state.track.title
+          : target.videoId;
+      void start(target, label);
+    });
+    ctx.onCleanup(() => item.remove());
+    const placeItem = () => {
+      const listbox = ctx.$("popup.listbox");
+      if (!listbox) return;
+      const hrefs = [...listbox.querySelectorAll<HTMLAnchorElement>("a[href]")]
+        .filter((link) => !item.contains(link))
+        .map((link) => link.getAttribute("href") ?? "");
+      itemTarget = menuTarget(hrefs);
+      if (itemTarget && item.parentElement !== listbox) listbox.prepend(item);
+      else if (!itemTarget && item.isConnected) item.remove();
+    };
+    void ctx.waitFor("popup.container").then((container) => {
+      const menuObserver = new MutationObserver(placeItem);
+      menuObserver.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
+      ctx.onCleanup(() => menuObserver.disconnect());
+    }, () => {});
 
     // Keep the button in the player bar, which YTM may re-render or replace
     // entirely while starting up, so watch the document rather than the bar.

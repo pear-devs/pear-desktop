@@ -120,6 +120,22 @@ const DISCORD_PLAY_BUTTON = "playOn\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0
 const DISCORD_STATUS_DISPLAY = ["name", "state", "details"] as const;
 /** pear-desktop's only equalizer preset, as the filter it applied. */
 const BASS_BOOSTER = { type: "lowshelf", frequency: 80, Q: 100, gain: 12 };
+/** pear-desktop's vudio.lighting options and the visualizer's flat names for them. */
+const VUDIO_OPTIONS: Record<string, string> = {
+  maxHeight: "vudioMaxHeight",
+  maxSize: "vudioMaxSize",
+  lineWidth: "vudioLineWidth",
+  color: "vudioColor",
+  shadowBlur: "vudioShadowBlur",
+  shadowColor: "vudioShadowColor",
+  fadeSide: "vudioFadeSide",
+  prettify: "vudioPrettify",
+  dottify: "vudioDottify",
+  horizontalAlign: "vudioHorizontalAlign",
+  verticalAlign: "vudioVerticalAlign",
+};
+/** pear-desktop's notification toast styles, in the order of their numbers. */
+const TOAST_STYLES = ["logo", "banner_centered_top", "hero", "banner_top_custom", "banner_centered_bottom", "banner_bottom", "legacy"];
 const SPONSORBLOCK_CATEGORIES = ["sponsor", "intro", "outro", "interaction", "selfpromo", "music_offtopic", "preview", "filler"];
 
 const PEAR_DESKTOP_PLUGINS: Record<string, PluginMigration> = {
@@ -154,7 +170,7 @@ const PEAR_DESKTOP_PLUGINS: Record<string, PluginMigration> = {
     const timeout = entry.activityTimeoutTime;
     if (isNumber(timeout)) {
       // Milliseconds; pear-desktop only armed the timeout for values above 0, so 0 never cleared it.
-      if (timeout > 0) setNew(entry, "activityTimeoutMinutes", clamp(Math.round(timeout / 60_000), 1, 240));
+      if (timeout > 0) setNew(entry, "activityTimeoutSeconds", clamp(Math.round(timeout / 1000), 1, 14_400));
       else entry.activityTimeoutEnabled = false;
     }
     const status = entry.statusDisplayType;
@@ -179,6 +195,10 @@ const PEAR_DESKTOP_PLUGINS: Record<string, PluginMigration> = {
     };
     if (Object.keys(bounds).length > 0) files["picture-in-picture.json"] ??= bounds;
   },
+  notifications: (entry) => {
+    // The Windows toast style was a number (1-based).
+    if (isNumber(entry.toastStyle) && TOAST_STYLES[entry.toastStyle - 1]) entry.toastStyle = TOAST_STYLES[entry.toastStyle - 1];
+  },
   "precise-volume": (entry) => {
     flattenStrings(entry, entry.globalShortcuts, { volumeUp: "volumeUp", volumeDown: "volumeDown" });
     clampNumber(entry, "steps", 1, 100);
@@ -198,8 +218,9 @@ const PEAR_DESKTOP_PLUGINS: Record<string, PluginMigration> = {
     flattenStrings(entry, listenbrainz, { token: "listenbrainzToken", apiRoot: "listenbrainzApiRoot" });
   },
   shortcuts: (entry, config) => {
-    // Global shortcuts; the in-window ("local") ones and media key overrides have no equivalent.
+    // Global and in-window ("local") shortcuts; overrideMediaKeys keeps its name.
     flattenStrings(entry, entry.global, { playPause: "playPause", next: "next", previous: "previous" });
+    flattenStrings(entry, entry.local, { playPause: "localPlayPause", next: "localNext", previous: "localPrevious" });
     // The plugin also ran the Linux MPRIS player, which is the media-controls plugin now.
     if (entry.enabled === true) setNew(plugin(config, "media-controls"), "enabled", true);
   },
@@ -211,16 +232,21 @@ const PEAR_DESKTOP_PLUGINS: Record<string, PluginMigration> = {
   },
   "transparent-player": (entry) => fractionToPercent(entry, "opacity"),
   visualizer: (entry) => {
-    if (entry.type === "vudio") entry.type = "bars";
-    const { butterchurn, vudio } = entry;
+    // Per-visualizer objects -> flat options; Wave's animations -> JSON.
+    const { butterchurn, vudio, wave } = entry;
     if (isRecord(butterchurn)) {
       if (typeof butterchurn.preset === "string") setNew(entry, "preset", butterchurn.preset);
       if (isNumber(butterchurn.blendTimeInSeconds)) setNew(entry, "blendTimeInSeconds", clamp(butterchurn.blendTimeInSeconds, 0, 10));
     }
     if (isRecord(vudio)) {
-      if (isNumber(vudio.accuracy)) setNew(entry, "bars", clamp(Math.round(vudio.accuracy), 16, 256));
-      if (isRecord(vudio.lighting) && typeof vudio.lighting.color === "string") setNew(entry, "primary", vudio.lighting.color);
+      if (typeof vudio.effect === "string") setNew(entry, "vudioEffect", vudio.effect);
+      if (isNumber(vudio.accuracy)) setNew(entry, "vudioAccuracy", String(vudio.accuracy));
+      const lighting = isRecord(vudio.lighting) ? vudio.lighting : {};
+      for (const [from, to] of Object.entries(VUDIO_OPTIONS)) {
+        if (lighting[from] !== undefined) setNew(entry, to, lighting[from]);
+      }
     }
+    if (isRecord(wave) && Array.isArray(wave.animations)) setNew(entry, "waveAnimations", JSON.stringify(wave.animations));
   },
 };
 // ---- end of pear-desktop 3.x plugin options
@@ -251,22 +277,19 @@ const DOWNLOADER: Record<string, PluginMigration> = {
   downloader(entry) {
     // Off by default in pear-desktop (on in the rewrite, for new profiles).
     setNew(entry, "skipExisting", false);
-    // FFmpeg presets became yt-dlp audio formats.
+    // FFmpeg presets became yt-dlp audio formats; the Custom preset keeps its arguments and extension.
     if (entry.format === undefined && typeof entry.selectedPreset === "string") {
-      const custom = (entry.customPresetSetting ?? {}) as { extension?: unknown };
-      const extension = typeof custom.extension === "string" ? custom.extension.toLowerCase() : custom.extension;
-      const format =
-        entry.selectedPreset === "Source"
-          ? "source"
-          : entry.selectedPreset === "Custom"
-            ? extension === "mp3" || extension === "m4a" || extension === "opus"
-              ? extension
-              : // No extension meant "keep the source's container".
-                extension == null
-                ? "source"
-                : undefined
-            : "mp3";
-      if (format) entry.format = format;
+      if (entry.selectedPreset === "Custom") {
+        const custom = (entry.customPresetSetting ?? {}) as { extension?: unknown; ffmpegArgs?: unknown };
+        entry.format = "custom";
+        if (Array.isArray(custom.ffmpegArgs)) {
+          const quote = (arg: string) => (/[\s"']/.test(arg) ? `"${arg.replace(/"/g, '\\"')}"` : arg);
+          setNew(entry, "customArgs", custom.ffmpegArgs.filter((arg) => typeof arg === "string").map(quote).join(" "));
+        }
+        if (typeof custom.extension === "string") setNew(entry, "customExtension", custom.extension);
+      } else {
+        entry.format = entry.selectedPreset === "Source" ? "source" : "mp3";
+      }
     }
     // { enabled, mode, seconds, percent, folder } -> flat options.
     const onFinish = entry.downloadOnFinish;

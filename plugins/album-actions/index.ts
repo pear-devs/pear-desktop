@@ -108,19 +108,25 @@ export default definePlugin({
         return;
       }
       if (bar.previousElementSibling !== header) header.after(bar);
+      // Until a long list has loaded completely the counts are partial: like
+      // pear-desktop, offer every action, half filled.
+      const complete = !ctx.$("browse.continuations")?.firstElementChild;
       for (const [action, button] of buttons) {
         const total = rows(action).length;
         const pending = matching(action).length;
-        button.hidden = pending === 0;
+        button.hidden = complete && pending === 0;
         button.disabled = busy;
         // The icon fills up with the share of tracks that are liked (or disliked).
         const pressed = action.pressed ? pending : total - pending;
-        button.style.setProperty("--pear-done", `${total === 0 ? 0 : Math.round((pressed / total) * 100)}%`);
-        const label = ctx.t("plugins.album-actions.progress", "{{action}} ({{pending}} of {{total}})", {
-          action: action.label(ctx.t),
-          pending,
-          total,
-        });
+        const done = !complete ? 50 : total === 0 ? 0 : Math.round((pressed / total) * 100);
+        button.style.setProperty("--pear-done", `${done}%`);
+        const label = complete
+          ? ctx.t("plugins.album-actions.progress", "{{action}} ({{pending}} of {{total}})", {
+              action: action.label(ctx.t),
+              pending,
+              total,
+            })
+          : action.label(ctx.t);
         button.title = label;
         button.setAttribute("aria-label", label);
       }

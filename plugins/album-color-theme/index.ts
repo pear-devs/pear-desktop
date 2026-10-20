@@ -62,8 +62,60 @@ const THEME = css`
   sel(player.page) {
     transition: background-color 300ms cubic-bezier(0.2, 0, 0.6, 1) !important;
   }
-  html.pear-album-color sel(player_bar) {
-    color: rgb(255 255 255 / 0.6) !important;
+  /* pear-desktop's fixes for the tinted theme. */
+  html.pear-album-color yt-page-navigation-progress {
+    --yt-page-navigation-container-color: #00000046 !important;
+    --yt-page-navigation-progress-color: white !important;
+  }
+  html.pear-album-color sel(guide.mini_background) {
+    border-right: 0 !important;
+  }
+  html.pear-album-color #items {
+    border-radius: 10px !important;
+  }
+  /* The player page slides under the (blurred) nav bar. */
+  html.pear-album-color ytmusic-app-layout > [slot="player-page"]:not([is-mweb-modernization-enabled]):not(:has(ytmusic-player[player-ui-state="FULLSCREEN"])) {
+    padding-top: 90px;
+    margin-top: calc(-90px + var(--menu-bar-height, 0px)) !important;
+  }
+  /* Secondary texts and icons stay readable on any tint. */
+  html.pear-album-color .duration.ytmusic-player-queue-item,
+  html.pear-album-color .byline.ytmusic-player-queue-item {
+    color: rgb(255 255 255 / 0.5) !important;
+    --yt-endpoint-color: rgb(255 255 255 / 0.5) !important;
+    --yt-endpoint-hover-color: rgb(255 255 255 / 0.5) !important;
+    --yt-endpoint-visited-color: rgb(255 255 255 / 0.5) !important;
+  }
+  html.pear-album-color .icon.ytmusic-menu-navigation-item-renderer {
+    color: rgb(255 255 255 / 0.5) !important;
+  }
+  html.pear-album-color .menu.ytmusic-player-bar {
+    --iron-icon-fill-color: rgb(255 255 255 / 0.5) !important;
+  }
+  html.pear-album-color sel(player_bar),
+  html.pear-album-color .time-info.ytmusic-player-bar {
+    color: rgb(255 255 255 / 0.5) !important;
+  }
+  html.pear-album-color .volume-slider.ytmusic-player-bar,
+  html.pear-album-color .expand-volume-slider.ytmusic-player-bar {
+    --paper-slider-container-color: rgb(255 255 255 / 0.5) !important;
+  }
+  /* Backgrounds: the artwork fades out, gradients take the tint. */
+  html.pear-album-color ytmusic-fullbleed-thumbnail-renderer img {
+    mask: linear-gradient(to bottom, #000 0%, #000 50%, transparent 100%);
+  }
+  html.pear-album-color .background-gradient.style-scope,
+  html.pear-album-color ytmusic-app-layout[is-bauhaus-sidenav-enabled] #mini-guide-background.ytmusic-app-layout {
+    background: var(--ytmusic-background) !important;
+  }
+  html.pear-album-color ytmusic-browse-response[has-background]:not([disable-gradient]) .background-gradient.ytmusic-browse-response {
+    background: unset !important;
+  }
+  html.pear-album-color #background.immersive-background.style-scope.ytmusic-browse-response {
+    opacity: 0.6;
+  }
+  html.pear-album-color ytmusic-search-box[is-bauhaus-sidenav-enabled] {
+    --ytmusic-search-background: var(--ytmusic-color-black3) !important;
   }
 `;
 

@@ -273,8 +273,11 @@ function SyncedLyrics({ store, options, now, seek, scroller }: ViewProps) {
   const lines = shown.lines;
   const [active, setActive] = useState(-1);
   const [following, setFollowing] = useState(true);
+  // The last line that started: what the view follows, also between lines.
+  const [anchor, setAnchor] = useState(-1);
   const listRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef(active);
+  const anchorRef = useRef(anchor);
 
   // Per-frame: find the current line; animate word fill and gap dots directly on the DOM.
   useEffect(() => {
@@ -287,7 +290,14 @@ function SyncedLyrics({ store, options, now, seek, scroller }: ViewProps) {
       if (position === null || position === last) return;
       last = position;
       const ms = position + options.offsetMs;
-      const index = lineAt(lines, ms);
+      // As pear-desktop: a line is current for its duration, then becomes past even if
+      // the next one hasn't started (lines with their own end time).
+      const started = lineAt(lines, ms);
+      const index = started >= 0 && ms < lines[started]!.endMs ? started : -1;
+      if (started !== anchorRef.current) {
+        anchorRef.current = started;
+        setAnchor(started);
+      }
       if (index !== activeRef.current) {
         activeRef.current = index;
         setActive(index);
@@ -307,14 +317,14 @@ function SyncedLyrics({ store, options, now, seek, scroller }: ViewProps) {
 
   // Keep the current line in view, unless the user is reading elsewhere.
   useLayoutEffect(() => {
-    const element = listRef.current?.children[Math.max(0, active)] as HTMLElement | undefined;
+    const element = listRef.current?.children[Math.max(0, anchor)] as HTMLElement | undefined;
     const container = scroller();
     if (!element || !container || !following) return;
     const box = container.getBoundingClientRect();
     const rect = element.getBoundingClientRect();
     const top = container.scrollTop + rect.top - box.top - box.height * 0.38 + rect.height / 2;
     container.scrollTo({ top, behavior: "smooth" });
-  }, [active, following]);
+  }, [anchor, following]);
 
   // Follow again once the user has stopped scrolling for a while.
   useEffect(() => {
@@ -344,7 +354,7 @@ function SyncedLyrics({ store, options, now, seek, scroller }: ViewProps) {
             line={line}
             text={shown.texts[i] ?? line.text}
             romanized={shown.romanized[i] ?? null}
-            state={i === active ? "active" : i < active ? "past" : "future"}
+            state={i === active ? "active" : i <= anchor ? "past" : "future"}
             options={options}
             onSeek={() => {
               seek(line.startMs);
@@ -371,6 +381,15 @@ interface LineProps {
   onSeek(): void;
 }
 
+/** Words as separate spans, staggered like pear-desktop's (each gets its index as --i). */
+function staggered(text: string) {
+  return text.split(" ").map((word, i) => (
+    <span key={i} class="w" style={{ "--i": i }}>
+      {`${word} `}
+    </span>
+  ));
+}
+
 function Line({ line, text, romanized, state, options, onSeek }: LineProps) {
   const gap = !text;
   // Word timing only applies to the original script.
@@ -381,6 +400,8 @@ function Line({ line, text, romanized, state, options, onSeek }: LineProps) {
       data-state={state}
       role="button"
       tabIndex={-1}
+      // The glow and wobble last as long as the line, as in pear-desktop.
+      style={{ "--line-duration": `${Math.max(0.2, (line.endMs - line.startMs) / 1000)}s` }}
       onClick={onSeek}
     >
       {options.showTimeCodes && <span class="time">{formatTime(line.startMs)}</span>}
@@ -388,10 +409,20 @@ function Line({ line, text, romanized, state, options, onSeek }: LineProps) {
         <GapMark kind={options.gapText} />
       ) : (
         <span class="text" dir="auto">
-          {words ? words.map((word, i) => <span key={i} class="word">{word.text}</span>) : text}
+          {words
+            ? words.map((word, i) => (
+                <span key={i} class="word w" style={{ "--i": i }}>
+                  {word.text}
+                </span>
+              ))
+            : staggered(text)}
         </span>
       )}
-      {romanized && !gap && <span class="romanized">{romanized}</span>}
+      {romanized && !gap && (
+        <span class="romanized" dir="auto">
+          {staggered(romanized)}
+        </span>
+      )}
     </div>
   );
 }
@@ -461,7 +492,10 @@ function progress(ms: number, start: number, end: number) {
   return Math.min(1, Math.max(0, (ms - start) / (end - start)));
 }
 
+/** pear-desktop's LRC-style time code, "[01:23.45]". */
 function formatTime(ms: number) {
-  const seconds = Math.floor(ms / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+  const centiseconds = Math.floor(ms / 10);
+  const minutes = Math.floor(centiseconds / 6000);
+  const seconds = Math.floor(centiseconds / 100) % 60;
+  return `[${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}.${String(centiseconds % 100).padStart(2, "0")}]`;
 }

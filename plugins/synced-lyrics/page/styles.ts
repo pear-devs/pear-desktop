@@ -8,13 +8,7 @@ export const lyricsStyles = css`
     --dim: rgb(255 255 255 / 0.36);
     --faint: rgb(255 255 255 / 0.5);
     --accent: #c6e47a;
-    --size: clamp(20px, 1.6vw + 6px, 30px);
-    --inactive-weight: 700;
-    --active-weight: 700;
-    --inactive-scale: 0.96;
-    --active-scale: 1;
-    --active-shift: 0px;
-    --inactive-blur: 0px;
+    --size: clamp(1.4rem, 1.1vmax, 3rem);
     font-family: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Sans", Roboto, "Segoe UI", system-ui, sans-serif;
     color: var(--fg);
     -webkit-font-smoothing: antialiased;
@@ -24,9 +18,33 @@ export const lyricsStyles = css`
 
   /* Lines reach 10px past the edges (hover background); keep the panel from scrolling sideways. */
   .root { position: relative; min-height: 100%; padding-bottom: 40vh; overflow-x: clip; overflow-clip-margin: 10px; }
-  .root.effect-scale { --inactive-weight: 500; --active-weight: 700; --inactive-scale: 1; --active-scale: 1.06; }
-  .root.effect-offset { --inactive-weight: 500; --active-weight: 700; --inactive-scale: 1; --active-shift: 14px; }
-  .root.effect-focus { --inactive-weight: 600; --active-weight: 700; --inactive-scale: 1; --inactive-blur: 1.6px; }
+  /* pear-desktop's line effects (its renderer set these variables per effect). */
+  .root {
+    --lyrics-font-size: clamp(1.4rem, 1.1vmax, 3rem);
+    --lyrics-line-height: 1.4;
+    --lyrics-width: 100%;
+    --lyrics-padding: 0px;
+    --lyrics-animations: none;
+    --inactive-weight: 400;
+    --inactive-opacity: 0.33;
+    --inactive-scale: 1;
+    --inactive-offset: 0;
+    --active-weight: 700;
+    --active-opacity: 1;
+    --active-scale: 1;
+    --active-offset: 0;
+    --glow-color: rgb(255 255 255 / 0.5);
+  }
+  .root.effect-fancy {
+    --lyrics-font-size: 3rem;
+    --lyrics-line-height: 1.333;
+    --lyrics-padding: 2rem;
+    --lyrics-animations: glow var(--line-duration, 2s) forwards, wobble calc(var(--line-duration, 2s) / 2) forwards;
+    --inactive-weight: 700;
+    --inactive-scale: 0.95;
+  }
+  .root.effect-scale { --lyrics-width: 83%; --active-scale: 1.2; }
+  .root.effect-offset { --active-offset: 5%; }
 
   /* pear-desktop's lyrics picker. */
   .picker {
@@ -130,33 +148,52 @@ export const lyricsStyles = css`
     display: flex;
     flex-direction: column;
     gap: 2px;
-    padding: 6px 10px;
+    width: var(--lyrics-width);
+    padding: calc(var(--lyrics-padding) / 2 + 6px) 10px;
     margin: 0 -10px;
     border-radius: 10px;
-    font-size: var(--size);
-    line-height: 1.28;
+    font-size: var(--lyrics-font-size);
+    line-height: var(--lyrics-line-height);
     font-weight: var(--inactive-weight);
-    letter-spacing: -0.01em;
     cursor: pointer;
-    transform-origin: left center;
-    transform: translateX(0) scale(var(--inactive-scale));
-    color: var(--dim);
-    filter: blur(var(--inactive-blur));
+    transform-origin: 0 50%;
+    scale: var(--inactive-scale);
+    translate: var(--inactive-offset);
+    color: var(--fg);
     transition:
-      transform 380ms cubic-bezier(0.2, 0.8, 0.2, 1),
-      color 300ms ease,
-      filter 300ms ease,
+      scale 0.166s,
+      translate 0.3s ease-in-out,
       background 150ms ease;
   }
-  .line:hover { background: rgb(255 255 255 / 0.06); filter: none; }
-  .line[data-state="past"] { color: rgb(255 255 255 / 0.28); }
+  .line:hover { background: rgb(255 255 255 / 0.06); }
   .line[data-state="active"] {
-    color: var(--fg);
     font-weight: var(--active-weight);
-    transform: translateX(var(--active-shift)) scale(var(--active-scale));
-    filter: none;
+    scale: var(--active-scale);
+    translate: var(--active-offset);
   }
-  .effect-fancy .line[data-state="active"] { text-shadow: 0 0 18px rgb(255 255 255 / 0.35); }
+  /* Each word fades in on its own, a little after the previous one. */
+  .line .w {
+    display: inline-block;
+    white-space: pre-wrap;
+    opacity: var(--inactive-opacity);
+    transition: opacity 0.33s;
+    transition-delay: calc(var(--i, 0) * 0.05s);
+  }
+  .line[data-state="active"] .w {
+    opacity: var(--active-opacity);
+    animation: var(--lyrics-animations);
+    animation-delay: calc(var(--i, 0) * 0.05s);
+  }
+  @keyframes glow {
+    from { text-shadow: 0 0 1.5rem var(--glow-color); }
+    to { text-shadow: 0 0 0 var(--glow-color); }
+  }
+  @keyframes wobble {
+    from { transform: translateY(0); }
+    33.33% { transform: translateY(1.75px); }
+    66.66% { transform: translateY(-1.75px); }
+    to { transform: translateY(0); }
+  }
   .time {
     font-size: 11px;
     font-weight: 500;
@@ -166,14 +203,12 @@ export const lyricsStyles = css`
   }
   .text { white-space: pre-wrap; overflow-wrap: anywhere; }
   .romanized {
-    font-size: 0.62em;
-    font-weight: 500;
+    color: rgb(255 255 255 / 0.7);
+    font-size: 0.7em;
     font-style: italic;
-    opacity: 0.75;
   }
 
   /* Word sync: each word fills from left to right as it is sung. */
-  .line.has-words[data-state="active"] { color: var(--dim); text-shadow: none; }
   .line.has-words[data-state="active"] .word {
     background: linear-gradient(
       90deg,
@@ -184,8 +219,9 @@ export const lyricsStyles = css`
     background-clip: text;
     color: transparent;
   }
-  .line.has-words[data-state="past"] .word { color: rgb(255 255 255 / 0.28); }
 
+  .gap { color: rgb(255 255 255 / 0.33); }
+  .gap[data-state="active"] { color: var(--fg); }
   .gap .text { font-size: 0.8em; letter-spacing: 0.1em; }
   .gap-dots { display: inline-flex; gap: 8px; padding: 6px 0; }
   .gap-dots i {
@@ -208,10 +244,10 @@ export const lyricsStyles = css`
   .plain .line {
     cursor: default;
     color: rgb(255 255 255 / 0.86);
-    font-size: calc(var(--size) * 0.72);
+    font-size: var(--size);
     font-weight: 500;
-    transform: none;
-    filter: none;
+    scale: none;
+    translate: none;
     padding-block: 2px;
   }
   .plain .line:hover { background: none; }
@@ -246,7 +282,8 @@ export const lyricsStyles = css`
   .message .hint { margin-top: 12px; }
 
   @media (prefers-reduced-motion: reduce) {
-    .line, .gap-dots i { transition: none; }
-    .line[data-state="active"] .gap-dots { animation: none; }
+    .line, .line .w, .gap-dots i { transition: none; }
+    .line[data-state="active"] .gap-dots,
+    .line[data-state="active"] .w { animation: none; }
   }
 `;

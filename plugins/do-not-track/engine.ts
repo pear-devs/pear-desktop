@@ -3,8 +3,9 @@
 //
 // @ghostery/adblocker-electron resolves its cosmetic-filter preload when the
 // module loads, which fails inside Pear Desktop's bundled main process (and Pear Desktop's
-// sandboxed window couldn't run that preload anyway). Network blocking is all
-// we use, so the engine is wired to the plugin's scoped webRequest here.
+// sandboxed window couldn't run that preload anyway). So the engine is wired to
+// the plugin's scoped webRequest here, and the page part asks for the lists'
+// cosmetic filters (cosmetics()) and applies them itself.
 
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
@@ -30,13 +31,45 @@ export interface LoadedEngine {
 }
 
 function build(lists: readonly string[]) {
-  // Network filters only: cosmetic filters bring YT scriptlets (json-prune
-  // of ad placements) that desync the player and cut the start of tracks.
   return FiltersEngine.fromLists((url) => net.fetch(url), [...lists], {
     enableCompression: true,
-    loadCosmeticFilters: false,
+    loadCosmeticFilters: true,
     loadNetworkFilters: true,
   });
+}
+
+export interface CosmeticsRequest {
+  url: string;
+  /** The generic (base) stylesheet: once per page. */
+  base: boolean;
+  classes?: string[];
+  ids?: string[];
+  hrefs?: string[];
+}
+
+/**
+ * The lists' cosmetic filters for a page: element hiding as a stylesheet, and
+ * scriptlets only when asked (some of the lists' scriptlets for the video site
+ * prune the player's data and desync playback).
+ */
+export function cosmetics(engine: FiltersEngine, request: CosmeticsRequest, scriptlets: boolean) {
+  const hostname = new URL(request.url).hostname;
+  const domain = hostname.split(".").slice(-2).join(".");
+  const dom = !!(request.classes?.length || request.ids?.length || request.hrefs?.length);
+  const { styles, scripts } = engine.getCosmeticsFilters({
+    url: request.url,
+    hostname,
+    domain,
+    ...(request.classes ? { classes: request.classes } : {}),
+    ...(request.ids ? { ids: request.ids } : {}),
+    ...(request.hrefs ? { hrefs: request.hrefs } : {}),
+    getBaseRules: request.base,
+    getInjectionRules: scriptlets && request.base,
+    getExtendedRules: false,
+    getRulesFromDOM: dom,
+    getRulesFromHostname: request.base,
+  });
+  return { styles, scripts: scriptlets ? scripts : [] };
 }
 
 async function save(file: string, engine: FiltersEngine) {
@@ -50,7 +83,8 @@ export async function loadEngine(options: EngineOptions): Promise<LoadedEngine> 
   if (lists.length === 0) throw new Error("No filter lists: enable the default lists or add your own.");
   if (!options.cacheDir) return { engine: await build(lists), refreshed: Promise.resolve(undefined) };
 
-  const key = createHash("sha256").update(lists.join("\n")).digest("hex").slice(0, 12);
+  // "cosmetic": engines cached before cosmetic filters were loaded are rebuilt.
+  const key = createHash("sha256").update(`cosmetic\n${lists.join("\n")}`).digest("hex").slice(0, 12);
   const file = join(options.cacheDir, `engine-${key}.bin`);
   try {
     const [buffer, info] = await Promise.all([readFile(file), stat(file)]);

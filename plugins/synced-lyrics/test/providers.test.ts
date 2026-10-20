@@ -44,6 +44,21 @@ const entry = (overrides: object) => ({
   ...overrides,
 });
 
+describe("original-language title and tags, as pear-desktop", () => {
+  test("LRCLIB searches the original title and accepts an artist named by a tag", async () => {
+    const japanese = { ...query, title: "Pretender", artist: "Higedan", alternativeTitle: "プリテンダー", tags: ["Official髭男dism"], durationSeconds: 326 };
+    const fetch = mockFetch([
+      [/q=%E3%83%97/, [entry({ trackName: "プリテンダー", artistName: "Official髭男dism", duration: 326, syncedLyrics: "[00:01.00]hello" })]],
+      [/search/, []],
+    ]);
+    const result = await lrclib(japanese, fetch);
+    expect(result?.lines?.map((line) => line.text)).toContain("hello");
+    expect(fetch.calls.some((call) => call.includes("q=%E3%83%97"))).toBe(true);
+    // Without the tag, the artist doesn't match.
+    expect(await lrclib({ ...japanese, tags: [] }, fetch)).toBeNull();
+  });
+});
+
 describe("match", () => {
   test("jaro-winkler", () => {
     expect(jaroWinkler("martha", "marhta")).toBeCloseTo(0.961, 3);

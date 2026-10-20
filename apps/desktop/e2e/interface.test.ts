@@ -61,6 +61,8 @@ test("album colors, ambient glow and the video switch on the player page", async
     await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains("pear-album-color"))).toBe(true);
     const background = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
     expect(await background()).not.toBe("rgb(3, 3, 3)");
+    // pear-desktop's fixes: secondary texts stay half white on any tint.
+    await expect(page.locator("ytmusic-player-bar .time-info")).toHaveCSS("color", "rgba(255, 255, 255, 0.5)");
 
     // The music video gets a glow canvas behind it that follows the video.
     const canvas = page.locator("#song-video .player-wrapper canvas.pear-ambient");
@@ -129,6 +131,16 @@ test("album actions, unobtrusive playback and skipping disliked tracks", async (
     await expect(likeAll).toHaveAttribute("aria-label", /^Like all \(\d+ of \d+\)$/);
     await expect(actions.locator("button[data-action=unlike]")).toBeHidden();
     await screenshot(page, "album-actions");
+
+    // While more rows are still to load, the counts are partial: every action shows, half filled.
+    await page.evaluate(() => {
+      const continuations = document.querySelector("#browse-page #continuations") ?? document.querySelector("#browse-page ytmusic-shelf-renderer")!.appendChild(Object.assign(document.createElement("div"), { id: "continuations" }));
+      continuations.append(Object.assign(document.createElement("div"), { className: "pear-test-loader" }));
+    });
+    await expect(actions.locator("button[data-action=unlike]")).toBeVisible();
+    await expect(actions.locator("button[data-action=unlike]")).toHaveAttribute("style", /--pear-done: 50%/);
+    await page.evaluate(() => document.querySelector(".pear-test-loader")!.remove());
+    await expect(actions.locator("button[data-action=unlike]")).toBeHidden();
 
     // Liking needs an account: intercept the rows' like buttons and count what would be clicked.
     const rows = await page.evaluate(() => {

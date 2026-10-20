@@ -332,6 +332,11 @@
         "port": {
           "label": "Port",
           "description": "Amuse expects 9863."
+        },
+        "hostname": {
+          "label": "Address to listen on",
+          "description": "0.0.0.0 (as pear-desktop) lets widgets on other devices reach it; 127.0.0.1 keeps it to this computer.",
+          "placeholder": "0.0.0.0"
         }
       }
     },
@@ -692,12 +697,22 @@
           "label": "Clear after a long pause",
           "description": "Remove the activity when playback stays paused."
         },
-        "activityTimeoutMinutes": {
-          "label": "Pause timeout"
-        },
         "autoReconnect": {
           "label": "Keep trying to connect",
           "description": "Reconnect automatically when Discord starts or restarts."
+        },
+        "activityTimeoutSeconds": {
+          "label": "Pause timeout"
+        }
+      },
+      "actions": {
+        "connect": {
+          "label": "Connect",
+          "description": "Connect to Discord now instead of waiting for the next retry."
+        },
+        "clearActivity": {
+          "label": "Clear activity",
+          "description": "Remove the activity until the next track or until playback resumes."
         }
       }
     },
@@ -732,6 +747,15 @@
         "skipAds": {
           "label": "Skip ads that still play",
           "description": "Gets through them in a blink, muted, without cutting into the track."
+        },
+        "cosmeticFilters": {
+          "label": "Cosmetic filters",
+          "description": "The lists' element hiding; scriptlets may cut the start of tracks.",
+          "options": {
+            "off": "Off",
+            "styles": "Hide elements",
+            "all": "Hide elements and run scriptlets"
+          }
         }
       },
       "no-lists": "No blocklists: enable the default ones or add your own."
@@ -819,7 +843,8 @@
             "mp3": "MP3 (most compatible)",
             "m4a": "M4A / AAC",
             "opus": "Opus (best quality for size)",
-            "source": "As streamed (no conversion)"
+            "source": "As streamed (no conversion)",
+            "custom": "Custom"
           }
         },
         "template": {
@@ -876,6 +901,20 @@
           "label": "Folder for these",
           "description": "Leave empty to use the download folder.",
           "placeholder": "The download folder"
+        },
+        "customArgs": {
+          "label": "ffmpeg arguments",
+          "description": "Passed to ffmpeg when converting, e.g. -b:a 320k.",
+          "placeholder": "-b:a 320k"
+        },
+        "customExtension": {
+          "label": "Extension",
+          "description": "aac, alac, flac, m4a, mp3, opus, vorbis or wav; empty keeps the streamed format.",
+          "placeholder": "mp3"
+        },
+        "useSession": {
+          "label": "Download with my account",
+          "description": "Lets downloads reach private playlists, liked songs and age-restricted songs, as pear-desktop did."
         }
       },
       "errors": {
@@ -1073,17 +1112,7 @@
         "permission-changed": "Music Together permission changed to \"{{permission}}\"",
         "remove-song-failed": "Failed to remove song",
         "user-connected": "{{name}} joined Music Together",
-        "user-disconnected": "{{name}} left Music Together",
-        "already-queued": "That song is already in the queue",
-        "queue-full": "The queue is full",
-        "suggested": "{{name}} suggested {{title}}",
-        "no-suggestions": "The host isn't taking suggestions",
-        "host-controls": "Only the host controls playback",
-        "left": "You left the session",
-        "host-ended": "The host ended the session",
-        "now-host-only": "The host now controls the music alone",
-        "now-suggest": "You can now suggest songs",
-        "now-control": "You can now control playback"
+        "user-disconnected": "{{name}} left Music Together"
       },
       "settings": {
         "displayName": {
@@ -1096,60 +1125,14 @@
           "description": "Default for new sessions; change it any time while hosting.",
           "options": {
             "host-only": "Listen only",
-            "suggest": "Suggest songs",
-            "control": "Full control"
+            "playlist": "Change the queue",
+            "all": "Full control"
           }
         }
       },
       "ui": {
-        "starting": "Starting session…",
-        "host-failed": "Couldn't start a session: {{error}}",
-        "invalid-code": "That doesn't look like a session code",
-        "joining": "Joining…",
-        "join-failed": "Couldn't join: {{error}}",
-        "permission": {
-          "host-only": "Only you control the music",
-          "suggest": "Guests can add songs to the queue",
-          "control": "Guests can also play, pause, seek and skip"
-        },
-        "permission-label": {
-          "suggest": "Suggest"
-        },
         "close": "Close",
-        "intro": "Listen in sync with friends. Everyone hears what the host plays.",
-        "start": "Start a session",
-        "or-join": "or join one",
-        "session-code": "Session code",
-        "join": "Join",
-        "hosting": "Hosting",
-        "end": "End session",
-        "copied": "Copied",
-        "copy": "Copy",
-        "code-hint": "Friends join with this code from their Pear Desktop.",
-        "guests-can": "Guests can",
-        "guest-permissions": "Guest permissions",
-        "queue-empty-host": "Songs you or your guests add play next.",
-        "add": "Add to queue",
-        "with-host": "With {{name}}",
-        "connecting": "Connecting…",
-        "leave": "Leave",
-        "in-sync": "In sync",
-        "syncing": "Syncing…",
-        "session": "Session {{code}}",
-        "queue-empty-listen": "The host picks the music.",
-        "queue-empty-guest": "Suggest a song and it plays next.",
-        "suggest": "Suggest",
-        "listening": "Listening",
-        "you": "you",
-        "host": "host",
-        "up-next": "Up next",
-        "added-by": "added by {{name}}",
-        "play-item": "Play {{title}} now",
-        "play-now": "Play now",
-        "remove-item": "Remove {{title}}",
-        "remove": "Remove",
-        "link-placeholder": "Paste a \u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063 link",
-        "song-link": "Song link"
+        "join": "Join"
       }
     },
     "navigation": {
@@ -1205,6 +1188,23 @@
         "refreshOnPlayPause": {
           "label": "Update after play/pause from the notification",
           "description": "Show it again with the opposite button after using its play/pause button."
+        },
+        "toastStyle": {
+          "label": "Toast style",
+          "description": "How the notification with buttons looks.",
+          "options": {
+            "logo": "Logo",
+            "banner_centered_top": "Banner centered top",
+            "hero": "Hero",
+            "banner_top_custom": "Banner top custom",
+            "banner_centered_bottom": "Banner centered bottom",
+            "banner_bottom": "Banner bottom",
+            "legacy": "Legacy"
+          }
+        },
+        "trayControls": {
+          "label": "Open and close it from the tray",
+          "description": "Clicking the tray icon shows or hides the notification; double-clicking shows or hides the window."
         }
       },
       "playing": "Playing",
@@ -1467,6 +1467,19 @@
         },
         "showWindow": {
           "label": "Show window"
+        },
+        "overrideMediaKeys": {
+          "label": "Take over the media keys",
+          "description": "Play/pause, next and previous keys control this app even when another player would get them."
+        },
+        "localPlayPause": {
+          "label": "Play / pause"
+        },
+        "localNext": {
+          "label": "Next track"
+        },
+        "localPrevious": {
+          "label": "Previous track"
         }
       }
     },
@@ -1822,7 +1835,8 @@
           "options": {
             "butterchurn": "Milkdrop (butterchurn)",
             "bars": "Bars",
-            "wave": "Wave"
+            "wave": "Wave",
+            "vudio": "Vudio"
           }
         },
         "preset": {
@@ -1851,14 +1865,110 @@
             "martin - witchcraft reloaded": "martin - witchcraft reloaded",
             "Milk Artist At our Best - FED - SlowFast Ft AdamFX n Martin - HD CosmoFX": "Milk Artist At our Best - FED - SlowFast Ft AdamFX n Mart…",
             "MilkDrop2077": {
-              "R002": "MilkDrop2077.R002"
+              "R002": "MilkDrop2077.R002",
+              "R033": "MilkDrop2077.R033"
             },
             "ShadowHarlequin - LovelyShinySquares [ liquid starburst rmx ] - unchained + rovaster - luckless - martin - starfield sector": "ShadowHarlequin - LovelyShinySquares [ liquid starburst r…",
             "shifter - liquid circuitry - conjugoth": "shifter - liquid circuitry - conjugoth",
             "suksma - uninitialized variabowl (hydroponic chronic)": "suksma - uninitialized variabowl (hydroponic chronic)",
             "Unchained - Rewop": "Unchained - Rewop",
             "yin - 191 - Temporal singularities": "yin - 191 - Temporal singularities",
-            "Zylot - Paint Spill (Music Reactive Paint Mix)": "Zylot - Paint Spill (Music Reactive Paint Mix)"
+            "Zylot - Paint Spill (Music Reactive Paint Mix)": "Zylot - Paint Spill (Music Reactive Paint Mix)",
+            "_Geiss - Artifact 01": "_Geiss - Artifact 01",
+            "_Geiss - Desert Rose 2": "_Geiss - Desert Rose 2",
+            "_Geiss - untitled": "_Geiss - untitled",
+            "_Mig_049": "_Mig_049",
+            "_Rovastar + Geiss - Hurricane Nightmare (Posterize Mix)": "_Rovastar + Geiss - Hurricane Nightmare (Posterize Mix)",
+            "$$$ Royal - Mashup (220)": "$$$ Royal - Mashup (220)",
+            "AdamFx 2 Geiss, Zylot and Flexi - Reaction Diffusion 3 (Overload Mix 2) EATIT4 hypno": "AdamFx 2 Geiss, Zylot and Flexi - Reaction Diffusion 3 (O…",
+            "Aderrasi - Potion of Spirits": "Aderrasi - Potion of Spirits",
+            "Aderrasi - Storm of the Eye (Thunder) - mash0000 - quasi pseudo meta concentrics": "Aderrasi - Storm of the Eye (Thunder) - mash0000 - quasi …",
+            "Aderrasi + Geiss - Airhandler (Kali Mix) - Canvas Mix": "Aderrasi + Geiss - Airhandler (Kali Mix) - Canvas Mix",
+            "Cope - The Neverending Explosion of Red Liquid Fire": "Cope - The Neverending Explosion of Red Liquid Fire",
+            "cope + flexi - colorful marble (ghost mix)": "cope + flexi - colorful marble (ghost mix)",
+            "cope + martin - mother-of-pearl": "cope + martin - mother-of-pearl",
+            "Eo": {
+              "S": {
+                " - glowsticks v2 05 and proton lights (+Krash′s beat code) _Phat_remix02b": "Eo.S. - glowsticks v2 05 and proton lights (+Krash′s beat…",
+                " + Zylot - skylight (Stained Glass Majesty mix)": "Eo.S. + Zylot - skylight (Stained Glass Majesty mix)"
+              }
+            },
+            "fiShbRaiN + Flexi - witchcraft 2": {
+              "0": "fiShbRaiN + Flexi - witchcraft 2.0"
+            },
+            "Flexi - area 51": "Flexi - area 51",
+            "Flexi - infused with the spiral": "Flexi - infused with the spiral",
+            "Flexi - mindblob mix": "Flexi - mindblob mix",
+            "flexi - mom, why the sky looks different today": "flexi - mom, why the sky looks different today",
+            "flexi - patternton, district of media, capitol of the united abstractions of fractopia": "flexi - patternton, district of media, capitol of the uni…",
+            "Flexi - predator-prey-spirals": "Flexi - predator-prey-spirals",
+            "Flexi - smashing fractals [acid etching mix]": "Flexi - smashing fractals [acid etching mix]",
+            "flexi - swing out on the spiral": "flexi - swing out on the spiral",
+            "Flexi - truly soft piece of software - this is generic texturing (Jelly) ": "Flexi - truly soft piece of software - this is generic te…",
+            "flexi - what is the matrix": "flexi - what is the matrix",
+            "flexi + amandio c - organic [random mashup]": "flexi + amandio c - organic [random mashup]",
+            "flexi + amandio c - organic12-3d-2": {
+              "milk": "flexi + amandio c - organic12-3d-2.milk"
+            },
+            "Flexi + amandio c - piercing 05 - Kopie (2) - Kopie": "Flexi + amandio c - piercing 05 - Kopie (2) - Kopie",
+            "flexi + fishbrain - neon mindblob grafitti": "flexi + fishbrain - neon mindblob grafitti",
+            "flexi + geiss - pogo cubes vs": {
+              " tokamak vs": {
+                " game of life [stahls jelly 4": {
+                  "5 finish]": "flexi + geiss - pogo cubes vs. tokamak vs. game of life […"
+                }
+              }
+            },
+            "Flexi + Martin - astral projection": "Flexi + Martin - astral projection",
+            "Flexi + Martin - cascading decay swing": "Flexi + Martin - cascading decay swing",
+            "Flexi + stahlregen - jelly showoff parade": "Flexi + stahlregen - jelly showoff parade",
+            "Fumbling_Foo + En D & Martin - Mandelverse": "Fumbling_Foo + En D & Martin - Mandelverse",
+            "Geiss - Spiral Artifact": "Geiss - Spiral Artifact",
+            "Geiss + Flexi + Martin - disconnected": "Geiss + Flexi + Martin - disconnected",
+            "Geiss, Flexi + Stahlregen - Thumbdrum Tokamak [crossfiring aftermath jelly mashup]": "Geiss, Flexi + Stahlregen - Thumbdrum Tokamak [crossfirin…",
+            "Goody - The Wild Vort": "Goody - The Wild Vort",
+            "gunthry is out back bloodying up the pine trees - adm atomising (v) the disintigrate (n)": "gunthry is out back bloodying up the pine trees - adm ato…",
+            "Halfbreak - Light of Breakers": "Halfbreak - Light of Breakers",
+            "Hexcollie, Pieturp, Orb, Flexi, Geiss n Demon Lord - Premeditative Urination Clause": "Hexcollie, Pieturp, Orb, Flexi, Geiss n Demon Lord - Prem…",
+            "high-altitude basket unraveling - singh grooves nitrogen argon nz+": "high-altitude basket unraveling - singh grooves nitrogen …",
+            "LuxXx - Play v3 (the war within all of us)": "LuxXx - Play v3 (the war within all of us)",
+            "martin - angel flight": "martin - angel flight",
+            "martin - another kind of groove": "martin - another kind of groove",
+            "martin - bombyx mori": "martin - bombyx mori",
+            "martin - castle in the air": "martin - castle in the air",
+            "Martin - charisma": "Martin - charisma",
+            "martin - disco mix 4": "martin - disco mix 4",
+            "martin - frosty caves 2": "martin - frosty caves 2",
+            "martin - fruit machine": "martin - fruit machine",
+            "martin - glass corridor": "martin - glass corridor",
+            "Martin - liquid arrows": "Martin - liquid arrows",
+            "martin - mucus cervix": "martin - mucus cervix",
+            "martin - stormy sea (2010 update)": "martin - stormy sea (2010 update)",
+            "martin - The Bridge of Khazad-Dum": "martin - The Bridge of Khazad-Dum",
+            "martin + flexi - diamond cutter [prismaticvortex": {
+              "com] - camille - i wish i wish i wish i was constrained": "martin + flexi - diamond cutter [prismaticvortex.com] - c…"
+            },
+            "martin, flexi, fishbrain + sto - enterstate [random mashup]": "martin, flexi, fishbrain + sto - enterstate [random mashup]",
+            "ORB - Waaa": "ORB - Waaa",
+            "Phat+fiShbRaiN+Eo": {
+              "S_Mandala_Chasers_remix": "Phat+fiShbRaiN+Eo.S_Mandala_Chasers_remix"
+            },
+            "Rovastar - Oozing Resistance": "Rovastar - Oozing Resistance",
+            "Rovastar + Loadus + Geiss - FractalDrop (Triple Mix)": "Rovastar + Loadus + Geiss - FractalDrop (Triple Mix)",
+            "sawtooth grin roam": "sawtooth grin roam",
+            "shifter - dark tides bdrv mix 2": "shifter - dark tides bdrv mix 2",
+            "shifter - escape (sigur ros)": "shifter - escape (sigur ros)",
+            "suksma - ed geining hateops - squeakers": "suksma - ed geining hateops - squeakers",
+            "suksma - heretical crosscut playpen": "suksma - heretical crosscut playpen",
+            "suksma - Hexcollie - Julian Carnival - shimmy dumb grid": "suksma - Hexcollie - Julian Carnival - shimmy dumb grid",
+            "suksma - Rovastar - Sunflower Passion (Enlightment Mix)_Phat_edit + flexi und martin shaders - circumflex in character classes in regular expression": "suksma - Rovastar - Sunflower Passion (Enlightment Mix)_P…",
+            "suksma - vector exp 1 - couldn′t not": "suksma - vector exp 1 - couldn′t not",
+            "TonyMilkdrop - Leonardo Da Vinci's Balloon [Flexi - merry-go-round + techstyle]": "TonyMilkdrop - Leonardo Da Vinci's Balloon [Flexi - merry…",
+            "TonyMilkdrop - Magellan's Nebula [Flexi - you enter first + multiverse]": "TonyMilkdrop - Magellan's Nebula [Flexi - you enter first…",
+            "Unchained - Unified Drag 2": "Unchained - Unified Drag 2",
+            "yin - 393 - Artificial Inspiration (music driven - outward)": "yin - 393 - Artificial Inspiration (music driven - outward)",
+            "Zylot - Star Ornament": "Zylot - Star Ornament",
+            "Zylot - True Visionary (Final Mix)": "Zylot - True Visionary (Final Mix)"
           }
         },
         "blendTimeInSeconds": {
@@ -1877,6 +1987,75 @@
         "secondary": {
           "label": "Secondary color",
           "placeholder": "#f76b1c"
+        },
+        "vudioEffect": {
+          "label": "Effect",
+          "options": {
+            "lighting": "Lighting",
+            "waveform": "Waveform",
+            "circlewave": "Circle wave",
+            "circlebar": "Circle bars"
+          }
+        },
+        "vudioAccuracy": {
+          "label": "Accuracy",
+          "options": {
+            "16": "16",
+            "32": "32",
+            "64": "64",
+            "128": "128",
+            "256": "256",
+            "512": "512"
+          }
+        },
+        "vudioMaxHeight": {
+          "label": "Maximum height"
+        },
+        "vudioMaxSize": {
+          "label": "Maximum size"
+        },
+        "vudioLineWidth": {
+          "label": "Line width"
+        },
+        "vudioColor": {
+          "label": "Color",
+          "placeholder": "#49f3f7"
+        },
+        "vudioShadowBlur": {
+          "label": "Shadow blur"
+        },
+        "vudioShadowColor": {
+          "label": "Shadow color",
+          "placeholder": "rgba(244,244,244,.5)"
+        },
+        "vudioFadeSide": {
+          "label": "Fade the sides"
+        },
+        "vudioPrettify": {
+          "label": "Prettify"
+        },
+        "vudioDottify": {
+          "label": "Dots"
+        },
+        "vudioHorizontalAlign": {
+          "label": "Horizontal alignment",
+          "options": {
+            "left": "Left",
+            "center": "Center",
+            "right": "Right"
+          }
+        },
+        "vudioVerticalAlign": {
+          "label": "Vertical alignment",
+          "options": {
+            "top": "Top",
+            "middle": "Middle",
+            "bottom": "Bottom"
+          }
+        },
+        "waveAnimations": {
+          "label": "Animations",
+          "description": "JSON list of Wave animations ({ type, config }), as in pear-desktop: Cubes, Circles, Lines, Glob, Arcs, Flower, Square, Turntable, Wave, Shine."
         }
       }
     },
@@ -2044,7 +2223,12 @@
       "https": "HTTPS",
       "blocklists": "Blocklists",
       "automatic-downloads": "Automatic downloads",
-      "programs": "Programs"
+      "programs": "Programs",
+      "in-the-window": "In the window",
+      "milkdrop": "Milkdrop",
+      "vudio": "Vudio",
+      "wave": "Wave",
+      "custom-format": "Custom format"
     },
     "title": "Settings",
     "search-placeholder": "Search settings",

@@ -7,6 +7,8 @@ import { embed } from "./macros.ts" with { type: "macro" };
 const APP_ICON = embed("generated/icons/png/256x256.png");
 const TRAY_ICON = embed("tray.png");
 const TRAY_ICON_WHITE = embed("tray-white.png");
+const TRAY_PAUSED_ICON = embed("tray-paused.png");
+const TRAY_PAUSED_ICON_WHITE = embed("tray-paused-white.png");
 
 function bitmap(base64: string, size: number): Buffer {
   const image = nativeImage.createFromBuffer(Buffer.from(base64, "base64"));
@@ -19,6 +21,8 @@ export function pearIconBitmap(size: number): Buffer {
 }
 
 /** The tray icon; white on macOS, whose menu bar is dark or tinted. */
-export function trayIconBitmap(size: number): Buffer {
-  return bitmap(process.platform === "darwin" ? TRAY_ICON_WHITE : TRAY_ICON, size);
+export function trayIconBitmap(size: number, paused = false): Buffer {
+  const mac = process.platform === "darwin";
+  if (paused) return bitmap(mac ? TRAY_PAUSED_ICON_WHITE : TRAY_PAUSED_ICON, size);
+  return bitmap(mac ? TRAY_ICON_WHITE : TRAY_ICON, size);
 }

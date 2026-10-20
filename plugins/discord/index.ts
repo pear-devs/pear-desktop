@@ -15,6 +15,8 @@ const MIN_UPDATE_INTERVAL_MS = 4_000;
 
 // Re-applies the config to the running instance.
 let refresh: (() => void) | undefined;
+/** The running instance's settings actions. */
+const controls = new WeakMap<object, { connect(): void; clear(): void }>();
 
 export default definePlugin({
   id: "discord",
@@ -47,11 +49,17 @@ export default definePlugin({
       label: "Clear after a long pause",
       description: "Remove the activity when playback stays paused.",
     }),
-    activityTimeoutMinutes: config.number(10, { label: "Pause timeout", min: 1, max: 240, step: 1, unit: "min" }),
+    // Seconds, as pear-desktop's prompt asked for them.
+    activityTimeoutSeconds: config.number(600, { label: "Pause timeout", min: 1, max: 14_400, step: 1, unit: "s", variant: "stepper" }),
     autoReconnect: config.bool(true, {
       label: "Keep trying to connect",
       description: "Reconnect automatically when Discord starts or restarts.",
     }),
+  },
+  // pear-desktop's menu items, as settings buttons.
+  actions: {
+    connect: { label: "Connect", description: "Connect to Discord now instead of waiting for the next retry." },
+    clearActivity: { label: "Clear activity", description: "Remove the activity until the next track or until playback resumes." },
   },
   host: {
     start(ctx) {
@@ -83,6 +91,14 @@ export default definePlugin({
         retryDelay = Math.min(retryDelay * 2, RETRY_MAX_MS);
       };
 
+      // pear-desktop's connected / disconnected indicator, on the settings card.
+      const showConnection = () =>
+        ctx.setStatus(
+          ready
+            ? ctx.t("plugins.discord.backend.connected", "Connected to Discord")
+            : ctx.t("plugins.discord.backend.disconnected", "Disconnected from Discord"),
+        );
+
       const connect = () => {
         // The library leaves listeners behind after a failed login: use a fresh client per attempt.
         const attempt = new Client({ clientId: CLIENT_ID });
@@ -94,6 +110,7 @@ export default definePlugin({
           warned = false;
           shown = null;
           ctx.log.info("connected to Discord");
+          showConnection();
           update();
         });
         attempt.on("disconnected", () => {
@@ -102,6 +119,7 @@ export default definePlugin({
           ready = false;
           client = undefined;
           dispose(attempt);
+          showConnection();
           scheduleRetry();
         });
         attempt.login().catch((error: unknown) => {
@@ -109,6 +127,7 @@ export default definePlugin({
           client = undefined;
           ready = false;
           dispose(attempt);
+          showConnection();
           if (!warned) {
             warned = true;
             const message = error instanceof Error ? error.message : String(error);
@@ -147,7 +166,7 @@ export default definePlugin({
         pauseTimer = setTimeout(() => {
           idle = true;
           update();
-        }, ctx.config.activityTimeoutMinutes * 60_000);
+        }, ctx.config.activityTimeoutSeconds * 1000);
       };
 
       const fetchDetails = async (videoId: string) => {
@@ -175,12 +194,31 @@ export default definePlugin({
         if (ctx.config.autoReconnect && !client) scheduleRetry();
         update();
       };
+      controls.set(ctx, {
+        connect() {
+          if (ready || client) return;
+          clearTimeout(retryTimer);
+          retryTimer = undefined;
+          retryDelay = RETRY_MIN_MS;
+          warned = false;
+          connect();
+        },
+        clear() {
+          // Hidden like after a long pause: back with the next track or when playback resumes.
+          clearTimeout(pauseTimer);
+          idle = true;
+          shown = null;
+          if (ready && client?.user) void client.user.clearActivity().catch(() => {});
+        },
+      });
       armPauseTimeout();
+      showConnection();
       connect();
 
       return () => {
         stopped = true;
         refresh = undefined;
+        controls.delete(ctx);
         clearTimeout(retryTimer);
         clearTimeout(updateTimer);
         clearTimeout(pauseTimer);
@@ -194,6 +232,14 @@ export default definePlugin({
     },
     // Options are read when the activity is built; no need to reconnect.
     onConfigChange: () => (refresh ? refresh() : "restart"),
+    commands: {
+      connect() {
+        controls.get(this)?.connect();
+      },
+      clearActivity() {
+        controls.get(this)?.clear();
+      },
+    },
   },
   page: {
     start(ctx) {

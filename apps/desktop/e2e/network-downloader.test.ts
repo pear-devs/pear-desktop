@@ -188,3 +188,32 @@ test("downloader downloads yt-dlp and ffmpeg when neither is installed", async (
     rmSync(folder, { recursive: true, force: true });
   }
 });
+
+test("downloader adds Download to the menus of songs and albums, as pear-desktop", async () => {
+  test.setTimeout(150_000);
+  const folder = mkdtempSync(join(tmpdir(), "pear-downloads-"));
+  const app = await launchApp({ plugins: { downloader: { enabled: true, config: { downloadFolder: folder } } } });
+  let page: Page | undefined;
+  try {
+    page = await mainWindow(app);
+    await page.goto("https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/playlist?list=OLAK5uy_nmDUsWOMoEcz0SsVqUwir0oxu-k1oUyXE");
+    const row = page.locator("#browse-page ytmusic-responsive-list-item-renderer").first();
+    await expect(row).toBeVisible({ timeout: 30_000 });
+    // A track's menu, without playing it.
+    await row.hover();
+    // Its action menu (the last button: like and dislike come first).
+    await row.locator("ytmusic-menu-renderer button").last().click();
+    const item = page.locator("ytmusic-menu-popup-renderer .pear-dl-item");
+    await expect(item).toBeVisible();
+    await item.click();
+    await expect(item).toBeHidden();
+    await expect
+      .poll(async () => ((await invoke(page!, "downloader", "state")) as { active?: { label: string } }).active?.label, { timeout: 10_000 })
+      .toMatch(/^[\w-]{11}$/);
+    expect(await page.evaluate(() => window.__pearRuntime!.player.state.track)).toBeNull();
+    await invoke(page, "downloader", "cancel");
+  } finally {
+    await closeApp(app, page);
+    rmSync(folder, { recursive: true, force: true });
+  }
+});

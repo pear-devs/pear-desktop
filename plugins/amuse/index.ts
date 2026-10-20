@@ -37,6 +37,11 @@ export default definePlugin({
       step: 1,
       description: "Amuse expects 9863.",
     }),
+    hostname: config.string("0.0.0.0", {
+      label: "Address to listen on",
+      description: "0.0.0.0 (as pear-desktop) lets widgets on other devices reach it; 127.0.0.1 keeps it to this computer.",
+      placeholder: "0.0.0.0",
+    }),
   },
   host: {
     async start(ctx) {
@@ -54,7 +59,7 @@ export default definePlugin({
       });
       await new Promise<void>((resolve, reject) => {
         server.once("error", reject);
-        server.listen(ctx.config.port, "127.0.0.1", () => {
+        server.listen(ctx.config.port, ctx.config.hostname || "0.0.0.0", () => {
           server.off("error", reject);
           resolve();
         });

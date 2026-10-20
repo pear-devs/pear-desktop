@@ -116,6 +116,11 @@ for (const plugin of plugins) {
   wanted.set(`plugins.${plugin.id}.name`, plugin.name);
   if (plugin.description) wanted.set(`plugins.${plugin.id}.description`, plugin.description);
   fieldStrings(plugin.id, plugin.config ?? {}, i18n, wanted);
+  for (const [name, action] of Object.entries((plugin.actions ?? {}) as Record<string, { label: string; description?: string } | undefined>)) {
+    if (!action) continue;
+    wanted.set(`plugins.${plugin.id}.actions.${name}.label`, action.label);
+    if (action.description) wanted.set(`plugins.${plugin.id}.actions.${name}.description`, action.description);
+  }
 }
 for (const shape of Object.values(CORE_SECTIONS)) fieldStrings("core", shape, i18n, wanted);
 for (const [key, english] of Object.entries(UI_STRINGS)) wanted.set(key, english);

@@ -11,10 +11,12 @@ interface DBusDaemon {
 }
 interface Properties {
   Get(iface: string, name: string): Promise<{ value: any }>;
+  Set(iface: string, name: string, value: dbus.Variant): Promise<void>;
 }
 interface MprisPlayer {
   Pause(): Promise<void>;
   Play(): Promise<void>;
+  OpenUri(uri: string): Promise<void>;
 }
 const iface = <T>(object: dbus.ProxyObject, name: string) => object.getInterface(name) as unknown as T;
 
@@ -65,6 +67,25 @@ test("MPRIS reflects the track and controls playback", async () => {
 
     await player.Play();
     await expect.poll(status, { timeout: 60_000 }).toMatch(/playing|buffering/);
+
+    // Like pear-desktop: no "previous" at the start of the queue, "next" while tracks follow.
+    await expect.poll(() => get("CanGoPrevious")).toBe(false);
+    await expect.poll(() => get("CanGoNext")).toBe(true);
+
+    // Full screen is YTM's full-screen player, both ways.
+    const root = (name: string) => props.Get("org.mpris.MediaPlayer2", name).then((v) => v.value);
+    expect(await root("CanSetFullscreen")).toBe(true);
+    await props.Set("org.mpris.MediaPlayer2", "Fullscreen", new dbus.Variant("b", true));
+    await expect(page.locator("ytmusic-player-bar[player-fullscreened]")).toBeAttached();
+    await expect.poll(() => root("Fullscreen")).toBe(true);
+    await props.Set("org.mpris.MediaPlayer2", "Fullscreen", new dbus.Variant("b", false));
+    await expect(page.locator("ytmusic-player-bar[player-fullscreened]")).toHaveCount(0);
+    await expect.poll(() => root("Fullscreen")).toBe(false);
+
+    // OpenUri opens YTM links in the window (and nothing else).
+    await player.OpenUri("https://example.com/");
+    await player.OpenUri("https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/explore");
+    await expect.poll(() => page.url()).toBe("https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/explore");
   } finally {
     bus.disconnect();
     await app.close();

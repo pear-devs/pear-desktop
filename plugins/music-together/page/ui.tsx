@@ -1,73 +1,52 @@
 import type { ComponentChildren } from "preact";
-import { useEffect, useRef, useState } from "preact/hooks";
-import type { Translate } from "@pear/sdk/i18n";
-import { formatCode, HOST_ID, parseVideoId, PERMISSIONS, type Participant, type QueueItem } from "../protocol.ts";
-import type { GuestSession, HostSession } from "../session.ts";
-import type { Together } from "./controller.ts";
+import { useEffect, useState } from "preact/hooks";
+import type { Together } from "../together.ts";
+import { PERMISSIONS, type Profile } from "../types.ts";
 
-/** The guest permissions in the UI's language (labels shared with the settings field's options). */
-function permissionTexts(t: Translate) {
-  const texts = {
-    "host-only": [
-      t("plugins.music-together.settings.defaultPermission.options.host-only", "Listen only"),
-      t("plugins.music-together.ui.permission.host-only", "Only you control the music"),
-    ],
-    suggest: [t("plugins.music-together.ui.permission-label.suggest", "Suggest"), t("plugins.music-together.ui.permission.suggest", "Guests can add songs to the queue")],
-    control: [
-      t("plugins.music-together.settings.defaultPermission.options.control", "Full control"),
-      t("plugins.music-together.ui.permission.control", "Guests can also play, pause, seek and skip"),
-    ],
-  };
-  return PERMISSIONS.map((p) => ({ ...p, label: texts[p.value][0]!, description: texts[p.value][1]! }));
-}
+type Translate = (key: string, fallback: string, vars?: Record<string, unknown>) => string;
 
 function useTogether(together: Together) {
   const [, setTick] = useState(0);
   useEffect(() => together.subscribe(() => setTick((t) => t + 1)), [together]);
-  // Sync status ("in sync" / "syncing") changes without session events.
-  useEffect(() => {
-    const timer = setInterval(() => together.mode.kind === "guest" && setTick((t) => t + 1), 1000);
-    return () => clearInterval(timer);
-  }, [together]);
 }
 
 export function LauncherButton({ together, open, onClick }: { together: Together; open: boolean; onClick(): void }) {
   useTogether(together);
-  const mode = together.mode;
-  const count =
-    mode.kind === "host" ? mode.session.participants.length : mode.kind === "guest" ? (mode.session.room?.participants.length ?? 0) : 0;
-  const active = mode.kind === "host" || mode.kind === "guest";
+  const count = Object.keys(together.profiles).length;
+  const active = together.mode !== "disconnected";
   return (
-    <button
-      type="button"
-      class="launcher"
-      data-active={active}
-      aria-expanded={open}
-      aria-label="Music Together"
-      title="Music Together"
-      onClick={onClick}
-    >
-      <PeopleIcon />
+    <button type="button" class="launcher" data-active={active} aria-expanded={open} aria-label="Music Together" title="Music Together" onClick={onClick}>
+      {together.busy ? <span class="spinner" aria-hidden="true" /> : <PeopleIcon />}
       {active && count > 1 && <span class="count">{count}</span>}
     </button>
   );
 }
 
-export function Panel({ together, onClose }: { together: Together; onClose(): void }) {
+export interface PanelProps {
+  together: Together;
+  t: Translate;
+  name: string;
+  setName(name: string): void;
+  copy(text: string): void;
+  onClose(): void;
+}
+
+/** pear-desktop's Music Together menus: host or join; then the host id, permission, users, and stop. */
+export function Panel(props: PanelProps) {
+  const { together, t, onClose } = props;
   useTogether(together);
-  const { t } = together;
   const mode = together.mode;
   return (
     <div class="panel" role="dialog" aria-label="Music Together">
-      {mode.kind === "idle" && <Start together={together} message={mode.message} />}
-      {mode.kind === "busy" && (
+      {together.busy ? (
         <div class="busy" role="status">
           <span class="spinner" aria-hidden="true" />
-          {mode.label}
         </div>
+      ) : mode === "disconnected" ? (
+        <Start {...props} />
+      ) : (
+        <Connected {...props} />
       )}
-      {mode.kind === "host" && <Hosting together={together} session={mode.session} code={mode.code} />}
-      {mode.kind === "guest" && <Joined together={together} session={mode.session} code={mode.code} />}
       <button type="button" class="close" aria-label={t("plugins.music-together.ui.close", "Close")} onClick={onClose}>
         <CloseIcon />
       </button>
@@ -75,10 +54,8 @@ export function Panel({ together, onClose }: { together: Together; onClose(): vo
   );
 }
 
-function Start({ together, message }: { together: Together; message: string | undefined }) {
-  const [code, setCode] = useState("");
-  const [name, setName] = useState(together.name);
-  const { t } = together;
+function Start({ together, t, name, setName, copy }: PanelProps) {
+  const [hostId, setHostId] = useState("");
   return (
     <>
       <header class="intro">
@@ -86,312 +63,118 @@ function Start({ together, message }: { together: Together; message: string | un
           <PeopleIcon />
         </span>
         <div>
-          <h2>Music Together</h2>
-          <p>{t("plugins.music-together.ui.intro", "Listen in sync with friends. Everyone hears what the host plays.")}</p>
+          <h2>{t("plugins.music-together.name", "Music Together")}</h2>
+          <p>{t("plugins.music-together.description", "Share a playlist with others. When the host plays a song, everyone else will hear the same song")}</p>
         </div>
       </header>
       <label class="field">
         <span>{t("plugins.music-together.settings.displayName.label", "Your name")}</span>
-        <input
-          value={name}
-          maxLength={32}
-          onInput={(e) => setName(e.currentTarget.value)}
-          onChange={(e) => together.setName(e.currentTarget.value.trim())}
-        />
+        <input value={name} maxLength={32} onChange={(e) => setName(e.currentTarget.value.trim())} />
       </label>
-      <button type="button" class="button primary wide" onClick={() => void together.host()}>
-        {t("plugins.music-together.ui.start", "Start a session")}
+      <button
+        type="button"
+        class="button primary wide"
+        onClick={async () => {
+          // As pear-desktop: hosting copies the id to share.
+          if (await together.host()) copy(together.id);
+        }}
+      >
+        {t("plugins.music-together.menu.host", "Music Together Host")}
       </button>
       <div class="divider">
-        <span>{t("plugins.music-together.ui.or-join", "or join one")}</span>
+        <span>{t("plugins.music-together.menu.join", "Join Music Together")}</span>
       </div>
       <form
         class="row"
         onSubmit={(e) => {
           e.preventDefault();
-          void together.join(code);
+          void together.join(hostId);
         }}
       >
         <input
           class="code-input"
-          placeholder="ABC-123"
-          aria-label={t("plugins.music-together.ui.session-code", "Session code")}
-          value={code}
-          maxLength={9}
-          spellcheck={false}
-          autocomplete="off"
-          onInput={(e) => setCode(e.currentTarget.value.toUpperCase())}
+          placeholder={t("plugins.music-together.dialog.enter-host", "Enter Host ID")}
+          aria-label={t("plugins.music-together.dialog.enter-host", "Enter Host ID")}
+          value={hostId}
+          onInput={(e) => setHostId(e.currentTarget.value)}
         />
-        <button type="submit" class="button" disabled={code.replace(/[^a-z0-9]/gi, "").length < 6}>
+        <button type="submit" class="button" disabled={!hostId.trim()}>
           {t("plugins.music-together.ui.join", "Join")}
         </button>
       </form>
-      {message && (
-        <p class="message" role="alert">
-          {message}
-        </p>
-      )}
     </>
   );
 }
 
-function Hosting({ together, session, code }: { together: Together; session: HostSession; code: string }) {
-  const [copied, setCopied] = useState(false);
-  const { t } = together;
-  const permissions = permissionTexts(t);
+function Connected({ together, t, copy }: PanelProps) {
+  const host = together.mode === "host";
+  const users = Object.values(together.profiles);
   return (
     <>
-      <header class="status">
-        <span class="live">
-          <i aria-hidden="true" /> {t("plugins.music-together.ui.hosting", "Hosting")}
+      <div class="status">
+        <span class={`live${host ? "" : " guest"}`}>
+          <i />
+          {host
+            ? t("plugins.music-together.menu.status.host", "Connected as Host")
+            : t("plugins.music-together.menu.status.guest", "Connected as Guest")}
         </span>
-        <button type="button" class="button danger small" onClick={() => together.stop()}>
-          {t("plugins.music-together.ui.end", "End session")}
-        </button>
-      </header>
-      <div class="code-card">
-        <span class="label">{t("plugins.music-together.ui.session-code", "Session code")}</span>
-        <div class="code-row">
-          <code data-code={code}>{formatCode(code)}</code>
-          <button
-            type="button"
-            class="button small"
-            onClick={() => {
-              together.copy(formatCode(code));
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            }}
-          >
-            {copied ? t("plugins.music-together.ui.copied", "Copied") : t("plugins.music-together.ui.copy", "Copy")}
-          </button>
-        </div>
-        <span class="hint">{t("plugins.music-together.ui.code-hint", "Friends join with this code from their Pear Desktop.")}</span>
       </div>
-      <section>
-        <h3>{t("plugins.music-together.ui.guests-can", "Guests can")}</h3>
-        <div class="segmented" role="radiogroup" aria-label={t("plugins.music-together.ui.guest-permissions", "Guest permissions")}>
-          {permissions.map((p) => (
-            <button
-              key={p.value}
-              type="button"
-              role="radio"
-              aria-checked={session.permission === p.value}
-              title={p.description}
-              onClick={() => session.setPermission(p.value)}
-            >
-              {p.label}
+      {host && (
+        <div class="code-card">
+          <span class="label">{t("plugins.music-together.menu.click-to-copy-id", "Copy Host ID")}</span>
+          <div class="code-row">
+            <code class="host-id">{together.id}</code>
+            <button type="button" class="button small" onClick={() => copy(together.id)}>
+              {t("plugins.music-together.menu.click-to-copy-id", "Copy Host ID")}
             </button>
-          ))}
-        </div>
-        <p class="hint">{permissions.find((p) => p.value === session.permission)?.description}.</p>
-      </section>
-      <People t={t} participants={session.participants} you={HOST_ID} />
-      <Queue
-        t={t}
-        items={session.queue}
-        participants={session.participants}
-        canManage={() => true}
-        onPlay={(id) => session.playItem(id)}
-        onRemove={(id) => session.removeItem(id)}
-        empty={t("plugins.music-together.ui.queue-empty-host", "Songs you or your guests add play next.")}
-      />
-      <AddSong t={t} onAdd={(videoId) => void session.suggest(videoId)} label={t("plugins.music-together.ui.add", "Add to queue")} />
-    </>
-  );
-}
-
-function Joined({ together, session, code }: { together: Together; session: GuestSession; code: string }) {
-  const room = session.room;
-  const connected = session.status === "connected";
-  const permission = session.permission;
-  const { t } = together;
-  return (
-    <>
-      <header class="status">
-        <span class="live guest">
-          <i aria-hidden="true" />
-          {connected
-            ? t("plugins.music-together.ui.with-host", "With {{name}}", { name: session.hostName })
-            : t("plugins.music-together.ui.connecting", "Connecting…")}
-        </span>
-        <button type="button" class="button small" onClick={() => together.stop()}>
-          {t("plugins.music-together.ui.leave", "Leave")}
-        </button>
-      </header>
-      {session.playback && (
-        <div class="now">
-          {session.playback.artworkUrl && <img src={session.playback.artworkUrl} alt="" />}
-          <div>
-            <strong>{session.playback.title}</strong>
-            <span>{session.playback.artist}</span>
           </div>
-          <span class="sync" data-sync={session.inSync}>
-            {session.inSync ? t("plugins.music-together.ui.in-sync", "In sync") : t("plugins.music-together.ui.syncing", "Syncing…")}
-          </span>
         </div>
       )}
-      <p class="hint">
-        {t("plugins.music-together.ui.session", "Session {{code}}", { code: formatCode(code) })} ·{" "}
-        {permissionTexts(t).find((p) => p.value === permission)?.description}
-      </p>
-      {room && <People t={t} participants={room.participants} you={session.you} />}
-      {room && (
-        <Queue
-          t={t}
-          items={room.queue}
-          participants={room.participants}
-          canManage={(item) => permission === "control" || item.by === session.you}
-          canPlay={permission === "control"}
-          onPlay={(id) => session.control({ type: "playItem", id })}
-          onRemove={(id) => session.control({ type: "removeItem", id })}
-          empty={
-            permission === "host-only"
-              ? t("plugins.music-together.ui.queue-empty-listen", "The host picks the music.")
-              : t("plugins.music-together.ui.queue-empty-guest", "Suggest a song and it plays next.")
-          }
-        />
-      )}
-      {permission !== "host-only" && (
-        <AddSong t={t} onAdd={(videoId) => session.suggest(videoId)} label={t("plugins.music-together.ui.suggest", "Suggest")} />
-      )}
+      <div class="field">
+        <span>{t("plugins.music-together.menu.set-permission", "Change Control Permission")}</span>
+        {host ? (
+          <div class="segmented" role="radiogroup">
+            {PERMISSIONS.map((permission) => (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={together.permission === permission}
+                title={together.permissionLabel(permission)}
+                onClick={() => void together.setPermission(permission)}
+              >
+                {t(`plugins.music-together.settings.defaultPermission.options.${permission}`, permission)}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <p class="hint">{together.permissionLabel(together.permission)}</p>
+      </div>
+      <div class="field">
+        <span>{t("plugins.music-together.menu.connected-users", "Connected Users")}</span>
+        {users.length === 0 ? (
+          <p class="hint">{t("plugins.music-together.menu.empty-user", "No connected users")}</p>
+        ) : (
+          <ul class="people">
+            {users.map((user) => (
+              <User user={user} host={user.id === (host ? together.id : undefined)} />
+            ))}
+          </ul>
+        )}
+      </div>
+      <button type="button" class="button danger wide" onClick={() => together.stop()}>
+        {host ? t("plugins.music-together.menu.close", "Close Music Together") : t("plugins.music-together.menu.disconnect", "Disconnect Music Together")}
+      </button>
     </>
   );
 }
 
-function People({ t, participants, you }: { t: Translate; participants: Participant[]; you: string }) {
+function User({ user, host }: { user: Profile; host: boolean }) {
   return (
-    <section>
-      <h3>
-        {t("plugins.music-together.ui.listening", "Listening")} <span class="muted">{participants.length}</span>
-      </h3>
-      <ul class="people">
-        {participants.map((p) => (
-          <li key={p.id}>
-            <Avatar name={p.name} />
-            <span class="name">{p.name}</span>
-            {p.id === you && <span class="tag">{t("plugins.music-together.ui.you", "you")}</span>}
-            {p.id === HOST_ID && <span class="tag host">{t("plugins.music-together.ui.host", "host")}</span>}
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-interface QueueProps {
-  t: Translate;
-  items: QueueItem[];
-  participants: Participant[];
-  canManage(item: QueueItem): boolean;
-  canPlay?: boolean;
-  onPlay(id: string): void;
-  onRemove(id: string): void;
-  empty: string;
-}
-
-function Queue({ t, items, participants, canManage, canPlay = true, onPlay, onRemove, empty }: QueueProps) {
-  const nameOf = (id: string) =>
-    participants.find((p) => p.id === id)?.name ?? t("plugins.music-together.internal.unknown-user", "Unknown User");
-  return (
-    <section>
-      <h3>
-        {t("plugins.music-together.ui.up-next", "Up next")} <span class="muted">{items.length || ""}</span>
-      </h3>
-      {items.length === 0 ? (
-        <p class="hint">{empty}</p>
-      ) : (
-        <ol class="queue">
-          {items.map((item) => (
-            <li key={item.id} data-video={item.videoId}>
-              <img src={`https://i.ytimg.com/vi/${item.videoId}/default.jpg`} alt="" loading="lazy" />
-              <div class="meta">
-                <strong title={item.title}>{item.title}</strong>
-                <span>
-                  {item.artist ? `${item.artist} · ` : ""}
-                  {t("plugins.music-together.ui.added-by", "added by {{name}}", { name: nameOf(item.by) })}
-                </span>
-              </div>
-              {canManage(item) && (
-                <div class="actions">
-                  {canPlay && (
-                    <button type="button" class="icon" aria-label={t("plugins.music-together.ui.play-item", "Play {{title}} now", { title: item.title })}
-                      title={t("plugins.music-together.ui.play-now", "Play now")} onClick={() => onPlay(item.id)}>
-                      <PlayIcon />
-                    </button>
-                  )}
-                  <button type="button" class="icon" aria-label={t("plugins.music-together.ui.remove-item", "Remove {{title}}", { title: item.title })}
-                    title={t("plugins.music-together.ui.remove", "Remove")} onClick={() => onRemove(item.id)}>
-                    <CloseIcon />
-                  </button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ol>
-      )}
-    </section>
-  );
-}
-
-function AddSong({ t, onAdd, label }: { t: Translate; onAdd(videoId: string): void; label: string }) {
-  const [value, setValue] = useState("");
-  const [invalid, setInvalid] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
-  return (
-    <form
-      class="row add"
-      onSubmit={(e) => {
-        e.preventDefault();
-        const videoId = parseVideoId(value);
-        if (!videoId) return setInvalid(true);
-        onAdd(videoId);
-        setValue("");
-        input.current?.focus();
-      }}
-    >
-      <input
-        ref={input}
-        placeholder={t("plugins.music-together.ui.link-placeholder", "Paste a \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music link")}
-        aria-label={t("plugins.music-together.ui.song-link", "Song link")}
-        aria-invalid={invalid}
-        value={value}
-        onInput={(e) => {
-          setValue(e.currentTarget.value);
-          setInvalid(false);
-        }}
-      />
-      <button type="submit" class="button" disabled={!value.trim()}>
-        {label}
-      </button>
-    </form>
-  );
-}
-
-export function Toasts({ items }: { items: { id: number; text: string }[] }) {
-  return (
-    <div class="toasts" role="status" aria-live="polite">
-      {items.map((t) => (
-        <div key={t.id} class="toast">
-          {t.text}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function Avatar({ name }: { name: string }) {
-  let hash = 0;
-  for (const char of name) hash = (hash * 31 + char.charCodeAt(0)) | 0;
-  const initials = name
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-  return (
-    <span class="avatar" style={{ background: `hsl(${Math.abs(hash) % 360} 45% 38%)` }} aria-hidden="true">
-      {initials}
-    </span>
+    <li>
+      <img class="avatar" src={user.thumbnail} alt="" />
+      <span class="name">{user.name}</span>
+      {host && <span class="tag host">host</span>}
+    </li>
   );
 }
 
@@ -411,11 +194,5 @@ const PeopleIcon = () => (
 const CloseIcon = () => (
   <Svg>
     <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z" />
-  </Svg>
-);
-
-const PlayIcon = () => (
-  <Svg>
-    <path d="M320-200v-560l440 280-440 280Z" />
   </Svg>
 );

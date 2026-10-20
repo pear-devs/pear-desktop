@@ -4,7 +4,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
-import { launchApp, mainWindow } from "./launch.ts";
+import { launchApp, mainWindow, playTestTrack } from "./launch.ts";
 
 const overlay = (page: Page) => page.locator("pear-settings");
 const pluginRow = (page: Page, id: string) => overlay(page).locator(`[data-plugin="${id}"]`);
@@ -198,7 +198,8 @@ test("records a global shortcut and registers it with the OS", async () => {
     await page.keyboard.press("Control+,");
     await section(page, "Plugins");
     await pluginRow(page, "shortcuts").getByRole("button", { name: "Configure Shortcuts (& MPRIS)" }).click();
-    const recorder = pluginRow(page, "shortcuts").getByLabel("Play / pause");
+    // The global one (the in-window ones follow under their own heading).
+    const recorder = pluginRow(page, "shortcuts").getByLabel("Play / pause").first();
     await recorder.click();
     await expect(recorder).toHaveText("Press keys…");
     await page.keyboard.press("Control+Alt+Shift+F9");
@@ -213,6 +214,37 @@ test("records a global shortcut and registers it with the OS", async () => {
     await expect
       .poll(() => app.evaluate(({ globalShortcut }) => globalShortcut.isRegistered("Ctrl+Alt+Shift+F9")))
       .toBe(false);
+  } finally {
+    await app.close();
+  }
+});
+
+test("in-window shortcuts and media keys, as pear-desktop's shortcuts plugin", async () => {
+  test.setTimeout(150_000);
+  const app = await launchApp({ plugins: { shortcuts: { enabled: true, config: { localPlayPause: "Ctrl+Alt+K", overrideMediaKeys: true } } } });
+  try {
+    const page = await mainWindow(app);
+    await playTestTrack(page);
+    await page.waitForFunction(() => window.__pearRuntime!.player.state.status === "playing", undefined, { timeout: 60_000 });
+    const status = () => page.evaluate(() => window.__pearRuntime!.player.state.status);
+    // Only while the window has focus, before the page sees the key. Real key input goes
+    // through Electron's input pipeline (Playwright's would skip before-input-event).
+    const press = () =>
+      app.evaluate(({ BrowserWindow }) => {
+        const contents = BrowserWindow.getAllWindows()[0]!.webContents;
+        contents.sendInputEvent({ type: "keyDown", keyCode: "K", modifiers: ["control", "alt"] });
+        contents.sendInputEvent({ type: "keyUp", keyCode: "K", modifiers: ["control", "alt"] });
+      });
+    await press();
+    await expect.poll(status).toBe("paused");
+    await press();
+    await expect.poll(status, { timeout: 30_000 }).toMatch(/playing|buffering/);
+    // The media keys are taken globally.
+    expect(await app.evaluate(({ globalShortcut }) => ["MediaPlayPause", "MediaNextTrack", "MediaPreviousTrack"].map((key) => globalShortcut.isRegistered(key)))).toEqual([
+      true,
+      true,
+      true,
+    ]);
   } finally {
     await app.close();
   }

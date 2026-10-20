@@ -11,7 +11,8 @@
     "./song-details": "./src/song-details.ts",
     "./rpc": "./src/rpc.ts",
     "./core-config": "./src/core-config.ts",
-    "./i18n": "./src/i18n.ts"
+    "./i18n": "./src/i18n.ts",
+    "./accelerator": "./src/accelerator.ts"
   },
   "scripts": {
     "typecheck": "tsc -p .",

@@ -1,10 +1,12 @@
 import { describe, expect, test } from "vitest";
+import { isSiteCookie, toNetscape } from "../cookies.ts";
 import {
   type ArgsOptions,
   buildArgs,
   canEmbedCover,
   type Capabilities,
   isDownloadablePlaylist,
+  menuTarget,
   overallProgress,
   parseLine,
   parseProbe,
@@ -142,5 +144,41 @@ describe("helpers", () => {
     expect(overallProgress(1, 1, 0.5)).toBe(0.5);
     expect(overallProgress(3, 4, 0.5)).toBe(0.625);
     expect(overallProgress(5, 4, 1)).toBe(1);
+  });
+});
+
+describe("pear-desktop's Custom preset, session and menus", () => {
+  test("custom ffmpeg arguments and extension", () => {
+    const args = buildArgs(options({ format: "custom", customArgs: "-b:a 320k", customExtension: "flac" }));
+    expect(valueOf(args, "--audio-format")).toBe("flac");
+    expect(args).toContain("ExtractAudio+ffmpeg_o:-b:a 320k");
+    // An extension yt-dlp can't convert to keeps the streamed format.
+    expect(valueOf(buildArgs(options({ format: "custom", customExtension: "xyz" })), "--audio-format")).toBe("best");
+  });
+
+  test("the session's cookies go to yt-dlp as a Netscape file", () => {
+    expect(valueOf(buildArgs(options({ cookiesFile: "/tmp/c.txt" })), "--cookies")).toBe("/tmp/c.txt");
+    expect(buildArgs(options())).not.toContain("--cookies");
+    const file = toNetscape([
+      { domain: ".\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com", path: "/", secure: true, expirationDate: 1900000000.5, name: "SID", value: "x" },
+      { domain: "music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com", hostOnly: true, name: "PREF", value: "y" },
+    ]);
+    expect(file.split("\n")).toEqual([
+      "# Netscape HTTP Cookie File",
+      "",
+      ".\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com\tTRUE\t/\tTRUE\t1900000000\tSID\tx",
+      "music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com\tFALSE\t/\tFALSE\t0\tPREF\ty",
+      "",
+    ]);
+    expect(isSiteCookie({ domain: ".\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com", name: "a", value: "b" })).toBe(true);
+    expect(isSiteCookie({ domain: ".google.com", name: "a", value: "b" })).toBe(false);
+    expect(isSiteCookie({ domain: "evil\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com", name: "a", value: "b" })).toBe(false);
+  });
+
+  test("a menu's links say what it is for", () => {
+    expect(menuTarget(["watch?v=abcdefghijk&list=RDAMVMabcdefghijk", "browse/MPREb_x"])).toEqual({ videoId: "abcdefghijk" });
+    expect(menuTarget(["watch?playlist=OLAK5uy_album"])).toEqual({ videoId: "", playlistId: "OLAK5uy_album" });
+    expect(menuTarget(["playlist?list=PLxyz"])).toEqual({ videoId: "", playlistId: "PLxyz" });
+    expect(menuTarget(["browse/UCartist"])).toBeUndefined();
   });
 });

@@ -1,4 +1,5 @@
 import { config, definePlugin, type PlayerAction } from "@pear/sdk";
+import { fromInput, matchesAccelerator } from "@pear/sdk/accelerator";
 import { globalShortcut } from "electron";
 
 const ACTIONS = {
@@ -15,6 +16,11 @@ type ActionName = keyof typeof ACTIONS;
 
 const VOLUME_STEP = 5;
 
+// pear-desktop's in-window shortcuts (only while the window has focus).
+const LOCAL = { localPlayPause: "playPause", localNext: "next", localPrevious: "previous" } as const;
+// pear-desktop's "override media keys": the keyboard's media keys, taken globally.
+const MEDIA_KEYS = { MediaPlayPause: "playPause", MediaNextTrack: "next", MediaPreviousTrack: "previous" } as const;
+
 export default definePlugin({
   id: "shortcuts",
   name: "Global shortcuts",
@@ -27,6 +33,13 @@ export default definePlugin({
     volumeDown: config.shortcut("", { label: ACTIONS.volumeDown.label }),
     like: config.shortcut("", { label: ACTIONS.like.label }),
     showWindow: config.shortcut("", { label: ACTIONS.showWindow.label }),
+    overrideMediaKeys: config.bool(false, {
+      label: "Take over the media keys",
+      description: "Play/pause, next and previous keys control this app even when another player would get them.",
+    }),
+    localPlayPause: config.shortcut("", { label: ACTIONS.playPause.label, group: "In the window" }),
+    localNext: config.shortcut("", { label: ACTIONS.next.label, group: "In the window" }),
+    localPrevious: config.shortcut("", { label: ACTIONS.previous.label, group: "In the window" }),
   },
   host: {
     start(ctx) {
@@ -46,9 +59,7 @@ export default definePlugin({
       };
 
       const failed: string[] = [];
-      for (const name of Object.keys(ACTIONS) as ActionName[]) {
-        const accelerator = ctx.config[name];
-        if (!accelerator) continue;
+      const register = (accelerator: string, name: ActionName) => {
         let ok = false;
         try {
           ok = globalShortcut.register(accelerator, () => run(name));
@@ -57,7 +68,30 @@ export default definePlugin({
         }
         if (ok) ctx.onCleanup(() => globalShortcut.unregister(accelerator));
         else failed.push(accelerator);
+      };
+      for (const name of Object.keys(ACTIONS) as ActionName[]) {
+        const accelerator = ctx.config[name];
+        if (accelerator) register(accelerator, name);
       }
+      if (ctx.config.overrideMediaKeys) {
+        for (const [key, name] of Object.entries(MEDIA_KEYS)) register(key, name);
+      }
+
+      // In-window shortcuts, matched before the page sees the key (like electron-localshortcut).
+      const isMac = process.platform === "darwin";
+      const onInput = (event: Electron.Event, input: Electron.Input) => {
+        if (input.type !== "keyDown") return;
+        for (const [key, name] of Object.entries(LOCAL) as [keyof typeof LOCAL, ActionName][]) {
+          if (!matchesAccelerator(fromInput(input), ctx.config[key], isMac)) continue;
+          event.preventDefault();
+          run(name);
+          return;
+        }
+      };
+      const contents = ctx.window.webContents;
+      contents.on("before-input-event", onInput);
+      ctx.onCleanup(() => contents.off("before-input-event", onInput));
+
       if (failed.length > 0) {
         throw new Error(`couldn't register ${failed.join(", ")} (invalid or used by another app)`);
       }

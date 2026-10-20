@@ -17,7 +17,7 @@ test("equalizer, compressor and crossfade compose in the shared graph and toggle
     await setEnabled(page, "audio-compressor", true);
     await setEnabled(page, "equalizer", true);
     // Ordered by stage order, not by enable order.
-    const expected = ["GainNode", ...Array(10).fill("BiquadFilterNode"), "DynamicsCompressorNode", "GainNode"];
+    const expected = ["GainNode", ...Array(10).fill("BiquadFilterNode"), "GainNode", "DynamicsCompressorNode", "GainNode"];
     await expect.poll(() => audioChain(page), { timeout: 15_000 }).toEqual(expected);
     await expect.poll(() => outputLevel(page), { timeout: 15_000 }).toBeGreaterThan(0.005);
 
@@ -35,9 +35,20 @@ test("equalizer, compressor and crossfade compose in the shared graph and toggle
     await setConfig(page, "equalizer", { band1000: -6 });
     await expect.poll(() => page.evaluate(() => window.__pearRuntime!.plugins.state("equalizer")?.config.preset)).toBe("custom");
 
-    // Extra filters from JSON extend the chain.
-    await setConfig(page, "equalizer", { filters: '[{"type":"notch","frequency":440,"Q":5,"gain":0}]' });
-    await expect.poll(() => audioChain(page)).toEqual(["GainNode", ...Array(11).fill("BiquadFilterNode"), "DynamicsCompressorNode", "GainNode"]);
+    // Extra filters (pear-desktop's format) are added on top of the signal, as pear-desktop
+    // mixed them: the bands feed both the mix and each filter, which feeds the mix too.
+    await setConfig(page, "equalizer", { filters: '[{"type":"lowshelf","frequency":80,"Q":100,"gain":12}]' });
+    const extraWiring = () =>
+      page.evaluate(() => {
+        const edges = window.__audioProbe!.edges;
+        const extra = [...edges.keys()].find((n): n is BiquadFilterNode => n instanceof BiquadFilterNode && n.frequency.value === 80);
+        if (!extra) return null;
+        const feeders = [...edges].filter(([, targets]) => targets.has(extra)).map(([node]) => node);
+        const mix = [...(edges.get(extra) ?? [])][0];
+        return { fedByBand: feeders.length === 1 && feeders[0] instanceof BiquadFilterNode, mixAlsoDry: !!mix && edges.get(feeders[0]!)?.has(mix as AudioNode) };
+      });
+    await expect.poll(extraWiring).toEqual({ fedByBand: true, mixAlsoDry: true });
+    await expect.poll(() => audioChain(page)).toEqual(expected);
 
     // The compressor is actually compressing and follows its config.
     const compressor = () =>
@@ -60,7 +71,7 @@ test("equalizer, compressor and crossfade compose in the shared graph and toggle
   }
 });
 
-test("crossfade fades the end of a track out and the next one in", async () => {
+test("crossfade plays the end of a track over the start of the next, as pear-desktop", async () => {
   test.setTimeout(300_000);
   const app = await launchApp({
     plugins: { crossfade: { enabled: false, config: { fadeOutDuration: 3000, fadeInDuration: 2000, secondsBeforeEnd: 5 } } },
@@ -78,18 +89,40 @@ test("crossfade fades the end of a track out and the next one in", async () => {
         return node instanceof GainNode ? node.gain.value : null;
       });
     await expect.poll(fadeGain, { timeout: 20_000 }).toBeGreaterThan(0.99);
+    // The second stream is a plain audio element; note the ones that play.
+    await page.evaluate(() => {
+      const w = window as unknown as { __streams: HTMLMediaElement[] };
+      w.__streams = [];
+      const play = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+        if (this instanceof HTMLAudioElement) w.__streams.push(this);
+        return play.call(this);
+      };
+    });
 
     const firstId = await page.evaluate(() => window.__pearRuntime!.player.state.track!.videoId);
     const duration = await page.evaluate(() => document.querySelector("video")!.duration);
-    // Into the fade-out window: it ends 5 s before the end and lasts 3 s.
-    await page.evaluate((t) => window.__pearRuntime!.player.control({ type: "seek", seconds: t }), duration - 7);
-    await expect.poll(fadeGain, { timeout: 10_000 }).toBeLessThan(0.6);
+    // Shortly before the switch point (5 s before the end): the second stream loads meanwhile.
+    await page.evaluate((t) => window.__pearRuntime!.player.control({ type: "seek", seconds: t }), duration - 12);
 
-    // At the skip point the next track starts and fades in.
+    // At the switch the next track starts while the end of this one keeps playing, fading out.
     await expect
       .poll(() => page.evaluate(() => window.__pearRuntime!.player.state.track?.videoId), { timeout: 30_000 })
       .not.toBe(firstId);
+    const overlap = () =>
+      page.evaluate(() => {
+        const stream = (window as unknown as { __streams: HTMLMediaElement[] }).__streams.at(-1);
+        return { outgoing: !!stream && !stream.paused, volume: stream?.volume ?? 0, next: window.__pearRuntime!.player.state.status };
+      });
+    await expect.poll(async () => (await overlap()).outgoing, { timeout: 10_000 }).toBe(true);
     await waitForTrackPlaying(page);
+    // Both at once, the outgoing one fading.
+    const during = await overlap();
+    expect(during.next).toBe("playing");
+    expect(during.outgoing).toBe(true);
+    expect(during.volume).toBeLessThan(1);
+    // The fade-out ends the second stream; the next track is at full volume.
+    await expect.poll(async () => (await overlap()).outgoing, { timeout: 10_000 }).toBe(false);
     await expect.poll(fadeGain, { timeout: 20_000 }).toBeGreaterThan(0.99);
   } finally {
     await closeApp(app);
@@ -98,7 +131,7 @@ test("crossfade fades the end of a track out and the next one in", async () => {
 
 test("skip-silences jumps over silence and visualizer draws from a graph tap", async () => {
   test.setTimeout(240_000);
-  const app = await launchApp({ plugins: { visualizer: { enabled: false, config: { type: "bars" } } } });
+  const app = await launchApp({ plugins: { visualizer: { enabled: false, config: { type: "vudio" } } } });
   try {
     const page = await mainWindow(app);
     await playTestTrack(page);
@@ -115,7 +148,20 @@ test("skip-silences jumps over silence and visualizer draws from a graph tap", a
         for (let i = 3; i < pixels.length; i += 16) if (pixels[i]! > 0) lit++;
         return lit;
       });
+    // pear-desktop's Vudio, then Wave with its default animations.
     await expect.poll(painted, { timeout: 15_000 }).toBeGreaterThan(100);
+    await setConfig(page, "visualizer", { type: "wave" });
+    await expect.poll(painted, { timeout: 15_000 }).toBeGreaterThan(100);
+    // Their own analysers reach the speakers only through a muted gain: the track isn't doubled.
+    const audible = () =>
+      page.evaluate(() => {
+        const probe = window.__audioProbe!;
+        const destination = probe.context!.destination;
+        return [...probe.edges]
+          .filter(([, targets]) => targets.has(destination))
+          .filter(([node]) => !(node instanceof GainNode && node.gain.value === 0)).length;
+      });
+    expect(await audible()).toBe(1);
 
     // Milkdrop loads lazily from the host and renders through WebGL into the same spot.
     await setConfig(page, "visualizer", { type: "butterchurn" });

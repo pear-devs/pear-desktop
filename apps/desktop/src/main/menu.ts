@@ -1,6 +1,6 @@
 // The native application menu, like pear-desktop's (src/menu.ts) without its
 // Plugins and Options submenus: the settings dialog replaced those. The
-// in-app-menu plugin offers the same actions in its own menu.
+// in-app-menu plugin draws this same menu in the page.
 
 import { app, type BrowserWindow, clipboard, Menu, type MenuItemConstructorOptions, shell } from "electron";
 import type { Translate } from "@pear/sdk/i18n";

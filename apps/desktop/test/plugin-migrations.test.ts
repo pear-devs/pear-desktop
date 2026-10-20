@@ -78,14 +78,14 @@ describe("pear-desktop plugin options", () => {
     expect(twice("custom-output-device", { output: "default", devices })).toMatchObject({ output: "" });
   });
 
-  test("discord: renamed options, minutes, and the status display enum", () => {
+  test("discord: renamed options, seconds, and the status display enum", () => {
     expect(
       twice("discord", { [PLAY_BUTTON]: false, activityTimeoutTime: 5 * 60_000, statusDisplayType: 1, hideGitHubButton: true }),
     ).toEqual({
       [PLAY_BUTTON]: false,
       playButton: false,
       activityTimeoutTime: 300_000,
-      activityTimeoutMinutes: 5,
+      activityTimeoutSeconds: 300,
       statusDisplayType: "state",
       hideGitHubButton: true,
     });
@@ -95,8 +95,16 @@ describe("pear-desktop plugin options", () => {
     // pear-desktop never armed a zero timeout: the activity stayed while paused.
     expect(twice("discord", { activityTimeoutTime: 0 })).toEqual({ activityTimeoutTime: 0, activityTimeoutEnabled: false });
     expect(twice("discord", { activityTimeoutTime: 0, activityTimeoutEnabled: true })).not.toHaveProperty("hideWhenPaused");
-    expect(twice("discord", { activityTimeoutTime: 999 * 60_000 })).toMatchObject({ activityTimeoutMinutes: 240 });
-    expect(twice("discord", { activityTimeoutTime: 1000 })).toMatchObject({ activityTimeoutMinutes: 1 });
+    expect(twice("discord", { activityTimeoutTime: 999 * 60_000 })).toMatchObject({ activityTimeoutSeconds: 14_400 });
+    // Sub-minute timeouts, which pear-desktop's prompt allowed, are kept.
+    expect(twice("discord", { activityTimeoutTime: 30_000 })).toMatchObject({ activityTimeoutSeconds: 30 });
+    expect(twice("discord", { activityTimeoutTime: 1000 })).toMatchObject({ activityTimeoutSeconds: 1 });
+  });
+
+  test("notifications: the numbered toast style becomes its name", () => {
+    expect(twice("notifications", { toastStyle: 1 })).toMatchObject({ toastStyle: "logo" });
+    expect(twice("notifications", { toastStyle: 7 })).toMatchObject({ toastStyle: "legacy" });
+    expect(twice("notifications", { toastStyle: 42 })).toMatchObject({ toastStyle: 42 });
   });
 
   test("equalizer: filters and the bass booster become the extra filters", () => {
@@ -148,11 +156,11 @@ describe("pear-desktop plugin options", () => {
     });
   });
 
-  test("shortcuts: global shortcuts are top-level options; MPRIS stays on", () => {
+  test("shortcuts: global and in-window shortcuts are top-level options; MPRIS stays on", () => {
     const plugins = migrated({
       shortcuts: { enabled: true, overrideMediaKeys: true, global: { playPause: "Ctrl+F1", next: "", previous: 5 }, local: { next: "N" } },
     });
-    expect(plugins.shortcuts).toMatchObject({ enabled: true, playPause: "Ctrl+F1", next: "" });
+    expect(plugins.shortcuts).toMatchObject({ enabled: true, overrideMediaKeys: true, playPause: "Ctrl+F1", next: "", localNext: "N" });
     expect(plugins.shortcuts).not.toHaveProperty("previous");
     expect(plugins["media-controls"]).toEqual({ enabled: true });
     // Not enabled: media-controls keeps its own default.
@@ -175,14 +183,26 @@ describe("pear-desktop plugin options", () => {
     expect(twice("sponsorblock", { categories: "sponsor" })).toEqual({ categories: "sponsor" });
   });
 
-  test("visualizer: vudio is the bars visualizer; per-visualizer options are flat", () => {
+  test("visualizer: per-visualizer options are flat; Wave's animations are JSON", () => {
+    const animations = [{ type: "Cubes", config: { count: 3 } }];
     expect(
       twice("visualizer", {
         type: "vudio",
         butterchurn: { preset: "Geiss - Thumb Drum", blendTimeInSeconds: 30 },
-        vudio: { accuracy: 512, lighting: { color: "#ff0000" } },
+        vudio: { effect: "waveform", accuracy: 512, lighting: { color: "#ff0000", dottify: false, horizontalAlign: "left" } },
+        wave: { animations },
       }),
-    ).toMatchObject({ type: "bars", preset: "Geiss - Thumb Drum", blendTimeInSeconds: 10, bars: 256, primary: "#ff0000" });
+    ).toMatchObject({
+      type: "vudio",
+      preset: "Geiss - Thumb Drum",
+      blendTimeInSeconds: 10,
+      vudioEffect: "waveform",
+      vudioAccuracy: "512",
+      vudioColor: "#ff0000",
+      vudioDottify: false,
+      vudioHorizontalAlign: "left",
+      waveAnimations: JSON.stringify(animations),
+    });
     expect(twice("visualizer", { type: "wave" })).toEqual({ type: "wave" });
   });
 
@@ -292,7 +312,7 @@ const EXPECTED: Record<string, { enabled: boolean; config: Json }> = {
     enabled: true,
     config: { interpolationTime: 3000, quality: 1000, size: 125, buffer: 20, opacity: 60, blur: 25, fullscreen: true },
   },
-  amuse: { enabled: true, config: { port: 9863 } },
+  amuse: { enabled: true, config: { port: 9863, hostname: "0.0.0.0" } },
   "audio-compressor": { enabled: true, config: { threshold: -50, ratio: 12, knee: 40, attack: 0, release: 250 } },
   "auth-proxy-adapter": {
     enabled: true,
@@ -317,7 +337,7 @@ const EXPECTED: Record<string, { enabled: boolean; config: Json }> = {
       hideDurationLeft: true,
       hideWhenPaused: false,
       activityTimeoutEnabled: true,
-      activityTimeoutMinutes: 30,
+      activityTimeoutSeconds: 1800,
       autoReconnect: false,
     },
   },
@@ -337,11 +357,18 @@ const EXPECTED: Record<string, { enabled: boolean; config: Json }> = {
   "in-app-menu": { enabled: true, config: { windowControls: false } },
   lumiastream: { enabled: false, config: {} },
   "media-controls": { enabled: true, config: {} },
-  "music-together": { enabled: true, config: { displayName: "", defaultPermission: "suggest" } },
+  "music-together": { enabled: true, config: { displayName: "", defaultPermission: "playlist" } },
   navigation: { enabled: false, config: {} },
   notifications: {
     enabled: true,
-    config: { unpauseNotification: true, urgency: "critical", interactive: false, refreshOnPlayPause: true },
+    config: {
+      unpauseNotification: true,
+      urgency: "critical",
+      interactive: false,
+      refreshOnPlayPause: true,
+      toastStyle: "hero",
+      trayControls: false,
+    },
   },
   "picture-in-picture": {
     enabled: true,
@@ -379,6 +406,10 @@ const EXPECTED: Record<string, { enabled: boolean; config: Json }> = {
       volumeDown: "",
       like: "",
       showWindow: "",
+      overrideMediaKeys: true,
+      localPlayPause: "",
+      localNext: "",
+      localPrevious: "",
     },
   },
   "skip-disliked-songs": { enabled: true, config: {} },
@@ -410,9 +441,20 @@ const EXPECTED: Record<string, { enabled: boolean; config: Json }> = {
       preset: "Flexi - alien fish pond",
       blendTimeInSeconds: 5,
       songTitle: false,
-      bars: 64,
-      primary: "#49f3f7",
-      secondary: "#f76b1c",
+      vudioEffect: "lighting",
+      vudioAccuracy: "128",
+      vudioMaxHeight: 160,
+      vudioMaxSize: 12,
+      vudioLineWidth: 1,
+      vudioColor: "#49f3f7",
+      vudioShadowBlur: 2,
+      vudioShadowColor: "rgba(244,244,244,.5)",
+      vudioFadeSide: true,
+      vudioPrettify: false,
+      vudioDottify: true,
+      vudioHorizontalAlign: "center",
+      vudioVerticalAlign: "middle",
+      waveAnimations: expect.stringContaining("Cubes"),
     },
   },
 };

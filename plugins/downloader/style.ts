@@ -122,4 +122,25 @@ export const style = css`
     font: 500 14px Roboto, Arial, sans-serif;
     cursor: pointer;
   }
+  /* pear-desktop's "Download" entry in YTM's track, album and playlist menus. */
+  .pear-dl-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    height: 48px;
+    padding: 0 16px;
+    color: var(--ytmusic-text-primary, #fff);
+    font: 400 14px Roboto, "Noto Naskh Arabic UI", Arial, sans-serif;
+    cursor: pointer;
+  }
+  .pear-dl-item:hover,
+  .pear-dl-item:focus-visible {
+    background: rgb(255 255 255 / 0.1);
+    outline: none;
+  }
+  .pear-dl-item svg {
+    width: 24px;
+    height: 24px;
+    color: rgb(255 255 255 / 0.7);
+  }
 `;

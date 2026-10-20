@@ -1,12 +1,26 @@
 // The nav-bar button and the popover panel, each in its own shadow root: the
-// button lives in YTM's nav bar, the panel and toasts float over the page.
+// button lives in YTM's nav bar, the panel floats over the page.
 
+import type { PageContext, YTPlayerApi } from "@pear/sdk";
 import { render } from "preact";
-import { Together, type Ctx } from "./controller.ts";
+import { Connection } from "../connection.ts";
+import type { QueueElement } from "../queue.ts";
+import { Together } from "../together.ts";
+import type { Permission } from "../types.ts";
 import { launcherStyles, panelStyles } from "./styles.ts";
-import { LauncherButton, Panel, Toasts } from "./ui.tsx";
+import { LauncherButton, Panel } from "./ui.tsx";
 
-const TOAST_MS = 4000;
+export interface TogetherConfig {
+  displayName: string;
+  defaultPermission: Permission;
+}
+
+export interface TogetherCommands {
+  [name: string]: (...args: any[]) => unknown;
+  copy(text: string): void;
+}
+
+export type Ctx = PageContext<TogetherConfig, TogetherCommands>;
 
 function shadowHost(tag: string, css: string) {
   const host = document.createElement(tag);
@@ -18,29 +32,47 @@ function shadowHost(tag: string, css: string) {
 }
 
 export function mountTogether(ctx: Ctx) {
-  const together = new Together(ctx);
+  const t = (key: string, fallback: string, vars?: Record<string, unknown>) => ctx.t(key, fallback, vars);
+  const together = new Together({
+    createConnection: () => new Connection(ctx.log),
+    queueElement: () => ctx.$<QueueElement>("queue"),
+    player: () => ctx.player.api as YTPlayerApi | null,
+    toast: (message) => ctx.toast(message),
+    t,
+    name: () => ctx.config.displayName,
+    defaultPermission: () => ctx.config.defaultPermission,
+    log: ctx.log,
+  });
   const launcher = shadowHost("pear-together-button", launcherStyles);
   const overlay = shadowHost("pear-together", panelStyles);
   document.body.append(overlay.host);
 
   let open = false;
-  let toasts: { id: number; text: string }[] = [];
-  let toastId = 0;
   let stopped = false;
+  const copy = (text: string) => {
+    void ctx.host.invoke("copy", text).then(
+      () => ctx.toast(t("plugins.music-together.toast.id-copied", "Host ID copied to clipboard")),
+      () => ctx.toast(t("plugins.music-together.toast.id-copy-failed", "Failed to copy Host ID to clipboard")),
+    );
+  };
 
   const draw = () => {
     if (stopped) return;
     render(<LauncherButton together={together} open={open} onClick={() => setOpen(!open)} />, launcher.root);
     const anchor = launcher.host.getBoundingClientRect();
     render(
-      <>
-        {open && (
-          <div class="anchor" style={{ top: `${anchor.bottom + 8}px`, right: `${Math.max(8, innerWidth - anchor.right - 8)}px` }}>
-            <Panel together={together} onClose={() => setOpen(false)} />
-          </div>
-        )}
-        <Toasts items={toasts} />
-      </>,
+      open ? (
+        <div class="anchor" style={{ top: `${anchor.bottom + 8}px`, right: `${Math.max(8, innerWidth - anchor.right - 8)}px` }}>
+          <Panel
+            together={together}
+            t={t}
+            name={ctx.config.displayName}
+            setName={(name) => ctx.setConfig({ displayName: name })}
+            copy={copy}
+            onClose={() => setOpen(false)}
+          />
+        </div>
+      ) : null,
       overlay.root,
     );
   };
@@ -48,18 +80,7 @@ export function mountTogether(ctx: Ctx) {
     open = next;
     draw();
   };
-
-  ctx.onCleanup(
-    together.onToast((text) => {
-      const id = ++toastId;
-      toasts = [...toasts.slice(-2), { id, text }];
-      draw();
-      setTimeout(() => {
-        toasts = toasts.filter((t) => t.id !== id);
-        draw();
-      }, TOAST_MS);
-    }),
-  );
+  ctx.onCleanup(together.subscribe(draw));
 
   // Keep YTM's shortcuts (space, j/k, …) away from our inputs; Escape closes.
   for (const type of ["keydown", "keyup", "keypress"]) {
@@ -99,4 +120,5 @@ export function mountTogether(ctx: Ctx) {
     launcher.host.remove();
     overlay.host.remove();
   });
+  return together;
 }

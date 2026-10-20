@@ -30,6 +30,8 @@ export interface HostEnvironment {
   openSettings(): void;
   /** Sends a plugin event to API server WebSocket clients. */
   broadcast(plugin: string, event: string, data: unknown): void;
+  /** Subscribes to app protocol commands. */
+  onProtocol(listener: (command: string, args: string[]) => void): () => void;
 }
 
 /** An exposed method, as listed by the API server. */
@@ -311,6 +313,7 @@ export class PluginHost {
           if (!instance.stopped) env.broadcast(id, event, data);
         },
       },
+      onProtocol: (listener) => void cleanups.push(env.onProtocol(listener)),
       onCleanup: (fn) => cleanups.push(fn),
       t: (key, fallback, vars) => (host.#i18n ? host.#i18n.t(key, fallback, vars) : interpolate(fallback ?? key, vars)),
       log: logger(id),

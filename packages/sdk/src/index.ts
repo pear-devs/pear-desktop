@@ -65,6 +65,11 @@ export interface HostContext<C> {
     /** Sends `{ type: "PLUGIN_EVENT", plugin, event, data }` to WebSocket clients; a no-op while the server is off. */
     broadcast(event: string, data?: unknown): void;
   };
+  /**
+   * Commands arriving through the app protocol (pear-desktop's "…music://playPause"
+   * links, e.g. from Windows notification buttons), after the core applied them.
+   */
+  onProtocol(listener: (command: string, args: string[]) => void): void;
   /** Runs when the plugin stops (disabled, restarted or app quit). */
   onCleanup(fn: Cleanup): void;
   /**
@@ -177,6 +182,8 @@ export interface PageContext<C, Cmds extends AnyCommands> {
   audio(): Promise<AudioGraph>;
   /** Adds a stylesheet for the plugin's lifetime. Works at document start. */
   addStyle(css: string): StyleHandle;
+  /** Shows a message in YTM's own toast (bottom left), as pear-desktop's plugins do. */
+  toast(message: string): void;
   onCleanup(fn: Cleanup): void;
   /** Aborted when the plugin stops. */
   readonly signal: AbortSignal;
@@ -208,6 +215,12 @@ export type PagePart<C, Cmds extends AnyCommands> =
 
 // ---------------------------------------------------------------- plugin
 
+/** A button in the plugin's settings, run by the host command of the same name. */
+export interface PluginAction {
+  label: string;
+  description?: string;
+}
+
 export interface PluginDef<S extends ConfigShape, Cmds extends AnyCommands, Rpc extends RpcSchemas = {}> {
   id: string;
   name: string;
@@ -226,6 +239,8 @@ export interface PluginDef<S extends ConfigShape, Cmds extends AnyCommands, Rpc 
    */
   restartRequired?: boolean;
   config?: S;
+  /** Buttons shown in settings while the plugin is enabled; each runs `host.commands[name]`. */
+  actions?: { readonly [K in keyof Cmds & string]?: PluginAction };
   host?: HostPart<ConfigOf<S>, Cmds, Rpc>;
   page?: PagePart<ConfigOf<S>, Cmds>;
   /** CSS applied while enabled; usually the result of the `css` macro. */

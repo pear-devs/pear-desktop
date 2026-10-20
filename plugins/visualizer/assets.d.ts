@@ -23,3 +23,21 @@ interface ButterchurnModule {
     ): ButterchurnVisualizer;
   };
 }
+
+/** vudio (UMD; no types). */
+interface VudioInstance {
+  dance(): void;
+  pause(): void;
+  setOption(option: Record<string, unknown>): void;
+}
+type VudioConstructor = new (source: MediaStream, canvas: HTMLCanvasElement, option: Record<string, unknown>) => VudioInstance;
+
+/** @foobar404/wave (UMD build; the parts used). */
+interface WaveInstance {
+  animations: Record<string, new (config: unknown) => unknown>;
+  addAnimation(animation: unknown): void;
+  clearAnimations(): void;
+}
+interface WaveModule {
+  Wave: new (audio: { context: AudioContext; source: AudioNode }, canvas: HTMLCanvasElement) => WaveInstance;
+}

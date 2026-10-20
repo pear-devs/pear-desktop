@@ -1,6 +1,7 @@
 // Now-playing integrations against fake local services: Discord (IPC),
 // ListenBrainz, Tuna, Lumia Stream, Amuse and native notifications.
 
+import { networkInterfaces } from "node:os";
 import { expect, test } from "@playwright/test";
 import { closeApp, fakeDiscord, recordingServer, waitForTrackPlaying } from "./integrations-helpers.ts";
 import { launchApp, mainWindow, playTestTrack, TEST_TRACK } from "./launch.ts";
@@ -62,6 +63,9 @@ test("integrations report the playing track and follow pause and disable", async
     const track = (await page.evaluate(() => window.__pearRuntime!.player.state.track))!;
 
     await expect.poll(async () => (await amuse()).track).toMatchObject({ id: TEST_TRACK, title: track.title, author: track.artist });
+    // Like pear-desktop, it listens on every interface, so widgets on other devices reach it.
+    const lan = Object.values(networkInterfaces()).flat().find((address) => address && address.family === "IPv4" && !address.internal);
+    if (lan) expect((await (await fetch(`http://${lan.address}:${amusePort}/query`)).json()).track.id).toBe(TEST_TRACK);
     expect((await amuse()).player.isPaused).toBe(false);
 
     await expect.poll(notifications).toContainEqual({ title: track.title, body: track.artist });
@@ -83,6 +87,11 @@ test("integrations report the playing track and follow pause and disable", async
 
     const lumiaPosts = () => lumia.requests.filter((r) => r.url === "/api/media").map((r) => r.body);
     await expect.poll(() => lumiaPosts()[0]).toMatchObject({ token: expect.any(String), data: { eventType: "switchSong", videoId: TEST_TRACK } });
+    // While playing, progress goes out every second, as pear-desktop did.
+    const progressCount = lumiaPosts().length;
+    await expect.poll(() => lumiaPosts().length, { timeout: 10_000 }).toBeGreaterThanOrEqual(progressCount + 3);
+    const progress = lumiaPosts().slice(-3).map((post) => post.data.progress as number);
+    expect(progress[2]!).toBeGreaterThan(progress[0]!);
 
     if (process.platform === "linux") {
       // First attempt failed (no Discord yet); the retry finds it.
@@ -91,6 +100,20 @@ test("integrations report the playing track and follow pause and disable", async
         details_url: track.url,
         timestamps: { start: expect.any(Number), end: expect.any(Number) },
       });
+
+      // pear-desktop's menu items are settings buttons: the connection state, and clearing the activity.
+      await page.keyboard.press("Control+,");
+      const settings = page.locator("pear-settings");
+      await settings.getByRole("navigation").getByRole("button", { name: "Plugins" }).click();
+      const card = settings.locator('[data-plugin="discord"]');
+      await expect(card.locator(".status-text")).toHaveText("Connected to Discord");
+      await card.locator(".plugin-toggle").click();
+      await card.locator('[data-action="clearActivity"] button').click();
+      await expect.poll(() => discord.activities.at(-1)).toBeNull();
+      // Connecting while connected changes nothing.
+      await card.locator('[data-action="connect"] button').click();
+      await expect(card.locator(".plugin-actions .error-text")).toHaveCount(0);
+      await page.keyboard.press("Escape");
     }
 
     await page.evaluate(() => window.__pearRuntime!.player.control({ type: "pause" }));

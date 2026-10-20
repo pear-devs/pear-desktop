@@ -1,7 +1,9 @@
 import { config, definePlugin } from "@pear/sdk";
 
 // A 10-band graphic EQ (shelves at the ends, peaking filters in between) plus
-// optional free-form biquad filters, like the original's `filters` option.
+// optional free-form biquad filters, pear-desktop's `filters` option. Those are
+// mixed in as pear-desktop did: each filter's output is added to the signal
+// (its bass booster is such a filter, and sounds the same this way).
 const BANDS = [32, 64, 125, 250, 500, 1000, 2000, 4000, 8000, 16000] as const;
 type BandKey = `band${(typeof BANDS)[number]}`;
 type Gains = readonly [number, number, number, number, number, number, number, number, number, number];
@@ -59,7 +61,8 @@ export default definePlugin({
     band16000: bandField(16000),
     filters: config.string("", {
       label: "Extra filters (advanced)",
-      description: 'JSON list of biquad filters, e.g. [{"type":"lowshelf","frequency":80,"Q":1,"gain":6}]',
+      description:
+        'JSON list of biquad filters, each added on top of the signal as in pear-desktop, e.g. [{"type":"lowshelf","frequency":80,"Q":100,"gain":12}] (its bass booster)',
       placeholder: "[]",
     }),
   },
@@ -68,6 +71,8 @@ export default definePlugin({
       const graph = await ctx.audio();
       const { context } = graph;
       const preamp = context.createGain();
+      // Where the bands' output and the extra filters' outputs are summed.
+      const mix = context.createGain();
       const bands = BANDS.map((frequency, i) => {
         const filter = context.createBiquadFilter();
         filter.type = i === 0 ? "lowshelf" : i === BANDS.length - 1 ? "highshelf" : "peaking";
@@ -112,16 +117,22 @@ export default definePlugin({
         });
         // Removing the old stage disconnects its output, so rewire after that.
         remove?.();
-        const chain = [preamp, ...bands, ...extras];
-        for (const node of chain) node.disconnect();
+        const chain = [preamp, ...bands];
+        for (const node of [...chain, mix]) node.disconnect();
         for (let i = 1; i < chain.length; i++) chain[i - 1]!.connect(chain[i]!);
-        remove = graph.insert(preamp, chain.at(-1)!, ORDER);
+        const last = chain.at(-1)!;
+        last.connect(mix);
+        for (const extra of extras) {
+          last.connect(extra);
+          extra.connect(mix);
+        }
+        remove = graph.insert(preamp, mix, ORDER);
       };
       apply();
       live = apply;
       return () => {
         live = undefined;
-        for (const node of [preamp, ...bands, ...extras]) node.disconnect();
+        for (const node of [preamp, ...bands, ...extras, mix]) node.disconnect();
       };
     },
     // Parameters are updated in place, without rebuilding the chain.

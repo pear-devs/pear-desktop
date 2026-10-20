@@ -2,6 +2,7 @@
 // tab panel, shown (and YTM's own lyrics hidden) while that tab is selected.
 
 import type { PageContext } from "@pear/sdk";
+import { readSongDetails } from "@pear/sdk/song-details";
 import { render } from "preact";
 import type { LyricResult, ProviderId, SearchQuery } from "../types.ts";
 import { LyricsStore, type Options } from "./store.ts";
@@ -54,6 +55,10 @@ export function mountLyrics(ctx: PageContext<LyricsConfig, Commands>): LyricsCon
       search: (provider, query) => ctx.host.invoke("search", provider, query),
       romanize: (lines) => ctx.host.invoke("romanize", lines),
       convertChinese: (lines, mode) => ctx.host.invoke("convertChinese", lines, mode),
+      details(videoId) {
+        const details = ctx.player.api ? readSongDetails(ctx.player.api) : null;
+        return details?.videoId === videoId ? details : null;
+      },
     },
     storeOptions(ctx.config),
   );

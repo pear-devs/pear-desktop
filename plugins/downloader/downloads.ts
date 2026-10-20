@@ -39,6 +39,8 @@ export interface QueueOptions {
   prepare(signal: AbortSignal): Promise<ReadyTools>;
   /** Called per job, so config changes apply to the next download. */
   argsFor(tools: ReadyTools, jobId: number): Omit<ArgsOptions, "target">;
+  /** A cookies file for this job (removed when it ends), if there is a session to share. */
+  cookies?(): Promise<{ path: string; dispose(): Promise<void> } | undefined>;
   onState(state: QueueState): void;
   onResult(result: JobResult): void;
   log: { warn(...args: unknown[]): void };
@@ -109,10 +111,20 @@ export class DownloadQueue {
 
   async #run(job: Job, state: JobState): Promise<JobResult> {
     const tools = await this.#options.prepare(this.#active!.abort.signal);
-    const options = { ...this.#options.argsFor(tools, job.id), target: job.target };
+    const options: ArgsOptions = { ...this.#options.argsFor(tools, job.id), target: job.target };
     await mkdir(options.folder, { recursive: true });
     // Cancelled before yt-dlp started: there is no process to kill, so don't start one.
     if (this.#active?.cancelled) return { id: job.id, label: job.label, files: [] };
+    const cookies = await this.#options.cookies?.().catch(() => undefined);
+    if (cookies) options.cookiesFile = cookies.path;
+    try {
+      return await this.#spawn(job, state, tools, options);
+    } finally {
+      await cookies?.dispose().catch(() => {});
+    }
+  }
+
+  async #spawn(job: Job, state: JobState, tools: ReadyTools, options: ArgsOptions): Promise<JobResult> {
     const child = spawn(tools.ytDlp, buildArgs(options), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
     if (this.#active) this.#active.child = child;
 

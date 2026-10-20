@@ -18,6 +18,10 @@ export const selectors = {
   player_bar: "ytmusic-player-bar",
   "player_bar.play_pause": "ytmusic-player-bar #play-pause-button",
   "player_bar.next": "ytmusic-player-bar .next-button",
+  "player_bar.expanding_menu": "ytmusic-player-bar #expanding-menu",
+  "player_bar.toggle_player_page": "ytmusic-player-bar .toggle-player-page-button",
+  /** The player page while it is open. */
+  "player.page_open": "ytmusic-app-layout[player-page-open]",
   "player_bar.previous": "ytmusic-player-bar .previous-button",
   "player_bar.left_controls": "ytmusic-player-bar .left-controls",
   "player_bar.middle_controls": "ytmusic-player-bar .middle-controls",
@@ -58,6 +62,8 @@ export const selectors = {
 
   queue: "#queue",
   "queue.items": "ytmusic-player-queue #contents",
+  /** Every track in the queue, autoplay's included, in order; the playing one has [selected]. */
+  "queue.item": "ytmusic-player-queue ytmusic-player-queue-item",
   "popup.container": "ytmusic-popup-container",
   "popup.menu": "ytmusic-menu-popup-renderer",
   "dialog.you_there": "ytmusic-you-there-renderer",

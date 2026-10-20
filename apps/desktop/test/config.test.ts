@@ -228,17 +228,22 @@ describe("migrations", () => {
     expect(settings.core("window").alwaysOnTop).toBe(false);
   });
 
-  test("downloader presets become formats", () => {
-    const format = (entry: Record<string, unknown>) =>
+  test("downloader presets become formats; the Custom preset keeps its arguments", () => {
+    const downloader = (entry: Record<string, unknown>) =>
       migrate({ plugins: { downloader: { enabled: true, ...entry } }, __internal__: { migrations: { version: "3.12.0" } } }, "4.0.0").config.plugins!
-        .downloader!.format;
-    expect(format({ selectedPreset: "mp3 (256kbps)" })).toBe("mp3");
-    expect(format({ selectedPreset: "Source" })).toBe("source");
-    expect(format({ selectedPreset: "Custom", customPresetSetting: { extension: "opus", ffmpegArgs: [] } })).toBe("opus");
-    expect(format({ selectedPreset: "Custom", customPresetSetting: { extension: null, ffmpegArgs: ["-acodec", "copy"] } })).toBe("source");
-    // Containers yt-dlp isn't asked for keep the default.
-    expect(format({ selectedPreset: "Custom", customPresetSetting: { extension: "flac", ffmpegArgs: [] } })).toBeUndefined();
-    expect(format({})).toBeUndefined();
+        .downloader!;
+    expect(downloader({ selectedPreset: "mp3 (256kbps)" }).format).toBe("mp3");
+    expect(downloader({ selectedPreset: "Source" }).format).toBe("source");
+    expect(downloader({ selectedPreset: "Custom", customPresetSetting: { extension: "flac", ffmpegArgs: ["-compression_level", "8", "-metadata", "comment=a b"] } })).toMatchObject({
+      format: "custom",
+      customArgs: '-compression_level 8 -metadata "comment=a b"',
+      customExtension: "flac",
+    });
+    expect(downloader({ selectedPreset: "Custom", customPresetSetting: { extension: null, ffmpegArgs: ["-acodec", "copy"] } })).toMatchObject({
+      format: "custom",
+      customArgs: "-acodec copy",
+    });
+    expect(downloader({}).format).toBeUndefined();
   });
 
   test("downloader: overwriting stays pear-desktop's default for its users", () => {

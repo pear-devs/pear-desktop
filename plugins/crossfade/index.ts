@@ -1,15 +1,19 @@
 import { config, definePlugin } from "@pear/sdk";
+import { net } from "electron";
+import { Innertube } from "\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js";
 
 // Late in the shared graph: fades apply after effects, before visualizer taps.
 const ORDER = 50;
 const CURVE_POINTS = 256;
 // Tracks shorter than this play untouched.
 const MIN_TRACK_SECONDS = 30;
+// The second stream starts loading this long before the switch.
+const PRELOAD_SECONDS = 20;
 
 export default definePlugin({
   id: "crossfade",
   name: "Crossfade",
-  description: "Fades out the end of a track and fades the next one in.",
+  description: "Fades out the end of a track while the next one fades in.",
   config: {
     fadeInDuration: config.number(1500, { label: "Fade-in", min: 0, max: 10000, step: 100, unit: " ms" }),
     fadeOutDuration: config.number(5000, { label: "Fade-out", min: 0, max: 20000, step: 100, unit: " ms" }),
@@ -30,6 +34,35 @@ export default definePlugin({
       { label: "Fade curve" },
     ),
     dynamicRange: config.number(60, { label: "Logarithmic range", min: 10, max: 120, step: 5, unit: " dB" }),
+  },
+  host: {
+    commands: {
+      /**
+       * A direct audio stream of a track, as pear-desktop fetched one to play the
+       * end of the track while the next one starts.
+       */
+      async audioUrl(videoId: string) {
+        innertube ??= Innertube.create({ retrieve_player: true, fetch: (input, init) => net.fetch(input as string, init) }).catch(
+          (error: unknown) => {
+            innertube = undefined;
+            throw error;
+          },
+        );
+        const yt = await innertube;
+        let lastError: unknown;
+        // The iOS client's streams play without extra tokens; the web client's as a fallback.
+        for (const client of ["IOS", undefined] as const) {
+          try {
+            const info = await yt.getBasicInfo(videoId, client ? { client } : undefined);
+            const format = info.chooseFormat({ type: "audio", quality: "best" });
+            return await format.decipher(yt.session.player);
+          } catch (error) {
+            lastError = error;
+          }
+        }
+        throw lastError;
+      },
+    },
   },
   page: {
     async start(ctx) {
@@ -60,6 +93,68 @@ export default definePlugin({
       let skipped = false;
       let pendingFadeIn = false;
 
+      // pear-desktop's crossfade: a second stream of the current track plays its end,
+      // fading out, while the next track starts. Without one (not fetched yet, or not
+      // available), the track fades out before the next one fades in.
+      let outgoing: { videoId: string; audio: HTMLAudioElement } | undefined;
+      const playing = new Set<HTMLAudioElement>();
+      const prepare = (videoId: string) => {
+        if (outgoing?.videoId === videoId) return;
+        outgoing = undefined;
+        ctx.host.invoke("audioUrl", videoId).then(
+          (url) => {
+            if (ctx.signal.aborted || ctx.player.state.track?.videoId !== videoId) return;
+            const audio = new Audio();
+            audio.preload = "none";
+            audio.src = url;
+            outgoing = { videoId, audio };
+          },
+          (error: unknown) => ctx.log.warn("no second stream for the crossfade; fading out instead", error),
+        );
+      };
+      const ready = () => !!outgoing && outgoing.videoId === ctx.player.state.track?.videoId && outgoing.audio.readyState >= 2;
+      // The level the track plays at (the element's own volume, whatever the volume plugins do).
+      const volumeNow = () =>
+        video.muted ? 0 : (Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "volume")!.get!.call(video) as number);
+      const playOutgoing = () => {
+        const { audio } = outgoing!;
+        outgoing = undefined;
+        const base = volumeNow();
+        const length = Math.max(0.01, ctx.config.fadeOutDuration / 1000);
+        audio.currentTime = video.currentTime;
+        audio.playbackRate = video.playbackRate;
+        audio.volume = base;
+        playing.add(audio);
+        const started = performance.now();
+        const stop = () => {
+          audio.pause();
+          audio.removeAttribute("src");
+          audio.load();
+          playing.delete(audio);
+        };
+        void audio.play().then(
+          () => {
+            const step = () => {
+              if (!playing.has(audio)) return;
+              const x = 1 - (performance.now() - started) / 1000 / length;
+              if (x <= 0) return stop();
+              audio.volume = Math.min(1, base * level(x));
+              requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+          },
+          (error: unknown) => {
+            ctx.log.warn("the second stream didn't play", error);
+            stop();
+          },
+        );
+      };
+      ctx.onCleanup(() => {
+        for (const audio of playing) audio.pause();
+        playing.clear();
+        outgoing = undefined;
+      });
+
       const fadeWindow = () => {
         const duration = video.duration;
         if (!Number.isFinite(duration) || duration < MIN_TRACK_SECONDS || ctx.player.state.ad) return;
@@ -70,7 +165,7 @@ export default definePlugin({
       // Schedules the rest of the fade-out from the current position, at the current rate.
       const scheduleFadeOut = () => {
         const fade = fadeWindow();
-        if (!fade || video.paused) return;
+        if (!fade || video.paused || ready()) return;
         const position = video.currentTime;
         if (position < fade.start || position >= fade.end) return;
         fadingOut = true;
@@ -81,6 +176,11 @@ export default definePlugin({
         const fade = fadeWindow();
         if (!fade || video.paused) return;
         const position = video.currentTime;
+        // Load the second stream ahead of the switch.
+        if (outgoing?.audio.preload === "none" && position >= fade.end - PRELOAD_SECONDS) {
+          outgoing.audio.preload = "auto";
+          outgoing.audio.currentTime = Math.max(0, fade.end - 1);
+        }
         if (position >= fade.end) {
           if (skipped) return;
           skipped = true;
@@ -89,6 +189,11 @@ export default definePlugin({
             ctx.player.control({ type: "seek", seconds: 0 });
             fadeIn();
           } else {
+            // The track's end goes on in the second stream while the next one fades in.
+            if (ready()) {
+              playOutgoing();
+              hold(0);
+            }
             // Also covers the end of the queue: the next play fades in.
             pendingFadeIn = true;
             ctx.player.control({ type: "next" });
@@ -118,6 +223,8 @@ export default definePlugin({
         }
       };
 
+      ctx.player.on("trackChange", (track) => prepare(track.videoId));
+      if (ctx.player.state.track) prepare(ctx.player.state.track.videoId);
       ctx.player.on("trackLoading", () => {
         skipped = false;
         fadingOut = false;
@@ -152,3 +259,5 @@ export default definePlugin({
 
 // The running page part's re-scheduler (one instance at a time).
 let live: (() => void) | undefined;
+// Host: the InnerTube client for audio URLs, created on first use.
+let innertube: Promise<Innertube> | undefined;

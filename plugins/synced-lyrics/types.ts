@@ -49,6 +49,10 @@ export interface SearchQuery {
   durationSeconds: number;
   /** Accept looser matches (title-only search). */
   inexact: boolean;
+  /** The title in its original language, which YTM offers for some tracks (pear-desktop searched it too). */
+  alternativeTitle?: string;
+  /** The video's tags; the first is often the canonical artist name. */
+  tags?: string[];
 }
 
 /** How good a result is: word sync > line sync > plain text > nothing. */

@@ -27,33 +27,66 @@ test("in-app menu turns the top bar into a title bar with the app menu", async (
       await page.evaluate(() => getComputedStyle(document.querySelector("ytmusic-search-box")!).getPropertyValue("app-region")),
     ).toBe("no-drag");
 
+    // The whole application menu, as pear-desktop drew it: its menus cascade from the trigger.
     await trigger.click();
-    const menu = page.locator("pear-app-menu").getByRole("menu");
-    await expect(menu).toBeVisible();
-    for (const label of ["Settings…", "Reload", "Toggle DevTools", "Zoom In", "Zoom Out", "Actual Size", "Exit"]) {
-      await expect(menu.getByRole("menuitem", { name: new RegExp(`^${label}`) })).toBeVisible();
+    const menus = page.locator("pear-app-menu").getByRole("menu");
+    const top = menus.first();
+    await expect(top).toBeVisible();
+    for (const label of ["Options", "View", "Navigation", "About"]) {
+      await expect(top.getByRole("menuitem", { name: new RegExp(`^${label}`) })).toBeVisible();
+    }
+    await top.getByRole("menuitem", { name: /^View/ }).click();
+    const view = menus.nth(1);
+    for (const label of ["Reload", "Force Reload", "Zoom In", "Zoom Out", "Actual Size", "Toggle Full Screen"]) {
+      await expect(view.getByRole("menuitem", { name: new RegExp(`^${label}`) })).toBeVisible();
     }
     await page.waitForTimeout(300);
     await screenshot(page, "in-app-menu");
-    await menu.getByRole("menuitem", { name: /^Zoom In/ }).click();
-    await expect(menu).toBeHidden();
+    await view.getByRole("menuitem", { name: /^Zoom In/ }).click();
+    await expect(top).toBeHidden();
     await expect.poll(async () => (await windowInfo(app)).zoom).toBe(0.5);
     await trigger.click();
-    await menu.getByRole("menuitem", { name: /^Actual Size/ }).click();
+    await top.getByRole("menuitem", { name: /^View/ }).click();
+    await view.getByRole("menuitem", { name: /^Actual Size/ }).click();
     await expect.poll(async () => (await windowInfo(app)).zoom).toBe(0);
+    // Items unreachable from the old fixed list.
+    await trigger.click();
+    await top.getByRole("menuitem", { name: /^Navigation/ }).click();
+    for (const label of ["Go back", "Go forward", "Copy current URL", "Restart App", "Exit"]) {
+      await expect(menus.nth(1).getByRole("menuitem", { name: new RegExp(`^${label}`) })).toBeVisible();
+    }
+    await menus.nth(1).getByRole("menuitem", { name: /^Copy current URL/ }).click();
+    await expect.poll(() => app.evaluate(({ clipboard }) => clipboard.readText())).toBe(page.url());
+    // Checkboxes show their state and toggle.
+    await trigger.click();
+    await top.getByRole("menuitem", { name: /^Options/ }).click();
+    const onTop = menus.nth(1).getByRole("menuitemcheckbox", { name: /^Always on top/ });
+    await expect(onTop).toHaveAttribute("aria-checked", "false");
+    await onTop.click();
+    await expect.poll(async () => (await windowInfo(app)).alwaysOnTop).toBe(true);
+    await trigger.click();
+    await top.getByRole("menuitem", { name: /^Options/ }).click();
+    await expect(onTop).toHaveAttribute("aria-checked", "true");
+    await onTop.click();
+    await expect.poll(async () => (await windowInfo(app)).alwaysOnTop).toBe(false);
 
-    // Keyboard: F10 opens with focus on the first entry, arrows move, Escape closes.
+    // Keyboard: F10 opens with focus on the first entry, arrows move and open submenus, Escape closes.
     await page.keyboard.press("F10");
-    await expect(menu).toBeVisible();
-    await expect(menu.getByRole("menuitem", { name: /^Settings/ })).toBeFocused();
+    await expect(top).toBeVisible();
+    await expect(top.getByRole("menuitem", { name: /^Options/ })).toBeFocused();
     await page.keyboard.press("ArrowDown");
-    await expect(menu.getByRole("menuitem", { name: /^Reload/ })).toBeFocused();
+    await expect(top.getByRole("menuitem", { name: /^View/ })).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    await expect(menus.nth(1).getByRole("menuitem", { name: /^Reload/ })).toBeFocused();
+    await page.keyboard.press("ArrowLeft");
+    await expect(top.getByRole("menuitem", { name: /^View/ })).toBeFocused();
     await page.keyboard.press("Escape");
-    await expect(menu).toBeHidden();
+    await expect(top).toBeHidden();
 
     // Settings opens Pear Desktop's overlay.
     await trigger.click();
-    await menu.getByRole("menuitem", { name: /^Settings/ }).click();
+    await top.getByRole("menuitem", { name: /^Options/ }).click();
+    await menus.nth(1).getByRole("menuitem", { name: /^Settings/ }).click();
     await expect(page.locator("pear-settings").getByRole("dialog")).toBeVisible();
     await page.locator("pear-settings").getByRole("button", { name: "Close settings" }).click();
 
@@ -125,6 +158,15 @@ test("picture in picture shrinks the window and restores it", async () => {
     await expect(page.locator("ytmusic-player#player")).toHaveAttribute("player-ui-state", "FULLSCREEN");
     await page.waitForTimeout(500);
     expect((await windowInfo(app)).bounds.width).toBe(450);
+    // pear-desktop's small-window styling: no track info or menu in the bar.
+    for (const info of await page.locator("ytmusic-player-bar .content-info-wrapper, ytmusic-player-controls .content-info-wrapper").all()) {
+      await expect(info).toBeHidden();
+    }
+    for (const menu of await page.locator("ytmusic-player-bar ytmusic-menu-renderer").all()) await expect(menu).toBeHidden();
+    // "f" would leave YTM's full screen; in the small window it does nothing.
+    await page.keyboard.press("f");
+    await page.waitForTimeout(500);
+    await expect(page.locator("ytmusic-player#player")).toHaveAttribute("player-ui-state", "FULLSCREEN");
     await screenshot(page, "pip");
     // Working in another window keeps the small one.
     await app.evaluate(({ BrowserWindow }) => {

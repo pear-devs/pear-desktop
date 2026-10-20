@@ -111,11 +111,20 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
         // pear-desktop's translated plugin names and descriptions, where they exist.
         const t = plugins.i18n?.t ?? ((_: string, fallback?: string) => fallback ?? "");
         const description = plugin.description ? t(`plugins.${plugin.id}.description`, plugin.description) : undefined;
+        const actions = Object.entries((plugin.actions ?? {}) as Record<string, { label: string; description?: string } | undefined>).flatMap(
+          ([name, action]) => {
+            if (!action) return [];
+            const key = `plugins.${plugin.id}.actions.${name}`;
+            const actionDescription = action.description ? t(`${key}.description`, action.description) : undefined;
+            return [{ name, label: t(`${key}.label`, action.label), ...(actionDescription ? { description: actionDescription } : {}) }];
+          },
+        );
         return {
           id: plugin.id,
           name: t(`plugins.${plugin.id}.name`, plugin.name),
           ...(description ? { description } : {}),
           config: plugin.config ?? {},
+          ...(actions.length > 0 ? { actions } : {}),
         };
       }),
     } satisfies Bootstrap;
