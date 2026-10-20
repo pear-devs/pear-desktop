@@ -43,3 +43,28 @@ test("do-not-track gets to the track's start quickly, skipping ads that still pl
     await closeApp(app, page);
   }
 });
+
+test("do-not-track dismisses the Premium reminder shown after skipped ads", async () => {
+  test.setTimeout(90_000);
+  const app = await launchApp({ plugins: { "do-not-track": { enabled: true } } });
+  let page: Page | undefined;
+  try {
+    page = await mainWindow(app);
+    await page.waitForSelector("ytmusic-popup-container", { state: "attached" });
+    // YTM's own dialog and promo elements, opened the way YTM opens them.
+    const shown = await page.evaluate(async () => {
+      const dialog = document.createElement("tp-yt-paper-dialog") as HTMLElement & { open(): void; opened: boolean };
+      dialog.append(document.createElement("ytmusic-mealbar-promo-renderer"));
+      document.querySelector("ytmusic-popup-container")!.append(dialog);
+      dialog.open();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+      return getComputedStyle(dialog).display;
+    });
+    expect(shown).toBe("none");
+    await expect
+      .poll(() => page!.evaluate(() => (document.querySelector("tp-yt-paper-dialog:has(> ytmusic-mealbar-promo-renderer)") as { opened?: boolean }).opened))
+      .toBe(false);
+  } finally {
+    await closeApp(app, page);
+  }
+});

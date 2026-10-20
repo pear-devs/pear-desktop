@@ -74,6 +74,9 @@ export const selectors = {
   "integrations.exit_fullscreen_button": ".exit-fullscreen-button",
 
   // ---- network & files (adblock, downloader, proxy, sponsorblock)
+  /** The Premium reminder YTM shows after skipped ads, and its "Don't renew"/"No thanks" button. */
+  "promo.mealbar": "ytmusic-mealbar-promo-renderer",
+  "promo.dismiss": "yt-button-renderer.dismiss-button button",
 
   // ---- audio (equalizer, compressor, crossfade, volume, speed, quality, visualizer, …)
   "player.container": "ytmusic-player#player",

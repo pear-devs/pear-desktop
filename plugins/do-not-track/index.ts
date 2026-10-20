@@ -5,6 +5,7 @@ import { adStrategy, FAST_FORWARD_RATE, rewindTarget } from "./ads.ts";
 import { enableBlocking, loadEngine } from "./engine.ts";
 import { cachedSources, chooseLists, fetchSources } from "./lists.ts";
 import { installPruner } from "./prune.ts";
+import { dismissPromos, hidePromoCss } from "./promo.ts";
 
 const IN_PLAYER = "In player";
 const WITH_BLOCKLISTS = "With blocklists";
@@ -115,6 +116,15 @@ export default definePlugin({
     runAt: "start",
     start(ctx) {
       if (ctx.config.blocker === IN_PLAYER) ctx.onCleanup(installPruner());
+
+      // The Premium reminder YTM shows once ads are skipped.
+      ctx.addStyle(hidePromoCss(ctx.sel("promo.mealbar")));
+      ctx.waitFor("popup.container").then(
+        (container) =>
+          ctx.onCleanup(dismissPromos(container, ctx.sel("promo.mealbar"), ctx.sel("promo.dismiss"), () => ctx.log.info("dismissed a Premium reminder"))),
+        () => {}, // stopped before YTM's popups existed
+      );
+
       if (!ctx.config.skipAds) return;
 
       // Ads that still play: get through them without touching the track (see ads.ts).
