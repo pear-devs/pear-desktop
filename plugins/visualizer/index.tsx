@@ -65,7 +65,8 @@ export default definePlugin({
       return { width: Math.ceil(container.clientWidth * ratio), height: Math.ceil(container.clientHeight * ratio) };
     };
     const renderer = await RENDERERS[ctx.config.type]({ ctx, graph, canvas, size });
-    if (!renderer) return;
+    // Stopped while the renderer loaded: the cleanup above already ran, so no loop.
+    if (!renderer || ctx.signal.aborted) return;
 
     const observer = new ResizeObserver(() => {
       const { width, height } = size();

@@ -3,8 +3,8 @@
 
 import type { App, BrowserWindow, BrowserWindowConstructorOptions, Session } from "electron";
 import { interpolate, type Translate } from "@pear/sdk/i18n";
-import { type AnyPlugin, type Cleanup, type HostContext, type HostPlayer, type RpcMethod, supportsPlatform } from "@pear/sdk";
-import { createLogger, errorMessage, timerSet } from "@pear/sdk/util";
+import { type AnyPlugin, type HostContext, type HostPlayer, type RpcMethod, supportsPlatform } from "@pear/sdk";
+import { CleanupStack, createLogger, errorMessage, timerSet } from "@pear/sdk/util";
 import { v } from "@pear/sdk/rpc";
 import type { HostEvent, PluginMeta, PluginState } from "@pear/sdk/protocol";
 import type { Settings } from "./config.ts";
@@ -18,7 +18,7 @@ type ConfigListener = (config: AnyConfig) => void | "restart";
 
 /** A running host part. */
 class Instance {
-  readonly cleanups: Cleanup[] = [];
+  readonly cleanups = new CleanupStack((error) => this.ctx.log.error("cleanup failed", error));
   /** Registered with `ctx.onConfigChange`; they replace restarting. */
   readonly configListeners: ConfigListener[] = [];
   stopped = false;
@@ -259,10 +259,8 @@ export class PluginHost {
     this.#clearError(plugin.id);
     try {
       const cleanup = await plugin.host.start?.(instance.ctx);
-      if (typeof cleanup === "function") {
-        if (instance.stopped) cleanup();
-        else instance.cleanups.push(cleanup);
-      }
+      // Stopped while starting: the stack runs it at once.
+      if (typeof cleanup === "function") instance.cleanups.add(cleanup);
     } catch (error) {
       this.#reportError(plugin.id, "failed to start", error);
     }
@@ -276,13 +274,7 @@ export class PluginHost {
     this.#clearError(id);
     this.#setStatus(id, "");
     this.#env?.router.release(id);
-    for (const cleanup of instance.cleanups.reverse()) {
-      try {
-        cleanup();
-      } catch (error) {
-        instance.ctx.log.error("cleanup failed", error);
-      }
-    }
+    instance.cleanups.run();
   }
 
   #createInstance(plugin: AnyPlugin, env: HostEnvironment) {
@@ -292,6 +284,7 @@ export class PluginHost {
   #context(id: string, env: HostEnvironment, instance: Instance): HostContext<AnyConfig> {
     const settings = this.#settings;
     const { cleanups } = instance;
+    const active = () => !instance.stopped;
     return {
       id,
       get config() {
@@ -300,15 +293,15 @@ export class PluginHost {
       setConfig: (patch) => void this.setConfig(id, patch),
       app: env.app,
       window: env.window,
-      session: env.router.scopedSession(id),
-      webRequest: env.router.scoped(id),
+      session: env.router.scopedSession(id, active),
+      webRequest: env.router.scoped(id, active),
       request: (event, payload, options) => env.requests.request(id, event, payload, options),
       player: scopedPlayer(env, cleanups),
       openSettings: () => env.openSettings(),
       focusWindow: () => env.focusWindow(),
       listen: (target, event, listener) => {
         target.on(event, listener);
-        cleanups.push(() => target.removeListener(event, listener));
+        cleanups.add(() => target.removeListener(event, listener));
       },
       onConfigChange: (listener) => void instance.configListeners.push(listener as ConfigListener),
       ...timers(cleanups),
@@ -321,8 +314,8 @@ export class PluginHost {
           if (!instance.stopped) env.broadcast(id, event, data);
         },
       },
-      onProtocol: (listener) => void cleanups.push(env.onProtocol(listener)),
-      onCleanup: (fn) => cleanups.push(fn),
+      onProtocol: (listener) => cleanups.add(env.onProtocol(listener)),
+      onCleanup: (fn) => cleanups.add(fn),
       t: this.t,
       log: createLogger(id),
     };
@@ -330,24 +323,20 @@ export class PluginHost {
 }
 
 /** setTimeout / setInterval, cleared when the plugin stops. */
-function timers(cleanups: Cleanup[]) {
-  const { clearAll, ...timers } = timerSet();
-  cleanups.push(clearAll);
+function timers(cleanups: CleanupStack) {
+  const { stop, ...timers } = timerSet();
+  cleanups.add(stop);
   return timers;
 }
 
 /** The player, with the plugin's listeners removed when it stops. */
-function scopedPlayer({ player, requests }: HostEnvironment, cleanups: Cleanup[]): HostPlayer {
+function scopedPlayer({ player, requests }: HostEnvironment, cleanups: CleanupStack): HostPlayer {
   return {
     get state() {
       return player.state;
     },
     // One implementation for both of `on`'s overloads, which a function expression can't declare.
-    on: ((event: "change", listener: never) => {
-      const off = player.on(event, listener);
-      cleanups.push(off);
-      return off;
-    }) as HostPlayer["on"],
+    on: ((event: "change", listener: never) => cleanups.track(player.on(event, listener))) as HostPlayer["on"],
     control: (action) => player.control(action),
     details: (options) => requests.songDetails(options),
   };

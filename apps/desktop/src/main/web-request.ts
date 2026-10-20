@@ -36,11 +36,16 @@ export class WebRequestRouter {
     this.#session = session;
   }
 
-  /** A WebRequest whose registrations belong to `owner` and compose with everyone else's. */
-  scoped(owner: string): WebRequest {
+  /**
+   * A WebRequest whose registrations belong to `owner` and compose with everyone else's.
+   * Calls are ignored once `active` is false: a stopped plugin's late registrations
+   * would outlive it, or replace those of its restarted successor (same owner).
+   */
+  scoped(owner: string, active: () => boolean = () => true): WebRequest {
     const scoped: Partial<Record<EventName, unknown>> = {};
     for (const event of [...BLOCKING_EVENTS, ...OBSERVER_EVENTS]) {
       scoped[event] = (filterOrListener?: unknown, maybeListener?: unknown) => {
+        if (!active()) return;
         const hasFilter = maybeListener !== undefined || (filterOrListener !== null && typeof filterOrListener === "object");
         const filter = hasFilter ? (filterOrListener as WebRequestFilter | null) ?? undefined : undefined;
         // Electron's own overloads type the arguments for callers; here they are what was passed.
@@ -53,8 +58,8 @@ export class WebRequestRouter {
   }
 
   /** A Session proxy whose `webRequest` is scoped to `owner`. */
-  scopedSession(owner: string): Session {
-    const webRequest = this.scoped(owner);
+  scopedSession(owner: string, active?: () => boolean): Session {
+    const webRequest = this.scoped(owner, active);
     return new Proxy(this.#session, {
       get(target, property, receiver) {
         if (property === "webRequest") return webRequest;

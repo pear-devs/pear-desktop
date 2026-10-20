@@ -163,4 +163,75 @@ describe("pear-desktop's Music Together", () => {
     host.stop();
     guest.stop();
   });
+
+  test("stopping while hosting waits for PeerJS destroys the peer and sets nothing up", async () => {
+    const network = new Network();
+    const hostQueue = fakeQueue(["a"]);
+    const toasts: string[] = [];
+    const connection = new PendingConnection("host-id", network);
+    const host = new Together({ ...environment(network, "host-id", hostQueue, toasts), createConnection: () => connection });
+    const hosting = host.host();
+    expect(host.connecting).toBe(true);
+    host.stop();
+    expect(connection.disconnects).toBe(1);
+    expect(host.connecting).toBe(false);
+    connection.open();
+    expect(await hosting).toBe(false);
+    // No queue injection: YTM's own changes apply as usual.
+    hostQueue.userAdds("b");
+    expect(hostQueue.ids()).toEqual(["a", "b"]);
+    expect(host.queue).toBeUndefined();
+    expect(toasts).toEqual([]);
+  });
+
+  test("a guest stopped while joining leaves YTM's queue alone", async () => {
+    const network = new Network();
+    const hostQueue = fakeQueue(["a"]);
+    const guestQueue = fakeQueue(["mine"]);
+    const guest = new Together(environment(network, "guest-id", guestQueue, []));
+    // The guest stops while its IDENTIFY is on the way to the host.
+    const host = new Together({ ...environment(network, "host-id", hostQueue, []), toast: () => guest.stop() });
+    await host.host();
+    expect(await guest.join("host-id")).toBe(false);
+    await settle();
+    expect(guestQueue.ids()).toEqual(["mine"]);
+    expect(guest.mode).toBe("disconnected");
+    host.stop();
+  });
+
+  test("hosting fails after a while when PeerJS never opens", async () => {
+    vi.useFakeTimers();
+    try {
+      const network = new Network();
+      const toasts: string[] = [];
+      const connection = new PendingConnection("host-id", network);
+      const host = new Together({ ...environment(network, "host-id", fakeQueue(), toasts), createConnection: () => connection });
+      const hosting = host.host();
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(await hosting).toBe(false);
+      expect(toasts).toEqual(["Failed to host Music Together"]);
+      expect(connection.disconnects).toBe(1);
+      expect(host.connecting).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
+
+/** A connection whose PeerJS peer opens only when told to. */
+class PendingConnection extends FakeConnection {
+  disconnects = 0;
+  #open!: () => void;
+  #ready = new Promise<void>((resolve) => (this.#open = resolve));
+  open() {
+    this.#open();
+  }
+  override async waitForReady() {
+    await this.#ready;
+    return super.waitForReady();
+  }
+  override disconnect() {
+    this.disconnects++;
+    super.disconnect();
+  }
+}

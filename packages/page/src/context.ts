@@ -16,7 +16,7 @@ import { keepMounted, observe } from "@pear/sdk/dom";
 import type { Bridge } from "@pear/sdk/protocol";
 import { selectors } from "@pear/sdk/selectors";
 import { adoptSheet, dropSheets, styleSheet } from "@pear/sdk/stylesheets";
-import { timerSet } from "@pear/sdk/util";
+import { CleanupStack, timerSet } from "@pear/sdk/util";
 import type { AudioGraph } from "./audio.ts";
 import { waitForSelector } from "./dom.ts";
 import type { Player } from "./player.ts";
@@ -30,8 +30,9 @@ export type RequestHandler = (payload: unknown) => unknown;
 
 /** What a running page part registered; `stop` undoes all of it. */
 export class Scope {
+  readonly #id: string;
   readonly #controller = new AbortController();
-  readonly #cleanups: Cleanup[] = [];
+  readonly #cleanups = new CleanupStack((error) => console.error(`[pear:${this.#id}] cleanup failed`, error));
   /** The plugin's `style`; see `PluginRunner`. */
   pluginSheet: CSSStyleSheet | undefined;
   /** Sheets from `ctx.addStyle`. */
@@ -39,30 +40,25 @@ export class Scope {
   /** Registered with `ctx.onConfigChange`; they replace restarting. */
   readonly configListeners: ConfigListener[] = [];
 
+  constructor(id: string) {
+    this.#id = id;
+  }
+
   get signal() {
     return this.#controller.signal;
   }
 
-  /** Runs `cleanup` when the plugin stops. */
+  /** Runs `cleanup` when the plugin stops, or now if it already did. */
   onStop(cleanup: Cleanup) {
-    this.#cleanups.push(cleanup);
+    this.#cleanups.add(cleanup);
   }
 
-  /** `onStop(unsubscribe)`, returning it. */
-  track = (unsubscribe: Unsubscribe): Unsubscribe => {
-    this.#cleanups.push(unsubscribe);
-    return unsubscribe;
-  };
+  /** `onStop(unsubscribe)`, returning an unsubscribe that also forgets it. */
+  track = (unsubscribe: Unsubscribe): Unsubscribe => this.#cleanups.track(unsubscribe);
 
-  stop(id: string) {
-    this.#controller.abort(new DOMException(`plugin ${id} stopped`, "AbortError"));
-    for (const cleanup of this.#cleanups.reverse()) {
-      try {
-        cleanup();
-      } catch (error) {
-        console.error(`[pear:${id}] cleanup failed`, error);
-      }
-    }
+  stop() {
+    this.#controller.abort(new DOMException(`plugin ${this.#id} stopped`, "AbortError"));
+    this.#cleanups.run();
     dropSheets(this.pluginSheet ? [this.pluginSheet, ...this.sheets] : this.sheets);
     this.pluginSheet = undefined;
     this.sheets = [];
@@ -125,6 +121,8 @@ export function hostClient(
 /** `ctx.addStyle`: a sheet before the themes, for the plugin's lifetime. */
 export function styleHandle(scope: Scope, css: string): StyleHandle {
   const sheet = styleSheet(css);
+  // Added by a stopped plugin (after an await in `start`): nothing would drop it.
+  if (scope.signal.aborted) return { update: (next) => sheet.replaceSync(next), remove: () => {} };
   adoptSheet(sheet);
   scope.sheets.push(sheet);
   return {
@@ -164,8 +162,8 @@ export function domHelpers(scope: Scope): DomHelpers {
 
 /** setTimeout / setInterval, cleared when the plugin stops. */
 export function timers(track: Track): Pick<AnyContext, "setTimeout" | "setInterval" | "clearTimeout" | "clearInterval"> {
-  const { clearAll, ...timers } = timerSet();
-  track(clearAll);
+  const { stop, ...timers } = timerSet();
+  track(stop);
   return timers;
 }
 

@@ -166,9 +166,8 @@ export class PluginRunner {
       if (scope.signal.aborted) return;
       const cleanup = await part.start(ctx);
       if (typeof cleanup !== "function") return;
-      // Stopped while starting: nothing else will run the cleanup.
-      if (scope.signal.aborted) cleanup();
-      else scope.onStop(cleanup);
+      // Stopped while starting: the scope runs it at once.
+      scope.onStop(cleanup);
     } catch (error) {
       if (scope.signal.aborted) return;
       console.error(`[pear:${id}] failed to start`, error);
@@ -180,7 +179,7 @@ export class PluginRunner {
     const instance = this.#instances.get(id);
     if (!instance) return;
     this.#instances.delete(id);
-    instance.scope.stop(id);
+    instance.scope.stop();
     this.#listeners.delete(id);
     this.#handlers.delete(id);
   }
@@ -228,7 +227,7 @@ export class PluginRunner {
 
   #createInstance(plugin: AnyPlugin): Instance {
     const { id } = plugin;
-    const scope = new Scope();
+    const scope = new Scope(id);
     const host = this.#host;
     const listeners = getOrCreate(this.#listeners, id, () => new Map());
     const handlers = getOrCreate(this.#handlers, id, () => new Map());

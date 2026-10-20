@@ -186,6 +186,11 @@ host: {
 Listeners, timers, observers, styles and mounted elements are all removed when
 the plugin stops.
 
+This holds for both parts even when `start` awaits and the plugin is disabled
+or restarted meanwhile: whatever it registers after it stopped is undone at
+once, and its timers never fire. On the page, `ctx.signal.aborted` tells it to
+give up early.
+
 ## Talking between host and page
 
 Page to host, with commands. Arguments and results are typed:

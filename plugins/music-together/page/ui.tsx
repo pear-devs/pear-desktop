@@ -40,6 +40,10 @@ export function Panel(props: PanelProps) {
       {together.connecting ? (
         <div class="busy" role="status">
           <span class="spinner" aria-hidden="true" />
+          {/* PeerJS may take a while (or never answer); stopping drops the attempt. */}
+          <button type="button" class="button small" onClick={() => together.stop()}>
+            {t("plugins.music-together.ui.cancel", "Cancel")}
+          </button>
         </div>
       ) : mode === "disconnected" ? (
         <Start {...props} />

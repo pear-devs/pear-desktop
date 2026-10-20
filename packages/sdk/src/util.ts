@@ -58,22 +58,29 @@ export function isPlaying(state: Pick<NowPlaying, "status">) {
 
 type Timer = ReturnType<typeof setTimeout>;
 
-/** The timers of a running plugin: `clearAll` clears the pending ones. Fired and cleared timers are forgotten. */
+/**
+ * The timers of a running plugin: `stop` clears the pending ones, and timers set
+ * after it are cleared at once (a `start` still awaiting when the plugin stopped
+ * mustn't leave any behind). Fired and cleared timers are forgotten.
+ */
 export function timerSet() {
   const pending = new Set<Timer>();
+  let stopped = false;
+  function arm(timer: Timer) {
+    if (stopped) clearTimeout(timer);
+    else pending.add(timer);
+    return timer;
+  }
   return {
     setTimeout(fn: () => void, ms: number): Timer {
       const timer = setTimeout(() => {
         pending.delete(timer);
         fn();
       }, ms);
-      pending.add(timer);
-      return timer;
+      return arm(timer);
     },
     setInterval(fn: () => void, ms: number): Timer {
-      const timer = setInterval(fn, ms);
-      pending.add(timer);
-      return timer;
+      return arm(setInterval(fn, ms));
     },
     clearTimeout(timer: Timer | undefined) {
       if (timer !== undefined) pending.delete(timer);
@@ -83,12 +90,78 @@ export function timerSet() {
       if (timer !== undefined) pending.delete(timer);
       clearInterval(timer);
     },
-    clearAll() {
+    stop() {
+      stopped = true;
       // clearTimeout clears intervals too (they share one set of ids).
       for (const timer of pending) clearTimeout(timer);
       pending.clear();
     },
   };
+}
+
+/**
+ * What a running plugin registered, undone by `run` when it stops, last registered
+ * first. Whatever is added after `run` is undone at once: a `start` that was still
+ * awaiting when the plugin stopped mustn't leave anything behind.
+ */
+export class CleanupStack {
+  // Wrappers, not the functions themselves: the same function may be added twice.
+  readonly #entries = new Set<() => void>();
+  readonly #onError: (error: unknown) => void;
+  #done = false;
+
+  constructor(onError: (error: unknown) => void) {
+    this.#onError = onError;
+  }
+
+  get done() {
+    return this.#done;
+  }
+
+  /** How many cleanups are waiting for `run`. */
+  get size() {
+    return this.#entries.size;
+  }
+
+  /** Runs `cleanup` on `run`, or now if that already happened. */
+  add(cleanup: () => void) {
+    if (this.#done) return this.#call(cleanup);
+    this.#entries.add(() => cleanup());
+  }
+
+  /**
+   * `add(unsubscribe)`, returning an unsubscribe that also drops it from the
+   * stack, so manual unsubscribes don't pile up until the plugin stops. Either
+   * way it runs once.
+   */
+  track(unsubscribe: () => void): () => void {
+    let called = false;
+    const once = () => {
+      if (called) return;
+      called = true;
+      this.#entries.delete(once);
+      unsubscribe();
+    };
+    if (this.#done) this.#call(once);
+    else this.#entries.add(once);
+    return once;
+  }
+
+  run() {
+    if (this.#done) return;
+    this.#done = true;
+    const entries = [...this.#entries].reverse();
+    this.#entries.clear();
+    for (const cleanup of entries) this.#call(cleanup);
+  }
+
+  #call(cleanup: () => void) {
+    try {
+      cleanup();
+    } catch (error) {
+      this.#onError(error);
+    }
+  }
 }
 
 export function createLogger(id: string): Logger {

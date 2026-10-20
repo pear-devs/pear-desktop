@@ -4,8 +4,13 @@ export interface WaitOptions extends WaitForOptions {
   signal?: AbortSignal;
 }
 
-/** Resolves with the first element matching `selector`, observing the DOM until it appears. */
+/**
+ * Resolves with the first element matching `selector`, observing the DOM until it appears.
+ * Rejects with the signal's reason once it aborts, even if the element is already there.
+ */
 export function waitForSelector<E extends Element>(selector: string, options: WaitOptions = {}): Promise<E> {
+  // An aborted signal never fires "abort" again: the observer would run forever.
+  if (options.signal?.aborted) return Promise.reject(options.signal.reason);
   const root = options.root ?? document;
   const found = root.querySelector<E>(selector);
   if (found) return Promise.resolve(found);

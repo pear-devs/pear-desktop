@@ -1132,7 +1132,8 @@
       },
       "ui": {
         "close": "Close",
-        "join": "Join"
+        "join": "Join",
+        "cancel": "Cancel"
       }
     },
     "navigation": {

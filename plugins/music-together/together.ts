@@ -30,6 +30,8 @@ const SEEK_TOLERANCE_S = 3;
 const STATE_INTERVAL_MS = 1000;
 const PLAYING = 1;
 const PAUSED = 2;
+/** How long hosting or joining waits for PeerJS (signalling server, then the host) before failing. */
+const CONNECT_TIMEOUT_MS = 20_000;
 /** How long after applying a change the player's own events still count as its echo (a frame). */
 const SETTLE_MS = 16;
 
@@ -54,6 +56,8 @@ export class Together {
   #stateTimer: ReturnType<typeof setInterval> | undefined;
   #rollback: (() => void)[] = [];
   #listeners = new Set<() => void>();
+  /** Bumped by every host, join and stop: an attempt that sees another number was stopped or superseded. */
+  #attempt = 0;
 
   constructor(env: TogetherEnvironment) {
     this.#env = env;
@@ -101,12 +105,13 @@ export class Together {
 
   /** Hosts a session; the id to share is `id`. */
   async host() {
-    this.connecting = true;
-    this.#emit();
+    const attempt = this.#begin();
     try {
       const connection = this.#env.createConnection();
       this.connection = connection;
-      if (!(await connection.waitForReady().catch(() => null))) return this.#fail(this.#env.t("plugins.music-together.toast.host-failed", "Failed to host Music Together"));
+      const ready = await withTimeout(connection.waitForReady(), CONNECT_TIMEOUT_MS).catch(() => null);
+      if (attempt !== this.#attempt) return this.#abandon(connection);
+      if (!ready) return this.#fail(this.#env.t("plugins.music-together.toast.host-failed", "Failed to host Music Together"));
       const queue = this.#makeQueue();
       if (!queue) return this.#fail(this.#env.t("plugins.music-together.toast.host-failed", "Failed to host Music Together"));
       this.queue = queue;
@@ -154,9 +159,32 @@ export class Together {
       this.#startSync();
       return true;
     } finally {
-      this.connecting = false;
-      this.#emit();
+      this.#end(attempt);
     }
+  }
+
+  /** Starts a host or join attempt, ending whatever session or attempt came before. */
+  #begin() {
+    if (this.connection) this.stop();
+    this.connecting = true;
+    this.#emit();
+    return ++this.#attempt;
+  }
+
+  #end(attempt: number) {
+    // A stopped or superseded attempt's `connecting` is no longer its own.
+    if (attempt !== this.#attempt) return;
+    this.connecting = false;
+    this.#emit();
+  }
+
+  /**
+   * Gives up an attempt that was stopped (or superseded) while it awaited. stop()
+   * undid what it had set up by then; the connection may not be the current one.
+   */
+  #abandon(connection: ConnectionLike) {
+    connection.disconnect();
+    return false;
   }
 
   /** Whether a guest's change is refused; the guest then gets the host's queue back. */
@@ -249,17 +277,22 @@ export class Together {
 
   /** Joins the session hosted under `hostId` (the host's PeerJS id). */
   async join(hostId: string) {
-    this.connecting = true;
-    this.#emit();
+    const attempt = this.#begin();
+    const failed = () => this.#fail(this.#env.t("plugins.music-together.toast.join-failed", "Failed to join Music Together"));
     try {
       const connection = this.#env.createConnection();
       this.connection = connection;
-      if (!(await connection.waitForReady().catch(() => null))) return this.#fail(this.#env.t("plugins.music-together.toast.join-failed", "Failed to join Music Together"));
+      const ready = await withTimeout(connection.waitForReady(), CONNECT_TIMEOUT_MS).catch(() => null);
+      if (attempt !== this.#attempt) return this.#abandon(connection);
+      if (!ready) return failed();
       this.profiles = {};
       const id = hostId.trim();
-      if (!id || !(await connection.connect(id).then(() => true, () => false))) return this.#fail(this.#env.t("plugins.music-together.toast.join-failed", "Failed to join Music Together"));
+      if (!id) return failed();
+      const connected = await withTimeout(connection.connect(id), CONNECT_TIMEOUT_MS).then(() => true, () => false);
+      if (attempt !== this.#attempt) return this.#abandon(connection);
+      if (!connected) return failed();
       const queue = this.#makeQueue();
-      if (!queue) return this.#fail(this.#env.t("plugins.music-together.toast.join-failed", "Failed to join Music Together"));
+      if (!queue) return failed();
       this.queue = queue;
       connection.onConnections((conn) => {
         if (this.connection !== connection) return;
@@ -297,18 +330,22 @@ export class Together {
       queue.setOwner(me);
       this.#watchSeeks();
 
+      // Stopped while these went out: leave YTM's queue alone and start no sync.
       await connection.broadcast("IDENTIFY", { profile: me });
+      if (attempt !== this.#attempt) return this.#abandon(connection);
       await connection.broadcast("SYNC_PROFILE", undefined);
+      if (attempt !== this.#attempt) return this.#abandon(connection);
       await connection.broadcast("PERMISSION", undefined);
+      if (attempt !== this.#attempt) return this.#abandon(connection);
       queue.clear();
       queue.syncQueueOwner();
       queue.initQueue();
       await connection.broadcast("SYNC_QUEUE", undefined);
+      if (attempt !== this.#attempt) return this.#abandon(connection);
       this.#startSync();
       return true;
     } finally {
-      this.connecting = false;
-      this.#emit();
+      this.#end(attempt);
     }
   }
 
@@ -456,9 +493,12 @@ export class Together {
   }
 
   stop() {
+    this.#attempt++;
+    this.connecting = false;
     const connection = this.connection;
     this.connection = undefined;
-    if (connection && connection.mode !== "disconnected") connection.disconnect();
+    // Even "disconnected": a host or join still waiting for PeerJS has a Peer that would keep reconnecting.
+    connection?.disconnect();
     clearInterval(this.#stateTimer);
     this.#stateTimer = undefined;
     this.queue?.rollbackInjection();
@@ -475,4 +515,13 @@ export class Together {
     this.stop();
     return false;
   }
+}
+
+/** `promise`, or a rejection after `ms`: PeerJS may never open, e.g. without a signalling server. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`timed out after ${ms} ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
