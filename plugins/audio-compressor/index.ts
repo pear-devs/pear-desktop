@@ -14,30 +14,19 @@ export default definePlugin({
     attack: config.number(0, { label: "Attack", min: 0, max: 1000, step: 5, unit: " ms" }),
     release: config.number(250, { label: "Release", min: 0, max: 1000, step: 5, unit: " ms" }),
   },
-  page: {
-    async start(ctx) {
-      const graph = await ctx.audio();
-      const compressor = graph.context.createDynamicsCompressor();
-      const apply = () => {
-        const { threshold, ratio, knee, attack, release } = ctx.config;
-        compressor.threshold.value = threshold;
-        compressor.ratio.value = ratio;
-        compressor.knee.value = knee;
-        compressor.attack.value = attack / 1000;
-        compressor.release.value = release / 1000;
-      };
-      apply();
-      graph.insert(compressor, compressor, ORDER);
-      live = apply;
-      return () => {
-        live = undefined;
-      };
-    },
-    onConfigChange() {
-      live?.();
-    },
+  page: async (ctx) => {
+    const graph = await ctx.audio();
+    const compressor = graph.context.createDynamicsCompressor();
+    const apply = () => {
+      const { threshold, ratio, knee, attack, release } = ctx.config;
+      compressor.threshold.value = threshold;
+      compressor.ratio.value = ratio;
+      compressor.knee.value = knee;
+      compressor.attack.value = attack / 1000;
+      compressor.release.value = release / 1000;
+    };
+    apply();
+    graph.insert(compressor, compressor, ORDER);
+    ctx.onConfigChange(apply);
   },
 });
-
-// The running page part's updater (one instance at a time).
-let live: (() => void) | undefined;

@@ -1,83 +1,22 @@
 import { join } from "node:path";
-import { config, definePlugin } from "@pear/sdk";
+import { definePlugin } from "@pear/sdk";
 import { net } from "electron";
-import { adStrategy, FAST_FORWARD_RATE, rewindTarget } from "./ads.ts";
+import { applyCosmetics } from "./cosmetics.ts";
 import { cosmetics, enableBlocking, loadEngine } from "./engine.ts";
 import type { CosmeticsRequest } from "./engine.ts";
 import { cachedSources, chooseLists, fetchSources } from "./lists.ts";
 import { installPruner } from "./prune.ts";
 import { dismissPromos, hidePromoCss } from "./promo.ts";
-
-const IN_PLAYER = "In player";
-const WITH_BLOCKLISTS = "With blocklists";
+import { IN_PLAYER, schema, WITH_BLOCKLISTS } from "./schema.ts";
+import { skipAds } from "./skip-ads.ts";
 
 const stats = { active: false, blocked: 0, lists: 0 };
-
-interface AdBreak {
-  videoId: string;
-  /** Track position when the ad started, to rewind to if the track ran on underneath. */
-  anchor: number;
-  rate: number;
-  muted: boolean;
-  fastForwarded: boolean;
-  timer: ReturnType<typeof setInterval>;
-}
 
 export default definePlugin({
   id: "do-not-track",
   name: "Do Not Track",
   description: "Blocks tracking: strips ad and tracking data from the player, or filters requests with tracker blocklists.",
-  config: {
-    // Values are pear-desktop's, so its settings keep working.
-    blocker: config.select(
-      IN_PLAYER,
-      [
-        { value: IN_PLAYER, label: "In the player" },
-        { value: WITH_BLOCKLISTS, label: "With blocklists" },
-      ],
-      {
-        label: "Blocker",
-        description:
-          "In the player removes ad and tracking placements from \u0059\u006f\u0075\u0054\u0075\u0062\u0065's player data; with blocklists filters network requests " +
-          "with pear-desktop's curated lists.",
-      },
-    ),
-    skipAds: config.bool(true, {
-      label: "Skip ads that still play",
-      description: "Gets through them in a blink, muted, without cutting into the track.",
-    }),
-    cache: config.bool(true, {
-      label: "Cache the blocklists",
-      description: "Starts blocking instantly on launch; lists refresh in the background.",
-      group: "Blocklists",
-    }),
-    additionalBlockLists: config.list([], {
-      label: "Additional blocklists",
-      placeholder: "https://…/filters.txt",
-      description: "URLs of extra lists in Adblock Plus / uBlock syntax.",
-      group: "Blocklists",
-    }),
-    disableDefaultLists: config.bool(false, {
-      label: "Disable the default blocklists",
-      description: "Only use the additional blocklists.",
-      group: "Blocklists",
-    }),
-    // pear-desktop applied the lists' cosmetic filters too; their scriptlets for the video
-    // site can desync playback, so those are opt-in.
-    cosmeticFilters: config.select(
-      "styles",
-      [
-        { value: "off", label: "Off" },
-        { value: "styles", label: "Hide elements" },
-        { value: "all", label: "Hide elements and run scriptlets" },
-      ],
-      {
-        label: "Cosmetic filters",
-        description: "The lists' element hiding; scriptlets may cut the start of tracks.",
-        group: "Blocklists",
-      },
-    ),
-  },
+  config: schema,
   host: {
     async start(ctx) {
       if (ctx.config.blocker !== WITH_BLOCKLISTS) return;
@@ -85,8 +24,7 @@ export default definePlugin({
       const cacheDir = ctx.config.cache ? join(ctx.app.getPath("userData"), "tb_cache") : undefined;
       const listsFrom = (sources: readonly string[]) => chooseLists(sources, ctx.config);
 
-      // Cached: start from the last known curated lists and look for new ones afterwards.
-      const sources = cacheDir ? await cachedSources(cacheDir) : ((await fetchSources(fetch, undefined)) ?? (await cachedSources(undefined)));
+      const sources = await initialSources(fetch, cacheDir);
       let lists = listsFrom(sources);
       if (lists.length === 0) {
         throw new Error(ctx.t("plugins.do-not-track.no-lists", "No blocklists: enable the default ones or add your own."));
@@ -143,78 +81,15 @@ export default definePlugin({
       if (ctx.config.blocker === WITH_BLOCKLISTS && ctx.config.cosmeticFilters !== "off") applyCosmetics(ctx);
 
       // The Premium reminder YTM shows once ads are skipped.
-      ctx.addStyle(hidePromoCss(ctx.sel("promo.mealbar")));
+      const promo = ctx.sel("promo.mealbar");
+      ctx.addStyle(hidePromoCss(promo));
+      const onDismiss = () => ctx.log.info("dismissed a Premium reminder");
       ctx.waitFor("popup.container").then(
-        (container) =>
-          ctx.onCleanup(dismissPromos(container, ctx.sel("promo.mealbar"), ctx.sel("promo.dismiss"), () => ctx.log.info("dismissed a Premium reminder"))),
+        (container) => ctx.onCleanup(dismissPromos(container, promo, ctx.sel("promo.dismiss"), onDismiss)),
         () => {}, // stopped before YTM's popups existed
       );
 
-      if (!ctx.config.skipAds) return;
-
-      // Ads that still play: get through them without touching the track (see ads.ts).
-      let content = { videoId: "", seconds: 0 };
-      let adBreak: AdBreak | undefined;
-      ctx.player.on("trackLoading", (videoId) => (content = { videoId, seconds: 0 }));
-      ctx.player.on("timeUpdate", (seconds) => {
-        const videoId = ctx.player.api?.getVideoData().video_id;
-        if (videoId) content = { videoId, seconds };
-      });
-
-      const tick = () => {
-        const video = ctx.player.video();
-        const api = ctx.player.api;
-        if (!adBreak || !video || !api) return;
-        const contentDuration = Number(api.getPlayerResponse()?.videoDetails?.lengthSeconds) || 0;
-        if (adStrategy(video.duration, contentDuration) === "seek") {
-          if (video.currentTime < video.duration - 0.25) video.currentTime = video.duration;
-        } else {
-          adBreak.fastForwarded = true;
-          if (video.playbackRate !== FAST_FORWARD_RATE) video.playbackRate = FAST_FORWARD_RATE;
-        }
-        if (!video.muted) video.muted = true;
-      };
-
-      const begin = () => {
-        const video = ctx.player.video();
-        const api = ctx.player.api;
-        if (adBreak || !video || !api) return;
-        const videoId = api.getVideoData().video_id;
-        adBreak = {
-          videoId,
-          anchor: videoId === content.videoId ? content.seconds : 0,
-          rate: api.getPlaybackRate() || 1,
-          muted: video.muted,
-          fastForwarded: false,
-          timer: setInterval(tick, 250),
-        };
-        ctx.log.info("ad started, skipping it");
-        tick();
-      };
-
-      const end = () => {
-        const ended = adBreak;
-        if (!ended) return;
-        adBreak = undefined;
-        clearInterval(ended.timer);
-        const video = ctx.player.video();
-        const api = ctx.player.api;
-        if (!video || !api) return;
-        video.playbackRate = ended.rate;
-        video.muted = ended.muted;
-        if (!ended.fastForwarded) return;
-        setTimeout(() => {
-          if (ctx.signal.aborted || ctx.player.state.ad || api.getVideoData().video_id !== ended.videoId) return;
-          const target = rewindTarget(ended.anchor, api.getCurrentTime());
-          if (target === undefined) return;
-          ctx.log.info(`rewinding ${(api.getCurrentTime() - target).toFixed(1)}s of track played at ad speed`);
-          api.seekTo(target, true);
-        }, 500);
-      };
-
-      ctx.player.on("adChange", (ad) => (ad ? begin() : end()));
-      if (ctx.player.state.ad) begin();
-      ctx.onCleanup(end);
+      if (ctx.config.skipAds) skipAds(ctx);
     },
   },
 });
@@ -222,79 +97,8 @@ export default definePlugin({
 /** Per running host part: its current engine. */
 const engines = new WeakMap<object, () => import("@ghostery/adblocker").FiltersEngine>();
 
-const COSMETICS_RETRY_MS = 1000;
-const DOM_SCAN_MS = 2000;
-
-interface CosmeticsContext {
-  host: { invoke(name: "cosmetics", request: CosmeticsRequest): Promise<{ styles: string; scripts: string[] } | null> };
-  addStyle(css: string): { update(css: string): void };
-  signal: AbortSignal;
-  onCleanup(fn: () => void): void;
-  log: { warn(...args: unknown[]): void };
+/** Cached: start from the last known curated lists (and look for new ones afterwards). Else fetch them, or use the built-in ones. */
+async function initialSources(fetch: (url: string) => Promise<Response>, cacheDir: string | undefined) {
+  if (cacheDir) return cachedSources(cacheDir);
+  return (await fetchSources(fetch, undefined)) ?? (await cachedSources(undefined));
 }
-
-/**
- * Applies the lists' cosmetic filters to the page, as Ghostery's preload does:
- * the page's base and hostname rules, then rules for the classes, ids and links
- * that appear.
- */
-function applyCosmetics(ctx: CosmeticsContext) {
-  const style = ctx.addStyle("");
-  let css = "";
-  const add = (styles: string) => {
-    if (!styles) return;
-    css += `\n${styles}`;
-    style.update(css);
-  };
-  const runScriptlets = async (scripts: string[]) => {
-    // The page's CSP is lifted: a blob module runs in the main world.
-    for (const script of scripts) {
-      const url = URL.createObjectURL(new Blob([script], { type: "text/javascript" }));
-      await import(/* @vite-ignore */ url).catch((error: unknown) => ctx.log.warn("scriptlet failed", error));
-      URL.revokeObjectURL(url);
-    }
-  };
-
-  const seen = { classes: new Set<string>(), ids: new Set<string>(), hrefs: new Set<string>() };
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const scan = () => {
-    timer = undefined;
-    if (ctx.signal.aborted || !document.documentElement) return;
-    const fresh = { classes: [] as string[], ids: [] as string[], hrefs: [] as string[] };
-    for (const element of document.querySelectorAll("[class],[id],a[href]")) {
-      for (const name of element.classList) if (!seen.classes.has(name)) seen.classes.add(name), fresh.classes.push(name);
-      if (element.id && !seen.ids.has(element.id)) seen.ids.add(element.id), fresh.ids.push(element.id);
-      const href = element instanceof HTMLAnchorElement ? element.href : "";
-      if (href && !seen.hrefs.has(href)) seen.hrefs.add(href), fresh.hrefs.push(href);
-    }
-    if (!fresh.classes.length && !fresh.ids.length && !fresh.hrefs.length) return;
-    ctx.host.invoke("cosmetics", { url: location.href, base: false, ...fresh }).then(
-      (result) => result && add(result.styles),
-      () => {},
-    );
-  };
-  const schedule = () => (timer ??= setTimeout(scan, DOM_SCAN_MS));
-  const observer = new MutationObserver(schedule);
-  ctx.onCleanup(() => {
-    observer.disconnect();
-    clearTimeout(timer);
-  });
-
-  // The lists load in the host after startup; ask until they're there.
-  const base = () => {
-    if (ctx.signal.aborted) return;
-    ctx.host.invoke("cosmetics", { url: location.href, base: true }).then(
-      (result) => {
-        if (ctx.signal.aborted) return;
-        if (!result) return void setTimeout(base, COSMETICS_RETRY_MS);
-        add(result.styles);
-        void runScriptlets(result.scripts);
-        observer.observe(document, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "id", "href"] });
-        schedule();
-      },
-      () => setTimeout(base, COSMETICS_RETRY_MS),
-    );
-  };
-  base();
-}
-

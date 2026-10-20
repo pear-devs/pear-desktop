@@ -29,8 +29,8 @@ export default definePlugin({
       document,
       "click",
       (event: MouseEvent) => {
-        if (!(event.target instanceof Element)) return;
         const target = event.target;
+        if (!(target instanceof Element)) return;
         if (target.closest(ctx.sel("player_bar"))) {
           // The user is driving the player now (e.g. opening the page); stop hiding it.
           if (!autoClosing) root.classList.remove(DID_PLAY);
@@ -43,8 +43,6 @@ export default definePlugin({
       { capture: true },
     );
 
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    ctx.onCleanup(() => clearTimeout(timer));
     const closePlayerPage = () => {
       if (autoClosing || !root.classList.contains(DID_PLAY)) return;
       if (ctx.$("app.layout")?.getAttribute("player-ui-state") !== "PLAYER_PAGE_OPEN") return;
@@ -52,7 +50,7 @@ export default definePlugin({
       ctx.$("player_bar.toggle_player_page")?.click();
       // Keep the page hidden until YTM's close animation is over, then check
       // again: YTM ignores the toggle while it is still opening the page.
-      timer = setTimeout(() => {
+      ctx.setTimeout(() => {
         autoClosing = false;
         closePlayerPage();
       }, AUTO_CLOSING_MS);
@@ -65,10 +63,6 @@ export default definePlugin({
     };
     ctx.player.on("adChange", onAd);
     onAd(ctx.player.state.ad);
-    void ctx.waitFor("app.layout").then((layout) => {
-      const observer = new MutationObserver(closePlayerPage);
-      observer.observe(layout, { attributes: true, attributeFilter: ["player-ui-state"] });
-      ctx.onCleanup(() => observer.disconnect());
-    }, () => {});
+    ctx.observe("app.layout", { attributes: true, attributeFilter: ["player-ui-state"] }, closePlayerPage);
   },
 });

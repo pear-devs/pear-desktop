@@ -5,6 +5,13 @@ const THRESHOLD_DB = -100; // -100 is absolute silence, 0 the loudest
 const INTERVAL_MS = 5;
 const HISTORY = 10;
 const SKIP_SECONDS = 0.2;
+const FFT_SIZE = 512;
+const SMOOTHING = 0.1;
+// The lowest bins (DC and rumble) don't count as sound.
+const FIRST_BIN = 4;
+// Sound again once 2 of the last 3 checks were loud.
+const RECENT = 3;
+const RECENT_LOUD = 2;
 // First in the shared graph, so the analysis sees the track before any fades or effects.
 const ORDER = -100;
 
@@ -24,8 +31,8 @@ export default definePlugin({
       const input = context.createGain();
       const output = context.createGain();
       const analyser = context.createAnalyser();
-      analyser.fftSize = 512;
-      analyser.smoothingTimeConstant = 0.1;
+      analyser.fftSize = FFT_SIZE;
+      analyser.smoothingTimeConstant = SMOOTHING;
       input.connect(output);
       input.connect(analyser);
       graph.insert(input, output, ORDER);
@@ -38,7 +45,9 @@ export default definePlugin({
       const loudness = () => {
         analyser.getFloatFrequencyData(bins);
         let max = Number.NEGATIVE_INFINITY;
-        for (let i = 4; i < bins.length; i++) if (bins[i]! > max && bins[i]! < 0) max = bins[i]!;
+        for (const bin of bins.subarray(FIRST_BIN)) {
+          if (bin > max && bin < 0) max = bin;
+        }
         return max;
       };
       const skip = () => {
@@ -51,7 +60,8 @@ export default definePlugin({
         const loud = volume > THRESHOLD_DB;
         if (loud) {
           // Trigger quickly on a short history.
-          if (history.slice(-3).reduce((a, b) => a + b, 0) >= 2) {
+          const recentLoud = history.slice(-RECENT).reduce((a, b) => a + b, 0);
+          if (recentLoud >= RECENT_LOUD) {
             silent = false;
             audioStarted = true;
           }
@@ -65,7 +75,7 @@ export default definePlugin({
         history.shift();
         history.push(Number(loud));
       };
-      const timer = setInterval(tick, INTERVAL_MS);
+      ctx.setInterval(tick, INTERVAL_MS);
 
       // Each seek (including our own skips) re-checks, so a long silence is crossed in steps.
       const onPlayOrSeek = () => {
@@ -75,10 +85,7 @@ export default definePlugin({
       ctx.listen(video, "play", onPlayOrSeek);
       ctx.listen(video, "seeked", onPlayOrSeek);
 
-      return () => {
-        clearInterval(timer);
-        input.disconnect();
-      };
+      return () => input.disconnect();
     },
     onConfigChange() {},
   },

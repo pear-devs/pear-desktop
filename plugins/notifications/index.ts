@@ -91,7 +91,15 @@ const schema = {
 };
 
 type Ctx = HostContextOf<typeof schema>;
-type Notifier = ReturnType<typeof createNotifier>;
+
+// An interface, not `ReturnType<typeof createNotifier>`: the page build's pruning
+// would count that as a use of the host-only function.
+interface Notifier {
+  show(track: Track, paused: boolean): Promise<void>;
+  close(): void;
+  readonly showing: boolean;
+  dispose(): void;
+}
 
 export default definePlugin({
   id: "notifications",
@@ -136,7 +144,7 @@ export default definePlugin({
 });
 
 /** Shows one notification at a time: a newer one replaces it, also while its artwork loads. */
-function createNotifier(ctx: Ctx) {
+function createNotifier(ctx: Ctx): Notifier {
   let current: Notification | undefined;
   let closeTimer: ReturnType<typeof setTimeout> | undefined;
   let generation = 0;

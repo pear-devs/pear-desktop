@@ -6,8 +6,14 @@ import { readSongDetails } from "@pear/sdk/song-details";
 import { Presence } from "./presence.ts";
 import { schema } from "./schema.ts";
 
-/** The running instance, for the settings actions. */
-const presences = new WeakMap<object, Presence>();
+/** What the settings actions call on the running instance. */
+interface PresenceActions {
+  connectNow(): void;
+  clear(): void;
+}
+
+// Typed by an interface: naming `Presence` here would keep the host-only module in the page build.
+const presences = new WeakMap<object, PresenceActions>();
 
 export default definePlugin({
   id: "discord",

@@ -19,7 +19,6 @@ export default definePlugin({
 
     let previousLike = ctx.player.state.like;
     let settling: ReturnType<typeof setTimeout> | undefined;
-    ctx.onCleanup(() => clearTimeout(settling));
     ctx.player.on("change", (state) => {
       const becameDisliked = state.like === "dislike" && previousLike !== "dislike";
       previousLike = state.like;
@@ -27,7 +26,7 @@ export default definePlugin({
     });
     ctx.player.on("trackChange", () => {
       clearTimeout(settling);
-      settling = setTimeout(() => {
+      settling = ctx.setTimeout(() => {
         settling = undefined;
         skipIfDisliked();
       }, SETTLE_MS);
