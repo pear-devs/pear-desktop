@@ -15,7 +15,8 @@ import { dirname, join } from "node:path";
 import { type AnyPlugin, type ConfigOf, type ConfigShape, isEnabledByDefault, normalizeConfig } from "@pear/sdk";
 import { CORE_SECTIONS, type CoreSection } from "@pear/sdk/core-config";
 import type { PluginState } from "@pear/sdk/protocol";
-import { migrate, type StoredConfig } from "./migrations.ts";
+import { isRecord, type MigratedFiles, type StoredConfig } from "./migrations/helpers.ts";
+import { migrate } from "./migrations/index.ts";
 
 export interface WindowState {
   x?: number;
@@ -33,8 +34,6 @@ export const CONFIG_FILE = "config.json";
 const API_SERVER_PLUGIN = "api-server";
 const WRITE_DELAY_MS = 300;
 
-const isRecord = (value: unknown): value is Json => typeof value === "object" && value !== null && !Array.isArray(value);
-
 export class Settings {
   readonly path: string;
   #data: StoredConfig;
@@ -46,10 +45,7 @@ export class Settings {
     this.path = join(userData, CONFIG_FILE);
     const { config, migrated, files } = migrate(readJson(this.path), appVersion);
     this.#data = config;
-    for (const [name, contents] of Object.entries(files)) {
-      const path = join(userData, name);
-      if (!existsSync(path)) writeFileSync(path, JSON.stringify(contents));
-    }
+    writeMissingFiles(userData, files);
     this.#core = Object.fromEntries(
       Object.entries(CORE_SECTIONS).map(([name, shape]) => [name, normalizeConfig(shape, this.#coreSource(name as CoreSection))]),
     ) as CoreConfigs;
@@ -106,17 +102,11 @@ export class Settings {
   get window(): WindowState | undefined {
     const size = this.#data["window-size"];
     if (!isRecord(size) || typeof size.width !== "number" || typeof size.height !== "number") return undefined;
-    const position = this.#data["window-position"];
-    // pear-desktop writes -1/-1 for "let the OS place it".
-    const placed =
-      isRecord(position) &&
-      typeof position.x === "number" &&
-      typeof position.y === "number" &&
-      !(position.x === -1 && position.y === -1);
+    const position = placedPosition(this.#data["window-position"]);
     return {
       width: size.width,
       height: size.height,
-      ...(placed ? { x: position.x as number, y: position.y as number } : {}),
+      ...position,
       maximized: this.#data["window-maximized"] === true,
     };
   }
@@ -168,6 +158,24 @@ export class Settings {
     writeFileSync(temp, `${JSON.stringify(this.#data, null, "\t")}\n`);
     renameSync(temp, this.path);
   }
+}
+
+/** Files a migration created next to config.json, unless they exist already. */
+function writeMissingFiles(userData: string, files: MigratedFiles) {
+  for (const [name, contents] of Object.entries(files)) {
+    const path = join(userData, name);
+    if (!existsSync(path)) writeFileSync(path, JSON.stringify(contents));
+  }
+}
+
+/** The saved window position, unless the OS is to place the window. */
+function placedPosition(position: unknown): { x: number; y: number } | undefined {
+  if (!isRecord(position)) return undefined;
+  const { x, y } = position;
+  if (typeof x !== "number" || typeof y !== "number") return undefined;
+  // pear-desktop writes -1/-1 for "let the OS place it".
+  if (x === -1 && y === -1) return undefined;
+  return { x, y };
 }
 
 function readJson(path: string): StoredConfig | undefined {

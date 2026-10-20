@@ -16,8 +16,10 @@ import type { PageRequests } from "../page-requests.ts";
 import type { PlayerMirror } from "../player.ts";
 import type { PluginHost } from "../plugins.ts";
 import { signToken } from "./jwt.ts";
-import { createRoutes, isPaused, REPEAT_NAMES, type RpcInfo, songInfo } from "./routes.ts";
+import { createRoutes } from "./routes.ts";
 import { startServer } from "./server.ts";
+import { isPaused, REPEAT_NAMES, songInfo } from "./song-info.ts";
+import type { Backend, RpcInfo } from "./types.ts";
 
 export interface ApiServerEnvironment {
   settings: Settings;
@@ -30,6 +32,14 @@ export interface ApiServerEnvironment {
 }
 
 type Running = Awaited<ReturnType<typeof startServer>>;
+
+/** The "allow this client?" dialog's buttons. */
+const ALLOW_BUTTON = 0;
+const DENY_BUTTON = 1;
+/** Of the generated token secret. */
+const SECRET_BYTES = 32;
+/** The song details are extras; don't wait long for a page that isn't up. */
+const DETAILS_TIMEOUT_MS = 5000;
 
 const networkKey = (c: ApiServerConfig) =>
   JSON.stringify([c.enabled, c.hostname, c.port, c.useHttps && c.certPath, c.useHttps && c.keyPath]);
@@ -76,7 +86,7 @@ export class ApiServer {
     this.stop();
     this.#listeningOn = key;
     if (!config.enabled) return this.#publish();
-    if (!config.secret) this.#env.settings.setCore("apiServer", { secret: randomBytes(32).toString("base64url") });
+    if (!config.secret) this.#env.settings.setCore("apiServer", { secret: randomBytes(SECRET_BYTES).toString("base64url") });
 
     const generation = ++this.#generation;
     try {
@@ -128,7 +138,7 @@ export class ApiServer {
 
   async #fetchDetails(videoId: string) {
     try {
-      const result = await this.#env.requests.request<SongDetails | null>("core", "details", undefined, { timeout: 5000 });
+      const result = await this.#env.requests.request<SongDetails | null>("core", "details", undefined, { timeout: DETAILS_TIMEOUT_MS });
       if (result?.videoId === videoId) this.#details = result;
     } catch {
       // The page runtime isn't up yet; song info just lacks the extras.
@@ -181,58 +191,14 @@ export class ApiServer {
   }
 
   #start(config: ApiServerConfig) {
-    const { settings, player, requests, window, plugins } = this.#env;
-    const page = <T,>(event: string, payload?: unknown) => requests.request<T>("core", event, payload);
-    const signal = this.#dialogs.signal;
-    const publish = () => this.#publish();
+    const { settings, player } = this.#env;
     if (player.state.track) void this.#fetchDetails(player.state.track.videoId);
-
-    const routes = createRoutes({
-      state: () => player.state,
-      details: () => this.#details,
-      control: (action) => player.control(action),
-      page,
-      async setFullscreen(fullscreen) {
-        window.setFullScreen(fullscreen);
-        await page("fullscreen:set", fullscreen);
-      },
-      async authorize(id, remoteAddress) {
-        if (id.includes(",")) return null;
-        const current = settings.core("apiServer");
-        if (!current.authorizedClients.includes(id)) {
-          if (current.authStrategy === "AUTH_AT_FIRST") {
-            const { response } = await dialog.showMessageBox(window, {
-              type: "question",
-              title: "API server",
-              message: `Allow “${id}” to control Pear Desktop?`,
-              detail: `The request came from ${remoteAddress}. You can revoke access in the API server settings.`,
-              buttons: ["Allow", "Deny"],
-              defaultId: 1,
-              cancelId: 1,
-              signal,
-            });
-            if (response !== 0) return null;
-          }
-          const clients = settings.core("apiServer").authorizedClients;
-          if (!clients.includes(id)) settings.setCore("apiServer", { authorizedClients: [...clients, id] });
-          publish();
-        }
-        return signToken({ id, iat: Math.floor(Date.now() / 1000) }, settings.core("apiServer").secret);
-      },
-      rpcMethods: () => this.#rpcMethods(),
-      async callRpc(plugin, method, body) {
-        const result = await plugins.callRpc(plugin, method, body);
-        if (!result.ok) return { status: result.status, body: { error: result.error } };
-        return result.value === undefined ? { status: 204 } : { status: 200, body: result.value };
-      },
-    });
-
     const { hostname, port, useHttps, certPath, keyPath } = config;
     return startServer({
       hostname,
       port,
       ...(useHttps && certPath && keyPath ? { https: { certPath, keyPath } } : {}),
-      routes,
+      routes: createRoutes(this.#backend()),
       rpcMethods: () => this.#rpcMethods(),
       auth: () => {
         const current = settings.core("apiServer");
@@ -249,6 +215,62 @@ export class ApiServer {
       },
       onError: (error) => log.error(error),
     });
+  }
+
+  /** What the routes act on. */
+  #backend(): Backend {
+    const { player, requests, window, plugins } = this.#env;
+    const page = <T,>(event: string, payload?: unknown) => requests.request<T>("core", event, payload);
+    return {
+      state: () => player.state,
+      details: () => this.#details,
+      control: (action) => player.control(action),
+      page,
+      async setFullscreen(fullscreen) {
+        window.setFullScreen(fullscreen);
+        await page("fullscreen:set", fullscreen);
+      },
+      authorize: (id, remoteAddress) => this.#authorize(id, remoteAddress),
+      rpcMethods: () => this.#rpcMethods(),
+      async callRpc(plugin, method, body) {
+        const result = await plugins.callRpc(plugin, method, body);
+        if (!result.ok) return { status: result.status, body: { error: result.error } };
+        return result.value === undefined ? { status: 204 } : { status: 200, body: result.value };
+      },
+    };
+  }
+
+  /** A token for the client, once it is (or the user makes it) an authorized one; null when denied. */
+  async #authorize(id: string, remoteAddress: string) {
+    if (id.includes(",")) return null;
+    const { settings } = this.#env;
+    if (!settings.core("apiServer").authorizedClients.includes(id)) {
+      if (!(await this.#userAllows(id, remoteAddress))) return null;
+      this.#addClient(id);
+    }
+    return signToken({ id, iat: Math.floor(Date.now() / 1000) }, settings.core("apiServer").secret);
+  }
+
+  async #userAllows(id: string, remoteAddress: string) {
+    if (this.#config.authStrategy !== "AUTH_AT_FIRST") return true;
+    const { response } = await dialog.showMessageBox(this.#env.window, {
+      type: "question",
+      title: "API server",
+      message: `Allow “${id}” to control Pear Desktop?`,
+      detail: `The request came from ${remoteAddress}. You can revoke access in the API server settings.`,
+      buttons: ["Allow", "Deny"],
+      defaultId: DENY_BUTTON,
+      cancelId: DENY_BUTTON,
+      signal: this.#dialogs.signal,
+    });
+    return response === ALLOW_BUTTON;
+  }
+
+  #addClient(id: string) {
+    const { settings } = this.#env;
+    const clients = settings.core("apiServer").authorizedClients;
+    if (!clients.includes(id)) settings.setCore("apiServer", { authorizedClients: [...clients, id] });
+    this.#publish();
   }
 }
 

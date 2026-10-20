@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { config, definePlugin } from "@pear/sdk";
 import { afterAll, describe, expect, test, vi } from "vitest";
 import { Settings } from "../src/main/config.ts";
-import { compareVersions, migrate } from "../src/main/migrations.ts";
+import { migrate } from "../src/main/migrations/index.ts";
+import { compareVersions } from "../src/main/version.ts";
 
 vi.mock("electron", () => ({}));
 

@@ -5,7 +5,7 @@
 import { type BrowserWindow, dialog, net, shell } from "electron";
 import type { Translate } from "@pear/sdk/i18n";
 import { errorMessage } from "@pear/sdk/util";
-import { compareVersions } from "./migrations.ts";
+import { comparePrerelease, compareVersions } from "./version.ts";
 import { alive } from "./windows.ts";
 
 export const RELEASES_URL = "https://github.com/pear-devs/pear-desktop/releases/latest";
@@ -20,27 +20,15 @@ export function shouldCheck({ packaged, enabled }: { packaged: boolean; enabled:
 /** Whether `latest` (a tag such as "v4.1.0") is newer than `current`; a release beats its own prereleases. */
 export function isNewerVersion(latest: string, current: string) {
   const clean = (version: string) => version.trim().replace(/^v/i, "").split("+")[0]!;
-  const [a, b] = [clean(latest), clean(current)];
-  if (!/^\d+(\.\d+)*(-.+)?$/.test(a)) return false;
-  const core = compareVersions(a, b);
-  if (core !== 0) return core > 0;
-  const [pa, pb] = [a.split("-").slice(1).join("-"), b.split("-").slice(1).join("-")];
-  if (!pa || !pb) return !pa && !!pb;
-  return comparePrerelease(pa, pb) > 0;
-}
-
-/** semver precedence of prerelease identifiers: "beta.2" < "beta.10" < "rc.1". */
-function comparePrerelease(a: string, b: string) {
-  const [x, y] = [a.split("."), b.split(".")];
-  for (let i = 0; i < Math.max(x.length, y.length); i++) {
-    const [p, q] = [x[i], y[i]];
-    if (p === undefined) return -1;
-    if (q === undefined) return 1;
-    const [np, nq] = [/^\d+$/.test(p), /^\d+$/.test(q)];
-    const diff = np && nq ? Number(p) - Number(q) : np ? -1 : nq ? 1 : p.localeCompare(q);
-    if (diff !== 0) return Math.sign(diff);
-  }
-  return 0;
+  const prerelease = (version: string) => version.split("-").slice(1).join("-");
+  const [newer, older] = [clean(latest), clean(current)];
+  if (!/^\d+(\.\d+)*(-.+)?$/.test(newer)) return false;
+  const release = compareVersions(newer, older);
+  if (release !== 0) return release > 0;
+  const [newerPre, olderPre] = [prerelease(newer), prerelease(older)];
+  // Same release: the release itself is newer than any of its prereleases.
+  if (!newerPre || !olderPre) return !newerPre && Boolean(olderPre);
+  return comparePrerelease(newerPre, olderPre) > 0;
 }
 
 export interface Release {

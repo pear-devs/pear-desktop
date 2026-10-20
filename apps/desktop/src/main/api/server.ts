@@ -8,7 +8,10 @@ import type { Duplex } from "node:stream";
 import { errorMessage } from "@pear/sdk/util";
 import { type WebSocket, WebSocketServer } from "ws";
 import { verifyToken } from "./jwt.ts";
-import { API_VERSION, openApiDocument, type Reply, type Route, type RpcInfo, validateBody } from "./routes.ts";
+import { validateBody } from "./body-schema.ts";
+import { openApiDocument } from "./openapi.ts";
+import { API } from "./routes.ts";
+import type { BodySchema, Reply, Route, RpcInfo } from "./types.ts";
 
 export interface AuthConfig {
   authStrategy: "AUTH_AT_FIRST" | "NONE";
@@ -29,7 +32,7 @@ export interface ServerOptions {
   onError(error: unknown): void;
 }
 
-const WS_PATH = `/api/${API_VERSION}/ws`;
+const WS_PATH = `${API}/ws`;
 const MAX_BODY_BYTES = 1 << 20;
 
 const CORS_HEADERS = {
@@ -47,11 +50,17 @@ const SWAGGER_HTML = `<!doctype html>
 <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js"></script>
 <script>SwaggerUIBundle({ url: "/doc", dom_id: "#swagger-ui" });</script></body></html>`;
 
+/** The WebSocket close codes the original used. */
+const WS_POLICY_VIOLATION = 1008;
+const WS_GOING_AWAY = 1001;
+
 interface CompiledRoute {
   route: Route;
   pattern: RegExp;
   names: string[];
 }
+
+type Match = { route: Route; params: Record<string, string> } | { status: 404 | 405 };
 
 export function isAuthorized(auth: AuthConfig, header: string | undefined | null, bearerOnly = true) {
   if (auth.authStrategy === "NONE") return true;
@@ -63,7 +72,27 @@ export function isAuthorized(auth: AuthConfig, header: string | undefined | null
 
 /** Starts listening; resolves once bound (rejects on e.g. EADDRINUSE). */
 export async function startServer(options: ServerOptions) {
-  const compiled: CompiledRoute[] = options.routes.map((route) => {
+  const listener = requestListener(options, compileRoutes(options.routes));
+  const server: Server = options.https
+    ? createHttpsServer({ key: readFileSync(options.https.keyPath), cert: readFileSync(options.https.certPath) }, listener)
+    : createHttpServer(listener);
+  const wss = attachWebSocket(server, options);
+  await listen(server, options);
+  return {
+    server,
+    sockets: wss.clients,
+    close() {
+      for (const client of wss.clients) client.close(WS_GOING_AWAY, "Server stopping");
+      wss.close();
+      server.close();
+      server.closeAllConnections();
+    },
+  };
+}
+
+/** Path templates ("/queue/{index}") as regular expressions. */
+function compileRoutes(routes: readonly Route[]): CompiledRoute[] {
+  return routes.map((route) => {
     const names: string[] = [];
     const source = route.path.replace(/\{(\w+)\}/g, (_, name: string) => {
       names.push(name);
@@ -71,76 +100,82 @@ export async function startServer(options: ServerOptions) {
     });
     return { route, pattern: new RegExp(`^${source}$`), names };
   });
+}
 
-  const send = (res: ServerResponse, { status, body }: Reply) => {
-    if (body === undefined || status === 204) {
-      res.writeHead(status, CORS_HEADERS).end();
-      return;
-    }
-    const isText = typeof body === "string";
-    res
-      .writeHead(status, { ...CORS_HEADERS, "Content-Type": isText ? "text/html; charset=utf-8" : "application/json" })
-      .end(isText ? body : JSON.stringify(body));
-  };
+/** The route for a request, or 405 when only the method is wrong, 404 otherwise. */
+function matchRoute(compiled: readonly CompiledRoute[], method: string, pathname: string): Match {
+  let pathExists = false;
+  for (const { route, pattern, names } of compiled) {
+    const found = pattern.exec(pathname);
+    if (!found) continue;
+    pathExists = true;
+    if (route.method !== method) continue;
+    return { route, params: Object.fromEntries(names.map((name, i) => [name, decodeURIComponent(found[i + 1]!)])) };
+  }
+  return { status: pathExists ? 405 : 404 };
+}
 
+function requestListener(options: ServerOptions, compiled: readonly CompiledRoute[]) {
   const handle = async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url ?? "/", "http://localhost");
     const method = req.method ?? "GET";
-    if (method === "OPTIONS") return send(res, { status: 204 });
+    if (method === "OPTIONS") return sendReply(res, { status: 204 });
     if (method === "GET" && url.pathname === "/doc") {
-      return send(res, { status: 200, body: openApiDocument(options.routes, "Pear Desktop API Server", options.rpcMethods()) });
+      return sendReply(res, { status: 200, body: openApiDocument(options.routes, "Pear Desktop API Server", options.rpcMethods()) });
     }
-    if (method === "GET" && url.pathname === "/swagger") return send(res, { status: 200, body: SWAGGER_HTML });
+    if (method === "GET" && url.pathname === "/swagger") return sendReply(res, { status: 200, body: SWAGGER_HTML });
 
-    let match: { route: Route; params: Record<string, string> } | undefined;
-    let pathExists = false;
-    for (const { route, pattern, names } of compiled) {
-      const found = pattern.exec(url.pathname);
-      if (!found) continue;
-      pathExists = true;
-      if (route.method !== method) continue;
-      match = { route, params: Object.fromEntries(names.map((name, i) => [name, decodeURIComponent(found[i + 1]!)])) };
-      break;
-    }
-    if (!match) return send(res, { status: pathExists ? 405 : 404, body: { error: "Not found" } });
-
+    const match = matchRoute(compiled, method, url.pathname);
+    if ("status" in match) return sendReply(res, { status: match.status, body: { error: "Not found" } });
     const { route, params } = match;
     if (!route.public && !isAuthorized(options.auth(), req.headers.authorization)) {
       res.writeHead(401, { ...CORS_HEADERS, "Content-Type": "text/plain" }).end("Unauthorized");
       return;
     }
-
-    let body: Record<string, unknown> = {};
-    if (route.body) {
-      let parsed: unknown;
-      try {
-        const text = await readBody(req);
-        // RPC methods without input may be called with an empty body.
-        parsed = route.body === "json" && text.trim() === "" ? undefined : JSON.parse(text);
-      } catch {
-        return send(res, { status: 400, body: { error: "invalid JSON body" } });
-      }
-      if (route.body !== "json") {
-        const error = validateBody(route.body, parsed);
-        if (error) return send(res, { status: 400, body: { error } });
-      }
-      body = parsed as Record<string, unknown>;
-    }
-    send(res, await route.handle({ params, body, remoteAddress: req.socket.remoteAddress ?? "unknown" }));
+    const body = route.body ? await readJsonBody(req, route.body) : { body: {} };
+    if ("error" in body) return sendReply(res, { status: 400, body: { error: body.error } });
+    sendReply(res, await route.handle({ params, body: body.body, remoteAddress: req.socket.remoteAddress ?? "unknown" }));
   };
 
-  const listener = (req: IncomingMessage, res: ServerResponse) => {
+  return (req: IncomingMessage, res: ServerResponse) => {
     handle(req, res).catch((error: unknown) => {
       options.onError(error);
-      if (!res.headersSent) send(res, { status: 500, body: { error: errorMessage(error) } });
+      if (!res.headersSent) sendReply(res, { status: 500, body: { error: errorMessage(error) } });
       else res.end();
     });
   };
+}
 
-  const server: Server = options.https
-    ? createHttpsServer({ key: readFileSync(options.https.keyPath), cert: readFileSync(options.https.certPath) }, listener)
-    : createHttpServer(listener);
+/** The request's JSON body, checked against the schema; or what's wrong with it. */
+async function readJsonBody(req: IncomingMessage, schema: BodySchema | "json"): Promise<{ body: Record<string, unknown> } | { error: string }> {
+  let parsed: unknown;
+  try {
+    const text = await readBody(req);
+    // RPC methods without input may be called with an empty body.
+    parsed = schema === "json" && text.trim() === "" ? undefined : JSON.parse(text);
+  } catch {
+    return { error: "invalid JSON body" };
+  }
+  if (schema !== "json") {
+    const error = validateBody(schema, parsed);
+    if (error) return { error };
+  }
+  // Checked above, or (RPC calls) by the method's own input schema.
+  return { body: parsed as Record<string, unknown> };
+}
 
+function sendReply(res: ServerResponse, { status, body }: Reply) {
+  if (body === undefined || status === 204) {
+    res.writeHead(status, CORS_HEADERS).end();
+    return;
+  }
+  const isText = typeof body === "string";
+  res
+    .writeHead(status, { ...CORS_HEADERS, "Content-Type": isText ? "text/html; charset=utf-8" : "application/json" })
+    .end(isText ? body : JSON.stringify(body));
+}
+
+function attachWebSocket(server: Server, options: ServerOptions) {
   const wss = new WebSocketServer({ noServer: true });
   server.on("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     const url = new URL(req.url ?? "/", "http://localhost");
@@ -151,14 +186,17 @@ export async function startServer(options: ServerOptions) {
     wss.handleUpgrade(req, socket, head, (ws) => {
       // Like the original: accept, then close with a policy violation, so clients see why.
       if (!isAuthorized(options.auth(), url.searchParams.get("token"), false)) {
-        ws.close(1008, "Unauthorized");
+        ws.close(WS_POLICY_VIOLATION, "Unauthorized");
         return;
       }
       options.onSocket(ws);
     });
   });
+  return wss;
+}
 
-  await new Promise<void>((resolve, reject) => {
+function listen(server: Server, options: ServerOptions) {
+  return new Promise<void>((resolve, reject) => {
     server.once("error", reject);
     server.listen(options.port, options.hostname, () => {
       server.off("error", reject);
@@ -166,17 +204,6 @@ export async function startServer(options: ServerOptions) {
       resolve();
     });
   });
-
-  return {
-    server,
-    sockets: wss.clients,
-    close() {
-      for (const client of wss.clients) client.close(1001, "Server stopping");
-      wss.close();
-      server.close();
-      server.closeAllConnections();
-    },
-  };
 }
 
 function readBody(req: IncomingMessage) {

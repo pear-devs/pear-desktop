@@ -8,7 +8,7 @@ import { join } from "node:path";
 import hostPlugins from "virtual:pear/host-plugins";
 import { afterAll, describe, expect, test, vi } from "vitest";
 import { Settings } from "../src/main/config.ts";
-import { migrate, PLUGIN_MIGRATIONS, type StoredConfig } from "../src/main/migrations.ts";
+import { migrate, PLUGIN_MIGRATIONS, type StoredConfig } from "../src/main/migrations/index.ts";
 
 vi.mock("electron", () => ({}));
 

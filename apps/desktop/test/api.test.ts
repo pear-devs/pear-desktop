@@ -1,7 +1,8 @@
 import { IDLE } from "@pear/sdk";
 import { describe, expect, it } from "vitest";
 import { signToken, verifyToken } from "../src/main/api/jwt.ts";
-import { songInfo, validateBody } from "../src/main/api/routes.ts";
+import { validateBody } from "../src/main/api/body-schema.ts";
+import { songInfo } from "../src/main/api/song-info.ts";
 import { isAuthorized } from "../src/main/api/server.ts";
 
 describe("tokens", () => {

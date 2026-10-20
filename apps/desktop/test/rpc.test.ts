@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { config, definePlugin } from "@pear/sdk";
 import { toJsonSchema, v } from "@pear/sdk/rpc";
 import { describe, expect, test, vi } from "vitest";
-import { openApiDocument } from "../src/main/api/routes.ts";
+import { openApiDocument } from "../src/main/api/openapi.ts";
 import { Settings } from "../src/main/config.ts";
 import { PluginHost } from "../src/main/plugins.ts";
 
