@@ -1,9 +1,8 @@
 import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
+import type { Translate } from "@pear/sdk/i18n";
 import type { Together } from "../together.ts";
 import { PERMISSIONS, type Profile } from "../types.ts";
-
-type Translate = (key: string, fallback: string, vars?: Record<string, unknown>) => string;
 
 function useTogether(together: Together) {
   const [, setTick] = useState(0);
@@ -16,7 +15,7 @@ export function LauncherButton({ together, open, onClick }: { together: Together
   const active = together.mode !== "disconnected";
   return (
     <button type="button" class="launcher" data-active={active} aria-expanded={open} aria-label="Music Together" title="Music Together" onClick={onClick}>
-      {together.busy ? <span class="spinner" aria-hidden="true" /> : <PeopleIcon />}
+      {together.connecting ? <span class="spinner" aria-hidden="true" /> : <PeopleIcon />}
       {active && count > 1 && <span class="count">{count}</span>}
     </button>
   );
@@ -38,7 +37,7 @@ export function Panel(props: PanelProps) {
   const mode = together.mode;
   return (
     <div class="panel" role="dialog" aria-label="Music Together">
-      {together.busy ? (
+      {together.connecting ? (
         <div class="busy" role="status">
           <span class="spinner" aria-hidden="true" />
         </div>

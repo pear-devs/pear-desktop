@@ -7,6 +7,7 @@
 // this track, and a starred provider is always shown for its track.
 
 import type { Track } from "@pear/sdk";
+import { errorMessage } from "@pear/sdk/util";
 import { PROVIDERS, resultRank, type LyricLine, type LyricResult, type ProviderId, type SearchQuery } from "../types.ts";
 
 export type ProviderState =
@@ -167,7 +168,7 @@ export class LyricsStore {
     try {
       state = { status: "done", result: await this.#backend.search(provider, query) };
     } catch (error) {
-      state = { status: "error", message: error instanceof Error ? error.message : String(error) };
+      state = { status: "error", message: errorMessage(error) };
     }
     if (generation !== this.#generation) return;
     this.providers = { ...this.providers, [provider]: state };

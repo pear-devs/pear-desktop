@@ -92,7 +92,7 @@ function environment(network: Network, id: string, queue: ReturnType<typeof fake
     queueElement: () => queue.element,
     player: () => null,
     toast: (message) => toasts.push(message),
-    t: (_key, fallback, vars) => fallback.replace(/{{(\w+)}}/g, (_, name: string) => String(vars?.[name] ?? "")),
+    t: (_key, fallback = "", vars) => fallback.replace(/{{(\w+)}}/g, (_, name: string) => String(vars?.[name] ?? "")),
     name: () => id,
     defaultPermission: () => "playlist",
     log: { warn() {}, error() {} },
@@ -106,7 +106,7 @@ const settle = async () => {
 describe("pear-desktop's Music Together", () => {
   test("YTM's own queue changes go to the session instead of the queue", () => {
     const queue = fakeQueue(["a"]);
-    const shared = new Queue({ queue: queue.element, getProfile: () => undefined, t: (_k, f) => f });
+    const shared = new Queue({ queue: queue.element, getProfile: () => undefined, t: (_k, f = "") => f });
     const events: ConnectionEventUnion[] = [];
     shared.on((event) => events.push(event));
     shared.setOwner({ id: "me", handleId: "", name: "Me", thumbnail: "" });

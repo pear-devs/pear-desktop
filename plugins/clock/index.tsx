@@ -1,5 +1,8 @@
+/** @jsxImportSource @pear/sdk */
 import { config, definePlugin } from "@pear/sdk";
 import { css } from "@pear/sdk/macros" with { type: "macro" };
+
+const SECOND = 1000;
 
 export default definePlugin({
   id: "clock",
@@ -21,10 +24,8 @@ export default definePlugin({
       user-select: none;
     }
   `,
-  page: async (ctx) => {
-    const clock = document.createElement("time");
-    clock.className = "pear-clock";
-    ctx.onCleanup(() => clock.remove());
+  page: (ctx) => {
+    const clock = (<time class="pear-clock" />) as HTMLTimeElement;
 
     // Config changes restart the page part, which rebuilds the format.
     const format = new Intl.DateTimeFormat(undefined, {
@@ -40,24 +41,18 @@ export default definePlugin({
     };
     tick();
     // Tick on second boundaries so the display never lags behind the system clock.
+    // One timer re-armed each second (ctx.setTimeout would keep a cleanup per tick).
     let timer: ReturnType<typeof setTimeout>;
     const schedule = () => {
       timer = setTimeout(() => {
         tick();
         schedule();
-      }, 1000 - (Date.now() % 1000));
+      }, SECOND - (Date.now() % SECOND));
     };
     schedule();
     ctx.onCleanup(() => clearTimeout(timer));
 
-    const mount = (right: Element) => right.prepend(clock);
-    mount(await ctx.waitFor("nav_bar.right"));
     // YTM re-renders the nav bar on some navigations.
-    const observer = new MutationObserver(() => {
-      const right = ctx.$("nav_bar.right");
-      if (!clock.isConnected && right) mount(right);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    ctx.onCleanup(() => observer.disconnect());
+    ctx.mount(clock, "nav_bar.right", "prepend");
   },
 });

@@ -1,4 +1,6 @@
+/** @jsxImportSource @pear/sdk */
 import { definePlugin } from "@pear/sdk";
+import { Icon } from "@pear/sdk/dom";
 import { css } from "@pear/sdk/macros" with { type: "macro" };
 
 const CHEVRON_LEFT = "M15.41 7.41 14 6l-6 6 6 6 1.41-1.41L10.83 12z";
@@ -51,14 +53,16 @@ export default definePlugin({
       fill: currentColor;
     }
   `,
-  page: async (ctx) => {
-    const container = document.createElement("div");
-    container.className = "pear-navigation";
+  page: (ctx) => {
     // pear-desktop's texts and translations.
-    const back = button(ctx.t("plugins.navigation.templates.back.title", "Go to previous page"), CHEVRON_LEFT, () => history.back());
-    const forward = button(ctx.t("plugins.navigation.templates.forward.title", "Go to next page"), CHEVRON_RIGHT, () => history.forward());
-    container.append(back, forward);
-    ctx.onCleanup(() => container.remove());
+    const back = navButton(ctx.t("plugins.navigation.templates.back.title", "Go to previous page"), CHEVRON_LEFT, () => history.back());
+    const forward = navButton(ctx.t("plugins.navigation.templates.forward.title", "Go to next page"), CHEVRON_RIGHT, () => history.forward());
+    const container = (
+      <div class="pear-navigation">
+        {back}
+        {forward}
+      </div>
+    );
 
     const navigation = (window as { navigation?: NavigationApi }).navigation;
     const update = () => {
@@ -69,30 +73,16 @@ export default definePlugin({
     update();
     if (navigation) ctx.listen(navigation, "currententrychange", update);
 
-    const mount = (left: Element) => left.append(container);
-    mount(await ctx.waitFor("nav_bar.left"));
     // YTM re-renders the nav bar on some navigations.
-    const observer = new MutationObserver(() => {
-      const left = ctx.$("nav_bar.left");
-      if (!container.isConnected && left) mount(left);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    ctx.onCleanup(() => observer.disconnect());
+    ctx.mount(container, "nav_bar.left", "append");
   },
 });
 
-function button(label: string, path: string, onClick: () => void) {
-  const element = document.createElement("button");
-  element.type = "button";
-  element.title = label;
-  element.setAttribute("aria-label", label);
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("aria-hidden", "true");
-  const shape = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  shape.setAttribute("d", path);
-  svg.append(shape);
-  element.append(svg);
-  element.addEventListener("click", onClick);
-  return element;
+function navButton(label: string, path: string, onClick: () => void) {
+  const button = (
+    <button type="button" title={label} aria-label={label} onClick={onClick}>
+      <Icon path={path} />
+    </button>
+  );
+  return button as HTMLButtonElement;
 }

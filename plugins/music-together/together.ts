@@ -3,12 +3,11 @@
 // app can be in the same session.
 
 import type { DataConnection } from "peerjs";
-import type { YTPlayerApi } from "@pear/sdk";
+import type { Logger, YTPlayerApi } from "@pear/sdk";
+import type { Translate } from "@pear/sdk/i18n";
 import type { ConnectionLike } from "./connection.ts";
 import { Queue, type QueueElement } from "./queue.ts";
-import { type ConnectionEventUnion, getDefaultProfile, type Permission, type Profile, type VideoData } from "./types.ts";
-
-type Translate = (key: string, fallback: string, vars?: Record<string, unknown>) => string;
+import { type ConnectionEventMap, type ConnectionEventUnion, getDefaultProfile, type Permission, type Profile, type VideoData } from "./types.ts";
 
 /** What the session needs from the page, so tests can fake it. */
 export interface TogetherEnvironment {
@@ -21,7 +20,7 @@ export interface TogetherEnvironment {
   /** The user's name for others (empty: "Guest 1234"). */
   name(): string;
   defaultPermission(): Permission;
-  log: { warn(...args: unknown[]): void; error(...args: unknown[]): void };
+  log: Pick<Logger, "warn" | "error">;
 }
 
 export type Mode = "disconnected" | "host" | "guest";
@@ -31,17 +30,27 @@ const SEEK_TOLERANCE_S = 3;
 const STATE_INTERVAL_MS = 1000;
 const PLAYING = 1;
 const PAUSED = 2;
+/** How long after applying a change the player's own events still count as its echo (a frame). */
+const SETTLE_MS = 16;
+
+/** What a guest's SYNC_PROGRESS may change on the host; the host's own changes rank above all. */
+const PERMISSION_LEVEL: Record<Permission, number> = { "host-only": 0, playlist: 1, all: 2 };
+const HOST_LEVEL = 3;
+const CONTROLS_QUEUE = 1;
+const CONTROLS_PLAYER = 2;
 
 export class Together {
   connection: ConnectionLike | undefined;
   queue: Queue | undefined;
   permission: Permission;
   profiles: Record<string, Profile> = {};
-  busy = false;
+  /** Hosting or joining is under way. */
+  connecting = false;
   #env: TogetherEnvironment;
   #me: Omit<Profile, "id"> | undefined;
   #ignoreChange = false;
-  #updateNext = false;
+  /** The queue changed after a track loaded: share the follow-up change too. */
+  #shareFollowUp = false;
   #stateTimer: ReturnType<typeof setInterval> | undefined;
   #rollback: (() => void)[] = [];
   #listeners = new Set<() => void>();
@@ -70,7 +79,10 @@ export class Together {
 
   #profile(id: string): Profile {
     const name = this.#env.name().trim();
-    this.#me ??= (({ id: _, ...rest }) => rest)(getDefaultProfile(id, Date.now().toString(), name || undefined));
+    if (!this.#me) {
+      const { id: _, ...me } = getDefaultProfile(id, Date.now().toString(), name || undefined);
+      this.#me = me;
+    }
     return { id, ...this.#me };
   }
 
@@ -89,14 +101,14 @@ export class Together {
 
   /** Hosts a session; the id to share is `id`. */
   async host() {
-    this.busy = true;
+    this.connecting = true;
     this.#emit();
     try {
       const connection = this.#env.createConnection();
       this.connection = connection;
-      if (!(await connection.waitForReady().catch(() => null))) return this.#fail("host-failed", "Failed to host Music Together");
+      if (!(await connection.waitForReady().catch(() => null))) return this.#fail(this.#env.t("plugins.music-together.toast.host-failed", "Failed to host Music Together"));
       const queue = this.#makeQueue();
-      if (!queue) return this.#fail("host-failed", "Failed to host Music Together");
+      if (!queue) return this.#fail(this.#env.t("plugins.music-together.toast.host-failed", "Failed to host Music Together"));
       this.queue = queue;
       this.profiles = {};
       const me = this.#profile(connection.id);
@@ -136,11 +148,13 @@ export class Together {
       };
       connection.on(listener);
       queue.on(listener);
-      setTimeout(() => (this.#ignoreChange = false), 16);
+      setTimeout(() => {
+        this.#ignoreChange = false;
+      }, SETTLE_MS);
       this.#startSync();
       return true;
     } finally {
-      this.busy = false;
+      this.connecting = false;
       this.#emit();
     }
   }
@@ -165,15 +179,10 @@ export class Together {
         queue.setIndex(event.payload.index);
         await connection.broadcast("SET_INDEX", { index: event.payload.index });
         break;
-      case "ADD_SONGS": {
+      case "ADD_SONGS":
         if (await this.#refuse(conn)) return;
-        const videoList = event.payload.videoList.map((video) => ({ ...video, ownerId: video.ownerId ?? conn?.peer ?? connection.id }));
-        await queue.addVideos(videoList, event.payload.index);
-        await connection.broadcast("ADD_SONGS", { ...event.payload, videoList }, event.after);
-        const after = event.after?.at(0);
-        if (after?.type === "SET_INDEX") queue.setIndex(after.payload.index);
+        await this.#hostAddSongs(event, conn);
         break;
-      }
       case "REMOVE_SONG":
         if (await this.#refuse(conn)) return;
         queue.removeVideo(event.payload.index);
@@ -199,18 +208,31 @@ export class Together {
         await connection.broadcast("SYNC_QUEUE", { videoList: queue.videoList });
         break;
       case "SYNC_PROGRESS": {
-        // 3: the host's own change; 2: guests control the player; 1: the queue; 0: nothing.
-        const level = !conn ? 3 : this.permission === "all" ? 2 : this.permission === "playlist" ? 1 : 0;
-        if (level >= 2) this.#applyProgress(event.payload);
-        if (level >= 1 && typeof event.payload?.index === "number" && queue.selectedIndex !== event.payload.index) {
-          queue.setIndex(event.payload.index);
-        }
+        const level = conn ? PERMISSION_LEVEL[this.permission] : HOST_LEVEL;
+        if (level >= CONTROLS_PLAYER) this.#applyProgress(event.payload);
+        if (level >= CONTROLS_QUEUE) this.#followIndex(event.payload);
         break;
       }
       case "CONNECTION_CLOSED":
         queue.off(listener);
         break;
     }
+  }
+
+  async #hostAddSongs(event: Extract<ConnectionEventUnion, { type: "ADD_SONGS" }>, conn: DataConnection | null) {
+    const connection = this.connection!;
+    const queue = this.queue!;
+    const videoList = event.payload.videoList.map((video) => ({ ...video, ownerId: video.ownerId ?? conn?.peer ?? connection.id }));
+    await queue.addVideos(videoList, event.payload.index);
+    await connection.broadcast("ADD_SONGS", { ...event.payload, videoList }, event.after);
+    const after = event.after?.at(0);
+    if (after?.type === "SET_INDEX") queue.setIndex(after.payload.index);
+  }
+
+  /** Selects the queue item another side is playing. */
+  #followIndex(payload: ConnectionEventMap["SYNC_PROGRESS"]) {
+    const queue = this.queue!;
+    if (typeof payload?.index === "number" && queue.selectedIndex !== payload.index) queue.setIndex(payload.index);
   }
 
   #applyProgress(payload: { progress?: number; state?: number } | undefined) {
@@ -227,17 +249,17 @@ export class Together {
 
   /** Joins the session hosted under `hostId` (the host's PeerJS id). */
   async join(hostId: string) {
-    this.busy = true;
+    this.connecting = true;
     this.#emit();
     try {
       const connection = this.#env.createConnection();
       this.connection = connection;
-      if (!(await connection.waitForReady().catch(() => null))) return this.#fail("join-failed", "Failed to join Music Together");
+      if (!(await connection.waitForReady().catch(() => null))) return this.#fail(this.#env.t("plugins.music-together.toast.join-failed", "Failed to join Music Together"));
       this.profiles = {};
       const id = hostId.trim();
-      if (!id || !(await connection.connect(id).then(() => true, () => false))) return this.#fail("join-failed", "Failed to join Music Together");
+      if (!id || !(await connection.connect(id).then(() => true, () => false))) return this.#fail(this.#env.t("plugins.music-together.toast.join-failed", "Failed to join Music Together"));
       const queue = this.#makeQueue();
-      if (!queue) return this.#fail("join-failed", "Failed to join Music Together");
+      if (!queue) return this.#fail(this.#env.t("plugins.music-together.toast.join-failed", "Failed to join Music Together"));
       this.queue = queue;
       connection.onConnections((conn) => {
         if (this.connection !== connection) return;
@@ -250,87 +272,21 @@ export class Together {
       let resolveIgnore: ReturnType<typeof setTimeout> | undefined;
       const settle = () => {
         clearTimeout(resolveIgnore);
-        resolveIgnore = setTimeout(() => (this.#ignoreChange = false), 16);
+        resolveIgnore = setTimeout(() => {
+          this.#ignoreChange = false;
+        }, SETTLE_MS);
       };
       // Changes made in this window's YTM go to the host, which applies them for everyone.
       const queueListener = async (event: ConnectionEventUnion) => {
         this.#ignoreChange = true;
-        switch (event.type) {
-          case "CLEAR_QUEUE":
-            await connection.broadcast("CLEAR_QUEUE", null);
-            break;
-          case "SET_INDEX":
-            await connection.broadcast("SET_INDEX", { index: event.payload.index });
-            break;
-          case "ADD_SONGS":
-            await connection.broadcast(
-              "ADD_SONGS",
-              { ...event.payload, videoList: event.payload.videoList.map((video) => ({ ...video, ownerId: video.ownerId ?? connection.id })) },
-              event.after,
-            );
-            break;
-          case "REMOVE_SONG":
-            await connection.broadcast("REMOVE_SONG", event.payload);
-            break;
-          case "MOVE_SONG":
-            await connection.broadcast("MOVE_SONG", event.payload);
-            break;
-          case "SYNC_PROGRESS":
-            if (this.permission === "host-only") await connection.broadcast("SYNC_QUEUE", undefined);
-            else await connection.broadcast("SYNC_PROGRESS", event.payload);
-            break;
-        }
+        await this.#sendToHost(connection, event);
         settle();
       };
       // The host's changes, applied here.
       const listener = async (event: ConnectionEventUnion) => {
         this.#ignoreChange = true;
-        switch (event.type) {
-          case "CLEAR_QUEUE":
-            queue.clear();
-            break;
-          case "SET_INDEX":
-            queue.setIndex(event.payload.index);
-            break;
-          case "ADD_SONGS": {
-            const videoList = event.payload.videoList.map((video) => ({ ...video, ownerId: video.ownerId ?? connection.id }));
-            await queue.addVideos(videoList, event.payload.index);
-            const after = event.after?.at(0);
-            if (after?.type === "SET_INDEX") queue.setIndex(after.payload.index);
-            break;
-          }
-          case "REMOVE_SONG":
-            queue.removeVideo(event.payload.index);
-            break;
-          case "MOVE_SONG":
-            queue.moveItem(event.payload.fromIndex, event.payload.toIndex);
-            break;
-          case "SYNC_QUEUE":
-            if (Array.isArray(event.payload?.videoList)) await queue.setVideoList(event.payload.videoList);
-            break;
-          case "SYNC_PROFILE":
-            if (!event.payload) break;
-            for (const [id, profile] of Object.entries(event.payload.profiles)) this.#putProfile(id, profile);
-            break;
-          case "SYNC_PROGRESS":
-            this.#applyProgress(event.payload);
-            if (typeof event.payload?.index === "number" && queue.selectedIndex !== event.payload.index) queue.setIndex(event.payload.index);
-            break;
-          case "PERMISSION": {
-            if (!event.payload) break;
-            this.permission = event.payload;
-            this.#env.toast(
-              this.#env.t("plugins.music-together.toast.permission-changed", 'Music Together permission changed to "{{permission}}"', {
-                permission: this.permissionLabel(this.permission),
-              }),
-            );
-            this.#emit();
-            break;
-          }
-          case "CONNECTION_CLOSED":
-            queue.off(queueListener);
-            break;
-        }
+        if (event.type === "CONNECTION_CLOSED") queue.off(queueListener);
+        else await this.#applyFromHost(connection, queue, event);
         settle();
       };
       connection.on(listener);
@@ -351,9 +307,76 @@ export class Together {
       this.#startSync();
       return true;
     } finally {
-      this.busy = false;
+      this.connecting = false;
       this.#emit();
     }
+  }
+
+  /** A guest's own queue change, sent to the host. */
+  async #sendToHost(connection: ConnectionLike, event: ConnectionEventUnion) {
+    switch (event.type) {
+      case "CLEAR_QUEUE":
+        return connection.broadcast("CLEAR_QUEUE", null);
+      case "SET_INDEX":
+        return connection.broadcast("SET_INDEX", { index: event.payload.index });
+      case "ADD_SONGS": {
+        const videoList = event.payload.videoList.map((video) => ({ ...video, ownerId: video.ownerId ?? connection.id }));
+        return connection.broadcast("ADD_SONGS", { ...event.payload, videoList }, event.after);
+      }
+      case "REMOVE_SONG":
+        return connection.broadcast("REMOVE_SONG", event.payload);
+      case "MOVE_SONG":
+        return connection.broadcast("MOVE_SONG", event.payload);
+      case "SYNC_PROGRESS":
+        if (this.permission === "host-only") return connection.broadcast("SYNC_QUEUE", undefined);
+        return connection.broadcast("SYNC_PROGRESS", event.payload);
+    }
+  }
+
+  /** A change from the host, applied to this guest's queue and player. */
+  async #applyFromHost(connection: ConnectionLike, queue: Queue, event: ConnectionEventUnion) {
+    switch (event.type) {
+      case "CLEAR_QUEUE":
+        return queue.clear();
+      case "SET_INDEX":
+        return queue.setIndex(event.payload.index);
+      case "ADD_SONGS": {
+        const videoList = event.payload.videoList.map((video) => ({ ...video, ownerId: video.ownerId ?? connection.id }));
+        await queue.addVideos(videoList, event.payload.index);
+        const after = event.after?.at(0);
+        if (after?.type === "SET_INDEX") queue.setIndex(after.payload.index);
+        return;
+      }
+      case "REMOVE_SONG":
+        return queue.removeVideo(event.payload.index);
+      case "MOVE_SONG":
+        return queue.moveItem(event.payload.fromIndex, event.payload.toIndex);
+      case "SYNC_QUEUE":
+        if (Array.isArray(event.payload?.videoList)) await queue.setVideoList(event.payload.videoList);
+        return;
+      case "SYNC_PROFILE":
+        if (!event.payload) return;
+        for (const [id, profile] of Object.entries(event.payload.profiles)) this.#putProfile(id, profile);
+        return;
+      case "SYNC_PROGRESS":
+        this.#applyProgress(event.payload);
+        this.#followIndex(event.payload);
+        return;
+      case "PERMISSION":
+        if (!event.payload) return;
+        this.permission = event.payload;
+        this.#toastPermission(this.permission);
+        this.#emit();
+        return;
+    }
+  }
+
+  #toastPermission(permission: Permission) {
+    this.#env.toast(
+      this.#env.t("plugins.music-together.toast.permission-changed", 'Music Together permission changed to "{{permission}}"', {
+        permission: this.permissionLabel(permission),
+      }),
+    );
   }
 
   /** A guest with full control seeking with YTM's progress bar tells the host. */
@@ -364,7 +387,8 @@ export class Together {
       progress._update = (...args: unknown[]) => {
         const now = args[0];
         const player = this.#env.player();
-        if (this.permission === "all" && typeof now === "number" && player && Math.abs(now - player.getCurrentTime()) > SEEK_TOLERANCE_S) {
+        const seeked = typeof now === "number" && !!player && Math.abs(now - player.getCurrentTime()) > SEEK_TOLERANCE_S;
+        if (this.permission === "all" && seeked) {
           void this.connection?.broadcast("SYNC_PROGRESS", { progress: now, state: player.getPlayerState() });
         }
         original.call(progress, ...args);
@@ -393,7 +417,7 @@ export class Together {
     };
     // The host shares its queue as YTM loads new tracks into it.
     const onVideoData = (name: string) => {
-      if (name !== "dataloaded" && !this.#updateNext) return;
+      if (name !== "dataloaded" && !this.#shareFollowUp) return;
       if (this.connection?.mode !== "host" || !this.queue) return;
       const connection = this.connection;
       const videoList = this.queue.flatItems.map(
@@ -402,7 +426,7 @@ export class Together {
       void this.queue.setVideoList(videoList, false);
       this.queue.syncQueueOwner();
       void connection.broadcast("SYNC_QUEUE", { videoList });
-      this.#updateNext = name === "dataloaded";
+      this.#shareFollowUp = name === "dataloaded";
     };
     player.addEventListener("onStateChange", onState);
     player.addEventListener("videodatachange", onVideoData);
@@ -416,9 +440,7 @@ export class Together {
   async setPermission(permission: Permission) {
     this.permission = permission;
     await this.connection?.broadcast("PERMISSION", permission);
-    this.#env.toast(
-      this.#env.t("plugins.music-together.toast.permission-changed", 'Music Together permission changed to "{{permission}}"', { permission: this.permissionLabel(permission) }),
-    );
+    this.#toastPermission(permission);
     this.#emit();
   }
 
@@ -448,8 +470,8 @@ export class Together {
     this.#emit();
   }
 
-  #fail(key: string, fallback: string) {
-    this.#env.toast(this.#env.t(`plugins.music-together.toast.${key}`, fallback));
+  #fail(message: string) {
+    this.#env.toast(message);
     this.stop();
     return false;
   }

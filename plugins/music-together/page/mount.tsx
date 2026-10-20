@@ -1,38 +1,27 @@
 // The nav-bar button and the popover panel, each in its own shadow root: the
 // button lives in YTM's nav bar, the panel floats over the page.
 
-import type { PageContext, YTPlayerApi } from "@pear/sdk";
+import type { PageContextOf, YTPlayerApi } from "@pear/sdk";
+import { isolateKeys, shadowHost } from "@pear/sdk/dom";
 import { render } from "preact";
 import { Connection } from "../connection.ts";
 import type { QueueElement } from "../queue.ts";
+import type { schema } from "../schema.ts";
 import { Together } from "../together.ts";
-import type { Permission } from "../types.ts";
 import { launcherStyles, panelStyles } from "./styles.ts";
 import { LauncherButton, Panel } from "./ui.tsx";
 
-export interface TogetherConfig {
-  displayName: string;
-  defaultPermission: Permission;
-}
-
 export interface TogetherCommands {
-  [name: string]: (...args: any[]) => unknown;
   copy(text: string): void;
 }
 
-export type Ctx = PageContext<TogetherConfig, TogetherCommands>;
+export type Ctx = PageContextOf<typeof schema, TogetherCommands>;
 
-function shadowHost(tag: string, css: string) {
-  const host = document.createElement(tag);
-  const root = host.attachShadow({ mode: "open" });
-  const sheet = new CSSStyleSheet();
-  sheet.replaceSync(css);
-  root.adoptedStyleSheets = [sheet];
-  return { host, root };
-}
+/** The panel's offset from the button and from the window's edge, in px. */
+const PANEL_GAP = 8;
 
 export function mountTogether(ctx: Ctx) {
-  const t = (key: string, fallback: string, vars?: Record<string, unknown>) => ctx.t(key, fallback, vars);
+  const t = ctx.t;
   const together = new Together({
     createConnection: () => new Connection(ctx.log),
     queueElement: () => ctx.$<QueueElement>("queue"),
@@ -62,7 +51,7 @@ export function mountTogether(ctx: Ctx) {
     const anchor = launcher.host.getBoundingClientRect();
     render(
       open ? (
-        <div class="anchor" style={{ top: `${anchor.bottom + 8}px`, right: `${Math.max(8, innerWidth - anchor.right - 8)}px` }}>
+        <div class="anchor" style={{ top: `${anchor.bottom + PANEL_GAP}px`, right: `${Math.max(PANEL_GAP, innerWidth - anchor.right - PANEL_GAP)}px` }}>
           <Panel
             together={together}
             t={t}
@@ -83,36 +72,27 @@ export function mountTogether(ctx: Ctx) {
   ctx.onCleanup(together.subscribe(draw));
 
   // Keep YTM's shortcuts (space, j/k, …) away from our inputs; Escape closes.
-  for (const type of ["keydown", "keyup", "keypress"]) {
-    ctx.listen(overlay.host, type, (event: KeyboardEvent) => {
-      if (type === "keydown" && event.key === "Escape") setOpen(false);
-      event.stopPropagation();
-    });
-  }
+  isolateKeys(overlay.host, ctx.signal);
+  ctx.listen(overlay.host, "keydown", (event: KeyboardEvent) => {
+    if (event.key === "Escape") setOpen(false);
+  });
   ctx.listen(document, "pointerdown", (event: PointerEvent) => {
     const path = event.composedPath();
     if (open && !path.includes(overlay.host) && !path.includes(launcher.host)) setOpen(false);
   });
   ctx.listen(window, "resize", () => open && draw());
 
-  // YTM re-renders its nav bar on some navigations; put the button back.
-  const place = () => {
-    if (launcher.host.isConnected) return;
+  // YTM re-renders its nav bar on some navigations; put the button back (left of the settings button).
+  ctx.mount(launcher.host, (host) => {
     const container = ctx.$("nav_bar.right");
     if (!container) return;
     const settings = container.querySelector("pear-launcher");
-    if (settings) settings.before(launcher.host);
-    else container.prepend(launcher.host);
-  };
-  const observer = new MutationObserver(place);
-  void ctx.waitFor("nav_bar.right").then(() => {
-    observer.observe(document.body, { childList: true, subtree: true });
-    place();
+    if (settings) settings.before(host);
+    else container.prepend(host);
   });
   draw();
 
   ctx.onCleanup(() => {
-    observer.disconnect();
     stopped = true;
     together.stop();
     render(null, launcher.root);

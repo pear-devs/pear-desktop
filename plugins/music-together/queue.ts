@@ -3,9 +3,9 @@
 // remove, reorder, play) go to the session instead, and the session's changes
 // are dispatched into it; each item shows who added it.
 
-import { type ConnectionEventUnion, getDefaultProfile, type Profile, type VideoData } from "./types.ts";
-
-type Translate = (key: string, fallback: string, vars?: Record<string, unknown>) => string;
+import type { Translate } from "@pear/sdk/i18n";
+import { decorateOwner } from "./owners.tsx";
+import type { ConnectionEventUnion, Profile, VideoData } from "./types.ts";
 
 interface VideoRenderer {
   videoId: string;
@@ -21,6 +21,8 @@ export interface StoreEvent {
   type: string;
   payload?: unknown;
 }
+
+type QueuePayload = { items?: QueueItem[]; index?: number; fromIndex?: number; toIndex?: number } | undefined;
 
 interface QueueState {
   queue: { items: QueueItem[]; queueContextParams: string; nextQueueItemId: number };
@@ -40,6 +42,10 @@ export interface QueueElement extends HTMLElement {
 interface AppElement extends HTMLElement {
   networkManager: { fetch<T>(path: string, body: unknown): Promise<T> };
 }
+
+// Queue rows, plain or inside a video wrapper.
+const QUEUE_ITEMS =
+  "#contents > ytmusic-player-queue-item, #contents > ytmusic-playlist-panel-video-wrapper-renderer > #primary-renderer > ytmusic-player-queue-item";
 
 export type QueueEventListener = (event: ConnectionEventUnion) => void;
 
@@ -75,8 +81,10 @@ export interface QueueOptions {
 export class Queue {
   private readonly queue: QueueElement;
   private originalDispatch: Store["dispatch"] | undefined;
-  private internalDispatch = false;
-  private ignoreFlag = false;
+  /** Set while this class dispatches the session's changes, which mustn't loop back to it. */
+  private applyingSession = false;
+  /** YTM cleared the queue: the next ADD_ITEMS is a whole new queue (something new is playing). */
+  private replacingQueue = false;
   private listeners: QueueEventListener[] = [];
   private owner: Profile | null = null;
   private readonly getProfile: (id: string) => Profile | undefined;
@@ -120,56 +128,49 @@ export class Queue {
       videos.map((video) => video.videoId),
     );
     if (!items) return false;
-    this.internalDispatch = true;
-    const state = this.store.getState();
-    this.queue.dispatch({
+    const { queue } = this.store.getState();
+    this.dispatchSession({
       type: "ADD_ITEMS",
       payload: {
-        nextQueueItemId: state.queue.nextQueueItemId,
-        index: index ?? (state.queue.items.length ? state.queue.items.length - 1 : null) ?? 0,
+        nextQueueItemId: queue.nextQueueItemId,
+        index: index ?? Math.max(0, queue.items.length - 1),
         items,
         shuffleEnabled: false,
         shouldAssignIds: true,
       },
     });
     const at = index ?? this._videoList.length;
-    const inserted = this._videoList[at];
-    if (!inserted || (inserted.videoId !== videos[0]?.videoId && inserted.ownerId !== videos[0]?.ownerId)) {
-      this._videoList.splice(at, 0, ...videos.map((video) => ({ ...video, ownerId: video.ownerId ?? this.owner?.id })));
+    const current = this._videoList[at];
+    // Our own ADD_SONGS echoed back: the list already has them.
+    const alreadyListed = current && (current.videoId === videos[0]?.videoId || current.ownerId === videos[0]?.ownerId);
+    if (!alreadyListed) {
+      const owned = videos.map((video) => ({ ...video, ownerId: video.ownerId ?? this.owner?.id }));
+      this._videoList.splice(at, 0, ...owned);
     }
-    this.internalDispatch = false;
     this.refresh();
     return true;
   }
 
   removeVideo(index: number) {
-    this.internalDispatch = true;
     this._videoList.splice(index, 1);
-    this.queue.dispatch({ type: "REMOVE_ITEM", payload: index });
-    this.internalDispatch = false;
+    this.dispatchSession({ type: "REMOVE_ITEM", payload: index });
     this.refresh();
   }
 
   setIndex(index: number) {
-    this.internalDispatch = true;
-    this.queue.dispatch({ type: "SET_INDEX", payload: index });
-    this.internalDispatch = false;
+    this.dispatchSession({ type: "SET_INDEX", payload: index });
   }
 
   moveItem(fromIndex: number, toIndex: number) {
-    this.internalDispatch = true;
     const [moved] = this._videoList.splice(fromIndex, 1);
     if (moved) this._videoList.splice(toIndex, 0, moved);
-    this.queue.dispatch({ type: "MOVE_ITEM", payload: { fromIndex, toIndex } });
-    this.internalDispatch = false;
+    this.dispatchSession({ type: "MOVE_ITEM", payload: { fromIndex, toIndex } });
     this.refresh();
   }
 
   clear() {
-    this.internalDispatch = true;
     this._videoList = [];
-    this.queue.dispatch({ type: "CLEAR" });
-    this.internalDispatch = false;
+    this.dispatchSession({ type: "CLEAR" });
   }
 
   on(listener: QueueEventListener) {
@@ -188,71 +189,80 @@ export class Queue {
   /** Routes YTM's own queue changes to the session (see the file comment). */
   injection() {
     if (this.originalDispatch) return;
-    const original = this.store.dispatch;
-    this.originalDispatch = original;
     const store = this.store;
+    const original = store.dispatch;
+    this.originalDispatch = original;
     store.dispatch = (event) => {
-      if (!this.owner) return original.call(store, event);
-      if (!this.internalDispatch) {
-        const payload = event.payload as { items?: QueueItem[]; index?: number; fromIndex?: number; toIndex?: number } | undefined;
-        const own = (items: QueueItem[]) =>
-          mapQueueItem((it) => ({ videoId: it!.videoId, ownerId: this.owner!.id }) satisfies VideoData, items);
-        switch (event.type) {
-          case "CLEAR":
-            this.ignoreFlag = true;
-            return this.broadcast({ type: "CLEAR_QUEUE", payload: null });
-          case "ADD_ITEMS": {
-            if (this.ignoreFlag) {
-              // Playing something new: YTM clears the queue, then adds the new one.
-              this.ignoreFlag = false;
-              const videoList = own(payload?.items ?? []);
-              const index = this._videoList.length;
-              if (videoList.length > 0) {
-                this._videoList = [...videoList];
-                this.broadcast({ type: "ADD_SONGS", payload: { videoList }, after: [{ type: "SET_INDEX", payload: { index } }] });
-              }
-            } else if (payload?.items?.length === 1) {
-              // Play next / add to queue.
-              const videoList = own(payload.items);
-              const hasIndex = payload && Object.hasOwn(payload, "index");
-              this._videoList.splice(hasIndex ? payload.index! : this._videoList.length, 0, ...videoList);
-              this.broadcast({ type: "ADD_SONGS", payload: { ...(hasIndex ? { index: payload.index! } : {}), videoList } });
-            }
-            return;
-          }
-          case "MOVE_ITEM":
-            return this.broadcast({ type: "MOVE_SONG", payload: { fromIndex: payload!.fromIndex!, toIndex: payload!.toIndex! } });
-          case "REMOVE_ITEM":
-            return this.broadcast({ type: "REMOVE_SONG", payload: { index: event.payload as number } });
-          case "SET_INDEX":
-            return this.broadcast({ type: "SYNC_PROGRESS", payload: { index: event.payload as number } });
-          case "SET_HEADER":
-            event.payload = this.headerPayload();
-            break;
-          case "ADD_STEERING_CHIPS":
-            event.type = "CLEAR_STEERING_CHIPS";
-            event.payload = undefined;
-            break;
-          case "SET_PLAYER_UI_STATE":
-            if (event.payload === "INACTIVE" && this._videoList.length > 0) return;
-            break;
-          // No autoplay or automix in a session: the queue is what people put in it.
-          case "HAS_SHOWN_AUTOPLAY":
-          case "ADD_AUTOMIX_ITEMS":
-            return;
-        }
-      }
-      original.call(store, event);
+      const passOn = !this.owner || this.applyingSession || this.onYtmChange(event);
+      if (passOn) original.call(store, event);
     };
+  }
+
+  /** A change YTM made itself; whether it should still reach YTM's store (possibly rewritten). */
+  private onYtmChange(event: StoreEvent): boolean {
+    const payload = event.payload as QueuePayload;
+    switch (event.type) {
+      case "CLEAR":
+        this.replacingQueue = true;
+        this.broadcast({ type: "CLEAR_QUEUE", payload: null });
+        return false;
+      case "ADD_ITEMS":
+        this.onYtmAdd(payload);
+        return false;
+      case "MOVE_ITEM":
+        this.broadcast({ type: "MOVE_SONG", payload: { fromIndex: payload!.fromIndex!, toIndex: payload!.toIndex! } });
+        return false;
+      case "REMOVE_ITEM":
+        this.broadcast({ type: "REMOVE_SONG", payload: { index: event.payload as number } });
+        return false;
+      case "SET_INDEX":
+        this.broadcast({ type: "SYNC_PROGRESS", payload: { index: event.payload as number } });
+        return false;
+      case "SET_HEADER":
+        event.payload = this.headerPayload();
+        return true;
+      case "ADD_STEERING_CHIPS":
+        event.type = "CLEAR_STEERING_CHIPS";
+        event.payload = undefined;
+        return true;
+      case "SET_PLAYER_UI_STATE":
+        return !(event.payload === "INACTIVE" && this._videoList.length > 0);
+      // No autoplay or automix in a session: the queue is what people put in it.
+      case "HAS_SHOWN_AUTOPLAY":
+      case "ADD_AUTOMIX_ITEMS":
+        return false;
+    }
+    return true;
+  }
+
+  private onYtmAdd(payload: QueuePayload) {
+    if (this.replacingQueue) {
+      // Playing something new: YTM clears the queue, then adds the new one.
+      this.replacingQueue = false;
+      const videoList = this.ownedBySelf(payload?.items ?? []);
+      const index = this._videoList.length;
+      if (videoList.length === 0) return;
+      this._videoList = [...videoList];
+      this.broadcast({ type: "ADD_SONGS", payload: { videoList }, after: [{ type: "SET_INDEX", payload: { index } }] });
+      return;
+    }
+    // Play next / add to queue.
+    if (payload?.items?.length !== 1) return;
+    const videoList = this.ownedBySelf(payload.items);
+    const hasIndex = Object.hasOwn(payload, "index");
+    this._videoList.splice(hasIndex ? payload.index! : this._videoList.length, 0, ...videoList);
+    this.broadcast({ type: "ADD_SONGS", payload: { ...(hasIndex ? { index: payload.index! } : {}), videoList } });
+  }
+
+  private ownedBySelf(items: QueueItem[]) {
+    return mapQueueItem((it) => ({ videoId: it!.videoId, ownerId: this.owner!.id }) satisfies VideoData, items);
   }
 
   /** The queue's header says it's the session's, and autoplay is off. */
   initQueue() {
-    this.internalDispatch = true;
-    this.queue.dispatch({ type: "HAS_SHOWN_AUTOPLAY", payload: false });
-    this.queue.dispatch({ type: "SET_HEADER", payload: this.headerPayload() });
-    this.queue.dispatch({ type: "CLEAR_STEERING_CHIPS" });
-    this.internalDispatch = false;
+    this.dispatchSession({ type: "HAS_SHOWN_AUTOPLAY", payload: false });
+    this.dispatchSession({ type: "SET_HEADER", payload: this.headerPayload() });
+    this.dispatchSession({ type: "CLEAR_STEERING_CHIPS" });
   }
 
   async syncVideo() {
@@ -261,38 +271,22 @@ export class Queue {
       this._videoList.map((video) => video.videoId),
     );
     if (!items) return false;
-    this.internalDispatch = true;
-    this.queue.dispatch({
+    const { nextQueueItemId } = this.store.getState().queue;
+    this.dispatchSession({
       type: "UPDATE_ITEMS",
-      payload: { items, nextQueueItemId: this.store.getState().queue.nextQueueItemId, shouldAssignIds: true, currentIndex: -1 },
+      payload: { items, nextQueueItemId, shouldAssignIds: true, currentIndex: -1 },
     });
-    this.internalDispatch = false;
     this.refresh();
     return true;
   }
 
   /** Shows who added each item: their avatar, and their name on hover. */
   syncQueueOwner() {
+    const unknown = this.t("plugins.music-together.internal.unknown-user", "Unknown User");
     for (const queue of document.querySelectorAll("#queue")) {
-      const items = queue.querySelectorAll<HTMLElement>(
-        "#contents > ytmusic-player-queue-item, #contents > ytmusic-playlist-panel-video-wrapper-renderer > #primary-renderer > ytmusic-player-queue-item",
-      );
-      items.forEach((item, index) => {
+      queue.querySelectorAll<HTMLElement>(QUEUE_ITEMS).forEach((item, index) => {
         const id = this._videoList[index]?.ownerId ?? "";
-        let data = this.getProfile(id);
-        const avatar = item.querySelector<HTMLImageElement>(".music-together-owner") ?? document.createElement("img");
-        avatar.classList.add("music-together-owner");
-        avatar.dataset.id = id;
-        avatar.dataset.index = String(index);
-        const name = item.querySelector<HTMLElement>(".music-together-name") ?? document.createElement("div");
-        name.classList.add("music-together-name");
-        name.textContent = data?.name ?? this.t("plugins.music-together.internal.unknown-user", "Unknown User");
-        if (!data?.name && !data?.handleId) data = getDefaultProfile(data?.id ?? "");
-        avatar.src = data.thumbnail;
-        avatar.title = data.name;
-        avatar.alt = data.handleId;
-        if (!avatar.isConnected) item.append(avatar);
-        if (!name.isConnected) item.append(name);
+        decorateOwner(item, index, id, this.getProfile(id), unknown);
       });
     }
   }
@@ -327,6 +321,13 @@ export class Queue {
         },
       ],
     };
+  }
+
+  /** Dispatches the session's change into YTM's queue without sending it back to the session. */
+  private dispatchSession(event: StoreEvent) {
+    this.applyingSession = true;
+    this.queue.dispatch(event);
+    this.applyingSession = false;
   }
 
   private broadcast(event: ConnectionEventUnion) {

@@ -24,7 +24,7 @@ const FALLBACK_TRACK_ID = 115264642;
 /** Appended to lyrics served to API clients. */
 const DISCLAIMER = /\n*\*{3,}[^*]*\*{3,}\s*(\(\d+\))?\s*$/;
 
-export type Translate = (key: string, fallback: string) => string;
+import type { Translate } from "@pear/sdk/i18n";
 
 export interface MusixmatchOptions {
   /** The user's own token; empty: ask for an anonymous one. */

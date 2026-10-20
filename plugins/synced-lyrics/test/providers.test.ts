@@ -242,7 +242,7 @@ describe("megalobiz", () => {
 });
 
 describe("musixmatch", () => {
-  const options = { userToken: "", t: (_key: string, english: string) => english };
+  const options = { userToken: "", t: (_key: string, english = "") => english };
 
   test("refuses the all-zero token Musixmatch gives anonymous apps", async () => {
     resetMusixmatchToken();

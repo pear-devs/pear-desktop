@@ -4,7 +4,8 @@ import { lineAt } from "../lrc.ts";
 import { PROVIDER_NAMES, PROVIDERS, resultRank, type LyricLine } from "../types.ts";
 import type { LyricsStore, ProviderState } from "./store.ts";
 
-type Translate = (key: string, fallback: string, vars?: Record<string, unknown>) => string;
+import type { Translate } from "@pear/sdk/i18n";
+import { clamp } from "@pear/sdk/util";
 
 export type LineEffect = "fancy" | "scale" | "offset" | "focus";
 export type GapText = "dots" | "bullets" | "note" | "dash" | "none";
@@ -32,6 +33,11 @@ export interface ViewProps {
 
 /** While the user scrolls the lyrics themselves, stop following the current line. */
 const USER_SCROLL_GRACE_MS = 4000;
+/** The followed line is kept this far down the panel (a share of its height). */
+const FOLLOW_AT = 0.38;
+const KAOMOJI_FRAME_MS = 500;
+/** The current line's glow and wobble last at least this long, in seconds. */
+const MIN_LINE_EFFECT_S = 0.2;
 
 function useStore(store: LyricsStore) {
   const [, setTick] = useState(0);
@@ -258,7 +264,7 @@ const LOADING_FRAMES = ["(>_<)", "{ (>_<) }", "{{ (>_<) }}", "{{{ (>_<) }}}", "{
 function LoadingKaomoji() {
   const [frame, setFrame] = useState(0);
   useEffect(() => {
-    const timer = setInterval(() => setFrame((n) => n + 1), 500);
+    const timer = setInterval(() => setFrame((n) => n + 1), KAOMOJI_FRAME_MS);
     return () => clearInterval(timer);
   }, []);
   return (
@@ -322,7 +328,7 @@ function SyncedLyrics({ store, options, now, seek, scroller }: ViewProps) {
     if (!element || !container || !following) return;
     const box = container.getBoundingClientRect();
     const rect = element.getBoundingClientRect();
-    const top = container.scrollTop + rect.top - box.top - box.height * 0.38 + rect.height / 2;
+    const top = container.scrollTop + rect.top - box.top - box.height * FOLLOW_AT + rect.height / 2;
     container.scrollTo({ top, behavior: "smooth" });
   }, [anchor, following]);
 
@@ -401,7 +407,7 @@ function Line({ line, text, romanized, state, options, onSeek }: LineProps) {
       role="button"
       tabIndex={-1}
       // The glow and wobble last as long as the line, as in pear-desktop.
-      style={{ "--line-duration": `${Math.max(0.2, (line.endMs - line.startMs) / 1000)}s` }}
+      style={{ "--line-duration": `${Math.max(MIN_LINE_EFFECT_S, (line.endMs - line.startMs) / 1000)}s` }}
       onClick={onSeek}
     >
       {options.showTimeCodes && <span class="time">{formatTime(line.startMs)}</span>}
@@ -489,7 +495,7 @@ function Message({ title, detail, children }: { title: string; detail?: string; 
 
 function progress(ms: number, start: number, end: number) {
   if (end <= start) return ms >= start ? 1 : 0;
-  return Math.min(1, Math.max(0, (ms - start) / (end - start)));
+  return clamp((ms - start) / (end - start), 0, 1);
 }
 
 /** pear-desktop's LRC-style time code, "[01:23.45]". */

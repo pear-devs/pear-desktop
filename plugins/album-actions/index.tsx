@@ -1,5 +1,9 @@
+/** @jsxImportSource @pear/sdk */
 import { definePlugin, type SelectorName } from "@pear/sdk";
+import { Icon } from "@pear/sdk/dom";
+import type { Translate } from "@pear/sdk/i18n";
 import { css } from "@pear/sdk/macros" with { type: "macro" };
+import { sleep } from "@pear/sdk/util";
 
 const THUMB_UP =
   "M3 11h3v10H3V11zm15.77 0h-4.23l1.52-4.94C16.38 5.03 15.54 4 14.38 4c-.58 0-1.14.24-1.52.65L7 11v10h10.43c1.06 0 1.98-.67 2.19-1.61l1.34-6C21.23 12.15 20.18 11 18.77 11z";
@@ -10,8 +14,6 @@ const STRIKE = "M3.3 2 2 3.3 20.7 22l1.3-1.3z";
 // Loading a long playlist's remaining rows: wait this long per batch, give up after this many.
 const CONTINUATION_WAIT_MS = 1500;
 const MAX_CONTINUATIONS = 100;
-
-type Translate = (key: string, fallback?: string, vars?: Readonly<Record<string, unknown>>) => string;
 
 interface Action {
   id: string;
@@ -76,22 +78,27 @@ export default definePlugin({
     }
   `,
   page: (ctx) => {
-    const bar = document.createElement("div");
-    bar.className = "pear-album-actions";
-    ctx.onCleanup(() => bar.remove());
+    let running = false;
     const buttons = new Map<Action, HTMLButtonElement>();
     for (const action of ACTIONS) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.dataset.action = action.id;
-      button.append(icon(action.icon), icon(action.icon));
-      button.addEventListener("click", (event) => {
-        event.stopPropagation();
-        void run(action);
-      });
-      buttons.set(action, button);
-      bar.append(button);
+      const button = (
+        <button
+          type="button"
+          data-action={action.id}
+          onClick={(event) => {
+            event.stopPropagation();
+            void run(action);
+          }}
+        >
+          {/* The second copy is the fill, clipped to the share already done. */}
+          <Icon path={action.icon} />
+          <Icon path={action.icon} />
+        </button>
+      );
+      buttons.set(action, button as HTMLButtonElement);
     }
+    const bar = <div class="pear-album-actions">{[...buttons.values()]}</div>;
+    ctx.onCleanup(() => bar.remove());
 
     const rows = (action: Action) => {
       const list = ctx.$("browse.tracklist");
@@ -99,8 +106,17 @@ export default definePlugin({
     };
     const matching = (action: Action) =>
       rows(action).filter((button) => (button.getAttribute("aria-pressed") === "true") === action.pressed);
+    const loader = () => ctx.$("browse.continuations")?.firstElementChild;
 
-    let busy = false;
+    const label = (action: Action, complete: boolean, pending: number, total: number) => {
+      if (!complete) return action.label(ctx.t);
+      return ctx.t("plugins.album-actions.progress", "{{action}} ({{pending}} of {{total}})", {
+        action: action.label(ctx.t),
+        pending,
+        total,
+      });
+    };
+
     const update = () => {
       const header = ctx.$("browse.action_buttons");
       if (!header || !ctx.$("browse.tracklist")) {
@@ -110,36 +126,29 @@ export default definePlugin({
       if (bar.previousElementSibling !== header) header.after(bar);
       // Until a long list has loaded completely the counts are partial: like
       // pear-desktop, offer every action, half filled.
-      const complete = !ctx.$("browse.continuations")?.firstElementChild;
+      const complete = !loader();
       for (const [action, button] of buttons) {
         const total = rows(action).length;
         const pending = matching(action).length;
         button.hidden = complete && pending === 0;
-        button.disabled = busy;
+        button.disabled = running;
         // The icon fills up with the share of tracks that are liked (or disliked).
         const pressed = action.pressed ? pending : total - pending;
-        const done = !complete ? 50 : total === 0 ? 0 : Math.round((pressed / total) * 100);
-        button.style.setProperty("--pear-done", `${done}%`);
-        const label = complete
-          ? ctx.t("plugins.album-actions.progress", "{{action}} ({{pending}} of {{total}})", {
-              action: action.label(ctx.t),
-              pending,
-              total,
-            })
-          : action.label(ctx.t);
-        button.title = label;
-        button.setAttribute("aria-label", label);
+        button.style.setProperty("--pear-done", `${donePercent(complete, pressed, total)}%`);
+        const text = label(action, complete, pending, total);
+        button.title = text;
+        button.setAttribute("aria-label", text);
       }
     };
 
     const run = async (action: Action) => {
-      busy = true;
+      running = true;
       update();
       try {
         await loadAllRows();
         for (const button of matching(action)) button.click();
       } finally {
-        busy = false;
+        running = false;
         update();
       }
     };
@@ -147,12 +156,13 @@ export default definePlugin({
     // Long playlists load in batches as you scroll; pull them all in before acting.
     const loadAllRows = async () => {
       for (let i = 0; i < MAX_CONTINUATIONS; i++) {
-        const loader = ctx.$("browse.continuations")?.firstElementChild;
-        if (!loader || ctx.signal.aborted) return;
-        loader.scrollIntoView({ block: "end" });
+        const current = loader();
+        if (!current || ctx.signal.aborted) return;
+        current.scrollIntoView({ block: "end" });
         const before = rows(ACTIONS[0]!).length;
-        await new Promise((resolve) => setTimeout(resolve, CONTINUATION_WAIT_MS));
-        if (rows(ACTIONS[0]!).length === before && ctx.$("browse.continuations")?.firstElementChild === loader) return;
+        await sleep(CONTINUATION_WAIT_MS);
+        const stalled = rows(ACTIONS[0]!).length === before && loader() === current;
+        if (stalled) return;
       }
     };
 
@@ -165,23 +175,14 @@ export default definePlugin({
       });
     };
     ctx.onCleanup(() => cancelAnimationFrame(scheduled));
-    void ctx.waitFor("browse.page").then((page) => {
-      const observer = new MutationObserver(schedule);
-      observer.observe(page, { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-pressed"] });
-      ctx.onCleanup(() => observer.disconnect());
-      update();
-    }, () => {});
+    ctx.observe("browse.page", { childList: true, subtree: true, attributes: true, attributeFilter: ["aria-pressed"] }, schedule);
+    void ctx.waitFor("browse.page").then(update, () => {});
   },
 });
 
-function icon(paths: string[]) {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 24 24");
-  svg.setAttribute("aria-hidden", "true");
-  for (const d of paths) {
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", d);
-    svg.append(path);
-  }
-  return svg;
+/** How full an action's icon is: half while the list is still loading. */
+function donePercent(complete: boolean, pressed: number, total: number) {
+  if (!complete) return 50;
+  if (total === 0) return 0;
+  return Math.round((pressed / total) * 100);
 }

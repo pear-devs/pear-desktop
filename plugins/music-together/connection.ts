@@ -9,9 +9,9 @@ import {
   type PeerError,
   PeerErrorType,
 } from "peerjs";
+import type { Logger } from "@pear/sdk";
+import { sleep } from "@pear/sdk/util";
 import type { ConnectionEventMap, ConnectionEventUnion } from "./types.ts";
-
-type Logger = { warn(...args: unknown[]): void; error(...args: unknown[]): void };
 
 export type ConnectionListener = (event: ConnectionEventUnion, conn: DataConnection | null) => void;
 export type ConnectionMode = "host" | "guest" | "disconnected";
@@ -45,7 +45,7 @@ export class Connection implements ConnectionLike {
   private listeners: ConnectionListener[] = [];
   private connectionListeners: ((connection?: DataConnection) => void)[] = [];
 
-  constructor(private log: Logger) {
+  constructor(private log: Pick<Logger, "warn" | "error">) {
     this.peer = new Peer({
       debug: 0,
       config: {
@@ -172,7 +172,7 @@ export class Connection implements ConnectionLike {
       } catch (error) {
         this.log.error("reconnect failed", error);
       }
-      await new Promise<void>((resolve) => setTimeout(resolve, backoff));
+      await sleep(backoff);
     }
     this.isReconnecting = false;
   }
@@ -193,11 +193,11 @@ export class Connection implements ConnectionLike {
         resolve(conn);
         for (const listener of this.connectionListeners) listener(conn);
         conn.on("data", (data) => {
-          if (!data || typeof data !== "object" || !("type" in data) || !("payload" in data) || !data.type) {
+          if (!isEvent(data)) {
             this.log.warn("invalid data", data);
             return;
           }
-          for (const listener of this.listeners) listener(data as ConnectionEventUnion, conn);
+          for (const listener of this.listeners) listener(data, conn);
         });
       });
       const onClose = (err?: PeerError<`${DataConnectionErrorType | BaseConnectionErrorType}`>) => {
@@ -214,4 +214,9 @@ export class Connection implements ConnectionLike {
       conn.on("close", () => onClose());
     });
   }
+}
+
+/** A `{ type, payload }` message; its payload is trusted as pear-desktop's. */
+function isEvent(data: unknown): data is ConnectionEventUnion {
+  return !!data && typeof data === "object" && "type" in data && "payload" in data && !!data.type;
 }
