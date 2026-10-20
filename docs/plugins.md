@@ -84,7 +84,9 @@ export default definePlugin({
 (scoped: composes with other plugins, removed on stop), `player` (`state`,
 `on("change" | "trackChange")`, `control(action)`), `emit(event, payload)` to
 the page part, `request(event, payload)` to ask the page part, `api.broadcast(event, data)` to
-API server WebSocket clients, `openSettings()`, `onCleanup(fn)`, `log`.
+API server WebSocket clients, `openSettings()`, `setStatus(text)` (a line on
+the plugin's settings card saying what it is doing; `""` clears it),
+`onCleanup(fn)`, `log`.
 
 ### Page context
 

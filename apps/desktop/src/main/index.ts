@@ -65,7 +65,7 @@ function main() {
   const send = (event: HostEvent) => {
     if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(CHANNEL.event, event);
     // The standalone settings window only follows state, not page-runtime traffic.
-    if (event.type === "plugin-state" || event.type === "plugin-error" || event.type === "core-state") {
+    if (event.type === "plugin-state" || event.type === "plugin-error" || event.type === "plugin-status" || event.type === "core-state") {
       settingsWindowContents()?.send(CHANNEL.event, event);
     }
   };

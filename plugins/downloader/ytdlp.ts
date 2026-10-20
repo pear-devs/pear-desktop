@@ -1,7 +1,8 @@
 // yt-dlp as a sidecar: argument building, output parsing and capability probing.
 // Pure functions (no Electron, no processes) so they are unit-testable.
 
-export type AudioFormat = "opus" | "m4a" | "mp3";
+/** "source": the audio as streamed (usually Opus), without re-encoding. */
+export type AudioFormat = "opus" | "m4a" | "mp3" | "source";
 
 export interface DownloadTarget {
   videoId: string;
@@ -38,6 +39,7 @@ const FORMAT_SELECTORS: Record<AudioFormat, string> = {
   opus: "bestaudio[acodec=opus]/bestaudio/best",
   m4a: "bestaudio[ext=m4a]/bestaudio/best",
   mp3: "bestaudio/best",
+  source: "bestaudio/best",
 };
 
 /** Radios and mixes ("RD…") are endless, except YTM's curated "RDCLAK…" playlists. */
@@ -49,6 +51,8 @@ export const isAlbum = (playlistId: string | undefined) => !!playlistId?.startsW
 /** yt-dlp writes cover art into opus/ogg (and reliably into m4a) only through mutagen or AtomicParsley. */
 export function canEmbedCover(format: AudioFormat, capabilities: Capabilities) {
   if (format === "mp3") return capabilities.ffmpeg;
+  // Opus or M4A, whichever was streamed: mutagen writes both.
+  if (format === "source") return capabilities.mutagen;
   if (format === "m4a") return capabilities.mutagen || capabilities.atomicParsley;
   return capabilities.mutagen;
 }
@@ -76,7 +80,8 @@ export function buildArgs(o: ArgsOptions): string[] {
     FORMAT_SELECTORS[o.format],
     "--extract-audio",
     "--audio-format",
-    o.format,
+    // "best" keeps the streamed codec and only remuxes it.
+    o.format === "source" ? "best" : o.format,
     "--audio-quality",
     "0",
     "--embed-metadata",

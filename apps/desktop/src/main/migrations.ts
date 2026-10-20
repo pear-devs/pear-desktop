@@ -209,9 +209,45 @@ const SYNCED_LYRICS: Record<string, PluginMigration> = {
   },
 };
 
+// ---- downloader
+const DOWNLOADER: Record<string, PluginMigration> = {
+  // Same names: downloadFolder, skipExisting, playlistMaxItems. The old keys stay
+  // (unknown keys are kept), so going back to 3.x still finds them.
+  downloader(entry) {
+    // FFmpeg presets became yt-dlp audio formats.
+    if (entry.format === undefined && typeof entry.selectedPreset === "string") {
+      const custom = (entry.customPresetSetting ?? {}) as { extension?: unknown };
+      const extension = typeof custom.extension === "string" ? custom.extension.toLowerCase() : custom.extension;
+      const format =
+        entry.selectedPreset === "Source"
+          ? "source"
+          : entry.selectedPreset === "Custom"
+            ? extension === "mp3" || extension === "m4a" || extension === "opus"
+              ? extension
+              : // No extension meant "keep the source's container".
+                extension == null
+                ? "source"
+                : undefined
+            : "mp3";
+      if (format) entry.format = format;
+    }
+    // { enabled, mode, seconds, percent, folder } -> flat options.
+    const onFinish = entry.downloadOnFinish;
+    if (entry.autoDownload === undefined && typeof onFinish === "object" && onFinish !== null) {
+      const { enabled, mode, seconds, percent, folder } = onFinish as Json;
+      if (typeof enabled === "boolean") entry.autoDownload = enabled;
+      if (mode === "seconds" || mode === "percent") entry.autoDownloadMode = mode;
+      if (typeof seconds === "number") entry.autoDownloadSeconds = seconds;
+      if (typeof percent === "number") entry.autoDownloadPercent = percent;
+      if (typeof folder === "string") entry.autoDownloadFolder = folder;
+    }
+  },
+};
+
 const PLUGIN_MIGRATIONS: Record<string, PluginMigration> = {
   ...PEAR_DESKTOP_PLUGINS,
   ...SYNCED_LYRICS,
+  ...DOWNLOADER,
 };
 
 export function compareVersions(a: string, b: string) {

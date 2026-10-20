@@ -79,6 +79,8 @@ bridge.onEvent((event) => {
       return runner.dispatch(event.id, event.event, event.payload);
     case "plugin-error":
       return runner.reportError(event.id, event.message, "host");
+    case "plugin-status":
+      return runner.applyStatus(event.id, event.message);
     case "plugin-request":
       return void runner.request(event.id, event.event, event.payload, event.requestId);
     case "core-state":

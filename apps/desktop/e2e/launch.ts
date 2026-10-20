@@ -10,6 +10,8 @@ export interface LaunchOptions {
   core?: Record<string, Record<string, unknown>>;
   /** A config.json to start from verbatim (e.g. one pear-desktop 3.x wrote). */
   config?: Record<string, unknown>;
+  /** Extra environment variables for the app. */
+  env?: Record<string, string>;
 }
 
 const APP_VERSION = (JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
@@ -33,7 +35,7 @@ export async function launchApp(options: LaunchOptions = {}) {
   if (options.config || options.plugins || options.core) {
     writeFileSync(join(userData, "config.json"), JSON.stringify(options.config ?? configFile(options)));
   }
-  const app = await electron.launch({ args: ["."], env: { ...process.env, PEAR_USER_DATA: userData } });
+  const app = await electron.launch({ args: ["."], env: { ...process.env, ...options.env, PEAR_USER_DATA: userData } });
   // Profiles are ~40 MB each, and /tmp is often RAM-backed.
   app.on("close", () => rmSync(userData, { recursive: true, force: true }));
   return Object.assign(app, { userData });

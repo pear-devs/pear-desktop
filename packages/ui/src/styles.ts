@@ -279,6 +279,7 @@ export const overlayStyles = css`
     color: var(--primary);
   }
   .error-text { margin: 0; padding: 0 18px 14px; font-size: 12px; color: var(--error); }
+  .status-text { margin: 0; padding: 0 18px 14px; font-size: 12px; color: var(--on-surface-variant); }
 
   /* switch */
   .switch {

@@ -3,6 +3,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { mkdir } from "node:fs/promises";
 import { createInterface } from "node:readline";
+import type { ReadyTools } from "./tools.ts";
 import { buildArgs, type ArgsOptions, type DownloadTarget, overallProgress, parseLine } from "./ytdlp.ts";
 
 export interface JobState {
@@ -34,9 +35,10 @@ interface Job {
 }
 
 export interface QueueOptions {
-  ytDlp: string;
+  /** The tools for the next job; may download them first. */
+  prepare(signal: AbortSignal): Promise<ReadyTools>;
   /** Called per job, so config changes apply to the next download. */
-  argsFor(target: DownloadTarget): Omit<ArgsOptions, "target">;
+  argsFor(tools: ReadyTools, jobId: number): Omit<ArgsOptions, "target">;
   onState(state: QueueState): void;
   onResult(result: JobResult): void;
   log: { warn(...args: unknown[]): void };
@@ -45,7 +47,7 @@ export interface QueueOptions {
 export class DownloadQueue {
   #options: QueueOptions;
   #pending: Job[] = [];
-  #active: { job: Job; state: JobState; child: ChildProcess | undefined; cancelled: boolean } | undefined;
+  #active: { job: Job; state: JobState; child: ChildProcess | undefined; cancelled: boolean; abort: AbortController } | undefined;
   #nextId = 1;
   #disposed = false;
 
@@ -70,6 +72,7 @@ export class DownloadQueue {
     this.#pending = [];
     if (this.#active) {
       this.#active.cancelled = true;
+      this.#active.abort.abort();
       this.#active.child?.kill();
     }
     this.#emit();
@@ -89,7 +92,7 @@ export class DownloadQueue {
     const job = this.#pending.shift();
     if (!job) return;
     const state: JobState = { id: job.id, label: job.label, progress: 0, stage: "starting" };
-    this.#active = { job, state, child: undefined, cancelled: false };
+    this.#active = { job, state, child: undefined, cancelled: false, abort: new AbortController() };
     this.#emit();
     const result = await this.#run(job, state).catch((error: unknown) => ({
       id: job.id,
@@ -105,11 +108,12 @@ export class DownloadQueue {
   }
 
   async #run(job: Job, state: JobState): Promise<JobResult> {
-    const options = { ...this.#options.argsFor(job.target), target: job.target };
+    const tools = await this.#options.prepare(this.#active!.abort.signal);
+    const options = { ...this.#options.argsFor(tools, job.id), target: job.target };
     await mkdir(options.folder, { recursive: true });
     // Cancelled before yt-dlp started: there is no process to kill, so don't start one.
     if (this.#active?.cancelled) return { id: job.id, label: job.label, files: [] };
-    const child = spawn(this.#options.ytDlp, buildArgs(options), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
+    const child = spawn(tools.ytDlp, buildArgs(options), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });
     if (this.#active) this.#active.child = child;
 
     const files: string[] = [];

@@ -13,6 +13,8 @@ export interface SettingsModel {
   readonly t: Translate;
   state(id: string): PluginState | undefined;
   error(id: string): string | undefined;
+  /** What the plugin's host part says it is doing. */
+  status(id: string): string | undefined;
   meta(id: string): PluginMeta | undefined;
   core(section: CoreSection): CoreState | undefined;
   subscribe(listener: () => void): () => void;
@@ -29,6 +31,7 @@ export function bridgeModel(bridge: Bridge): SettingsModel {
   const { bootstrap } = bridge;
   const states = new Map(Object.entries(bootstrap.plugins));
   const errors = new Map(Object.entries(bootstrap.errors));
+  const statuses = new Map(Object.entries(bootstrap.statuses ?? {}));
   const core = { ...bootstrap.core };
   const subscribers = new Set<() => void>();
   const notify = () => subscribers.forEach((listener) => listener());
@@ -38,6 +41,9 @@ export function bridgeModel(bridge: Bridge): SettingsModel {
     else if (event.type === "plugin-error") {
       if (event.message) errors.set(event.id, event.message);
       else errors.delete(event.id);
+    } else if (event.type === "plugin-status") {
+      if (event.message) statuses.set(event.id, event.message);
+      else statuses.delete(event.id);
     } else if (event.type === "core-state") core[event.section] = event.state;
     else return;
     notify();
@@ -49,6 +55,7 @@ export function bridgeModel(bridge: Bridge): SettingsModel {
     t: translator(bootstrap.strings),
     state: (id) => states.get(id),
     error: (id) => errors.get(id),
+    status: (id) => statuses.get(id),
     meta: (id) => bootstrap.meta[id],
     core: (section) => core[section],
     subscribe(listener) {

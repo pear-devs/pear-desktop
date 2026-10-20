@@ -57,6 +57,8 @@ export interface Bootstrap {
   meta: Record<string, PluginMeta>;
   /** Host-side errors so far, by plugin id. */
   errors: Record<string, string>;
+  /** What host plugins say they are doing (`ctx.setStatus`), by plugin id. */
+  statuses: Record<string, string>;
   core: Record<CoreSection, CoreState>;
   app: AppInfo;
   /** The active language and its strings (English underneath). */
@@ -75,6 +77,8 @@ export type HostEvent =
   | { type: "plugin-event"; id: string; event: string; payload: unknown }
   /** An empty message clears the plugin's host error. */
   | { type: "plugin-error"; id: string; message: string }
+  /** An empty message clears the plugin's status line. */
+  | { type: "plugin-status"; id: string; message: string }
   | { type: "plugin-request"; id: string; event: string; payload: unknown; requestId: number }
   | { type: "core-state"; section: CoreSection; state: CoreState }
   /** The theme files changed (the list or a file's contents). */

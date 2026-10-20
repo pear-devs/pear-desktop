@@ -53,6 +53,11 @@ export interface HostContext<C> {
   request<T = unknown>(event: string, payload?: unknown, options?: { timeout?: number }): Promise<T>;
   /** Opens the in-page settings overlay (focusing the window). */
   openSettings(): void;
+  /**
+   * A short line on the plugin's settings card saying what it is doing, e.g.
+   * "Downloading ffmpeg… 40%"; an empty string clears it, and so does stopping.
+   */
+  setStatus(message: string): void;
   /** Sends an event to this plugin's page part (`ctx.host.on`). */
   emit(event: string, payload?: unknown): void;
   /** The core API server. */

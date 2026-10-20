@@ -94,6 +94,7 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
       plugins: plugins.states(),
       meta: plugins.meta(),
       errors: plugins.errors(),
+      statuses: plugins.statuses(),
       core: core.states(),
       app: {
         version: app.getVersion(),

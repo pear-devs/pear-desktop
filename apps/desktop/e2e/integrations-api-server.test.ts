@@ -1,7 +1,7 @@
 // The core API server: REST endpoints, auth, WebSocket updates against a real
 // track, and plugins' RPC methods.
 
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
@@ -181,7 +181,7 @@ test("plugins' RPC methods are callable, validated, documented and follow the pl
     core: { apiServer: { enabled: true, hostname: "127.0.0.1", port, authStrategy: "NONE" } },
     plugins: {
       sponsorblock: { enabled: true },
-      downloader: { enabled: true, config: { folder } },
+      downloader: { enabled: true, config: { downloadFolder: folder } },
     },
   });
   let ws: ReturnType<typeof connect> | undefined;
@@ -238,5 +238,6 @@ test("plugins' RPC methods are callable, validated, documented and follow the pl
   } finally {
     ws?.socket.close();
     await closeApp(app);
+    rmSync(folder, { recursive: true, force: true });
   }
 });

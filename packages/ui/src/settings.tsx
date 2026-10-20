@@ -374,6 +374,7 @@ function PluginCard(props: {
   const state = model.state(plugin.id);
   const enabled = state?.enabled ?? false;
   const error = model.error(plugin.id);
+  const status = model.status(plugin.id);
   const groups = groupFields(plugin.config, props.platform, props.filter, localized);
   const configurable = groupFields(plugin.config, props.platform).length > 0;
 
@@ -405,6 +406,7 @@ function PluginCard(props: {
         <Switch checked={enabled} label={text("settings-ui.enable", { name: plugin.name })} onChange={props.onEnabled} />
       </div>
       {error && enabled && <p class="error-text">{error}</p>}
+      {status && enabled && !error && <p class="status-text" role="status">{status}</p>}
       {open && state && groups.length > 0 && (
         <div class="plugin-body">
           {groups.map((group, index) => (

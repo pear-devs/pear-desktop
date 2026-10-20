@@ -1,8 +1,8 @@
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { config, definePlugin } from "@pear/sdk";
-import { describe, expect, test, vi } from "vitest";
+import { afterAll, describe, expect, test, vi } from "vitest";
 import { Settings } from "../src/main/config.ts";
 import { compareVersions, migrate } from "../src/main/migrations.ts";
 
@@ -23,7 +23,25 @@ const lyrics = definePlugin({
   },
 });
 const clock = definePlugin({ id: "clock", name: "Clock", enabledByDefault: false });
-const PLUGINS = [tray, lyrics, clock];
+/** The downloader's options that pear-desktop 3.x had (or has a migration for). */
+const downloader = definePlugin({
+  id: "downloader",
+  name: "Downloader",
+  config: {
+    downloadFolder: config.string("", { label: "Folder" }),
+    format: config.select("mp3", [{ value: "mp3", label: "MP3" }, { value: "m4a", label: "M4A" }, { value: "opus", label: "Opus" }, { value: "source", label: "Source" }], {
+      label: "Format",
+    }),
+    playlistMaxItems: config.number(0, { label: "Limit", min: 0, max: 5000 }),
+    skipExisting: config.bool(true, { label: "Skip existing" }),
+    autoDownload: config.bool(false, { label: "Auto" }),
+    autoDownloadMode: config.select("seconds", [{ value: "seconds", label: "Seconds" }, { value: "percent", label: "Percent" }], { label: "When" }),
+    autoDownloadSeconds: config.number(20, { label: "Seconds", min: 1, max: 600 }),
+    autoDownloadPercent: config.number(10, { label: "Percent", min: 1, max: 100 }),
+    autoDownloadFolder: config.string("", { label: "Auto folder" }),
+  },
+});
+const PLUGINS = [tray, lyrics, clock, downloader];
 
 /** What pear-desktop 3.12 leaves in config.json (electron-store, tab-indented). */
 const PEAR_DESKTOP_3 = {
@@ -49,12 +67,25 @@ const PEAR_DESKTOP_3 = {
     "synced-lyrics": { enabled: true, preciseTiming: false, lineEffect: "scale", showTimeCodes: true },
     "api-server": { enabled: true, port: 9000, authorizedClients: ["remote"], secret: "s3cret", hostname: "0.0.0.0" },
     "do-not-track": { enabled: true, blocker: "In player" },
+    downloader: {
+      enabled: true,
+      downloadFolder: "/home/me/Music/YTM",
+      downloadOnFinish: { enabled: true, seconds: 30, percent: 80, mode: "percent", folder: "/home/me/Music/Auto" },
+      selectedPreset: "Source",
+      customPresetSetting: { extension: "mp3", ffmpegArgs: ["-b:a", "256k"] },
+      skipExisting: true,
+      playlistMaxItems: 50,
+    },
   },
   __internal__: { migrations: { version: "3.12.0" } },
 };
 
+const profiles: string[] = [];
+afterAll(() => profiles.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
+
 function profile(contents?: unknown) {
   const dir = mkdtempSync(join(tmpdir(), "pear-config-"));
+  profiles.push(dir);
   if (contents !== undefined) writeFileSync(join(dir, "config.json"), `${JSON.stringify(contents, null, "\t")}\n`);
   return dir;
 }
@@ -84,6 +115,25 @@ describe("config.json from pear-desktop 3.x", () => {
 
   test("reads the API server where the plugin kept it", () => {
     expect(settings.core("apiServer")).toMatchObject({ enabled: true, port: 9000, authorizedClients: ["remote"], secret: "s3cret" });
+  });
+
+  test("maps the downloader's presets and download-on-finish settings", () => {
+    expect(settings.plugin("downloader")).toEqual({
+      enabled: true,
+      config: {
+        downloadFolder: "/home/me/Music/YTM",
+        format: "source",
+        playlistMaxItems: 50,
+        skipExisting: true,
+        autoDownload: true,
+        autoDownloadMode: "percent",
+        autoDownloadSeconds: 30,
+        autoDownloadPercent: 80,
+        autoDownloadFolder: "/home/me/Music/Auto",
+      },
+    });
+    // The old keys stay for pear-desktop 3.x.
+    expect(saved(dir).plugins.downloader).toMatchObject({ selectedPreset: "Source", downloadOnFinish: { enabled: true } });
   });
 
   test("reads the window state and last page", () => {
@@ -144,6 +194,29 @@ describe("migrations", () => {
     const settings = new Settings(dir, PLUGINS, "4.0.0");
     expect(settings.core("general").startingPage).toBe("");
     expect(settings.core("window").alwaysOnTop).toBe(false);
+  });
+
+  test("downloader presets become formats", () => {
+    const format = (entry: Record<string, unknown>) =>
+      migrate({ plugins: { downloader: { enabled: true, ...entry } }, __internal__: { migrations: { version: "3.12.0" } } }, "4.0.0").config.plugins!
+        .downloader!.format;
+    expect(format({ selectedPreset: "mp3 (256kbps)" })).toBe("mp3");
+    expect(format({ selectedPreset: "Source" })).toBe("source");
+    expect(format({ selectedPreset: "Custom", customPresetSetting: { extension: "opus", ffmpegArgs: [] } })).toBe("opus");
+    expect(format({ selectedPreset: "Custom", customPresetSetting: { extension: null, ffmpegArgs: ["-acodec", "copy"] } })).toBe("source");
+    // Containers yt-dlp isn't asked for keep the default.
+    expect(format({ selectedPreset: "Custom", customPresetSetting: { extension: "flac", ffmpegArgs: [] } })).toBeUndefined();
+    expect(format({})).toBeUndefined();
+  });
+
+  test("download on finish without a folder or mode keeps the defaults", () => {
+    const entry = migrate(
+      { plugins: { downloader: { enabled: false, downloadOnFinish: { enabled: false, seconds: 5 } } }, __internal__: { migrations: { version: "3.12.0" } } },
+      "4.0.0",
+    ).config.plugins!.downloader!;
+    expect(entry).toMatchObject({ autoDownload: false, autoDownloadSeconds: 5 });
+    expect(entry).not.toHaveProperty("autoDownloadMode");
+    expect(entry).not.toHaveProperty("autoDownloadFolder");
   });
 
   test("versions compare numerically", () => {

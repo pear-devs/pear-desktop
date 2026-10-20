@@ -75,6 +75,13 @@ describe("buildArgs", () => {
     expect(valueOf(buildArgs(options({ format: "m4a" })), "--format")).toBe("bestaudio[ext=m4a]/bestaudio/best");
   });
 
+  test("keeps the streamed audio as it is for the source format", () => {
+    const args = buildArgs(options({ format: "source", capabilities: { ...caps, mutagen: true } }));
+    expect(valueOf(args, "--audio-format")).toBe("best");
+    expect(args).toContain("--embed-thumbnail");
+    expect(buildArgs(options({ format: "source" }))).not.toContain("--embed-thumbnail");
+  });
+
   test("keeps templates inside the download folder", () => {
     expect(valueOf(buildArgs(options({ template: "/etc/%(title)s.%(ext)s" })), "--output")).toBe("etc/%(title)s.%(ext)s");
   });

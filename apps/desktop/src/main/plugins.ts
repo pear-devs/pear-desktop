@@ -47,6 +47,7 @@ export class PluginHost {
   #settings: Settings;
   #instances = new Map<string, Instance>();
   #errors = new Map<string, string>();
+  #statuses = new Map<string, string>();
   #env: HostEnvironment | undefined;
   #i18n: I18n | undefined;
 
@@ -92,6 +93,17 @@ export class PluginHost {
 
   errors(): Record<string, string> {
     return Object.fromEntries(this.#errors);
+  }
+
+  statuses(): Record<string, string> {
+    return Object.fromEntries(this.#statuses);
+  }
+
+  #setStatus(id: string, message: string) {
+    if ((this.#statuses.get(id) ?? "") === message) return;
+    if (message) this.#statuses.set(id, message);
+    else this.#statuses.delete(id);
+    this.#env?.send({ type: "plugin-status", id, message });
   }
 
   #clearError(id: string) {
@@ -249,6 +261,7 @@ export class PluginHost {
     this.#instances.delete(id);
     instance.stopped = true;
     this.#clearError(id);
+    this.#setStatus(id, "");
     this.#env?.router.release(id);
     for (const cleanup of instance.cleanups.reverse()) {
       try {
@@ -289,6 +302,9 @@ export class PluginHost {
         control: (action) => player.control(action),
       },
       openSettings: () => env.openSettings(),
+      setStatus: (message) => {
+        if (!instance.stopped) host.#setStatus(id, message);
+      },
       emit: (event, payload) => env.send({ type: "plugin-event", id, event, payload }),
       api: {
         broadcast: (event, data) => {

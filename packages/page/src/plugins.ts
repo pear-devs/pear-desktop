@@ -36,6 +36,7 @@ export class PluginRunner {
   #errors = new Map<string, string>();
   // Host errors are only cleared by the host (an empty message), not by restarting the page part.
   #hostErrors = new Map<string, string>();
+  #statuses = new Map<string, string>();
   #subscribers = new Set<() => void>();
   #handlers = new Map<string, Map<string, (payload: unknown) => unknown>>();
   #audio: Promise<AudioGraph> | undefined;
@@ -56,6 +57,7 @@ export class PluginRunner {
       this.#states.set(plugin.id, state);
     }
     for (const [id, message] of Object.entries(bridge.bootstrap.errors)) this.#hostErrors.set(id, message);
+    for (const [id, message] of Object.entries(bridge.bootstrap.statuses ?? {})) this.#statuses.set(id, message);
     this.#core = { ...bridge.bootstrap.core };
     this.t = translator(bridge.bootstrap.strings);
   }
@@ -104,6 +106,17 @@ export class PluginRunner {
 
   error(id: string) {
     return this.#hostErrors.get(id) ?? this.#errors.get(id);
+  }
+
+  /** The host part's status line (`ctx.setStatus`). */
+  status(id: string) {
+    return this.#statuses.get(id);
+  }
+
+  applyStatus(id: string, message: string) {
+    if (message) this.#statuses.set(id, message);
+    else this.#statuses.delete(id);
+    this.#notify();
   }
 
   meta(id: string) {

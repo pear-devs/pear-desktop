@@ -795,7 +795,11 @@
         },
         "download-playlist": "Download playlist",
         "presets": "Presets",
-        "skip-existing": "Skip existing files"
+        "skip-existing": "Skip existing files",
+        "download-song": "Download song",
+        "download-album": "Download album",
+        "cancel-all": "Cancel downloads",
+        "cancel": "Cancel download"
       },
       "name": "Downloader",
       "renderer": {
@@ -805,17 +809,13 @@
         "button": "Download"
       },
       "settings": {
-        "folder": {
-          "label": "Download folder",
-          "description": "Leave empty for a Pear Desktop folder in your Music folder.",
-          "placeholder": "Music/Pear Desktop"
-        },
         "format": {
           "label": "Format",
           "options": {
             "mp3": "MP3 (most compatible)",
             "m4a": "M4A / AAC",
-            "opus": "Opus (best quality for size)"
+            "opus": "Opus (best quality for size)",
+            "source": "As streamed (no conversion)"
           }
         },
         "template": {
@@ -825,10 +825,6 @@
         },
         "playlistFolders": {
           "label": "Put albums and playlists in their own folder"
-        },
-        "playlistLimit": {
-          "label": "Most songs per playlist",
-          "description": "0 means no limit."
         },
         "skipExisting": {
           "label": "Skip songs that are already downloaded"
@@ -852,7 +848,74 @@
           "label": "ffmpeg",
           "description": "Path to ffmpeg or its folder; yt-dlp needs it to convert audio.",
           "placeholder": "Found automatically"
+        },
+        "downloadFolder": {
+          "label": "Download folder",
+          "description": "Leave empty for your Downloads folder, like pear-desktop.",
+          "placeholder": "Downloads"
+        },
+        "playlistMaxItems": {
+          "label": "Most songs per playlist",
+          "description": "0 means no limit."
+        },
+        "autoDownloadMode": {
+          "label": "When",
+          "options": {
+            "seconds": "Near the end",
+            "percent": "Once partly played"
+          }
+        },
+        "autoDownloadPercent": {
+          "label": "…once this much has played"
+        },
+        "autoDownloadFolder": {
+          "label": "Folder for these",
+          "description": "Leave empty to use the download folder.",
+          "placeholder": "The download folder"
         }
+      },
+      "errors": {
+        "starting": "the downloader is still starting",
+        "nothing-playing": "nothing is playing",
+        "yt-dlp-not-found": "yt-dlp was not found at “{{path}}”. Correct its path in the settings, or clear it to have yt-dlp downloaded automatically.",
+        "ffmpeg-broken": "yt-dlp can't use the downloaded ffmpeg.",
+        "unsupported": "{{tool}} can't be downloaded automatically on this computer. Install it yourself and set its path in the downloader's settings.",
+        "install-failed": "Couldn't download {{tool}} ({{error}}).",
+        "offline": "Check your internet connection and try again.",
+        "manual": "Try again later, or install {{tool}} yourself and set its path in the downloader's settings.",
+        "ffmpeg-not-usable": "yt-dlp can't use the ffmpeg at “{{path}}”. Correct its path in the settings, or clear it."
+      },
+      "setup": {
+        "extracting": "Unpacking {{tool}}…",
+        "verifying": "Checking {{tool}}…",
+        "downloading": "Downloading {{tool}}… {{percent}}%",
+        "toast": "Downloading {{tool}}, which saving songs needs. This happens only once.",
+        "both-missing": "yt-dlp and ffmpeg aren't installed; they will be downloaded the first time you download a song.",
+        "missing": "{{tool}} isn't installed; it will be downloaded the first time you download a song.",
+        "source-configured": "set in the settings",
+        "source-system": "installed on this computer",
+        "source-managed": "downloaded automatically",
+        "ready": "Using yt-dlp {{version}} ({{ytDlpSource}}) and ffmpeg ({{ffmpegSource}})."
+      },
+      "progress": {
+        "converting": "Converting “{{title}}” – {{percent}}%",
+        "starting": "Starting “{{title}}”",
+        "downloading": "Downloading “{{title}}” – {{percent}}%",
+        "queued": "{{count}} more queued"
+      },
+      "toast": {
+        "queued": "Queued “{{title}}”",
+        "cannot-download": "Can't download: {{error}}",
+        "nothing-playing": "Play something to download it",
+        "cancelled": "Download cancelled",
+        "failed": "Download failed: {{error}}",
+        "saved-many": "Saved {{count}} songs from “{{title}}”",
+        "saved": "Saved “{{title}}”",
+        "show": "Show"
+      },
+      "labels": {
+        "album": "album",
+        "playlist": "playlist"
       }
     },
     "equalizer": {
@@ -1990,7 +2053,9 @@
       "network": "Network",
       "access": "Access",
       "https": "HTTPS",
-      "blocklists": "Blocklists"
+      "blocklists": "Blocklists",
+      "automatic-downloads": "Automatic downloads",
+      "programs": "Programs"
     },
     "title": "Settings",
     "search-placeholder": "Search settings",
