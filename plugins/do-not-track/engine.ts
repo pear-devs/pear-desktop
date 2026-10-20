@@ -9,14 +9,12 @@
 import { createHash } from "node:crypto";
 import { mkdir, readFile, rename, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { adsAndTrackingLists, FiltersEngine, Request } from "@ghostery/adblocker";
+import { FiltersEngine, Request } from "@ghostery/adblocker";
 import { net, type WebRequest } from "electron";
 
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 const CSP_HEADER = "content-security-policy";
 
-/** Ghostery's ads and tracking lists (EasyList, EasyPrivacy, uBlock Origin's). */
-export const DEFAULT_LISTS: readonly string[] = adsAndTrackingLists;
 
 export interface EngineOptions {
   /** Filter list URLs. */
@@ -29,11 +27,6 @@ export interface LoadedEngine {
   engine: FiltersEngine;
   /** Resolves with a fresher engine when the cached one was stale, else undefined. */
   refreshed: Promise<FiltersEngine | undefined>;
-}
-
-/** Splits a free-form list of URLs (spaces, commas or newlines). */
-export function parseListUrls(text: string) {
-  return text.split(/[\s,]+/).filter((s) => URL.canParse(s));
 }
 
 function build(lists: readonly string[]) {

@@ -1,9 +1,11 @@
-// do-not-track: "With blocklists" filters requests next to the adblock plugin
-// (both on, neither replacing the other's listeners); "In player" strips ad
-// placements from the player's data without breaking playback.
+// do-not-track: "With blocklists" filters requests (next to the core's own
+// listeners, without replacing them); "In player" strips ad placements from the
+// player's data without breaking playback.
 
+import { existsSync, readdirSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
+import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { launchApp, mainWindow, playTestTrack } from "./launch.ts";
 import { closeApp, invoke } from "./network-helpers.ts";
@@ -28,12 +30,11 @@ async function serveList() {
 const probe = (page: Page, path: string) =>
   page.evaluate((path) => fetch(`https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/${path}`).then(() => "through", () => "blocked"), path);
 
-test("with blocklists: blocks requests alongside the adblock plugin", async () => {
+test("with blocklists: blocks requests and caches the engine", async () => {
   test.setTimeout(120_000);
   const list = await serveList();
   const app = await launchApp({
     plugins: {
-      adblock: { enabled: true },
       "do-not-track": {
         enabled: true,
         config: { blocker: "With blocklists", disableDefaultLists: true, additionalBlockLists: [list.url] },
@@ -42,19 +43,19 @@ test("with blocklists: blocks requests alongside the adblock plugin", async () =
   });
   let page: Page | undefined;
   try {
-    // The runtime injects: neither blocker replaced the core's CSP stripping.
+    // The runtime injects: the blocker didn't replace the core's CSP stripping.
     page = await mainWindow(app);
     const stats = () => invoke<Stats>(page!, "do-not-track", "stats");
     await expect.poll(async () => (await stats()).active, { timeout: 30_000 }).toBe(true);
-    await expect.poll(async () => (await invoke<Stats>(page!, "adblock", "stats")).active, { timeout: 30_000 }).toBe(true);
     expect((await stats()).lists).toBe(1);
 
     const before = (await stats()).blocked;
     expect(await probe(page, "pear-dnt-probe")).toBe("blocked");
     expect(await probe(page, "pear-dnt-other")).toBe("through");
     expect((await stats()).blocked).toBe(before + 1);
-    // adblock keeps blocking with its own lists at the same time.
-    await expect.poll(async () => (await invoke<Stats>(page!, "adblock", "stats")).blocked, { timeout: 30_000 }).toBeGreaterThan(0);
+    // The engine is cached for the next launch.
+    const cache = join(app.userData, "tb_cache");
+    expect(existsSync(cache) && readdirSync(cache).some((f) => /^engine-\w+\.bin$/.test(f))).toBe(true);
 
     // Back to the default mode live: request filtering stops.
     await page.evaluate(() => window.__pear!.invoke("plugin:set-config", "do-not-track", { blocker: "In player" }));

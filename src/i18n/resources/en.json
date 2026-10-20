@@ -728,6 +728,10 @@
         "disableDefaultLists": {
           "label": "Disable the default blocklists",
           "description": "Only use the additional blocklists."
+        },
+        "skipAds": {
+          "label": "Skip ads that still play",
+          "description": "Gets through them in a blink, muted, without cutting into the track."
         }
       },
       "no-lists": "No blocklists: enable the default ones or add your own."
@@ -1862,32 +1866,6 @@
         "secondary": {
           "label": "Secondary color",
           "placeholder": "#f76b1c"
-        }
-      }
-    },
-    "adblock": {
-      "name": "Ad blocker",
-      "description": "Blocks ad and tracker requests, and gets through player ads in a blink without cutting into the track.",
-      "settings": {
-        "blockRequests": {
-          "label": "Block ads and trackers",
-          "description": "Network filtering with Ghostery's engine and EasyList, EasyPrivacy and uBlock Origin lists."
-        },
-        "skipAds": {
-          "label": "Skip player ads",
-          "description": "Gets through the ads \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music still plays in a blink, muted."
-        },
-        "defaultLists": {
-          "label": "Use the default filter lists"
-        },
-        "additionalLists": {
-          "label": "Additional filter lists",
-          "description": "URLs of extra lists in Adblock Plus / uBlock syntax, separated by spaces or commas.",
-          "placeholder": "https://…/filters.txt"
-        },
-        "cache": {
-          "label": "Cache the filter engine",
-          "description": "Starts blocking instantly on launch; lists refresh in the background once a week."
         }
       }
     },

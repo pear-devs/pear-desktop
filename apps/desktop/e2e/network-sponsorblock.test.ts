@@ -14,7 +14,7 @@ test("sponsorblock skips the non-music intro of a music video", async () => {
     plugins: {
       sponsorblock: { enabled: true },
       // Gets through logged-out pre-rolls quickly.
-      adblock: { enabled: true, config: { blockRequests: false } },
+      "do-not-track": { enabled: true },
     },
   });
   let page: Page | undefined;

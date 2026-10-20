@@ -28,6 +28,17 @@ const plugin = (config: StoredConfig, id: string): Json => {
 
 const MIGRATIONS: [version: string, migration: Migration][] = [
   [
+    // pear-desktop's own: its ad blocker became do-not-track (for files from before 3.12).
+    "3.12.0",
+    (config) => {
+      const blocker = config.plugins?.adblocker;
+      if (!blocker || typeof blocker !== "object") return;
+      if (blocker.blocker !== "In player" && blocker.blocker !== "With blocklists") blocker.blocker = "In player";
+      config.plugins!["do-not-track"] = blocker;
+      delete config.plugins!.adblocker;
+    },
+  ],
+  [
     // pear-desktop 3.x -> the rewrite. Most of the file already means the same:
     // plugin ids, options and their values were kept on purpose. What moved:
     "4.0.0",

@@ -29,7 +29,7 @@ test("downloader saves the current song as a tagged mp3 from the player bar", as
   const app = await launchApp({
     plugins: {
       downloader: { enabled: true, config: { downloadFolder: folder, format: "mp3", template: "%(title)s.%(ext)s" } },
-      adblock: { enabled: true, config: { blockRequests: false } },
+      "do-not-track": { enabled: true },
     },
   });
   let page: Page | undefined;
@@ -91,7 +91,7 @@ test("downloader downloads yt-dlp when it isn't installed, and says so when offl
     env: NO_SYSTEM_TOOLS,
     plugins: {
       downloader: { enabled: true, config: { downloadFolder: folder, format: "opus", template: "%(title)s.%(ext)s", ffmpegPath: dirname(ffmpeg!) } },
-      adblock: { enabled: true, config: { blockRequests: false } },
+      "do-not-track": { enabled: true },
     },
   });
   let page: Page | undefined;
@@ -162,7 +162,7 @@ test("downloader downloads yt-dlp and ffmpeg when neither is installed", async (
     env: NO_SYSTEM_TOOLS,
     plugins: {
       downloader: { enabled: true, config: { downloadFolder: folder, format: "mp3", template: "%(title)s.%(ext)s" } },
-      adblock: { enabled: true, config: { blockRequests: false } },
+      "do-not-track": { enabled: true },
     },
   });
   let page: Page | undefined;

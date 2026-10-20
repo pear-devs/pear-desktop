@@ -22,7 +22,6 @@ a desktop client for YTM with a plugin system, built on Electron.
 
 | id | name | what it does |
 |---|---|---|
-| `adblock` | Ad blocker | Blocks ad and tracker requests, and gets through player ads in a blink without cutting into the track. |
 | `album-actions` | Album actions | Like or dislike every track of an album or playlist at once. |
 | `album-color-theme` | Album color theme | Tints the interface with the colors of the current track's artwork. |
 | `ambient-mode` | Ambient mode | Surrounds the video or cover art with a soft glow of its own colors. |
@@ -36,7 +35,7 @@ a desktop client for YTM with a plugin system, built on Electron.
 | `custom-output-device` | Custom output device | Play through a chosen audio device instead of the system default. |
 | `disable-autoplay` | Disable autoplay | Starts every track paused instead of playing it automatically. |
 | `discord` | Discord Rich Presence | Show your friends what you're listening to in your Discord status. |
-| `do-not-track` | Do Not Track | Blocks tracking: strips ad and tracking data from the player, or filters requests with tracker blocklists (works alongside `adblock`). |
+| `do-not-track` | Do Not Track | pear-desktop's ad and tracker blocker: strips ads and tracking data from the player, or filters requests with blocklists, and skips ads that still play. |
 | `downloader` | Downloader | Saves songs, albums and playlists as tagged audio files with cover art, using yt-dlp. |
 | `equalizer` | Equalizer | A 10-band equalizer with presets. |
 | `exponential-volume` | Exponential volume | Makes the volume slider follow loudness perception, giving finer control at low volumes. |

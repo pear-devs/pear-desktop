@@ -1,21 +1,15 @@
-// adblock: network filtering composes with core CSP stripping, and player ads
-// are skipped without cutting into the track.
+// do-not-track: ads that still play are skipped without cutting into the track.
 
-import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { launchApp, mainWindow, playTestTrack } from "./launch.ts";
 import { closeApp, invoke } from "./network-helpers.ts";
 
-test("adblock blocks requests, keeps the runtime and gets to the track's start quickly", async () => {
+test("do-not-track gets to the track's start quickly, skipping ads that still play", async () => {
   test.setTimeout(120_000);
-  const app = await launchApp({ plugins: { adblock: { enabled: true } } });
+  const app = await launchApp({ plugins: { "do-not-track": { enabled: true } } });
   let page: Page | undefined;
   try {
-    // The runtime still injects: the blocker's webRequest listeners didn't replace CSP stripping.
     page = await mainWindow(app);
-    const stats = () => invoke<{ active: boolean; blocked: number }>(page!, "adblock", "stats");
-    await expect.poll(async () => (await stats()).active, { timeout: 30_000 }).toBe(true);
     await playTestTrack(page);
 
     // Watch until the track itself plays (playing it like a user if autoplay was refused).
@@ -42,14 +36,9 @@ test("adblock blocks requests, keeps the runtime and gets to the track's start q
     // Playback speed and mute are back to normal.
     expect(await page.evaluate(() => ({ rate: document.querySelector("video")!.playbackRate, muted: document.querySelector("video")!.muted }))).toEqual({ rate: 1, muted: false });
 
-    expect((await stats()).blocked).toBeGreaterThan(0);
-    // The engine is cached for the next launch.
-    const cache = join(app.userData, "adblock");
-    expect(existsSync(cache) && readdirSync(cache).some((f) => /^engine-\w+\.bin$/.test(f))).toBe(true);
-
     // Disabling works live.
-    await page.evaluate(() => window.__pear!.invoke("plugin:set-enabled", "adblock", false));
-    await expect(stats()).rejects.toThrow(/disabled/);
+    await page.evaluate(() => window.__pear!.invoke("plugin:set-enabled", "do-not-track", false));
+    await expect(invoke(page, "do-not-track", "stats")).rejects.toThrow(/disabled/);
   } finally {
     await closeApp(app, page);
   }

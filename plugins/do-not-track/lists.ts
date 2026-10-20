@@ -1,7 +1,6 @@
 // "With blocklists" blocking: the tracker lists pear-desktop curates (fetched
 // from its tb-list repository, like pear-desktop does) in Ghostery's engine.
-// The engine code is the adblock plugin's, so both plugins share one loader,
-// one on-disk cache format and the same request matching.
+// The engine (engine.ts) caches the built filter engine next to these lists.
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";

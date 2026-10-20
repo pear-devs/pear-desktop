@@ -128,25 +128,6 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
 
-  plugins/adblock:
-    dependencies:
-      '@ghostery/adblocker':
-        specifier: ^2.20.1
-        version: 2.20.1
-      '@pear/sdk':
-        specifier: workspace:*
-        version: link:../../packages/sdk
-    devDependencies:
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.19.2
-      electron:
-        specifier: ^44.9.0
-        version: 44.9.0
-      vitest:
-        specifier: ^5.0.5
-        version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
-
   plugins/album-actions:
     dependencies:
       '@pear/sdk':
@@ -333,6 +314,9 @@ importers:
 
   plugins/do-not-track:
     dependencies:
+      '@ghostery/adblocker':
+        specifier: ^2.20.1
+        version: 2.20.1
       '@pear/sdk':
         specifier: workspace:*
         version: link:../../packages/sdk

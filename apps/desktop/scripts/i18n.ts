@@ -32,7 +32,7 @@ export const { app, BrowserWindow, clipboard, contextBridge, dialog, globalShort
   nativeImage, nativeTheme, net, Notification, protocol, screen, session, shell, TouchBar, Tray } = new Proxy({}, { get: () => stub });
 `;
 
-// Packages in node_modules (e.g. adblock's) are loaded by Node directly, not by
+// Packages in node_modules (e.g. do-not-track's) are loaded by Node directly, not by
 // Vite, so the stub is installed as a Node resolve hook.
 const STUB_URL = `data:text/javascript,${encodeURIComponent(ELECTRON_STUB)}`;
 registerHooks({

@@ -225,3 +225,19 @@ describe("migrations", () => {
     expect(compareVersions("4.0.0", "4.0.0-beta.1")).toBe(0);
   });
 });
+
+describe("files from before pear-desktop 3.12", () => {
+  test("the ad blocker becomes do-not-track, as pear-desktop 3.12 did", () => {
+    const { config: result } = migrate(
+      { plugins: { adblocker: { enabled: true, blocker: "Electron", cache: false } }, __internal__: { migrations: { version: "3.10.0" } } },
+      "4.0.0",
+    );
+    expect(result.plugins?.adblocker).toBeUndefined();
+    expect(result.plugins?.["do-not-track"]).toEqual({ enabled: true, blocker: "In player", cache: false });
+  });
+
+  test("3.12+ files are left to the 4.0.0 migration", () => {
+    const { config: result } = migrate({ plugins: { adblocker: { enabled: true } }, __internal__: { migrations: { version: "3.12.0" } } }, "4.0.0");
+    expect(result.plugins?.adblocker).toEqual({ enabled: true });
+  });
+});

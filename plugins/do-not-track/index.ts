@@ -1,8 +1,8 @@
 import { join } from "node:path";
 import { config, definePlugin } from "@pear/sdk";
 import { net } from "electron";
-// The adblock plugin's engine loader: same Ghostery engine, cache and matching.
-import { enableBlocking, loadEngine } from "../adblock/engine.ts";
+import { adStrategy, FAST_FORWARD_RATE, rewindTarget } from "./ads.ts";
+import { enableBlocking, loadEngine } from "./engine.ts";
 import { cachedSources, chooseLists, fetchSources } from "./lists.ts";
 import { installPruner } from "./prune.ts";
 
@@ -10,6 +10,16 @@ const IN_PLAYER = "In player";
 const WITH_BLOCKLISTS = "With blocklists";
 
 const stats = { active: false, blocked: 0, lists: 0 };
+
+interface AdBreak {
+  videoId: string;
+  /** Track position when the ad started, to rewind to if the track ran on underneath. */
+  anchor: number;
+  rate: number;
+  muted: boolean;
+  fastForwarded: boolean;
+  timer: ReturnType<typeof setInterval>;
+}
 
 export default definePlugin({
   id: "do-not-track",
@@ -27,9 +37,13 @@ export default definePlugin({
         label: "Blocker",
         description:
           "In the player removes ad and tracking placements from \u0059\u006f\u0075\u0054\u0075\u0062\u0065's player data; with blocklists filters network requests " +
-          "with pear-desktop's curated tracker lists. Works alongside the Ad blocker plugin: both can be on, each filters with its own lists.",
+          "with pear-desktop's curated lists.",
       },
     ),
+    skipAds: config.bool(true, {
+      label: "Skip ads that still play",
+      description: "Gets through them in a blink, muted, without cutting into the track.",
+    }),
     cache: config.bool(true, {
       label: "Cache the blocklists",
       description: "Starts blocking instantly on launch; lists refresh in the background.",
@@ -65,7 +79,7 @@ export default definePlugin({
       const loaded = await loadEngine({ lists, cacheDir });
       let engine = loaded.engine;
       ctx.log.info(`${lists.length} blocklist(s) ready in ${Math.round(performance.now() - started)}ms`);
-      // ctx.webRequest is this plugin's own: it composes with the adblock plugin's listeners.
+      // ctx.webRequest is this plugin's own: it composes with the core's and other plugins' listeners.
       enableBlocking(ctx.webRequest, () => engine, () => void stats.blocked++);
       Object.assign(stats, { active: true, lists: lists.length });
 
@@ -100,7 +114,73 @@ export default definePlugin({
     // Before YTM's scripts, so the player response inlined in the page is pruned too.
     runAt: "start",
     start(ctx) {
-      if (ctx.config.blocker === IN_PLAYER) return installPruner();
+      if (ctx.config.blocker === IN_PLAYER) ctx.onCleanup(installPruner());
+      if (!ctx.config.skipAds) return;
+
+      // Ads that still play: get through them without touching the track (see ads.ts).
+      let content = { videoId: "", seconds: 0 };
+      let adBreak: AdBreak | undefined;
+      ctx.player.on("trackLoading", (videoId) => (content = { videoId, seconds: 0 }));
+      ctx.player.on("timeUpdate", (seconds) => {
+        const videoId = ctx.player.api?.getVideoData().video_id;
+        if (videoId) content = { videoId, seconds };
+      });
+
+      const tick = () => {
+        const video = ctx.player.video();
+        const api = ctx.player.api;
+        if (!adBreak || !video || !api) return;
+        const contentDuration = Number(api.getPlayerResponse()?.videoDetails?.lengthSeconds) || 0;
+        if (adStrategy(video.duration, contentDuration) === "seek") {
+          if (video.currentTime < video.duration - 0.25) video.currentTime = video.duration;
+        } else {
+          adBreak.fastForwarded = true;
+          if (video.playbackRate !== FAST_FORWARD_RATE) video.playbackRate = FAST_FORWARD_RATE;
+        }
+        if (!video.muted) video.muted = true;
+      };
+
+      const begin = () => {
+        const video = ctx.player.video();
+        const api = ctx.player.api;
+        if (adBreak || !video || !api) return;
+        const videoId = api.getVideoData().video_id;
+        adBreak = {
+          videoId,
+          anchor: videoId === content.videoId ? content.seconds : 0,
+          rate: api.getPlaybackRate() || 1,
+          muted: video.muted,
+          fastForwarded: false,
+          timer: setInterval(tick, 250),
+        };
+        ctx.log.info("ad started, skipping it");
+        tick();
+      };
+
+      const end = () => {
+        const ended = adBreak;
+        if (!ended) return;
+        adBreak = undefined;
+        clearInterval(ended.timer);
+        const video = ctx.player.video();
+        const api = ctx.player.api;
+        if (!video || !api) return;
+        video.playbackRate = ended.rate;
+        video.muted = ended.muted;
+        if (!ended.fastForwarded) return;
+        setTimeout(() => {
+          if (ctx.signal.aborted || ctx.player.state.ad || api.getVideoData().video_id !== ended.videoId) return;
+          const target = rewindTarget(ended.anchor, api.getCurrentTime());
+          if (target === undefined) return;
+          ctx.log.info(`rewinding ${(api.getCurrentTime() - target).toFixed(1)}s of track played at ad speed`);
+          api.seekTo(target, true);
+        }, 500);
+      };
+
+      ctx.player.on("adChange", (ad) => (ad ? begin() : end()));
+      if (ctx.player.state.ad) begin();
+      ctx.onCleanup(end);
     },
   },
 });
+
