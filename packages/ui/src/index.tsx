@@ -73,8 +73,32 @@ function createOverlay(close: () => void) {
   host.addEventListener("keydown", (event) => {
     if (event.key === "Escape") close();
   });
+  // The page behind doesn't scroll either: over the scrim, or past the end of the dialog's lists.
+  host.addEventListener(
+    "wheel",
+    (event) => {
+      event.stopPropagation();
+      if (!scrollsInside(event)) event.preventDefault();
+    },
+    { passive: false },
+  );
   document.body.append(host);
   return container;
+}
+
+/** Whether something in the overlay under the pointer can still scroll the way the wheel turns. */
+function scrollsInside(event: WheelEvent) {
+  const vertical = Math.abs(event.deltaY) >= Math.abs(event.deltaX);
+  const delta = vertical ? event.deltaY : event.deltaX;
+  for (const target of event.composedPath()) {
+    if (!(target instanceof HTMLElement) || target.localName === "pear-settings") break;
+    const style = getComputedStyle(target);
+    if (!/auto|scroll/.test(vertical ? style.overflowY : style.overflowX)) continue;
+    const position = vertical ? target.scrollTop : target.scrollLeft;
+    const room = vertical ? target.scrollHeight - target.clientHeight : target.scrollWidth - target.clientWidth;
+    if (delta < 0 ? position > 0 : position < room - 1) return true;
+  }
+  return false;
 }
 
 /** A "Settings" entry at the end of the sidebar's primary section, in both the full and the mini guide. */

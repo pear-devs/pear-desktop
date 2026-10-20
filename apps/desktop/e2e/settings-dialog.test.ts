@@ -33,6 +33,25 @@ test("opens from the shortcut and the sidebar entry, closes with Escape", async 
   await expect(dialog).toBeHidden();
 });
 
+test("scrolling in the dialog, or over its scrim, leaves the page behind where it was", async ({ page }) => {
+  const scrolled = () => page.evaluate(() => document.scrollingElement!.scrollTop);
+  // The home page is long enough to scroll.
+  await page.waitForFunction(() => document.scrollingElement!.scrollHeight > innerHeight + 500);
+  expect(await scrolled()).toBe(0);
+
+  await openSettings(page);
+  const dialog = overlay(page).getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  // Over the scrim, then far past the end of the dialog's body.
+  await page.mouse.move(5, 300);
+  await page.mouse.wheel(0, 1500);
+  const box = (await dialog.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.7, box.y + box.height / 2);
+  for (let i = 0; i < 5; i++) await page.mouse.wheel(0, 1500);
+  await page.waitForTimeout(500);
+  expect(await scrolled()).toBe(0);
+});
+
 test("toggles and configures plugins live, persisting to config.json", async ({ app, page }) => {
   await openSettings(page);
 

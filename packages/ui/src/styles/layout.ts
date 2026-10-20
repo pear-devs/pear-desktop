@@ -77,6 +77,6 @@ export const layout = css`
   .restart-later { padding: 8px 10px; color: inherit; opacity: 0.85; }
   .restart-now { padding: 8px 16px; background: var(--on-tertiary-container); color: var(--tertiary-container); }
 
-  .body { flex: 1; padding: 18px 20px 28px; overflow-y: auto; }
+  .body { flex: 1; padding: 18px 20px 28px; overflow-y: auto; overscroll-behavior: contain; }
   .empty { padding: 60px 20px; text-align: center; color: var(--on-surface-variant); }
 `;

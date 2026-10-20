@@ -13,7 +13,7 @@ export type Block =
   /** YTM's feature flags this session (only in YTM's page). */
   | { kind: "site-flags" };
 
-export type SectionId = "general" | "appearance" | "window" | "advanced" | "plugins" | "about";
+export type SectionId = "general" | "appearance" | "window" | "advanced" | "developer" | "plugins" | "about";
 
 export interface Section {
   id: SectionId;
@@ -48,11 +48,13 @@ export const SECTIONS: Record<SectionId, Section> = {
     icon: "tune",
     blocks: [
       { kind: "core", section: "advanced" },
-      { kind: "core", section: "site" },
-      { kind: "site-flags" },
       { kind: "core", section: "apiServer", title: "settings-ui.blocks.api-server" },
-      { kind: "developer" },
     ],
+  },
+  developer: {
+    id: "developer",
+    icon: "code",
+    blocks: [{ kind: "core", section: "site" }, { kind: "site-flags" }, { kind: "developer" }],
   },
   plugins: { id: "plugins", icon: "puzzle", blocks: [] },
   about: { id: "about", icon: "info", blocks: [] },

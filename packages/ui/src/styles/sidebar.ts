@@ -48,6 +48,7 @@ export const sidebar = css`
     gap: 2px;
     padding: 4px 12px 14px;
     overflow-y: auto;
+    overscroll-behavior: contain;
   }
   .nav-item {
     display: flex;

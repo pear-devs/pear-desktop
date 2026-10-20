@@ -67,7 +67,7 @@ test("feature flag overrides reach the page, and the flag list edits them", asyn
   expect((await siteFlags(page)).served).not.toHaveProperty("pear_e2e_flag");
 
   await openSettings(page);
-  await openSection(page, "Advanced");
+  await openSection(page, "Developer Tweaks");
   const card = overlay(page).locator('[data-core="site-flags"]');
   await expect(card).toBeVisible();
   await card.getByRole("searchbox").fill("pear_e2e");

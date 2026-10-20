@@ -2349,7 +2349,7 @@
       },
       "advanced": {
         "label": "Advanced",
-        "sub": "Performance, network, API server and developer tools"
+        "sub": "Performance, network and API server"
       },
       "plugins": {
         "label": "Plugins",
@@ -2358,6 +2358,10 @@
       "about": {
         "label": "About",
         "sub": "Versions and app info"
+      },
+      "developer": {
+        "label": "Developer Tweaks",
+        "sub": "Site feature flags and developer tools"
       }
     },
     "about": {

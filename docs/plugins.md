@@ -240,7 +240,7 @@ YTM has two player bars: the classic one, and a new one it gives some users.
 Each `player_bar.*` name matches either, so a plugin using the names works on
 both. A few exist in one layout only (`player_bar.expand_volume`,
 `player_bar.volume_popup`…); their comments say so. To try your plugin on both,
-pick one under Settings → Advanced → Site features → Player bar.
+pick one under Settings → Developer Tweaks → Player bar.
 
 ## Styles
 
