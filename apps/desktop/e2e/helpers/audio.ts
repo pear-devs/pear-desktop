@@ -1,6 +1,6 @@
-// Shared helpers for the audio plugin e2e tests.
+// The shared Web Audio graph, observed from the page.
 
-import type { ElectronApplication, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 
 declare global {
   interface Window {
@@ -88,36 +88,20 @@ export function outputLevel(page: Page) {
   });
 }
 
-/** Waits until the track itself (not an ad) is playing; plays paused ads like a user would. */
-export async function waitForTrackPlaying(page: Page, timeout = 120_000) {
-  await page.waitForFunction(
-    () => {
-      const { player } = window.__pearRuntime!;
-      const video = document.querySelector("video");
-      if (video?.paused && (player.state.ad || player.state.status !== "playing")) void video.play().catch(() => {});
-      return !player.state.ad && player.state.status === "playing" && !!video && !video.paused;
-    },
-    undefined,
-    { timeout, polling: 500 },
-  );
-}
-
-export function setEnabled(page: Page, id: string, enabled: boolean) {
-  return page.evaluate(([id, enabled]) => window.__pear!.invoke("plugin:set-enabled", id, enabled), [id, enabled] as const);
-}
-
-export function setConfig(page: Page, id: string, patch: Record<string, unknown>) {
-  return page.evaluate(([id, patch]) => window.__pear!.invoke("plugin:set-config", id, patch), [id, patch] as const);
-}
-
-export function pluginConfig(page: Page, id: string) {
-  return page.evaluate((id) => window.__pearRuntime!.plugins.state(id)?.config, id);
-}
-
-/** Pauses before closing: while YTM plays, its beforeunload handler keeps the window from closing. */
-export async function closeApp(app: ElectronApplication) {
-  const page = app.windows()[0];
-  await page?.evaluate(() => window.__pearRuntime?.player.control({ type: "pause" })).catch(() => {});
-  await page?.evaluate(() => document.querySelector("video")?.pause()).catch(() => {});
-  await app.close();
+/**
+ * How many sampled pixels of the visualizer's canvas are lit (every 4th pixel):
+ * by alpha for 2D drawings, by color for WebGL (opaque black when dark).
+ */
+export function litPixels(page: Page, by: "alpha" | "color") {
+  return page.evaluate((by) => {
+    const canvas = document.querySelector<HTMLCanvasElement>("ytmusic-player#player canvas.pear-visualizer");
+    if (!canvas || canvas.width === 0) return 0;
+    const pixels = canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data;
+    let lit = 0;
+    for (let i = 0; i < pixels.length; i += 16) {
+      const on = by === "alpha" ? pixels[i + 3]! > 0 : pixels[i]! + pixels[i + 1]! + pixels[i + 2]! > 30;
+      if (on) lit++;
+    }
+    return lit;
+  }, by);
 }

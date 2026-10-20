@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _electron as electron, type ElectronApplication, type Page } from "@playwright/test";
+import { ytmUrl } from "@pear/sdk/util";
 
 export interface LaunchOptions {
   /** Initial plugin states, written to config.json before launch. */
@@ -13,6 +14,9 @@ export interface LaunchOptions {
   /** Extra environment variables for the app. */
   env?: Record<string, string>;
 }
+
+/** How long the page runtime and the test track get to load. */
+const LOAD_TIMEOUT_MS = 30_000;
 
 const APP_VERSION = (JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
 
@@ -41,21 +45,23 @@ export async function launchApp(options: LaunchOptions = {}) {
   return Object.assign(app, { userData });
 }
 
+export type App = Awaited<ReturnType<typeof launchApp>>;
+
 /** A track that is reliably available on YTM without signing in. */
 export const TEST_TRACK = "dQw4w9WgXcQ";
 
 /** Opens the test track and waits until the runtime has loaded it. */
 export async function playTestTrack(page: Page) {
-  await page.goto(`https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/watch?v=${TEST_TRACK}`);
+  await page.goto(ytmUrl(`/watch?v=${TEST_TRACK}`));
   await page.waitForFunction(
     (id) => window.__pearRuntime?.player.state.track?.videoId === id,
     TEST_TRACK,
-    { timeout: 30_000 },
+    { timeout: LOAD_TIMEOUT_MS },
   );
 }
 
 export async function mainWindow(app: ElectronApplication) {
   const page = await app.firstWindow();
-  await page.waitForFunction(() => window.__pearRuntime, undefined, { timeout: 30_000 });
+  await page.waitForFunction(() => window.__pearRuntime, undefined, { timeout: LOAD_TIMEOUT_MS });
   return page;
 }

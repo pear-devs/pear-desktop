@@ -6,9 +6,13 @@ import { existsSync, readdirSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
-import { expect, type Page, test } from "@playwright/test";
-import { launchApp, mainWindow, playTestTrack } from "./launch.ts";
-import { closeApp, invoke } from "./network-helpers.ts";
+import { ytmUrl } from "@pear/sdk/util";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures.ts";
+import { YTM_HOST } from "./helpers/network.ts";
+import { waitForTrackPlaying } from "./helpers/playback.ts";
+import { invoke, setConfig, setEnabled } from "./helpers/plugins.ts";
+import { mainWindow, playTestTrack } from "./launch.ts";
 
 interface Stats {
   active: boolean;
@@ -20,7 +24,7 @@ interface Stats {
 async function serveList() {
   const server = createServer((_, response) => {
     response.writeHead(200, { "content-type": "text/plain" });
-    response.end("[Adblock Plus 2.0]\n||music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/pear-dnt-probe^\nmusic.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com##.pear-dnt-cosmetic-probe\n##.pear-dnt-generic-probe\n");
+    response.end(`[Adblock Plus 2.0]\n||${YTM_HOST}/pear-dnt-probe^\n${YTM_HOST}##.pear-dnt-cosmetic-probe\n##.pear-dnt-generic-probe\n`);
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   return { url: `http://127.0.0.1:${(server.address() as AddressInfo).port}/list.txt`, close: () => server.close() };
@@ -28,12 +32,13 @@ async function serveList() {
 
 /** Whether a request from the page gets through (a 404 counts) or is blocked by the client. */
 const probe = (page: Page, path: string) =>
-  page.evaluate((path) => fetch(`https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/${path}`).then(() => "through", () => "blocked"), path);
+  page.evaluate((url) => fetch(url).then(() => "through", () => "blocked"), ytmUrl(`/${path}`));
 
-test("with blocklists: blocks requests and caches the engine", async () => {
+test("with blocklists: blocks requests and caches the engine", async ({ launch, defer }) => {
   test.setTimeout(120_000);
   const list = await serveList();
-  const app = await launchApp({
+  defer(list.close);
+  const app = await launch({
     plugins: {
       "do-not-track": {
         enabled: true,
@@ -41,85 +46,58 @@ test("with blocklists: blocks requests and caches the engine", async () => {
       },
     },
   });
-  let page: Page | undefined;
-  try {
-    // The runtime injects: the blocker didn't replace the core's CSP stripping.
-    page = await mainWindow(app);
-    const stats = () => invoke<Stats>(page!, "do-not-track", "stats");
-    await expect.poll(async () => (await stats()).active, { timeout: 30_000 }).toBe(true);
-    expect((await stats()).lists).toBe(1);
+  // The runtime injects: the blocker didn't replace the core's CSP stripping.
+  const page = await mainWindow(app);
+  const stats = () => invoke<Stats>(page, "do-not-track", "stats");
+  await expect.poll(async () => (await stats()).active, { timeout: 30_000 }).toBe(true);
+  expect((await stats()).lists).toBe(1);
 
-    const before = (await stats()).blocked;
-    expect(await probe(page, "pear-dnt-probe")).toBe("blocked");
-    expect(await probe(page, "pear-dnt-other")).toBe("through");
-    expect((await stats()).blocked).toBe(before + 1);
-    // The lists' element hiding applies too (site-specific and generic rules), and playback is fine.
-    const hidden = (className: string) =>
-      page!.evaluate((className) => {
-        if (!document.body) return null;
-        let element = document.querySelector(`.${className}`) as HTMLElement | null;
-        if (!element) {
-          element = Object.assign(document.createElement("div"), { className, textContent: "probe" });
-          document.body.append(element);
-        }
-        return getComputedStyle(element).display === "none";
-      }, className);
-    await expect.poll(() => hidden("pear-dnt-cosmetic-probe"), { timeout: 20_000 }).toBe(true);
-    await expect.poll(() => hidden("pear-dnt-generic-probe"), { timeout: 20_000 }).toBe(true);
-    expect(await hidden("pear-dnt-not-filtered")).toBe(false);
-    await playTestTrack(page);
-    await expect
-      .poll(() => page!.evaluate(() => (window.__pearRuntime!.player.state.status === "playing" ? window.__pearRuntime!.player.state.positionSeconds : 0)), {
-        timeout: 60_000,
-      })
-      .toBeGreaterThan(1);
-    // The engine is cached for the next launch.
-    const cache = join(app.userData, "tb_cache");
-    expect(existsSync(cache) && readdirSync(cache).some((f) => /^engine-\w+\.bin$/.test(f))).toBe(true);
+  const before = (await stats()).blocked;
+  expect(await probe(page, "pear-dnt-probe")).toBe("blocked");
+  expect(await probe(page, "pear-dnt-other")).toBe("through");
+  expect((await stats()).blocked).toBe(before + 1);
+  // The lists' element hiding applies too (site-specific and generic rules), and playback is fine.
+  const hidden = (className: string) =>
+    page.evaluate((className) => {
+      if (!document.body) return null;
+      let element = document.querySelector(`.${className}`) as HTMLElement | null;
+      if (!element) {
+        element = Object.assign(document.createElement("div"), { className, textContent: "probe" });
+        document.body.append(element);
+      }
+      return getComputedStyle(element).display === "none";
+    }, className);
+  await expect.poll(() => hidden("pear-dnt-cosmetic-probe"), { timeout: 20_000 }).toBe(true);
+  await expect.poll(() => hidden("pear-dnt-generic-probe"), { timeout: 20_000 }).toBe(true);
+  expect(await hidden("pear-dnt-not-filtered")).toBe(false);
+  await playTestTrack(page);
+  await waitForTrackPlaying(page);
+  // The engine is cached for the next launch.
+  const cache = join(app.userData, "tb_cache");
+  expect(existsSync(cache) && readdirSync(cache).some((f) => /^engine-\w+\.bin$/.test(f))).toBe(true);
 
-    // Back to the default mode live: request filtering stops.
-    await page.evaluate(() => window.__pear!.invoke("plugin:set-config", "do-not-track", { blocker: "In player" }));
-    await expect.poll(async () => (await stats()).active).toBe(false);
-    expect(await probe(page, "pear-dnt-probe")).toBe("through");
-  } finally {
-    await closeApp(app, page);
-    list.close();
-  }
+  // Back to the default mode live: request filtering stops.
+  await setConfig(page, "do-not-track", { blocker: "In player" });
+  await expect.poll(async () => (await stats()).active).toBe(false);
+  expect(await probe(page, "pear-dnt-probe")).toBe("through");
 });
 
-test("in player: the player gets no ad placements and the track plays", async () => {
+test("in player: the player gets no ad placements and the track plays", async ({ launch }) => {
   test.setTimeout(120_000);
-  const app = await launchApp({ plugins: { "do-not-track": { enabled: true } } });
-  let page: Page | undefined;
-  try {
-    page = await mainWindow(app);
-    const pruned = () => page!.evaluate(() => JSON.parse('{"adPlacements":[1],"playerAds":[2],"keep":3}') as object);
-    expect(await pruned()).toEqual({ keep: 3 });
+  const page = await mainWindow(await launch({ plugins: { "do-not-track": { enabled: true } } }));
+  const pruned = () => page.evaluate(() => JSON.parse('{"adPlacements":[1],"playerAds":[2],"keep":3}') as object);
+  expect(await pruned()).toEqual({ keep: 3 });
 
-    await playTestTrack(page);
-    const response = await page.evaluate(() => {
-      const r = window.__pearRuntime!.player.api!.getPlayerResponse() as Record<string, unknown>;
-      return { video: Boolean(r.videoDetails), ads: ["adPlacements", "playerAds", "adSlots"].filter((key) => key in r) };
-    });
-    expect(response).toEqual({ video: true, ads: [] });
+  await playTestTrack(page);
+  const response = await page.evaluate(() => {
+    const r = window.__pearRuntime!.player.api!.getPlayerResponse() as Record<string, unknown>;
+    return { video: Boolean(r.videoDetails), ads: ["adPlacements", "playerAds", "adSlots"].filter((key) => key in r) };
+  });
+  expect(response).toEqual({ video: true, ads: [] });
 
-    await expect
-      .poll(
-        () =>
-          page!.evaluate(() => {
-            const video = document.querySelector("video");
-            if (video?.paused) void video.play();
-            const s = window.__pearRuntime!.player.state;
-            return !s.ad && s.status === "playing" && s.positionSeconds >= 2;
-          }),
-        { timeout: 45_000, intervals: [500] },
-      )
-      .toBe(true);
+  await waitForTrackPlaying(page);
 
-    // Disabling undoes the patches live.
-    await page.evaluate(() => window.__pear!.invoke("plugin:set-enabled", "do-not-track", false));
-    await expect.poll(pruned).toEqual({ adPlacements: [1], playerAds: [2], keep: 3 });
-  } finally {
-    await closeApp(app, page);
-  }
+  // Disabling undoes the patches live.
+  await setEnabled(page, "do-not-track", false);
+  await expect.poll(pruned).toEqual({ adPlacements: [1], playerAds: [2], keep: 3 });
 });
