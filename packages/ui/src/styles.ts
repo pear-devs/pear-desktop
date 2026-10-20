@@ -347,6 +347,9 @@ export const overlayStyles = css`
   .text { width: 100%; }
   .text:focus, .stepper-input:focus { border-color: var(--primary); }
   .stepper { display: inline-flex; align-items: center; gap: 6px; }
+  .list { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+  .list-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+  .list-row .icon-button { flex-shrink: 0; font-size: 20px; }
   .stepper-button {
     display: inline-flex;
     align-items: center;

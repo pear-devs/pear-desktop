@@ -48,7 +48,17 @@ export interface SelectField<T extends string = string> extends FieldBase<"selec
 /** An Electron accelerator such as "CmdOrCtrl+Shift+P"; empty means unset. */
 export interface ShortcutField extends FieldBase<"shortcut", string> {}
 
-export type Field = BoolField | NumberField | StringField | SelectField | ShortcutField;
+/** A list of strings the user adds and removes (URLs, file paths, ids). */
+export interface ListField extends FieldBase<"list", string[]> {
+  placeholder?: string;
+}
+
+/** Any number of the given options. */
+export interface MultiField<T extends string = string> extends FieldBase<"multi", T[]> {
+  options: readonly SelectOption<T>[];
+}
+
+export type Field = BoolField | NumberField | StringField | SelectField | ShortcutField | ListField | MultiField;
 
 export type ConfigShape = Record<string, Field>;
 
@@ -80,6 +90,16 @@ export const config = {
     default: defaultValue,
     ...meta,
   }),
+  list: (defaultValue: string[], meta: FieldMeta & Pick<ListField, "placeholder">): ListField => ({
+    kind: "list",
+    default: defaultValue,
+    ...meta,
+  }),
+  multi: <const O extends readonly SelectOption<string>[]>(
+    defaultValue: O[number]["value"][],
+    options: O,
+    meta: FieldMeta,
+  ): MultiField<O[number]["value"]> => ({ kind: "multi", default: defaultValue, options, ...meta }),
 };
 
 export function defaultsOf<S extends ConfigShape>(shape: S): ConfigOf<S> {
@@ -113,5 +133,9 @@ function isValid(field: Field, value: unknown): boolean {
       return typeof value === "string";
     case "select":
       return field.options.some((option) => option.value === value);
+    case "list":
+      return Array.isArray(value) && value.every((item) => typeof item === "string");
+    case "multi":
+      return Array.isArray(value) && value.every((item) => field.options.some((option) => option.value === item));
   }
 }

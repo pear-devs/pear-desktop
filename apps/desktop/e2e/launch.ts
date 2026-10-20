@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _electron as electron, type ElectronApplication, type Page } from "@playwright/test";
@@ -8,7 +8,11 @@ export interface LaunchOptions {
   plugins?: Record<string, { enabled: boolean; config?: Record<string, unknown> }>;
   /** Initial core settings sections, e.g. `{ apiServer: { enabled: true } }`. */
   core?: Record<string, Record<string, unknown>>;
+  /** A config.json to start from verbatim (e.g. one pear-desktop 3.x wrote). */
+  config?: Record<string, unknown>;
 }
+
+const APP_VERSION = (JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
 
 /** The options above in config.json's layout (see src/main/config.ts). */
 function configFile({ plugins = {}, core = {} }: LaunchOptions) {
@@ -16,14 +20,18 @@ function configFile({ plugins = {}, core = {} }: LaunchOptions) {
   const entries: Record<string, Record<string, unknown>> = {};
   for (const [id, { enabled, config }] of Object.entries(plugins)) entries[id] = { enabled, ...config };
   if (apiServer) entries["api-server"] = apiServer;
-  return { plugins: entries, options: Object.assign({}, ...Object.values(options)) };
+  return {
+    plugins: entries,
+    options: Object.assign({}, ...Object.values(options)),
+    __internal__: { migrations: { version: APP_VERSION } },
+  };
 }
 
 /** Launch the built app with a fresh, isolated profile. */
 export async function launchApp(options: LaunchOptions = {}) {
   const userData = mkdtempSync(join(tmpdir(), "pear-e2e-"));
-  if (options.plugins || options.core) {
-    writeFileSync(join(userData, "config.json"), JSON.stringify(configFile(options)));
+  if (options.config || options.plugins || options.core) {
+    writeFileSync(join(userData, "config.json"), JSON.stringify(options.config ?? configFile(options)));
   }
   const app = await electron.launch({ args: ["."], env: { ...process.env, PEAR_USER_DATA: userData } });
   // Profiles are ~40 MB each, and /tmp is often RAM-backed.

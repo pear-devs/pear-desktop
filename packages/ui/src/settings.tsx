@@ -20,7 +20,7 @@ type Block =
   | { kind: "plugin"; id: string; title: string }
   | { kind: "developer" };
 
-type SectionId = "general" | "window" | "advanced" | "plugins" | "about";
+type SectionId = "general" | "appearance" | "window" | "advanced" | "plugins" | "about";
 
 interface Section {
   id: SectionId;
@@ -35,8 +35,15 @@ const SECTIONS: Section[] = [
     id: "general",
     icon: "settings",
     label: "General",
-    sub: "Startup",
+    sub: "Startup and updates",
     blocks: [{ kind: "core", section: "general" }],
+  },
+  {
+    id: "appearance",
+    icon: "palette",
+    label: "Appearance",
+    sub: "Interface, window title and themes",
+    blocks: [{ kind: "core", section: "appearance" }],
   },
   {
     id: "window",
@@ -53,7 +60,7 @@ const SECTIONS: Section[] = [
     id: "advanced",
     icon: "tune",
     label: "Advanced",
-    sub: "Performance, API server and developer tools",
+    sub: "Performance, network, API server and developer tools",
     blocks: [
       { kind: "core", section: "advanced" },
       { kind: "core", section: "apiServer", title: "API server" },

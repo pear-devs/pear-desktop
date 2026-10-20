@@ -2,7 +2,7 @@
 // everything else below the label. The control is picked from the field kind
 // and its `variant`.
 
-import type { Field, NumberField, SelectField } from "@pear/sdk";
+import type { Field, ListField, MultiField, NumberField, SelectField } from "@pear/sdk";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { toAccelerator } from "./accelerator.ts";
 
@@ -50,6 +50,16 @@ export function SettingsField({ name, field, value, onChange }: FieldProps) {
       {field.kind === "select" && (
         <div class="field-control">
           <SelectControl id={id} field={field} value={String(value)} onChange={onChange} />
+        </div>
+      )}
+      {field.kind === "list" && (
+        <div class="field-control">
+          <ListControl id={id} field={field} value={Array.isArray(value) ? (value as string[]) : []} onChange={onChange} />
+        </div>
+      )}
+      {field.kind === "multi" && (
+        <div class="field-control">
+          <MultiControl id={id} field={field} value={Array.isArray(value) ? (value as string[]) : []} onChange={onChange} />
         </div>
       )}
     </div>
@@ -182,6 +192,61 @@ function SelectControl({ id, field, value, onChange }: { id: string; field: Sele
           {o.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+function MultiControl({ id, field, value, onChange }: { id: string; field: MultiField; value: string[]; onChange(v: unknown): void }) {
+  return (
+    <div class="chips" id={id} role="group" aria-labelledby={`${id}-label`}>
+      {field.options.map((o) => {
+        const checked = value.includes(o.value);
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="checkbox"
+            class="chip"
+            aria-checked={checked}
+            onClick={() => onChange(checked ? value.filter((v) => v !== o.value) : [...value, o.value])}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** One row per entry; empty entries are dropped when saved. */
+function ListControl({ id, field, value, onChange }: { id: string; field: ListField; value: string[]; onChange(v: unknown): void }) {
+  const [rows, setRows] = useDraft(value);
+  const commit = useDebounced((next) => onChange((next as string[]).map((v) => v.trim()).filter(Boolean)), 400);
+  const update = (next: string[]) => {
+    setRows(next);
+    commit(next);
+  };
+  return (
+    <div class="list" id={id} role="group" aria-labelledby={`${id}-label`}>
+      {rows.map((row, index) => (
+        <div class="list-row" key={index}>
+          <input
+            class="text"
+            type="text"
+            spellcheck={false}
+            placeholder={field.placeholder}
+            aria-label={`${field.label} ${index + 1}`}
+            value={row}
+            onInput={(e) => update(rows.map((v, i) => (i === index ? e.currentTarget.value : v)))}
+          />
+          <button type="button" class="icon-button" aria-label={`Remove ${row || `entry ${index + 1}`}`} onClick={() => update(rows.filter((_, i) => i !== index))}>
+            ×
+          </button>
+        </div>
+      ))}
+      <button type="button" class="outlined" onClick={() => setRows([...rows, ""])}>
+        Add
+      </button>
     </div>
   );
 }

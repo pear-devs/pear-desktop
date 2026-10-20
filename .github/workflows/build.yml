@@ -102,7 +102,7 @@ jobs:
 
       - name: Get version
         run: |
-          echo "VERSION_TAG=v$(node -pe "require('./package.json').version")" >> $GITHUB_ENV
+          echo "VERSION_TAG=v$(node -pe "require('./apps/desktop/package.json').version")" >> $GITHUB_ENV
 
       - name: Check if version already exists in tags
         run: |

@@ -122,7 +122,7 @@ test("requires a token for authorized clients unless auth is off", async () => {
         hostname: "127.0.0.1",
         port,
         authStrategy: "AUTH_AT_FIRST",
-        authorizedClients: "e2e-remote",
+        authorizedClients: ["e2e-remote"],
         secret: "e2e-secret",
       },
     },
@@ -150,7 +150,7 @@ test("requires a token for authorized clients unless auth is off", async () => {
 
     // Revoking the client in settings applies live.
     const page = await app.firstWindow();
-    await page.evaluate(() => window.__pear!.invoke("core:set-config", "apiServer", { authorizedClients: "" }));
+    await page.evaluate(() => window.__pear!.invoke("core:set-config", "apiServer", { authorizedClients: [] }));
     await expect
       .poll(async () => (await fetch(`${base}/api/v1/volume`, { headers: { Authorization: `Bearer ${accessToken}` } })).status)
       .toBe(401);

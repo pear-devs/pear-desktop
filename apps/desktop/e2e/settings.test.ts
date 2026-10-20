@@ -130,9 +130,9 @@ test("core options apply live; restart-only ones offer a restart", async () => {
     await expect(pluginRow(page, "tray")).toBeVisible();
 
     await section(page, "General");
-    await overlay(page).getByRole("radio", { name: "Explore" }).click();
-    await expect.poll(() => savedSettings(app.userData).options?.startingPage, { timeout: 5000 }).toBe("/explore");
-    await expect(overlay(page).getByRole("radio", { name: "Explore" })).toHaveAttribute("aria-checked", "true");
+    await overlay(page).getByLabel("Starting page").selectOption("Explore");
+    await expect.poll(() => savedSettings(app.userData).options?.startingPage, { timeout: 5000 }).toBe("Explore");
+    await expect(overlay(page).getByLabel("Starting page")).toHaveValue("Explore");
 
     await section(page, "Advanced");
     const banner = overlay(page).getByRole("status").filter({ hasText: "restart" });
@@ -157,7 +157,7 @@ test("core options apply live; restart-only ones offer a restart", async () => {
 });
 
 test("opens on the starting page when the last page isn't reopened", async () => {
-  const app = await launchApp({ core: { general: { restoreLastPage: false, startingPage: "/explore" } } });
+  const app = await launchApp({ core: { general: { resumeOnStart: false, startingPage: "Explore" } } });
   try {
     const page = await mainWindow(app);
     await expect.poll(() => new URL(page.url()).pathname).toBe("/explore");
@@ -228,6 +228,34 @@ test("tray: close-to-tray hides instead of quitting", async () => {
         app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((w) => ({ visible: w.isVisible() }))),
       )
       .toEqual([{ visible: false }]);
+  } finally {
+    await app.close();
+  }
+});
+
+test("an existing pear-desktop 3.x config.json is migrated in place", async () => {
+  const app = await launchApp({
+    config: {
+      "window-size": { width: 900, height: 700 },
+      "window-maximized": false,
+      "window-position": { x: -1, y: -1 },
+      url: "https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/watch?v=dQw4w9WgXcQ",
+      options: { tray: false, alwaysOnTop: true, resumeOnStart: false, startingPage: "Explore", language: "el" },
+      plugins: { clock: { enabled: true }, "blur-nav-bar": { enabled: true, blur: 20 } },
+      __internal__: { migrations: { version: "3.12.0" } },
+    },
+  });
+  try {
+    const page = await mainWindow(app);
+    await expect.poll(() => new URL(page.url()).pathname).toBe("/explore");
+    expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]!.isAlwaysOnTop())).toBe(true);
+    expect(await enabled(page, "clock")).toBe(true);
+    expect(await enabled(page, "tray")).toBe(false);
+    expect((await pluginConfig(page, "blur-nav-bar"))?.blur).toBe(20);
+    const file = savedSettings(app.userData);
+    expect(file.__internal__.migrations.version).toBe("4.0.0");
+    // Options this version doesn't use yet are kept.
+    expect(file.options.language).toBe("el");
   } finally {
     await app.close();
   }

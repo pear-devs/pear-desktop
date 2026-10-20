@@ -13,6 +13,10 @@ export default definePlugin({
       description: "Closing the window keeps music playing in the background.",
     }),
     clickToToggle: config.bool(true, { label: "Click toggles the window" }),
+    clickPlayPause: config.bool(false, {
+      label: "Click plays and pauses",
+      description: "Instead of toggling the window.",
+    }),
   },
   host: {
     start(ctx) {
@@ -71,7 +75,8 @@ export default definePlugin({
       });
 
       tray.on("click", () => {
-        if (ctx.config.clickToToggle) toggleWindow();
+        if (ctx.config.clickPlayPause) ctx.player.control({ type: "toggle" });
+        else if (ctx.config.clickToToggle) toggleWindow();
       });
 
       let quitting = false;

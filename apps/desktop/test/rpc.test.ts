@@ -29,7 +29,7 @@ const greeter = definePlugin({
 
 async function setup(enabled = true) {
   const userData = mkdtempSync(join(tmpdir(), "pear-rpc-"));
-  const settings = new Settings(userData, [greeter]);
+  const settings = new Settings(userData, [greeter], "4.0.0");
   const host = new PluginHost([greeter], settings, "linux");
   const broadcast = vi.fn();
   host.attach({

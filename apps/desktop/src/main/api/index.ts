@@ -30,12 +30,6 @@ export interface ApiServerEnvironment {
 
 type Running = Awaited<ReturnType<typeof startServer>>;
 
-const parseClients = (value: string) =>
-  value
-    .split(",")
-    .map((id) => id.trim())
-    .filter(Boolean);
-
 const networkKey = (c: ApiServerConfig) =>
   JSON.stringify([c.enabled, c.hostname, c.port, c.useHttps && c.certPath, c.useHttps && c.keyPath]);
 
@@ -204,7 +198,7 @@ export class ApiServer {
       async authorize(id, remoteAddress) {
         if (id.includes(",")) return null;
         const current = settings.core("apiServer");
-        if (!parseClients(current.authorizedClients).includes(id)) {
+        if (!current.authorizedClients.includes(id)) {
           if (current.authStrategy === "AUTH_AT_FIRST") {
             const { response } = await dialog.showMessageBox(window, {
               type: "question",
@@ -218,8 +212,8 @@ export class ApiServer {
             });
             if (response !== 0) return null;
           }
-          const clients = parseClients(settings.core("apiServer").authorizedClients);
-          if (!clients.includes(id)) settings.setCore("apiServer", { authorizedClients: [...clients, id].join(", ") });
+          const clients = settings.core("apiServer").authorizedClients;
+          if (!clients.includes(id)) settings.setCore("apiServer", { authorizedClients: [...clients, id] });
           publish();
         }
         return signToken({ id, iat: Math.floor(Date.now() / 1000) }, settings.core("apiServer").secret);
@@ -244,7 +238,7 @@ export class ApiServer {
         return {
           authStrategy: current.authStrategy,
           secret: current.secret,
-          authorizedClients: parseClients(current.authorizedClients),
+          authorizedClients: current.authorizedClients,
         };
       },
       onSocket: (socket) => {

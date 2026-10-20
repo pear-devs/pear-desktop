@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { app, BrowserWindow, nativeImage, screen, session } from "electron";
 import { pearIconBitmap } from "@pear/sdk/icon";
-import type { CoreSection } from "@pear/sdk/core-config";
+import { type CoreSection, STARTING_PAGES, type StartingPage } from "@pear/sdk/core-config";
 import { CHANNEL, type HostEvent } from "@pear/sdk/protocol";
 import hostPlugins from "virtual:pear/host-plugins";
 import { chromeUserAgent, isGoogleAuth, YTM_ORIGIN } from "../shared/user-agent.ts";
@@ -40,9 +40,9 @@ if (!app.requestSingleInstanceLock()) {
 }
 
 function main() {
-  const settings = new Settings(app.getPath("userData"), hostPlugins);
+  const settings = new Settings(app.getPath("userData"), hostPlugins, app.getVersion());
   const plugins = new PluginHost(hostPlugins, settings, process.platform);
-  if (!settings.core("advanced").hardwareAcceleration) app.disableHardwareAcceleration();
+  if (settings.core("advanced").disableHardwareAcceleration) app.disableHardwareAcceleration();
   registerSettingsScheme();
   const features = plugins.beforeReady(app);
   if (features.enabled.size > 0) app.commandLine.appendSwitch("enable-features", [...features.enabled].join(","));
@@ -114,7 +114,7 @@ function main() {
     if (saved?.maximized) window.maximize();
     window.once("ready-to-show", () => {
       // Hidden starts only make sense with a tray icon to bring the window back.
-      if (settings.core("window").startHidden && settings.plugin("tray")?.enabled) return;
+      if (!settings.core("window").appVisible && settings.plugin("tray")?.enabled) return;
       window.show();
       console.info(`[pear] startup: window shown after ${Math.round(performance.now())}ms`);
     });
@@ -177,6 +177,7 @@ function main() {
         states: () => ({
           general: { config: settings.core("general") },
           window: { config: settings.core("window") },
+          appearance: { config: settings.core("appearance") },
           advanced: { config: settings.core("advanced") },
           apiServer: api?.state() ?? { config: settings.core("apiServer") },
         }),
@@ -231,10 +232,10 @@ function main() {
 }
 
 /** The last YTM page (never straight into a track) if enabled, otherwise the starting page. */
-function startUrl(general: { restoreLastPage: boolean; startingPage: string }, lastUrl: string | undefined) {
-  const last = general.restoreLastPage && lastUrl ? URL.parse(lastUrl) : null;
+function startUrl(general: { resumeOnStart: boolean; startingPage: StartingPage }, lastUrl: string | undefined) {
+  const last = general.resumeOnStart && lastUrl ? URL.parse(lastUrl) : null;
   if (last && last.origin === YTM_ORIGIN && last.pathname !== "/watch") return last.toString();
-  return new URL(general.startingPage, YTM_URL).toString();
+  return new URL(STARTING_PAGES[general.startingPage] ?? "/", YTM_URL).toString();
 }
 
 function windowBounds(saved: WindowState | undefined) {

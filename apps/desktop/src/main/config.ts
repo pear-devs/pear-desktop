@@ -4,6 +4,7 @@
 //   plugins.<id>        { enabled, ...config }      (the API server: plugins.api-server)
 //   options.*           the core sections (general, window, appearance, advanced)
 //   url, window-size, window-position, window-maximized
+//   __internal__.migrations.version                 like electron-store
 //
 // Values are normalized against their schema on load, so stale or hand-edited
 // ones fall back to defaults instead of crashing anything. Keys this version
@@ -14,6 +15,7 @@ import { dirname, join } from "node:path";
 import { type AnyPlugin, type ConfigOf, type ConfigShape, normalizeConfig } from "@pear/sdk";
 import { CORE_SECTIONS, type CoreSection } from "@pear/sdk/core-config";
 import type { PluginState } from "@pear/sdk/protocol";
+import { migrate, type StoredConfig } from "./migrations.ts";
 
 export interface WindowState {
   x?: number;
@@ -25,16 +27,6 @@ export interface WindowState {
 
 type CoreConfigs = { [K in CoreSection]: ConfigOf<(typeof CORE_SECTIONS)[K]> };
 type Json = Record<string, unknown>;
-
-interface StoredConfig {
-  plugins?: Record<string, Json>;
-  options?: Json;
-  url?: unknown;
-  "window-size"?: unknown;
-  "window-position"?: unknown;
-  "window-maximized"?: unknown;
-  [key: string]: unknown;
-}
 
 export const CONFIG_FILE = "config.json";
 /** The API server is a core section, stored where pear-desktop's plugin kept it. */
@@ -50,9 +42,10 @@ export class Settings {
   #core: CoreConfigs;
   #writeTimer: ReturnType<typeof setTimeout> | undefined;
 
-  constructor(userData: string, plugins: readonly AnyPlugin[]) {
+  constructor(userData: string, plugins: readonly AnyPlugin[], appVersion: string) {
     this.path = join(userData, CONFIG_FILE);
-    this.#data = readJson(this.path) ?? {};
+    const { config, migrated } = migrate(readJson(this.path), appVersion);
+    this.#data = config;
     this.#core = Object.fromEntries(
       Object.entries(CORE_SECTIONS).map(([name, shape]) => [name, normalizeConfig(shape, this.#coreSource(name as CoreSection))]),
     ) as CoreConfigs;
@@ -63,6 +56,8 @@ export class Settings {
         config: plugin.config ? normalizeConfig(plugin.config, entry) : {},
       });
     }
+    // Persist a migration right away, so it never runs twice.
+    if (migrated) this.#write();
   }
 
   plugin(id: string): PluginState | undefined {
