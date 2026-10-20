@@ -50,6 +50,8 @@ export interface ArgsOptions {
   customExtension?: string;
   /** A Netscape cookies file with the signed-in session, for private playlists and age-restricted tracks. */
   cookiesFile?: string;
+  /** The folder's list of downloaded ids (--download-archive), when skipping by id. */
+  archiveFile?: string;
 }
 
 export const DEFAULT_TEMPLATE = "%(artist,creator,uploader)s - %(title)s.%(ext)s";
@@ -119,6 +121,7 @@ export function buildArgs(options: ArgsOptions): string[] {
   // pear-desktop's Custom preset: its ffmpeg arguments for the conversion.
   if (options.format === "custom" && options.customArgs?.trim()) args.push("--postprocessor-args", `ExtractAudio+ffmpeg_o:${options.customArgs.trim()}`);
   if (options.cookiesFile) args.push("--cookies", options.cookiesFile);
+  if (options.archiveFile) args.push("--download-archive", options.archiveFile);
   if (canEmbedCover(options.format, options.capabilities, options.customExtension)) {
     args.push("--embed-thumbnail", "--convert-thumbnails", "jpg");
     // YTM artwork comes as 16:9 with the square cover in the middle.

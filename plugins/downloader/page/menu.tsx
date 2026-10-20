@@ -30,7 +30,12 @@ export function buttonMenu(ctx: Ctx, button: HTMLElement) {
     );
   };
   const open = (options: MenuOption[]) => {
-    menu.replaceChildren(...options.map(entry));
+    // A heading where a section starts.
+    const children = options.flatMap((option, index) => {
+      const starts = option.section && option.section !== options[index - 1]?.section;
+      return starts ? [<div class="pear-dl-menu-heading">{option.section}</div>, entry(option)] : [entry(option)];
+    });
+    menu.replaceChildren(...children);
     menu.hidden = false;
     button.setAttribute("aria-expanded", "true");
     menu.querySelector("button")?.focus();

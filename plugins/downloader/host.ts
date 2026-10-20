@@ -6,14 +6,16 @@ import { join } from "node:path";
 import { type HostContextOf, livePosition, type NowPlaying, type Track } from "@pear/sdk";
 import { YTM_ORIGIN } from "@pear/sdk/util";
 import { nativeImage, net } from "electron";
+import { archivePath } from "./archive.ts";
 import type { downloaderConfig } from "./config.ts";
 import { chooseConverter, type Converter, type Cover, WasmConverter, type WasmFFmpeg } from "./convert.ts";
 import { isSiteCookie, toNetscape } from "./cookies.ts";
-import { DownloadQueue, type QueueState } from "./downloads.ts";
+import { DownloadQueue, type JobResult, type QueueState } from "./downloads.ts";
 import { type BuiltInJobOptions, InnertubeEngine, InnertubeSession, type PoTokenAnswer } from "./engines/innertube.ts";
 import type { Engine } from "./engines/types.ts";
 import { YtDlpEngine } from "./engines/ytdlp.ts";
 import { Installer } from "./install.ts";
+import { findLyrics } from "./lyrics.ts";
 import { ffmpegCoreDir } from "./macros.ts" with { type: "macro" };
 import type { PoTokenRequest } from "./potoken.ts";
 import { expandHome, type SetupState, type ToolSource, Tools } from "./tools.ts";
@@ -25,11 +27,14 @@ type Config = Ctx["config"];
 /** What the page shows: the queue, and yt-dlp or ffmpeg being downloaded. */
 export interface DownloaderState extends QueueState {
   setup?: SetupState | undefined;
+  /** The last downloads, newest first. */
+  recent?: JobResult[];
 }
 
 interface Downloader {
   queue: DownloadQueue;
   tools: Tools;
+  recent: JobResult[];
 }
 
 /** Tests set this to pretend yt-dlp and ffmpeg aren't installed. */
@@ -38,6 +43,8 @@ const IGNORE_SYSTEM_TOOLS = "PEAR_DOWNLOADER_IGNORE_SYSTEM_TOOLS";
 const UPDATE_DELAY_MS = 15_000;
 /** After a failed download, a newer yt-dlp may fix it; check if the last check is this old. */
 const UPDATE_AFTER_FAILURE_MS = 60 * 60 * 1000;
+/** How many finished downloads the button's menu lists. */
+const RECENT_COUNT = 10;
 /** Progress comes per network chunk; the page and the settings need a few updates a second. */
 const PUBLISH_INTERVAL_MS = 250;
 /** BotGuard takes a few seconds in the page; a page that is loading takes longer to answer. */
@@ -58,8 +65,8 @@ export function downloaderOf(ctx: Pick<Ctx, "t">) {
   return downloader;
 }
 
-export function stateOf({ queue, tools }: Downloader): DownloaderState {
-  return { ...queue.state, setup: tools.setup };
+export function stateOf({ queue, tools, recent }: Downloader): DownloaderState {
+  return { ...queue.state, setup: tools.setup, recent };
 }
 
 export async function startHost(ctx: Ctx) {
@@ -68,8 +75,13 @@ export async function startHost(ctx: Ctx) {
   await tools.init();
 
   const autoJobs = new Set<number>();
-  const queue = createQueue(ctx, tools, autoJobs, () => publisher.publish());
-  downloaders.set(ctx, { queue, tools });
+  const recent: JobResult[] = [];
+  const remember = (result: JobResult) => {
+    recent.unshift(result);
+    recent.splice(RECENT_COUNT);
+  };
+  const queue = createQueue(ctx, tools, autoJobs, remember, () => publisher.publish());
+  downloaders.set(ctx, { queue, tools, recent });
   // Everything but the tool paths is read per download.
   const toolsKey = toolsKeyOf(ctx.config);
   ctx.onConfigChange((config) => {
@@ -154,7 +166,7 @@ class Publisher {
     this.#timer = undefined;
     this.#published = Date.now();
     const ctx = this.#ctx;
-    ctx.setStatus(this.#tools.describe(ctx.config.engine));
+    ctx.setStatus(this.#tools.describe(engineOf(ctx.config)));
     const downloader = downloaders.get(ctx);
     if (!downloader) return;
     ctx.emit("state", stateOf(downloader));
@@ -172,7 +184,7 @@ class Publisher {
 
 // ---------------------------------------------------------------- queue
 
-function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, publish: () => void) {
+function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, remember: (result: JobResult) => void, publish: () => void) {
   const ytDlp = createYtDlpEngine(ctx, tools, autoJobs);
   const builtIn = createBuiltInEngine(ctx, tools, autoJobs);
   return new DownloadQueue({
@@ -185,6 +197,7 @@ function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, publish: () 
         // The site changes; a newer yt-dlp often fixes failing downloads.
         void tools.update(UPDATE_AFTER_FAILURE_MS);
       }
+      remember(result);
       ctx.emit("result", result);
       ctx.api.broadcast("result", result);
     },
@@ -192,10 +205,12 @@ function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, publish: () 
   });
 }
 
-/** The built-in engine first, then yt-dlp; only yt-dlp when chosen, or for the Custom format's ffmpeg arguments. */
-export function enginesFor(config: Pick<Config, "engine" | "format">, builtIn: Engine, ytDlp: Engine): Engine[] {
-  if (config.engine === "yt-dlp" || config.format === "custom") return [ytDlp];
-  return [builtIn, ytDlp];
+/** Only yt-dlp when chosen, or for the Custom format's ffmpeg arguments. */
+const engineOf = (config: Pick<Config, "engine" | "format">) => (config.format === "custom" ? "yt-dlp" : config.engine);
+
+/** The built-in engine first, then yt-dlp; or yt-dlp alone. */
+function enginesFor(config: Pick<Config, "engine" | "format">, builtIn: Engine, ytDlp: Engine): Engine[] {
+  return engineOf(config) === "yt-dlp" ? [ytDlp] : [builtIn, ytDlp];
 }
 
 function createYtDlpEngine(ctx: Ctx, tools: Tools, autoJobs: Set<number>) {
@@ -217,6 +232,7 @@ function createYtDlpEngine(ctx: Ctx, tools: Tools, autoJobs: Set<number>) {
         playlistLimit: config.playlistMaxItems,
         skipExisting: config.skipExisting,
         squareCover: config.squareCover,
+        ...(config.skipExisting && config.archive ? { archiveFile: archivePath(downloadFolder(ctx, autoJobs.has(id))) } : {}),
         ffmpegPath: ready.ffmpegPath,
         capabilities: ready.capabilities,
         customArgs: config.customArgs,
@@ -247,12 +263,16 @@ function createBuiltInEngine(ctx: Ctx, tools: Tools, autoJobs: Set<number>) {
         playlistFolders: config.playlistFolders,
         playlistLimit: config.playlistMaxItems,
         skipExisting: config.skipExisting,
+        archive: config.archive,
         squareCover: config.squareCover,
+        lyrics: config.lyrics,
+        lyricsFile: config.lyricsFile,
       };
     },
     converter: (): Converter => chooseConverter(tools.ffmpegProgram, () => wasm),
     cover: (url, square, signal) => fetchCover(ctx, url, square, signal),
     fetch: (url, init) => ctx.session.fetch(url, init),
+    lyrics: (query, signal) => findLyrics(query, (url, init) => ctx.session.fetch(url, init), signal),
     log: ctx.log,
   });
 }
@@ -288,7 +308,7 @@ async function fetchCover(ctx: Ctx, url: string, square: boolean, signal: AbortS
 }
 
 /** Automatic downloads go to their own folder when one is set. */
-function downloadFolder(ctx: Ctx, auto: boolean) {
+export function downloadFolder(ctx: Pick<Ctx, "config" | "app">, auto: boolean) {
   const autoFolder = auto ? ctx.config.autoDownloadFolder.trim() : "";
   const folder = expandHome((autoFolder || ctx.config.downloadFolder).trim());
   return folder || ctx.app.getPath("downloads");

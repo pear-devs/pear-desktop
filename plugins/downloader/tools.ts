@@ -165,14 +165,34 @@ export class Tools {
     const { installer, log } = this.#options;
     if (this.ytDlp?.source !== "managed" || this.#updating || this.#preparing) return;
     if (!updateDue(installer.state, Date.now(), interval)) return;
+    await this.#update().catch((error: unknown) => log.warn("couldn't update yt-dlp:", errorMessage(error)));
+  }
+
+  /** The settings' "Update yt-dlp" button: now, and saying why not when yt-dlp isn't this plugin's to update. */
+  async updateNow() {
+    const { t } = this.#options;
+    if (!this.ytDlp) {
+      throw new Error(t("plugins.downloader.errors.update-missing", "yt-dlp isn't downloaded yet; that happens the first time it is needed."));
+    }
+    if (this.ytDlp.source !== "managed") {
+      throw new Error(
+        t("plugins.downloader.errors.update-external", "This yt-dlp is {{source}}; update it the way it was installed.", {
+          source: this.#source(this.ytDlp.source),
+        }),
+      );
+    }
+    if (this.#updating || this.#preparing) return;
+    await this.#update();
+  }
+
+  async #update() {
+    const { installer, log } = this.#options;
     this.#updating = true;
     try {
       if (await this.#run("yt-dlp", (signal) => installer.installYtDlp(signal))) {
         await this.#probe();
         log.info(`updated yt-dlp to ${this.capabilities?.version}`);
       }
-    } catch (error) {
-      log.warn("couldn't update yt-dlp:", errorMessage(error));
     } finally {
       this.#updating = false;
       this.#options.onChange();

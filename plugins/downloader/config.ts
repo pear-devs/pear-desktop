@@ -44,7 +44,17 @@ export const downloaderConfig = {
   playlistFolders: config.bool(true, { label: "Put albums and playlists in their own folder" }),
   playlistMaxItems: config.number(0, { label: "Most songs per playlist", min: 0, max: 5000, description: "0 means no limit." }),
   skipExisting: config.bool(true, { label: "Skip songs that are already downloaded" }),
+  archive: config.bool(true, {
+    label: "…even when their files were renamed",
+    description: "Remembers what was downloaded to a folder by song, in a list there (yt-dlp's download archive).",
+  }),
   squareCover: config.bool(true, { label: "Crop cover art to a square" }),
+  lyrics: config.bool(false, {
+    label: "Add lyrics to the files",
+    description: "Looked up on LRCLib, as synced-lyrics does. Only the built-in downloader adds them.",
+    group: "Lyrics",
+  }),
+  lyricsFile: config.bool(false, { label: "Also save synced lyrics as an .lrc file next to the song", group: "Lyrics" }),
   autoDownload: config.bool(false, {
     label: "Download everything I listen to",
     description: "Saves each song shortly before it ends.",

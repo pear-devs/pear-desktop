@@ -8,6 +8,8 @@ export type Ctx = PageContextOf<typeof downloaderConfig, DownloaderCommands>;
 export interface MenuOption {
   label: string;
   run(): void;
+  /** Listed under a heading of its own (the recent downloads). */
+  section?: string;
 }
 
 // Material "download" icon.

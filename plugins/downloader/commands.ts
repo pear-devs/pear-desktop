@@ -9,4 +9,6 @@ export interface DownloaderCommands {
   state(): DownloaderState;
   info(): ToolsInfo;
   reveal(file: string): void;
+  openFolder(): Promise<void>;
+  updateYtDlp(): Promise<void>;
 }

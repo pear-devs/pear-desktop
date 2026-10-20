@@ -63,10 +63,13 @@ describe("ffmpegArgs", () => {
 
 describe("tags", () => {
   test("metadata by ffmpeg's names, in an escaped ffmetadata file", () => {
-    const metadata = metadataOf({ title: "A=B; #1", artist: "C", album: "D", albumArtist: "E", year: 1987, track: 3, trackCount: 10 });
+    const metadata = metadataOf({ title: "A=B; #1", artist: "C", album: "D", albumArtist: "E", year: 1987, track: 3, trackCount: 10 }, "m4a");
     expect(metadata).toEqual({ title: "A=B; #1", artist: "C", album: "D", album_artist: "E", date: "1987", track: "3/10" });
     expect(ffmetadata({ title: "A=B; #1", comment: "x\\y\nz" })).toBe(";FFMETADATA1\ntitle=A\\=B\\; \\#1\ncomment=x\\\\y\\\nz\n");
-    expect(metadataOf({ title: "Only" })).toEqual({ title: "Only" });
+    expect(metadataOf({ title: "Only" }, "mp3")).toEqual({ title: "Only" });
+    // MP3 lyrics are written as USLT separately.
+    expect(metadataOf({ title: "t", lyrics: "la la" }, "opus")).toEqual({ title: "t", lyrics: "la la" });
+    expect(metadataOf({ title: "t", lyrics: "la la" }, "mp3")).toEqual({ title: "t" });
   });
 
   test("Opus covers as a FLAC picture block", () => {

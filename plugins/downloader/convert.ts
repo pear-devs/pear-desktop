@@ -27,6 +27,8 @@ export interface Tags {
   year?: number | undefined;
   track?: number | undefined;
   trackCount?: number | undefined;
+  /** Unsynced lyrics. */
+  lyrics?: string | undefined;
 }
 
 export interface Cover {
@@ -88,8 +90,11 @@ export const codecOf = (mimeType: string): SourceStream["codec"] => {
 /** `;FFMETADATA1` escaping: `=`, `;`, `#`, `\` and newlines get a backslash. */
 const escapeMetadata = (value: string) => value.replace(/[=;#\\\n]/g, (char) => `\\${char}`);
 
-/** The tags by ffmpeg's names. */
-export function metadataOf(tags: Tags, extra: Record<string, string> = {}): Record<string, string> {
+/**
+ * The tags by ffmpeg's names, for a file of type `ext`. ffmpeg writes MP3 lyrics
+ * as a TXXX frame players don't read, so those go in as USLT afterwards (node-id3).
+ */
+export function metadataOf(tags: Tags, ext: Extension, extra: Record<string, string> = {}): Record<string, string> {
   const entries: [string, string | number | undefined][] = [
     ["title", tags.title],
     ["artist", tags.artist],
@@ -97,6 +102,7 @@ export function metadataOf(tags: Tags, extra: Record<string, string> = {}): Reco
     ["album_artist", tags.albumArtist],
     ["date", tags.year],
     ["track", tags.track && (tags.trackCount ? `${tags.track}/${tags.trackCount}` : tags.track)],
+    ["lyrics", ext === "mp3" ? undefined : tags.lyrics],
   ];
   const metadata: Record<string, string> = {};
   for (const [key, value] of entries) if (value !== undefined && value !== "") metadata[key] = String(value);
@@ -167,7 +173,7 @@ const muxerOf = (ext: Extension) => (ext === "m4a" ? "ipod" : ext === "opus" ? "
 function metadataFor(job: Pick<ConvertJob, "ext" | "tags" | "cover">) {
   const extra: Record<string, string> = {};
   if (job.ext === "opus" && job.cover) extra.METADATA_BLOCK_PICTURE = pictureBlock(job.cover);
-  return metadataOf(job.tags, extra);
+  return metadataOf(job.tags, job.ext, extra);
 }
 
 /** `-progress` reports the position written so far. */
@@ -196,6 +202,7 @@ export class NativeConverter implements Converter {
       if (coverFile) await writeFile(coverFile, job.cover!.data);
       const args = ffmpegArgs({ ...job, metadataFile, coverFile });
       await this.#run(["-y", "-nostdin", "-hide_banner", "-loglevel", "error", "-progress", "pipe:1", "-nostats", ...args], job);
+      if (job.ext === "mp3" && job.tags.lyrics) await writeFile(job.output, await addMp3Lyrics(await readFile(job.output), job.tags.lyrics));
     } finally {
       await Promise.all([metadataFile, coverFile].map((file) => file && rm(file, { force: true })));
     }
@@ -253,6 +260,16 @@ export interface WasmOptions {
   create(): Promise<WasmFFmpeg>;
 }
 
+const lyricsFrame = (text: string) => ({ language: "eng", text });
+
+/** An MP3's lyrics as the USLT frame players read. */
+export async function addMp3Lyrics(file: Buffer, lyrics: string): Promise<Buffer> {
+  const { default: NodeID3 } = await import("node-id3");
+  const tagged = NodeID3.update({ unsynchronisedLyrics: lyricsFrame(lyrics) }, file);
+  if (tagged instanceof Error) throw tagged;
+  return tagged;
+}
+
 /** MP3 tags as pear-desktop wrote them after ffmpeg.wasm: with node-id3. */
 export async function tagMp3(file: Buffer, tags: Tags, cover: Cover | undefined): Promise<Buffer> {
   const { default: NodeID3 } = await import("node-id3");
@@ -262,6 +279,7 @@ export async function tagMp3(file: Buffer, tags: Tags, cover: Cover | undefined)
   if (tags.albumArtist) id3.performerInfo = tags.albumArtist;
   if (tags.year) id3.year = String(tags.year);
   if (tags.track) id3.trackNumber = tags.trackCount ? `${tags.track}/${tags.trackCount}` : String(tags.track);
+  if (tags.lyrics) id3.unsynchronisedLyrics = lyricsFrame(tags.lyrics);
   if (cover) {
     const FRONT_COVER = 3;
     id3.image = { mime: "image/jpeg", type: { id: FRONT_COVER }, description: "Cover", imageBuffer: cover.data };
@@ -296,7 +314,7 @@ export class WasmConverter implements Converter {
     ffmpeg.FS("writeFile", names.input, await readFile(job.input));
     try {
       // MP3 tags come from node-id3 afterwards.
-      const metadata = mp3 ? metadataOf({ title: job.tags.title }) : metadataFor(job);
+      const metadata = mp3 ? metadataOf({ title: job.tags.title }, job.ext) : metadataFor(job);
       ffmpeg.FS("writeFile", names.metadata, new TextEncoder().encode(ffmetadata(metadata)));
       const cover = !mp3 && job.cover && job.ext !== "opus";
       if (cover) ffmpeg.FS("writeFile", names.cover, job.cover!.data);

@@ -1,9 +1,10 @@
 import { definePlugin } from "@pear/sdk";
 import { css } from "@pear/sdk/macros" with { type: "macro" };
 import { v } from "@pear/sdk/rpc";
+import { mkdir } from "node:fs/promises";
 import { shell } from "electron";
 import { downloaderConfig } from "./config.ts";
-import { type DownloaderState, downloaderOf, startHost, stateOf, toolsInfo } from "./host.ts";
+import { type DownloaderState, downloadFolder, downloaderOf, startHost, stateOf, toolsInfo } from "./host.ts";
 import { startPage } from "./page/index.ts";
 import type { DownloadTarget } from "./ytdlp.ts";
 
@@ -12,6 +13,11 @@ export default definePlugin({
   name: "Downloader",
   description: "Saves songs, albums and playlists as tagged audio files with cover art.",
   config: downloaderConfig,
+  actions: {
+    openFolder: { label: "Open the download folder" },
+    updateYtDlp: { label: "Update yt-dlp", description: "Checks for a newer yt-dlp now (when the downloader downloaded it)." },
+    cancel: { label: "Cancel all downloads" },
+  },
   host: {
     start: startHost,
     commands: {
@@ -34,6 +40,15 @@ export default definePlugin({
       },
       reveal(file: string) {
         shell.showItemInFolder(file);
+      },
+      async openFolder() {
+        const folder = downloadFolder(this, false);
+        await mkdir(folder, { recursive: true });
+        const error = await shell.openPath(folder);
+        if (error) throw new Error(error);
+      },
+      updateYtDlp() {
+        return downloaderOf(this).tools.updateNow();
       },
     },
     rpc: {
@@ -148,6 +163,22 @@ export default definePlugin({
       text-align: left;
       white-space: nowrap;
       cursor: pointer;
+    }
+    .pear-dl-menu-heading {
+      margin-top: 8px;
+      padding: 8px 16px 4px;
+      border-top: 1px solid rgb(255 255 255 / 0.1);
+      color: var(--ytmusic-text-secondary, #aaa);
+      font: 500 12px Roboto, "Noto Naskh Arabic UI", Arial, sans-serif;
+    }
+    .pear-dl-menu-heading:first-child {
+      margin-top: 0;
+      border-top: 0;
+    }
+    .pear-dl-menu button {
+      max-width: 360px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .pear-dl-menu button:hover,
     .pear-dl-menu button:focus-visible {

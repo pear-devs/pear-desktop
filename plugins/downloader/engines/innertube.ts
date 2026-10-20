@@ -4,11 +4,13 @@
 // Anything the site refuses it is a RecoverableError, which yt-dlp gets next.
 
 import { existsSync } from "node:fs";
-import { mkdir, open, rename, rm } from "node:fs/promises";
+import { mkdir, open, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { errorMessage } from "@pear/sdk/util";
 import { Innertube, Platform, type Types, UniversalCache, type YT, YTNodes, type YTMusic } from "\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js";
 import { type BuiltInFormat, type Converter, type Cover, codecOf, outputFor, preferredContainer, type Tags } from "../convert.ts";
+import type { Lyrics, LyricsQuery } from "../lyrics.ts";
+import { Archive } from "../archive.ts";
 import { playlistFolder, renderTemplate, type TemplateFields } from "../template.ts";
 import { isAlbum } from "../ytdlp.ts";
 import { type Engine, type EngineJob, type EngineResult, type Progress, RecoverableError } from "./types.ts";
@@ -18,6 +20,8 @@ const CHUNK_BYTES = 10 * 1024 * 1024;
 /** The share of a song's progress its download takes; converting is the rest. */
 const DOWNLOAD_SHARE = 0.7;
 const HTTP_FORBIDDEN = 403;
+/** Songs of a playlist downloaded at the same time. */
+const PLAYLIST_CONCURRENCY = 2;
 
 export interface BuiltInJobOptions {
   folder: string;
@@ -27,7 +31,12 @@ export interface BuiltInJobOptions {
   /** 0 = whole playlist. */
   playlistLimit: number;
   skipExisting: boolean;
+  /** Also skip songs the folder's archive lists, and add the downloaded ones to it. */
+  archive: boolean;
   squareCover: boolean;
+  /** Lyrics in the tags, and synced ones in an .lrc file next to the song. */
+  lyrics: boolean;
+  lyricsFile: boolean;
 }
 
 // ---------------------------------------------------------------- session
@@ -124,6 +133,7 @@ export interface InnertubeEngineOptions {
   cover(url: string, square: boolean, signal: AbortSignal): Promise<Cover | undefined>;
   /** The window's session's fetch, for the stream. */
   fetch(url: string, init: { signal: AbortSignal }): Promise<Response>;
+  lyrics(query: LyricsQuery, signal: AbortSignal): Promise<Lyrics | undefined>;
   log: { warn(...args: unknown[]): void };
 }
 
@@ -170,7 +180,7 @@ export class InnertubeEngine implements Engine {
     const { playlistId } = job.target;
     if (playlistId) return this.#playlist(yt, playlistId, job.target.items, options, progress, signal);
     const file = await this.#song(yt, { videoId: job.target.videoId, title: job.label, index: 1 }, undefined, options, songProgress(progress, 0, 1), signal);
-    return { files: [file] };
+    return { files: file ? [file] : [] };
   }
 
   async #playlist(
@@ -183,21 +193,32 @@ export class InnertubeEngine implements Engine {
   ): Promise<EngineResult> {
     const { list, entries } = await recoverable(() => this.#list(yt, playlistId, options.playlistLimit), signal);
     const wanted = only ? entries.filter((entry) => only.includes(entry.index)) : entries;
-    const files: string[] = [];
+    const saved: (string | undefined)[] = [];
     const retry: number[] = [];
     const errors: string[] = [];
-    for (const [position, entry] of wanted.entries()) {
-      signal.throwIfAborted();
-      progress.item(position + 1, wanted.length, entry.title);
-      try {
-        files.push(await this.#song(yt, entry, list, options, songProgress(progress, position, wanted.length), signal));
-      } catch (error) {
-        if (signal.aborted) throw error;
-        this.#options.log.warn(`${entry.title} (${entry.videoId}):`, errorMessage(error));
-        if (error instanceof RecoverableError) retry.push(entry.index);
-        else errors.push(errorMessage(error));
+    const songs = listProgress(progress, wanted.length);
+    let next = 0;
+    // A few songs at a time: most of a song's time is waiting for the site, not the disk.
+    const worker = async () => {
+      while (next < wanted.length) {
+        signal.throwIfAborted();
+        const position = next++;
+        const entry = wanted[position]!;
+        progress.item(position + 1, wanted.length, entry.title);
+        try {
+          saved[position] = await this.#song(yt, entry, list, options, songs.song(position), signal);
+        } catch (error) {
+          if (signal.aborted) throw error;
+          this.#options.log.warn(`${entry.title} (${entry.videoId}):`, errorMessage(error));
+          if (error instanceof RecoverableError) retry.push(entry.index);
+          else errors.push(errorMessage(error));
+        }
+        songs.done(position);
       }
-    }
+    };
+    await Promise.all(Array.from({ length: Math.min(PLAYLIST_CONCURRENCY, wanted.length) }, worker));
+    const files = saved.filter((file) => file !== undefined);
+    retry.sort((a, b) => a - b);
     if (retry.length > 0) throw new RecoverableError(`${retry.length} of ${wanted.length} songs failed`, { files, items: retry });
     if (wanted.length === 0) return { files, error: "the playlist is empty" };
     return errors.length > 0 ? { files, error: errors.at(-1)! } : { files };
@@ -243,7 +264,7 @@ export class InnertubeEngine implements Engine {
     }
   }
 
-  /** Downloads and converts one song; resolves with its file. */
+  /** Downloads and converts one song; resolves with its file, or undefined when the archive says it was downloaded. */
   async #song(
     yt: Innertube,
     entry: Entry,
@@ -251,7 +272,9 @@ export class InnertubeEngine implements Engine {
     options: BuiltInJobOptions,
     progress: SongProgress,
     signal: AbortSignal,
-  ): Promise<string> {
+  ): Promise<string | undefined> {
+    const archive = options.skipExisting && options.archive ? new Archive(options.folder) : undefined;
+    if (await archive?.has(entry.videoId)) return undefined;
     const session = this.#options.session;
     let poToken = await session.poToken(yt, entry.videoId);
     const { info, tags } = await recoverable(() => this.#lookup(yt, entry.videoId, poToken), signal);
@@ -263,7 +286,10 @@ export class InnertubeEngine implements Engine {
     const relative = renderTemplate(options.template, fields);
     const folder = list && options.playlistFolders ? join(options.folder, playlistFolder(fields)) : options.folder;
     const file = join(folder, relative);
-    if (options.skipExisting && existsSync(file)) return file;
+    if (options.skipExisting && existsSync(file)) {
+      await archive?.add(entry.videoId);
+      return file;
+    }
     await mkdir(dirname(file), { recursive: true });
 
     const partial = `${file}.part`;
@@ -272,6 +298,8 @@ export class InnertubeEngine implements Engine {
       const refresh = async () => (poToken = await session.poToken(yt, entry.videoId, true));
       await this.#stream({ yt, format, poToken: () => poToken, refresh }, partial, (fraction) => progress.download(fraction), signal);
       const cover = await this.#cover(list?.album?.cover ?? thumbnailOf(info), options.squareCover, signal);
+      const lyrics = options.lyrics || options.lyricsFile ? await this.#lyrics(tags, info.basic_info.duration ?? 0, signal) : undefined;
+      if (options.lyrics && lyrics) tags.lyrics = lyrics.plain;
       await this.#options.converter().convert({
         input: partial,
         output: converted,
@@ -284,6 +312,8 @@ export class InnertubeEngine implements Engine {
         onProgress: (fraction) => progress.convert(fraction),
       });
       await rename(converted, file);
+      if (options.lyricsFile && lyrics?.synced) await writeFile(file.replace(/\.[^./\\]+$/, ".lrc"), lyrics.synced);
+      await archive?.add(entry.videoId);
       return file;
     } finally {
       await Promise.all([rm(partial, { force: true }), rm(converted, { force: true })]);
@@ -337,6 +367,17 @@ export class InnertubeEngine implements Engine {
       await file.close();
     }
     onProgress(1);
+  }
+
+  async #lyrics(tags: Tags, durationSeconds: number, signal: AbortSignal) {
+    if (!tags.artist) return undefined;
+    try {
+      return await this.#options.lyrics({ title: tags.title, artist: tags.artist, album: tags.album, durationSeconds }, signal);
+    } catch (error) {
+      if (signal.aborted) throw error;
+      this.#options.log.warn("no lyrics:", errorMessage(error));
+      return undefined;
+    }
   }
 
   async #cover(url: string | undefined, square: boolean, signal: AbortSignal) {
@@ -468,5 +509,26 @@ function songProgress(progress: Progress, position: number, count: number): Song
   return {
     download: (fraction) => progress.download(overall(fraction * DOWNLOAD_SHARE)),
     convert: (fraction) => progress.converting(overall(DOWNLOAD_SHARE + fraction * (1 - DOWNLOAD_SHARE))),
+  };
+}
+
+/** A playlist's progress: the sum of its songs', which download side by side. */
+function listProgress(progress: Progress, count: number) {
+  const songs = new Array<number>(count).fill(0);
+  const overall = () => songs.reduce((sum, fraction) => sum + fraction, 0) / Math.max(1, count);
+  return {
+    song: (position: number): SongProgress => ({
+      download: (fraction) => {
+        songs[position] = fraction * DOWNLOAD_SHARE;
+        progress.download(overall());
+      },
+      convert: (fraction) => {
+        songs[position] = DOWNLOAD_SHARE + fraction * (1 - DOWNLOAD_SHARE);
+        progress.converting(overall());
+      },
+    }),
+    done: (position: number) => {
+      songs[position] = 1;
+    },
   };
 }

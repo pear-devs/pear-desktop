@@ -30,6 +30,8 @@ export interface JobResult {
   cancelled?: boolean;
   /** The engine that did (the rest of) the job. */
   engine?: Engine["name"];
+  /** What was asked for, to try again. */
+  target?: DownloadTarget;
 }
 
 interface Job {
@@ -104,7 +106,8 @@ export class DownloadQueue {
     }));
     const cancelled = this.#active?.cancelled ?? false;
     this.#active = undefined;
-    if (!this.#disposed) this.#options.onResult(cancelled ? { ...result, cancelled, error: "Download cancelled" } : result);
+    const final: JobResult = cancelled ? { ...result, cancelled, error: "Download cancelled" } : result;
+    if (!this.#disposed) this.#options.onResult({ ...final, target: job.target });
     this.#emit();
     void this.#next();
   }

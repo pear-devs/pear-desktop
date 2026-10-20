@@ -828,7 +828,11 @@
         "download-song": "Download song",
         "download-album": "Download album",
         "cancel-all": "Cancel downloads",
-        "cancel": "Cancel download"
+        "cancel": "Cancel download",
+        "recent": "Recent downloads",
+        "show": "Show “{{title}}” in its folder",
+        "retry": "Retry “{{title}}”",
+        "download-liked": "Download liked songs"
       },
       "name": "Downloader",
       "renderer": {
@@ -924,6 +928,17 @@
             "auto": "Built in, then yt-dlp",
             "yt-dlp": "Only yt-dlp"
           }
+        },
+        "lyrics": {
+          "label": "Add lyrics to the files",
+          "description": "Looked up on LRCLib, as synced-lyrics does. Only the built-in downloader adds them."
+        },
+        "lyricsFile": {
+          "label": "Also save synced lyrics as an .lrc file next to the song"
+        },
+        "archive": {
+          "label": "…even when their files were renamed",
+          "description": "Remembers what was downloaded to a folder by song, in a list there (yt-dlp's download archive)."
         }
       },
       "errors": {
@@ -935,7 +950,9 @@
         "install-failed": "Couldn't download {{tool}} ({{error}}).",
         "offline": "Check your internet connection and try again.",
         "manual": "Try again later, or install {{tool}} yourself and set its path in the downloader's settings.",
-        "ffmpeg-not-usable": "yt-dlp can't use the ffmpeg at “{{path}}”. Correct its path in the settings, or clear it."
+        "ffmpeg-not-usable": "yt-dlp can't use the ffmpeg at “{{path}}”. Correct its path in the settings, or clear it.",
+        "update-missing": "yt-dlp isn't downloaded yet; that happens the first time it is needed.",
+        "update-external": "This yt-dlp is {{source}}; update it the way it was installed."
       },
       "setup": {
         "extracting": "Unpacking {{tool}}…",
@@ -972,7 +989,20 @@
       },
       "labels": {
         "album": "album",
-        "playlist": "playlist"
+        "playlist": "playlist",
+        "liked": "liked songs"
+      },
+      "actions": {
+        "openFolder": {
+          "label": "Open the download folder"
+        },
+        "updateYtDlp": {
+          "label": "Update yt-dlp",
+          "description": "Checks for a newer yt-dlp now (when the downloader downloaded it)."
+        },
+        "cancel": {
+          "label": "Cancel all downloads"
+        }
       }
     },
     "equalizer": {
@@ -2243,7 +2273,8 @@
       "milkdrop": "Milkdrop",
       "vudio": "Vudio",
       "wave": "Wave",
-      "custom-format": "Custom format"
+      "custom-format": "Custom format",
+      "lyrics": "Lyrics"
     },
     "title": "Settings",
     "search-placeholder": "Search settings",

@@ -3,7 +3,7 @@
 // none); the yt-dlp engine, downloading yt-dlp (and ffmpeg) when they aren't installed.
 
 import { execFileSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, renameSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { ytmUrl } from "@pear/sdk/util";
 import type { Page } from "@playwright/test";
@@ -28,6 +28,8 @@ const whichTool = (name: string) => {
 const hasTool = (name: string) => !!whichTool(name);
 
 const status = (page: Page) => pluginStatus(page, "downloader");
+/** The folder's files, without the downloader's list of downloaded songs. */
+const songFiles = (folder: string) => readdirSync(folder).filter((file) => !file.startsWith("."));
 
 const ffprobe = <T>(file: string, ...show: string[]) =>
   JSON.parse(execFileSync("ffprobe", ["-v", "quiet", "-print_format", "json", ...show, file], { encoding: "utf8" })) as T;
@@ -65,7 +67,7 @@ async function downloadButton(page: Page) {
 test("downloader saves the current song as a tagged mp3 from the player bar", async ({ launch, tempDir }) => {
   test.skip(!hasTool("yt-dlp") || !hasTool("ffmpeg"), "needs yt-dlp and ffmpeg");
   test.setTimeout(150_000);
-  const { page, folder } = await launchDownloader({ launch, tempDir }, { format: "mp3" });
+  const { page, folder } = await launchDownloader({ launch, tempDir }, { format: "mp3", lyrics: true, lyricsFile: true });
   await expect
     .poll(() => invoke<{ capabilities: { ffmpeg: boolean } }>(page, "downloader", "info").catch(() => null))
     .toMatchObject({ capabilities: { ffmpeg: true } });
@@ -79,14 +81,24 @@ test("downloader saves the current song as a tagged mp3 from the player bar", as
   await expect(toast).toContainText("Saved", { timeout: 90_000 });
   await expect(toast.getByRole("button", { name: "Show" })).toBeVisible();
   await expect(button).not.toHaveAttribute("data-busy");
+  const { recent } = await invoke<{ recent: { engine: string; files: string[] }[] }>(page, "downloader", "state");
+  expect(recent[0]!.engine).toBe("built-in");
+
+  // The menu now lists it.
+  await button.click();
+  await expect(page.locator(".pear-dl-menu-heading")).toHaveText("Recent downloads");
+  await expect(page.locator(".pear-dl-menu").getByRole("menuitem", { name: /^Show “.+” in its folder$/ })).toBeVisible();
+  await page.keyboard.press("Escape");
 
   expect(await status(page)).toBe(
     "Downloading with the built-in downloader, converting with ffmpeg (installed on this computer); yt-dlp (installed on this computer) takes over when that fails.",
   );
 
-  const files = readdirSync(folder);
-  expect(files).toHaveLength(1);
-  expect(files[0]).toMatch(/\.mp3$/);
+  // The song, and its synced lyrics from LRCLib next to it.
+  const files = songFiles(folder).sort();
+  expect(files).toEqual([expect.stringMatching(/\.lrc$/), expect.stringMatching(/\.mp3$/)]);
+  expect(readFileSync(join(folder, files[0]!), "utf8")).toMatch(/^\[\d\d:\d\d\.\d\d\]/m);
+  files.shift();
   const tags = ffprobe<{ format: { tags: Record<string, string> }; streams: { codec_type: string; width?: number; height?: number }[] }>(
     join(folder, files[0]!),
     "-show_format",
@@ -95,9 +107,18 @@ test("downloader saves the current song as a tagged mp3 from the player bar", as
   const title = await page.evaluate(() => window.__pearRuntime!.player.state.track!.title);
   expect(tags.format.tags.title).toContain(title);
   expect(tags.format.tags.artist).toBeTruthy();
+  // ffprobe names the USLT frame by its language.
+  expect(tags.format.tags["lyrics-eng"]).toBeTruthy();
   const cover = tags.streams.find((s) => s.codec_type === "video");
   expect(cover).toBeTruthy();
   expect(cover!.width).toBe(cover!.height);
+
+  // Renamed, it still counts as downloaded: the folder's archive knows the song.
+  renameSync(join(folder, files[0]!), join(folder, "renamed.mp3"));
+  await button.click();
+  await page.locator(".pear-dl-menu").getByRole("menuitem", { name: "Download song" }).click();
+  await expect.poll(async () => (await invoke<{ recent: unknown[] }>(page, "downloader", "state")).recent.length).toBe(2);
+  expect(songFiles(folder).sort()).toEqual([expect.stringMatching(/\.lrc$/), "renamed.mp3"]);
 
   // A missing yt-dlp is reported in settings.
   await setConfig(page, "downloader", { ytDlpPath: "/nonexistent/yt-dlp" });
@@ -129,7 +150,9 @@ test("downloader downloads yt-dlp when it isn't installed, and says so when offl
   });
 
   await test.step("online: yt-dlp is downloaded (with progress on the button), then the song", async () => {
+    // The failed download is in the menu now, to try again.
     await button.click();
+    await page.locator(".pear-dl-menu").getByRole("menuitem", { name: /^Retry “.+”$/ }).click();
     await expect(toast).toContainText("Downloading yt-dlp, which saving songs needs", { timeout: 20_000 });
     await expect(button).toHaveAttribute("title", /^(Downloading|Checking) yt-dlp/);
     await expect.poll(() => status(page), { timeout: 20_000 }).toMatch(/^(Downloading yt-dlp… \d+%|Checking yt-dlp…)$/);
@@ -157,7 +180,7 @@ test("downloader downloads yt-dlp when it isn't installed, and says so when offl
   await expect(statusText).toContainText("(downloaded automatically)");
   await page.keyboard.press("Escape");
 
-  const files = readdirSync(folder);
+  const files = songFiles(folder);
   expect(files).toHaveLength(1);
   expect(files[0]).toMatch(/\.opus$/);
   const { streams } = ffprobe<{ streams: { codec_type: string }[] }>(join(folder, files[0]!), "-show_streams");
@@ -179,7 +202,7 @@ test("downloader downloads yt-dlp and ffmpeg when neither is installed", async (
   const info = await invoke<{ sources: unknown; ffmpeg: string }>(page, "downloader", "info");
   expect(info.sources).toEqual({ ytDlp: "managed", ffmpeg: "managed" });
   expect(info.ffmpeg).toBe(join(app.userData, "bin", "ffmpeg"));
-  expect(readdirSync(folder)).toEqual([expect.stringMatching(/\.mp3$/)]);
+  expect(songFiles(folder)).toEqual([expect.stringMatching(/\.mp3$/)]);
 });
 
 test("downloader converts with ffmpeg.wasm when there is no ffmpeg, without downloading anything", async ({ launch, tempDir }) => {
@@ -194,7 +217,7 @@ test("downloader converts with ffmpeg.wasm when there is no ffmpeg, without down
   await expect(toast).toContainText("Saved", { timeout: 120_000 });
   // Neither yt-dlp nor ffmpeg was needed.
   expect(existsSync(join(app.userData, "bin"))).toBe(false);
-  const files = readdirSync(folder);
+  const files = songFiles(folder);
   expect(files).toEqual([expect.stringMatching(/\.mp3$/)]);
   const { format, streams } = ffprobe<{ format: { tags: Record<string, string> }; streams: { codec_type: string; width?: number; height?: number }[] }>(
     join(folder, files[0]!),
@@ -206,6 +229,27 @@ test("downloader converts with ffmpeg.wasm when there is no ffmpeg, without down
   // node-id3 wrote the cover, square.
   const cover = streams.find((s) => s.codec_type === "video");
   expect(cover?.width).toBe(cover?.height);
+});
+
+test("downloader saves an album into its own folder, two songs at a time, with the album's tags", async ({ launch, tempDir }) => {
+  test.skip(!hasTool("ffmpeg") || !hasTool("ffprobe"), "needs ffmpeg");
+  test.setTimeout(150_000);
+  const { page, folder } = await launchDownloader({ launch, tempDir }, { format: "opus", playlistMaxItems: 2 });
+  await expect.poll(() => invoke(page, "downloader", "state").catch(() => null)).toBeTruthy();
+  await invoke(page, "downloader", "download", { videoId: "", playlistId: new URL(ALBUM_URL).searchParams.get("list")! }, "album");
+  await expect
+    .poll(async () => (await invoke<{ recent: unknown[] }>(page, "downloader", "state")).recent, { timeout: 120_000 })
+    .toEqual([expect.objectContaining({ engine: "built-in", files: [expect.any(String), expect.any(String)] })]);
+  expect(songFiles(folder)).toEqual(["Whenever You Need Somebody"]);
+  const album = join(folder, "Whenever You Need Somebody");
+  const tracks = songFiles(album)
+    .sort()
+    .map((file) => ffprobe<{ streams: { codec_type: string; tags?: Record<string, string> }[] }>(join(album, file), "-show_streams"));
+  // Ogg keeps the tags on the audio stream; ffprobe shows the cover's picture block as a picture stream.
+  const tags = tracks.map(({ streams }) => streams.find((s) => s.codec_type === "audio")!.tags!);
+  expect(tags.map((t) => t.track).sort()).toEqual(["1/2", "2/2"]);
+  for (const t of tags) expect(t).toMatchObject({ album: "Whenever You Need Somebody", album_artist: "Rick Astley", date: "1987" });
+  for (const { streams } of tracks) expect(streams.some((s) => s.codec_type === "video")).toBe(true);
 });
 
 test("downloader adds Download to the menus of songs and albums, as pear-desktop", async ({ launch, tempDir }) => {
