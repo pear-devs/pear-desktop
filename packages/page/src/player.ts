@@ -17,7 +17,7 @@ import {
   type YTPlayerResponse,
 } from "@pear/sdk";
 import { selectors, type SelectorName } from "@pear/sdk/selectors";
-import { clamp, sleep, ytmUrl } from "@pear/sdk/util";
+import { clamp, isPlaying, sleep, ytmUrl } from "@pear/sdk/util";
 import { waitForSelector } from "./dom.ts";
 import { Emitter } from "./emitter.ts";
 
@@ -107,7 +107,7 @@ export class Player implements PagePlayer {
       case "pause":
         return api.pauseVideo();
       case "toggle":
-        return this.#state.status === "playing" ? api.pauseVideo() : api.playVideo();
+        return isPlaying(this.#state) ? api.pauseVideo() : api.playVideo();
       case "next":
         return clickOr("player_bar.next", () => api.nextVideo());
       case "previous":

@@ -35,6 +35,8 @@ interface Restore {
   bounds: Rectangle;
   maximized: boolean;
   fullscreen: boolean;
+  /** The core "Always on top" option keeps the window there (at the default level). */
+  alwaysOnTop: boolean;
 }
 
 /** The small window's position and size, remembered in userData as pear-desktop did. */
@@ -100,7 +102,12 @@ export class SmallWindow {
   enter() {
     if (this.#restore) return;
     const { window, config } = this.#ctx;
-    this.#restore = { bounds: window.getNormalBounds(), maximized: window.isMaximized(), fullscreen: window.isFullScreen() };
+    this.#restore = {
+      bounds: window.getNormalBounds(),
+      maximized: window.isMaximized(),
+      fullscreen: window.isFullScreen(),
+      alwaysOnTop: window.isAlwaysOnTop(),
+    };
     if (this.#restore.fullscreen) window.setFullScreen(false);
     if (this.#restore.maximized) window.unmaximize();
     window.setMaximizable(false);
@@ -128,7 +135,7 @@ export class SmallWindow {
     window.off("move", this.#remember);
     window.off("resize", this.#remember);
     this.#ctx.emit("pip", false);
-    window.setAlwaysOnTop(false);
+    window.setAlwaysOnTop(previous.alwaysOnTop);
     window.setVisibleOnAllWorkspaces(false);
     window.setMaximizable(true);
     window.setWindowButtonVisibility?.(true);

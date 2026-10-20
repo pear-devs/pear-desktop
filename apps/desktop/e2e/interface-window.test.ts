@@ -140,6 +140,25 @@ test("transparent player makes the window see-through", async ({ launch }) => {
   expect((await windowInfo(app)).background).toBe("#030303");
 });
 
+test("leaving picture in picture keeps the core always-on-top option", async ({ launch }) => {
+  const app = await launch({
+    core: { window: { alwaysOnTop: true } },
+    plugins: { "picture-in-picture": { enabled: true, config: { useNativePiP: false } } },
+  });
+  const page = await mainWindow(app);
+  await playTestTrack(page);
+  await waitForTrackPlaying(page);
+  expect((await windowInfo(app)).alwaysOnTop).toBe(true);
+  const before = await windowInfo(app);
+
+  await page.locator("body").click({ position: { x: 5, y: 400 } });
+  await page.keyboard.press("p");
+  await expect.poll(async () => (await windowInfo(app)).bounds.width).toBe(PIP_SIZE.width);
+  await page.keyboard.press("p");
+  await expect.poll(async () => (await windowInfo(app)).bounds.width).toBe(before.bounds.width);
+  expect((await windowInfo(app)).alwaysOnTop).toBe(true);
+});
+
 test("picture in picture shrinks the window and restores it", async ({ launch }) => {
   test.setTimeout(180_000);
   const app = await launch({ plugins: { "picture-in-picture": { enabled: true, config: { useNativePiP: false } } } });

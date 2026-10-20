@@ -105,13 +105,22 @@ export function Switch(props: { id?: string; checked: boolean; label: string; on
   );
 }
 
-/** `onChange`, called once calls stop coming for `delay`. */
+/** `onChange`, called once calls stop coming for `delay`, or on unmount if still pending. */
 function useDebounced<V>(onChange: (value: V) => void, delay: number) {
   const timer = useRef<ReturnType<typeof setTimeout>>();
-  useEffect(() => () => clearTimeout(timer.current), []);
+  const pending = useRef<() => void>();
+  const flush = () => {
+    clearTimeout(timer.current);
+    const call = pending.current;
+    pending.current = undefined;
+    call?.();
+  };
+  // Closing the dialog or collapsing the card right after an edit still saves it.
+  useEffect(() => flush, []);
   return (value: V) => {
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => onChange(value), delay);
+    pending.current = () => onChange(value);
+    timer.current = setTimeout(flush, delay);
   };
 }
 

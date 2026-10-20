@@ -1,12 +1,13 @@
 // The YTM window: its options and saved bounds, the user agent per destination,
 // the title, and the page it starts on. Also the channel to its page runtime.
 
-import { app, type BrowserWindowConstructorOptions, BrowserWindow, screen } from "electron";
+import { app, type BrowserWindowConstructorOptions, BrowserWindow, screen, shell } from "electron";
 import { STARTING_PAGES, type StartingPage } from "@pear/sdk/core-config";
 import { CHANNEL, type HostEvent } from "@pear/sdk/protocol";
 import { chromeUserAgent, isGoogleAuth, isYtmUrl, YTM_ORIGIN } from "../shared/user-agent.ts";
 import { APP_NAME } from "./app-identity.ts";
 import type { Settings, WindowState } from "./config.ts";
+import { navigationAction, windowOpenAction } from "./links.ts";
 import type { PluginHost } from "./plugins.ts";
 import { openSettingsWindow, settingsWindowContents } from "./settings-window.ts";
 import { alive, appIcon, focusWindow, secureWebPreferences } from "./windows.ts";
@@ -105,6 +106,7 @@ export class MainWindow {
       this.#runtimeUp = false;
     });
     this.#followNavigation(window);
+    routeLinks(window);
     this.#saveBounds(window);
     void window.loadURL(startUrl(settings.core("general"), settings.lastUrl));
     return window;
@@ -164,6 +166,23 @@ export class MainWindow {
     window.on("maximize", save);
     window.on("unmaximize", save);
   }
+}
+
+/** YTM links stay in this window, other web pages open in the browser, the rest nowhere. */
+function routeLinks(window: BrowserWindow) {
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    const action = windowOpenAction(url);
+    if (action === "load") void window.loadURL(url);
+    if (action === "external") void shell.openExternal(url);
+    return { action: "deny" };
+  });
+  // Only page-initiated navigations: redirects (sign-in's way back) don't come here.
+  window.webContents.on("will-navigate", (event) => {
+    const action = navigationAction(event.url);
+    if (action === "allow") return;
+    event.preventDefault();
+    if (action === "external") void shell.openExternal(event.url);
+  });
 }
 
 /** The custom window title, or the page's. */

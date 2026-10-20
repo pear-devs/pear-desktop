@@ -28,3 +28,11 @@ test("accounts.google.com sees the honest Electron UA", async ({ app }) => {
   await page.goto(ytmUrl("/"));
   expect(await page.evaluate(() => navigator.userAgent)).toBe(ytmUserAgent);
 });
+
+test("YTM's sign-in link opens Google sign-in in the window", async ({ app }) => {
+  const page = await app.firstWindow();
+  await page.waitForURL((url) => url.origin === YTM_ORIGIN);
+  // Page-initiated, so it goes through will-navigate (unlike page.goto above).
+  await page.locator('a[href^="https://accounts.google.com/"]').first().click();
+  await page.waitForURL((url) => url.origin === "https://accounts.google.com");
+});

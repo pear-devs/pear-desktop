@@ -55,6 +55,17 @@ test("toggles and configures plugins live, persisting to config.json", async ({ 
     .toMatchObject({ enabled: true, blur: 12 });
 });
 
+test("an edit is kept when the dialog closes right after it", async ({ page }) => {
+  await openSettings(page);
+  await searchbox(page).fill("blur navigation");
+  await pluginRow(page, "blur-nav-bar").getByRole("button", { name: "Configure Blur Navigation Bar" }).click();
+  // Closing within the debounce window must not drop the pending value.
+  await pluginRow(page, "blur-nav-bar").getByLabel("Blur radius").fill("15");
+  await page.keyboard.press("Escape");
+  await expect(overlay(page).getByRole("dialog")).toBeHidden();
+  await expect.poll(async () => (await pluginConfig(page, "blur-nav-bar"))?.blur).toBe(15);
+});
+
 test("keys typed in the overlay don't reach YTM", async ({ page }) => {
   await openSettings(page);
   // Space would toggle playback.
