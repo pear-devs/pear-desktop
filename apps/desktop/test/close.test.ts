@@ -7,7 +7,8 @@ function fakeWindow() {
   return Object.assign(window, { isVisible: () => window.visible, isDestroyed: () => window.destroyed });
 }
 
-const close = (window: EventEmitter) => {
+/** Closes the window; whether closing was prevented. */
+const closePrevented = (window: EventEmitter) => {
   const event = { preventDefault: vi.fn() };
   window.emit("close", event);
   return event.preventDefault.mock.calls.length > 0;
@@ -18,7 +19,7 @@ describe("macOS window lifecycle (pear-desktop's)", () => {
     const app = new EventEmitter();
     const window = fakeWindow();
     hideOnClose(app as never, window as never);
-    expect(close(window)).toBe(true);
+    expect(closePrevented(window)).toBe(true);
     expect(window.hide).toHaveBeenCalledOnce();
   });
 
@@ -27,7 +28,7 @@ describe("macOS window lifecycle (pear-desktop's)", () => {
     const window = fakeWindow();
     hideOnClose(app as never, window as never);
     app.emit("before-quit");
-    expect(close(window)).toBe(false);
+    expect(closePrevented(window)).toBe(false);
     expect(window.hide).not.toHaveBeenCalled();
   });
 

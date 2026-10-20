@@ -12,6 +12,11 @@ export const RELEASES_URL = "https://github.com/pear-devs/pear-desktop/releases/
 const LATEST_RELEASE_API = "https://api.github.com/repos/pear-devs/pear-desktop/releases/latest";
 export const CHECK_DELAY_MS = 2000;
 
+/** The update dialog's buttons, in order. */
+const OK_BUTTON = 0;
+const DOWNLOAD_BUTTON = 1;
+const DISABLE_BUTTON = 2;
+
 /** Dev runs and tests (`electron .`) never check. */
 export function shouldCheck({ packaged, enabled }: { packaged: boolean; enabled: boolean }) {
   return packaged && enabled;
@@ -80,11 +85,11 @@ export async function checkForUpdates({ currentVersion, window, t, disable }: Up
     detail: t("main.dialog.update-available.detail", "A new version is available and can be downloaded at {{downloadLink}}", {
       downloadLink: release.url,
     }),
-    defaultId: 1,
-    cancelId: 0,
+    defaultId: DOWNLOAD_BUTTON,
+    cancelId: OK_BUTTON,
   };
   const parent = alive(window());
   const { response } = parent ? await dialog.showMessageBox(parent, options) : await dialog.showMessageBox(options);
-  if (response === 1) void shell.openExternal(release.url);
-  else if (response === 2) disable();
+  if (response === DOWNLOAD_BUTTON) void shell.openExternal(release.url);
+  else if (response === DISABLE_BUTTON) disable();
 }

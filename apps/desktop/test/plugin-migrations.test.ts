@@ -9,17 +9,15 @@ import hostPlugins from "virtual:pear/host-plugins";
 import { afterAll, describe, expect, test, vi } from "vitest";
 import { Settings } from "../src/main/config.ts";
 import { migrate, PLUGIN_MIGRATIONS, type StoredConfig } from "../src/main/migrations/index.ts";
+import { from312, PEAR_DESKTOP_3, PLAY_BUTTON } from "./pear-desktop-3.ts";
 
 vi.mock("electron", () => ({}));
 
 type Json = Record<string, unknown>;
 
-// Built from parts: the app's name isn't spelled out in the sources.
-const PLAY_BUTTON = `playOn${["You", "Tube", "Music"].join("")}`;
-
 /** Runs the 4.0.0 migration over a pear-desktop 3.12 file with these plugin entries. */
 function migrated(plugins: Record<string, Json>, options: Json = {}) {
-  const { config } = migrate({ options, plugins, __internal__: { migrations: { version: "3.12.0" } } }, "4.0.0");
+  const { config } = migrate(from312({ options, plugins }), "4.0.0");
   return config.plugins!;
 }
 
@@ -213,98 +211,7 @@ describe("pear-desktop plugin options", () => {
   });
 });
 
-/** What a pear-desktop 3.12 user's config.json holds for these plugins (only changed values, like it stores them). */
-const PEAR_DESKTOP_3 = {
-  options: { proxy: "socks5://user:pass@proxy.lan:1080", tray: false },
-  plugins: {
-    "album-actions": { enabled: true },
-    "album-color-theme": { enabled: true, ratio: 0.8, enableSeekbar: false },
-    "ambient-mode": { enabled: true, quality: 1000, buffer: 20, interpolationTime: 3000, blur: 25, size: 125, opacity: 0.6, fullscreen: true },
-    amuse: { enabled: true },
-    "audio-compressor": { enabled: true },
-    "auth-proxy-adapter": { enabled: true, hostname: "0.0.0.0", port: 4646 },
-    "blur-nav-bar": { enabled: true },
-    "captions-selector": { enabled: true, disableCaptions: false, autoload: true, lastCaptionsCode: "de" },
-    clock: { enabled: true, displaySeconds: true, hour12: true },
-    crossfade: { enabled: true, fadeInDuration: 2000, fadeOutDuration: 8000, secondsBeforeEnd: 12, fadeScaling: 30 },
-    "custom-output-device": { enabled: true, output: "9f2c", devices: { default: "Default", "9f2c": "Speakers (USB)" } },
-    "disable-autoplay": { enabled: true, applyOnce: true },
-    discord: {
-      enabled: true,
-      autoReconnect: false,
-      activityTimeoutEnabled: true,
-      activityTimeoutTime: 30 * 60_000,
-      [PLAY_BUTTON]: false,
-      hideGitHubButton: true,
-      hideDurationLeft: true,
-      statusDisplayType: 0,
-      listenAlong: true,
-    },
-    equalizer: { enabled: true, filters: [{ type: "highshelf", frequency: 8000, Q: 1, gain: 4 }], presets: { "bass-booster": true } },
-    "exponential-volume": { enabled: true },
-    "in-app-menu": { enabled: true, hideDOMWindowControls: true },
-    lumiastream: { enabled: false },
-    "music-together": { enabled: true },
-    navigation: { enabled: false },
-    notifications: {
-      enabled: true,
-      unpauseNotification: true,
-      urgency: "critical",
-      interactive: false,
-      toastStyle: 3,
-      refreshOnPlayPause: true,
-      trayControls: false,
-      hideButtonText: true,
-    },
-    "picture-in-picture": {
-      "enabled": true,
-      "alwaysOnTop": false,
-      "savePosition": false,
-      "saveSize": true,
-      "hotkey": "Shift+P",
-      "pip-position": [20, 30],
-      "pip-size": [500, 300],
-      "isInPiP": false,
-      "useNativePiP": false,
-    },
-    "playback-speed": { enabled: true },
-    "precise-volume": { enabled: true, steps: 50, arrowsShortcut: false, globalShortcuts: { volumeUp: "Ctrl+Up", volumeDown: "Ctrl+Down" }, savedVolume: 42 },
-    "quality-changer": { enabled: true },
-    scrobbler: {
-      enabled: true,
-      scrobbleOtherMedia: false,
-      alternativeTitles: false,
-      alternativeArtist: true,
-      scrobblers: {
-        lastfm: { enabled: true, token: "tok", sessionKey: "session", apiRoot: "https://ws.audioscrobbler.com/2.0/", apiKey: "k", secret: "s" },
-        listenbrainz: { enabled: true, token: "lb-token", apiRoot: "https://api.listenbrainz.org/1/" },
-      },
-    },
-    shortcuts: {
-      enabled: true,
-      overrideMediaKeys: true,
-      global: { previous: "Ctrl+Shift+Left", playPause: "Ctrl+Shift+Space", next: "Ctrl+Shift+Right" },
-      local: { previous: "", playPause: "", next: "" },
-    },
-    "skip-disliked-songs": { enabled: true },
-    "skip-silences": { enabled: true, onlySkipBeginning: true },
-    sponsorblock: { enabled: true, apiURL: "https://sponsor.example", categories: ["sponsor", "selfpromo", "music_offtopic", "filler"] },
-    "taskbar-mediacontrol": { enabled: true },
-    touchbar: { enabled: true },
-    "transparent-player": { enabled: true, opacity: 0.3, type: "acrylic" },
-    "tuna-obs": { enabled: true },
-    "unobtrusive-player": { enabled: true },
-    "video-toggle": { enabled: true, hideVideo: true, mode: "native", forceHide: true, align: "right" },
-    visualizer: {
-      enabled: true,
-      type: "butterchurn",
-      butterchurn: { preset: "Flexi - alien fish pond", blendTimeInSeconds: 5 },
-    },
-  },
-  __internal__: { migrations: { version: "3.12.0" } },
-};
-
-/** Each plugin's settings once the file above is loaded. */
+/** Each plugin's settings once PEAR_DESKTOP_3 is loaded. */
 const EXPECTED: Record<string, { enabled: boolean; config: Json }> = {
   "album-actions": { enabled: true, config: {} },
   "album-color-theme": { enabled: true, config: { ratio: 80, enableSeekbar: false } },

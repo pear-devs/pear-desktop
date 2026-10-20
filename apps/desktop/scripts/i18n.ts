@@ -16,8 +16,9 @@
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { registerHooks } from "node:module";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import pear from "@pear/vite-plugin";
-import type { AnyPlugin, ConfigShape } from "@pear/sdk";
+import { type AnyPlugin, type ConfigShape, pluginActions } from "@pear/sdk";
 import { createServer } from "vite";
 import { escapeNames } from "../../../scripts/escape-names.ts";
 
@@ -25,25 +26,48 @@ const desktop = resolve(import.meta.dirname, "..");
 const repo = resolve(desktop, "../..");
 const EN = join(repo, "src/i18n/resources/en.json");
 
-// Host plugins import electron, which only exists inside Electron; give them a stub.
-const ELECTRON_STUB = `
-const stub = new Proxy(function () {}, { get: () => stub, apply: () => stub, construct: () => stub });
-export default stub;
-export const { app, BrowserWindow, clipboard, contextBridge, dialog, globalShortcut, ipcMain, ipcRenderer, Menu,
-  nativeImage, nativeTheme, net, Notification, protocol, screen, session, shell, TouchBar, Tray } = new Proxy({}, { get: () => stub });
-`;
+const ELECTRON_STUB = pathToFileURL(join(import.meta.dirname, "electron-stub.js")).href;
 
-// Packages in node_modules (e.g. do-not-track's) are loaded by Node directly, not by
-// Vite, so the stub is installed as a Node resolve hook.
-const STUB_URL = `data:text/javascript,${encodeURIComponent(ELECTRON_STUB)}`;
-registerHooks({
-  resolve(specifier, context, next) {
-    if (specifier === "electron") return { url: STUB_URL, format: "module", shortCircuit: true };
-    const resolved = next(specifier, context);
-    // Vite imports externals by their resolved path.
-    return /\/node_modules\/electron\/index\.js$/.test(resolved.url) ? { url: STUB_URL, format: "module", shortCircuit: true } : resolved;
-  },
-});
+await main();
+
+async function main() {
+  installElectronStub();
+  const wanted = wantedStrings(await loadModules());
+  const en = JSON.parse(readFileSync(EN, "utf8")) as Record<string, unknown>;
+  const missing = [...wanted].filter(([key]) => lookup(en, key) === undefined);
+  if (process.argv.includes("--check")) {
+    for (const [key] of missing) console.error(`i18n: en.json is missing "${key}"`);
+    if (missing.length > 0) {
+      console.error(`i18n: ${missing.length} missing; run \`nub run i18n\``);
+      process.exit(1);
+    }
+    console.log("i18n: en.json is up to date");
+    return;
+  }
+  for (const [key, english] of missing) insert(en, key, english);
+  // JSON.stringify writes the app name plainly; keep it escaped like the rest of the repo.
+  writeFileSync(EN, escapeNames(`${JSON.stringify(en, null, 2)}\n`));
+  console.log(`i18n: added ${missing.length} key(s) to en.json`);
+}
+
+/**
+ * Host plugins import electron, which only exists inside Electron. Packages in
+ * node_modules (e.g. do-not-track's) are loaded by Node directly, not by Vite,
+ * so the stub is installed as a Node resolve hook.
+ */
+function installElectronStub() {
+  const stub = { url: ELECTRON_STUB, format: "module", shortCircuit: true } as const;
+  registerHooks({
+    resolve(specifier, context, next) {
+      if (specifier === "electron") return stub;
+      const resolved = next(specifier, context);
+      // Vite imports externals by their resolved path.
+      return /\/node_modules\/electron\/index\.js$/.test(resolved.url) ? stub : resolved;
+    },
+  });
+}
+
+type Modules = Awaited<ReturnType<typeof loadModules>>;
 
 async function loadModules() {
   const server = await createServer({
@@ -63,6 +87,24 @@ async function loadModules() {
   } finally {
     await server.close();
   }
+}
+
+/** Every key the code has an English text for, with that text. */
+function wantedStrings({ plugins, CORE_SECTIONS, UI_STRINGS, i18n }: Modules) {
+  const wanted = new Map<string, string>();
+  for (const plugin of plugins) {
+    wanted.set(`plugins.${plugin.id}.name`, plugin.name);
+    if (plugin.description) wanted.set(`plugins.${plugin.id}.description`, plugin.description);
+    fieldStrings(plugin.id, plugin.config ?? {}, i18n, wanted);
+    for (const [name, action] of pluginActions(plugin)) {
+      wanted.set(`plugins.${plugin.id}.actions.${name}.label`, action.label);
+      if (action.description) wanted.set(`plugins.${plugin.id}.actions.${name}.description`, action.description);
+    }
+  }
+  for (const shape of Object.values(CORE_SECTIONS)) fieldStrings("core", shape, i18n, wanted);
+  for (const [key, english] of Object.entries(UI_STRINGS)) wanted.set(key, english);
+  sourceStrings(wanted);
+  return wanted;
 }
 
 function fieldStrings(owner: string, shape: ConfigShape, i18n: typeof import("@pear/sdk/i18n"), out: Map<string, string>) {
@@ -108,37 +150,4 @@ function insert(tree: Record<string, unknown>, key: string, value: string) {
     node = (node[part] ??= {}) as Record<string, unknown>;
   }
   node[parts.at(-1)!] = value;
-}
-
-const { plugins, CORE_SECTIONS, UI_STRINGS, i18n } = await loadModules();
-const wanted = new Map<string, string>();
-for (const plugin of plugins) {
-  wanted.set(`plugins.${plugin.id}.name`, plugin.name);
-  if (plugin.description) wanted.set(`plugins.${plugin.id}.description`, plugin.description);
-  fieldStrings(plugin.id, plugin.config ?? {}, i18n, wanted);
-  for (const [name, action] of Object.entries((plugin.actions ?? {}) as Record<string, { label: string; description?: string } | undefined>)) {
-    if (!action) continue;
-    wanted.set(`plugins.${plugin.id}.actions.${name}.label`, action.label);
-    if (action.description) wanted.set(`plugins.${plugin.id}.actions.${name}.description`, action.description);
-  }
-}
-for (const shape of Object.values(CORE_SECTIONS)) fieldStrings("core", shape, i18n, wanted);
-for (const [key, english] of Object.entries(UI_STRINGS)) wanted.set(key, english);
-sourceStrings(wanted);
-
-const en = JSON.parse(readFileSync(EN, "utf8")) as Record<string, unknown>;
-const missing = [...wanted].filter(([key]) => lookup(en, key) === undefined);
-
-if (process.argv.includes("--check")) {
-  for (const [key] of missing) console.error(`i18n: en.json is missing "${key}"`);
-  if (missing.length > 0) {
-    console.error(`i18n: ${missing.length} missing; run \`nub run i18n\``);
-    process.exit(1);
-  }
-  console.log("i18n: en.json is up to date");
-} else {
-  for (const [key, english] of missing) insert(en, key, english);
-  // JSON.stringify writes the app name plainly; keep it escaped like the rest of the repo.
-  writeFileSync(EN, escapeNames(`${JSON.stringify(en, null, 2)}\n`));
-  console.log(`i18n: added ${missing.length} key(s) to en.json`);
 }

@@ -6,12 +6,17 @@
 
 import type { Session, WebRequest, WebRequestFilter } from "electron";
 
-type Callback = (response: Record<string, unknown>) => void;
-type BlockingListener = (details: any, callback: Callback) => void;
-type ObserverListener = (details: any) => void;
+type Response = Record<string, unknown>;
+type Callback = (response: Response) => void;
+/** Electron's details object; its fields depend on the event. */
+type Details = { url: string; resourceType?: string; [key: string]: unknown };
+/** Blocking events' listeners get a callback, observers' don't. */
+type Listener = (details: Details, callback?: Callback) => void;
 
 const BLOCKING_EVENTS = ["onBeforeRequest", "onBeforeSendHeaders", "onHeadersReceived"] as const;
 const OBSERVER_EVENTS = ["onSendHeaders", "onResponseStarted", "onBeforeRedirect", "onCompleted", "onErrorOccurred"] as const;
+/** Headers a blocking listener may replace; later listeners see the replaced ones. */
+const HEADER_KEYS = ["requestHeaders", "responseHeaders"] as const;
 type BlockingEvent = (typeof BLOCKING_EVENTS)[number];
 type ObserverEvent = (typeof OBSERVER_EVENTS)[number];
 type EventName = BlockingEvent | ObserverEvent;
@@ -19,7 +24,7 @@ type EventName = BlockingEvent | ObserverEvent;
 interface Registration {
   owner: string;
   filter: WebRequestFilter | undefined;
-  listener: (...args: any[]) => void;
+  listener: Listener;
 }
 
 export class WebRequestRouter {
@@ -38,10 +43,12 @@ export class WebRequestRouter {
       scoped[event] = (filterOrListener?: unknown, maybeListener?: unknown) => {
         const hasFilter = maybeListener !== undefined || (filterOrListener !== null && typeof filterOrListener === "object");
         const filter = hasFilter ? (filterOrListener as WebRequestFilter | null) ?? undefined : undefined;
-        const listener = (hasFilter ? maybeListener : filterOrListener) as Registration["listener"] | null | undefined;
+        // Electron's own overloads type the arguments for callers; here they are what was passed.
+        const listener = (hasFilter ? maybeListener : filterOrListener) as Listener | null | undefined;
         this.#set(event, owner, listener ? { owner, filter, listener } : undefined);
       };
     }
+    // Every event method is set above; TypeScript can't follow the loop.
     return scoped as unknown as WebRequest;
   }
 
@@ -73,12 +80,13 @@ export class WebRequestRouter {
   #install(event: EventName) {
     if (this.#installed.has(event)) return;
     this.#installed.add(event);
-    const webRequest = this.#session.webRequest as unknown as Record<EventName, (listener: unknown) => void>;
-    if ((BLOCKING_EVENTS as readonly string[]).includes(event)) {
-      webRequest[event]((details: any, callback: Callback) => void this.#runBlocking(event as BlockingEvent, details, callback));
+    // Each method's overloads differ; all take a listener alone, typed by the router's own types.
+    const webRequest = this.#session.webRequest as unknown as Record<EventName, (listener: Listener) => void>;
+    if (isBlocking(event)) {
+      webRequest[event]((details, callback) => void this.#runBlocking(event, details, callback!));
     } else {
-      webRequest[event]((details: any) => {
-        for (const r of this.#matching(event, details)) safely(() => (r.listener as ObserverListener)(details));
+      webRequest[event]((details) => {
+        for (const r of this.#matching(event, details)) safely(() => r.listener(details));
       });
     }
   }
@@ -87,13 +95,13 @@ export class WebRequestRouter {
     return (this.#registrations.get(event) ?? []).filter((r) => matchesFilter(r.filter, details));
   }
 
-  async #runBlocking(event: BlockingEvent, details: any, callback: Callback) {
-    const result: Record<string, unknown> = {};
+  async #runBlocking(event: BlockingEvent, details: Details, callback: Callback) {
+    const result: Response = {};
     let current = details;
     for (const r of this.#matching(event, details)) {
-      const response = await new Promise<Record<string, unknown>>((resolve) => {
+      const response = await new Promise<Response>((resolve) => {
         try {
-          (r.listener as BlockingListener)(current, (value) => resolve(value ?? {}));
+          r.listener(current, (value) => resolve(value ?? {}));
         } catch (error) {
           console.error(`[pear] webRequest ${event} listener of ${r.owner} threw`, error);
           resolve({});
@@ -103,18 +111,19 @@ export class WebRequestRouter {
         callback(response);
         return;
       }
-      if (response.requestHeaders) {
-        current = { ...current, requestHeaders: response.requestHeaders };
-        result.requestHeaders = response.requestHeaders;
-      }
-      if (response.responseHeaders) {
-        current = { ...current, responseHeaders: response.responseHeaders };
-        result.responseHeaders = response.responseHeaders;
+      for (const key of HEADER_KEYS) {
+        if (!response[key]) continue;
+        current = { ...current, [key]: response[key] };
+        result[key] = response[key];
       }
       if (response.statusLine) result.statusLine = response.statusLine;
     }
     callback(result);
   }
+}
+
+function isBlocking(event: EventName): event is BlockingEvent {
+  return (BLOCKING_EVENTS as readonly string[]).includes(event);
 }
 
 function safely(fn: () => void) {

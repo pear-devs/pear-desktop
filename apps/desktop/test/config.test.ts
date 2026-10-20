@@ -6,6 +6,7 @@ import { afterAll, describe, expect, test, vi } from "vitest";
 import { Settings } from "../src/main/config.ts";
 import { migrate } from "../src/main/migrations/index.ts";
 import { compareVersions } from "../src/main/version.ts";
+import { from312, PEAR_DESKTOP_3 } from "./pear-desktop-3.ts";
 
 vi.mock("electron", () => ({}));
 
@@ -26,7 +27,8 @@ const lyrics = definePlugin({
     lineEffect: config.select("fancy", [{ value: "fancy", label: "Fancy" }, { value: "scale", label: "Scale" }], { label: "Effect" }),
   },
 });
-const clock = definePlugin({ id: "clock", name: "Clock", enabledByDefault: false });
+/** Not in PEAR_DESKTOP_3. */
+const genius = definePlugin({ id: "lyrics-genius", name: "Genius lyrics", enabledByDefault: false });
 const menu = definePlugin({ id: "in-app-menu", name: "In-app menu", enabledByDefault: ["win32"] });
 /** The downloader's options that pear-desktop 3.x had (or has a migration for). */
 const downloader = definePlugin({
@@ -46,44 +48,7 @@ const downloader = definePlugin({
     autoDownloadFolder: config.string("", { label: "Auto folder" }),
   },
 });
-const PLUGINS = [tray, lyrics, clock, downloader];
-
-/** What pear-desktop 3.12 leaves in config.json (electron-store, tab-indented). */
-const PEAR_DESKTOP_3 = {
-  "window-size": { width: 1100, height: 550 },
-  "window-maximized": true,
-  "window-position": { x: 40, y: 60 },
-  url: "https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/playlist?list=LM",
-  options: {
-    tray: true,
-    trayClickPlayPause: true,
-    appVisible: false,
-    autoUpdates: false,
-    alwaysOnTop: true,
-    disableHardwareAcceleration: true,
-    resumeOnStart: false,
-    startingPage: "Explore",
-    likeButtons: "hide",
-    themes: ["/home/me/theme.css"],
-    language: "el",
-    hideMenuWarned: true,
-  },
-  plugins: {
-    "synced-lyrics": { enabled: true, preciseTiming: false, lineEffect: "scale", showTimeCodes: true },
-    "api-server": { enabled: true, port: 9000, authorizedClients: ["remote"], secret: "s3cret", hostname: "0.0.0.0" },
-    "do-not-track": { enabled: true, blocker: "In player" },
-    downloader: {
-      enabled: true,
-      downloadFolder: "/home/me/Music/YTM",
-      downloadOnFinish: { enabled: true, seconds: 30, percent: 80, mode: "percent", folder: "/home/me/Music/Auto" },
-      selectedPreset: "Source",
-      customPresetSetting: { extension: "mp3", ffmpegArgs: ["-b:a", "256k"] },
-      skipExisting: true,
-      playlistMaxItems: 50,
-    },
-  },
-  __internal__: { migrations: { version: "3.12.0" } },
-};
+const PLUGINS = [tray, lyrics, genius, menu, downloader];
 
 const profiles: string[] = [];
 afterAll(() => profiles.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
@@ -97,6 +62,11 @@ function profile(contents?: unknown) {
 
 const saved = (dir: string) => JSON.parse(readFileSync(join(dir, "config.json"), "utf8"));
 
+/** Settings loaded from a new profile with this config.json (none: a fresh profile). */
+const load = (stored?: unknown, platform?: string) => new Settings(profile(stored), PLUGINS, "4.0.0", platform);
+/** The 4.0.0 migration's result for a file pear-desktop 3.12 wrote. */
+const migrated312 = (stored: object) => migrate(from312(stored) as never, "4.0.0");
+
 describe("config.json from pear-desktop 3.x", () => {
   const dir = profile(PEAR_DESKTOP_3);
   const settings = new Settings(dir, PLUGINS, "4.0.0");
@@ -104,7 +74,7 @@ describe("config.json from pear-desktop 3.x", () => {
   test("keeps plugin states and same-named options", () => {
     expect(settings.plugin("synced-lyrics")).toEqual({ enabled: true, config: { preciseTiming: false, lineEffect: "scale" } });
     // Not in the old file: the plugin's own default.
-    expect(settings.plugin("clock")).toEqual({ enabled: false, config: {} });
+    expect(settings.plugin("lyrics-genius")).toEqual({ enabled: false, config: {} });
   });
 
   test("maps app options onto the core sections", () => {
@@ -117,8 +87,7 @@ describe("config.json from pear-desktop 3.x", () => {
   test("moves the tray option onto the tray plugin", () => {
     // With the tray on, pear-desktop hid the window when it was closed.
     expect(settings.plugin("tray")).toEqual({ enabled: true, config: { closeToTray: true, clickPlayPause: true } });
-    const off = (options: Record<string, unknown>) =>
-      migrate({ options, __internal__: { migrations: { version: "3.12.0" } } }, "4.0.0").config.plugins?.tray;
+    const off = (options: Record<string, unknown>) => migrated312({ options }).config.plugins?.tray;
     expect(off({ tray: false })).toEqual({ enabled: false });
     expect(off({})).toBeUndefined();
   });
@@ -128,22 +97,16 @@ describe("config.json from pear-desktop 3.x", () => {
   });
 
   test("the API server keeps listening on every interface, pear-desktop's default", () => {
-    const apiServer = (entry: Record<string, unknown>) =>
-      new Settings(profile({ plugins: { "api-server": entry }, __internal__: { migrations: { version: "3.12.0" } } }), PLUGINS, "4.0.0").core(
-        "apiServer",
-      );
+    const apiServer = (entry: Record<string, unknown>) => load(from312({ plugins: { "api-server": entry } })).core("apiServer");
     expect(apiServer({ enabled: true, authorizedClients: ["phone"] })).toMatchObject({ enabled: true, hostname: "0.0.0.0" });
     expect(apiServer({ enabled: true, hostname: "127.0.0.1" })).toMatchObject({ hostname: "127.0.0.1" });
     // Never set up in pear-desktop, or a new profile: this machine only.
-    expect(new Settings(profile({ __internal__: { migrations: { version: "3.12.0" } } }), PLUGINS, "4.0.0").core("apiServer")).toMatchObject({
-      hostname: "127.0.0.1",
-    });
-    expect(new Settings(profile(), PLUGINS, "4.0.0").core("apiServer")).toMatchObject({ hostname: "127.0.0.1" });
+    expect(load(from312({})).core("apiServer")).toMatchObject({ hostname: "127.0.0.1" });
+    expect(load().core("apiServer")).toMatchObject({ hostname: "127.0.0.1" });
   });
 
   test("performance-improvement stays on unless it was turned off (on by default in pear-desktop)", () => {
-    const performance = (plugins: Record<string, unknown>) =>
-      migrate({ plugins, __internal__: { migrations: { version: "3.12.0" } } } as never, "4.0.0").config.plugins?.["performance-improvement"];
+    const performance = (plugins: Record<string, unknown>) => migrated312({ plugins }).config.plugins?.["performance-improvement"];
     expect(performance({})).toEqual({ enabled: true });
     expect(performance({ "performance-improvement": { enabled: false } })).toEqual({ enabled: false });
     // New profiles: off, the rewrite's default.
@@ -184,13 +147,13 @@ describe("config.json from pear-desktop 3.x", () => {
   });
 
   test("writes changes back in the same layout", () => {
-    settings.setPlugin(clock, { enabled: true });
+    settings.setPlugin(genius, { enabled: true });
     settings.setCore("window", { alwaysOnTop: false });
     settings.setCore("apiServer", { authorizedClients: ["remote", "phone"] });
     settings.window = { width: 800, height: 600, maximized: false };
     settings.flush();
     const file = saved(dir);
-    expect(file.plugins.clock).toEqual({ enabled: true });
+    expect(file.plugins["lyrics-genius"]).toEqual({ enabled: true });
     expect(file.options.alwaysOnTop).toBe(false);
     expect(file.plugins["api-server"]).toMatchObject({ authorizedClients: ["remote", "phone"], port: 9000 });
     expect(file["window-size"]).toEqual({ width: 800, height: 600 });
@@ -223,16 +186,13 @@ describe("migrations", () => {
   });
 
   test("invalid values fall back to defaults", () => {
-    const dir = profile({ options: { startingPage: "Nowhere", alwaysOnTop: "yes" }, __internal__: { migrations: { version: "4.0.0" } } });
-    const settings = new Settings(dir, PLUGINS, "4.0.0");
+    const settings = load({ options: { startingPage: "Nowhere", alwaysOnTop: "yes" }, __internal__: { migrations: { version: "4.0.0" } } });
     expect(settings.core("general").startingPage).toBe("");
     expect(settings.core("window").alwaysOnTop).toBe(false);
   });
 
   test("downloader presets become formats; the Custom preset keeps its arguments", () => {
-    const downloader = (entry: Record<string, unknown>) =>
-      migrate({ plugins: { downloader: { enabled: true, ...entry } }, __internal__: { migrations: { version: "3.12.0" } } }, "4.0.0").config.plugins!
-        .downloader!;
+    const downloader = (entry: Record<string, unknown>) => migrated312({ plugins: { downloader: { enabled: true, ...entry } } }).config.plugins!.downloader!;
     expect(downloader({ selectedPreset: "mp3 (256kbps)" }).format).toBe("mp3");
     expect(downloader({ selectedPreset: "Source" }).format).toBe("source");
     expect(downloader({ selectedPreset: "Custom", customPresetSetting: { extension: "flac", ffmpegArgs: ["-compression_level", "8", "-metadata", "comment=a b"] } })).toMatchObject({
@@ -248,31 +208,25 @@ describe("migrations", () => {
   });
 
   test("downloader: overwriting stays pear-desktop's default for its users", () => {
-    const downloaderOf = (entry: Record<string, unknown>) =>
-      new Settings(profile({ plugins: { downloader: entry }, __internal__: { migrations: { version: "3.12.0" } } }), PLUGINS, "4.0.0").plugin(
-        "downloader",
-      )!.config;
+    const downloaderOf = (entry: Record<string, unknown>) => load(from312({ plugins: { downloader: entry } })).plugin("downloader")!.config;
     expect(downloaderOf({ enabled: true })).toMatchObject({ skipExisting: false });
     expect(downloaderOf({ enabled: true, skipExisting: true })).toMatchObject({ skipExisting: true });
-    expect(new Settings(profile(), PLUGINS, "4.0.0").plugin("downloader")!.config).toMatchObject({ skipExisting: true });
+    expect(load().plugin("downloader")!.config).toMatchObject({ skipExisting: true });
   });
 
   test("download on finish without a folder or mode keeps the defaults", () => {
-    const entry = migrate(
-      { plugins: { downloader: { enabled: false, downloadOnFinish: { enabled: false, seconds: 5 } } }, __internal__: { migrations: { version: "3.12.0" } } },
-      "4.0.0",
-    ).config.plugins!.downloader!;
+    const entry = migrated312({ plugins: { downloader: { enabled: false, downloadOnFinish: { enabled: false, seconds: 5 } } } }).config.plugins!.downloader!;
     expect(entry).toMatchObject({ autoDownload: false, autoDownloadSeconds: 5 });
     expect(entry).not.toHaveProperty("autoDownloadMode");
     expect(entry).not.toHaveProperty("autoDownloadFolder");
   });
 
   test("picture-in-picture: the small window's saved bounds move to their own file", () => {
-    const old = (entry: Record<string, unknown>) => ({ plugins: { "picture-in-picture": entry }, __internal__: { migrations: { version: "3.12.0" } } });
-    expect(migrate(old({ "pip-position": [120.4, 80], "pip-size": [640, 360] }) as never, "4.0.0").files).toEqual({
+    const old = (entry: Record<string, unknown>) => from312({ plugins: { "picture-in-picture": entry } });
+    expect(migrated312(old({ "pip-position": [120.4, 80], "pip-size": [640, 360] })).files).toEqual({
       "picture-in-picture.json": { x: 120, y: 80, width: 640, height: 360 },
     });
-    expect(migrate(old({ "pip-position": "broken", "pip-size": [0, 0] }) as never, "4.0.0").files).toEqual({});
+    expect(migrated312(old({ "pip-position": "broken", "pip-size": [0, 0] })).files).toEqual({});
 
     // Written next to config.json, unless the rewrite already saved bounds there.
     const dir = profile(old({ enabled: true, "pip-position": [5, 6] }));
@@ -285,15 +239,14 @@ describe("migrations", () => {
   });
 
   test("a plugin can be enabled by default on some platforms only", () => {
-    const enabled = (platform: string, stored?: unknown) => new Settings(profile(stored), [menu], "4.0.0", platform).plugin("in-app-menu")!.enabled;
+    const enabled = (platform: string, stored?: unknown) => load(stored, platform).plugin("in-app-menu")!.enabled;
     expect(enabled("win32")).toBe(true);
     expect(enabled("linux")).toBe(false);
     expect(enabled("darwin")).toBe(false);
     // pear-desktop's Windows users who never turned it off keep it; a stored choice wins.
-    const old = (plugins: unknown) => ({ plugins, __internal__: { migrations: { version: "3.12.0" } } });
-    expect(enabled("win32", old({}))).toBe(true);
-    expect(enabled("win32", old({ "in-app-menu": { enabled: false } }))).toBe(false);
-    expect(enabled("linux", old({ "in-app-menu": { enabled: true } }))).toBe(true);
+    expect(enabled("win32", from312({ plugins: {} }))).toBe(true);
+    expect(enabled("win32", from312({ plugins: { "in-app-menu": { enabled: false } } }))).toBe(false);
+    expect(enabled("linux", from312({ plugins: { "in-app-menu": { enabled: true } } }))).toBe(true);
   });
 
   test("versions compare numerically", () => {
@@ -314,7 +267,7 @@ describe("files from before pear-desktop 3.12", () => {
   });
 
   test("3.12+ files are left to the 4.0.0 migration", () => {
-    const { config: result } = migrate({ plugins: { adblocker: { enabled: true } }, __internal__: { migrations: { version: "3.12.0" } } }, "4.0.0");
+    const { config: result } = migrated312({ plugins: { adblocker: { enabled: true } } });
     expect(result.plugins?.adblocker).toEqual({ enabled: true });
   });
 });

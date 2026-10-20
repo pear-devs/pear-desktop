@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, type IpcMainEvent, type IpcMainInvokeEvent, shell } from "electron";
+import { pluginActions } from "@pear/sdk";
 import { isCoreSection, type CoreSection } from "@pear/sdk/core-config";
 import {
   type Bootstrap,
@@ -6,6 +7,7 @@ import {
   type CoreCommandName,
   type CoreCommands,
   type CoreState,
+  type PluginInfo,
 } from "@pear/sdk/protocol";
 import { isSettingsUrl, isYtmUrl } from "../shared/user-agent.ts";
 import type { PageRequests } from "./page-requests.ts";
@@ -18,6 +20,18 @@ function isTrustedSender(event: IpcMainInvokeEvent | IpcMainEvent) {
   // Only top-level frames: an iframe on YTM's origin is not the runtime.
   if (!frame || frame.parent) return false;
   return isYtmUrl(frame.url) || isSettingsUrl(frame.url);
+}
+
+/** The page runtime of a YTM window; trusted senders only. */
+function isPageRuntime(event: IpcMainInvokeEvent | IpcMainEvent) {
+  return isYtmUrl(event.senderFrame!.url);
+}
+
+/** Commands only the page runtime sends: it answers requests and reports the player. */
+const PAGE_RUNTIME_COMMANDS = new Set<unknown>(["plugin:respond", "player:update"]);
+
+function assertPatch(patch: unknown): asserts patch is Record<string, unknown> {
+  if (typeof patch !== "object" || patch === null) throw new Error("[pear] config patch must be an object");
 }
 
 type Handlers = { [K in CoreCommandName]: (...args: Parameters<CoreCommands[K]>) => unknown };
@@ -47,7 +61,7 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
     },
     "plugin:set-enabled": async (id, enabled) => void (await plugins.setEnabled(String(id), Boolean(enabled))),
     "plugin:set-config": async (id, patch) => {
-      if (typeof patch !== "object" || patch === null) throw new Error("[pear] config patch must be an object");
+      assertPatch(patch);
       await plugins.setConfig(String(id), patch);
     },
     "plugin:invoke": (id, command, args) => {
@@ -57,7 +71,7 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
     "plugin:respond": (requestId, ok, value) => requests.respond(Number(requestId), Boolean(ok), value),
     "core:set-config": async (section, patch) => {
       if (!isCoreSection(String(section))) throw new Error(`[pear] unknown settings section: ${String(section)}`);
-      if (typeof patch !== "object" || patch === null) throw new Error("[pear] config patch must be an object");
+      assertPatch(patch);
       await core.setConfig(section, patch);
     },
     "app:show-settings-file": () => shell.showItemInFolder(settingsPath),
@@ -71,8 +85,7 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
 
   ipcMain.handle(CHANNEL.invoke, (event, name: unknown, args: unknown) => {
     if (!isTrustedSender(event)) throw new Error("[pear] invoke from untrusted frame");
-    // Only the page runtime answers requests and reports the player.
-    if ((name === "plugin:respond" || name === "player:update") && !isYtmUrl(event.senderFrame!.url)) {
+    if (PAGE_RUNTIME_COMMANDS.has(name) && !isPageRuntime(event)) {
       throw new Error(`[pear] ${name} is for the page runtime`);
     }
     if (typeof name !== "string" || !Object.hasOwn(handlers, name)) {
@@ -87,46 +100,51 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
       event.returnValue = null;
       return;
     }
-    if (isYtmUrl(event.senderFrame!.url)) onRuntimeBootstrap(event.sender);
-    event.returnValue = {
+    if (isPageRuntime(event)) onRuntimeBootstrap(event.sender);
+    event.returnValue = bootstrapPayload(plugins, core);
+  });
+}
+
+function bootstrapPayload(plugins: PluginHost, core: IpcEnvironment["core"]): Bootstrap {
+  return {
+    // Also in `app`: the page runtime reads these, the settings UI the copies there.
+    version: app.getVersion(),
+    platform: process.platform,
+    plugins: plugins.states(),
+    meta: plugins.meta(),
+    errors: plugins.errors(),
+    statuses: plugins.statuses(),
+    core: core.states(),
+    app: {
       version: app.getVersion(),
       platform: process.platform,
-      plugins: plugins.states(),
-      meta: plugins.meta(),
-      errors: plugins.errors(),
-      statuses: plugins.statuses(),
-      core: core.states(),
-      app: {
-        version: app.getVersion(),
-        platform: process.platform,
-        arch: process.arch,
-        electron: process.versions.electron,
-        chrome: process.versions.chrome,
-        node: process.versions.node,
-      },
-      themes: core.themes(),
-      language: plugins.i18n?.language ?? "en",
-      strings: plugins.i18n?.strings ?? {},
-      catalog: plugins.plugins.map((plugin) => {
-        // pear-desktop's translated plugin names and descriptions, where they exist.
-        const t = plugins.t;
-        const description = plugin.description ? t(`plugins.${plugin.id}.description`, plugin.description) : undefined;
-        const actions = Object.entries((plugin.actions ?? {}) as Record<string, { label: string; description?: string } | undefined>).flatMap(
-          ([name, action]) => {
-            if (!action) return [];
-            const key = `plugins.${plugin.id}.actions.${name}`;
-            const actionDescription = action.description ? t(`${key}.description`, action.description) : undefined;
-            return [{ name, label: t(`${key}.label`, action.label), ...(actionDescription ? { description: actionDescription } : {}) }];
-          },
-        );
-        return {
-          id: plugin.id,
-          name: t(`plugins.${plugin.id}.name`, plugin.name),
-          ...(description ? { description } : {}),
-          config: plugin.config ?? {},
-          ...(actions.length > 0 ? { actions } : {}),
-        };
-      }),
-    } satisfies Bootstrap;
+      arch: process.arch,
+      electron: process.versions.electron,
+      chrome: process.versions.chrome,
+      node: process.versions.node,
+    },
+    themes: core.themes(),
+    language: plugins.i18n?.language ?? "en",
+    strings: plugins.i18n?.strings ?? {},
+    catalog: pluginCatalog(plugins),
+  };
+}
+
+/** Plugins in settings-UI form, with pear-desktop's translated names and descriptions where they exist. */
+function pluginCatalog({ plugins, t }: PluginHost): PluginInfo[] {
+  return plugins.map((plugin) => {
+    const description = plugin.description ? t(`plugins.${plugin.id}.description`, plugin.description) : undefined;
+    const actions = pluginActions(plugin).map(([name, action]) => {
+      const key = `plugins.${plugin.id}.actions.${name}`;
+      const actionDescription = action.description ? t(`${key}.description`, action.description) : undefined;
+      return { name, label: t(`${key}.label`, action.label), ...(actionDescription ? { description: actionDescription } : {}) };
+    });
+    return {
+      id: plugin.id,
+      name: t(`plugins.${plugin.id}.name`, plugin.name),
+      ...(description ? { description } : {}),
+      config: plugin.config ?? {},
+      ...(actions.length > 0 ? { actions } : {}),
+    };
   });
 }

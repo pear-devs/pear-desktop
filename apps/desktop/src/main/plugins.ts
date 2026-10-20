@@ -3,7 +3,7 @@
 
 import type { App, BrowserWindow, BrowserWindowConstructorOptions, Session } from "electron";
 import { interpolate, type Translate } from "@pear/sdk/i18n";
-import { type AnyPlugin, type Cleanup, type HostContext, type RpcMethod, supportsPlatform } from "@pear/sdk";
+import { type AnyPlugin, type Cleanup, type HostContext, type HostPlayer, type RpcMethod, supportsPlatform } from "@pear/sdk";
 import { createLogger, errorMessage } from "@pear/sdk/util";
 import { v } from "@pear/sdk/rpc";
 import type { HostEvent, PluginMeta, PluginState } from "@pear/sdk/protocol";
@@ -16,12 +16,17 @@ import type { WebRequestRouter } from "./web-request.ts";
 type AnyConfig = Record<string, unknown>;
 type ConfigListener = (config: AnyConfig) => void | "restart";
 
-interface Instance {
-  ctx: HostContext<AnyConfig>;
-  cleanups: Cleanup[];
+/** A running host part. */
+class Instance {
+  readonly cleanups: Cleanup[] = [];
   /** Registered with `ctx.onConfigChange`; they replace restarting. */
-  configListeners: ConfigListener[];
-  stopped: boolean;
+  readonly configListeners: ConfigListener[] = [];
+  stopped = false;
+  readonly ctx: HostContext<AnyConfig>;
+
+  constructor(createContext: (instance: Instance) => HostContext<AnyConfig>) {
+    this.ctx = createContext(this);
+  }
 }
 
 export interface HostEnvironment {
@@ -78,7 +83,7 @@ export class PluginHost {
     return Object.fromEntries(this.plugins.map((p) => [p.id, all[p.id]!]));
   }
 
-  /** Runs plugins' beforeReady hooks; returns the Chromium features they asked for. */
+  /** What the settings UI needs to know per plugin: whether changes take a restart. */
   meta(): Record<string, PluginMeta> {
     return Object.fromEntries(
       this.plugins.map((p) => [p.id, { restartRequired: Boolean(p.restartRequired || p.host?.beforeReady || p.host?.windowOptions) }]),
@@ -127,6 +132,7 @@ export class PluginHost {
     this.#env?.send({ type: "plugin-error", id, message });
   }
 
+  /** Runs plugins' beforeReady hooks; returns the Chromium features they asked for. */
   beforeReady(app: App) {
     const enabled = new Set<string>();
     const disabled = new Set<string>();
@@ -279,35 +285,25 @@ export class PluginHost {
     }
   }
 
-  #createInstance(plugin: AnyPlugin, env: HostEnvironment): Instance {
-    const id = plugin.id;
+  #createInstance(plugin: AnyPlugin, env: HostEnvironment) {
+    return new Instance((instance) => this.#context(plugin.id, env, instance));
+  }
+
+  #context(id: string, env: HostEnvironment, instance: Instance): HostContext<AnyConfig> {
     const settings = this.#settings;
-    const host = this;
-    const cleanups: Cleanup[] = [];
-    const instance: Instance = { cleanups, configListeners: [], stopped: false, ctx: undefined! };
-    const player = env.player;
-    instance.ctx = {
+    const { cleanups } = instance;
+    return {
       id,
       get config() {
         return settings.plugin(id)?.config ?? {};
       },
-      setConfig: (patch) => void host.setConfig(id, patch),
+      setConfig: (patch) => void this.setConfig(id, patch),
       app: env.app,
       window: env.window,
       session: env.router.scopedSession(id),
       webRequest: env.router.scoped(id),
       request: (event, payload, options) => env.requests.request(id, event, payload, options),
-      player: {
-        get state() {
-          return player.state;
-        },
-        on: ((event: "change", listener: never) => {
-          const off = player.on(event, listener);
-          cleanups.push(off);
-          return off;
-        }) as HostContext<unknown>["player"]["on"],
-        control: (action) => player.control(action),
-      },
+      player: scopedPlayer(env.player, cleanups),
       openSettings: () => env.openSettings(),
       focusWindow: () => env.focusWindow(),
       listen: (target, event, listener) => {
@@ -326,7 +322,7 @@ export class PluginHost {
         return timer;
       },
       setStatus: (message) => {
-        if (!instance.stopped) host.#setStatus(id, message);
+        if (!instance.stopped) this.#setStatus(id, message);
       },
       emit: (event, payload) => env.send({ type: "plugin-event", id, event, payload }),
       api: {
@@ -336,11 +332,26 @@ export class PluginHost {
       },
       onProtocol: (listener) => void cleanups.push(env.onProtocol(listener)),
       onCleanup: (fn) => cleanups.push(fn),
-      t: host.t,
+      t: this.t,
       log: createLogger(id),
     };
-    return instance;
   }
+}
+
+/** The player, with the plugin's listeners removed when it stops. */
+function scopedPlayer(player: PlayerMirror, cleanups: Cleanup[]): HostPlayer {
+  return {
+    get state() {
+      return player.state;
+    },
+    // One implementation for both of `on`'s overloads, which a function expression can't declare.
+    on: ((event: "change", listener: never) => {
+      const off = player.on(event, listener);
+      cleanups.push(off);
+      return off;
+    }) as HostPlayer["on"],
+    control: (action) => player.control(action),
+  };
 }
 
 /** Lets the running host part take a config change; "restart" when it can't. */
@@ -349,7 +360,8 @@ function configChange(plugin: AnyPlugin, instance: Instance, config: AnyConfig) 
   if (!host) return;
   if (instance.configListeners.length > 0) {
     const results = instance.configListeners.map((listener) => listener(config));
-    return results.includes("restart") ? "restart" : undefined;
+    if (results.includes("restart")) return "restart";
+    return;
   }
   if (host.onConfigChange) return host.onConfigChange(config, instance.ctx);
   if (host.start) return "restart";
