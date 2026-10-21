@@ -499,6 +499,14 @@
     },
     "do-not-track": {
       "description": "Block all tracking out of the box",
+      "dialog": {
+        "reload": {
+          "title": "Reload page",
+          "message": "Do Not Track settings have changed.",
+          "detail": "Network rules update without restarting the app. Reload the page to fully apply changes to page filters. Playback may be interrupted. You can reload later.",
+          "reload-now": "Reload page now"
+        }
+      },
       "menu": {
         "blocker": "Blocker"
       },

@@ -1,12 +1,4 @@
-import {
-  createEffect,
-  createSignal,
-  onCleanup,
-  onMount,
-  runWithOwner,
-  Show,
-  untrack,
-} from 'solid-js';
+import { createEffect, createSignal, onCleanup, Show, untrack } from 'solid-js';
 import { type VirtualizerHandle, VList } from 'virtua/solid';
 
 import {
@@ -17,17 +9,17 @@ import {
   PlainLyrics,
 } from './components';
 import { LyricsPicker } from './components/LyricsPicker';
-import { reactiveOwner } from './reactive-root';
+import { registerReactiveRoot } from './reactive-root';
 import { currentLyrics } from './store';
-import { selectors } from './utils';
+import { lineStatus, type LineStatus } from './timing';
 
-import type { LineLyrics, SyncedLyricsPluginConfig } from '../types';
+import type { LyricLine, SyncedLyricsPluginConfig } from '../types';
 
 export const [isVisible, setIsVisible] = createSignal<boolean>(false);
 export const [config, setConfig] =
   createSignal<SyncedLyricsPluginConfig | null>(null);
 
-runWithOwner(reactiveOwner, () => {
+registerReactiveRoot(() => {
   createEffect(() => {
     if (!config()?.enabled) return;
     const root = document.documentElement;
@@ -128,64 +120,36 @@ runWithOwner(reactiveOwner, () => {
 });
 
 type LyricsRendererChild =
-  | { kind: 'LyricsPicker' }
+  | { kind: 'PickerSpace' }
   | { kind: 'LoadingKaomoji' }
   | { kind: 'NotFoundKaomoji' }
   | { kind: 'Error'; error: Error }
   | {
       kind: 'SyncedLine';
-      line: LineLyrics;
+      line: LyricLine;
     }
   | {
       kind: 'PlainLine';
       line: string;
     };
 
-const lyricsPicker: LyricsRendererChild = { kind: 'LyricsPicker' };
-
 export const [currentTime, setCurrentTime] = createSignal<number>(-1);
 export const LyricsRenderer = () => {
   const [scroller, setScroller] = createSignal<VirtualizerHandle>();
-  const [stickyRef, setStickRef] = createSignal<HTMLElement | null>(null);
-
-  const tab = document.querySelector<HTMLElement>(selectors.body.tabRenderer)!;
-
-  let mouseCoord = 0;
-  const mousemoveListener = (e: Event) => {
-    if ('clientY' in e) {
-      mouseCoord = (e as MouseEvent).clientY;
-    }
-
-    const { top } = tab.getBoundingClientRect();
-    const { clientHeight: height } = stickyRef()!;
-    const scrollOffset = scroller()?.scrollOffset ?? -1;
-
-    const isInView = scrollOffset <= height;
-    const isMouseOver = mouseCoord - top - 5 <= height;
-
-    const showPicker = isInView || isMouseOver;
-
-    if (showPicker) {
-      // picker visible
-      stickyRef()!.style.setProperty('--lyrics-picker-top', '0');
-    } else {
-      // picker hidden
-      stickyRef()!.style.setProperty('--lyrics-picker-top', `-${height}px`);
-    }
-  };
-
-  onMount(() => {
-    const vList = document.querySelector<HTMLElement>('.synced-lyrics-vlist');
-
-    tab.addEventListener('mousemove', mousemoveListener);
-    vList?.addEventListener('scroll', mousemoveListener);
-    vList?.addEventListener('scrollend', mousemoveListener);
-
-    onCleanup(() => {
-      tab.removeEventListener('mousemove', mousemoveListener);
-      vList?.removeEventListener('scroll', mousemoveListener);
-      vList?.removeEventListener('scrollend', mousemoveListener);
-    });
+  const [picker, setPicker] = createSignal<HTMLElement | null>(null);
+  const [pickerHeight, setPickerHeight] = createSignal(0);
+  const [scrollOffset, setScrollOffset] = createSignal(0);
+  const [pointerNearTop, setPointerNearTop] = createSignal(false);
+  const showPicker = () => scrollOffset() <= pickerHeight() || pointerNearTop();
+  createEffect(() => {
+    const element = picker();
+    if (!element) return;
+    const measure = () =>
+      setPickerHeight(element.getBoundingClientRect().height);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    onCleanup(() => observer.disconnect());
   });
 
   const [children, setChildren] = createSignal<LyricsRendererChild[]>([
@@ -229,9 +193,7 @@ export const LyricsRenderer = () => {
     });
   });
 
-  const [statuses, setStatuses] = createSignal<
-    ('previous' | 'current' | 'upcoming')[]
-  >([]);
+  const [statuses, setStatuses] = createSignal<LineStatus[]>([]);
   createEffect(() => {
     const time = currentTime();
     const data = currentLyrics()?.data;
@@ -239,11 +201,7 @@ export const LyricsRenderer = () => {
     if (!data || !data.lines) return setStatuses([]);
 
     const previous = untrack(statuses);
-    const current = data.lines.map((line) => {
-      if (line.timeInMs >= time) return 'upcoming';
-      if (time - line.timeInMs >= line.duration) return 'previous';
-      return 'current';
-    });
+    const current = data.lines.map((line) => lineStatus(line, time));
 
     if (previous.length !== current.length) return setStatuses(current);
     if (previous.every((status, idx) => status === current[idx])) return;
@@ -266,8 +224,7 @@ export const LyricsRenderer = () => {
 
     if (!scroller() || !current.data?.lines) return;
 
-    // hacky way to make the "current" line scroll to the center of the screen
-    const scrollIndex = Math.min(idx + 1, maxIdx);
+    const scrollIndex = Math.min(idx + 1, maxIdx + 1);
 
     scroller()!.scrollToIndex(scrollIndex, {
       smooth: true,
@@ -277,43 +234,67 @@ export const LyricsRenderer = () => {
 
   return (
     <Show when={isVisible()}>
-      <VList
-        {...{
-          ref: setScroller,
-          style: { 'scrollbar-width': 'none' },
-          class: 'synced-lyrics-vlist',
-          keepMounted: [0],
-          overscan: 4,
+      <div
+        class="synced-lyrics-layout"
+        onPointerLeave={() => setPointerNearTop(false)}
+        onPointerMove={(event) => {
+          const top = event.currentTarget.getBoundingClientRect().top;
+          setPointerNearTop(
+            event.clientY >= top && event.clientY <= top + pickerHeight(),
+          );
         }}
-        data={[lyricsPicker, ...children()]}
       >
-        {(props, idx) => {
-          if (typeof props === 'undefined') return null;
-          switch (props.kind) {
-            case 'LyricsPicker':
-              return <LyricsPicker setStickRef={setStickRef} />;
-            case 'Error':
-              return <ErrorDisplay {...props} />;
-            case 'LoadingKaomoji':
-              return <LoadingKaomoji />;
-            case 'NotFoundKaomoji':
-              return <NotFoundKaomoji />;
-            case 'SyncedLine': {
-              return (
-                <SyncedLine
-                  {...props}
-                  index={idx()}
-                  scroller={scroller()!}
-                  status={statuses()[idx() - 1]}
-                />
-              );
+        <div
+          aria-hidden={!showPicker()}
+          class="lyrics-picker-header"
+          classList={{ 'lyrics-picker-header-hidden': !showPicker() }}
+          inert={!showPicker()}
+        >
+          <LyricsPicker setStickRef={setPicker} />
+        </div>
+        <VList
+          {...{
+            ref: setScroller,
+            style: { 'scrollbar-width': 'none' },
+            class: 'synced-lyrics-vlist',
+            overscan: 4,
+            onScroll: setScrollOffset,
+          }}
+          data={[{ kind: 'PickerSpace' } as LyricsRendererChild, ...children()]}
+        >
+          {(props, idx) => {
+            if (typeof props === 'undefined') return null;
+            switch (props.kind) {
+              case 'PickerSpace':
+                return (
+                  <div
+                    aria-hidden="true"
+                    style={{ height: `${pickerHeight()}px` }}
+                  />
+                );
+              case 'Error':
+                return <ErrorDisplay {...props} />;
+              case 'LoadingKaomoji':
+                return <LoadingKaomoji />;
+              case 'NotFoundKaomoji':
+                return <NotFoundKaomoji />;
+              case 'SyncedLine': {
+                return (
+                  <SyncedLine
+                    {...props}
+                    index={idx()}
+                    scroller={scroller()!}
+                    status={statuses()[idx() - 1]}
+                  />
+                );
+              }
+              case 'PlainLine': {
+                return <PlainLyrics {...props} />;
+              }
             }
-            case 'PlainLine': {
-              return <PlainLyrics {...props} />;
-            }
-          }
-        }}
-      </VList>
+          }}
+        </VList>
+      </div>
     </Show>
   );
 };
