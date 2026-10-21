@@ -2,7 +2,7 @@
 
 This experimental plugin copies PCM from Pear's Web Audio source before applying a separate local listening gain. External applications can receive music while controlling local listening volume independently, including local silence. It has no dependency on a game, account-sharing service or external audio driver.
 
-Development branch: `feat/independent-audio-monitoring` in `Vlastrix/pear-desktop`. The plugin is disabled by default. This is a feasibility prototype, not an accepted upstream feature or a supported public release. No pull request has been submitted to Pear maintainers.
+Development branch: `feat/independent-audio-monitoring` in `Vlastrix/pear-desktop`. The plugin is disabled by default. This is a feasibility prototype for draft review, not an accepted upstream feature or a supported public release.
 
 ## Implementation
 
@@ -59,7 +59,7 @@ The tester followed the development Pear/diagnostic client walkthrough and repor
 
 This is user-reported live-music evidence, in addition to the automated synthetic checks. It does not establish game integration, remote listener reception, behavior on other machines, long-session stability or all lifecycle cases. Explicit client close/reopen and plugin disable/re-enable checks remain on the validation checklist.
 
-## Before an upstream pull request
+## Before marking the draft ready for review
 
 - Extend the successful live-music test with explicit client reconnect, cleanup and longer-session checks.
 - Agree on a general-purpose integration surface and authentication model with maintainers before promising compatibility to external clients.

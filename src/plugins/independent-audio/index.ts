@@ -1,5 +1,6 @@
 import { app, ipcMain } from 'electron';
 
+import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 
 import { startAudioServer } from './backend';
@@ -53,9 +54,8 @@ async function audioReady(event: CustomEvent<Compressor>) {
 }
 
 export default createPlugin({
-  name: () => 'Independent Audio Monitoring',
-  description: () =>
-    'Experimental PCM capture with independent local listening gain.',
+  name: () => t('plugins.independent-audio.name'),
+  description: () => t('plugins.independent-audio.description'),
   restartNeeded: true,
   config: { enabled: false },
   backend: {

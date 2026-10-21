@@ -130,8 +130,6 @@ Some predefined themes are available in https://github.com/kerichdev/themes-for-
 
 ## Dev
 
-This fork develops an experimental, disabled-by-default **Independent Audio Monitoring** plugin on `feat/independent-audio-monitoring`. See [the prototype notes](docs/independent-audio.md) for its scope, isolated development launcher, protocol and native checks. It has not been accepted upstream and is not a player release.
-
 ```bash
 git clone https://github.com/pear-devs/pear-desktop
 cd pear-desktop
