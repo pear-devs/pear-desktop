@@ -14,6 +14,13 @@ const loadedPluginMap: Record<
   PluginDef<unknown, unknown, unknown>
 > = {};
 
+// Tracks listener wrappers so ipc.removeListener can undo ipc.on
+const ipcListenerRegistry: {
+  event: string;
+  listener: CallableFunction;
+  wrapper: (_event: unknown, ...args: unknown[]) => void;
+}[] = [];
+
 const createContext = (
   id: string,
   win: BrowserWindow,
@@ -40,10 +47,21 @@ const createContext = (
       ipcMain.handle(event, (_, ...args: unknown[]) => listener(...args));
     },
     on: (event: string, listener: CallableFunction) => {
-      ipcMain.on(event, (_, ...args: unknown[]) => {
+      const wrapper = (_: unknown, ...args: unknown[]) => {
         // oxlint-disable-next-line typescript/no-unsafe-call
         listener(...args);
-      });
+      };
+      ipcListenerRegistry.push({ event, listener, wrapper });
+      ipcMain.on(event, wrapper);
+    },
+    removeListener: (event: string, listener: CallableFunction) => {
+      for (let i = ipcListenerRegistry.length - 1; i >= 0; i -= 1) {
+        const entry = ipcListenerRegistry[i];
+        if (entry.event === event && entry.listener === listener) {
+          ipcMain.removeListener(event, entry.wrapper);
+          ipcListenerRegistry.splice(i, 1);
+        }
+      }
     },
     removeHandler: (event: string) => {
       ipcMain.removeHandler(event);
