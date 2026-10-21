@@ -4,6 +4,8 @@ This experimental plugin copies PCM from Pear's Web Audio source before applying
 
 Development branch: `feat/independent-audio-monitoring` in `Vlastrix/pear-desktop`. The plugin is disabled by default. This is a feasibility prototype for draft review, not an accepted upstream feature or a supported public release.
 
+Upstream proposal: [draft pull request #4767](https://github.com/pear-devs/pear-desktop/pull/4767). It requests design feedback; it is not ready to merge.
+
 ## Implementation
 
 - `src/plugins/independent-audio/graph.ts` branches the existing media source into an AudioWorklet capture path and a separate local GainNode. The capture worklet emits 20 ms frames of 48 kHz stereo signed 16-bit PCM. Local gain does not modify those samples.
