@@ -3,7 +3,11 @@ import { createPlugin } from '@/utils';
 
 import { onConfigChange, onMainLoad } from './main';
 import { onMenu } from './menu';
-import { onPlayerApiReady, onRendererLoad } from './renderer';
+import {
+  onPlayerApiReady,
+  onRendererConfigChange,
+  onRendererLoad,
+} from './renderer';
 import style from './style.css?inline';
 import { DefaultPresetList, type Preset } from './types';
 
@@ -21,6 +25,8 @@ export type DownloaderPluginConfig = {
   customPresetSetting: Preset;
   skipExisting: boolean;
   playlistMaxItems?: number;
+  /** Shows the download progress panel inside the app */
+  showProgress: boolean;
 };
 
 export const defaultConfig: DownloaderPluginConfig = {
@@ -37,6 +43,7 @@ export const defaultConfig: DownloaderPluginConfig = {
   customPresetSetting: DefaultPresetList['mp3 (256kbps)'], // Presets
   skipExisting: false,
   playlistMaxItems: undefined,
+  showProgress: true,
 };
 
 export default createPlugin({
@@ -53,5 +60,6 @@ export default createPlugin({
   renderer: {
     start: onRendererLoad,
     onPlayerApiReady,
+    onConfigChange: onRendererConfigChange,
   },
 });
