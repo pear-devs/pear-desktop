@@ -51,11 +51,17 @@ npx.cmd --yes pnpm@11.21.0 test:independent-audio
 
 The current test runner targets Windows, requires Node 24 or later and clears `ELECTRON_RUN_AS_NODE` for its Electron child. The hidden Electron test uses a silent output sink and a synthetic 440 Hz source. It checks actual captured samples and monitor samples at gains 1, 0.25, 0 and 1; it does not play a tone through speakers. It also checks real context-bridge IPC, authenticated localhost delivery, invalid authentication, gain restoration on disconnect/timeout and idempotent shutdown. The numeric report is saved to `.independent-audio-test/result.json`.
 
-The original prototype passed these checks on Windows build 26100 using Electron 42.5.0. Synthetic audio checks do not establish live music compatibility. A signed-in live-music test, runtime plugin enable/disable, device and track changes, reloads and other operating systems remain to be validated.
+The original prototype passed these checks on Windows build 26100 using Electron 42.5.0. Synthetic audio checks are separate from the user validation below. Runtime plugin enable/disable, device changes, reloads and other operating systems remain to be validated.
+
+## User-reported live music validation (October 21, 2026)
+
+The tester followed the development Pear/diagnostic client walkthrough and reported that local listening control works with actual music, including changing songs and pausing playback. Screenshots show local gain at **0%** while the diagnostic receives PCM: one snapshot shows **381 frames / RMS 0.29235**, and another **1325 frames / RMS 0.22105**. These snapshots support capture continuing while local listening is silenced; the different RMS levels reflect different moments in the music, not a controlled amplitude comparison.
+
+This is user-reported live-music evidence, in addition to the automated synthetic checks. It does not establish game integration, remote listener reception, behavior on other machines, long-session stability or all lifecycle cases. Explicit client close/reopen and plugin disable/re-enable checks remain on the validation checklist.
 
 ## Before an upstream pull request
 
-- Validate actual music with independent capture and local listening volume, including reconnect and cleanup behavior.
+- Extend the successful live-music test with explicit client reconnect, cleanup and longer-session checks.
 - Agree on a general-purpose integration surface and authentication model with maintainers before promising compatibility to external clients.
 - Resolve audio graph interactions, sample-rate handling, user-facing controls, translations and platform support.
 - Keep the contribution focused on audio capture and local monitoring; external integrations belong in their own applications.
