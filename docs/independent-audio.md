@@ -1,4 +1,4 @@
-# Independent audio monitoring prototype
+# Independent Audio Monitoring prototype
 
 This experimental plugin copies PCM from Pear's Web Audio source before applying a separate local listening gain. External applications can receive music while controlling local listening volume independently, including local silence. It has no dependency on a game, account-sharing service or external audio driver.
 
@@ -25,7 +25,7 @@ npx.cmd --yes pnpm@11.21.0 build
 & node_modules/electron/dist/electron.exe scripts/independent-audio-dev.cjs
 ```
 
-The optional development launcher uses `.independent-audio-test/dev-profile` for settings, cookies and the instance lock. It does not import or modify an installed Pear profile. Enable **Independent audio monitoring** in the Plugins menu, restart this development copy and play a song. Authentication to the music service may require signing in separately in this profile. Do not commit this profile or share its contents.
+The optional development launcher uses `.independent-audio-test/dev-profile` for settings, cookies and the instance lock. It does not import or modify an installed Pear profile. Enable **Independent Audio Monitoring** in the Plugins menu, restart this development copy and play a song. Authentication to the music service may require signing in separately in this profile. Do not commit this profile or share its contents.
 
 If the environment defines `ELECTRON_RUN_AS_NODE`, unset it for the Electron child before launching. The development launcher is intended to run in Electron, not in Node's command-line runtime.
 

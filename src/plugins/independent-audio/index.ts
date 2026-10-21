@@ -53,7 +53,7 @@ async function audioReady(event: CustomEvent<Compressor>) {
 }
 
 export default createPlugin({
-  name: () => 'Independent audio monitoring',
+  name: () => 'Independent Audio Monitoring',
   description: () =>
     'Experimental PCM capture with independent local listening gain.',
   restartNeeded: true,
