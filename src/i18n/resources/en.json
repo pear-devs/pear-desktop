@@ -593,6 +593,13 @@
       "description": "Makes the volume slider exponential so it's easier to select lower volumes.",
       "name": "Exponential Volume"
     },
+    "force-shuffle": {
+      "description": "Keeps shuffle mode enabled when switching tracks",
+      "menu": {
+        "mode-always": "Always enable shuffle on new songs"
+      },
+      "name": "Force Shuffle"
+    },
     "in-app-menu": {
       "description": "Gives menu-bars a fancy, dark or album-color look",
       "menu": {
