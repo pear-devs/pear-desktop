@@ -1,12 +1,17 @@
 import prompt, { type KeybindOptions } from 'custom-electron-prompt';
-import { globalShortcut, type MenuItem } from 'electron';
+import { globalShortcut, type MenuItem, webFrame } from 'electron';
 
 import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 import { createPlugin } from '@/utils';
 
 import { overrideListener } from './override';
-import { onConfigChange, onPlayerApiReady } from './renderer';
+import {
+  onConfigChange,
+  onPlayerApiReady,
+  removeNewSliderListener,
+  restoreVolumeScript,
+} from './renderer';
 import hudStyle from './volume-hud.css?inline';
 
 export type PreciseVolumePluginConfig = {
@@ -184,9 +189,22 @@ export default createPlugin({
     }
   },
 
+  preload: {
+    /** Restore the saved volume before YTM starts playback */
+    async start({ getConfig }) {
+      const { savedVolume } = await getConfig();
+      if (typeof savedVolume === 'number') {
+        await webFrame.executeJavaScript(restoreVolumeScript(savedVolume));
+      }
+    },
+  },
+
   renderer: {
     start() {
       overrideListener();
+    },
+    stop() {
+      removeNewSliderListener();
     },
     onPlayerApiReady,
     onConfigChange,
