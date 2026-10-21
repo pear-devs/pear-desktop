@@ -141,7 +141,7 @@ export class SlackService {
   }
 
   async clearStatus() {
-    if (!this.config?.enabled || !this.config.token || !this.slackClient) {
+    if (!this.config?.token || !this.slackClient) {
       console.log(
         LoggerPrefix,
         t('plugins.slack-status.backend.clear-skipped'),

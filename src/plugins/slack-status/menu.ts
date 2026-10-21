@@ -4,8 +4,6 @@ import { t } from '@/i18n';
 
 import promptOptions from '@/providers/prompt-options';
 
-import { setMenuOptions } from '@/config/plugins';
-
 import { LoggerPrefix } from '@/utils';
 
 import type { MenuTemplate } from '@/menu';
@@ -60,10 +58,7 @@ async function promptSlackStatusOptions(
     const updatedOptions = { ...options } as SlackStatusConfig;
     if (output[0] !== undefined) updatedOptions.token = output[0];
     setConfig(updatedOptions);
-    console.log(
-      LoggerPrefix,
-      t('plugins.slack-status.menu.set', updatedOptions),
-    );
+    console.log(LoggerPrefix, t('plugins.slack-status.menu.set'));
   }
 }
 
@@ -91,7 +86,7 @@ export const onMenu = async ({
     },
     {
       label: t('plugins.slack-status.menu.set-inactivity-timeout'),
-      click: () => setInactivityTimeout(window, config),
+      click: () => setInactivityTimeout(window, config, setConfig),
     },
   ];
 };
@@ -99,6 +94,7 @@ export const onMenu = async ({
 async function setInactivityTimeout(
   win: Electron.BrowserWindow,
   options: SlackStatusConfig,
+  setConfig: (config: SlackStatusConfig) => void,
 ) {
   const output = await prompt(
     {
@@ -113,8 +109,10 @@ async function setInactivityTimeout(
     win,
   );
 
-  if (output) {
-    options.activityTimeoutTime = Math.round(~~output * 1e3);
-    setMenuOptions('slack-status', options);
+  if (output !== null && output !== undefined) {
+    setConfig({
+      ...options,
+      activityTimeoutTime: Math.round(~~output * 1e3),
+    });
   }
 }

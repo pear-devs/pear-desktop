@@ -24,11 +24,7 @@ export const backend = createBackend<
   async start(ctx) {
     const config = await ctx.getConfig();
     slackService = new SlackService(ctx.window, config);
-    console.log(
-      LoggerPrefix,
-      t('plugins.slack-status.backend.init-main'),
-      config,
-    );
+    console.log(LoggerPrefix, t('plugins.slack-status.backend.init-main'));
 
     if (config.enabled) {
       ctx.window.once('ready-to-show', () => {
@@ -62,7 +58,6 @@ export const backend = createBackend<
     console.log(
       LoggerPrefix,
       t('plugins.slack-status.backend.on-config-change'),
-      newConfig,
     );
     slackService?.onConfigChange(newConfig);
   },
