@@ -161,7 +161,8 @@
                 "default": "ค่าเริ่มต้น",
                 "force-show": "บังคับให้แสดง",
                 "hide": "ซ่อน",
-                "label": "ปุ่มถูกใจ"
+                "label": "ปุ่มถูกใจ",
+                "swap": "สลับลำดับปุ่มถูกใจ"
               },
               "remove-upgrade-button": "ลบปุ่มอัปเกรด",
               "theme": {
@@ -230,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "ใช้ธีมบนแถบกรอ"
       },
       "name": "ธีมสีของอัลบั้ม"
     },
@@ -313,6 +315,22 @@
         "hostname": {
           "label": "ชื่อโฮสต์ (Hostname)"
         },
+        "https": {
+          "label": "HTTPS กับ Certificates",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "เลือกไฟล์ certificate HTTPS",
+              "label": "ไฟล์ Certificate (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "เปิดใช้งาน HTTPS"
+            },
+            "key": {
+              "dialogTitle": "เลือกไฟล์ private key HTTPS",
+              "label": "ไฟล์ Private Key (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "พอร์ต (Port) ของ Server"
         }
@@ -388,6 +406,17 @@
         "no-captions": "ไม่มีคำบรรยายสำหรับเพลงนี้"
       }
     },
+    "clock": {
+      "description": "เพิ่มนาฬิกาที่แถบนำทาง",
+      "menu": {
+        "format": {
+          "24-hour-format": "รูปแบบ 24 ชั่วโมง",
+          "display-seconds": "แสดงวินาที",
+          "label": "รูปแบบ"
+        }
+      },
+      "name": "นาฬิกา"
+    },
     "compact-sidebar": {
       "description": "ตั้งค่าแถบข้างให้อยู่ในโหมดกระชับเสมอ",
       "name": "แถบข้างแบบกระชับ"
@@ -454,9 +483,9 @@
         "set-status-display-type": {
           "label": "ข้อความสถานะ",
           "submenu": {
+            "application": "กำลังฟัง {{applicationName}}",
             "artist": "กำลังฟัง {ชื่อนักร้อง}",
-            "title": "กำลังฟัง {ชื่อเพลง}",
-            "application": "กำลังฟัง {{applicationName}}"
+            "title": "กำลังฟัง {ชื่อเพลง}"
           }
         }
       },
@@ -467,6 +496,13 @@
           "title": "ตั้งระยะเวลาไม่มีกิจกรรม"
         }
       }
+    },
+    "do-not-track": {
+      "description": "ป้องกันการติดตามข้อมูลทั้งหมดทันที",
+      "menu": {
+        "blocker": "รูปแบบการป้องกัน"
+      },
+      "name": "ป้องกันการติดตามข้อมูล"
     },
     "downloader": {
       "backend": {
@@ -806,6 +842,24 @@
         "not-found": "⚠️ ไม่เจอเนื้อเพลงสำหรับเพลงนี้"
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "แปลงตัวอักษรจีน",
+          "submenu": {
+            "disabled": {
+              "label": "ปิด",
+              "tooltip": "ปิดการแปลงตัวอักษรจีน"
+            },
+            "simplified-to-traditional": {
+              "label": "ตัวย่อเป็นตัวเต็ม",
+              "tooltip": "แปลงอักษรจีนตัวย่อเป็นอักษรจีนตัวเต็ม"
+            },
+            "traditional-to-simplified": {
+              "label": "ตัวเต็มเป็นตัวย่อ",
+              "tooltip": "แปลงอักษรจีนตัวเต็มเป็นอักษรจีนตัวย่อ"
+            }
+          },
+          "tooltip": "แปลงอักษรจีนเป็นตัวเต็มหรือตัวย่อ"
+        },
         "default-text-string": {
           "label": "อักขระคั่นระหว่างเนื้อเพลง",
           "tooltip": "เลือกอักขระที่คั่นในช่วงที่อยู่ระหว่างเนื้อเพลง"
@@ -889,9 +943,14 @@
           "label": "ประเภท",
           "submenu": {
             "acrylic": "อะคริลิก",
-            "mica": "ไมกา",
+            "content": "เนื้อหา",
+            "fullscreen-ui": "หน้าต่างเต็มหน้าจอ",
+            "mica": "ไมกา (Mica)",
             "none": "ไม่มี",
-            "tabbed": "Tabbed"
+            "tabbed": "แบบแท็บ (Tabbed)",
+            "under-page": "ใต้หน้า",
+            "under-window": "ใต้หน้าต่าง",
+            "window": "หน้าต่างปกติ"
           }
         }
       },

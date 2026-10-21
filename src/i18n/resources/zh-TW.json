@@ -4,11 +4,11 @@
       "plugins": {
         "execute-failed": "外掛 {{pluginName}} 無法執行::{{contextName}}",
         "executed-at-ms": "外掛 {{pluginName}}::{{contextName}} 用了 {{ms}} 毫秒來執行",
-        "initialize-failed": "初始化外掛「{{pluginName}}」失敗",
+        "initialize-failed": "無法初始化外掛「{{pluginName}}」",
         "load-all": "正在載入所有外掛",
-        "load-failed": "載入外掛「{{pluginName}}」失敗",
+        "load-failed": "無法載入外掛「{{pluginName}}」",
         "loaded": "外掛「{{pluginName}}」已載入",
-        "unload-failed": "移除外掛「{{pluginName}}」失敗",
+        "unload-failed": "無法移除外掛「{{pluginName}}」",
         "unloaded": "外掛「{{pluginName}}」已移除"
       }
     }
@@ -36,7 +36,7 @@
         "details": "沒有回應錯誤！\n{{error}}"
       },
       "when-ready": {
-        "clearing-cache-after-20s": "清理程式的快取資料"
+        "clearing-cache-after-20s": "正在清除應用程式快取"
       },
       "window": {
         "tried-to-render-offscreen": "視窗正嘗試在螢幕外繪製，視窗大小 = {{windowSize}}，螢幕大小 = {{displaySize}}，位置 = {{position}}"
@@ -53,17 +53,17 @@
           "later": "稍後",
           "restart-now": "立即重啟"
         },
-        "detail": "外掛 \"{{pluginName}}\" 需要重啟應用才會生效",
-        "message": "\"{{pluginName}}\" 需要重啟應用",
-        "title": "需要重啟應用"
+        "detail": "外掛「{{pluginName}}」需要重新啟動應用程式才會生效",
+        "message": "「{{pluginName}}」需要重新啟動應用程式",
+        "title": "需要重新啟動應用程式"
       },
       "unresponsive": {
         "buttons": {
           "quit": "離開",
-          "relaunch": "重啟應用",
+          "relaunch": "重新啟動應用程式",
           "wait": "稍等"
         },
-        "detail": "造成不便我們深表歉意！請選擇動作:",
+        "detail": "造成不便我們深表歉意！請選擇動作：",
         "message": "應用程式沒有回應",
         "title": "視窗沒有回應"
       },
@@ -71,7 +71,7 @@
         "buttons": {
           "disable": "停用新版本通知",
           "download": "前往下載",
-          "ok": "略過"
+          "ok": "確定"
         },
         "detail": "新版本已經推出，前往下載 {{downloadLink}}",
         "message": "有新版本可用",
@@ -83,11 +83,11 @@
       "navigation": {
         "label": "導覽列",
         "submenu": {
-          "copy-current-url": "複製當前頁面的網址",
+          "copy-current-url": "複製目前網址",
           "go-back": "返回上一頁",
           "go-forward": "前往下一頁",
-          "quit": "退出",
-          "restart": "重啟應用"
+          "quit": "結束",
+          "restart": "重新啟動應用程式"
         }
       },
       "options": {
@@ -100,16 +100,16 @@
               "disable-hardware-acceleration": "關閉硬體加速",
               "edit-config-json": "編輯 config.json",
               "override-user-agent": "覆寫使用者代理",
-              "restart-on-config-changes": "設定變更時自動重啟應用",
+              "restart-on-config-changes": "設定變更時自動重新啟動應用程式",
               "set-proxy": {
                 "label": "設定代理伺服器",
                 "prompt": {
-                  "label": "輸入代理伺服器位置：（留空以停用本設定）",
-                  "placeholder": "例: SOCKS5://127.0.0.1:9999",
+                  "label": "輸入代理伺服器位址：（留空以停用本設定）",
+                  "placeholder": "範例：SOCKS5://127.0.0.1:9999",
                   "title": "設定代理伺服器"
                 }
               },
-              "toggle-dev-tools": "開發人員工具"
+              "toggle-dev-tools": "切換開發人員工具"
             }
           },
           "always-on-top": "最上層顯示",
@@ -123,7 +123,7 @@
           },
           "language": {
             "dialog": {
-              "message": "語言會在重啟應用後變更",
+              "message": "語言會在重新啟動後變更",
               "title": "語言已變更"
             },
             "label": "語言",
@@ -153,8 +153,8 @@
               "custom-window-title": {
                 "label": "自訂窗口標題",
                 "prompt": {
-                  "label": "輸入自訂視窗標題: (留空將其停用)",
-                  "placeholder": "例如: {{applicationName}}"
+                  "label": "輸入自訂視窗標題：（留空將其停用）",
+                  "placeholder": "範例：{{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -172,7 +172,7 @@
                     "remove": "確定移除"
                   },
                   "remove-theme": "確定要移除自訂主題嗎？",
-                  "remove-theme-message": "這將會移除自訂主題"
+                  "remove-theme-message": "這會移除自訂主題"
                 },
                 "label": "主題",
                 "submenu": {
@@ -187,7 +187,7 @@
       "plugins": {
         "enabled": "已啟用",
         "label": "外掛功能",
-        "new": "新的"
+        "new": "新的ｃ"
       },
       "view": {
         "label": "檢視",
@@ -205,7 +205,7 @@
       "next": "下一首",
       "play-pause": "播放／暫停",
       "previous": "上一首",
-      "quit": "關閉",
+      "quit": "結束",
       "restart": "重新啟動應用程式",
       "show": "顯示視窗",
       "tooltip": {
@@ -316,7 +316,7 @@
           "label": "主機名稱"
         },
         "https": {
-          "label": "HTTPS 及 憑證",
+          "label": "HTTPS 及憑證",
           "submenu": {
             "cert": {
               "dialogTitle": "選擇憑證檔案",
@@ -370,7 +370,7 @@
           "title": "Proxy 主機名稱"
         },
         "port": {
-          "label": "本地 Proxy 伺服器連接埠（需要重啟應用）：",
+          "label": "本地 Proxy 伺服器連接埠（需要重新啟動應用程式）：",
           "title": "Proxy 連接埠"
         }
       }
@@ -392,7 +392,7 @@
       "name": "字幕選項",
       "prompt": {
         "selector": {
-          "label": "當前語言: {{language}}",
+          "label": "目前字幕語言：{{language}}",
           "none": "無",
           "title": "選擇字幕語言"
         }
@@ -403,7 +403,7 @@
       "toast": {
         "caption-changed": "字幕語言已更改至 {{language}}",
         "caption-disabled": "字幕已停用",
-        "no-captions": "該首歌曲無可用的字幕"
+        "no-captions": "這首歌曲沒有可用的字幕"
       }
     },
     "clock": {

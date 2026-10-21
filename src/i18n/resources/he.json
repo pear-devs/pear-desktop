@@ -231,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "הפעל עיצוב של פס ההתקדמות"
       },
       "name": "ערכת נושא צבע אלבום"
     },
@@ -314,6 +315,22 @@
         "hostname": {
           "label": "שם שרת אחסון"
         },
+        "https": {
+          "label": "HTTPS ותעודות",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "בחר קובץ תעודת HTTPS",
+              "label": "קובץ תעודה (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "הפעל HTTPS"
+            },
+            "key": {
+              "dialogTitle": "בחר קובץ מפתח אישי HTTPS",
+              "label": "קובץ מפתח אישי (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "פורט"
         }
@@ -385,9 +402,20 @@
       },
       "toast": {
         "caption-changed": "תרגום שונה ל {{שפה}}",
-        "caption-disabled": "תרגום בוטל",
-        "no-captions": "אין תרגום זמין לשיר הזה"
+        "caption-disabled": "כתוביות מושבתות",
+        "no-captions": "אין כתוביות זמינות לשיר הזה"
       }
+    },
+    "clock": {
+      "description": "הוסף שעון לפס הניווט",
+      "menu": {
+        "format": {
+          "24-hour-format": "פורמט 24-שעות",
+          "display-seconds": "הצג שניות",
+          "label": "פורמט"
+        }
+      },
+      "name": "שעון"
     },
     "compact-sidebar": {
       "description": "הגדר תמיד את סרגל הצד למצב קומפקטי",
@@ -403,15 +431,33 @@
         "options": {
           "multi-input": {
             "fade-in-duration": "תתפייד בזמן[מילישניות]",
+            "fade-out-duration": "משך דיהוי סוף השיר (במילישניות)",
             "fade-scaling": {
+              "label": "קנה מידת הדהייה",
               "linear": "לינארי",
               "logarithmic": "לוגריתמי"
-            }
-          }
+            },
+            "seconds-before-end": "שילוב בין X שירים לפני הסוף"
+          },
+          "title": "הגדרות שילוב שירים"
+        }
+      }
+    },
+    "custom-output-device": {
+      "description": "הגדר עבור שירים פלט התקן מדיה מותאם אישית",
+      "menu": {
+        "device-selector": "בחר התקן"
+      },
+      "name": "התקן פלט מותאם אישי",
+      "prompt": {
+        "device-selector": {
+          "label": "בחר את התקן מדיה הפלט לשימוש",
+          "title": "בחר התקן פלט"
         }
       }
     },
     "disable-autoplay": {
+      "description": "גורם לשירים להתחיל במצב מושהה",
       "menu": {
         "apply-once": "חל רק בהפעלה"
       },
@@ -419,18 +465,43 @@
     },
     "discord": {
       "backend": {
+        "already-connected": "נוסה להתחבר עם חיבור פעיל",
         "connected": "התחבר לדיסקורד",
         "disconnected": "התנתק לדיסקורד"
       },
+      "description": "הצג לחברים שלך למה אתה מקשיב עם Rich Presence",
       "menu": {
         "auto-reconnect": "חיבור מחדש אוטומטי",
         "clear-activity": "נקה פעילות",
+        "clear-activity-after-timeout": "נקה פעילות לאחר פסק זמן",
         "connected": "מחובר",
         "disconnected": "מנותק",
+        "hide-duration-left": "הסתר זמן נותר",
         "hide-github-button": "הסתר את לחצן הקישור של GitHub",
         "play-on-application": "הפעל ביוטיוב מיוזיק",
-        "set-inactivity-timeout": "הגדר פסק זמן לחוסר פעילות"
+        "set-inactivity-timeout": "הגדר פסק זמן לחוסר פעילות",
+        "set-status-display-type": {
+          "label": "טקסט סטטוס",
+          "submenu": {
+            "application": "מאזין ל{{applicationName}}",
+            "artist": "מאזין ל{artist}",
+            "title": "מאזין ל{song title}"
+          }
+        }
+      },
+      "prompt": {
+        "set-inactivity-timeout": {
+          "label": "הזן זמן תפוגה של חוסר פעילות בשניות:",
+          "title": "הגדר זמן קצוב לחוסר פעילות"
+        }
       }
+    },
+    "do-not-track": {
+      "description": "חסום את כל המעקב כברירת מחדל",
+      "menu": {
+        "blocker": "חוסם"
+      },
+      "name": "אל תעקוב"
     },
     "downloader": {
       "backend": {
@@ -446,19 +517,32 @@
             "buttons": {
               "ok": "אוקיי"
             },
-            "message": "מוריד פלייליסט {{playlistTitle}}",
+            "message": "מוריד רשימת השמעה {{playlistTitle}}",
             "title": "הורדה התחילה"
           }
         },
         "feedback": {
+          "conversion-progress": "המרה: {{percent}}%",
+          "converting": "ממיר…",
+          "done": "סיום: {{filePath}}",
+          "download-info": "מוריד {{artist}} - {{title}} {{videoId}}",
+          "download-progress": "הורדה: {{percent}}%",
           "downloading": "מוריד…",
+          "downloading-counter": "מוריד {{current}}/{{total}}…",
+          "downloading-playlist": "מוריד רשימת השמעה \"{{playlistTitle}}\" - {{playlistSize}} שירים {{playlistId}}",
+          "error-while-downloading": "שגיאה בהורדת \"{{author}} - {{title}}\": {{error}}",
+          "folder-already-exists": "התיקייה {{playlistFolder}} כבר קיימת",
+          "getting-playlist-info": "מקבל מידע על רשימת ההשמעה…",
           "loading": "בטְעִינָה…",
           "playlist-has-only-one-song": "לפלייליסט יש רק פריט אחד, מוריד אותו ישירות",
           "playlist-id-not-found": "לא נמצא מזהה ID פלייליסט",
+          "playlist-is-empty": "הרשימת ההשמעה ריקה",
+          "playlist-is-mix-or-private": "שגיאה בקבלת מידע על רשימת ההשמעה: וודא כי היא אינה פרטית או רשימת השמעה \"Mixed for you\"\n\n{{error}}",
           "preparing-file": "מכין קובץ…",
           "saving": "שומר…",
           "trying-to-get-playlist-id": "מנסה להשיג מזהה פלייליסט: {{playlistId}}",
-          "video-id-not-found": "הסרטון לא נמצא"
+          "video-id-not-found": "הסרטון לא נמצא",
+          "writing-id3": "כותב תגיות ID3…"
         }
       },
       "description": "מוריד MP3 / אודיו מקור ישירות מהממשק",
@@ -474,12 +558,93 @@
           "submenu": {
             "advanced": "מִתקַדֵם",
             "enabled": "מופעל",
+            "mode": "מצב זמן",
             "percent": "אָחוּז",
             "seconds": "שניות"
           }
         },
+        "download-playlist": "הורד רשימת ההשמעה",
         "presets": "הגדרות קבועות מראש",
         "skip-existing": "דלג על קבצים קיימים"
+      },
+      "name": "מוריד",
+      "renderer": {
+        "can-not-update-progress": "לא ניתן לעדכן התקדמות"
+      },
+      "templates": {
+        "button": "הורד"
+      }
+    },
+    "equalizer": {
+      "description": "מוסיף אקולייזר לנגן",
+      "menu": {
+        "presets": {
+          "label": "הגדרות קבועות מראש",
+          "list": {
+            "bass-booster": "מגבר בס"
+          }
+        }
+      },
+      "name": "אקולייזר"
+    },
+    "exponential-volume": {
+      "description": "הופך את מחוון עוצמת הקול לאקספוננציאלית כך שיהיה קל יותר לבחור עוצמות קול נמוכות יותר.",
+      "name": "עוצמת קול אקספוננציאלית"
+    },
+    "in-app-menu": {
+      "description": "נותן לסרגלי התפריטים מראה מהודר, כהה או בצבע אלבום",
+      "menu": {
+        "hide-dom-window-controls": "הסתר פקדי חלון DOM"
+      },
+      "name": "תפריט פנים-אפליקצה"
+    },
+    "lumiastream": {
+      "description": "מוסיף תמיכת Lumia Stream",
+      "name": "Lumia Stream [בטא]"
+    },
+    "lyrics-genius": {
+      "description": "מוסיף תמיכת כתוביות לרוב השירים",
+      "renderer": {
+        "fetched-lyrics": "נאספו כתוביות לGenius"
+      }
+    },
+    "music-together": {
+      "description": "שתף רשימת השמעה עם אחרים. כאשר המארח מנגן שיר, כל השאר ישמעו את אותו שיר",
+      "dialog": {
+        "enter-host": "הזן את המזהה של המארח"
+      },
+      "internal": {
+        "save": "שמור",
+        "unknown-user": "משתמש לא מזוהה"
+      },
+      "menu": {
+        "click-to-copy-id": "העתק מזהה המארח",
+        "close": "סגור Music Together",
+        "connected-users": "משתמשים מחוברים",
+        "disconnect": "נתק Music Together",
+        "empty-user": "אין משתמשים מחוברים",
+        "host": "מארח Music Together",
+        "join": "הצטרף לMusic Together",
+        "permission": {
+          "all": "מרשה לאורחים לשלוט ברשימת ההשמעה ובנגן",
+          "host-only": "רק המארח יכול לשלוט ברשימת ההשמעה ובנגן",
+          "playlist": "הרשה לאורחים לשלוט ברשימת ההשמה"
+        },
+        "set-permission": "שנה רשות השליטה",
+        "status": {
+          "disconnected": "מנותק",
+          "guest": "מחובר בתור אורח",
+          "host": "מחובר בתור מארח"
+        }
+      },
+      "name": "Music Together [בטא]",
+      "toast": {
+        "add-song-failed": "נכשל בהוספת השיר",
+        "closed": "Music Together נסגר",
+        "disconnected": "Music Together נותק",
+        "host-failed": "נכשל באירוח Music Together",
+        "id-copied": "מזהה מארח הועתק ללוח",
+        "id-copy-failed": "נכשל בהעתקת מזהה המארח ללוח"
       }
     }
   }

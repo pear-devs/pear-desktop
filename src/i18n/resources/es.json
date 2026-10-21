@@ -2,9 +2,9 @@
   "common": {
     "console": {
       "plugins": {
-        "execute-failed": "Error al ejecutar el complemento {{pluginName}}::{{contextName}}",
-        "executed-at-ms": "Complemento {{pluginName}}::{{contextName}} se ejecutó en {{ms}}ms",
-        "initialize-failed": "Error al inicializar el complemento \"{{pluginName}}\"",
+        "execute-failed": "Error en executar el complement {{pluginName}}::{{contextName}}",
+        "executed-at-ms": "Complement {{pluginName}}::{{contextName}} executat a {{ms}}ms",
+        "initialize-failed": "Error en inicializar el complement \"{{pluginName}}\"",
         "load-all": "Cargando todos los complementos",
         "load-failed": "Error al cargar el complemento \"{{pluginName}}\"",
         "loaded": "Complementos \"{{pluginName}}\" cargados",

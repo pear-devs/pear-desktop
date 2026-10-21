@@ -15,6 +15,7 @@ body:
       - label: I understand that **pear-devs/pear-desktop has NO affiliation with Google or YouTube**
         required: true
 - type: input
+  id: app-version
   attributes:
     label: Pear Desktop (Application) Version
     description: |
@@ -31,6 +32,7 @@ body:
       - label: I use the portable version of the Pear Desktop Application.
       - label: I can reproduce this issue in the [official version of (WEB) YTM](https://music.youtube.com).
 - type: dropdown
+  id: os
   attributes:
     label: What operating system are you using?
     options:
@@ -42,6 +44,7 @@ body:
   validations:
     required: true
 - type: input
+  id: os-version
   attributes:
     label: Operating System Version
     description: What operating system version are you using? On Windows, click the Start button > Settings > System > About. On macOS, click the Apple Menu > About This Mac. On Linux, use lsb_release or uname -a.
@@ -49,6 +52,7 @@ body:
   validations:
     required: true
 - type: dropdown
+  id: cpu-arch
   attributes:
     label: What CPU architecture are you using?
     options:
@@ -83,6 +87,7 @@ body:
   validations:
     required: true
 - type: textarea
+  id: enabled-plugins
   attributes:
     label: Enabled plugins
     description: Provide the list of plugins you enabled.

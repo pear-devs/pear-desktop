@@ -497,6 +497,13 @@
         }
       }
     },
+    "do-not-track": {
+      "description": "Chặn mọi trình theo dõi từ đầu",
+      "menu": {
+        "blocker": "Trình chặn"
+      },
+      "name": "Không theo dõi/Chặn quảng cáo"
+    },
     "downloader": {
       "backend": {
         "dialog": {
@@ -936,9 +943,14 @@
           "label": "Kiểu nền",
           "submenu": {
             "acrylic": "Acrylic",
+            "content": "Nội dung",
+            "fullscreen-ui": "Giao diện toàn màn hình",
             "mica": "Mica",
             "none": "Không có",
-            "tabbed": "Tabbed"
+            "tabbed": "Tabbed",
+            "under-page": "Phía dưới trang",
+            "under-window": "Ở dưới cửa sổ",
+            "window": "Cửa sổ"
           }
         }
       },
