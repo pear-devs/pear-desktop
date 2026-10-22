@@ -147,18 +147,28 @@ export function registerMPRIS(win: BrowserWindow) {
       player.seeked(secToMicro(t));
     });
 
+    let stalledSince: number | null = null;
+
     ipcMain.on(
       'peard:position-changed',
       (_, currentTime: number, rate: number) => {
         const position = secToMicro(currentTime);
         const drift = Math.abs(position - player.getPosition());
+        const clientLead =
+          stalledSince !== null && rate > 0
+            ? (Date.now() - stalledSince) * 1e3 * player.rate
+            : 0;
+        stalledSince = rate > 0 ? null : (stalledSince ?? Date.now());
         player.setPosition(position, rate);
         if (rate > 0 && rate !== player.rate) {
           player.minimumRate = Math.min(player.minimumRate, rate);
           player.maximumRate = Math.max(player.maximumRate, rate);
           player.rate = rate;
         }
-        if (drift > positionDriftToleranceMicro) {
+        if (
+          drift > positionDriftToleranceMicro ||
+          clientLead > positionDriftToleranceMicro
+        ) {
           player.seeked(position);
         }
       },
