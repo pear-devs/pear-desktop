@@ -6,6 +6,7 @@ import promptOptions from '@/providers/prompt-options';
 
 import { type ScrobblerPluginConfig } from './index';
 import { type SetConfType, backend } from './main';
+import { login } from './services/lastfm';
 
 import type { MenuTemplate } from '@/menu';
 import type { MenuContext } from '@/types/contexts';
@@ -124,6 +125,12 @@ export const onMenu = async ({
             backend.toggleScrobblers(config, window);
             config.scrobblers.lastfm.enabled = item.checked;
             setConfig(config);
+          },
+        },
+        {
+          label: t('plugins.scrobbler.menu.lastfm.login'),
+          click() {
+            login(config, setConfig, window);
           },
         },
         {
