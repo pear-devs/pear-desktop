@@ -26,20 +26,22 @@ window.ipcRenderer.on(
 // Used because 'loadeddata' or 'loadedmetadata' weren't firing on song start for some users (https://github.com/pear-devs/pear-desktop/issues/473)
 const srcChangedEvent = new CustomEvent('peard:src-changed');
 
-export const setupSeekedListener = singleton(() => {
-  document.querySelector('video')?.addEventListener('seeked', (v) => {
-    if (v.target instanceof HTMLVideoElement) {
-      window.ipcRenderer.send('peard:seeked', v.target.currentTime);
-    }
+export const setupSeekedListener = singleton((api: MusicPlayer) => {
+  document.querySelector('video')?.addEventListener('seeked', () => {
+    window.ipcRenderer.send('peard:seeked', api.getCurrentTime());
   });
 });
 
-export const setupTimeChangedListener = singleton(() => {
+export const setupTimeChangedListener = singleton((api: MusicPlayer) => {
   const progressObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       const target = mutation.target as Node & { value: string };
       const numberValue = Number(target.value);
-      window.ipcRenderer.send('peard:time-changed', numberValue);
+      window.ipcRenderer.send(
+        'peard:time-changed',
+        numberValue,
+        api.getCurrentTime(),
+      );
       songInfo.elapsedSeconds = numberValue;
     }
   });
@@ -194,7 +196,7 @@ export const setupAutoPlayChangedListener = singleton(() => {
 
 export const setupSongInfo = (api: MusicPlayer) => {
   window.ipcRenderer.on('peard:setup-time-changed-listener', () => {
-    setupTimeChangedListener();
+    setupTimeChangedListener(api);
   });
 
   window.ipcRenderer.on('peard:setup-like-changed-listener', () => {
@@ -222,7 +224,7 @@ export const setupSongInfo = (api: MusicPlayer) => {
   });
 
   window.ipcRenderer.on('peard:setup-seeked-listener', () => {
-    setupSeekedListener();
+    setupSeekedListener(api);
   });
 
   const playPausedHandler = (e: Event, status: string) => {

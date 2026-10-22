@@ -22,10 +22,11 @@ import type { QueueResponse } from '@/types/music-player-desktop-internal';
 
 class YTPlayer extends MprisPlayer {
   /**
-   * @type {number} The current position in microseconds
+   * @type {number} The position in microseconds at positionUpdatedAt
    * @private
    */
   private currentPosition: number = 0;
+  private positionUpdatedAt: number = Date.now();
   canUsePlayerControls: boolean = false;
 
   constructor(opts: PlayerOptions) {
@@ -34,10 +35,16 @@ class YTPlayer extends MprisPlayer {
 
   setPosition(t: number) {
     this.currentPosition = t;
+    this.positionUpdatedAt = Date.now();
   }
 
   override getPosition(): number {
-    return this.currentPosition;
+    if (!this.isPlaying()) {
+      return this.currentPosition;
+    }
+
+    const elapsedMicro = (Date.now() - this.positionUpdatedAt) * 1e3;
+    return this.currentPosition + elapsedMicro;
   }
 
   setLoopStatus(status: LoopStatus) {
@@ -57,6 +64,7 @@ class YTPlayer extends MprisPlayer {
   }
 
   setPlaybackStatus(status: PlayBackStatus) {
+    this.setPosition(this.getPosition());
     this.playbackStatus = status;
   }
 }
@@ -95,7 +103,8 @@ export function registerMPRIS(win: BrowserWindow) {
   try {
     let currentSongInfo: SongInfo | null = null;
     const secToMicro = (n: number) => Math.round(Number(n) * 1e6);
-    const microToSec = (n: number) => Math.round(Number(n) / 1e6);
+    const microToSec = (n: number) => Number(n) / 1e6;
+    const positionDriftToleranceMicro = 100_000;
 
     const correctId = (videoId: string) => {
       return videoId.replace(/-/g, '_MINUS_');
@@ -134,6 +143,22 @@ export function registerMPRIS(win: BrowserWindow) {
       player.setPosition(secToMicro(t));
       player.seeked(secToMicro(t));
     });
+
+    ipcMain.on(
+      'peard:time-changed',
+      (_, _seconds: number, currentTime?: number) => {
+        if (typeof currentTime !== 'number') {
+          return;
+        }
+
+        const position = secToMicro(currentTime);
+        const drift = Math.abs(position - player.getPosition());
+        player.setPosition(position);
+        if (drift > positionDriftToleranceMicro) {
+          player.seeked(position);
+        }
+      },
+    );
 
     ipcMain.on('peard:repeat-changed', (_, mode: RepeatMode) => {
       switch (mode) {
@@ -319,7 +344,6 @@ export function registerMPRIS(win: BrowserWindow) {
 
     registerCallback((songInfo: SongInfo, event) => {
       if (event === SongInfoEvent.TimeChanged) {
-        player.setPosition(secToMicro(songInfo.elapsedSeconds ?? 0));
         return;
       }
       if (player) {
@@ -342,11 +366,13 @@ export function registerMPRIS(win: BrowserWindow) {
 
         player.metadata = data;
 
-        const currentElapsedMicroSeconds = secToMicro(
-          songInfo.elapsedSeconds ?? 0,
-        );
-        player.setPosition(currentElapsedMicroSeconds);
-        player.seeked(currentElapsedMicroSeconds);
+        if (event === SongInfoEvent.VideoSrcChanged) {
+          const currentElapsedMicroSeconds = secToMicro(
+            songInfo.elapsedSeconds ?? 0,
+          );
+          player.setPosition(currentElapsedMicroSeconds);
+          player.seeked(currentElapsedMicroSeconds);
+        }
 
         player.setPlaybackStatus(
           songInfo.isPaused
