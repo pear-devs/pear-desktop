@@ -33,22 +33,30 @@ export const setupSeekedListener = singleton((api: MusicPlayer) => {
 });
 
 export const setupTimeChangedListener = singleton((api: MusicPlayer) => {
+  const video = document.querySelector('video');
+  const sendPosition = (rate = video?.playbackRate ?? 1) => {
+    window.ipcRenderer.send(
+      'peard:position-changed',
+      api.getCurrentTime(),
+      rate,
+    );
+  };
   const progressObserver = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       const target = mutation.target as Node & { value: string };
       const numberValue = Number(target.value);
-      window.ipcRenderer.send(
-        'peard:time-changed',
-        numberValue,
-        api.getCurrentTime(),
-      );
+      window.ipcRenderer.send('peard:time-changed', numberValue);
       songInfo.elapsedSeconds = numberValue;
+      sendPosition();
     }
   });
   const progressBar = document.querySelector('#progress-bar');
   if (progressBar) {
     progressObserver.observe(progressBar, { attributeFilter: ['value'] });
   }
+  video?.addEventListener('waiting', () => sendPosition(0));
+  video?.addEventListener('playing', () => sendPosition());
+  video?.addEventListener('ratechange', () => sendPosition());
 });
 
 export const setupRepeatChangedListener = singleton(() => {

@@ -27,15 +27,17 @@ class YTPlayer extends MprisPlayer {
    */
   private currentPosition: number = 0;
   private positionUpdatedAt: number = Date.now();
+  private positionRate: number = 1;
   canUsePlayerControls: boolean = false;
 
   constructor(opts: PlayerOptions) {
     super(opts);
   }
 
-  setPosition(t: number) {
+  setPosition(t: number, rate: number = this.positionRate) {
     this.currentPosition = t;
     this.positionUpdatedAt = Date.now();
+    this.positionRate = rate;
   }
 
   override getPosition(): number {
@@ -43,7 +45,8 @@ class YTPlayer extends MprisPlayer {
       return this.currentPosition;
     }
 
-    const elapsedMicro = (Date.now() - this.positionUpdatedAt) * 1e3;
+    const elapsedMicro =
+      (Date.now() - this.positionUpdatedAt) * 1e3 * this.positionRate;
     return this.currentPosition + elapsedMicro;
   }
 
@@ -145,15 +148,16 @@ export function registerMPRIS(win: BrowserWindow) {
     });
 
     ipcMain.on(
-      'peard:time-changed',
-      (_, _seconds: number, currentTime?: number) => {
-        if (typeof currentTime !== 'number') {
-          return;
-        }
-
+      'peard:position-changed',
+      (_, currentTime: number, rate: number) => {
         const position = secToMicro(currentTime);
         const drift = Math.abs(position - player.getPosition());
-        player.setPosition(position);
+        player.setPosition(position, rate);
+        if (rate > 0 && rate !== player.rate) {
+          player.minimumRate = Math.min(player.minimumRate, rate);
+          player.maximumRate = Math.max(player.maximumRate, rate);
+          player.rate = rate;
+        }
         if (drift > positionDriftToleranceMicro) {
           player.seeked(position);
         }
