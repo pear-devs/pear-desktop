@@ -39,33 +39,20 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - name: Setup nub and NodeJS
+        uses: nubjs/setup-nub@c7b970ec04655a2f0a111cd436cc182a3b660e7a # v0.6.0
         with:
-          version: 11
-          run_install: false
-
-      - name: Setup NodeJS
-        if: startsWith(matrix.os, 'macOS') != true
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Setup NodeJS for macOS
-        if: startsWith(matrix.os, 'macOS')
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
-        with:
+          nub-version: 0.9.5
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: nub ci
 
       - name: Build on macOS
         if: startsWith(matrix.os, 'macOS')
         run: |
-          pnpm dist:mac
-          pnpm dist:mac:arm64
+          nub run dist:mac
+          nub run dist:mac:arm64
 
       - name: Install Linux dependencies
         if: startsWith(matrix.os, 'ubuntu')
@@ -81,14 +68,14 @@ jobs:
       - name: Build on Linux
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          pnpm dist:linux
-          pnpm dist:linux:deb-arm64
-          pnpm dist:linux:rpm-arm64
+          nub run dist:linux
+          nub run dist:linux:deb-arm64
+          nub run dist:linux:rpm-arm64
 
       - name: Build on Windows
         if: startsWith(matrix.os, 'windows')
         run: |
-          pnpm dist:win
+          nub run dist:win
 
       - name: Upload artifacts
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
