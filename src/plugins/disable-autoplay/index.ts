@@ -27,6 +27,13 @@ export default createPlugin<
     enabled: false,
     applyOnce: false,
   },
+  settings: [
+    {
+      type: 'switch',
+      key: 'applyOnce',
+      label: () => t('plugins.disable-autoplay.menu.apply-once'),
+    },
+  ],
   menu: async ({ getConfig, setConfig }) => {
     const config = await getConfig();
 
