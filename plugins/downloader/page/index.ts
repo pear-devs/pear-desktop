@@ -110,11 +110,14 @@ function showResult(ctx: Ctx, toast: ShowToast, result: JobResult, openDownloads
     return toast(t("plugins.downloader.toast.failed", "Download failed: {{error}}", { error: result.error }), downloads);
   }
   const [file] = result.files;
-  const count = result.files.length;
+  // Songs kept in the app count too; with no file to show, the Downloads page shows them.
+  const count = result.files.length + (result.kept?.length ?? 0);
   const message =
     count > 1
       ? t("plugins.downloader.toast.saved-many", "Saved {{count}} songs from “{{title}}”", { count, title: result.label })
       : t("plugins.downloader.toast.saved", "Saved “{{title}}”", { title: result.label });
-  const show = file ? { label: t("plugins.downloader.toast.show", "Show"), run: () => void ctx.host.invoke("reveal", file) } : undefined;
+  const show = file
+    ? { label: t("plugins.downloader.toast.show", "Show"), run: () => void ctx.host.invoke("reveal", file) }
+    : { label: t("plugins.downloader.toast.downloads", "Downloads"), run: openDownloads };
   toast(message, show);
 }

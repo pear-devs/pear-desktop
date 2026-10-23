@@ -70,7 +70,8 @@ async function launchDownloader(
   const app = await launch({
     ...options,
     plugins: {
-      downloader: { enabled: true, config: { downloadFolder: folder, template: "%(title)s.%(ext)s", ...config } },
+      // Saving to the folder, as for everyone upgrading (new profiles keep songs in the app: see its own test).
+      downloader: { enabled: true, config: { downloadFolder: folder, template: "%(title)s.%(ext)s", exportFiles: true, ...config } },
       "do-not-track": { enabled: true },
     },
   });
@@ -203,6 +204,34 @@ for (const layout of ["classic", "new"] as const) {
     await expect(action(row(page, title), "Show in folder")).toBeVisible();
   });
 }
+
+test("downloader keeps songs in the app unless asked, and saves them to the folder from their row", async ({ launch, tempDir }) => {
+  test.setTimeout(150_000);
+  const { page, folder } = await launchDownloader({ launch, tempDir }, { format: "opus", exportFiles: false });
+  await expect.poll(() => invoke(page, "downloader", "state").catch(() => null)).toBeTruthy();
+  await invoke(page, "downloader", "download", { videoId: TEST_TRACK }, "Test song");
+  await expect.poll(async () => (await jobs(page))[0]?.status, { timeout: 90_000 }).toBe("done");
+
+  // Kept in the app: nothing in the folder, and the song is in the downloader's store.
+  expect(songFiles(folder)).toEqual([]);
+  expect(await jobs(page)).toEqual([expect.objectContaining({ files: [], kept: [TEST_TRACK] })]);
+  const tracks = await invoke<{ videoId: string }[]>(page, "downloader", "offlineTracks");
+  expect(tracks.map((track) => track.videoId)).toEqual([TEST_TRACK]);
+
+  // Its row says so, and saves it to the folder, converted as the settings say then.
+  await preview(page);
+  const song = row(page, "Test song");
+  await expect(song.locator(".status")).toContainText("In the app");
+  await action(song, "Save to the download folder").click();
+  await expect.poll(() => songFiles(folder), { timeout: 60_000 }).toEqual(["Never Gonna Give You Up.opus"]);
+  const tags = ffprobe<{ format: { tags?: Record<string, string> }; streams: { codec_type: string; tags?: Record<string, string> }[] }>(
+    join(folder, "Never Gonna Give You Up.opus"),
+    "-show_streams",
+  );
+  expect(tags.streams.find((stream) => stream.codec_type === "audio")?.tags).toMatchObject({ title: "Never Gonna Give You Up", artist: "Rick Astley" });
+  await expect(action(song, "Show in folder")).toBeVisible();
+  await expect(song.locator(".status")).not.toContainText("In the app");
+});
 
 test("downloader downloads yt-dlp when it isn't installed, and says so when offline", async ({ launch, tempDir }) => {
   test.setTimeout(240_000);

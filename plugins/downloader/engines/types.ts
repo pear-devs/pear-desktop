@@ -51,6 +51,8 @@ export const isPause = (signal: AbortSignal) => signal.aborted && signal.reason 
 
 export interface EngineResult {
   files: string[];
+  /** Songs kept in the downloader's store instead of saved to the folder (by video id). */
+  kept?: string[];
   /** Why some items of a playlist failed, when others were saved. */
   error?: string;
 }
@@ -67,12 +69,14 @@ export interface Engine {
  */
 export class RecoverableError extends Error {
   readonly files: string[];
+  readonly kept: string[];
   readonly items: number[] | undefined;
 
-  constructor(message: string, options: { cause?: unknown; files?: string[]; items?: number[] } = {}) {
+  constructor(message: string, options: { cause?: unknown; files?: string[]; kept?: string[]; items?: number[] } = {}) {
     super(message, options.cause === undefined ? undefined : { cause: options.cause });
     this.name = "RecoverableError";
     this.files = options.files ?? [];
+    this.kept = options.kept ?? [];
     this.items = options.items;
   }
 }

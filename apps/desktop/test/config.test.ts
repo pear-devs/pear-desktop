@@ -36,6 +36,7 @@ const downloader = definePlugin({
   name: "Downloader",
   config: {
     downloadFolder: config.string("", { label: "Folder" }),
+    exportFiles: config.bool(false, { label: "Export" }),
     format: config.select("mp3", [{ value: "mp3", label: "MP3" }, { value: "m4a", label: "M4A" }, { value: "opus", label: "Opus" }, { value: "source", label: "Source" }], {
       label: "Format",
     }),
@@ -113,11 +114,18 @@ describe("config.json from pear-desktop 3.x", () => {
     expect(migrate(undefined, "4.0.0").config.plugins).toBeUndefined();
   });
 
+  test("everyone upgrading keeps the downloader saving files to the folder; new profiles keep songs in the app", () => {
+    expect(migrated312({}).config.plugins?.downloader).toMatchObject({ exportFiles: true });
+    expect(migrated312({ plugins: { downloader: { exportFiles: false } } }).config.plugins?.downloader).toMatchObject({ exportFiles: false });
+    expect(load().plugin("downloader")?.config).toMatchObject({ exportFiles: false });
+  });
+
   test("maps the downloader's presets and download-on-finish settings", () => {
     expect(settings.plugin("downloader")).toEqual({
       enabled: true,
       config: {
         downloadFolder: "/home/me/Music/YTM",
+        exportFiles: true,
         format: "source",
         playlistMaxItems: 50,
         skipExisting: true,

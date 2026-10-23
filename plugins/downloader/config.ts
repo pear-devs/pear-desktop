@@ -8,6 +8,11 @@ export const downloaderConfig = {
     placeholder: "Downloads",
     description: "Leave empty for your Downloads folder, like pear-desktop.",
   }),
+  exportFiles: config.bool(false, {
+    label: "Save songs to the download folder",
+    description:
+      "Off, downloaded songs stay in the app, where the Downloads page plays them offline, until you export them from the Downloads list. Songs only yt-dlp can get are always saved to the folder.",
+  }),
   format: config.select(
     "mp3",
     [
@@ -51,7 +56,7 @@ export const downloaderConfig = {
   offline: config.bool(true, {
     label: "Play downloaded songs offline",
     description:
-      "Keeps a copy of each song in the app, so the Downloads page in your Library plays it without internet. Only songs the built-in downloader saves. The site's own Premium downloads stop working while this is on.",
+      "The Downloads page in your Library plays downloaded songs without internet (the songs the built-in downloader saves). The site's own Premium downloads stop working while this is on.",
   }),
   squareCover: config.bool(true, { label: "Crop cover art to a square" }),
   replayGain: config.bool(false, {

@@ -45,6 +45,20 @@ function queueWith(engine: Engine, options: Partial<QueueOptions> = {}) {
 const statuses = (queue: DownloadQueue) => queue.jobs.map((job) => [job.label, job.status]);
 
 describe("download queue", () => {
+  test("remembers the songs a job kept in the app, until they are exported", async () => {
+    const keeping: Engine = { name: "built-in", download: async () => ({ files: [], kept: ["aaaaaaaaaaa"] }) };
+    const { queue, results } = queueWith(keeping);
+    const id = queue.add({ videoId: "aaaaaaaaaaa" }, "One");
+    await expect.poll(() => queue.jobs[0]?.status).toBe("done");
+    expect(queue.jobs[0]).toMatchObject({ files: [], kept: ["aaaaaaaaaaa"] });
+    expect(results[0]).toMatchObject({ kept: ["aaaaaaaaaaa"] });
+    expect(results[0]?.error).toBeUndefined();
+
+    queue.exported(id, "aaaaaaaaaaa", "/music/One.mp3");
+    expect(queue.jobs[0]).toMatchObject({ files: ["/music/One.mp3"] });
+    expect(queue.jobs[0]?.kept).toBeUndefined();
+  });
+
   test("lists the running job, the queued ones, then the finished ones", async () => {
     const { engine, finish, running } = heldEngine();
     const { queue } = queueWith(engine);

@@ -1,13 +1,16 @@
-// Songs kept for YTM's own offline playback (host only): each song's stream as
-// it was downloaded, before converting, and the player response YTM plays it
-// with, in userData/offline/<videoId>/; and the albums and playlists they came
-// from, in userData/offline/lists/<playlistId>.json. The page writes them into
-// YTM's offline databases (page/offline.ts), so its Downloads page plays them
-// without internet.
+// The downloader's own store of songs (host only): each song's stream as it
+// was downloaded, before converting, the player response YTM plays it with, and
+// what exporting it into the download folder later needs (tags, the file name's
+// fields, the cover art), in userData/offline/<videoId>/; and the albums and
+// playlists they came from, in userData/offline/lists/<playlistId>.json. The
+// page writes them into YTM's offline databases (page/offline.ts), so its
+// Downloads page plays them without internet.
 
 import { constants } from "node:fs";
 import { copyFile, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import type { Cover, Tags } from "./convert.ts";
+import type { TemplateFields } from "./template.ts";
 
 const VIDEO_ID = /^[\w-]{11}$/;
 const PLAYLIST_ID = /^[\w-]+$/;
@@ -15,6 +18,9 @@ const LISTS_FOLDER = "lists";
 const TRACK_FILE = "track.json";
 const PLAYER_FILE = "player.json";
 const AUDIO_FILE = "audio";
+const COVER_FILE = "cover.jpg";
+/** Streams being downloaded into the store, before they are kept. */
+const STAGING_FOLDER = ".staging";
 
 /** A byte range of the stream, as the site's player response gives it. */
 export interface ByteRange {
@@ -37,6 +43,17 @@ export interface OfflineFormat {
   audioChannels?: number;
 }
 
+/** What exporting a kept song needs besides its stream: its tags and its file name's fields. */
+export interface ExportInfo {
+  tags: Tags;
+  /** The file name's fields, but the extension, which the format at export time decides. */
+  fields: Omit<TemplateFields, "ext">;
+  /** Downloaded with an album or playlist, which may have a folder of its own. */
+  inList: boolean;
+  /** The cover art's size, when it is kept (cover.jpg). */
+  cover?: { width: number; height: number };
+}
+
 /** What the page shows of a kept song. */
 export interface OfflineTrack {
   videoId: string;
@@ -46,11 +63,32 @@ export interface OfflineTrack {
   format: OfflineFormat;
   /** When it was kept, in milliseconds. */
   addedAt: number;
+  export?: ExportInfo;
+  /** The file it was exported to. */
+  exported?: string;
 }
 
 /** A song to keep: its track and the player response, as JSON. */
-export interface OfflineSong extends Omit<OfflineTrack, "addedAt"> {
+export interface OfflineSong extends Omit<OfflineTrack, "addedAt" | "export"> {
   playerResponse: string;
+}
+
+/** What else a song is kept with. */
+export interface KeepOptions {
+  /** For exporting it later. */
+  exportInfo?: Omit<ExportInfo, "cover">;
+  cover?: Cover | undefined;
+  /** Move the stream in (it was staged in the store) instead of copying it. */
+  move?: boolean;
+  /** The file it was saved to as well. */
+  exported?: string;
+}
+
+/** A kept song, for exporting it: its stream's file and what else it was kept with. */
+export interface KeptSong {
+  track: OfflineTrack;
+  audio: string;
+  cover: Cover | undefined;
 }
 
 /** An album or playlist of kept songs. */
@@ -79,17 +117,30 @@ export class OfflineStore {
     this.#dir = dir;
   }
 
-  /** Keeps `song` with a copy of its downloaded `stream` (a cheap clone where the file system has them). */
-  async save(song: OfflineSong, stream: string) {
+  /**
+   * Keeps `song` with its downloaded `stream`: moved in, or a copy (a cheap
+   * clone where the file system has them).
+   */
+  async save(song: OfflineSong, stream: string, options: KeepOptions = {}) {
     const folder = this.#folder(song.videoId);
     const temp = `${folder}.temp`;
     await rm(temp, { recursive: true, force: true });
     await mkdir(temp, { recursive: true });
     try {
-      await copyFile(stream, join(temp, AUDIO_FILE), constants.COPYFILE_FICLONE);
-      const { playerResponse, ...track } = song;
+      if (options.move) await rename(stream, join(temp, AUDIO_FILE));
+      else await copyFile(stream, join(temp, AUDIO_FILE), constants.COPYFILE_FICLONE);
+      const { playerResponse, ...rest } = song;
+      const track: OfflineTrack = { ...rest, addedAt: Date.now() };
+      if (options.exported) track.exported = options.exported;
+      if (options.exportInfo) {
+        track.export = { ...options.exportInfo };
+        if (options.cover) {
+          await writeFile(join(temp, COVER_FILE), options.cover.data);
+          track.export.cover = { width: options.cover.width, height: options.cover.height };
+        }
+      }
       await writeFile(join(temp, PLAYER_FILE), playerResponse);
-      await writeFile(join(temp, TRACK_FILE), JSON.stringify({ ...track, addedAt: Date.now() } satisfies OfflineTrack));
+      await writeFile(join(temp, TRACK_FILE), JSON.stringify(track));
       await rm(folder, { recursive: true, force: true });
       await rename(temp, folder);
     } catch (error) {
@@ -131,6 +182,29 @@ export class OfflineStore {
 
   async has(videoId: string) {
     return (await this.#track(videoId)) !== undefined;
+  }
+
+  /** Where a stream is downloaded to before it is kept; continued from there when a paused download resumes. */
+  async stagingFile(videoId: string, itag: number) {
+    this.#folder(videoId);
+    await mkdir(join(this.#dir, STAGING_FOLDER), { recursive: true });
+    return join(this.#dir, STAGING_FOLDER, `${videoId}.f${itag}.part`);
+  }
+
+  /** A kept song's stream file and what else it was kept with; undefined when it isn't kept. */
+  async kept(videoId: string): Promise<KeptSong | undefined> {
+    const track = await this.#track(videoId);
+    if (!track) return undefined;
+    const folder = this.#folder(videoId);
+    const size = track.export?.cover;
+    const cover = size ? { data: await readFile(join(folder, COVER_FILE)), ...size } : undefined;
+    return { track, audio: join(folder, AUDIO_FILE), cover };
+  }
+
+  /** Remembers that a kept song was exported to `file`. */
+  async exported(videoId: string, file: string) {
+    const track = await this.#track(videoId);
+    if (track) await writeFile(join(this.#folder(videoId), TRACK_FILE), JSON.stringify({ ...track, exported: file }));
   }
 
   /** Keeps an album or playlist with those of its songs that are kept; none kept, nothing to keep. */

@@ -35,6 +35,10 @@ interface Downloader {
   queue: DownloadQueue;
   tools: Tools;
   offline: OfflineStore;
+  /** For exporting kept songs. */
+  builtIn: InnertubeEngine;
+  /** The built-in engine's options now, as a job would get them. */
+  builtInOptions(): BuiltInJobOptions;
 }
 
 /** Tests set this to pretend yt-dlp and ffmpeg aren't installed. */
@@ -77,8 +81,9 @@ export async function startHost(ctx: Ctx) {
   const autoJobs = new Set<number>();
   const history = new DownloadHistory(join(ctx.app.getPath("userData"), "downloads.json"));
   const offline = new OfflineStore(join(ctx.app.getPath("userData"), "offline"));
-  const queue = createQueue(ctx, tools, autoJobs, history, offline, () => publisher.publish());
-  downloaders.set(ctx, { queue, tools, offline });
+  const builtIn = createBuiltInEngine(ctx, tools, autoJobs, offline);
+  const queue = createQueue(ctx, tools, autoJobs, history, builtIn, () => publisher.publish());
+  downloaders.set(ctx, { queue, tools, offline, builtIn, builtInOptions: () => builtInJobOptions(ctx, false) });
   blockOfflineSync(ctx);
   // Everything but the tool paths and offline playback is read per download.
   const toolsKey = toolsKeyOf(ctx.config);
@@ -199,9 +204,8 @@ class Publisher {
 
 // ---------------------------------------------------------------- queue
 
-function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, history: DownloadHistory, offline: OfflineStore, publish: () => void) {
+function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, history: DownloadHistory, builtIn: InnertubeEngine, publish: () => void) {
   const ytDlp = createYtDlpEngine(ctx, tools, autoJobs);
-  const builtIn = createBuiltInEngine(ctx, tools, autoJobs, offline);
   return new DownloadQueue({
     engines: () => enginesFor(ctx.config, builtIn, ytDlp),
     saved: history.load(),
@@ -271,30 +275,14 @@ function createBuiltInEngine(ctx: Ctx, tools: Tools, autoJobs: Set<number>, offl
   const wasm = new WasmConverter({ create: () => createWasmFFmpeg(ctx) });
   return new InnertubeEngine({
     session,
-    jobOptions: (id): BuiltInJobOptions => {
-      const { config } = ctx;
-      return {
-        folder: downloadFolder(ctx, autoJobs.has(id)),
-        // The Custom format never gets here (enginesFor).
-        format: config.format === "custom" ? "source" : config.format,
-        template: config.template,
-        playlistFolders: config.playlistFolders,
-        playlistLimit: config.playlistMaxItems,
-        skipExisting: config.skipExisting,
-        archive: config.archive,
-        squareCover: config.squareCover,
-        replayGain: config.replayGain,
-        lyrics: config.lyrics,
-        lyricsFile: config.lyricsFile,
-        offline: config.offline,
-      };
-    },
+    jobOptions: (id) => builtInJobOptions(ctx, autoJobs.has(id)),
     converter: (): Converter => chooseConverter(tools.ffmpegProgram, () => wasm),
     cover: (url, square, signal) => fetchCover(ctx, url, square, signal),
     fetch: (url, init) => ctx.session.fetch(url, init),
     lyrics: (query, signal) => findLyrics(query, (url, init) => ctx.session.fetch(url, init), signal),
-    keep: async (song, stream) => {
-      await offline.save(song, stream);
+    store: offline,
+    keep: async (song, stream, options) => {
+      await offline.save(song, stream, options);
       // The page writes it into the site's offline databases.
       ctx.emit("offline-added", song.videoId);
     },
@@ -303,6 +291,27 @@ function createBuiltInEngine(ctx: Ctx, tools: Tools, autoJobs: Set<number>, offl
     },
     log: ctx.log,
   });
+}
+
+/** The built-in engine's options for a job (automatic downloads have a folder of their own). */
+function builtInJobOptions(ctx: Ctx, auto: boolean): BuiltInJobOptions {
+  const { config } = ctx;
+  return {
+    folder: downloadFolder(ctx, auto),
+    // The Custom format never gets here (enginesFor).
+    format: config.format === "custom" ? "source" : config.format,
+    template: config.template,
+    playlistFolders: config.playlistFolders,
+    playlistLimit: config.playlistMaxItems,
+    skipExisting: config.skipExisting,
+    archive: config.archive,
+    squareCover: config.squareCover,
+    replayGain: config.replayGain,
+    lyrics: config.lyrics,
+    lyricsFile: config.lyricsFile,
+    offline: config.offline,
+    exportFiles: config.exportFiles,
+  };
 }
 
 /**
@@ -359,7 +368,7 @@ function notifyWhenHidden(ctx: Ctx, result: JobResult) {
 /** What the toast says about a finished download. */
 function resultMessage({ t }: Ctx, result: JobResult) {
   if (result.error) return t("plugins.downloader.toast.failed", "Download failed: {{error}}", { error: result.error });
-  const count = result.files.length;
+  const count = result.files.length + (result.kept?.length ?? 0);
   if (count > 1) return t("plugins.downloader.toast.saved-many", "Saved {{count}} songs from “{{title}}”", { count, title: result.label });
   return t("plugins.downloader.toast.saved", "Saved “{{title}}”", { title: result.label });
 }

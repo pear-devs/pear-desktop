@@ -10,7 +10,7 @@ import { errorMessage } from "@pear/sdk/util";
 import { Innertube, Platform, type Types, UniversalCache, type YT, YTNodes, type YTMusic } from "\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js";
 import { type BuiltInFormat, type Converter, type Cover, codecOf, outputFor, preferredContainer, type Tags } from "../convert.ts";
 import type { Lyrics, LyricsQuery } from "../lyrics.ts";
-import type { OfflineList, OfflineSong } from "../offline.ts";
+import type { KeepOptions, OfflineList, OfflineSong, OfflineStore } from "../offline.ts";
 import { Archive } from "../archive.ts";
 import { playlistFolder, renderTemplate, type TemplateFields } from "../template.ts";
 import { isAlbum } from "../ytdlp.ts";
@@ -44,6 +44,8 @@ export interface BuiltInJobOptions {
   lyricsFile: boolean;
   /** Keep each song's stream as downloaded for YTM's offline playback (`keep`). */
   offline: boolean;
+  /** Save songs to `folder`; otherwise they are kept in the store until exported (`export`). */
+  exportFiles: boolean;
 }
 
 // ---------------------------------------------------------------- session
@@ -169,8 +171,10 @@ export interface InnertubeEngineOptions {
   /** The window's session's fetch, for the stream. */
   fetch(url: string, init: { signal: AbortSignal }): Promise<Response>;
   lyrics(query: LyricsQuery, signal: AbortSignal): Promise<Lyrics | undefined>;
-  /** Keeps a song's downloaded stream, before it is converted, for YTM's offline playback. */
-  keep?(song: OfflineSong, stream: string): Promise<void>;
+  /** Keeps a song's downloaded stream (before it is converted) in the store, for YTM's offline playback and exporting. */
+  keep?(song: OfflineSong, stream: string, options: KeepOptions): Promise<void>;
+  /** The store's songs, which `keep` adds to. */
+  store?: Pick<OfflineStore, "has" | "stagingFile" | "kept" | "exported">;
   /** Keeps an album or playlist (after its songs), for YTM's offline Downloads page. */
   keepList?(list: Omit<OfflineList, "addedAt">): Promise<void>;
   log: { warn(...args: unknown[]): void };
@@ -207,6 +211,8 @@ interface SongProgress {
   download(bytes: number, total: number): void;
   convert(fraction: number): void;
   saved(file: string): void;
+  /** Kept in the store, not saved to the folder. */
+  kept(): void;
   /** Downloaded before. */
   skipped(): void;
   /** Its partial download stays for later. */
@@ -227,8 +233,8 @@ export class InnertubeEngine implements Engine {
     const { playlistId } = job.target;
     if (playlistId) return this.#playlist(yt, playlistId, job.target.items, options, progress, signal);
     const entry = { videoId: job.target.videoId, title: job.label, index: 1 };
-    const file = await this.#song(yt, entry, undefined, options, songProgress(progress, entry, 0, 1), signal);
-    return { files: file ? [file] : [] };
+    const { file, kept } = await this.#song(yt, entry, undefined, options, songProgress(progress, entry, 0, 1), signal);
+    return { files: file ? [file] : [], kept: kept ? [kept] : [] };
   }
 
   async #playlist(
@@ -242,7 +248,7 @@ export class InnertubeEngine implements Engine {
     const { list, entries } = await recoverable(() => this.#list(yt, playlistId, options.playlistLimit), signal);
     const wanted = only ? entries.filter((entry) => only.includes(entry.index)) : entries;
     progress.songs(entries.map(({ index, videoId, title }) => ({ index, videoId, title })));
-    const saved: (string | undefined)[] = [];
+    const saved: SongOutcome[] = [];
     const retry: number[] = [];
     const errors: string[] = [];
     const songs = listProgress(progress, wanted);
@@ -270,12 +276,13 @@ export class InnertubeEngine implements Engine {
     const workers = await Promise.allSettled(Array.from({ length: Math.min(PLAYLIST_CONCURRENCY, wanted.length) }, worker));
     const stopped = workers.find((settled) => settled.status === "rejected");
     if (stopped) throw stopped.reason;
-    if (options.offline) await this.#keepList(list, entries);
-    const files = saved.filter((file) => file !== undefined);
+    if (options.offline || !options.exportFiles) await this.#keepList(list, entries);
+    const files = saved.flatMap((outcome) => (outcome?.file ? [outcome.file] : []));
+    const kept = saved.flatMap((outcome) => (outcome?.kept ? [outcome.kept] : []));
     retry.sort((a, b) => a - b);
-    if (retry.length > 0) throw new RecoverableError(`${retry.length} of ${wanted.length} songs failed`, { files, items: retry });
-    if (wanted.length === 0) return { files, error: "the playlist is empty" };
-    return errors.length > 0 ? { files, error: errors.at(-1)! } : { files };
+    if (retry.length > 0) throw new RecoverableError(`${retry.length} of ${wanted.length} songs failed`, { files, kept, items: retry });
+    if (wanted.length === 0) return { files, kept, error: "the playlist is empty" };
+    return errors.length > 0 ? { files, kept, error: errors.at(-1)! } : { files, kept };
   }
 
   /** The list's songs, following continuations up to the limit; for albums also the album's tags. */
@@ -320,7 +327,11 @@ export class InnertubeEngine implements Engine {
     }
   }
 
-  /** Downloads and converts one song; resolves with its file, or undefined when the archive says it was downloaded. */
+  /**
+   * Downloads one song: into the store, where it stays until exported, or
+   * converted into the folder. Resolves with its file or its video id (kept),
+   * or neither when the archive says it was downloaded.
+   */
   async #song(
     yt: Innertube,
     entry: Entry,
@@ -328,11 +339,17 @@ export class InnertubeEngine implements Engine {
     options: BuiltInJobOptions,
     progress: SongProgress,
     signal: AbortSignal,
-  ): Promise<string | undefined> {
-    const archive = options.skipExisting && options.archive ? new Archive(options.folder) : undefined;
+  ): Promise<SongOutcome> {
+    const store = this.#options.store;
+    const exporting = options.exportFiles || !store;
+    const archive = exporting && options.skipExisting && options.archive ? new Archive(options.folder) : undefined;
     if (await archive?.has(entry.videoId)) {
       progress.skipped();
-      return undefined;
+      return {};
+    }
+    if (!exporting && options.skipExisting && (await store.has(entry.videoId))) {
+      progress.skipped();
+      return { kept: entry.videoId };
     }
     progress.started();
     const session = this.#options.session;
@@ -346,20 +363,29 @@ export class InnertubeEngine implements Engine {
     const relative = renderTemplate(options.template, fields);
     const folder = list && options.playlistFolders ? join(options.folder, playlistFolder(fields)) : options.folder;
     const file = join(folder, relative);
-    if (options.skipExisting && existsSync(file)) {
+    if (exporting && options.skipExisting && existsSync(file)) {
       await archive?.add(entry.videoId);
       progress.skipped();
-      return file;
+      return { file };
     }
-    await mkdir(dirname(file), { recursive: true });
 
-    // Named by the stream, so a paused download only continues from the same one.
-    const partial = `${file}.f${format.itag}.part`;
+    // Kept, the stream is downloaded into the store; named by the stream, so a paused download only continues from the same one.
+    const keepOnly = !exporting && keepable(format);
+    const partial = keepOnly ? await store.stagingFile(entry.videoId, format.itag) : `${file}.f${format.itag}.part`;
+    if (!keepOnly) await mkdir(dirname(file), { recursive: true });
     const converted = join(dirname(file), `${relative.split("/").at(-1)!.replace(/\.[^.]+$/, "")}.temp.${ext}`);
+    const { ext: _ext, ...exportFields } = fields;
+    const exportInfo = { tags, fields: exportFields, inList: list !== undefined };
     try {
       const refresh = async () => (poToken = await session.poToken(yt, entry.videoId, true));
       await this.#stream({ yt, format, poToken: () => poToken, refresh }, partial, progress, signal);
       const cover = await this.#cover(list?.album?.cover ?? thumbnailOf(info), options.squareCover, signal);
+      if (keepOnly && (await this.#keep(entry.videoId, format, tags, partial, { move: true, cover, exportInfo }))) {
+        progress.kept();
+        return { kept: entry.videoId };
+      }
+      // Saved to the folder (also when the store can't keep it).
+      await mkdir(dirname(file), { recursive: true });
       const lyrics = options.lyrics || options.lyricsFile ? await this.#lyrics(tags, info.basic_info.duration ?? 0, signal) : undefined;
       if (options.lyrics && lyrics) tags.lyrics = lyrics.plain;
       await this.#options.converter().convert({
@@ -376,17 +402,52 @@ export class InnertubeEngine implements Engine {
       });
       await rename(converted, file);
       // Once saved: a song paused or cancelled while converting isn't kept.
-      if (options.offline) await this.#keep(entry.videoId, format, tags, partial);
+      if (options.offline) await this.#keep(entry.videoId, format, tags, partial, { cover, exportInfo, exported: file });
       if (options.lyricsFile && lyrics?.synced) await writeFile(file.replace(/\.[^./\\]+$/, ".lrc"), lyrics.synced);
       await archive?.add(entry.videoId);
       progress.saved(file);
-      return file;
+      return { file };
     } finally {
       // A paused song continues its download later.
       if (isPause(signal) && existsSync(partial)) progress.keep(partial);
       else await rm(partial, { force: true });
       await rm(converted, { force: true });
     }
+  }
+
+  /**
+   * Saves a kept song into the folder, converted as `options` say now (format,
+   * file name, tags, lyrics); resolves with its file.
+   */
+  async export(videoId: string, options: BuiltInJobOptions, signal: AbortSignal): Promise<string> {
+    const kept = await this.#options.store?.kept(videoId);
+    const info = kept?.track.export;
+    if (!kept || !info) throw new Error(`${videoId} isn't in the downloads, or was kept before it could be exported`);
+    const { ext, codecArgs } = outputFor(options.format, { codec: codecOf(kept.track.format.mimeType) });
+    const fields: TemplateFields = { ...info.fields, ext };
+    const relative = renderTemplate(options.template, fields);
+    const folder = info.inList && options.playlistFolders ? join(options.folder, playlistFolder(fields)) : options.folder;
+    const file = join(folder, relative);
+    const archive = options.archive ? new Archive(options.folder) : undefined;
+    if (!existsSync(file)) {
+      await mkdir(dirname(file), { recursive: true });
+      const converted = join(dirname(file), `${relative.split("/").at(-1)!.replace(/\.[^.]+$/, "")}.temp.${ext}`);
+      const tags = { ...info.tags };
+      const duration = fields.duration ?? 0;
+      const lyrics = options.lyrics || options.lyricsFile ? await this.#lyrics(tags, duration, signal) : undefined;
+      if (options.lyrics && lyrics) tags.lyrics = lyrics.plain;
+      try {
+        const input = { input: kept.audio, output: converted, ext, codecArgs, tags, cover: kept.cover, replayGain: options.replayGain, duration, signal };
+        await this.#options.converter().convert({ ...input, onProgress: () => {} });
+        await rename(converted, file);
+      } finally {
+        await rm(converted, { force: true });
+      }
+      if (options.lyricsFile && lyrics?.synced) await writeFile(file.replace(/\.[^./\\]+$/, ".lrc"), lyrics.synced);
+    }
+    await archive?.add(videoId);
+    await this.#options.store?.exported(videoId, file);
+    return file;
   }
 
   /** The song's streams and tags; songs that need signing in are tried with the TV client, as pear-desktop did. */
@@ -416,17 +477,21 @@ export class InnertubeEngine implements Engine {
     });
   }
 
-  /** Keeps the stream for YTM's offline playback; a song that can't be kept is still saved. */
-  async #keep(videoId: string, format: FormatLike, tags: Tags, stream: string) {
+  /** Keeps the stream in the store; whether it did (a song it can't keep is saved to the folder instead). */
+  async #keep(videoId: string, format: FormatLike, tags: Tags, stream: string, options: KeepOptions) {
     const keep = this.#options.keep;
-    if (!keep) return;
+    if (!keep) return false;
     try {
       const song = offlineSong(this.#options.session.playerResponse(videoId), videoId, format, tags);
-      if (song) await keep(song, stream);
-      else this.#options.log.warn(`${tags.title} (${videoId}) not kept for offline playback: no audio-only stream, or no playable player response`);
+      if (song) {
+        await keep(song, stream, options);
+        return true;
+      }
+      this.#options.log.warn(`${tags.title} (${videoId}) not kept in the downloads: no audio-only stream, or no playable player response`);
     } catch (error) {
-      this.#options.log.warn(`${tags.title} (${videoId}) not kept for offline playback:`, errorMessage(error));
+      this.#options.log.warn(`${tags.title} (${videoId}) not kept in the downloads:`, errorMessage(error));
     }
+    return false;
   }
 
   /** Keeps the list with those of its songs that were kept; a list that can't be kept doesn't fail the download. */
@@ -467,6 +532,15 @@ export class InnertubeEngine implements Engine {
 
 type FormatLike = ReturnType<YTMusic.TrackInfo["chooseFormat"]>;
 
+/** A song's outcome: saved to the folder (`file`), or kept in the store (`kept`, its video id). */
+interface SongOutcome {
+  file?: string;
+  kept?: string;
+}
+
+/** Streams YTM's offline player plays from its store: audio only, with their byte ranges. */
+const keepable = (format: FormatLike) => format.mime_type.startsWith("audio/") && !!format.init_range && !!format.index_range && !!format.content_length;
+
 /** A song's stream and the PO token its URL carries. */
 interface StreamSource {
   yt: Innertube;
@@ -483,7 +557,7 @@ interface StreamSource {
  */
 function offlineSong(playerResponse: string | undefined, videoId: string, format: FormatLike, tags: Tags): OfflineSong | undefined {
   const { init_range: initRange, index_range: indexRange, content_length: contentLength } = format;
-  if (!playerResponse || !format.mime_type.startsWith("audio/") || !initRange || !indexRange || !contentLength) return undefined;
+  if (!playerResponse || !keepable(format) || !initRange || !indexRange || !contentLength) return undefined;
   const range = ({ start, end }: { start: number; end: number }) => ({ start: String(start), end: String(end) });
   return {
     videoId,
@@ -665,6 +739,7 @@ function songUpdates(progress: Progress, entry: Entry) {
     started: () => update({ status: "active", videoId: entry.videoId, title: entry.title }),
     bytes: (bytes: number, total: number) => update(total ? { bytes, total } : { bytes }),
     saved: (file: string) => update({ status: "done", file }),
+    kept: () => update({ status: "done" }),
     skipped: () => update({ status: "skipped" }),
     keep: (file: string) => progress.partial(file),
   };

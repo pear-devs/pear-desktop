@@ -943,6 +943,10 @@
         "offline": {
           "label": "Play downloaded songs offline",
           "description": "Keeps a copy of each song in the app, so the Downloads page in your Library plays it without internet. Only songs the built-in downloader saves. The site's own Premium downloads stop working while this is on."
+        },
+        "exportFiles": {
+          "label": "Save songs to the download folder",
+          "description": "Off, downloaded songs stay in the app, where the Downloads page plays them offline, until you export them from the Downloads list. Songs only yt-dlp can get are always saved to the folder."
         }
       },
       "errors": {
@@ -990,7 +994,8 @@
         "saved-many": "Saved {{count}} songs from “{{title}}”",
         "saved": "Saved “{{title}}”",
         "show": "Show",
-        "downloads": "Downloads"
+        "downloads": "Downloads",
+        "cannot-export": "Can't save it to the folder: {{error}}"
       },
       "labels": {
         "album": "album",
@@ -1045,7 +1050,8 @@
           "starting": "Starting",
           "left": "{{time}} left",
           "downloading": "Downloading",
-          "skipped": "Already downloaded"
+          "skipped": "Already downloaded",
+          "in-app": "In the app"
         },
         "size-of": "{{downloaded}} of {{size}}",
         "open-folder": "Open folder",
@@ -1056,7 +1062,9 @@
           "seconds": "{{count}} s",
           "minutes": "{{count}} min",
           "hours": "{{hours}} h {{minutes}} min"
-        }
+        },
+        "exporting": "Saving to the download folder…",
+        "export": "Save to the download folder"
       },
       "page": {
         "queue": "Download queue"

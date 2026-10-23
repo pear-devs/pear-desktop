@@ -47,6 +47,10 @@ const MIGRATIONS: [version: string, migration: Migration][] = [
       if (performance.enabled !== false) performance.enabled = true;
       if (typeof options.trayClickPlayPause === "boolean") ensurePluginEntry(config, "tray").clickPlayPause = options.trayClickPlayPause;
       migratePlugins(config, files);
+      // pear-desktop saved every download to the download folder; the rewrite keeps them in the app
+      // unless asked (exportFiles). Everyone upgrading keeps getting the files. After migratePlugins,
+      // which would treat a new entry as one pear-desktop wrote.
+      setNew(ensurePluginEntry(config, "downloader"), "exportFiles", true);
     },
   ],
 ];

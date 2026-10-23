@@ -30,6 +30,8 @@ export interface JobResult {
   id: number;
   label: string;
   files: string[];
+  /** Songs kept in the downloader's store instead (video ids). */
+  kept?: string[];
   error?: string;
   cancelled?: boolean;
   /** The engine that did (the rest of) the job. */
@@ -67,7 +69,7 @@ interface Running {
   item?: JobState["item"];
 }
 
-type Outcome = Pick<Job, "status"> & Partial<Pick<Job, "files" | "error" | "engine">>;
+type Outcome = Pick<Job, "status"> & Partial<Pick<Job, "files" | "kept" | "error" | "engine">>;
 
 export class DownloadQueue {
   #options: QueueOptions;
@@ -170,6 +172,18 @@ export class DownloadQueue {
     const paused = this.#takePaused(id);
     if (paused) void removeFiles(paused.partials);
     if (paused || this.#dropPending(id) || this.#takeFinished(id)) this.#emit();
+  }
+
+  /** A kept song of a finished job was exported to `file`. */
+  exported(id: number, videoId: string, file: string) {
+    const job = this.#finished.find((finished) => finished.id === id);
+    if (!job) return;
+    job.kept = (job.kept ?? []).filter((kept) => kept !== videoId);
+    if (job.kept.length === 0) delete job.kept;
+    if (!job.files.includes(file)) job.files = [...job.files, file];
+    for (const item of job.items ?? []) if (item.videoId === videoId) item.file = file;
+    this.#saved();
+    this.#emit();
   }
 
   clearFinished() {
@@ -278,6 +292,7 @@ export class DownloadQueue {
     const cancelled = stopping === "cancel";
     const final: JobResult = cancelled ? { ...result, cancelled, error: "Download cancelled" } : result;
     const outcome: Outcome = { status: "done", files: final.files };
+    if (final.kept?.length) outcome.kept = final.kept;
     if (final.engine) outcome.engine = final.engine;
     if (cancelled) outcome.status = "cancelled";
     else if (final.error) Object.assign(outcome, { status: "failed", error: final.error });
@@ -288,6 +303,7 @@ export class DownloadQueue {
   /** The songs it saved stay saved; the one it was downloading starts again on resume. */
   #pausedRun(job: Job) {
     job.files = savedFiles(job);
+    job.kept = keptSongs(job);
     delete job.stage;
     for (const item of job.items ?? []) {
       if (item.status === "active") item.status = "queued";
@@ -304,23 +320,25 @@ export class DownloadQueue {
     const engines = this.#options.engines(job.id);
     // A resumed job keeps what it saved before, and does only the songs it hadn't.
     const saved = [...job.files];
+    const kept = [...(job.kept ?? [])];
     let target = remainingTarget(job);
     const progress = this.#progress(running);
     for (const [index, engine] of engines.entries()) {
       try {
         const result = await engine.download({ id: job.id, label: job.label, target }, progress, signal);
-        return { ...resultOf(job, [...saved, ...result.files], result), engine: engine.name };
+        return { ...resultOf(job, [...saved, ...result.files], [...kept, ...(result.kept ?? [])], result), engine: engine.name };
       } catch (error) {
         const next = engines[index + 1];
         if (!next || !isRecoverable(error) || signal.aborted) throw error;
         this.#options.log.warn(`${engine.name} couldn't download ${job.label} (${error.message}); trying ${next.name}`);
         saved.push(...error.files);
+        kept.push(...error.kept);
         if (error.items) target = { ...target, items: error.items };
         job.stage = "starting";
         this.#emit();
       }
     }
-    return { id: job.id, label: job.label, files: saved };
+    return { id: job.id, label: job.label, files: saved, kept };
   }
 
   #progress(running: Running): Progress {
@@ -440,6 +458,12 @@ function setOrDelete<K extends "speed" | "eta">(target: Partial<Record<K, number
   else target[key] = value;
 }
 
+/** The songs a job kept in the store so far, and not exported. */
+function keptSongs(job: Job) {
+  const songs = (job.items ?? []).flatMap((item) => (item.status === "done" && !item.file && item.videoId ? [item.videoId] : []));
+  return [...new Set([...(job.kept ?? []), ...songs])];
+}
+
 /** The files of the songs a job saved so far. */
 function savedFiles(job: Job) {
   const songs = (job.items ?? []).flatMap((item) => (item.status === "done" && item.file ? [item.file] : []));
@@ -456,10 +480,10 @@ function remainingTarget(job: Job): DownloadTarget {
   return { ...job.target, items: wanted ? left.filter((index) => wanted.includes(index)) : left };
 }
 
-function resultOf(job: EngineJob, files: string[], result: EngineResult): JobResult {
-  const jobResult: JobResult = { id: job.id, label: job.label, files };
+function resultOf(job: EngineJob, files: string[], kept: string[], result: EngineResult): JobResult {
+  const jobResult: JobResult = { id: job.id, label: job.label, files, kept: [...new Set(kept)] };
   // Some items failing is still a success while others were saved.
-  if (result.error && files.length === 0) jobResult.error = result.error;
+  if (result.error && files.length === 0 && kept.length === 0) jobResult.error = result.error;
   return jobResult;
 }
 
@@ -474,6 +498,7 @@ function jobState({ job, item }: Running): JobState {
 function snapshot(job: Job): Job {
   const { items, partials, ...rest } = job;
   const copy: Job = { ...rest, files: [...job.files] };
+  if (job.kept) copy.kept = [...job.kept];
   if (partials) copy.partials = [...partials];
   if (items && job.kind !== "song") copy.items = items.map((item) => ({ ...item }));
   return copy;

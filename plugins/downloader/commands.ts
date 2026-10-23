@@ -27,6 +27,8 @@ export interface DownloaderCommands {
   /** Shows the Downloads popover in the page, pinned open. */
   openDownloads(): void;
   updateYtDlp(): Promise<void>;
+  /** Saves the songs a finished download kept in the app into the download folder; resolves with their files. */
+  export(id: number): Promise<string[]>;
   /** The songs kept for offline playback, newest first. */
   offlineTracks(): Promise<OfflineTrack[]>;
   /** A kept song with its stream, for the page to write into the site's offline databases. */

@@ -4,6 +4,7 @@
 // same rows. Preact, rendered while they show.
 
 import { useEffect, useState } from "preact/hooks";
+import { remoteErrorMessage } from "@pear/sdk/util";
 import type { Job, JobItem } from "../jobs.ts";
 import { isFinished } from "../jobs.ts";
 import { formatBytes, formatSpeed, formatTimeLeft, formatWhen } from "./format.ts";
@@ -21,6 +22,7 @@ const ICONS = {
   retry: "M17.65 6.35A7.96 7.96 0 0 0 12 4a8 8 0 1 0 7.73 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z",
   remove: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
   folder: "M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z",
+  export: "M19 12v7H5v-7H3v7c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-7h-2zm-6 .67 2.59-2.58L17 11.5l-5 5-5-5 1.41-1.41L11 12.67V3h2z",
   chevron: "M8.59 16.59 13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z",
 } as const;
 
@@ -173,7 +175,7 @@ function SongRow({ ctx, item }: { ctx: Ctx; item: JobItem }) {
   );
 }
 
-type Action = { label: string; icon: string; run(): void };
+type Action = { label: string; icon: string; run(): void; disabled?: boolean };
 
 /** The row's icon actions, by status. */
 function Actions({ ctx, job }: { ctx: Ctx; job: Job }) {
@@ -185,6 +187,20 @@ function Actions({ ctx, job }: { ctx: Ctx; job: Job }) {
   const retry = { label: t("plugins.downloader.popover.retry", "Retry"), icon: ICONS.retry, run: invoke("retry") };
   const remove = { label: t("plugins.downloader.popover.remove", "Remove"), icon: ICONS.remove, run: invoke("remove") };
   const [file] = job.files;
+  const [exporting, setExporting] = useState(false);
+  // Songs kept in the app go to the download folder.
+  const exportSongs: Action = {
+    label: exporting ? t("plugins.downloader.popover.exporting", "Saving to the download folder…") : t("plugins.downloader.popover.export", "Save to the download folder"),
+    icon: ICONS.export,
+    disabled: exporting,
+    run: () => {
+      setExporting(true);
+      ctx.host
+        .invoke("export", job.id)
+        .catch((error: unknown) => ctx.toast(t("plugins.downloader.toast.cannot-export", "Can't save it to the folder: {{error}}", { error: remoteErrorMessage(error) })))
+        .finally(() => setExporting(false));
+    },
+  };
   const show = { label: t("plugins.downloader.popover.show", "Show in folder"), icon: ICONS.folder, run: () => {
       if (file) void ctx.host.invoke("reveal", file);
     },
@@ -195,12 +211,12 @@ function Actions({ ctx, job }: { ctx: Ctx; job: Job }) {
     queued: [cancel],
     failed: [retry, remove],
     cancelled: [retry, remove],
-    done: file ? [show, remove] : [remove],
+    done: [...(job.kept?.length ? [exportSongs] : []), ...(file ? [show] : []), remove],
   };
   return (
     <span class="actions">
       {actions[job.status].map((action) => (
-        <button type="button" class="action" aria-label={action.label} title={action.label} onClick={action.run}>
+        <button type="button" class="action" aria-label={action.label} title={action.label} disabled={action.disabled} onClick={action.run}>
           <Icon path={action.icon} />
         </button>
       ))}
@@ -218,8 +234,11 @@ function jobLine(ctx: Ctx, job: Job) {
       return runningLine(ctx, job);
     case "paused":
       return t("plugins.downloader.popover.status.paused", "Paused");
-    case "done":
-      return [job.size !== undefined && formatBytes(job.size), formatWhen(job.finishedAt ?? job.addedAt)].filter(Boolean).join(" · ");
+    case "done": {
+      // Kept in the app, not saved to the folder (yet).
+      const inApp = job.kept?.length && job.files.length === 0 && t("plugins.downloader.popover.status.in-app", "In the app");
+      return [job.size !== undefined && formatBytes(job.size), formatWhen(job.finishedAt ?? job.addedAt), inApp].filter(Boolean).join(" · ");
+    }
     case "failed":
       return job.error ?? t("plugins.downloader.popover.status.failed", "Failed");
     case "cancelled":

@@ -48,6 +48,8 @@ export interface Job extends Transfer {
   /** The songs of an album or playlist, once the engine lists them. */
   items?: JobItem[];
   files: string[];
+  /** Songs kept in the downloader's store but not saved to the folder (video ids); exporting saves them. */
+  kept?: string[];
   error?: string;
   /** The engine that did (the rest of) the job. */
   engine?: Engine;

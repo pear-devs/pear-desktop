@@ -78,7 +78,7 @@
 | `disable-autoplay` | Disable autoplay | Starts every track paused instead of playing it automatically. |
 | `discord` | Discord Rich Presence | Show your friends what you're listening to in your Discord status. |
 | `do-not-track` | Do Not Track | pear-desktop's ad and tracker blocker: strips ads and tracking data from the player, or filters requests with blocklists, skips ads that still play, and dismisses the Premium reminder YTM shows after them. |
-| `downloader` | Downloader | Saves songs, albums and playlists as tagged audio files with cover art, using yt-dlp. They also play offline from the Downloads page in your Library. |
+| `downloader` | Downloader | Downloads songs, albums and playlists to play offline from the Downloads page in your Library, and saves them as tagged audio files with cover art (on request, or always for those upgrading from pear-desktop 3.x), using yt-dlp for what it can't get itself. |
 | `equalizer` | Equalizer | A 10-band equalizer with presets. |
 | `exponential-volume` | Exponential volume | Makes the volume slider follow loudness perception, giving finer control at low volumes. |
 | `in-app-menu` | In-app menu | Replaces the system title bar: the top bar moves the window and holds the app menu. |

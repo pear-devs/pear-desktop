@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
@@ -91,6 +91,26 @@ describe("offline store", () => {
     expect(await store.removeList("PLmix")).toEqual(["bbbbbbbbbbb"]);
     expect(await store.has("bbbbbbbbbbb")).toBe(false);
     expect(await store.lists()).toEqual([]);
+  });
+
+  test("keeps what exporting later needs, moves a staged stream in, and remembers the export", async () => {
+    const dir = tempDir();
+    const store = new OfflineStore(join(dir, "offline"));
+    const staged = await store.stagingFile("n1oPCIdabo4", 251);
+    writeFileSync(staged, "opus!!");
+    const exportInfo = { tags: { title: "Song", artist: "Artist" }, fields: { id: "n1oPCIdabo4", title: "Song" }, inList: false };
+    const cover = { data: Buffer.from("jpeg"), width: 544, height: 544 };
+    await store.save(song(), staged, { move: true, exportInfo, cover });
+    expect(existsSync(staged)).toBe(false);
+
+    const kept = await store.kept("n1oPCIdabo4");
+    expect(kept?.track.export).toEqual({ ...exportInfo, cover: { width: 544, height: 544 } });
+    expect(Buffer.from(kept!.cover!.data).toString()).toBe("jpeg");
+    expect(readFileSync(kept!.audio, "utf8")).toBe("opus!!");
+    expect(kept?.track.exported).toBeUndefined();
+
+    await store.exported("n1oPCIdabo4", "/music/Song.mp3");
+    expect((await store.kept("n1oPCIdabo4"))?.track.exported).toBe("/music/Song.mp3");
   });
 
   test("only video ids name its folders", async () => {

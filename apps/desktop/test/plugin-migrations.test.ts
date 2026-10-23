@@ -206,8 +206,8 @@ describe("pear-desktop plugin options", () => {
 
   test("runs on the stored entry only, never on a missing or broken one", () => {
     expect(migrated({ visualizer: "broken" as unknown as Json }).visualizer).toBe("broken");
-    // Only performance-improvement, on by default in pear-desktop, gets an entry.
-    expect(migrated({})).toEqual({ "performance-improvement": { enabled: true } });
+    // Only performance-improvement (on by default in pear-desktop) and the downloader (saving to the folder) get an entry.
+    expect(migrated({})).toEqual({ "performance-improvement": { enabled: true }, downloader: { exportFiles: true } });
   });
 });
 

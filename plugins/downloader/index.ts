@@ -83,6 +83,19 @@ export default definePlugin({
       updateYtDlp() {
         return downloaderOf(this).tools.updateNow();
       },
+      /** Saves the songs a finished download kept in the app into the download folder; resolves with their files. */
+      async export(id: number): Promise<string[]> {
+        const { queue, builtIn, builtInOptions } = downloaderOf(this);
+        const kept = queue.jobs.find((job) => job.id === id)?.kept ?? [];
+        const options = builtInOptions();
+        const files: string[] = [];
+        for (const videoId of kept) {
+          const file = await builtIn.export(videoId, options, new AbortController().signal);
+          queue.exported(id, videoId, file);
+          files.push(file);
+        }
+        return files;
+      },
       offlineTracks(): Promise<OfflineTrack[]> {
         return downloaderOf(this).offline.list();
       },
