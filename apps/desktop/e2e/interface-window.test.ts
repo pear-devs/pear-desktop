@@ -6,7 +6,7 @@ import { waitForTrackPlaying } from "./helpers/playback.ts";
 import { setConfig, setEnabled } from "./helpers/plugins.ts";
 import { overlay } from "./helpers/settings.ts";
 import { screenshot, windowInfo } from "./helpers/window.ts";
-import { mainWindow, playTestTrack } from "./launch.ts";
+import { mainWindow, NO_WINDOW_MANAGER, playTestTrack } from "./launch.ts";
 import { inBar, sel } from "./helpers/player-bar.ts";
 
 /** picture-in-picture's small window. */
@@ -96,29 +96,34 @@ test.describe("in-app menu", () => {
     await expect(top).toBeHidden();
   });
 
-  test("opens the settings, has window controls, and goes away when disabled", async ({ app, page }) => {
-    const trigger = await menuTrigger(page);
-    // Settings opens Pear Desktop's overlay.
-    await menuItem(await openSubmenu(page, trigger, "Options"), "Settings").click();
-    await expect(overlay(page).getByRole("dialog")).toBeVisible();
-    await overlay(page).getByRole("button", { name: "Close settings" }).click();
+  test.describe("with a window manager", () => {
+    // Maximizing takes one.
+    test.skip(!!NO_WINDOW_MANAGER, NO_WINDOW_MANAGER);
 
-    if (process.platform === "linux") {
-      const controls = page.locator("pear-window-controls");
-      await expect(controls.getByRole("button", { name: "Close" })).toBeVisible();
-      await controls.getByRole("button", { name: "Maximize" }).click();
-      await expect.poll(async () => (await windowInfo(app)).maximized).toBe(true);
-      await expect(controls.getByRole("button", { name: "Restore" })).toBeVisible();
-      await controls.getByRole("button", { name: "Restore" }).click();
-      await expect.poll(async () => (await windowInfo(app)).maximized).toBe(false);
+    test("opens the settings, has window controls, and goes away when disabled", async ({ app, page }) => {
+      const trigger = await menuTrigger(page);
+      // Settings opens Pear Desktop's overlay.
+      await menuItem(await openSubmenu(page, trigger, "Options"), "Settings").click();
+      await expect(overlay(page).getByRole("dialog")).toBeVisible();
+      await overlay(page).getByRole("button", { name: "Close settings" }).click();
 
-      await setConfig(page, "in-app-menu", { windowControls: false });
-      await expect(controls).toHaveCount(0);
-    }
+      if (process.platform === "linux") {
+        const controls = page.locator("pear-window-controls");
+        await expect(controls.getByRole("button", { name: "Close" })).toBeVisible();
+        await controls.getByRole("button", { name: "Maximize" }).click();
+        await expect.poll(async () => (await windowInfo(app)).maximized).toBe(true);
+        await expect(controls.getByRole("button", { name: "Restore" })).toBeVisible();
+        await controls.getByRole("button", { name: "Restore" }).click();
+        await expect.poll(async () => (await windowInfo(app)).maximized).toBe(false);
 
-    await setEnabled(page, "in-app-menu", false);
-    await expect(page.locator("pear-app-menu, pear-window-controls")).toHaveCount(0);
-    expect(await page.evaluate(() => getComputedStyle(document.querySelector("ytmusic-nav-bar")!).getPropertyValue("app-region"))).not.toBe("drag");
+        await setConfig(page, "in-app-menu", { windowControls: false });
+        await expect(controls).toHaveCount(0);
+      }
+
+      await setEnabled(page, "in-app-menu", false);
+      await expect(page.locator("pear-app-menu, pear-window-controls")).toHaveCount(0);
+      expect(await page.evaluate(() => getComputedStyle(document.querySelector("ytmusic-nav-bar")!).getPropertyValue("app-region"))).not.toBe("drag");
+    });
   });
 });
 
@@ -231,18 +236,23 @@ test("picture in picture shrinks the window and restores it", async ({ launch })
   await expect.poll(() => page.evaluate(() => document.pictureInPictureElement)).toBeNull();
 });
 
-test("the page knows when the window is off screen", async ({ app, page }) => {
-  const windowVisible = () => page.evaluate(() => window.__pearRuntime!.plugins.windowVisible);
-  const mainWindowDo = (action: "minimize" | "restore" | "hide" | "show") =>
-    app.evaluate(({ BrowserWindow }, action) => BrowserWindow.getAllWindows()[0]![action](), action);
-  // Shown once the page is ready to paint.
-  await expect.poll(windowVisible).toBe(true);
-  await mainWindowDo("minimize");
-  await expect.poll(windowVisible).toBe(false);
-  await mainWindowDo("restore");
-  await expect.poll(windowVisible).toBe(true);
-  await mainWindowDo("hide");
-  await expect.poll(windowVisible).toBe(false);
-  await mainWindowDo("show");
-  await expect.poll(windowVisible).toBe(true);
+test.describe("with a window manager", () => {
+  // Minimizing takes one.
+  test.skip(!!NO_WINDOW_MANAGER, NO_WINDOW_MANAGER);
+
+  test("the page knows when the window is off screen", async ({ app, page }) => {
+    const windowVisible = () => page.evaluate(() => window.__pearRuntime!.plugins.windowVisible);
+    const mainWindowDo = (action: "minimize" | "restore" | "hide" | "show") =>
+      app.evaluate(({ BrowserWindow }, action) => BrowserWindow.getAllWindows()[0]![action](), action);
+    // Shown once the page is ready to paint.
+    await expect.poll(windowVisible).toBe(true);
+    await mainWindowDo("minimize");
+    await expect.poll(windowVisible).toBe(false);
+    await mainWindowDo("restore");
+    await expect.poll(windowVisible).toBe(true);
+    await mainWindowDo("hide");
+    await expect.poll(windowVisible).toBe(false);
+    await mainWindowDo("show");
+    await expect.poll(windowVisible).toBe(true);
+  });
 });

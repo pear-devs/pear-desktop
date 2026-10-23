@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { _electron as electron, type ElectronApplication, type Page } from "@playwright/test";
 import { ytmUrl } from "@pear/sdk/util";
+import { E2E_DISPLAY } from "./global-setup.ts";
 
 export interface LaunchOptions {
   /** Initial plugin states, written to config.json before launch. */
@@ -41,11 +42,28 @@ export async function launchApp(options: LaunchOptions = {}) {
   if (options.config || options.plugins || options.core) {
     writeFileSync(join(userData, "config.json"), JSON.stringify(options.config ?? configFile(options)));
   }
-  const app = await electron.launch({ args: ["."], env: { ...process.env, ...options.env, PEAR_USER_DATA: userData } });
+  const virtual = process.env[E2E_DISPLAY];
+  const app = await electron.launch({
+    // No GPU there: WebGL (the visualizer) renders in software.
+    args: [".", ...(virtual ? ["--ozone-platform=x11", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"] : [])],
+    env: { ...(virtual ? virtualDisplayEnv(virtual) : process.env), ...options.env, PEAR_USER_DATA: userData },
+  });
   // Profiles are ~40 MB each, and /tmp is often RAM-backed.
   if (!options.userData) app.on("close", () => rmSync(userData, { recursive: true, force: true }));
   return Object.assign(app, { userData });
 }
+
+/** The environment for an X11 app on the virtual display (global-setup.ts). */
+function virtualDisplayEnv(display: string): Record<string, string | undefined> {
+  const { WAYLAND_DISPLAY: _wayland, ...env } = process.env;
+  return { ...env, DISPLAY: display };
+}
+
+/**
+ * The virtual display has no window manager, so nothing maximizes or minimizes
+ * there; tests of that run with PEAR_E2E_SHOW=1 (on the desktop).
+ */
+export const NO_WINDOW_MANAGER = process.env[E2E_DISPLAY] ? "the virtual display has no window manager; PEAR_E2E_SHOW=1 runs it" : "";
 
 export type App = Awaited<ReturnType<typeof launchApp>>;
 

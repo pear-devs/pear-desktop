@@ -351,6 +351,10 @@ nub run test:e2e    # builds the app, then drives it against the real YTM
 The end-to-end tests use [Playwright](https://playwright.dev/) to test the app. Never automate Google sign-in in them:
 Google rate-limits the whole IP.
 
+On Linux with Xvfb installed, the apps under test open on a virtual display, so they don't take your keyboard focus;
+the two tests of maximizing and minimizing need a window manager and are skipped there. `PEAR_E2E_SHOW=1 nub run
+test:e2e` opens the apps on your desktop and runs those too.
+
 ## License
 
 MIT © [pear-devs](https://github.com/pear-devs/pear-desktop)

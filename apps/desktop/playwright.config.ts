@@ -2,6 +2,8 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "e2e",
+  // The apps' windows go to a virtual display, off the desktop (see the file).
+  globalSetup: "./e2e/global-setup.ts",
   timeout: 60_000,
   reporter: "list",
   // Tests drive the real YTM: pre-roll ads and network hiccups are
