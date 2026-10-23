@@ -25,6 +25,8 @@ type Index = Map<string, PlaylistRef[]>;
 
 interface Cache {
   time: number;
+  /** Some playlists failed to load: a retry is scheduled */
+  partial?: boolean;
   playlists: PlaylistRef[];
   tracks: Record<string, string[]>; // videoId -> playlist ids
 }
@@ -92,7 +94,7 @@ const buildCache = async (): Promise<Cache> => {
   const time =
     failures > 0 ? Date.now() - CACHE_TTL_MS + RETRY_DELAY_MS : Date.now();
 
-  return { time, playlists, tracks };
+  return { time, playlists, tracks, partial: failures > 0 };
 };
 
 const getVideoId = (row: HTMLElement): string | undefined => {
@@ -136,6 +138,7 @@ export default createPlugin<
     styleEl?: HTMLStyleElement;
     popup?: HTMLElement;
     refreshTimer?: number;
+    retryTimer?: number;
     playerTimer?: number;
     scanTimer?: number;
     refreshing: boolean;
@@ -210,6 +213,8 @@ export default createPlugin<
       clearTimeout(this.scanTimer);
       this.scanTimer = undefined;
       clearInterval(this.refreshTimer);
+      clearTimeout(this.retryTimer);
+      this.retryTimer = undefined;
       clearInterval(this.playerTimer);
       if (this.onDocClick) {
         document.removeEventListener('click', this.onDocClick, true);
@@ -231,6 +236,12 @@ export default createPlugin<
         this.index = indexFromCache(this.cache);
         clearDecorations();
         this.scan();
+        clearTimeout(this.retryTimer);
+        this.retryTimer = this.cache.partial
+          ? window.setTimeout(() => {
+              this.refresh().catch(() => {});
+            }, RETRY_DELAY_MS)
+          : undefined;
       } catch (error) {
         console.warn('[playlist-indicator] refresh failed', error);
       } finally {
