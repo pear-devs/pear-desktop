@@ -55,8 +55,14 @@ interface SiteAction {
 
 declare global {
   interface Window {
-    yt?: { config_?: { DATASYNC_ID?: string } };
+    yt?: { config_?: { DATASYNC_ID?: string; LOGGED_IN?: boolean } };
   }
+}
+
+/** A change to the site's app state, as its own reducers take them. */
+interface StateAction {
+  type: string;
+  payload?: unknown;
 }
 
 export function startOffline(ctx: Ctx, startDownload: StartDownload) {
@@ -67,9 +73,13 @@ export function startOffline(ctx: Ctx, startDownload: StartDownload) {
   const showLibraryTab = libraryTab(ctx, () => kept.size > 0);
   const site = (async () => {
     await ctx.waitFor("app");
-    const account = window.yt?.config_?.DATASYNC_ID;
+    const config = window.yt?.config_;
+    const account = config?.DATASYNC_ID;
     if (!account) throw new Error("the site has no offline storage for this account");
-    return new OfflineSite(account);
+    // Signed out, the site never loads its offline database into its app state, so
+    // its Downloads page shows nothing: the database is mirrored there from here.
+    const app = config?.LOGGED_IN ? undefined : ctx.$<HTMLElement & { dispatch?(action: StateAction): void }>("app");
+    return new OfflineSite(account, app?.dispatch ? (action) => app.dispatch!(action) : undefined);
   })();
 
   const failed = (what: string) => (error: unknown) => ctx.log.warn(`offline playback: ${what}:`, remoteErrorMessage(error));
@@ -126,6 +136,7 @@ export function startOffline(ctx: Ctx, startDownload: StartDownload) {
   };
   void sync()
     .then(syncLists)
+    .then(async () => (await site).mirror())
     .then(showLibraryTab, failed("sync"));
   ctx.host.on("offline-added", (videoId) => void add(String(videoId)).catch(failed(String(videoId))));
   ctx.host.on("offline-lists-changed", () => void syncLists().catch(failed("lists")));
@@ -199,9 +210,12 @@ function libraryTab(ctx: Ctx, hasDownloads: () => boolean) {
 class OfflineSite {
   readonly #account: string;
   readonly #channel: BroadcastChannel;
+  /** Set when the site doesn't keep its app state in step with the database itself. */
+  readonly #dispatch: ((action: StateAction) => void) | undefined;
 
-  constructor(account: string) {
+  constructor(account: string, dispatch?: (action: StateAction) => void) {
     this.#account = account;
+    this.#dispatch = dispatch;
     // The site's own tabs and its app state follow the entity store through this.
     this.#channel = new BroadcastChannel(`PERSISTENT_ENTITY_STORE_SYNC:${account}`);
   }
@@ -308,6 +322,15 @@ class OfflineSite {
     this.#announce([...written.flatMap(({ entities: records }) => records), ...deleted, libraryRecord]);
   }
 
+  /** Puts every entity of the database into the site's app state, as the site does on load when signed in. */
+  async mirror() {
+    if (!this.#dispatch) return;
+    const rows = await this.#entities("readonly", ({ entities }) => request<StoredEntity[]>(entities.getAll()));
+    const state: Record<string, Record<string, unknown>> = {};
+    for (const row of rows) (state[row.entityType] ??= {})[row.key] = await this.#decode(row);
+    this.#dispatch({ type: "REPLACE_ENTITIES", payload: state });
+  }
+
   /** The library entity's fields, decrypted when the site wrote it. */
   async #library(): Promise<Record<string, unknown>> {
     const row = await this.#entities("readonly", ({ entities }) => request<StoredEntity | undefined>(entities.get(libraryKey())));
@@ -337,11 +360,15 @@ class OfflineSite {
     localStorage.setItem(key, JSON.stringify({ data: JSON.stringify(marks), creation: Date.now() }));
   }
 
-  /** Tells the site's app state which entities changed, as its own writes do. */
-  #announce(records: Pick<EntityRecord, "key" | "entityType">[]) {
+  /** Tells the site's app state which entities changed (records without data were deleted), as its own writes do. */
+  #announce(records: (Pick<EntityRecord, "key" | "entityType"> & { data?: unknown })[]) {
     const changed: Partial<Record<EntityType, Set<string>>> = {};
     for (const { key, entityType } of records) (changed[entityType] ??= new Set()).add(key);
     this.#channel.postMessage(changed);
+    if (!this.#dispatch) return;
+    const state: Record<string, Record<string, unknown>> = {};
+    for (const { key, entityType, data } of records) (state[entityType] ??= {})[key] = data;
+    this.#dispatch({ type: "REPLACE_ENTITIES", payload: state });
   }
 
   #entities<T>(mode: IDBTransactionMode, run: (stores: { entities: IDBObjectStore; associations: IDBObjectStore }) => T | Promise<T>) {

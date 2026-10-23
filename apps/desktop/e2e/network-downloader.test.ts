@@ -249,6 +249,8 @@ test("downloader keeps songs in the app unless asked, and saves them to the fold
   // Its row says so, and saves it to the folder, converted as the settings say then.
   await page.keyboard.press("Control+j");
   await expectDownloadsPage(page);
+  // The site's page lists it too, signed out as well (the site loads its offline database only for accounts).
+  await expect(page.locator("ytmusic-offline-item-section-renderer").getByText("Downloaded songs")).toBeVisible();
   await showFinished(page);
   const song = finishedRow(page, "Test song");
   await expect(song.locator(".row-sub")).toContainText("In the app");
