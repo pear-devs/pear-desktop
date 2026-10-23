@@ -230,15 +230,32 @@ export default definePlugin({
       fill: currentColor;
     }
     /*
-     * The Downloads popover: the picker's look, both class names to win over its sheet.
-     * Its rows also make the Downloads page's queue (.pear-dl-section).
+     * The Downloads popover and the Downloads page's queue strip. The popover has
+     * the picker's classes too: both class names, to win over its sheet.
      */
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) {
+      /* YTM's colours: its menus' surface, its text, white progress and its link blue. */
+      --pear-dl-surface: #212121;
+      --pear-dl-surface-high: #212121;
+      --pear-dl-on-surface: var(--ytmusic-text-primary, #fff);
+      --pear-dl-on-surface-variant: var(--ytmusic-text-secondary, #aaa);
+      --pear-dl-outline: #909090;
+      --pear-dl-outline-variant: rgb(255 255 255 / 0.1);
+      --pear-dl-primary: #3ea6ff;
+      --pear-dl-fill: #fff;
+      --pear-dl-track: rgb(255 255 255 / 0.15);
+      --pear-dl-tertiary: #3ea6ff;
+      --pear-dl-error: #f28b82;
+      color: var(--pear-dl-on-surface);
+      font: 400 14px/20px Roboto, sans-serif;
+    }
     .pear-picker-popover.pear-dl-downloads-popover {
-      width: 380px;
-      max-height: 60vh;
-      padding: 0;
-      overflow-y: auto;
-      overscroll-behavior: contain;
+      width: 300px;
+      padding: 16px;
+      border: 0;
+      border-radius: 16px;
+      background: var(--pear-dl-surface);
+      box-shadow: 0 4px 8px 3px rgb(0 0 0 / 0.15), 0 1px 3px rgb(0 0 0 / 0.3);
     }
     .pear-picker-popover.pear-dl-downloads-popover[data-side="right"] {
       margin: 0 8px;
@@ -248,178 +265,148 @@ export default definePlugin({
       height: fit-content;
       margin: auto;
     }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chips {
-      position: sticky;
-      top: 0;
-      z-index: 1;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      padding: 12px 12px 8px;
-      background: #212121;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
-      border: 1px solid rgb(255 255 255 / 0.2);
-      border-radius: 16px;
-      background: none;
-      color: #fff;
-      font: 400 12px Roboto, sans-serif;
-      cursor: pointer;
-    }
-    /* Not the picker's check mark. */
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chip::before {
-      content: none;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chip[aria-checked="true"] {
-      border-color: transparent;
-      background: #fff;
-      color: #030303;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .count {
-      opacity: 0.7;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) ul {
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .job {
-      padding: 6px 8px 6px 4px;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .job:hover {
-      background: rgb(255 255 255 / 0.05);
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .line {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chevron,
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .action {
-      display: inline-flex;
-      flex: none;
-      align-items: center;
-      justify-content: center;
-      width: 28px;
-      height: 28px;
-      padding: 0;
-      border: 0;
-      border-radius: 50%;
-      background: none;
-      color: #aaa;
-      cursor: pointer;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chevron:is(button):hover,
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .action:hover {
-      background: rgb(255 255 255 / 0.1);
-      color: #fff;
-    }
     :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) svg {
+      flex: none;
       width: 20px;
       height: 20px;
       fill: currentColor;
     }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chevron svg {
-      transition: transform 0.15s;
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .ring {
+      width: auto;
+      height: auto;
+      fill: none;
     }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chevron[aria-expanded="true"] svg {
-      transform: rotate(90deg);
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .ring-track {
+      fill: none;
+      stroke: var(--pear-dl-track);
     }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .kind {
-      display: inline-flex;
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .ring-value {
+      fill: none;
+      stroke: var(--pear-dl-fill);
+      stroke-linecap: round;
+      transition: stroke-dasharray 0.3s;
+    }
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .text-button {
       flex: none;
-      color: #aaa;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .title {
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .actions {
-      display: inline-flex;
-      flex: none;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .status {
-      padding-left: 60px;
-      overflow: hidden;
-      color: #aaa;
-      font-size: 12px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .job[data-status="failed"] > .status {
-      color: #f28b82;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) progress {
-      display: block;
-      width: calc(100% - 60px);
-      height: 3px;
-      margin: 4px 0 2px 60px;
+      height: 40px;
+      padding: 0 12px;
       border: 0;
-      appearance: none;
-      background: rgb(255 255 255 / 0.15);
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) progress::-webkit-progress-bar {
-      background: rgb(255 255 255 / 0.15);
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) progress::-webkit-progress-value {
-      background: #fff;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .songs {
-      margin: 4px 0 0 60px;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .song {
-      display: flex;
-      gap: 12px;
-      padding: 3px 4px 3px 0;
-      font-size: 13px;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .song-status {
-      flex: none;
-      color: #aaa;
-      font-size: 12px;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .song[data-status="failed"] .song-status {
-      color: #f28b82;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .empty {
-      padding: 24px 16px;
-      text-align: center;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .footer {
-      position: sticky;
-      bottom: 0;
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 8px 12px;
-      border-top: 1px solid rgb(255 255 255 / 0.1);
-      background: #212121;
-    }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .footer button {
-      padding: 6px 8px;
-      border: 0;
-      border-radius: 16px;
-      background: none;
-      color: #3ea6ff;
-      font: 500 13px Roboto, sans-serif;
+      border-radius: 20px;
+      background: transparent;
+      color: var(--pear-dl-primary);
+      font: 500 14px/20px Roboto, sans-serif;
+      white-space: nowrap;
       cursor: pointer;
     }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .footer button:hover {
-      background: rgb(62 166 255 / 0.15);
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .text-button.small {
+      height: 32px;
+      border-radius: 16px;
+      font-size: 13px;
     }
-    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .footer button:disabled {
-      color: #717171;
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .icon-button {
+      display: inline-flex;
+      flex: none;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: transparent;
+      color: var(--pear-dl-on-surface-variant);
+      cursor: pointer;
+    }
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .icon-button.small {
+      width: 32px;
+      height: 32px;
+      color: var(--pear-dl-outline);
+    }
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .icon-button.small svg {
+      width: 16px;
+      height: 16px;
+    }
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .text-button:hover,
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .text-button:focus-visible {
+      background: color-mix(in srgb, var(--pear-dl-primary) 8%, transparent);
+      outline: none;
+    }
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .icon-button:hover,
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .icon-button:focus-visible {
+      background: color-mix(in srgb, var(--pear-dl-on-surface) 8%, transparent);
+      color: var(--pear-dl-on-surface);
+      outline: none;
+    }
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) :is(.text-button, .icon-button):disabled {
+      opacity: 0.38;
       cursor: default;
-      background: none;
+      background: transparent;
     }
-    /* The Downloads page is ours: no Library tab bar, and our sidebar entry is the highlighted one. */
+    /* The popover: the download in front. */
+    .pear-dl-summary {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .pear-dl-summary .summary-main {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .pear-dl-summary .summary-ring {
+      position: relative;
+      display: grid;
+      flex: none;
+      place-items: center;
+      width: 72px;
+      height: 72px;
+    }
+    .pear-dl-summary .summary-ring .ring {
+      position: absolute;
+      inset: 0;
+    }
+    .pear-dl-summary .summary-percent {
+      font: 500 16px/20px Roboto, sans-serif;
+    }
+    .pear-dl-summary .summary-text {
+      flex: 1;
+      min-width: 0;
+    }
+    .pear-dl-summary :is(.summary-phase, .summary-name) {
+      overflow: hidden;
+      color: var(--pear-dl-on-surface-variant);
+      font: 400 12px/16px Roboto, sans-serif;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pear-dl-summary .summary-count {
+      overflow: hidden;
+      font: 400 24px/32px Roboto, sans-serif;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pear-dl-summary .summary-footer {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 -4px -6px;
+      padding-top: 10px;
+      border-top: 1px solid var(--pear-dl-outline-variant);
+    }
+    .pear-dl-summary :is(.summary-failed, .summary-waiting) {
+      padding-left: 4px;
+      color: var(--pear-dl-on-surface-variant);
+      font: 400 12px/16px Roboto, sans-serif;
+      white-space: nowrap;
+    }
+    .pear-dl-summary .summary-failed {
+      color: var(--pear-dl-error);
+      font-weight: 500;
+    }
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .spacer {
+      flex: 1;
+    }
+    /* The Downloads page: no Library tab bar, and our sidebar entry is the highlighted one. */
     html[pear-dl-downloads-page] sel(browse.tabs) {
       display: none;
     }
@@ -433,18 +420,195 @@ export default definePlugin({
     .pear-dl-section {
       width: var(--ytmusic-content-width);
       margin: 0 auto 24px;
-      color: #fff;
-      font: 400 14px Roboto, sans-serif;
     }
     .pear-dl-section:empty {
       display: none;
     }
-    .pear-dl-section .heading {
-      margin: 0 0 8px;
-      font: 700 20px/28px Roboto, sans-serif;
+    .pear-dl-queue {
+      overflow: hidden;
+      border-radius: 12px;
+      background: var(--pear-dl-surface-high);
     }
-    .pear-dl-section .job {
-      border-radius: 8px;
+    .pear-dl-queue .strip {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 8px 8px 12px;
+      cursor: pointer;
+    }
+    .pear-dl-queue .strip-text {
+      flex: 1;
+      min-width: 0;
+    }
+    .pear-dl-queue .strip-title {
+      overflow: hidden;
+      font-weight: 500;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pear-dl-queue .strip-sub {
+      display: flex;
+      gap: 6px;
+      overflow: hidden;
+      color: var(--pear-dl-on-surface-variant);
+      font: 400 12px/16px Roboto, sans-serif;
+      white-space: nowrap;
+    }
+    .pear-dl-queue .dot {
+      margin-right: 6px;
+    }
+    .pear-dl-queue .failed {
+      color: var(--pear-dl-error);
+    }
+    .pear-dl-queue .failed .dot {
+      color: var(--pear-dl-on-surface-variant);
+    }
+    .pear-dl-queue .chevron svg {
+      transition: transform 0.15s;
+    }
+    .pear-dl-queue .chevron[aria-expanded="true"] svg {
+      transform: rotate(180deg);
+    }
+    .pear-dl-queue .strip-body {
+      border-top: 1px solid var(--pear-dl-outline-variant);
+    }
+    .pear-dl-queue .rows {
+      max-height: 280px;
+      margin: 0;
+      padding: 4px 0;
+      overflow: auto;
+      list-style: none;
+    }
+    .pear-dl-queue .row {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 44px;
+      padding: 0 8px 0 16px;
+      box-sizing: border-box;
+    }
+    .pear-dl-queue .row:hover {
+      background: color-mix(in srgb, var(--pear-dl-on-surface) 4%, transparent);
+    }
+    .pear-dl-queue .row-icon {
+      display: flex;
+      color: var(--pear-dl-on-surface-variant);
+    }
+    .pear-dl-queue .row-icon svg {
+      width: 18px;
+      height: 18px;
+    }
+    .pear-dl-queue .row[data-status="downloading"] :is(.row-icon, .row-state) {
+      color: var(--pear-dl-fill);
+    }
+    .pear-dl-queue .row[data-status="converting"] :is(.row-icon, .row-state) {
+      color: var(--pear-dl-tertiary);
+    }
+    .pear-dl-queue .row:is([data-status="failed"], [data-status="cancelled"]) .row-icon {
+      color: var(--pear-dl-error);
+    }
+    .pear-dl-queue .row-text {
+      flex: 1;
+      min-width: 0;
+      padding: 4px 0;
+    }
+    .pear-dl-queue .row-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pear-dl-queue .row[data-status="queued"] .row-title,
+    .pear-dl-queue .row-title.muted {
+      color: var(--pear-dl-on-surface-variant);
+    }
+    .pear-dl-queue .row-sub {
+      overflow: hidden;
+      color: var(--pear-dl-outline);
+      font: 400 11px/14px Roboto, sans-serif;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pear-dl-queue .row-state {
+      flex: none;
+      max-width: 40%;
+      overflow: hidden;
+      color: var(--pear-dl-outline);
+      font: 400 12px/16px Roboto, sans-serif;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .pear-dl-queue .row-state.mono {
+      font-family: "Roboto Mono", monospace;
+    }
+    .pear-dl-queue .row-state.error {
+      color: var(--pear-dl-error);
+    }
+    .pear-dl-queue .icon-space {
+      flex: none;
+      width: 32px;
+    }
+    .pear-dl-queue .actions {
+      display: inline-flex;
+      flex: none;
+    }
+    .pear-dl-queue .history {
+      padding-left: 46px;
+    }
+    .pear-dl-queue .row-progress {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      background: var(--pear-dl-track);
+    }
+    .pear-dl-queue .bar {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+    }
+    .pear-dl-queue .bar.download {
+      background: var(--pear-dl-fill);
+    }
+    /* Converting says nothing of how far it is. */
+    .pear-dl-queue .bar.convert {
+      right: 0;
+      background: var(--pear-dl-tertiary);
+      animation: pear-dl-pulse 1s ease-in-out infinite alternate;
+    }
+    .pear-dl-queue .strip-footer {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-top: 1px solid var(--pear-dl-outline-variant);
+    }
+    .pear-dl-queue .legend {
+      display: flex;
+      flex: 1;
+      gap: 12px;
+      padding-left: 8px;
+      color: var(--pear-dl-on-surface-variant);
+      font: 400 12px/16px Roboto, sans-serif;
+    }
+    .pear-dl-queue .legend[hidden] {
+      visibility: hidden;
+    }
+    .pear-dl-queue .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pear-dl-queue .legend-item::before {
+      content: "";
+      width: 12px;
+      height: 3px;
+      background: var(--pear-dl-fill);
+    }
+    .pear-dl-queue .legend-item.convert::before {
+      background: var(--pear-dl-tertiary);
     }
     .pear-dl-toast {
       position: fixed;

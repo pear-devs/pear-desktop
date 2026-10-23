@@ -1,6 +1,6 @@
 // The site's Downloads page, as ours: the sidebar's Downloads entry opens it, its
 // Library / Downloads tab bar is hidden, our entry is the highlighted one, and a
-// queue above its songs shows what is downloading, waiting or failed.
+// queue strip above its songs shows what is downloading, waiting or failed.
 
 import { openBrowsePage, type SidebarEntry } from "@pear/sdk/dom";
 import { render } from "preact";
@@ -18,6 +18,9 @@ export function downloadsPage(ctx: Ctx, entry: SidebarEntry) {
   const section = document.createElement("div");
   section.className = "pear-dl-section";
   let shown = false;
+  // Changes when the popover's "View all" asks for the strip open.
+  let reveal = 0;
+  const draw = () => render(<Queue ctx={ctx} reveal={reveal} />, section);
 
   const update = () => {
     const here = onDownloadsPage();
@@ -26,7 +29,7 @@ export function downloadsPage(ctx: Ctx, entry: SidebarEntry) {
     if (here === shown) return;
     shown = here;
     if (here) {
-      render(<Queue ctx={ctx} />, section);
+      draw();
     } else {
       // Live updates only while it shows.
       render(null, section);
@@ -47,6 +50,11 @@ export function downloadsPage(ctx: Ctx, entry: SidebarEntry) {
   });
 
   return {
-    open: () => openBrowsePage(DOWNLOADS_PAGE),
+    /** Opens the page; `expanded`, with the queue strip open. */
+    open({ expanded = false } = {}) {
+      if (expanded) reveal++;
+      if (onDownloadsPage() && shown) draw();
+      else openBrowsePage(DOWNLOADS_PAGE);
+    },
   };
 }

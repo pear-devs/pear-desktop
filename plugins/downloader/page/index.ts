@@ -47,14 +47,14 @@ export function startPage(ctx: Ctx) {
     icon: ICON,
     onClick: () => openDownloads(),
   });
-  const preview = downloadsPopover(ctx, entry);
   const page = downloadsPage(ctx, entry);
-  const openDownloads = () => {
+  const openDownloads = (options?: { expanded?: boolean }) => {
     preview.close();
-    page.open();
+    page.open(options);
   };
+  const preview = downloadsPopover(ctx, entry, () => openDownloads({ expanded: true }));
   // The app menu, the tray and the settings' button.
-  ctx.host.on("open-downloads", openDownloads);
+  ctx.host.on("open-downloads", () => openDownloads());
   showState(button, state, t);
 
   const apply = (next: DownloaderState) => {
@@ -71,7 +71,7 @@ export function startPage(ctx: Ctx) {
     entry.setBadge(count > 0 ? String(count) : "");
   };
   ctx.host.on("state", (payload) => apply(payload as DownloaderState));
-  ctx.host.on("result", (payload) => showResult(ctx, toast, payload as JobResult, openDownloads));
+  ctx.host.on("result", (payload) => showResult(ctx, toast, payload as JobResult, () => openDownloads({ expanded: true })));
   ctx.host.invoke("state").then(apply, () => {});
 
   // The menu's Ctrl+J, also when the page has the keyboard (as the settings' Ctrl+,).

@@ -1,11 +1,12 @@
 // The Downloads popover: resting the pointer on the sidebar's Downloads entry
-// previews the downloads next to it, until the pointer leaves the entry and the
-// popover. A click on the entry opens the Downloads page instead (downloads-page.tsx).
+// sums up the downloads next to it, until the pointer leaves the entry and the
+// popover. A click on the entry, or its "View all", opens the Downloads page
+// (downloads-page.tsx).
 
 import { anchoredPopover, containScroll, isolateKeys, type SidebarEntry } from "@pear/sdk/dom";
 import { render } from "preact";
 import { onDownloadsPage } from "./downloads-page.tsx";
-import { Downloads } from "./downloads-list.tsx";
+import { DownloadsSummary } from "./downloads-list.tsx";
 import type { Ctx } from "./types.ts";
 
 /** How long the pointer rests on the entry before the preview opens. */
@@ -19,7 +20,7 @@ function onScreen(element: HTMLElement) {
   return box.width > 0 && box.height > 0 && box.right > 0 && box.left < innerWidth;
 }
 
-export function downloadsPopover(ctx: Ctx, entry: SidebarEntry) {
+export function downloadsPopover(ctx: Ctx, entry: SidebarEntry, viewAll: () => void) {
   const bubble = anchoredPopover(ctx, { name: "dl-downloads", label: ctx.t("plugins.downloader.downloads", "Downloads") });
   const { popover } = bubble;
   isolateKeys(popover, ctx.signal);
@@ -40,7 +41,7 @@ export function downloadsPopover(ctx: Ctx, entry: SidebarEntry) {
     if (!tab || onDownloadsPage()) return;
     const wasOpen = bubble.isOpen;
     bubble.show(tab, "right span-bottom");
-    if (!wasOpen) render(<Downloads ctx={ctx} />, popover);
+    if (!wasOpen) render(<DownloadsSummary ctx={ctx} onViewAll={viewAll} />, popover);
   };
 
   const close = () => {

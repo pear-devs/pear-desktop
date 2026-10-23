@@ -102,8 +102,19 @@ async function preview(page: Page) {
     await expect(popover(page)).toBeVisible({ timeout: 2000 });
   }).toPass({ timeout: 20_000 });
 }
-/** The queue on the Downloads page. */
+/** The queue strip on the Downloads page. */
 const queue = (page: Page) => page.locator(".pear-dl-section");
+/** Opens the strip to its rows, if it isn't. */
+async function openQueue(page: Page) {
+  const chevron = queue(page).locator(".strip .chevron");
+  if ((await chevron.getAttribute("aria-expanded")) !== "true") await chevron.click();
+  await expect(chevron).toHaveAttribute("aria-expanded", "true");
+}
+/** Opens the strip's finished downloads. */
+async function showFinished(page: Page) {
+  await openQueue(page);
+  await queue(page).locator(".finished-row").getByRole("button", { name: "Show", exact: true }).click();
+}
 /** Opens YTM's Home, as its own links do (YTM doesn't follow `history.pushState`). */
 async function goHome(page: Page) {
   await page.evaluate(() => {
@@ -117,12 +128,16 @@ async function expectDownloadsPage(page: Page) {
   await expect(page).toHaveURL(/\/browse\/FEmusic_offline/);
   await expect(sidebarEntry(page)).toHaveAttribute("aria-current", "page");
 }
-/** A download's row in the popover. */
-const row = (page: Page, label: string | RegExp) => popover(page).locator("li.job", { has: page.locator(".line .title", { hasText: label }) });
-/** A row's icon action. */
-const action = (row: Locator, name: string) => row.locator(".actions").getByRole("button", { name, exact: true });
-/** A chip of the popover, which filters by status. */
-const chip = (page: Page, name: string) => popover(page).getByRole("radio", { name: new RegExp(`^${name}`) });
+/** A song or download still to go, in the strip. */
+const row = (page: Page, label: string | RegExp) => queue(page).locator("li.row:not(.history, .finished-row)", { has: page.locator(".row-title", { hasText: label }) });
+/** The song or download rows still to go. */
+const rows = (page: Page) => queue(page).locator("li.row:not(.history, .finished-row)");
+/** A finished download, in the strip once its finished ones show. */
+const finishedRow = (page: Page, label: string | RegExp) => queue(page).locator("li.history", { has: page.locator(".row-title", { hasText: label }) });
+/** A row's button. */
+const action = (row: Locator, name: string) => row.getByRole("button", { name, exact: true });
+/** A button of the strip itself. */
+const stripButton = (page: Page, name: string) => queue(page).locator(".strip").getByRole("button", { name, exact: true });
 /** What `size · when` reads for a finished download. */
 const FINISHED_LINE = /^[\d.]+ [KMG]iB · /;
 
@@ -195,13 +210,26 @@ for (const layout of ["classic", "new"] as const) {
     await expect.poll(() => jobs(page)).toEqual([expect.objectContaining({ label: title })]);
     await expect(toast).toContainText("Saved", { timeout: 90_000 });
 
+    // The popover sums it up; "View all" opens the Downloads page with the queue open.
+    await preview(page);
+    await expect(popover(page).locator(".summary-phase")).toHaveText("All downloads finished");
+    await expect(popover(page).locator(".summary-count")).toHaveText(title);
+    await expect(popover(page).locator(".summary-percent")).toHaveText("100%");
+    await popover(page).getByRole("button", { name: "View all" }).click();
+    await expectDownloadsPage(page);
+    await expect(popover(page)).toBeHidden();
+    await expect(queue(page).locator(".strip-title")).toHaveText("All downloads finished");
+    await expect(queue(page).locator(".strip-sub")).toHaveText("1 song saved");
+    await showFinished(page);
+    await expect(finishedRow(page, title).locator(".row-sub")).toHaveText(FINISHED_LINE);
+    await expect(action(finishedRow(page, title), "Show in folder")).toBeVisible();
+    // Dismissed, the strip stays away until something else finishes.
+    await stripButton(page, "Dismiss").click();
+    await expect(queue(page)).toBeHidden();
+    await goHome(page);
     await page.keyboard.press("Control+j");
     await expectDownloadsPage(page);
-    // The page itself has no preview.
-    await goHome(page);
-    await preview(page);
-    await expect(row(page, title).locator(".status")).toHaveText(FINISHED_LINE);
-    await expect(action(row(page, title), "Show in folder")).toBeVisible();
+    await expect(queue(page)).toBeHidden();
   });
 }
 
@@ -219,9 +247,11 @@ test("downloader keeps songs in the app unless asked, and saves them to the fold
   expect(tracks.map((track) => track.videoId)).toEqual([TEST_TRACK]);
 
   // Its row says so, and saves it to the folder, converted as the settings say then.
-  await preview(page);
-  const song = row(page, "Test song");
-  await expect(song.locator(".status")).toContainText("In the app");
+  await page.keyboard.press("Control+j");
+  await expectDownloadsPage(page);
+  await showFinished(page);
+  const song = finishedRow(page, "Test song");
+  await expect(song.locator(".row-sub")).toContainText("In the app");
   await action(song, "Save to the download folder").click();
   await expect.poll(() => songFiles(folder), { timeout: 60_000 }).toEqual(["Never Gonna Give You Up.opus"]);
   const tags = ffprobe<{ format: { tags?: Record<string, string> }; streams: { codec_type: string; tags?: Record<string, string> }[] }>(
@@ -230,7 +260,7 @@ test("downloader keeps songs in the app unless asked, and saves them to the fold
   );
   expect(tags.streams.find((stream) => stream.codec_type === "audio")?.tags).toMatchObject({ title: "Never Gonna Give You Up", artist: "Rick Astley" });
   await expect(action(song, "Show in folder")).toBeVisible();
-  await expect(song.locator(".status")).not.toContainText("In the app");
+  await expect(song.locator(".row-sub")).not.toContainText("In the app");
 });
 
 test("downloader downloads yt-dlp when it isn't installed, and says so when offline", async ({ launch, tempDir }) => {
@@ -378,19 +408,17 @@ test("downloader saves an album from its page's Download button, with the album'
   const lists = await invoke<{ playlistId: string; videoIds: string[] }[]>(page, "downloader", "offlineLists");
   expect(lists).toEqual([expect.objectContaining({ playlistId: new URL(ALBUM_URL).searchParams.get("list"), videoIds: [expect.any(String), expect.any(String)] })]);
 
-  // The popover lists it, with its two songs, and still does after a restart.
+  // The popover sums it up, its two songs done, and still does after a restart.
   await preview(page);
-  const albumRow = row(page, "Whenever You Need Somebody");
-  await expect(albumRow.locator(".status")).toHaveText(FINISHED_LINE);
-  await albumRow.getByRole("button", { name: "Show the songs" }).click();
-  const songs = albumRow.locator("li.song");
-  await expect(songs).toHaveCount(2);
-  await expect(songs.locator(".song-status")).toHaveText([/MiB$/, /MiB$/]);
+  await expect(popover(page).locator(".summary-count")).toHaveText("2 of 2");
+  await expect(popover(page).locator(".summary-name")).toHaveText("Whenever You Need Somebody");
   await closeApp(app);
   const again = await launchDownloader({ launch, tempDir }, config, { userData });
   await preview(again.page);
-  await expect(row(again.page, "Whenever You Need Somebody").locator(".status")).toHaveText(FINISHED_LINE);
-  await again.page.keyboard.press("Escape");
+  await expect(popover(again.page).locator(".summary-count")).toHaveText("2 of 2");
+  await popover(again.page).getByRole("button", { name: "View all" }).click();
+  await showFinished(again.page);
+  await expect(finishedRow(again.page, "Whenever You Need Somebody").locator(".row-sub")).toHaveText(FINISHED_LINE);
 
   // A playlist's page has the button too.
   await again.page.goto(PLAYLIST_URL);
@@ -404,7 +432,7 @@ test("downloader saves an album from its page's Download button, with the album'
   await expect(listButton).toHaveAttribute("aria-label", "Download album");
 });
 
-test("downloader cancels and retries from the Downloads page's queue, leaving nothing half-written, and the popover's chips filter", async ({
+test("downloader cancels and retries from the Downloads page's queue, leaving nothing half-written, and the popover sums it up", async ({
   launch,
   tempDir,
 }) => {
@@ -415,37 +443,38 @@ test("downloader cancels and retries from the Downloads page's queue, leaving no
   const options = await app.evaluate(({ Menu }) => Menu.getApplicationMenu()!.items[0]!.submenu!.items.map((item) => `${item.label} ${item.accelerator ?? ""}`));
   expect(options).toContain("Downloads CmdOrCtrl+J");
   await preview(page);
-  await expect(popover(page).getByText("Nothing downloaded yet")).toBeVisible();
+  await expect(popover(page).locator(".summary-phase")).toHaveText("Nothing downloaded yet");
 
   // The queue stays while the album downloads, wherever the pointer is.
   await sidebarEntry(page).click();
   await expectDownloadsPage(page);
   await invoke(page, "downloader", "download", { videoId: "", playlistId: new URL(ALBUM_URL).searchParams.get("list")! }, "album");
-  const album = queue(page).locator("li.job", { has: page.locator(".line .title", { hasText: "album" }) });
   await expect.poll(async () => (await jobs(page))[0]?.progress ?? 0, { timeout: 60_000 }).toBeGreaterThan(0);
   // The sidebar entry counts the running download.
   await expect(page.locator("pear-downloader-entry").first().locator(".badge")).toHaveText("1");
-  await expect(album.locator(".status")).toHaveText(/ of .*iB|Converting/);
-  await expect(album.locator("progress")).toBeVisible();
+  await expect(queue(page).locator(".strip-title")).toHaveText(/^Downloading album/);
+  await expect(queue(page).locator(".strip-sub")).toHaveText(/left|\/s|Starting|Converting/);
+  await openQueue(page);
+  // Its songs, one downloading with its progress.
+  await expect(rows(page)).toHaveCount(2);
+  await expect(queue(page).locator(".row-progress").first()).toBeVisible();
 
-  await action(album, "Cancel").click();
-  await expect(album.locator(".status")).toHaveText("Cancelled");
+  await stripButton(page, "Cancel").click();
+  const album = row(page, "album");
+  await expect(album.locator(".row-state")).toHaveText("Cancelled");
+  await expect(queue(page).locator(".strip-title")).toHaveText("Download cancelled");
   expect(songFiles(folder).filter((file) => /\.(part|temp\.\w+|meta\.txt|cover\.jpg)$/.test(file))).toEqual([]);
 
-  // Retry downloads it again; the popover's chips sort it.
+  // Retry downloads it again, and the popover says so.
   await action(album, "Retry").click();
-  await expect(album.locator(".status")).toHaveText(/Starting| of .*iB|Converting/);
+  await expect(queue(page).locator(".strip-title")).toHaveText(/^(Downloading album|Waiting · album)/);
   await goHome(page);
   await preview(page);
-  const inPopover = row(page, "album");
-  await expect(chip(page, "Downloading")).toHaveText("Downloading1");
-  await chip(page, "Cancelled").click();
-  await expect(inPopover).toBeHidden();
-  await expect(popover(page).getByText("No cancelled downloads")).toBeVisible();
-  await chip(page, "Downloading").click();
-  await expect(inPopover).toBeVisible();
+  await expect(popover(page).locator(".summary-phase")).toHaveText(/Downloading|Waiting/);
+  await expect(popover(page).locator(".summary-percent")).toHaveText(/^\d+%$/);
   await invoke(page, "downloader", "cancel");
   await expect.poll(async () => (await jobs(page))[0]?.status).toBe("cancelled");
+  await expect(popover(page).locator(".summary-phase")).toHaveText("Download cancelled");
 });
 
 test("downloader pauses a playlist, keeping its parts, and resumes it without downloading the saved songs again", async ({ launch, tempDir }) => {
@@ -456,27 +485,28 @@ test("downloader pauses a playlist, keeping its parts, and resumes it without do
   await sidebarEntry(page).click();
   await expectDownloadsPage(page);
   await invoke(page, "downloader", "download", { videoId: "", playlistId: new URL(ALBUM_URL).searchParams.get("list")! }, "album");
-  const album = queue(page).locator("li.job", { has: page.locator(".line .title", { hasText: "album" }) });
   // While running, its songs show; pause once one is saved and another is under way.
-  const songs = album.locator("li.song");
-  await expect(songs).toHaveCount(4, { timeout: 60_000 });
+  await openQueue(page);
+  await expect.poll(async () => (await jobs(page))[0]?.items?.length ?? 0, { timeout: 60_000 }).toBe(4);
   const started = async () => {
     const [job] = await jobs(page);
     const items = job?.items ?? [];
     return items.some((item) => item.status === "done") && items.some((item) => item.status === "active" && (item.downloaded ?? 0) > 0);
   };
   await expect.poll(started, { timeout: 60_000, intervals: [50] }).toBe(true);
-  await action(album, "Pause").click();
-  await expect(album.locator(".status")).toHaveText("Paused");
+  await stripButton(page, "Pause").click();
+  await expect(queue(page).locator(".strip-title")).toHaveText(/^Paused · album/);
+  await expect(rows(page).first().locator(".row-state")).toHaveText("Paused");
   const parts = () => songFiles(folder).filter((file) => file.endsWith(".part"));
   expect(parts().length).toBeGreaterThan(0);
   const saved = songFiles(folder).filter((file) => file.endsWith(".opus"));
   expect(saved.length).toBeGreaterThan(0);
   const savedAt = saved.map((file) => statSync(join(folder, file)).mtimeMs);
 
-  await action(album, "Resume").click();
+  await stripButton(page, "Resume").click();
   await expect.poll(async () => (await jobs(page))[0]?.status, { timeout: 120_000 }).toBe("done");
-  await expect(album).toBeHidden();
+  await expect(queue(page).locator(".strip-title")).toHaveText("All downloads finished");
+  await expect(rows(page)).toHaveCount(0);
   expect(parts()).toEqual([]);
   expect(songFiles(folder).filter((file) => file.endsWith(".opus"))).toHaveLength(4);
   // The songs saved before the pause weren't written again.
@@ -519,11 +549,13 @@ test("downloader's Downloads page: opened by its sidebar entry, Ctrl+J and the m
   await expect(queue(page)).toBeHidden();
   const id = await invoke<number>(page, "downloader", "download", { videoId: TEST_TRACK }, "Test song");
   await invoke(page, "downloader", "pause", id);
-  const queued = queue(page).locator("li.job", { has: page.locator(".line .title", { hasText: "Test song" }) });
-  await expect(queued.locator(".status")).toHaveText("Paused");
-  await expect(queue(page).getByRole("heading", { name: "Download queue" })).toBeVisible();
+  await expect(queue(page).getByRole("region", { name: "Download queue" })).toBeVisible();
+  await expect(queue(page).locator(".strip-title")).toHaveText("Paused · Test song");
+  await openQueue(page);
+  const queued = row(page, "Test song");
+  await expect(queued.locator(".row-state")).toHaveText("Paused");
   await action(queued, "Cancel").click();
-  await expect(queued.locator(".status")).toHaveText("Cancelled");
+  await expect(queued.locator(".row-state")).toHaveText("Cancelled");
   await action(queued, "Remove").click();
   await expect(queue(page)).toBeHidden();
 });
