@@ -36,6 +36,10 @@ function SettingsDialog({ model, onClose, standalone = false }: SettingsProps) {
 
   const trimmed = query.trim();
   const searching = trimmed !== "";
+  // Another section, or the search results, starts at the top, not where the last one was scrolled to.
+  const body = useRef<HTMLDivElement>(null);
+  const view = searching ? "search" : active;
+  useEffect(() => body.current?.scrollTo(0, 0), [view]);
   const section = SECTIONS[active];
   const labels = sectionText(text, active);
   const enabled = dialog.plugins.filter((p) => model.state(p.id)?.enabled).map((p) => p.name);
@@ -70,7 +74,7 @@ function SettingsDialog({ model, onClose, standalone = false }: SettingsProps) {
             onClose={standalone ? undefined : onClose}
           />
           <RestartBanner restarts={dialog.restarts} onRestart={() => void model.relaunch()} />
-          <div class="body">
+          <div class="body" ref={body}>
             {searching ? (
               <SearchResults dialog={dialog} query={trimmed} />
             ) : (
