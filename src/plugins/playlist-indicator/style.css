@@ -43,9 +43,53 @@
   text-transform: uppercase;
 }
 
+.ytmd-pi-row {
+  display: flex;
+  align-items: center;
+  padding-left: 16px;
+}
+
+.ytmd-pi-row:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.ytmd-pi-check {
+  appearance: none;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 2px solid var(--ytmusic-text-secondary, #aaa);
+  border-radius: 50%;
+  background: transparent center / 14px no-repeat;
+  cursor: pointer;
+}
+
+.ytmd-pi-check:checked {
+  border-color: #e53935;
+  background-color: #e53935;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.ytmd-pi-check:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.ytmd-pi-removed .ytmd-pi-item {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.ytmd-pi-error .ytmd-pi-item {
+  color: #ff6b6b;
+}
+
 .ytmd-pi-item {
   display: block;
-  padding: 8px 16px;
+  flex: 1;
+  min-width: 0;
+  padding: 8px 16px 8px 10px;
   color: inherit;
   text-decoration: none;
   white-space: nowrap;

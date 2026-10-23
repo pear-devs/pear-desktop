@@ -5,14 +5,21 @@ import {
   fetchLibraryPlaylists,
   fetchPlaylistVideoIds,
   type PlaylistRef,
+  setPlaylistMembership,
 } from './innertube';
 import style from './style.css?inline';
 
 const CACHE_KEY = 'ytmd-playlist-indicator-cache-v1';
 const CACHE_TTL_MS = 30 * 60 * 1000;
+const RETRY_DELAY_MS = 2 * 60 * 1000;
 const BADGE_CLASS = 'ytmd-playlist-indicator';
 const POPUP_CLASS = 'ytmd-playlist-indicator-popup';
 const ROW_SELECTOR = 'ytmusic-responsive-list-item-renderer';
+const PLAYER_BAR_SELECTOR = 'ytmusic-player-bar';
+const ICON_IN =
+  '<svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="10" fill="#e53935"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_OUT =
+  '<svg viewBox="0 0 24 24" width="22" height="22"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
 
 type Index = Map<string, PlaylistRef[]>;
 
@@ -25,7 +32,15 @@ interface Cache {
 const loadCache = (): Cache | undefined => {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
-    return raw ? (JSON.parse(raw) as Cache) : undefined;
+    if (!raw) return undefined;
+    const c = JSON.parse(raw) as Partial<Cache> | null;
+    return c &&
+      typeof c.time === 'number' &&
+      Array.isArray(c.playlists) &&
+      c.tracks &&
+      typeof c.tracks === 'object'
+      ? (c as Cache)
+      : undefined;
   } catch {
     return undefined;
   }
@@ -54,6 +69,7 @@ const buildCache = async (): Promise<Cache> => {
   const tracks: Record<string, string[]> = {};
 
   const queue = [...playlists];
+  let failures = 0;
   const worker = async () => {
     for (let p = queue.shift(); p; p = queue.shift()) {
       try {
@@ -61,13 +77,22 @@ const buildCache = async (): Promise<Cache> => {
           (tracks[videoId] ??= []).push(p.id);
         }
       } catch (error) {
+        failures++;
         console.warn('[playlist-indicator] failed for', p.title, error);
       }
     }
   };
   await Promise.all(Array.from({ length: 4 }, worker));
 
-  return { time: Date.now(), playlists, tracks };
+  // Keep the previous cache rather than replacing it with nothing
+  if (playlists.length && failures === playlists.length) {
+    throw new Error('all playlist fetches failed');
+  }
+  // Partial result: back-date it so the next refresh retries soon
+  const time =
+    failures > 0 ? Date.now() - CACHE_TTL_MS + RETRY_DELAY_MS : Date.now();
+
+  return { time, playlists, tracks };
 };
 
 const getVideoId = (row: HTMLElement): string | undefined => {
@@ -84,11 +109,14 @@ const getVideoId = (row: HTMLElement): string | undefined => {
     : undefined;
 };
 
-/** Playlist id of the page being viewed, if any (its tracks trivially belong to it). */
-const getCurrentPlaylistId = () => {
-  const list = new URLSearchParams(location.search).get('list');
-  if (location.pathname === '/playlist' && list) return list;
-  return location.pathname.match(/^\/browse\/VL(.+)$/)?.[1];
+/** Video id of the song currently playing (player bar), if any. */
+const getPlayingVideoId = (): string | undefined => {
+  const player = document.querySelector<
+    HTMLElement & { getVideoData?: () => { video_id?: string } | undefined }
+  >('#movie_player');
+  const fromPlayer = player?.getVideoData?.()?.video_id;
+  if (fromPlayer) return fromPlayer;
+  return new URLSearchParams(location.search).get('v') ?? undefined;
 };
 
 const clearDecorations = () => {
@@ -108,11 +136,15 @@ export default createPlugin<
     styleEl?: HTMLStyleElement;
     popup?: HTMLElement;
     refreshTimer?: number;
+    playerTimer?: number;
     scanTimer?: number;
     refreshing: boolean;
+    dirty: boolean;
     refresh(force?: boolean): Promise<void>;
+    setMembership(videoId: string, playlistId: string, member: boolean): void;
     scan(): void;
-    decorate(row: HTMLElement): void;
+    popupAnchor?: HTMLElement;
+    decorate(row: HTMLElement, isPlayerBar?: boolean): void;
     openPopup(anchor: HTMLElement, videoId: string): void;
     closePopup(): void;
     onDocClick?: (e: MouseEvent) => void;
@@ -130,6 +162,7 @@ export default createPlugin<
   renderer: {
     index: new Map(),
     refreshing: false,
+    dirty: false,
 
     start() {
       this.styleEl = document.createElement('style');
@@ -161,6 +194,10 @@ export default createPlugin<
       });
       this.observer.observe(document.body, { childList: true, subtree: true });
 
+      // The player's video data can lag behind DOM mutations on song change
+      // (also catches rows whose data arrives without any DOM mutation)
+      this.playerTimer = window.setInterval(() => this.scan(), 2000);
+
       this.refresh().catch(() => {});
       this.refreshTimer = window.setInterval(() => {
         this.refresh().catch(() => {});
@@ -173,6 +210,7 @@ export default createPlugin<
       clearTimeout(this.scanTimer);
       this.scanTimer = undefined;
       clearInterval(this.refreshTimer);
+      clearInterval(this.playerTimer);
       if (this.onDocClick) {
         document.removeEventListener('click', this.onDocClick, true);
       }
@@ -204,49 +242,69 @@ export default createPlugin<
       for (const row of document.querySelectorAll<HTMLElement>(ROW_SELECTOR)) {
         this.decorate(row);
       }
+      const playerBar =
+        document.querySelector<HTMLElement>(PLAYER_BAR_SELECTOR);
+      if (playerBar) this.decorate(playerBar, true);
     },
 
-    decorate(row) {
-      const videoId = getVideoId(row);
-      // Rows are recycled by the browse page: re-check when the song changed
-      if (row.dataset.ytmdPiId === (videoId ?? '')) return;
-      row.dataset.ytmdPiId = videoId ?? '';
-      row.querySelector(`.${BADGE_CLASS}`)?.remove();
-      if (!videoId) return;
+    decorate(row, isPlayerBar = false) {
+      const videoId = isPlayerBar ? getPlayingVideoId() : getVideoId(row);
+      const existing = row.querySelector(`.${BADGE_CLASS}`);
+      if (!videoId) {
+        existing?.remove();
+        delete row.dataset.ytmdPiId;
+        return;
+      }
 
-      const current = getCurrentPlaylistId();
-      const playlists = (this.index.get(videoId) ?? []).filter(
-        (p) => p.id !== current,
-      );
-      if (!playlists.length) return;
+      const count = this.index.get(videoId)?.length ?? 0;
+
+      // Rows are recycled by the page: rebuild when the song or its state changed
+      if (
+        existing &&
+        row.dataset.ytmdPiId === videoId &&
+        (existing as HTMLElement).dataset.count === String(count)
+      ) {
+        return;
+      }
+      existing?.remove();
+      row.dataset.ytmdPiId = videoId;
 
       const badge = document.createElement('button');
       badge.className = BADGE_CLASS;
-      badge.title = t('plugins.playlist-indicator.tooltip', {
-        count: playlists.length,
-      });
-      badge.innerHTML =
-        '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M3 10h11v2H3v-2zm0-4h11v2H3V6zm0 8h7v2H3v-2zm13-1v8l6-4-6-4z"/></svg>';
+      badge.dataset.count = String(count);
+      badge.title = count
+        ? t('plugins.playlist-indicator.tooltip', { count })
+        : t('plugins.playlist-indicator.tooltip-none');
+      badge.innerHTML = count ? ICON_IN : ICON_OUT;
       badge.addEventListener('click', (e) => {
         e.stopPropagation();
         e.preventDefault();
         this.openPopup(badge, videoId);
       });
 
+      if (isPlayerBar) {
+        (row.querySelector('.middle-controls-buttons') ?? row).appendChild(
+          badge,
+        );
+        return;
+      }
       const menu = row.querySelector('.menu');
       if (menu) menu.parentElement?.insertBefore(badge, menu);
       else row.appendChild(badge);
     },
 
     openPopup(anchor, videoId) {
-      const wasSame = this.popup?.dataset.videoId === videoId;
+      const wasSame =
+        this.popup?.dataset.videoId === videoId && this.popupAnchor === anchor;
       this.closePopup();
       if (wasSame) return;
+      this.popupAnchor = anchor;
 
-      const current = getCurrentPlaylistId();
-      const playlists = (this.index.get(videoId) ?? []).filter(
-        (p) => p.id !== current,
-      );
+      const memberOf = this.index.get(videoId) ?? [];
+      // Song in no playlist: list every playlist so it can be added to one
+      const playlists = memberOf.length
+        ? memberOf
+        : (this.cache?.playlists ?? []);
 
       const popup = document.createElement('div');
       popup.className = POPUP_CLASS;
@@ -258,11 +316,46 @@ export default createPlugin<
       popup.appendChild(header);
 
       for (const p of playlists) {
+        const row = document.createElement('div');
+        row.className = 'ytmd-pi-row';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'ytmd-pi-check';
+        checkbox.checked = memberOf.some((m) => m.id === p.id);
+        checkbox.title = t('plugins.playlist-indicator.toggle-tooltip');
+        checkbox.addEventListener('change', () => {
+          const member = checkbox.checked;
+          checkbox.disabled = true;
+          row.classList.remove('ytmd-pi-error');
+          setPlaylistMembership(p.id, videoId, member)
+            .then(() => {
+              this.setMembership(videoId, p.id, member);
+              row.classList.toggle('ytmd-pi-removed', !member);
+            })
+            .catch((error) => {
+              console.warn(
+                '[playlist-indicator] edit failed for',
+                p.title,
+                error,
+              );
+              checkbox.checked = !member;
+              row.classList.add('ytmd-pi-error');
+              row.title = t('plugins.playlist-indicator.edit-failed');
+            })
+            .finally(() => {
+              checkbox.disabled = false;
+            });
+        });
+        row.appendChild(checkbox);
+
         const a = document.createElement('a');
         a.className = 'ytmd-pi-item';
         a.textContent = p.title;
         a.href = `/playlist?list=${encodeURIComponent(p.id)}`;
-        popup.appendChild(a);
+        row.appendChild(a);
+
+        popup.appendChild(row);
       }
 
       const refreshBtn = document.createElement('button');
@@ -290,9 +383,26 @@ export default createPlugin<
       this.popup = popup;
     },
 
+    setMembership(videoId, playlistId, member) {
+      if (!this.cache) return;
+      const ids = new Set(this.cache.tracks[videoId] ?? []);
+      if (member) ids.add(playlistId);
+      else ids.delete(playlistId);
+      if (ids.size) this.cache.tracks[videoId] = [...ids];
+      else delete this.cache.tracks[videoId];
+      saveCache(this.cache);
+      this.index = indexFromCache(this.cache);
+      this.dirty = true;
+    },
+
     closePopup() {
       this.popup?.remove();
       this.popup = undefined;
+      if (this.dirty) {
+        this.dirty = false;
+        clearDecorations();
+        this.scan();
+      }
     },
   },
 });

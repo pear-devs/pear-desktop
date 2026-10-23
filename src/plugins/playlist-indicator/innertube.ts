@@ -37,7 +37,10 @@ const authHeader = async () => {
   return `SAPISIDHASH ${ts}_${await sha1(`${ts} ${sapisid} ${origin}`)}`;
 };
 
-const browse = async (body: Record<string, unknown>): Promise<Json> => {
+const post = async (
+  endpoint: string,
+  body: Record<string, unknown>,
+): Promise<Json> => {
   const ytcfg = (window as unknown as { ytcfg?: YtCfg }).ytcfg;
   const key = ytcfg?.get('INNERTUBE_API_KEY');
   const context = ytcfg?.get('INNERTUBE_CONTEXT');
@@ -52,7 +55,7 @@ const browse = async (body: Record<string, unknown>): Promise<Json> => {
   if (auth) headers.Authorization = auth;
 
   const res = await fetch(
-    `/youtubei/v1/browse?prettyPrint=false&key=${encodeURIComponent(key)}`,
+    `/youtubei/v1/${endpoint}?prettyPrint=false&key=${encodeURIComponent(key)}`,
     {
       method: 'POST',
       credentials: 'include',
@@ -60,8 +63,28 @@ const browse = async (body: Record<string, unknown>): Promise<Json> => {
       body: JSON.stringify({ context, ...body }),
     },
   );
-  if (!res.ok) throw new Error(`browse failed: ${res.status}`);
+  if (!res.ok) throw new Error(`${endpoint} failed: ${res.status}`);
   return res.json();
+};
+
+const browse = (body: Record<string, unknown>) => post('browse', body);
+
+/** Adds or removes a song from a playlist the user owns. Throws if YouTube refuses. */
+export const setPlaylistMembership = async (
+  playlistId: string,
+  videoId: string,
+  member: boolean,
+): Promise<void> => {
+  const action = member
+    ? { action: 'ACTION_ADD_VIDEO', addedVideoId: videoId }
+    : { action: 'ACTION_REMOVE_VIDEO_BY_VIDEO_ID', removedVideoId: videoId };
+  const data = await post('browse/edit_playlist', {
+    playlistId,
+    actions: [action],
+  });
+  if (data?.status !== 'STATUS_SUCCEEDED') {
+    throw new Error(`edit_playlist: ${data?.status ?? 'unknown status'}`);
+  }
 };
 
 const walk = (node: Json, visit: (key: string, value: Json) => void) => {
