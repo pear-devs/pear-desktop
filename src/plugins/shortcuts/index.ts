@@ -9,11 +9,18 @@ export type ShortcutMappingType = {
   playPause: string;
   next: string;
 };
+export type SeekMappingType = {
+  forward: string;
+  backward: string;
+};
 export type ShortcutsPluginConfig = {
   enabled: boolean;
   overrideMediaKeys: boolean;
   global: ShortcutMappingType;
   local: ShortcutMappingType;
+  seekSeconds: number;
+  seekGlobalShortcuts: SeekMappingType;
+  focusWindowOnDoublePlayPause: boolean;
 };
 
 export default createPlugin({
@@ -33,6 +40,12 @@ export default createPlugin({
       playPause: '',
       next: '',
     },
+    seekSeconds: 10,
+    seekGlobalShortcuts: {
+      forward: '',
+      backward: '',
+    },
+    focusWindowOnDoublePlayPause: false,
   } as ShortcutsPluginConfig,
   menu: onMenu,
 
