@@ -1,5 +1,6 @@
 import type { Job } from "./jobs.ts";
 import type { DownloaderState, ToolsInfo } from "./host.ts";
+import type { OfflineData, OfflineTrack } from "./offline.ts";
 import type { DownloadTarget } from "./ytdlp.ts";
 
 /** The host commands, as the page calls them. */
@@ -26,4 +27,10 @@ export interface DownloaderCommands {
   /** Shows the Downloads popover in the page, pinned open. */
   openDownloads(): void;
   updateYtDlp(): Promise<void>;
+  /** The songs kept for offline playback, newest first. */
+  offlineTracks(): Promise<OfflineTrack[]>;
+  /** A kept song with its stream, for the page to write into the site's offline databases. */
+  offlineTrack(videoId: string): Promise<OfflineData | undefined>;
+  /** Forgets a kept song (removed in the site's Downloads page). */
+  offlineRemove(videoId: string): Promise<void>;
 }

@@ -113,6 +113,8 @@ export const selectors = {
 
   // ---- browse pages (home, albums, playlists…)
   "browse.page": "#browse-page",
+  /** The browse page's element; its `.data` is the server's answer it draws. */
+  "browse.response": "ytmusic-browse-response",
   "browse.header": "#header.ytmusic-item-section-renderer",
   "browse.background": "ytmusic-browse-response #background",
   "browse.gradient": "ytmusic-browse-response .background-gradient",

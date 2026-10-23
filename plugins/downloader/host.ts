@@ -17,6 +17,7 @@ import type { Engine } from "./engines/types.ts";
 import { YtDlpEngine } from "./engines/ytdlp.ts";
 import { Installer } from "./install.ts";
 import { findLyrics } from "./lyrics.ts";
+import { OfflineStore } from "./offline.ts";
 import { ffmpegCoreDir } from "./macros.ts" with { type: "macro" };
 import type { PoTokenRequest } from "./potoken.ts";
 import { expandHome, type SetupState, type ToolSource, Tools } from "./tools.ts";
@@ -33,6 +34,7 @@ export interface DownloaderState extends QueueState {
 interface Downloader {
   queue: DownloadQueue;
   tools: Tools;
+  offline: OfflineStore;
 }
 
 /** Tests set this to pretend yt-dlp and ffmpeg aren't installed. */
@@ -74,12 +76,15 @@ export async function startHost(ctx: Ctx) {
 
   const autoJobs = new Set<number>();
   const history = new DownloadHistory(join(ctx.app.getPath("userData"), "downloads.json"));
-  const queue = createQueue(ctx, tools, autoJobs, history, () => publisher.publish());
-  downloaders.set(ctx, { queue, tools });
-  // Everything but the tool paths is read per download.
+  const offline = new OfflineStore(join(ctx.app.getPath("userData"), "offline"));
+  const queue = createQueue(ctx, tools, autoJobs, history, offline, () => publisher.publish());
+  downloaders.set(ctx, { queue, tools, offline });
+  blockOfflineSync(ctx);
+  // Everything but the tool paths and offline playback is read per download.
   const toolsKey = toolsKeyOf(ctx.config);
+  const offlineAtStart = ctx.config.offline;
   ctx.onConfigChange((config) => {
-    if (toolsKeyOf(config) !== toolsKey) return "restart";
+    if (toolsKeyOf(config) !== toolsKey || config.offline !== offlineAtStart) return "restart";
     // The status line names the engine.
     publisher.flush();
   });
@@ -194,9 +199,9 @@ class Publisher {
 
 // ---------------------------------------------------------------- queue
 
-function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, history: DownloadHistory, publish: () => void) {
+function createQueue(ctx: Ctx, tools: Tools, autoJobs: Set<number>, history: DownloadHistory, offline: OfflineStore, publish: () => void) {
   const ytDlp = createYtDlpEngine(ctx, tools, autoJobs);
-  const builtIn = createBuiltInEngine(ctx, tools, autoJobs);
+  const builtIn = createBuiltInEngine(ctx, tools, autoJobs, offline);
   return new DownloadQueue({
     engines: () => enginesFor(ctx.config, builtIn, ytDlp),
     saved: history.load(),
@@ -256,7 +261,7 @@ function createYtDlpEngine(ctx: Ctx, tools: Tools, autoJobs: Set<number>) {
   });
 }
 
-function createBuiltInEngine(ctx: Ctx, tools: Tools, autoJobs: Set<number>) {
+function createBuiltInEngine(ctx: Ctx, tools: Tools, autoJobs: Set<number>, offline: OfflineStore) {
   const session = new InnertubeSession({
     fetch: (input, init) => ctx.session.fetch(input, init),
     cookie: () => accountCookie(ctx),
@@ -281,14 +286,31 @@ function createBuiltInEngine(ctx: Ctx, tools: Tools, autoJobs: Set<number>) {
         replayGain: config.replayGain,
         lyrics: config.lyrics,
         lyricsFile: config.lyricsFile,
+        offline: config.offline,
       };
     },
     converter: (): Converter => chooseConverter(tools.ffmpegProgram, () => wasm),
     cover: (url, square, signal) => fetchCover(ctx, url, square, signal),
     fetch: (url, init) => ctx.session.fetch(url, init),
     lyrics: (query, signal) => findLyrics(query, (url, init) => ctx.session.fetch(url, init), signal),
+    keep: async (song, stream) => {
+      await offline.save(song, stream);
+      // The page writes it into the site's offline databases.
+      ctx.emit("offline-added", song.videoId);
+    },
     log: ctx.log,
   });
+}
+
+/**
+ * The site's offline downloads check with its servers whether each song may
+ * stay, and the answer removes the songs the page added (page/offline.ts):
+ * without those requests they stay. The site's own Premium downloads stop
+ * working meanwhile, so this is part of the "offline" option.
+ */
+function blockOfflineSync(ctx: Ctx) {
+  if (!ctx.config.offline) return;
+  ctx.webRequest.onBeforeRequest({ urls: [`${YTM_ORIGIN}/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i/v1/offline*`] }, (_details, callback) => callback({ cancel: true }));
 }
 
 /** The cookies of a signed-in session, for the built-in engine; none when signed out or not wanted. */

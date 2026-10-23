@@ -939,6 +939,10 @@
         },
         "notifyWhenHidden": {
           "label": "Notify me when a download finishes while the window is hidden"
+        },
+        "offline": {
+          "label": "Play downloaded songs offline",
+          "description": "Keeps a copy of each song in the app, so the Downloads page in your Library plays it without internet. Only songs the built-in downloader saves. The site's own Premium downloads stop working while this is on."
         }
       },
       "errors": {

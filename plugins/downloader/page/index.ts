@@ -12,6 +12,7 @@ import type { DownloadTarget } from "../ytdlp.ts";
 import { downloadButton, showState } from "./button.tsx";
 import type { StartDownload } from "./options.ts";
 import { downloadsPopover } from "./downloads-popover.tsx";
+import { startOffline } from "./offline.ts";
 import { pageButton } from "./page-button.tsx";
 import { popupEntry } from "./popup-entry.ts";
 import { createToast, type ShowToast } from "./toast.tsx";
@@ -31,6 +32,7 @@ export function startPage(ctx: Ctx) {
     }
   };
   const startDownload: StartDownload = (target, label) => void start(target, label);
+  startOffline(ctx, startDownload);
 
   const downloadPlaying = () => {
     const track = ctx.player.state.track;

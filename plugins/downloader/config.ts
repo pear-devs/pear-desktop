@@ -48,6 +48,11 @@ export const downloaderConfig = {
     label: "…even when their files were renamed",
     description: "Remembers what was downloaded to a folder by song, in a list there (yt-dlp's download archive).",
   }),
+  offline: config.bool(true, {
+    label: "Play downloaded songs offline",
+    description:
+      "Keeps a copy of each song in the app, so the Downloads page in your Library plays it without internet. Only songs the built-in downloader saves. The site's own Premium downloads stop working while this is on.",
+  }),
   squareCover: config.bool(true, { label: "Crop cover art to a square" }),
   replayGain: config.bool(false, {
     label: "Add ReplayGain tags",

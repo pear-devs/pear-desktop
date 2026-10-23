@@ -6,6 +6,7 @@ import { shell } from "electron";
 import { downloaderConfig } from "./config.ts";
 import { type DownloaderState, downloadFolder, downloaderOf, openDownloads, startHost, stateOf, toolsInfo } from "./host.ts";
 import type { Job } from "./jobs.ts";
+import type { OfflineData, OfflineTrack } from "./offline.ts";
 import { startPage } from "./page/index.ts";
 import type { DownloadTarget } from "./ytdlp.ts";
 
@@ -81,6 +82,15 @@ export default definePlugin({
       },
       updateYtDlp() {
         return downloaderOf(this).tools.updateNow();
+      },
+      offlineTracks(): Promise<OfflineTrack[]> {
+        return downloaderOf(this).offline.list();
+      },
+      offlineTrack(videoId: string): Promise<OfflineData | undefined> {
+        return downloaderOf(this).offline.read(videoId);
+      },
+      offlineRemove(videoId: string) {
+        return downloaderOf(this).offline.remove(videoId);
       },
     },
     rpc: {

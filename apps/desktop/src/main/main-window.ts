@@ -1,7 +1,7 @@
 // The YTM window: its options and saved bounds, the user agent per destination,
 // the title, and the page it starts on. Also the channel to its page runtime.
 
-import { app, type BrowserWindowConstructorOptions, BrowserWindow, screen, shell } from "electron";
+import { app, type BrowserWindowConstructorOptions, BrowserWindow, net, screen, shell } from "electron";
 import { STARTING_PAGES, type StartingPage } from "@pear/sdk/core-config";
 import { CHANNEL, type HostEvent } from "@pear/sdk/protocol";
 import { chromeUserAgent, isGoogleAuth, isYtmUrl, YTM_ORIGIN } from "../shared/user-agent.ts";
@@ -115,7 +115,8 @@ export class MainWindow {
     routeLinks(window);
     this.#saveBounds(window);
     this.#reportVisibility(window);
-    void window.loadURL(startUrl(settings.core("general"), settings.lastUrl));
+    openHomeWhenOffline(window);
+    void window.loadURL(net.isOnline() ? startUrl(settings.core("general"), settings.lastUrl) : `${YTM_ORIGIN}/`);
     return window;
   }
 
@@ -204,6 +205,24 @@ function routeLinks(window: BrowserWindow) {
     if (action === "allow") return;
     event.preventDefault();
     if (action === "external") void shell.openExternal(event.url);
+  });
+}
+
+/**
+ * Chromium's errors for a page that failed to load for want of a network
+ * (net_error_list.h); the site's service worker turns those into ERR_FAILED (-2).
+ */
+const OFFLINE_ERRORS = new Set([-2, -21, -105, -106, -109, -118, -137]);
+
+/**
+ * Offline, the site's service worker answers for its home page only (from its
+ * cached app shell, with the Downloads page a click away); any other page
+ * fails to load, so the home page loads instead.
+ */
+function openHomeWhenOffline(window: BrowserWindow) {
+  window.webContents.on("did-fail-load", (_event, errorCode, _description, url, isMainFrame) => {
+    if (!isMainFrame || !OFFLINE_ERRORS.has(errorCode) || !isYtmUrl(url) || new URL(url).pathname === "/") return;
+    void window.loadURL(`${YTM_ORIGIN}/`);
   });
 }
 
