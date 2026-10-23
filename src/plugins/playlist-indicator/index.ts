@@ -66,6 +66,19 @@ const indexFromCache = (cache: Cache): Index => {
   return index;
 };
 
+const applyMembership = (
+  cache: Cache,
+  videoId: string,
+  playlistId: string,
+  member: boolean,
+) => {
+  const ids = new Set(cache.tracks[videoId] ?? []);
+  if (member) ids.add(playlistId);
+  else ids.delete(playlistId);
+  if (ids.size) cache.tracks[videoId] = [...ids];
+  else delete cache.tracks[videoId];
+};
+
 const buildCache = async (): Promise<Cache> => {
   const playlists = await fetchLibraryPlaylists();
   const tracks: Record<string, string[]> = {};
@@ -144,6 +157,7 @@ export default createPlugin<
     refreshing: boolean;
     dirty: boolean;
     epoch: number;
+    pendingEdits: [videoId: string, playlistId: string, member: boolean][];
     refresh(force?: boolean): Promise<void>;
     armRetry(partial?: boolean): void;
     setMembership(videoId: string, playlistId: string, member: boolean): void;
@@ -169,6 +183,7 @@ export default createPlugin<
     refreshing: false,
     dirty: false,
     epoch: 0,
+    pendingEdits: [],
 
     start() {
       this.styleEl = document.createElement('style');
@@ -204,6 +219,8 @@ export default createPlugin<
       // (also catches rows whose data arrives without any DOM mutation)
       this.playerTimer = window.setInterval(() => this.scan(), 2000);
 
+      // A partial cache loaded from storage would otherwise wait for the next interval
+      this.armRetry(this.cache?.partial);
       this.refresh().catch(() => {});
       this.refreshTimer = window.setInterval(() => {
         this.refresh().catch(() => {});
@@ -236,11 +253,13 @@ export default createPlugin<
         return;
       }
       this.refreshing = true;
+      this.pendingEdits = [];
       const epoch = this.epoch;
       try {
         const cache = await buildCache();
         // The plugin was stopped (or restarted) meanwhile: drop this result
         if (epoch !== this.epoch) return;
+        for (const edit of this.pendingEdits) applyMembership(cache, ...edit);
         this.cache = cache;
         saveCache(cache);
         this.index = indexFromCache(cache);
@@ -413,12 +432,11 @@ export default createPlugin<
     },
 
     setMembership(videoId, playlistId, member) {
+      // An in-flight refresh may have fetched stale data: replay the edit on it
+      if (this.refreshing)
+        this.pendingEdits.push([videoId, playlistId, member]);
       if (!this.cache) return;
-      const ids = new Set(this.cache.tracks[videoId] ?? []);
-      if (member) ids.add(playlistId);
-      else ids.delete(playlistId);
-      if (ids.size) this.cache.tracks[videoId] = [...ids];
-      else delete this.cache.tracks[videoId];
+      applyMembership(this.cache, videoId, playlistId, member);
       saveCache(this.cache);
       this.index = indexFromCache(this.cache);
       this.dirty = true;
