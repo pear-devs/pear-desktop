@@ -3,6 +3,8 @@
 // them and are passed as the fallback; `nub run i18n` copies new ones into
 // en.json so translators see them.
 
+import { YTM_NAME } from "./util.ts";
+
 export type Strings = Readonly<Record<string, string>>;
 export type Vars = Readonly<Record<string, unknown>>;
 
@@ -15,8 +17,11 @@ export function interpolate(text: string, vars: Vars | undefined): string {
   return text.replace(/\{\{\s*([\w.-]+)\s*\}\}/g, (match, name: string) => (name in vars ? String(vars[name]) : match));
 }
 
+/** Placeholders pear-desktop's strings use without the code passing them. */
+const COMMON_VARS: Vars = { applicationName: YTM_NAME };
+
 export function translator(strings: Strings): Translate {
-  return (key, fallback, vars) => interpolate(strings[key] || fallback || key, vars);
+  return (key, fallback, vars) => interpolate(strings[key] || fallback || key, { ...COMMON_VARS, ...vars });
 }
 
 /** `{ a: { b: "x" } }` → `{ "a.b": "x" }`. */
