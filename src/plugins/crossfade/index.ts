@@ -372,13 +372,17 @@ export default createPlugin<
         const start = Date.now();
         const step = () => {
           const progress = Math.min((Date.now() - start) / OVERLAP_MS, 1);
-          const angle = (progress * Math.PI) / 2;
-          videoGain.volume = startGain * Math.cos(angle);
-          audio.volume = targetVolume * startGain * Math.sin(angle);
           if (progress < 1) {
+            const angle = (progress * Math.PI) / 2;
+            videoGain.volume = startGain * Math.cos(angle);
+            audio.volume = targetVolume * startGain * Math.sin(angle);
             setTimeout(step, 10);
             return;
           }
+          // Exact end values: cos(π/2) isn't 0, and the timeupdate fallback
+          // only fades the next song in from a gain of exactly 0
+          videoGain.volume = 0;
+          audio.volume = targetVolume * startGain;
           // Go to next video - XXX: does not support "repeat 1" mode
           api.nextVideo();
           // No next song: give the old one back to the video
