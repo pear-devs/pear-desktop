@@ -728,6 +728,16 @@
         "button": "Speed"
       }
     },
+    "playlist-indicator": {
+      "description": "Shows an icon on songs that are in one of your playlists; click it to see which ones, and uncheck a playlist to remove the song from it",
+      "edit-failed": "Could not update this playlist",
+      "name": "Playlist Indicator",
+      "popup-title": "In your playlists",
+      "refresh": "Refresh playlists",
+      "toggle-tooltip": "Check to add this song to the playlist, uncheck to remove it",
+      "tooltip": "In {{count}} of your playlists",
+      "tooltip-none": "Not in any of your playlists"
+    },
     "precise-volume": {
       "description": "Control the volume precisely using mousewheel/hotkeys, with a custom HUD and customizable volume steps",
       "menu": {
