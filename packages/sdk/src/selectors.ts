@@ -108,6 +108,8 @@ export const selectors = {
   "guide.primary_items": "ytmusic-guide-section-renderer[is-primary] > #items",
   /** Sidebar entries; each carries its renderer data (`.data`: browse id, icon type). */
   "guide.entry": "ytmusic-guide-entry-renderer",
+  /** YTM's entry for the page that shows (highlighted). */
+  "guide.active_entry": "ytmusic-guide-entry-renderer[active]",
   /** The sidebar's "Upgrade" entry, which the core marks (it can only be told apart by its data). */
   "upgrade.button": "ytmusic-guide-entry-renderer[pear-upgrade]",
 
@@ -115,6 +117,10 @@ export const selectors = {
   "browse.page": "#browse-page",
   /** The browse page's element; its `.data` is the server's answer it draws. */
   "browse.response": "ytmusic-browse-response",
+  /** The bar of tabs some browse pages have (the Library's: Library, Downloads). */
+  "browse.tabs": "ytmusic-browse-response ytmusic-tabs",
+  /** The page's shelves, in its section list. */
+  "browse.contents": "ytmusic-browse-response ytmusic-section-list-renderer > #contents",
   "browse.header": "#header.ytmusic-item-section-renderer",
   "browse.background": "ytmusic-browse-response #background",
   "browse.gradient": "ytmusic-browse-response .background-gradient",

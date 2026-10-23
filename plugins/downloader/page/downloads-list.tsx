@@ -1,6 +1,7 @@
 // What the Downloads popover shows: chips to filter by status, a two-line row
 // per download with its actions, the songs of an album or playlist under it,
-// and a footer for all of them. Preact, rendered while the popover is open.
+// and a footer for all of them; and the queue on the Downloads page, with the
+// same rows. Preact, rendered while they show.
 
 import { useEffect, useState } from "preact/hooks";
 import type { Job, JobItem } from "../jobs.ts";
@@ -85,6 +86,24 @@ export function Downloads({ ctx }: { ctx: Ctx }) {
       )}
       <Footer ctx={ctx} jobs={jobs} />
     </div>
+  );
+}
+
+/** The Downloads page's queue: what is downloading, waiting, paused, failed or cancelled; nothing when all are done. */
+export function Queue({ ctx }: { ctx: Ctx }) {
+  const jobs = useJobs(ctx);
+  const [isExpanded, toggle] = useExpanded();
+  const queued = newestFirst(jobs.filter((job) => job.status !== "done"));
+  if (queued.length === 0) return null;
+  return (
+    <section class="pear-dl-downloads">
+      <h2 class="heading">{ctx.t("plugins.downloader.page.queue", "Download queue")}</h2>
+      <ul class="rows">
+        {queued.map((job) => (
+          <JobRow key={job.id} ctx={ctx} job={job} expanded={isExpanded(job)} onToggle={() => toggle(job)} />
+        ))}
+      </ul>
+    </section>
   );
 }
 

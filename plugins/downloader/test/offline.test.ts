@@ -3,7 +3,18 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "vitest";
 import { type OfflineFormat, type OfflineSong, OfflineStore } from "../offline.ts";
-import { AUDIO_ONLY, CHUNK_BYTES, chunkKey, entityKey, indexEntry, libraryKey, policyRecord, songEntities, songKey } from "../page/offline-records.ts";
+import {
+  AUDIO_ONLY,
+  CHUNK_BYTES,
+  chunkKey,
+  entityKey,
+  indexEntry,
+  libraryKey,
+  listEntities,
+  policyRecord,
+  songEntities,
+  songKey,
+} from "../page/offline-records.ts";
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -53,6 +64,35 @@ describe("offline store", () => {
     expect(await store.read("n1oPCIdabo4")).toBeUndefined();
   });
 
+  test("keeps albums with their kept songs, and forgets songs no other list has", async () => {
+    const dir = tempDir();
+    const stream = join(dir, "song.part");
+    writeFileSync(stream, "opus!!");
+    const store = new OfflineStore(join(dir, "offline"));
+    await store.save(song("aaaaaaaaaaa"), stream);
+    await store.save(song("bbbbbbbbbbb"), stream);
+    // A song that wasn't kept (yt-dlp saved it) isn't on the list.
+    const album = await store.saveList({ playlistId: "OLAK5uy_album", title: "Album", cover: "https://example.com/c.jpg", videoIds: ["aaaaaaaaaaa", "ccccccccccc", "bbbbbbbbbbb"] });
+    expect(album?.videoIds).toEqual(["aaaaaaaaaaa", "bbbbbbbbbbb"]);
+    expect(await store.saveList({ playlistId: "PLnothing", title: "Nothing kept", videoIds: ["ccccccccccc"] })).toBeUndefined();
+    await store.saveList({ playlistId: "PLmix", title: "Mix", videoIds: ["bbbbbbbbbbb"] });
+
+    // Removing a song takes it off its lists; a list left empty goes.
+    await store.remove("aaaaaaaaaaa");
+    expect((await store.lists()).map((list) => [list.playlistId, list.videoIds])).toEqual(
+      expect.arrayContaining([
+        ["OLAK5uy_album", ["bbbbbbbbbbb"]],
+        ["PLmix", ["bbbbbbbbbbb"]],
+      ]),
+    );
+    // Removing a list keeps its songs that another list has.
+    expect(await store.removeList("OLAK5uy_album")).toEqual([]);
+    expect(await store.has("bbbbbbbbbbb")).toBe(true);
+    expect(await store.removeList("PLmix")).toEqual(["bbbbbbbbbbb"]);
+    expect(await store.has("bbbbbbbbbbb")).toBe(false);
+    expect(await store.lists()).toEqual([]);
+  });
+
   test("only video ids name its folders", async () => {
     const store = new OfflineStore(tempDir());
     await expect(store.remove("../settings")).rejects.toThrow("not a video id");
@@ -99,5 +139,13 @@ describe("the site's offline records", () => {
     expect(byType.offlineVideoPolicy).toEqual(policyRecord("n1oPCIdabo4", now).data);
     expect(Number((byType.offlineVideoPolicy as { expirationTimestamp: string }).expirationTimestamp)).toBeGreaterThan(now);
     expect(associations).toContainEqual({ parentEntityKey: libraryKey(), childEntityKey: songKey("n1oPCIdabo4", "musicTrack") });
+  });
+
+  test("an album lists its songs by their keys", () => {
+    const { entities } = listEntities({ playlistId: "OLAK5uy_album", title: "Album", cover: "https://example.com/c.jpg", videoIds: ["n1oPCIdabo4"], addedAt: 7 });
+    const playlist = entities.find((record) => record.entityType === "musicPlaylist")!;
+    expect(playlist.key).toBe(entityKey("OLAK5uy_album", "musicPlaylist"));
+    expect(playlist.data).toMatchObject({ playlistId: "OLAK5uy_album", title: "Album", tracks: [songKey("n1oPCIdabo4", "musicTrack")] });
+    expect(entities.find((record) => record.entityType === "musicPlaylistDownloadMetadataEntity")?.data).toMatchObject({ addedTimestampMillis: "7" });
   });
 });

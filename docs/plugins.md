@@ -302,7 +302,10 @@ export default definePlugin({
 - `sidebarEntry(ctx, { name, label, icon, onClick })`: an entry in YTM's
   sidebar, under Home and Library, in the full and the collapsed sidebar. Its
   `setBadge(text)` shows a small count next to it; `elements` and `focus()` are
-  there to put a popover on it. See `plugins/downloader`.
+  there to put a popover on it, and `setSelected(true)` highlights it while its
+  page shows. See `plugins/downloader`.
+- `openBrowsePage(browseId)`: opens one of YTM's pages in place, as its own
+  links do, e.g. `openBrowsePage("FEmusic_offline")` for its Downloads page.
 
 For bigger UIs that change a lot, like the lyrics panel, use Preact instead
 (see `plugins/synced-lyrics`).

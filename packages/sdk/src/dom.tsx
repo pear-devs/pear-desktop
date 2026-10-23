@@ -412,6 +412,8 @@ export interface SidebarEntry {
   readonly elements: readonly HTMLElement[];
   /** Focuses the entry that shows. */
   focus(): void;
+  /** Marks the entry as the current page's, as YTM marks its own (while its page shows). */
+  setSelected(selected: boolean): void;
 }
 
 /** The sidebar's two layouts: the full guide and the collapsed ("mini") one. */
@@ -459,7 +461,19 @@ export function sidebarEntry(owner: Pick<PageContext<unknown, {}>, "onCleanup">,
     focus() {
       buttons.find((button) => button.getClientRects().length > 0)?.focus();
     },
+    setSelected(selected) {
+      for (const button of buttons) {
+        if (selected) button.setAttribute("aria-current", "page");
+        else button.removeAttribute("aria-current");
+      }
+    },
   };
+}
+
+/** Opens one of YTM's pages in place, as its own links do; `browseId` names it, e.g. "FEmusic_offline". */
+export function openBrowsePage(browseId: string) {
+  const detail = { endpoint: { browseEndpoint: { browseId } } };
+  document.querySelector(selectors.app)?.dispatchEvent(new CustomEvent("yt-navigate", { bubbles: true, composed: true, detail }));
 }
 
 /** YTM's own look for sidebar entries. */
@@ -483,7 +497,7 @@ const SIDEBAR_ENTRY_CSS = `
     cursor: pointer;
     user-select: none;
   }
-  button:hover { background: rgb(255 255 255 / 0.1); }
+  button:hover, button[aria-current="page"] { background: rgb(255 255 255 / 0.1); }
   button:focus-visible { outline: 2px solid #d0bcff; }
   svg { flex: none; width: 24px; height: 24px; fill: currentColor; }
   .badge {

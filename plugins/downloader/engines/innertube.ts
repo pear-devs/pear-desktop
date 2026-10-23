@@ -10,7 +10,7 @@ import { errorMessage } from "@pear/sdk/util";
 import { Innertube, Platform, type Types, UniversalCache, type YT, YTNodes, type YTMusic } from "\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js";
 import { type BuiltInFormat, type Converter, type Cover, codecOf, outputFor, preferredContainer, type Tags } from "../convert.ts";
 import type { Lyrics, LyricsQuery } from "../lyrics.ts";
-import type { OfflineSong } from "../offline.ts";
+import type { OfflineList, OfflineSong } from "../offline.ts";
 import { Archive } from "../archive.ts";
 import { playlistFolder, renderTemplate, type TemplateFields } from "../template.ts";
 import { isAlbum } from "../ytdlp.ts";
@@ -23,6 +23,8 @@ const DOWNLOAD_SHARE = 0.7;
 const HTTP_FORBIDDEN = 403;
 /** Songs of a playlist downloaded at the same time. */
 const PLAYLIST_CONCURRENCY = 2;
+/** The site's player responses remembered for offline playback, the latest songs'. */
+const PLAYER_RESPONSES_KEPT = 50;
 
 export interface BuiltInJobOptions {
   folder: string;
@@ -79,6 +81,8 @@ function evaluate(data: Types.BuildScriptResult, env: Record<string, Types.VMPri
 export class InnertubeSession {
   #options: SessionOptions;
   #current: Promise<{ yt: Innertube; cookie: string | undefined }> | undefined;
+  /** Playable player responses by video id, as the site sent them (JSON). */
+  readonly #playerResponses = new Map<string, string>();
 
   constructor(options: SessionOptions) {
     this.#options = options;
@@ -94,6 +98,27 @@ export class InnertubeSession {
       if (this.#current === created) this.#current = undefined;
     });
     return (await created).yt;
+  }
+
+  /**
+   * The site's player response for a song this session looked up, as it sent
+   * it (JSON); undefined when it wasn't playable. YTM's offline player plays the
+   * song with it; asking again without the song's PO token isn't answered.
+   */
+  playerResponse(videoId: string) {
+    return this.#playerResponses.get(videoId);
+  }
+
+  /** Remembers a playable player response the library got. */
+  async #remember(response: Response) {
+    try {
+      const json = await response.text();
+      const parsed = JSON.parse(json) as { videoDetails?: { videoId?: string }; playabilityStatus?: { status?: string } };
+      const videoId = parsed.videoDetails?.videoId;
+      if (!videoId || parsed.playabilityStatus?.status !== "OK" || this.#playerResponses.has(videoId)) return;
+      this.#playerResponses.set(videoId, json);
+      if (this.#playerResponses.size > PLAYER_RESPONSES_KEPT) this.#playerResponses.delete(this.#playerResponses.keys().next().value!);
+    } catch {}
   }
 
   /** A PO token for a song's streams; `refresh` after a stream refused the last one. Undefined when the page has none. */
@@ -112,7 +137,12 @@ export class InnertubeSession {
     const { fetch } = this.#options;
     const yt = await Innertube.create({
       // The cookies go in as the library's header (it signs requests with them), not again from the session's jar.
-      fetch: (input, init) => fetch(input as string | Request, { ...init, credentials: "omit" }),
+      fetch: async (input, init) => {
+        const response = await fetch(input as string | Request, { ...init, credentials: "omit" });
+        const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+        if (new URL(url).pathname.endsWith("/player")) void this.#remember(response.clone());
+        return response;
+      },
       generate_session_locally: true,
       cache: new UniversalCache(false),
       ...(cookie ? { cookie } : {}),
@@ -141,6 +171,8 @@ export interface InnertubeEngineOptions {
   lyrics(query: LyricsQuery, signal: AbortSignal): Promise<Lyrics | undefined>;
   /** Keeps a song's downloaded stream, before it is converted, for YTM's offline playback. */
   keep?(song: OfflineSong, stream: string): Promise<void>;
+  /** Keeps an album or playlist (after its songs), for YTM's offline Downloads page. */
+  keepList?(list: Omit<OfflineList, "addedAt">): Promise<void>;
   log: { warn(...args: unknown[]): void };
 }
 
@@ -157,6 +189,8 @@ interface ListInfo {
   id: string;
   title: string;
   count: number;
+  /** The cover art's URL: the album's, or the playlist's. */
+  cover?: string | undefined;
   album?: AlbumInfo | undefined;
 }
 
@@ -232,7 +266,11 @@ export class InnertubeEngine implements Engine {
         songs.done(position);
       }
     };
-    await Promise.all(Array.from({ length: Math.min(PLAYLIST_CONCURRENCY, wanted.length) }, worker));
+    // All of them, even when one stops (cancelled, paused): the others clean up their files first.
+    const workers = await Promise.allSettled(Array.from({ length: Math.min(PLAYLIST_CONCURRENCY, wanted.length) }, worker));
+    const stopped = workers.find((settled) => settled.status === "rejected");
+    if (stopped) throw stopped.reason;
+    if (options.offline) await this.#keepList(list, entries);
     const files = saved.filter((file) => file !== undefined);
     retry.sort((a, b) => a - b);
     if (retry.length > 0) throw new RecoverableError(`${retry.length} of ${wanted.length} songs failed`, { files, items: retry });
@@ -256,7 +294,9 @@ export class InnertubeEngine implements Engine {
     const header = playlist.header;
     const headerTitle = header && "title" in header ? header.title?.text : undefined;
     const title = headerTitle || album?.title || playlistId;
-    return { list: { id: playlistId, title, count: entries.length, album }, entries };
+    // Playlist headers are drawn like albums'.
+    const cover = album?.cover ?? largest(headerThumbnails(header as YTMusic.Album["header"]));
+    return { list: { id: playlistId, title, count: entries.length, album, cover }, entries };
   }
 
   /** An album's own page has its artist, year and square cover; its songs only link to it. */
@@ -319,7 +359,6 @@ export class InnertubeEngine implements Engine {
     try {
       const refresh = async () => (poToken = await session.poToken(yt, entry.videoId, true));
       await this.#stream({ yt, format, poToken: () => poToken, refresh }, partial, progress, signal);
-      if (options.offline) await this.#keep(yt, entry.videoId, format, tags, partial);
       const cover = await this.#cover(list?.album?.cover ?? thumbnailOf(info), options.squareCover, signal);
       const lyrics = options.lyrics || options.lyricsFile ? await this.#lyrics(tags, info.basic_info.duration ?? 0, signal) : undefined;
       if (options.lyrics && lyrics) tags.lyrics = lyrics.plain;
@@ -336,6 +375,8 @@ export class InnertubeEngine implements Engine {
         onProgress: (fraction) => progress.convert(fraction),
       });
       await rename(converted, file);
+      // Once saved: a song paused or cancelled while converting isn't kept.
+      if (options.offline) await this.#keep(entry.videoId, format, tags, partial);
       if (options.lyricsFile && lyrics?.synced) await writeFile(file.replace(/\.[^./\\]+$/, ".lrc"), lyrics.synced);
       await archive?.add(entry.videoId);
       progress.saved(file);
@@ -376,14 +417,26 @@ export class InnertubeEngine implements Engine {
   }
 
   /** Keeps the stream for YTM's offline playback; a song that can't be kept is still saved. */
-  async #keep(yt: Innertube, videoId: string, format: FormatLike, tags: Tags, stream: string) {
+  async #keep(videoId: string, format: FormatLike, tags: Tags, stream: string) {
     const keep = this.#options.keep;
     if (!keep) return;
     try {
-      const song = await offlineSong(yt, videoId, format, tags);
+      const song = offlineSong(this.#options.session.playerResponse(videoId), videoId, format, tags);
       if (song) await keep(song, stream);
+      else this.#options.log.warn(`${tags.title} (${videoId}) not kept for offline playback: no audio-only stream, or no playable player response`);
     } catch (error) {
       this.#options.log.warn(`${tags.title} (${videoId}) not kept for offline playback:`, errorMessage(error));
+    }
+  }
+
+  /** Keeps the list with those of its songs that were kept; a list that can't be kept doesn't fail the download. */
+  async #keepList(list: ListInfo, entries: readonly Entry[]) {
+    const keepList = this.#options.keepList;
+    if (!keepList) return;
+    try {
+      await keepList({ playlistId: list.id, title: list.title, cover: list.cover, videoIds: entries.map((entry) => entry.videoId) });
+    } catch (error) {
+      this.#options.log.warn(`${list.title} not kept for offline playback:`, errorMessage(error));
     }
   }
 
@@ -424,16 +477,13 @@ interface StreamSource {
 
 /**
  * The song as YTM's offline player plays it: the stream's format and the site's
- * own player response for it. Undefined for streams it can't play from its
- * offline store (audio with video, no byte ranges) and songs it won't play.
+ * own player response for it (the one the download got). Undefined without a
+ * playable response, and for streams it can't play from its offline store
+ * (audio with video, no byte ranges).
  */
-async function offlineSong(yt: Innertube, videoId: string, format: FormatLike, tags: Tags): Promise<OfflineSong | undefined> {
+function offlineSong(playerResponse: string | undefined, videoId: string, format: FormatLike, tags: Tags): OfflineSong | undefined {
   const { init_range: initRange, index_range: indexRange, content_length: contentLength } = format;
-  if (!format.mime_type.startsWith("audio/") || !initRange || !indexRange || !contentLength) return undefined;
-  // The response as the site's player gets it, not the library's parsed one.
-  const response = await yt.actions.execute("/player", { videoId, racyCheckOk: true, contentCheckOk: true, client: "YTMUSIC", parse: false });
-  const playerResponse = response.data as { playabilityStatus?: { status?: string } };
-  if (playerResponse.playabilityStatus?.status !== "OK") return undefined;
+  if (!playerResponse || !format.mime_type.startsWith("audio/") || !initRange || !indexRange || !contentLength) return undefined;
   const range = ({ start, end }: { start: number; end: number }) => ({ start: String(start), end: String(end) });
   return {
     videoId,
@@ -452,7 +502,7 @@ async function offlineSong(yt: Innertube, videoId: string, format: FormatLike, t
       ...(format.audio_sample_rate ? { audioSampleRate: String(format.audio_sample_rate) } : {}),
       ...(format.audio_channels ? { audioChannels: format.audio_channels } : {}),
     },
-    playerResponse: JSON.stringify(playerResponse),
+    playerResponse,
   };
 }
 

@@ -298,6 +298,9 @@ function createBuiltInEngine(ctx: Ctx, tools: Tools, autoJobs: Set<number>, offl
       // The page writes it into the site's offline databases.
       ctx.emit("offline-added", song.videoId);
     },
+    keepList: async (list) => {
+      if (await offline.saveList(list)) ctx.emit("offline-lists-changed");
+    },
     log: ctx.log,
   });
 }

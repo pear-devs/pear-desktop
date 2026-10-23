@@ -1057,6 +1057,9 @@
           "minutes": "{{count}} min",
           "hours": "{{hours}} h {{minutes}} min"
         }
+      },
+      "page": {
+        "queue": "Download queue"
       }
     },
     "equalizer": {

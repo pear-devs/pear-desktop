@@ -3,16 +3,18 @@
 // keys they go under. page/offline.ts writes them; the layout follows what the
 // site's player writes for its own downloads.
 
-import type { OfflineData, OfflineFormat } from "../offline.ts";
+import type { OfflineData, OfflineFormat, OfflineList } from "../offline.ts";
 
 /** Entity type numbers, as the site's entity keys carry them. */
 export const ENTITY = {
+  musicPlaylist: 24,
   musicTrack: 28,
   playbackData: 119,
   transfer: 120,
   offlineVideoPolicy: 130,
   downloadStatusEntity: 141,
   musicTrackDownloadMetadataEntity: 234,
+  musicPlaylistDownloadMetadataEntity: 248,
   musicDownloadsLibraryEntity: 257,
   videoDownloadContextEntity: 461,
 } as const;
@@ -28,6 +30,11 @@ export const SONG_ENTITIES: readonly EntityType[] = [
   "musicTrackDownloadMetadataEntity",
   "videoDownloadContextEntity",
 ];
+
+/** The entities a list has. */
+export const LIST_ENTITIES: readonly EntityType[] = ["musicPlaylist", "musicPlaylistDownloadMetadataEntity"];
+/** The size the cover art is fetched in (the site's image server scales it). */
+const COVER_SIZE = 1200;
 
 /** The id of the one library entity, which lists the downloaded songs. */
 export const LIBRARY_ID = "music_downloads_library_id";
@@ -143,6 +150,34 @@ export function songEntities({ track, playerResponse }: Pick<OfflineData, "track
     { parentEntityKey: key("playbackData"), childEntityKey: key("offlineVideoPolicy") },
     { parentEntityKey: key("playbackData"), childEntityKey: key("transfer") },
     { parentEntityKey: libraryKey(), childEntityKey: key("musicTrack") },
+  ];
+  return { entities, associations };
+}
+
+/**
+ * An album's or playlist's entities: the site's Downloads page lists it under
+ * Albums when its id is an album's ("OL…"), under Playlists otherwise, and
+ * plays its songs offline from `tracks`.
+ */
+export function listEntities(list: OfflineList) {
+  const key = (type: EntityType) => entityKey(list.playlistId, type);
+  const record = (entityType: EntityType, data: Record<string, unknown>): EntityRecord => ({ key: key(entityType), entityType, data, version: 0 });
+  const tracks = list.videoIds.map((videoId) => songKey(videoId, "musicTrack"));
+  const entities = [
+    record("musicPlaylist", {
+      id: key("musicPlaylist"),
+      playlistId: list.playlistId,
+      title: list.title,
+      thumbnailDetails: { thumbnails: list.cover ? [{ url: list.cover, width: COVER_SIZE, height: COVER_SIZE }] : [] },
+      tracks,
+      downloadMetadata: key("musicPlaylistDownloadMetadataEntity"),
+    }),
+    record("musicPlaylistDownloadMetadataEntity", { id: key("musicPlaylistDownloadMetadataEntity"), addedTimestampMillis: String(list.addedAt) }),
+  ];
+  const associations: Association[] = [
+    { parentEntityKey: libraryKey(), childEntityKey: key("musicPlaylist") },
+    { parentEntityKey: key("musicPlaylist"), childEntityKey: key("musicPlaylistDownloadMetadataEntity") },
+    ...tracks.map((track) => ({ parentEntityKey: key("musicPlaylist"), childEntityKey: track })),
   ];
   return { entities, associations };
 }

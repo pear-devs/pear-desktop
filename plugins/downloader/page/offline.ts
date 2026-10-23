@@ -1,21 +1,25 @@
 // Offline playback in the site's own UI (page only). The songs the host kept
-// (offline.ts) are written into the site's offline databases, which its
-// Downloads page and player read, so they play there without internet.
+// (offline.ts), and the albums and playlists they came from, are written into
+// the site's offline databases, which its Downloads page and player read, so
+// they play there without internet.
 // Deleting one in that page deletes our copy as well, and the site's download
 // buttons, when it shows them, queue a download here instead of its own (which
 // the host stops, see blockOfflineSync).
 
 import { remoteErrorMessage } from "@pear/sdk/util";
-import type { OfflineData, OfflineTrack } from "../offline.ts";
+import type { OfflineData, OfflineList, OfflineTrack } from "../offline.ts";
 import {
   AUDIO_ONLY,
   CHUNK_BYTES,
   chunkKey,
   type EntityRecord,
   type EntityType,
+  entityKey,
   indexEntry,
   indexKey,
+  LIST_ENTITIES,
   libraryKey,
+  listEntities,
   policyRecord,
   SONG_ENTITIES,
   songEntities,
@@ -58,6 +62,7 @@ declare global {
 export function startOffline(ctx: Ctx, startDownload: StartDownload) {
   if (!ctx.config.offline) return;
   const kept = new Set<string>();
+  const keptLists = new Set<string>();
   // The Library's Downloads tab shows once there are downloads.
   const showLibraryTab = libraryTab(ctx, () => kept.size > 0);
   const site = (async () => {
@@ -82,6 +87,26 @@ export function startOffline(ctx: Ctx, startDownload: StartDownload) {
     await ctx.host.invoke("offlineRemove", videoId);
     // The site deletes its own records; this is in case it didn't get to all of them.
     await (await site).remove(videoId);
+    // It is off the lists it was on.
+    await syncLists();
+  };
+  /** An album or playlist, with its songs no other list has. */
+  const removeList = async (playlistId: string) => {
+    const songs = await ctx.host.invoke("offlineRemoveList", playlistId);
+    const stores = await site;
+    for (const videoId of songs) {
+      kept.delete(videoId);
+      await stores.remove(videoId);
+    }
+    await syncLists();
+  };
+  // The lists as the host has them; those it no longer has go.
+  const syncLists = async () => {
+    const lists = await ctx.host.invoke("offlineLists");
+    const gone = [...keptLists].filter((playlistId) => !lists.some((list) => list.playlistId === playlistId));
+    await (await site).writeLists(lists, gone);
+    keptLists.clear();
+    for (const list of lists) keptLists.add(list.playlistId);
   };
 
   // Songs missing from the site's databases (a new account, cleared site data, the
@@ -99,9 +124,11 @@ export function startOffline(ctx: Ctx, startDownload: StartDownload) {
       }
     }
   };
-  void sync().then(showLibraryTab, failed("sync"));
+  void sync()
+    .then(syncLists)
+    .then(showLibraryTab, failed("sync"));
   ctx.host.on("offline-added", (videoId) => void add(String(videoId)).catch(failed(String(videoId))));
-
+  ctx.host.on("offline-lists-changed", () => void syncLists().catch(failed("lists")));
 
   // The site's own download commands. It deletes its records of a song itself (its
   // database work needs no server), so a deleted song only goes from ours.
@@ -124,6 +151,9 @@ export function startOffline(ctx: Ctx, startDownload: StartDownload) {
       } else if (actionName === "yt-signal-action-delete-download") {
         const videoId = command?.signalAction?.targetId;
         if (videoId && kept.has(videoId)) void remove(videoId).catch(failed(`deleting ${videoId}`));
+      } else if (actionName === "yt-signal-action-delete-playlist-download") {
+        const playlistId = command?.signalAction?.targetId;
+        if (playlistId && keptLists.has(playlistId)) void removeList(playlistId).catch(failed(`deleting ${playlistId}`));
       } else if (actionName === "yt-signal-action-delete-all-downloads") {
         for (const videoId of [...kept]) void remove(videoId).catch(failed(`deleting ${videoId}`));
       }
@@ -246,6 +276,36 @@ class OfflineSite {
     });
     this.#markDownloaded(videoId, false);
     this.#announce([...SONG_ENTITIES.map((entityType): Pick<EntityRecord, "key" | "entityType"> => ({ key: songKey(videoId, entityType), entityType })), libraryRecord]);
+  }
+
+  /**
+   * Writes the albums and playlists, and deletes those `gone`; the library
+   * lists them (and keeps the site's own).
+   */
+  async writeLists(lists: readonly OfflineList[], gone: readonly string[]) {
+    const library = await this.#library();
+    const ours = new Set([...lists.map((list) => list.playlistId), ...gone].map((playlistId) => entityKey(playlistId, "musicPlaylist")));
+    const theirs = (Array.isArray(library.downloadedPlaylists) ? (library.downloadedPlaylists as string[]) : []).filter((key) => !ours.has(key));
+    const written = lists.map((list) => listEntities(list));
+    const libraryRecord: EntityRecord = {
+      key: libraryKey(),
+      entityType: "musicDownloadsLibraryEntity",
+      data: { ...library, id: libraryKey(), downloadedPlaylists: [...lists.map((list) => entityKey(list.playlistId, "musicPlaylist")), ...theirs] },
+      version: 0,
+    };
+    const deleted = gone.flatMap((playlistId) => LIST_ENTITIES.map((entityType) => ({ key: entityKey(playlistId, entityType), entityType })));
+    await this.#entities("readwrite", ({ entities, associations }) => {
+      for (const { key } of deleted) {
+        entities.delete(key);
+        associations.index("byParentEntityKey").openKeyCursor(IDBKeyRange.only(key)).onsuccess = deleteEach(associations);
+      }
+      for (const { entities: records, associations: links } of written) {
+        for (const record of records) entities.put(record);
+        for (const link of links) associations.put(link);
+      }
+      entities.put(libraryRecord);
+    });
+    this.#announce([...written.flatMap(({ entities: records }) => records), ...deleted, libraryRecord]);
   }
 
   /** The library entity's fields, decrypted when the site wrote it. */

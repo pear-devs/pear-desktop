@@ -1,6 +1,6 @@
 // The page part: the player-bar button, the Download button of album and
-// playlist pages, the Downloads entry in the sidebar with its popover, the
-// toasts, and the entry in YTM's menus.
+// playlist pages, the Downloads entry in the sidebar with its popover and its
+// page, the toasts, and the entry in YTM's menus.
 
 import { sidebarEntry } from "@pear/sdk/dom";
 import { remoteErrorMessage } from "@pear/sdk/util";
@@ -11,6 +11,7 @@ import { visibleSetup } from "../progress.ts";
 import type { DownloadTarget } from "../ytdlp.ts";
 import { downloadButton, showState } from "./button.tsx";
 import type { StartDownload } from "./options.ts";
+import { downloadsPage } from "./downloads-page.tsx";
 import { downloadsPopover } from "./downloads-popover.tsx";
 import { startOffline } from "./offline.ts";
 import { pageButton } from "./page-button.tsx";
@@ -44,10 +45,14 @@ export function startPage(ctx: Ctx) {
     name: "downloader",
     label: t("plugins.downloader.downloads", "Downloads"),
     icon: ICON,
-    onClick: () => downloads.toggle(),
+    onClick: () => openDownloads(),
   });
-  const downloads = downloadsPopover(ctx, entry, button);
-  const openDownloads = () => downloads.show();
+  const preview = downloadsPopover(ctx, entry);
+  const page = downloadsPage(ctx, entry);
+  const openDownloads = () => {
+    preview.close();
+    page.open();
+  };
   // The app menu, the tray and the settings' button.
   ctx.host.on("open-downloads", openDownloads);
   showState(button, state, t);

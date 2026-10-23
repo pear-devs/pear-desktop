@@ -1,6 +1,6 @@
 import type { Job } from "./jobs.ts";
 import type { DownloaderState, ToolsInfo } from "./host.ts";
-import type { OfflineData, OfflineTrack } from "./offline.ts";
+import type { OfflineData, OfflineList, OfflineTrack } from "./offline.ts";
 import type { DownloadTarget } from "./ytdlp.ts";
 
 /** The host commands, as the page calls them. */
@@ -33,4 +33,8 @@ export interface DownloaderCommands {
   offlineTrack(videoId: string): Promise<OfflineData | undefined>;
   /** Forgets a kept song (removed in the site's Downloads page). */
   offlineRemove(videoId: string): Promise<void>;
+  /** The kept albums and playlists, newest first. */
+  offlineLists(): Promise<OfflineList[]>;
+  /** Forgets a kept album or playlist and its songs no other list has; resolves with those songs. */
+  offlineRemoveList(playlistId: string): Promise<string[]>;
 }

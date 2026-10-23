@@ -6,7 +6,7 @@ import { shell } from "electron";
 import { downloaderConfig } from "./config.ts";
 import { type DownloaderState, downloadFolder, downloaderOf, openDownloads, startHost, stateOf, toolsInfo } from "./host.ts";
 import type { Job } from "./jobs.ts";
-import type { OfflineData, OfflineTrack } from "./offline.ts";
+import type { OfflineData, OfflineList, OfflineTrack } from "./offline.ts";
 import { startPage } from "./page/index.ts";
 import type { DownloadTarget } from "./ytdlp.ts";
 
@@ -91,6 +91,12 @@ export default definePlugin({
       },
       offlineRemove(videoId: string) {
         return downloaderOf(this).offline.remove(videoId);
+      },
+      offlineLists(): Promise<OfflineList[]> {
+        return downloaderOf(this).offline.lists();
+      },
+      offlineRemoveList(playlistId: string): Promise<string[]> {
+        return downloaderOf(this).offline.removeList(playlistId);
       },
     },
     rpc: {
@@ -210,7 +216,10 @@ export default definePlugin({
       height: 24px;
       fill: currentColor;
     }
-    /* The Downloads popover: the picker's look, both class names to win over its sheet. */
+    /*
+     * The Downloads popover: the picker's look, both class names to win over its sheet.
+     * Its rows also make the Downloads page's queue (.pear-dl-section).
+     */
     .pear-picker-popover.pear-dl-downloads-popover {
       width: 380px;
       max-height: 60vh;
@@ -226,7 +235,7 @@ export default definePlugin({
       height: fit-content;
       margin: auto;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .chips {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chips {
       position: sticky;
       top: 0;
       z-index: 1;
@@ -236,7 +245,7 @@ export default definePlugin({
       padding: 12px 12px 8px;
       background: #212121;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .chip {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chip {
       display: inline-flex;
       align-items: center;
       gap: 6px;
@@ -249,35 +258,35 @@ export default definePlugin({
       cursor: pointer;
     }
     /* Not the picker's check mark. */
-    .pear-picker-popover.pear-dl-downloads-popover .chip::before {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chip::before {
       content: none;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .chip[aria-checked="true"] {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chip[aria-checked="true"] {
       border-color: transparent;
       background: #fff;
       color: #030303;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .count {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .count {
       opacity: 0.7;
     }
-    .pear-picker-popover.pear-dl-downloads-popover ul {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) ul {
       margin: 0;
       padding: 0;
       list-style: none;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .job {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .job {
       padding: 6px 8px 6px 4px;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .job:hover {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .job:hover {
       background: rgb(255 255 255 / 0.05);
     }
-    .pear-picker-popover.pear-dl-downloads-popover .line {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .line {
       display: flex;
       align-items: center;
       gap: 4px;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .chevron,
-    .pear-picker-popover.pear-dl-downloads-popover .action {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chevron,
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .action {
       display: inline-flex;
       flex: none;
       align-items: center;
@@ -291,39 +300,39 @@ export default definePlugin({
       color: #aaa;
       cursor: pointer;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .chevron:is(button):hover,
-    .pear-picker-popover.pear-dl-downloads-popover .action:hover {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chevron:is(button):hover,
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .action:hover {
       background: rgb(255 255 255 / 0.1);
       color: #fff;
     }
-    .pear-picker-popover.pear-dl-downloads-popover svg {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) svg {
       width: 20px;
       height: 20px;
       fill: currentColor;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .chevron svg {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chevron svg {
       transition: transform 0.15s;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .chevron[aria-expanded="true"] svg {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .chevron[aria-expanded="true"] svg {
       transform: rotate(90deg);
     }
-    .pear-picker-popover.pear-dl-downloads-popover .kind {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .kind {
       display: inline-flex;
       flex: none;
       color: #aaa;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .title {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .title {
       flex: 1;
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .actions {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .actions {
       display: inline-flex;
       flex: none;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .status {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .status {
       padding-left: 60px;
       overflow: hidden;
       color: #aaa;
@@ -331,10 +340,10 @@ export default definePlugin({
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .job[data-status="failed"] > .status {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .job[data-status="failed"] > .status {
       color: #f28b82;
     }
-    .pear-picker-popover.pear-dl-downloads-popover progress {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) progress {
       display: block;
       width: calc(100% - 60px);
       height: 3px;
@@ -343,34 +352,34 @@ export default definePlugin({
       appearance: none;
       background: rgb(255 255 255 / 0.15);
     }
-    .pear-picker-popover.pear-dl-downloads-popover progress::-webkit-progress-bar {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) progress::-webkit-progress-bar {
       background: rgb(255 255 255 / 0.15);
     }
-    .pear-picker-popover.pear-dl-downloads-popover progress::-webkit-progress-value {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) progress::-webkit-progress-value {
       background: #fff;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .songs {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .songs {
       margin: 4px 0 0 60px;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .song {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .song {
       display: flex;
       gap: 12px;
       padding: 3px 4px 3px 0;
       font-size: 13px;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .song-status {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .song-status {
       flex: none;
       color: #aaa;
       font-size: 12px;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .song[data-status="failed"] .song-status {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .song[data-status="failed"] .song-status {
       color: #f28b82;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .empty {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .empty {
       padding: 24px 16px;
       text-align: center;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .footer {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .footer {
       position: sticky;
       bottom: 0;
       display: flex;
@@ -380,7 +389,7 @@ export default definePlugin({
       border-top: 1px solid rgb(255 255 255 / 0.1);
       background: #212121;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .footer button {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .footer button {
       padding: 6px 8px;
       border: 0;
       border-radius: 16px;
@@ -389,13 +398,40 @@ export default definePlugin({
       font: 500 13px Roboto, sans-serif;
       cursor: pointer;
     }
-    .pear-picker-popover.pear-dl-downloads-popover .footer button:hover {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .footer button:hover {
       background: rgb(62 166 255 / 0.15);
     }
-    .pear-picker-popover.pear-dl-downloads-popover .footer button:disabled {
+    :is(.pear-picker-popover.pear-dl-downloads-popover, .pear-dl-section) .footer button:disabled {
       color: #717171;
       cursor: default;
       background: none;
+    }
+    /* The Downloads page is ours: no Library tab bar, and our sidebar entry is the highlighted one. */
+    html[pear-dl-downloads-page] sel(browse.tabs) {
+      display: none;
+    }
+    html[pear-dl-downloads-page] sel(guide.active_entry) tp-yt-paper-item {
+      background: transparent;
+    }
+    html[pear-dl-downloads-page] sel(guide.active_entry) .title {
+      font-weight: 400;
+    }
+    /* As wide as the page's shelves, as the site sizes them. */
+    .pear-dl-section {
+      width: var(--ytmusic-content-width);
+      margin: 0 auto 24px;
+      color: #fff;
+      font: 400 14px Roboto, sans-serif;
+    }
+    .pear-dl-section:empty {
+      display: none;
+    }
+    .pear-dl-section .heading {
+      margin: 0 0 8px;
+      font: 700 20px/28px Roboto, sans-serif;
+    }
+    .pear-dl-section .job {
+      border-radius: 8px;
     }
     .pear-dl-toast {
       position: fixed;
