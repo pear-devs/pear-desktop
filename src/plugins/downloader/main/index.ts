@@ -14,7 +14,6 @@ import {
   UniversalCache,
   Utils,
   YTNodes,
-  Platform,
   type YT,
   type YTMusic,
   type Types,
@@ -22,6 +21,7 @@ import {
 
 import { t } from '@/i18n';
 import { getNetFetchAsFetch } from '@/plugins/utils/main';
+import { setupYoutubeiEvaluator } from '@/plugins/utils/main/youtubei';
 import {
   registerCallback,
   cleanupName,
@@ -55,25 +55,7 @@ const ffmpeg = lazyVar.lazy(async () =>
 );
 const ffmpegMutex = new Mutex();
 
-Platform.shim.eval = (
-  data: Types.BuildScriptResult,
-  env: Record<string, Types.VMPrimative>,
-) => {
-  const properties = [];
-
-  if (env.n) {
-    properties.push(`n: exportedVars.nFunction("${env.n}")`);
-  }
-
-  if (env.sig) {
-    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`);
-  }
-
-  const code = `${data.output}\nreturn { ${properties.join(', ')} }`;
-
-  // oxlint-disable-next-line typescript/no-unsafe-return,typescript/no-implied-eval,typescript/no-unsafe-call
-  return new Function(code)();
-};
+setupYoutubeiEvaluator();
 
 let yt: Innertube;
 let win: BrowserWindow;
