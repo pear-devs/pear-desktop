@@ -9,7 +9,7 @@ import {
   setupYoutubeiEvaluator,
 } from '@/plugins/utils/main/youtubei';
 import promptOptions from '@/providers/prompt-options';
-import { createPlugin } from '@/utils';
+import { createPlugin, LoggerPrefix } from '@/utils';
 
 import { VolumeFader } from './fader';
 
@@ -175,21 +175,30 @@ export default createPlugin<
     });
 
     ipc.handle('audio-url', async (videoID: string) => {
-      const poToken = await mintPoToken(
-        yt.session.context.client.visitorData ?? '',
-        videoID,
-      );
-      const info = await yt.getBasicInfo(videoID, {
-        client: 'YTMUSIC',
-        po_token: poToken,
-      });
-      const url = new URL(
-        await info
-          .chooseFormat({ type: 'audio', quality: 'best' })
-          .decipher(yt.session.player),
-      );
-      url.searchParams.set('pot', poToken);
-      return url.toString();
+      try {
+        const poToken = await mintPoToken(
+          yt.session.context.client.visitorData ?? '',
+          videoID,
+        );
+        const info = await yt.getBasicInfo(videoID, {
+          client: 'YTMUSIC',
+          po_token: poToken,
+        });
+        const url = new URL(
+          await info
+            .chooseFormat({ type: 'audio', quality: 'best' })
+            .decipher(yt.session.player),
+        );
+        url.searchParams.set('pot', poToken);
+        return url.toString();
+      } catch (error) {
+        console.error(
+          LoggerPrefix,
+          `[crossfade] Failed to get the stream URL of ${videoID}:`,
+          error,
+        );
+        return '';
+      }
     });
   },
 
@@ -343,6 +352,10 @@ export default createPlugin<
         await waitForTransition;
         const url = await getStreamURL(videoID);
         if (!url) {
+          // Don't fade out the previous track's audio on the next transition
+          if (transitionAudio) {
+            transitionAudio.unload();
+          }
           return;
         }
 
