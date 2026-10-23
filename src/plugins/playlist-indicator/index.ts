@@ -143,7 +143,9 @@ export default createPlugin<
     scanTimer?: number;
     refreshing: boolean;
     dirty: boolean;
+    epoch: number;
     refresh(force?: boolean): Promise<void>;
+    armRetry(partial?: boolean): void;
     setMembership(videoId: string, playlistId: string, member: boolean): void;
     scan(): void;
     popupAnchor?: HTMLElement;
@@ -166,6 +168,7 @@ export default createPlugin<
     index: new Map(),
     refreshing: false,
     dirty: false,
+    epoch: 0,
 
     start() {
       this.styleEl = document.createElement('style');
@@ -209,6 +212,9 @@ export default createPlugin<
     },
 
     stop() {
+      // Invalidate any in-flight refresh so it cannot touch state or re-arm a retry
+      this.epoch++;
+      this.refreshing = false;
       this.observer?.disconnect();
       clearTimeout(this.scanTimer);
       this.scanTimer = undefined;
@@ -230,23 +236,33 @@ export default createPlugin<
         return;
       }
       this.refreshing = true;
+      const epoch = this.epoch;
       try {
-        this.cache = await buildCache();
-        saveCache(this.cache);
-        this.index = indexFromCache(this.cache);
+        const cache = await buildCache();
+        // The plugin was stopped (or restarted) meanwhile: drop this result
+        if (epoch !== this.epoch) return;
+        this.cache = cache;
+        saveCache(cache);
+        this.index = indexFromCache(cache);
         clearDecorations();
         this.scan();
-        clearTimeout(this.retryTimer);
-        this.retryTimer = this.cache.partial
-          ? window.setTimeout(() => {
-              this.refresh().catch(() => {});
-            }, RETRY_DELAY_MS)
-          : undefined;
+        this.armRetry(cache.partial);
       } catch (error) {
         console.warn('[playlist-indicator] refresh failed', error);
+        // A failed retry of a partial cache must try again
+        if (epoch === this.epoch) this.armRetry(this.cache?.partial);
       } finally {
-        this.refreshing = false;
+        if (epoch === this.epoch) this.refreshing = false;
       }
+    },
+
+    armRetry(partial) {
+      clearTimeout(this.retryTimer);
+      this.retryTimer = partial
+        ? window.setTimeout(() => {
+            this.refresh(true).catch(() => {});
+          }, RETRY_DELAY_MS)
+        : undefined;
     },
 
     scan() {
