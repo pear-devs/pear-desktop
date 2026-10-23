@@ -312,10 +312,12 @@ export default createPlugin<
       this.popupAnchor = anchor;
 
       const memberOf = this.index.get(videoId) ?? [];
-      // Song in no playlist: list every playlist so it can be added to one
-      const playlists = memberOf.length
-        ? memberOf
-        : (this.cache?.playlists ?? []);
+      // Every playlist, those containing the song first, so it can be added to others
+      const memberIds = new Set(memberOf.map((m) => m.id));
+      const playlists = [
+        ...memberOf,
+        ...(this.cache?.playlists ?? []).filter((p) => !memberIds.has(p.id)),
+      ];
 
       const popup = document.createElement('div');
       popup.className = POPUP_CLASS;
