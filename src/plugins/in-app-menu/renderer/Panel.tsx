@@ -3,6 +3,7 @@ import {
   flip,
   offset,
   type OffsetOptions,
+  shift,
   size,
 } from '@floating-ui/dom';
 import { useFloating } from 'solid-floating-ui';
@@ -116,6 +117,9 @@ export const Panel = (props: PanelProps) => {
         },
       }),
       flip({ fallbackStrategy: 'initialPlacement' }),
+      // Narrow windows have room on neither side of a panel for a submenu:
+      // slide it back into view, over its parent
+      shift({ crossAxis: true, padding: 8 }),
     ],
   });
 
