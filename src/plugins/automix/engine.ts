@@ -2362,12 +2362,6 @@ export class AutoMixEngine {
       const cancel = context.createGain();
       cancel.gain.value = 0;
       cancel.gain.setValueAtTime(-1, startAt);
-      if (!head) {
-        // The player itself brings the next song in: stop cancelling it
-        // once it's surely muted
-        cancel.gain.setValueAtTime(-1, startAt + 0.1);
-        cancel.gain.linearRampToValueAtTime(0, startAt + 0.12);
-      }
       this.source.connect(cancel).connect(context.destination);
       mix.cancel = cancel;
     }
@@ -2375,6 +2369,15 @@ export class AutoMixEngine {
       if (this.mix !== mix) return;
       this.holdVolume(video, mix);
       this.applyLevel(video, mix);
+      if (!head && mix.cancel) {
+        // The player itself brings the next song in: stop cancelling it
+        // once it's muted, which is now (a volume change is heard within
+        // ~10 ms), not at a fixed time: the main thread can be held up
+        // for hundreds of ms here and the player would be heard twice
+        const from = Math.max(context.currentTime, startAt) + 0.03;
+        mix.cancel.gain.setValueAtTime(-1, from);
+        mix.cancel.gain.linearRampToValueAtTime(0, from + 0.02);
+      }
     });
     // The player moves on to the next song while we keep the old one playing
     this.at(startAt + 0.2, () => {
