@@ -192,6 +192,29 @@ export const setupAutoPlayChangedListener = singleton(() => {
   });
 });
 
+/** The title of `videoId`'s entry in a watch-next response's queue. */
+const findQueueTitle = (
+  response: unknown,
+  videoId: string,
+): string | undefined => {
+  const pending: unknown[] = [
+    (response as { contents?: unknown } | undefined)?.contents,
+  ];
+  while (pending.length > 0) {
+    const node = pending.pop();
+    if (!node || typeof node !== 'object') continue;
+    const entry = node as {
+      videoId?: string;
+      title?: { runs?: { text: string }[] };
+    };
+    if (entry.videoId === videoId && entry.title?.runs?.length) {
+      return entry.title.runs.map((run) => run.text).join('');
+    }
+    pending.push(...Object.values(node as Record<string, unknown>));
+  }
+  return undefined;
+};
+
 export const setupSongInfo = (api: MusicPlayer) => {
   window.ipcRenderer.on('peard:setup-time-changed-listener', () => {
     setupTimeChangedListener();
@@ -349,6 +372,15 @@ export const setupSongInfo = (api: MusicPlayer) => {
       playerOverlay?.playerOverlayRenderer?.browserMediaSession?.browserMediaSessionRenderer?.album?.runs?.at(
         0,
       )?.text;
+    // The title YouTube Music shows (queue, player bar). The player
+    // response can carry another language's title, e.g. "I Am Fine" for
+    // 孫燕姿's 我不難過 on a zh-TW page
+    const queueTitle = findQueueTitle(
+      videoData['\u0079\u0074\u006d\u0064WatchNextResponse'] ??
+        api.getWatchNextResponse(),
+      data.videoDetails.videoId,
+    );
+    if (queueTitle) data.videoDetails.title = queueTitle;
     data.videoDetails.elapsedSeconds = 0;
     data.videoDetails.isPaused = false;
 
