@@ -3,25 +3,22 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { Mutex } from 'async-mutex';
-import { BG, type BgConfig } from 'bgutils-js';
 import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
 import is from 'electron-is';
 import filenamify from 'filenamify';
 import lazyVar from 'lazy-var';
 import NodeID3 from 'node-id3';
 import {
-  Innertube,
-  UniversalCache,
   Utils,
   YTNodes,
-  Platform,
+  type Innertube,
   type YT,
   type YTMusic,
   type Types,
 } from '\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js';
 
 import { t } from '@/i18n';
-import { getNetFetchAsFetch } from '@/plugins/utils/main';
+import { createInnertube } from '@/plugins/utils/main/innertube';
 import {
   registerCallback,
   cleanupName,
@@ -54,26 +51,6 @@ const ffmpeg = lazyVar.lazy(async () =>
   }),
 );
 const ffmpegMutex = new Mutex();
-
-Platform.shim.eval = (
-  data: Types.BuildScriptResult,
-  env: Record<string, Types.VMPrimative>,
-) => {
-  const properties = [];
-
-  if (env.n) {
-    properties.push(`n: exportedVars.nFunction("${env.n}")`);
-  }
-
-  if (env.sig) {
-    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`);
-  }
-
-  const code = `${data.output}\nreturn { ${properties.join(', ')} }`;
-
-  // oxlint-disable-next-line typescript/no-unsafe-return,typescript/no-implied-eval,typescript/no-unsafe-call
-  return new Function(code)();
-};
 
 let yt: Innertube;
 let win: BrowserWindow;
@@ -127,16 +104,6 @@ const sendError = (error: Error, source?: string) => {
   });
 };
 
-export const getCookieFromWindow = async (win: BrowserWindow) => {
-  return (
-    await win.webContents.session.cookies.get({
-      url: 'https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com',
-    })
-  )
-    .map((it) => it.name + '=' + it.value)
-    .join(';');
-};
-
 let config: DownloaderPluginConfig;
 
 export const onMainLoad = async ({
@@ -147,71 +114,7 @@ export const onMainLoad = async ({
   win = _win;
   config = await getConfig();
 
-  yt = await Innertube.create({
-    cache: new UniversalCache(false),
-    cookie: await getCookieFromWindow(win),
-    generate_session_locally: true,
-    fetch: getNetFetchAsFetch(),
-  });
-
-  const requestKey = 'O43z0dpjhgX20SCx4KAo';
-  const visitorData = yt.session.context.client.visitorData;
-
-  if (visitorData) {
-    const cleanUp = (context: Partial<typeof globalThis>) => {
-      delete context.window;
-      delete context.document;
-    };
-
-    try {
-      const [width, height] = win.getSize();
-      // emulate jsdom using linkedom
-      const window = new (await import('happy-dom')).Window({
-        width,
-        height,
-        console,
-      });
-      const document = window.document;
-
-      Object.assign(globalThis, {
-        window,
-        document,
-      });
-
-      const bgConfig: BgConfig = {
-        fetch: getNetFetchAsFetch(),
-        globalObj: globalThis,
-        identifier: visitorData,
-        requestKey,
-      };
-
-      const bgChallenge = await BG.Challenge.create(bgConfig);
-      const interpreterJavascript =
-        bgChallenge?.interpreterJavascript
-          .privateDoNotAccessOrElseSafeScriptWrappedValue;
-
-      if (interpreterJavascript) {
-        // This is a workaround to run the interpreterJavascript code
-        // Maybe there is a better way to do this (e.g. https://github.com/Siubaak/sval ?)
-        // oxlint-disable-next-line typescript/no-implied-eval,typescript/no-unsafe-call
-        new Function(interpreterJavascript)();
-
-        const poTokenResult = await BG.PoToken.generate({
-          program: bgChallenge.program,
-          globalName: bgChallenge.globalName,
-          bgConfig,
-        }).finally(() => {
-          cleanUp(globalThis);
-        });
-
-        yt.session.po_token = poTokenResult.poToken;
-      } else {
-        cleanUp(globalThis);
-      }
-    } catch {
-      cleanUp(globalThis);
-    }
-  }
+  yt = await createInnertube(win);
 
   ipc.handle('download-song', (url: string) => downloadSong(url));
   ipc.on('peard:video-src-changed', (data: GetPlayerResponse) => {
