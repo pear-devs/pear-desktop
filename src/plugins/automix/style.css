@@ -451,7 +451,10 @@ ytmusic-player-bar.automix-mixing {
 @media (prefers-reduced-motion: reduce) {
   .automix-pill[data-phase='mixing']::after,
   .automix-bars i,
-  .automix-pill[data-phase='analyzing'] .automix-icon {
+  .automix-pill[data-phase='analyzing'] .automix-icon,
+  .automix-reorder[data-state='busy'] .automix-icon,
+  .automix-mix-now[data-state='busy'] .automix-icon,
+  .automix-mix-now[data-state='armed'] .automix-icon {
     animation: none;
   }
 
@@ -503,7 +506,7 @@ ytmusic-player-bar.automix-mixing {
   position: relative;
   width: min(1040px, 100%);
   max-height: calc(100vh - 48px);
-  overflow: hidden;
+  overflow: hidden auto;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 22px;
   background: rgba(16, 16, 20, 0.86);

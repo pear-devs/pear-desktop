@@ -17,6 +17,8 @@ const MAX_DURATION_DELTA = 2;
 /** Don't ask again for a song Apple has no match for */
 const MISS_TTL_MS = 6 * 60 * 60 * 1000;
 const MAX_CACHED = 200;
+/** Longest one request may take, body included: the analysis is optional */
+const REQUEST_TIMEOUT_MS = 10_000;
 
 interface Token {
   value: string;
@@ -33,12 +35,15 @@ const headers = (value: string) => ({
   Origin: WEB,
 });
 
+const fetchWithin = (url: string, init: RequestInit = {}) =>
+  net.fetch(url, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+
 /** The developer token embedded in the web player's main script */
 const scrapeToken = async (): Promise<Token> => {
-  const page = await (await net.fetch(`${WEB}/us/browse`)).text();
+  const page = await (await fetchWithin(`${WEB}/us/browse`)).text();
   const script = /\/assets\/index[^"']*\.js/.exec(page)?.[0];
   if (!script) throw new Error('Apple Music web player script not found');
-  const source = await (await net.fetch(`${WEB}${script}`)).text();
+  const source = await (await fetchWithin(`${WEB}${script}`)).text();
   const value = /eyJ[\w-]{10,}\.[\w-]+\.[\w-]+/.exec(source)?.[0];
   if (!value) throw new Error('Apple Music web player token not found');
   const payload = JSON.parse(
@@ -61,12 +66,12 @@ const getToken = async (refresh = false) => {
 
 const request = async <T>(path: string): Promise<T> => {
   let auth = await getToken();
-  let response = await net.fetch(`${API}${path}`, {
+  let response = await fetchWithin(`${API}${path}`, {
     headers: headers(auth.value),
   });
   if (response.status === 401 || response.status === 403) {
     auth = await getToken(true);
-    response = await net.fetch(`${API}${path}`, {
+    response = await fetchWithin(`${API}${path}`, {
       headers: headers(auth.value),
     });
   }

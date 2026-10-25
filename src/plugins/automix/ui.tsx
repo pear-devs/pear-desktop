@@ -514,7 +514,8 @@ const ART_SETTLE_MS = 1600;
 const followArtwork = (props: { status: Accessor<AutoMixStatus> }) => {
   let overlays: HTMLElement[] = [];
   let key = '';
-  let settle: number | undefined;
+  /** Overlays melting away, each batch on its own timer */
+  const leaving = new Map<number, HTMLElement[]>();
 
   const build = (from: string | undefined, to: string) => {
     for (const selector of ART_HOSTS) {
@@ -536,14 +537,15 @@ const followArtwork = (props: { status: Accessor<AutoMixStatus> }) => {
     }
   };
   const clear = () => {
-    const leaving = overlays;
+    const batch = overlays;
     overlays = [];
     key = '';
-    for (const overlay of leaving) overlay.classList.add('automix-art-leaving');
-    window.clearTimeout(settle);
-    settle = window.setTimeout(() => {
-      for (const overlay of leaving) overlay.remove();
+    for (const overlay of batch) overlay.classList.add('automix-art-leaving');
+    const timer = window.setTimeout(() => {
+      leaving.delete(timer);
+      for (const overlay of batch) overlay.remove();
     }, ART_SETTLE_MS);
+    leaving.set(timer, batch);
   };
 
   createEffect(() => {
@@ -565,7 +567,11 @@ const followArtwork = (props: { status: Accessor<AutoMixStatus> }) => {
   });
 
   onCleanup(() => {
-    window.clearTimeout(settle);
+    for (const [timer, batch] of leaving) {
+      window.clearTimeout(timer);
+      for (const overlay of batch) overlay.remove();
+    }
+    leaving.clear();
     for (const overlay of overlays) overlay.remove();
     for (const selector of ART_HOSTS) {
       document.querySelector(selector)?.classList.remove('automix-art-host');
