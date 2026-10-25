@@ -22,22 +22,32 @@ import type { QueueResponse } from '@/types/music-player-desktop-internal';
 
 class YTPlayer extends MprisPlayer {
   /**
-   * @type {number} The current position in microseconds
+   * @type {number} The position in microseconds at positionUpdatedAt
    * @private
    */
   private currentPosition: number = 0;
+  private positionUpdatedAt: number = Date.now();
+  private positionRate: number = 1;
   canUsePlayerControls: boolean = false;
 
   constructor(opts: PlayerOptions) {
     super(opts);
   }
 
-  setPosition(t: number) {
+  setPosition(t: number, rate: number = this.positionRate) {
     this.currentPosition = t;
+    this.positionUpdatedAt = Date.now();
+    this.positionRate = rate;
   }
 
   override getPosition(): number {
-    return this.currentPosition;
+    if (!this.isPlaying()) {
+      return this.currentPosition;
+    }
+
+    const elapsedMicro =
+      (Date.now() - this.positionUpdatedAt) * 1e3 * this.positionRate;
+    return this.currentPosition + elapsedMicro;
   }
 
   setLoopStatus(status: LoopStatus) {
@@ -57,6 +67,7 @@ class YTPlayer extends MprisPlayer {
   }
 
   setPlaybackStatus(status: PlayBackStatus) {
+    this.setPosition(this.getPosition());
     this.playbackStatus = status;
   }
 }
@@ -95,7 +106,8 @@ export function registerMPRIS(win: BrowserWindow) {
   try {
     let currentSongInfo: SongInfo | null = null;
     const secToMicro = (n: number) => Math.round(Number(n) * 1e6);
-    const microToSec = (n: number) => Math.round(Number(n) / 1e6);
+    const microToSec = (n: number) => Number(n) / 1e6;
+    const positionDriftToleranceMicro = 100_000;
 
     const correctId = (videoId: string) => {
       return videoId.replace(/-/g, '_MINUS_');
@@ -134,6 +146,33 @@ export function registerMPRIS(win: BrowserWindow) {
       player.setPosition(secToMicro(t));
       player.seeked(secToMicro(t));
     });
+
+    let stalledSince: number | null = null;
+
+    ipcMain.on(
+      'peard:position-changed',
+      (_, currentTime: number, rate: number) => {
+        const position = secToMicro(currentTime);
+        const drift = Math.abs(position - player.getPosition());
+        const clientLead =
+          stalledSince !== null && rate > 0
+            ? (Date.now() - stalledSince) * 1e3 * player.rate
+            : 0;
+        stalledSince = rate > 0 ? null : (stalledSince ?? Date.now());
+        player.setPosition(position, rate);
+        if (rate > 0 && rate !== player.rate) {
+          player.minimumRate = Math.min(player.minimumRate, rate);
+          player.maximumRate = Math.max(player.maximumRate, rate);
+          player.rate = rate;
+        }
+        if (
+          drift > positionDriftToleranceMicro ||
+          clientLead > positionDriftToleranceMicro
+        ) {
+          player.seeked(position);
+        }
+      },
+    );
 
     ipcMain.on('peard:repeat-changed', (_, mode: RepeatMode) => {
       switch (mode) {
@@ -319,7 +358,6 @@ export function registerMPRIS(win: BrowserWindow) {
 
     registerCallback((songInfo: SongInfo, event) => {
       if (event === SongInfoEvent.TimeChanged) {
-        player.setPosition(secToMicro(songInfo.elapsedSeconds ?? 0));
         return;
       }
       if (player) {
@@ -342,11 +380,13 @@ export function registerMPRIS(win: BrowserWindow) {
 
         player.metadata = data;
 
-        const currentElapsedMicroSeconds = secToMicro(
-          songInfo.elapsedSeconds ?? 0,
-        );
-        player.setPosition(currentElapsedMicroSeconds);
-        player.seeked(currentElapsedMicroSeconds);
+        if (event === SongInfoEvent.VideoSrcChanged) {
+          const currentElapsedMicroSeconds = secToMicro(
+            songInfo.elapsedSeconds ?? 0,
+          );
+          player.setPosition(currentElapsedMicroSeconds);
+          player.seeked(currentElapsedMicroSeconds);
+        }
 
         player.setPlaybackStatus(
           songInfo.isPaused
