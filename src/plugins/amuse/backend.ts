@@ -3,31 +3,89 @@ import { type Context, Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { t } from 'i18next';
 
-import { registerCallback, type SongInfo } from '@/providers/song-info';
+import {
+  MediaType,
+  registerCallback,
+  type SongInfo,
+} from '@/providers/song-info';
 import { createBackend } from '@/utils';
 
 import type { AmuseSongInfo } from './types';
 
 const amusePort = 9863;
 
-const formatSongInfo = (info: SongInfo) => {
-  const formattedSongInfo: AmuseSongInfo = {
+const toHumanTime = (seconds: number) => {
+  const safeSeconds = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(safeSeconds / 60);
+  const remaining = safeSeconds % 60;
+  return `${minutes}:${remaining.toString().padStart(2, '0')}`;
+};
+
+// 6K Labs clients (e.g. the Amuse app) read every field of the query response
+// and treat missing keys as a malformed provider, so each one must always be
+// present with a non-null default.
+const emptyQuery = (): AmuseSongInfo => ({
+  player: {
+    hasSong: false,
+    isPaused: true,
+    volumePercent: 0,
+    seekbarCurrentPosition: 0,
+    seekbarCurrentPositionHuman: '0:00',
+    statePercent: 0,
+    likeStatus: 'INDIFFERENT',
+    repeatType: 'NONE',
+  },
+  track: {
+    author: '',
+    title: '',
+    album: '',
+    cover: '',
+    duration: 0,
+    durationHuman: '0:00',
+    url: '',
+    id: '',
+    isVideo: false,
+    isAdvertisement: false,
+    inLibrary: false,
+  },
+});
+
+const formatSongInfo = (info: SongInfo): AmuseSongInfo => {
+  if (!info.artist || !info.title) {
+    return emptyQuery();
+  }
+
+  const elapsedSeconds = Math.floor(info.elapsedSeconds ?? 0);
+  const duration = Math.floor(info.songDuration ?? 0);
+
+  return {
     player: {
-      hasSong: !!(info.artist && info.title),
+      hasSong: true,
       isPaused: info.isPaused ?? false,
-      seekbarCurrentPosition: info.elapsedSeconds ?? 0,
+      volumePercent: 0,
+      seekbarCurrentPosition: elapsedSeconds,
+      seekbarCurrentPositionHuman: toHumanTime(elapsedSeconds),
+      statePercent:
+        duration > 0 ? Math.round((elapsedSeconds / duration) * 100) : 0,
+      likeStatus: 'INDIFFERENT',
+      repeatType: 'NONE',
     },
     track: {
-      duration: info.songDuration,
-      title: info.title,
       author: info.artist,
+      title: info.title,
+      album: info.album ?? '',
       cover: info.imageSrc ?? '',
+      duration,
+      durationHuman: toHumanTime(duration),
       url: info.url ?? '',
       id: info.videoId,
+      isVideo:
+        info.mediaType !== MediaType.Audio &&
+        info.mediaType !== MediaType.OriginalMusicVideo,
       isAdvertisement: false,
+      inLibrary: false,
     },
   };
-  return formattedSongInfo;
 };
 
 export default createBackend({
