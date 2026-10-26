@@ -567,7 +567,8 @@
         },
         "download-playlist": "Download playlist",
         "presets": "Presets",
-        "skip-existing": "Skip existing files"
+        "skip-existing": "Skip existing files",
+        "max-parallel-downloads": "Simultaneous downloads"
       },
       "name": "Downloader",
       "renderer": {
