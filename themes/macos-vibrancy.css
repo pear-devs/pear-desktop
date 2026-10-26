@@ -1,0 +1,170 @@
+:root {
+  --ts-body-color: transparent !important;
+}
+
+/* =========================
+   BASE
+   ========================= */
+body {
+  background-color: transparent !important;
+  transition: background-color 0.5s ease-in-out !important;
+}
+
+ytmusic-app[is-bauhaus-sidenav-enabled] #guide-wrapper.ytmusic-app {
+  background-color: transparent !important;
+}
+
+/* =========================
+   REMOVE BACKGROUNDS
+   ========================= */
+#nav-bar-divider,
+#browse-page > #background,
+tp-yt-paper-toast.toast-button.style-scope.yt-notification-action-renderer.paper-toast-open {
+  display: none !important;
+}
+
+#nav-bar-background,
+#mini-guide-background {
+  border: none !important;
+  height: 0 !important;
+}
+
+#guide,
+ytmusic-nav-bar,
+.background-gradient {
+  background-color: var(--ts-body-color) !important;
+  background-image: none !important;
+}
+
+/* =========================
+   MAIN LAYOUT
+   ========================= */
+ytmusic-app-layout:not([player-ui-state="FULLSCREEN"]) #main-panel {
+  margin-right: 440px !important;
+}
+
+/* =========================
+   SIDE PANEL (WORKING VIBRANCY)
+   ========================= */
+#side-panel {
+  width: 40em !important;
+  height: 80vh !important;
+  padding: 0 2em !important;
+  position: absolute !important;
+  right: 0 !important;
+  top: 0 !important;
+
+  background: rgba(0, 0, 0, 0.08) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+
+  border-radius: 2em 0 0 2em !important;
+
+  box-shadow:
+    rgba(0, 0, 0, 0.15) 0px -36px 30px inset,
+    rgba(0, 0, 0, 0.1) 0px -79px 40px inset,
+    rgba(0, 0, 0, 0.06) 0px 2px 1px,
+    rgba(0, 0, 0, 0.09) 0px 4px 2px,
+    rgba(0, 0, 0, 0.09) 0px 8px 4px,
+    rgba(0, 0, 0, 0.09) 0px 16px 8px,
+    rgba(0, 0, 0, 0.09) 0px 32px 16px !important;
+}
+
+/* =========================
+   PLAYER BAR (VIBRANCY ONLY – NO FAKE BLUR)
+   ========================= */
+ytmusic-player-bar,
+#player-bar-background {
+  margin: 1vw !important;
+  width: 98vw !important;
+
+  overflow: visible !important;
+  border-radius: 1em !important;
+
+  background: rgba(0, 0, 0, 0.08) !important;
+  backdrop-filter: blur(100px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+
+  transition: background-color 0.5s ease-in-out !important;
+
+  box-shadow:
+    rgba(0, 0, 0, 0.15) 0px -36px 30px inset,
+    rgba(0, 0, 0, 0.1) 0px -79px 40px inset,
+    rgba(0, 0, 0, 0.06) 0px 2px 1px,
+    rgba(0, 0, 0, 0.09) 0px 4px 2px,
+    rgba(0, 0, 0, 0.09) 0px 8px 4px,
+    rgba(0, 0, 0, 0.09) 0px 16px 8px,
+    rgba(0, 0, 0, 0.09) 0px 32px 16px !important;
+}
+
+/* =========================
+   PLAYER CONTROLS (NATIVE FLOW)
+   ========================= */
+ytmusic-player-bar ytmusic-player-controls-renderer {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+#left-controls,
+.middle-controls {
+  position: relative !important;
+  transform: none !important;
+}
+
+.time-info {
+  position: relative !important;
+  width: 100% !important;
+  text-align: center !important;
+}
+
+/* prevent slider clipping */
+tp-yt-paper-slider,
+.slider-container,
+#progress-bar,
+#sliderBar {
+  overflow: visible !important;
+}
+
+/* =========================
+   ALBUM ART (FINAL, CORRECT)
+   ========================= */
+#player {
+  overflow: visible !important;
+}
+
+#song-image {
+  width: 320px !important;
+  height: 320px !important;
+  background: transparent !important;
+}
+
+#song-image img,
+#song-image #thumbnail {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 0 !important;
+  box-shadow: #0006 0 0 50px !important;
+}
+
+/* =========================
+   SEARCH BAR (ACTUALLY WORKS)
+   ========================= */
+ytmusic-search-box #container {
+  background: rgba(0, 0, 0, 0.08) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border-radius: 10px !important;
+}
+
+ytmusic-search-box input {
+  background: transparent !important;
+}
+
+/* =========================
+   PLAYER PAGE
+   ========================= */
+#player-page {
+  background: transparent !important;
+}
