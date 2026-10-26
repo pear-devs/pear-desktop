@@ -1,0 +1,60 @@
+:root {
+  --pear-theme-accent: #ff0000;
+  --pear-theme-bg: #030303;
+  --pear-theme-surface: #1f1f1f;
+  --pear-theme-text: #ffffff;
+}
+
+/* Base colors */
+:root {
+  --ytmusic-color-black1: var(--pear-theme-surface) !important;
+  --ytmusic-color-black2: var(--pear-theme-surface) !important;
+  --ytmusic-color-black3: var(--pear-theme-bg) !important;
+  --ytmusic-color-black4: var(--pear-theme-bg) !important;
+  --ytmusic-color-blackpure: var(--pear-theme-bg) !important;
+  --dark-theme-background-color: var(--pear-theme-surface) !important;
+  --yt-spec-base-background: var(--pear-theme-bg) !important;
+  --yt-spec-raised-background: var(--pear-theme-surface) !important;
+  --yt-spec-menu-background: var(--pear-theme-surface) !important;
+  --yt-spec-general-background-a: var(--pear-theme-surface) !important;
+  --yt-spec-general-background-b: var(--pear-theme-bg) !important;
+  --yt-spec-general-background-c: var(--pear-theme-bg) !important;
+  --yt-spec-snackbar-background: var(--pear-theme-bg) !important;
+  --yt-spec-filled-button-text: var(--pear-theme-surface) !important;
+  --yt-spec-black-pure: var(--pear-theme-bg) !important;
+  --yt-spec-black-1-alpha-98: var(--pear-theme-bg) !important;
+  --yt-spec-static-brand-black: var(--pear-theme-surface) !important;
+  --yt-spec-static-overlay-background-solid: var(--pear-theme-bg) !important;
+  --ytmusic-search-background: var(--pear-theme-bg) !important;
+  --paper-toast-background-color: var(--pear-theme-surface) !important;
+  --paper-dialog-background-color: var(--pear-theme-surface) !important;
+  background: var(--pear-theme-bg) !important;
+  --ytmusic-background: var(--pear-theme-bg) !important;
+}
+
+/* Text color */
+:root {
+  --yt-spec-text-primary: var(--pear-theme-text) !important;
+  --yt-spec-text-secondary: var(--pear-theme-text) !important;
+  --ytmusic-text-primary: var(--pear-theme-text) !important;
+}
+
+ytmusic-app-layout {
+  color: var(--pear-theme-text) !important;
+}
+
+/* Accent color */
+.seekbar-theme #progress-bar.ytmusic-player-bar,
+#progress-bar.ytmusic-player-bar {
+  --paper-progress-active-color-1: var(--pear-theme-accent) !important;
+  --paper-progress-active-color-2: var(--pear-theme-accent) !important;
+  --paper-slider-knob-color: var(--pear-theme-accent) !important;
+  --paper-slider-knob-start-color: var(--pear-theme-accent) !important;
+}
+
+/* Fix local background gradient */
+.background-gradient.style-scope,
+ytmusic-app-layout[is-bauhaus-sidenav-enabled]
+  #mini-guide-background.ytmusic-app-layout {
+  background: var(--ytmusic-background) !important;
+}
