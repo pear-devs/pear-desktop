@@ -728,6 +728,13 @@
         "button": "Speed"
       }
     },
+    "playlist-search": {
+      "description": "Add a search bar to search within playlists and albums (Note: this 'search' works by filtering the visible items, and loading more pages sequentially, as YouTube API does not support playlist search. Performance is not great on playlists over 1000 songs)",
+      "name": "Playlist and Album Search",
+      "playlist_search_placeholder": "Search in playlist",
+      "album_search_placeholder": "Search in album",
+      "search_placeholder": "Search in"
+    },
     "precise-volume": {
       "description": "Control the volume precisely using mousewheel/hotkeys, with a custom HUD and customizable volume steps",
       "menu": {
