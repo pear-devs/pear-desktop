@@ -81,6 +81,18 @@ export const onMenu = async ({
       },
     },
     {
+      label: t('plugins.discord.menu.show-application-user', {
+        applicationName: APPLICATION_NAME,
+      }),
+      type: 'checkbox',
+      checked: config.showApplicationUser,
+      click(item: Electron.MenuItem) {
+        setConfig({
+          showApplicationUser: item.checked,
+        });
+      },
+    },
+    {
       label: t('plugins.discord.menu.hide-github-button'),
       type: 'checkbox',
       checked: config.hideGitHubButton,

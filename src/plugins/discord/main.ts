@@ -49,6 +49,19 @@ export const backend = createBackend<
       ctx.ipc.send('peard:setup-time-changed-listener');
     });
 
+    ctx.ipc.on('discord:youtube-info', (info: unknown) => {
+      if (typeof info === 'object' && info !== null) {
+        const name = (info as { name?: unknown }).name;
+        const avatar = (info as { avatar?: unknown }).avatar;
+        if (typeof name === 'string') {
+          discordService?.setApplicationUser({
+            name,
+            avatar: typeof avatar === 'string' ? avatar : '',
+          });
+        }
+      }
+    });
+
     app.on('before-quit', () => {
       discordService?.cleanup();
     });
