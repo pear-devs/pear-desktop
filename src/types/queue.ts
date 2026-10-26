@@ -16,6 +16,7 @@ export type QueueElement = HTMLElement & {
 };
 export type QueueAPI = {
   getItems(): QueueItem[];
+  shuffle?: () => void;
   store: {
     store: Store;
   };
