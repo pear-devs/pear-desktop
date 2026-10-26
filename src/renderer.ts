@@ -309,6 +309,61 @@ async function onApiLoaded() {
     },
   );
 
+  window.ipcRenderer.on(
+    'peard:innertube-request',
+    async (_, requestId: string, endpoint: string, body: unknown) => {
+      const responseChannel = `peard:innertube-response:${requestId}`;
+      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+      if (!app) {
+        window.ipcRenderer.send(responseChannel, {
+          error: 'ytmusic-app is not available',
+        });
+        return;
+      }
+
+      try {
+        const result = await app.networkManager.fetch<unknown, unknown>(
+          endpoint,
+          body,
+        );
+        window.ipcRenderer.send(responseChannel, { result });
+      } catch (error) {
+        let message: string;
+        if (error instanceof Error) message = error.message;
+        else if (typeof error === 'string') message = error;
+        else {
+          try {
+            message = JSON.stringify(error);
+          } catch {
+            message = String(error);
+          }
+        }
+        window.ipcRenderer.send(responseChannel, {
+          error: message || 'Unknown error',
+        });
+      }
+    },
+  );
+
+  window.ipcRenderer.on(
+    'peard:play-endpoint',
+    (_, requestId: string, endpoint: unknown) => {
+      // Same event YouTube Music fires when a song / "Start radio" / playlist is clicked
+      const app = document.querySelector('ytmusic-app');
+      app?.dispatchEvent(
+        new CustomEvent('yt-navigate', {
+          bubbles: true,
+          composed: true,
+          detail: { endpoint },
+        }),
+      );
+      window.ipcRenderer.send(
+        `peard:play-endpoint-response:${requestId}`,
+        !!app,
+      );
+    },
+  );
+
   const video = document.querySelector('video')!;
   const audioContext = new AudioContext();
   const audioSource = audioContext.createMediaElementSource(video);
