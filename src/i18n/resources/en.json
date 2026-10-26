@@ -614,6 +614,10 @@
         "fetched-lyrics": "Fetched lyrics for Genius"
       }
     },
+    "memory-saver": {
+      "description": "Reloads the page while you're away once memory use grows too high, keeping the current song, position and shuffle. Works around a memory leak in the web player itself that slows the app down over long sessions",
+      "name": "Memory Saver"
+    },
     "music-together": {
       "description": "Share a playlist with others. When the host plays a song, everyone else will hear the same song",
       "dialog": {
