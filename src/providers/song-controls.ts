@@ -146,5 +146,16 @@ export const getSongControls = (win: BrowserWindow) => {
         });
         win.webContents.send('peard:search', query, params, continuation);
       }),
+        playPlaylist: (playlistId: ArgsType<string>, videoId?: ArgsType<string>) => {
+      const pid = parseStringFromArgsType(playlistId);
+      const vid = videoId ? parseStringFromArgsType(videoId) : null;
+      if (pid) {
+        let url = `https://music.youtube.com/playlist?list=${pid}`;
+        if (vid) {
+          url += `&v=${vid}`;
+        }
+        win.webContents.loadURL(url);
+      }
+    },
   };
 };
