@@ -721,6 +721,13 @@
         "button": "Picture-in-picture"
       }
     },
+    "pitch-shift": {
+      "description": "Shift the pitch of the current song up or down",
+      "name": "Pitch Shifter",
+      "templates": {
+        "button": "Pitch Shift"
+      }
+    },
     "playback-speed": {
       "description": "Listen fast, listen slow! Adds a slider that controls song speed",
       "name": "Playback Speed",
