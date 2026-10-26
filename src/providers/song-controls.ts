@@ -61,7 +61,7 @@ export const getSongControls = (win: BrowserWindow) => {
     goForward: (seconds: ArgsType<number>) => {
       const secondsNumber = parseNumberFromArgsType(seconds);
       if (secondsNumber !== null) {
-        win.webContents.send('peard:seek-by', seconds);
+        win.webContents.send('peard:seek-by', secondsNumber);
       }
     },
     requestShuffleInformation: () => {
