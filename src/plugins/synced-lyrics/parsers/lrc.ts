@@ -98,11 +98,17 @@ export const LRC = {
     }
 
     lrc.lines.sort(({ timeInMs: timeA }, { timeInMs: timeB }) => timeA - timeB);
+
+    for (const line of lrc.lines) {
+      line.timeInMs += offset;
+      for (const word of line.words) {
+        word.timeInMs += offset;
+      }
+    }
+
     for (let i = 0; i < lrc.lines.length; i++) {
       const current = lrc.lines[i];
       const next = lrc.lines[i + 1];
-
-      current.timeInMs += offset;
 
       if (next) {
         current.duration = next.timeInMs - current.timeInMs;
