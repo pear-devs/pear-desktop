@@ -215,10 +215,13 @@ export const romanizeThai = (line: string) => {
 
 export const romanizeBengali = (line: string) => {
   try {
-    let out = Sanscript.t(line, 'bengali', 'iast');
-    out = out.normalize('NFD');
-    out = out.replace(/[\u0300-\u036f]/g, '');
-    out = out.replace(/[\u09BC\u09BE-\u09CD]/g, '');
+    // Use ISO 15919 for more natural, readable romanization of Bengali lyrics
+    let out = Sanscript.t(line, 'bengali', 'iso');
+    out = out.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    // Remove any stray Bengali-specific marks if present
+    out = out.replace(/[\u09BC]/g, '');
+    out = out.replace(/[^a-z\s'-]/gi, ' ');
+    out = out.replace(/\s+/g, ' ').trim();
     return out.toLowerCase();
   } catch {
     return line;
@@ -227,9 +230,13 @@ export const romanizeBengali = (line: string) => {
 
 export const romanizeHindi = (line: string) => {
   try {
-    let out = Sanscript.t(line, 'devanagari', 'iast');
-    out = out.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // strip accents
-    return out.replace(/[^a-zA-Z\s]/g, '') || line; // remove any remaining symbols
+    // Use ISO 15919 with syncope for more singable Hindi romanization
+    let out = Sanscript.t(line, 'devanagari', 'iso', { syncope: true });
+    out = out.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    // Keep letters, spaces, apostrophes and hyphens; collapse whitespace
+    out = out.replace(/[^a-z\s'-]/gi, ' ');
+    out = out.replace(/\s+/g, ' ').trim();
+    return out.toLowerCase() || line;
   } catch {
     return line;
   }
