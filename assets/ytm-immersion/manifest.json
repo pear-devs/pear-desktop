@@ -1,0 +1,97 @@
+{
+  "manifest_version": 3,
+  "name": "YTM-Immersion for Pear Desktop",
+  "version": "3.0.2",
+  "description": "A desktop port of YTM-Immersion for Pear Desktop",
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://music.youtube.com/*",
+    "https://lrclib.net/*",
+    "https://lyricsplus-seven.vercel.app/*",
+    "https://lyricsplus.prjktla.workers.dev/*",
+    "https://lyricsplus.prjktla.my.id/*",
+    "https://api-lyrics.simpmusic.org/*",
+    "https://lrchub.coreone.work/*",
+    "https://api-free.deepl.com/*",
+    "https://api.deepl.com/*",
+    "https://music.163.com/*",
+    "https://raw.githubusercontent.com/*",
+    "https://cdn.jsdelivr.net/*",
+    "https://krcs.kugou.com/*",
+    "https://lyrics.kugou.com/*",
+    "https://api.liriqo-alfarrizi.workers.dev/*",
+    "https://buaaa.buachi.work/*"
+  ],
+  "background": {
+    "service_worker": "src/js/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://music.youtube.com/*"
+      ],
+      "js": [
+        "src/js/module/namespace.js",
+        "src/js/pear-bridge.js",
+        "src/js/module/player-bar.js",
+        "src/js/module/cloud-sync.js",
+        "src/js/module/lyrics-cache.js",
+        "src/js/module/replay-manager.js",
+        "src/js/module/replay-share.js",
+        "src/js/module/lyric-card.js",
+        "src/js/module/queue-manager.js",
+        "src/js/module/pip-manager.js",
+        "src/js/module/ytm-lyrics.js",
+        "src/js/module/budoux-ja.js",
+        "src/js/module/korean-ruby.js",
+        "src/js/module/builtin-translate.js",
+        "src/js/module/bar-autohide.js",
+        "src/js/module/fluid-bg.js",
+        "src/js/module/volume-leveler.js",
+        "src/js/module/video-quality.js",
+        "src/js/module/video-title.js",
+        "src/js/module/lyrics-ui.js",
+        "src/js/content.js"
+      ],
+      "css": [
+        "src/css/style.css"
+      ],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://music.youtube.com/*"
+      ],
+      "js": [
+        "src/js/page/loudness-bridge.js",
+        "src/js/page/queue-bridge.js",
+        "src/js/page/quality-bridge.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/assets/fonts/*.woff2",
+        "src/assets/icons/*.png",
+        "src/options.html"
+      ],
+      "matches": [
+        "https://music.youtube.com/*"
+      ]
+    }
+  ],
+  "icons": {
+    "16": "src/assets/icons/icon16.png",
+    "48": "src/assets/icons/icon48.png",
+    "128": "src/assets/icons/icon128.png"
+  },
+  "options_page": "src/options.html"
+}
