@@ -1,161 +1,153 @@
 import { createRenderer } from '@/utils';
 
-function getCanonicalVideoId(queueItem: any): string | undefined {
-    const menu = queueItem?.getMenuRenderer?.();
+import type { MusicPlayer } from '@/types/music-player';
 
-    for (const item of menu?.items ?? []) {
-        const videoId =
-            item?.toggleMenuServiceItemRenderer
-                ?.defaultServiceEndpoint
-                ?.likeEndpoint
-                ?.target
-                ?.videoId;
+type QueueItem = Element & {
+  getMenuRenderer?: () => {
+    items?: {
+      toggleMenuServiceItemRenderer?: {
+        defaultServiceEndpoint?: {
+          likeEndpoint?: {
+            target?: { videoId?: string };
+          };
+        };
+      };
+    }[];
+  };
+};
 
-        if (videoId) {
-            return videoId;
-        }
+/** Returns the catalog audio ID exposed by the selected queue item. */
+function getCanonicalVideoId(queueItem: QueueItem): string | undefined {
+  const menu = queueItem?.getMenuRenderer?.();
+
+  for (const item of menu?.items ?? []) {
+    const videoId =
+      item?.toggleMenuServiceItemRenderer?.defaultServiceEndpoint?.likeEndpoint
+        ?.target?.videoId;
+
+    if (videoId) {
+      return videoId;
     }
+  }
 
-    return undefined;
+  return undefined;
 }
 
 export const renderer = createRenderer<{
-    player?: any;
-    lastVideoId?: string;
-    stateChangeHandler?: () => void;
+  player?: MusicPlayer;
+  lastVideoId?: string;
+  stateChangeHandler?: () => void;
 }>({
-    start() {
-        console.log('[Audio only mode] Renderer started');
-    },
+  start() {
+    console.log('[Audio only mode] Renderer started');
+  },
 
-    onPlayerApiReady(api) {
-        const player = api as any;
-        this.player = player;
+  onPlayerApiReady(api) {
+    if (this.player && this.stateChangeHandler) {
+      this.player.removeEventListener('onStateChange', this.stateChangeHandler);
+    }
+    this.lastVideoId = undefined;
 
-        const checkCurrentTrack = () => {
-            const response = player.getPlayerResponse?.();
-            const details = response?.videoDetails;
+    const player = api;
+    this.player = player;
 
-            if (!details?.videoId) return;
+    const checkCurrentTrack = () => {
+      const response = player.getPlayerResponse?.();
+      const details = response?.videoDetails;
 
-            const {
-                videoId,
-                title,
-                author,
-                musicVideoType,
-            } = details;
+      if (!details?.videoId) return;
 
-            // Evita procesar varias veces el mismo video por los
-            // múltiples onStateChange que dispara el reproductor.
-            if (videoId === this.lastVideoId) return;
-            this.lastVideoId = videoId;
+      const { videoId, title, author, musicVideoType } = details;
 
-            console.log('[Audio only mode] Track:', {
-                videoId,
-                title,
-                author,
-                musicVideoType,
-            });
-            /*
-      
-            // Ya estamos reproduciendo el audio del catálogo.
-            if (musicVideoType === 'MUSIC_VIDEO_TYPE_ATV') {
-              return;
-            }
-      
-            // Por ahora sólo reemplazamos OMV confirmados.
-            if (musicVideoType !== 'MUSIC_VIDEO_TYPE_OMV') {
-              console.log(
-                '[Audio only mode] Unknown musicVideoType:',
-                musicVideoType,
-              );
-              return;
-            }*/
-            switch (musicVideoType) {
-                case 'MUSIC_VIDEO_TYPE_ATV':
-                    // Already playing catalog audio.
-                    return;
+      // Evita procesar varias veces el mismo video por los
+      // múltiples onStateChange que dispara el reproductor.
+      if (videoId === this.lastVideoId) return;
 
-                case 'MUSIC_VIDEO_TYPE_OMV':
-                    // Try to replace with canonical audio.
-                    break;
+      console.log('[Audio only mode] Track:', {
+        videoId,
+        title,
+        author,
+        musicVideoType,
+      });
+      switch (musicVideoType) {
+        case 'MUSIC_VIDEO_TYPE_ATV':
+          // Already playing catalog audio.
+          this.lastVideoId = videoId;
+          return;
 
-                case 'MUSIC_VIDEO_TYPE_UGC':
-                    console.log(
-                        '[Audio only mode] UGC track detected. Keeping original.',
-                    );
-                    return;
+        case 'MUSIC_VIDEO_TYPE_OMV':
+          // Try to replace with canonical audio.
+          break;
 
-                default:
-                    console.log(
-                        '[Audio only mode] Unsupported musicVideoType. Keeping original:',
-                        musicVideoType,
-                    );
-                    return;
-            }
-            const queueItem = document.querySelector(
-                'ytmusic-player-queue-item[selected]',
-            );
+        case 'MUSIC_VIDEO_TYPE_UGC':
+          this.lastVideoId = videoId;
+          console.log(
+            '[Audio only mode] UGC track detected. Keeping original.',
+          );
+          return;
 
-            if (!queueItem) {
-                console.warn(
-                    '[Audio only mode] Could not find selected queue item.',
-                );
-                return;
-            }
+        default:
+          this.lastVideoId = videoId;
+          console.log(
+            '[Audio only mode] Unsupported musicVideoType. Keeping original:',
+            musicVideoType,
+          );
+          return;
+      }
+      const queueItem = document.querySelector<QueueItem>(
+        'ytmusic-player-queue-item[selected]',
+      );
 
-            const canonicalVideoId = getCanonicalVideoId(queueItem);
+      if (!queueItem) {
+        console.warn('[Audio only mode] Could not find selected queue item.');
+        return;
+      }
 
-            if (!canonicalVideoId) {
-                console.warn(
-                    '[Audio only mode] Could not find canonical audio videoId.',
-                );
-                return;
-            }
+      const canonicalVideoId = getCanonicalVideoId(queueItem);
 
-            if (canonicalVideoId === videoId) {
-                console.log(
-                    '[Audio only mode] Canonical videoId is the current video.',
-                );
-                return;
-            }
-
-            const currentTime = player.getCurrentTime?.() ?? 0;
-
-            console.log('[Audio only mode] Replacing music video:', {
-                from: videoId,
-                to: canonicalVideoId,
-                startSeconds: currentTime,
-            });
-
-            player.loadVideoById({
-                videoId: canonicalVideoId,
-                startSeconds: currentTime,
-            });
-        };
-
-        this.stateChangeHandler = checkCurrentTrack;
-
-        player.addEventListener(
-            'onStateChange',
-            this.stateChangeHandler,
+      if (!canonicalVideoId) {
+        console.warn(
+          '[Audio only mode] Could not find canonical audio videoId.',
         );
+        return;
+      }
 
-        checkCurrentTrack();
-    },
+      if (canonicalVideoId === videoId) {
+        this.lastVideoId = videoId;
+        console.log(
+          '[Audio only mode] Canonical videoId is the current video.',
+        );
+        return;
+      }
 
-    stop() {
-        if (this.player && this.stateChangeHandler) {
-            this.player.removeEventListener(
-                'onStateChange',
-                this.stateChangeHandler,
-            );
-        }
+      const currentTime = player.getCurrentTime?.() ?? 0;
 
-        this.player = undefined;
-        this.stateChangeHandler = undefined;
-        this.lastVideoId = undefined;
+      console.log('[Audio only mode] Replacing music video:', {
+        from: videoId,
+        to: canonicalVideoId,
+        startSeconds: currentTime,
+      });
 
-        console.log('[Audio only mode] Renderer stopped');
-    },
+      this.lastVideoId = canonicalVideoId;
+      player.loadVideoById(canonicalVideoId, currentTime, 'default');
+    };
+
+    this.stateChangeHandler = checkCurrentTrack;
+
+    player.addEventListener('onStateChange', this.stateChangeHandler);
+
+    checkCurrentTrack();
+  },
+
+  stop() {
+    if (this.player && this.stateChangeHandler) {
+      this.player.removeEventListener('onStateChange', this.stateChangeHandler);
+    }
+
+    this.player = undefined;
+    this.stateChangeHandler = undefined;
+    this.lastVideoId = undefined;
+
+    console.log('[Audio only mode] Renderer stopped');
+  },
 });
