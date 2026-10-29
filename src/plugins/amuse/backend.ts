@@ -10,12 +10,18 @@ import type { AmuseSongInfo } from './types';
 
 const amusePort = 9863;
 
-const formatSongInfo = (info: SongInfo, isAdvertisement: boolean) => {
+const formatSongInfo = (
+  info: SongInfo,
+  isAdvertisement: boolean,
+  positionUpdatedAt: number,
+) => {
   const formattedSongInfo: AmuseSongInfo = {
+    apiVersion: 2,
     player: {
       hasSong: !!(info.artist && info.title),
       isPaused: info.isPaused ?? false,
       seekbarCurrentPosition: info.elapsedSeconds ?? 0,
+      positionUpdatedAt,
     },
     track: {
       duration: info.songDuration,
@@ -25,6 +31,9 @@ const formatSongInfo = (info: SongInfo, isAdvertisement: boolean) => {
       url: info.url ?? '',
       id: info.videoId,
       isAdvertisement,
+      album: info.album ?? null,
+      mediaType: info.mediaType,
+      playlistId: info.playlistId ?? null,
     },
   };
   return formattedSongInfo;
@@ -34,6 +43,8 @@ export default createBackend({
   currentSongInfo: {} as SongInfo,
   // Reported by the renderer, the song info itself doesn't know about ads
   isAdvertisement: false,
+  // When elapsedSeconds last changed, so clients can extrapolate the position
+  positionUpdatedAt: 0,
   app: null as Hono | null,
   server: null as ReturnType<typeof serve> | null,
   start({ ipc }) {
@@ -47,7 +58,15 @@ export default createBackend({
     );
 
     registerCallback((songInfo) => {
-      this.currentSongInfo = songInfo;
+      if (
+        songInfo.elapsedSeconds !== this.currentSongInfo.elapsedSeconds ||
+        songInfo.videoId !== this.currentSongInfo.videoId ||
+        songInfo.isPaused !== this.currentSongInfo.isPaused
+      ) {
+        this.positionUpdatedAt = Date.now();
+      }
+      // The provider reuses one object, keep a copy to compare against
+      this.currentSongInfo = { ...songInfo };
     });
 
     this.app = new Hono();
@@ -58,7 +77,11 @@ export default createBackend({
 
     const queryAndApiHandler = (ctx: Context) => {
       return ctx.json(
-        formatSongInfo(this.currentSongInfo, this.isAdvertisement),
+        formatSongInfo(
+          this.currentSongInfo,
+          this.isAdvertisement,
+          this.positionUpdatedAt,
+        ),
         200,
       );
     };
