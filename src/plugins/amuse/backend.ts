@@ -10,7 +10,7 @@ import type { AmuseSongInfo } from './types';
 
 const amusePort = 9863;
 
-const formatSongInfo = (info: SongInfo) => {
+const formatSongInfo = (info: SongInfo, isAdvertisement: boolean) => {
   const formattedSongInfo: AmuseSongInfo = {
     player: {
       hasSong: !!(info.artist && info.title),
@@ -24,7 +24,7 @@ const formatSongInfo = (info: SongInfo) => {
       cover: info.imageSrc ?? '',
       url: info.url ?? '',
       id: info.videoId,
-      isAdvertisement: false,
+      isAdvertisement,
     },
   };
   return formattedSongInfo;
@@ -32,9 +32,20 @@ const formatSongInfo = (info: SongInfo) => {
 
 export default createBackend({
   currentSongInfo: {} as SongInfo,
+  // Reported by the renderer, the song info itself doesn't know about ads
+  isAdvertisement: false,
   app: null as Hono | null,
   server: null as ReturnType<typeof serve> | null,
-  start() {
+  start({ ipc }) {
+    ipc.on('peard:amuse-ad-state', (isAd: boolean) => {
+      this.isAdvertisement = isAd;
+    });
+    // Without this the song info only gets a new elapsed time on play, pause
+    // or seek, so seekbarCurrentPosition stood still while a song played
+    ipc.on('peard:player-api-loaded', () =>
+      ipc.send('peard:setup-time-changed-listener'),
+    );
+
     registerCallback((songInfo) => {
       this.currentSongInfo = songInfo;
     });
@@ -46,7 +57,10 @@ export default createBackend({
     );
 
     const queryAndApiHandler = (ctx: Context) => {
-      return ctx.json(formatSongInfo(this.currentSongInfo), 200);
+      return ctx.json(
+        formatSongInfo(this.currentSongInfo, this.isAdvertisement),
+        200,
+      );
     };
 
     this.app.get('/query', queryAndApiHandler);
