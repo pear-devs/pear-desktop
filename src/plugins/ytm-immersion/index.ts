@@ -1,5 +1,6 @@
-import { app, BrowserWindow, globalShortcut } from 'electron';
 import { join } from 'node:path';
+
+import { app, BrowserWindow, globalShortcut } from 'electron';
 
 import { createPlugin } from '@/utils';
 
@@ -17,16 +18,16 @@ const getExtensionPath = () =>
       )
     : join(app.getAppPath(), 'assets', 'ytm-immersion');
 
-const toggleImmersion = () => {
+const toggleImmersion = async () => {
   if (!targetWindow || targetWindow.isDestroyed()) return;
-  void targetWindow.webContents
-    .executeJavaScript(
+  try {
+    await targetWindow.webContents.executeJavaScript(
       "document.querySelector('#my-mode-toggle')?.click()",
       true,
-    )
-    .catch((error: unknown) => {
-      console.warn('[YTM-Immersion] Could not toggle Immersion mode', error);
-    });
+    );
+  } catch (error) {
+    console.warn('[YTM-Immersion] Could not toggle Immersion mode', error);
+  }
 };
 
 const openSettings = async (parent: BrowserWindow) => {
@@ -47,9 +48,7 @@ const openSettings = async (parent: BrowserWindow) => {
   child.on('closed', () => {
     settingsWindow = null;
   });
-  await child.loadURL(
-    `chrome-extension://${extensionId}/src/options.html`,
-  );
+  await child.loadURL(`chrome-extension://${extensionId}/src/options.html`);
 };
 
 export default createPlugin({
@@ -62,19 +61,22 @@ export default createPlugin({
   menu: ({ window }) => [
     {
       label: 'YTM-Immersion settings',
-      click: () => void openSettings(window),
+      click: async () => {
+        await openSettings(window);
+      },
     },
   ],
   backend: {
     async start({ window }) {
       targetWindow = window;
-      const extension = await window.webContents.session.extensions.loadExtension(
-        getExtensionPath(),
-      );
+      const extension =
+        await window.webContents.session.extensions.loadExtension(
+          getExtensionPath(),
+        );
       extensionId = extension.id;
       globalShortcut.register('Alt+Shift+I', toggleImmersion);
     },
-    async stop({ window }) {
+    stop({ window }) {
       globalShortcut.unregister('Alt+Shift+I');
       settingsWindow?.close();
       settingsWindow = null;
