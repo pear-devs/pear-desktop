@@ -3,7 +3,11 @@ import { type Context, Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { t } from 'i18next';
 
-import { registerCallback, type SongInfo } from '@/providers/song-info';
+import {
+  MediaType,
+  registerCallback,
+  type SongInfo,
+} from '@/providers/song-info';
 import { createBackend } from '@/utils';
 
 import type { AmuseSongInfo } from './types';
@@ -32,8 +36,10 @@ const formatSongInfo = (
       id: info.videoId,
       isAdvertisement,
       album: info.album ?? null,
-      mediaType: info.mediaType,
-      playlistId: info.playlistId ?? null,
+      // Before the first song the info is empty; keep the field in the response
+      mediaType: info.mediaType ?? MediaType.Audio,
+      // The provider uses '' when the URL has no playlist
+      playlistId: info.playlistId || null,
     },
   };
   return formattedSongInfo;
