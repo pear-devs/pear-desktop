@@ -497,6 +497,13 @@
         }
       }
     },
+    "do-not-track": {
+      "description": "Disabilita tutti i tracker all'avvio",
+      "menu": {
+        "blocker": "Blocker"
+      },
+      "name": "Non tracciare"
+    },
     "downloader": {
       "backend": {
         "dialog": {
@@ -936,9 +943,12 @@
           "label": "Tipo",
           "submenu": {
             "acrylic": "Acrilico",
+            "content": "Contenuto",
+            "fullscreen-ui": "Schermo intero",
             "mica": "Mica",
             "none": "Nessuno",
-            "tabbed": "In scheda"
+            "tabbed": "In scheda",
+            "window": "Finestra"
           }
         }
       },
