@@ -147,50 +147,14 @@ export const injectCpuTamerByAnimationFrame = ((__CONTEXT__) => {
     /** @type {Function|null} */
     let afInterupter = null;
 
+    // pear-desktop: the upstream script drives this clock with an infinite 1ms CSS
+    // animation (`animationiteration` on a hidden <a-f> element). That animation keeps
+    // the renderer producing a full main-thread frame (style, paint, layerize) on
+    // every vsync even when no timer is waiting, which made scrolling janky.
+    // requestAnimationFrame gives the same once-per-frame tick, but only requests a
+    // frame while a deferred timer is actually waiting for it.
     const getRAFHelper = () => {
-      const asc = document.createElement('a-f');
-      if (!('onanimationiteration' in asc)) {
-        return (resolve) => requestAnimationFrame(afInterupter = resolve);
-      }
-      asc.id = 'a-f';
-      let qr = null;
-      asc.onanimationiteration = function () {
-        if (qr !== null) qr = (qr(), null);
-      }
-      if (!document.getElementById('afscript')) {
-        const style = document.createElement('style');
-        style.id = 'afscript';
-        style.textContent = `
-          @keyFrames aF1 {
-            0% {
-              order: 0;
-            }
-            100% {
-              order: 1;
-            }
-          }
-          #a-f[id] {
-            visibility: collapse !important;
-            position: fixed !important;
-            display: block !important;
-            top: -100px !important;
-            left: -100px !important;
-            margin:0 !important;
-            padding:0 !important;
-            outline:0 !important;
-            border:0 !important;
-            z-index:-1 !important;
-            width: 0px !important;
-            height: 0px !important;
-            contain: strict !important;
-            pointer-events: none !important;
-            animation: 1ms steps(2, jump-none) 0ms infinite alternate forwards running aF1 !important;
-          }
-        `;
-        (document.head || document.documentElement).appendChild(style);
-      }
-      document.documentElement.insertBefore(asc, document.documentElement.firstChild);
-      return (resolve) => (qr = afInterupter = resolve);
+      return (resolve) => requestAnimationFrame(afInterupter = resolve);
     };
 
     /** @type {(resolve: () => void)}  */
