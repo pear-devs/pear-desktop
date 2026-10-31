@@ -1,0 +1,229 @@
+! =====================================================================
+! YTMusic Privacy Shield
+! Additional filter rules for a dedicated YouTube Music client
+! Assumes the client's built-in Lite anti-ad layer is ALWAYS active:
+!
+!   Property traps:
+!     playerResponse.adPlacements = undefined
+!     ytInitialPlayerResponse.playerAds = undefined
+!     ytInitialPlayerResponse.adPlacements = undefined
+!     ytInitialPlayerResponse.adSlots = undefined
+!
+!   JSON cleanup:
+!     playerAds
+!     adPlacements
+!     adSlots
+!     playerResponse.playerAds
+!     playerResponse.adPlacements
+!     playerResponse.adSlots
+!     ytInitialPlayerResponse.playerAds
+!     ytInitialPlayerResponse.adPlacements
+!     ytInitialPlayerResponse.adSlots
+!     entries[].command.reelWatchEndpoint.adClientParams.isAd
+!     reelWatchSequenceResponse.entries[].command.reelWatchEndpoint.adClientParams.isAd
+!
+! Therefore this file deliberately contains NO duplicate property traps,
+! json-prune rules, or response-rewrite logic.
+! =====================================================================
+
+! PROFILE: BALANCED
+! Recommended default.
+!
+! Blocks:
+! - advertising infrastructure
+! - ad measurement / impressions
+! - obvious YouTube tracking pixels
+! - QoE/ad telemetry that should not be required for user features
+! - generic Google Analytics / Tag Manager calls
+! - cosmetic ad/promoted UI
+! - common tracking URL parameters
+!
+! Preserves:
+! - youtubei/v1/log_event
+! - api/stats/watchtime
+! - api/stats/playback
+! - api/stats/delayplay
+! - api/stats/streamingstats
+!
+! Intent: history, recommendations, Recap, resume/progress and normal
+! playback behavior should remain intact.
+! =====================================================================
+
+
+! ---------------------------------------------------------------------
+! 1. Google / DoubleClick advertising infrastructure
+! ---------------------------------------------------------------------
+
+||doubleclick.net^$domain=music.youtube.com
+||googleads.g.doubleclick.net^$domain=music.youtube.com
+||stats.g.doubleclick.net^$domain=music.youtube.com
+||ad.doubleclick.net^$domain=music.youtube.com
+
+||googlesyndication.com^$domain=music.youtube.com
+||pagead2.googlesyndication.com^$domain=music.youtube.com
+||tpc.googlesyndication.com^$domain=music.youtube.com
+
+||googleadservices.com^$domain=music.youtube.com
+||www.googleadservices.com^$domain=music.youtube.com
+||googleads.com^$domain=music.youtube.com
+||adservice.google.com^$domain=music.youtube.com
+
+||imasdk.googleapis.com^$domain=music.youtube.com
+||2mdn.net^$domain=music.youtube.com
+
+
+! ---------------------------------------------------------------------
+! 2. YouTube ad / impression telemetry
+! ---------------------------------------------------------------------
+
+||music.youtube.com/api/stats/ads?
+||www.youtube.com/api/stats/ads?$domain=music.youtube.com
+||s.youtube.com/api/stats/ads?$domain=music.youtube.com
+
+||music.youtube.com/api/stats/qoe?
+||www.youtube.com/api/stats/qoe?$domain=music.youtube.com
+||s.youtube.com/api/stats/qoe?$domain=music.youtube.com
+
+||music.youtube.com/api/stats/atr?
+||www.youtube.com/api/stats/atr?$domain=music.youtube.com
+||s.youtube.com/api/stats/atr?$domain=music.youtube.com
+
+||music.youtube.com/ptracking?
+||www.youtube.com/ptracking?$domain=music.youtube.com
+||youtube.com/ptracking?$domain=music.youtube.com
+
+||music.youtube.com/pcs/activeview?
+||www.youtube.com/pcs/activeview?$domain=music.youtube.com
+||youtube.com/pcs/activeview?$domain=music.youtube.com
+
+||music.youtube.com/pagead/
+||www.youtube.com/pagead/$domain=music.youtube.com
+||youtube.com/pagead/$domain=music.youtube.com
+
+
+! ---------------------------------------------------------------------
+! 3. Google ad measurement
+! ---------------------------------------------------------------------
+
+||google.com/pagead/$domain=music.youtube.com
+||www.google.com/pagead/$domain=music.youtube.com
+||google.com/ads/measurement/$domain=music.youtube.com
+||www.google.com/ads/measurement/$domain=music.youtube.com
+
+
+! ---------------------------------------------------------------------
+! 4. Generic Google analytics / tagging
+! ---------------------------------------------------------------------
+
+||google-analytics.com^$domain=music.youtube.com
+||www.google-analytics.com^$domain=music.youtube.com
+||ssl.google-analytics.com^$domain=music.youtube.com
+||analytics.google.com^$domain=music.youtube.com
+||region1.analytics.google.com^$domain=music.youtube.com
+||region1.google-analytics.com^$domain=music.youtube.com
+
+||googletagmanager.com^$domain=music.youtube.com
+||www.googletagmanager.com^$domain=music.youtube.com
+||googletagservices.com^$domain=music.youtube.com
+||www.googletagservices.com^$domain=music.youtube.com
+
+
+! ---------------------------------------------------------------------
+! 5. Ad-media requests
+! Do NOT block googlevideo.com globally.
+! ---------------------------------------------------------------------
+
+*_ad_$media,domain=music.youtube.com
+||googlevideo.com/initplayback?*oad=$xhr,domain=music.youtube.com
+
+
+! ---------------------------------------------------------------------
+! 6. Cosmetic ad / promoted-content cleanup
+! ---------------------------------------------------------------------
+
+music.youtube.com##ytmusic-player-ads
+music.youtube.com###player-ads
+music.youtube.com##ytmusic-display-ad-renderer
+music.youtube.com##ytmusic-promoted-video-renderer
+music.youtube.com##ytmusic-promoted-sparkles-web-renderer
+
+music.youtube.com##ytd-display-ad-renderer
+music.youtube.com##ytd-promoted-video-renderer
+music.youtube.com##ytd-promoted-sparkles-web-renderer
+music.youtube.com##ytd-ad-slot-renderer
+
+music.youtube.com##[id*="player-ads"]
+music.youtube.com##[class*="ad-container"]
+music.youtube.com##[class*="ad-slot"]
+
+
+! ---------------------------------------------------------------------
+! 7. YouTube URL tracking cleanup
+! ---------------------------------------------------------------------
+
+||music.youtube.com^$removeparam=si
+||music.youtube.com^$removeparam=pp
+||music.youtube.com^$removeparam=feature
+||music.youtube.com^$removeparam=source_ve_path
+||music.youtube.com^$removeparam=embeds_referring_euri
+||music.youtube.com^$removeparam=embeds_referring_origin
+
+||youtube.com^$removeparam=si
+||youtube.com^$removeparam=pp
+||youtube.com^$removeparam=feature
+||youtube.com^$removeparam=source_ve_path
+||youtube.com^$removeparam=embeds_referring_euri
+||youtube.com^$removeparam=embeds_referring_origin
+
+||youtu.be^$removeparam=si
+||youtu.be^$removeparam=pp
+||youtu.be^$removeparam=feature
+
+
+! ---------------------------------------------------------------------
+! 8. Generic tracking-parameter cleanup
+! ---------------------------------------------------------------------
+
+$removeparam=/^utm_/
+$removeparam=gclid
+$removeparam=dclid
+$removeparam=gbraid
+$removeparam=wbraid
+$removeparam=fbclid
+$removeparam=msclkid
+$removeparam=_ga
+$removeparam=_gl
+
+
+! ---------------------------------------------------------------------
+! 9. YouTube redirect tracking cleanup
+! Destination parameters are intentionally preserved.
+! ---------------------------------------------------------------------
+
+||youtube.com/redirect?$removeparam=event
+||youtube.com/redirect?$removeparam=redir_token
+||youtube.com/redirect?$removeparam=v
+||youtube.com/redirect?$removeparam=html_redirect
+||youtube.com/redirect?$removeparam=qid
+
+||music.youtube.com/redirect?$removeparam=event
+||music.youtube.com/redirect?$removeparam=redir_token
+||music.youtube.com/redirect?$removeparam=v
+||music.youtube.com/redirect?$removeparam=html_redirect
+||music.youtube.com/redirect?$removeparam=qid
+
+
+! ---------------------------------------------------------------------
+! 10. Explicit safety boundary
+!
+! DO NOT block globally:
+!   googlevideo.com
+!   ytimg.com
+!   gstatic.com
+!   accounts.google.com
+!   youtubei/v1/player
+!   youtubei/v1/browse
+!   youtubei/v1/next
+!   youtubei/v1/search
+!   youtubei/v1/music/*
+! ---------------------------------------------------------------------

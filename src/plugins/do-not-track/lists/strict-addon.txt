@@ -1,0 +1,32 @@
+! YTMusic Privacy Shield — Strict add-on
+! Loaded after built-in Balanced rules. Blocks behavioral/playback telemetry.
+!
+! Possible side effects: incomplete listening history, weaker recommendations,
+! inaccurate Recap, degraded resume/progress, missing playback diagnostics.
+
+! First-party event telemetry
+||music.youtube.com/youtubei/v1/log_event?$xhr
+||www.youtube.com/youtubei/v1/log_event?$xhr,domain=music.youtube.com
+||youtube.com/youtubei/v1/log_event?$xhr,domain=music.youtube.com
+||youtube.googleapis.com/youtubei/v1/log_event?$xhr,domain=music.youtube.com
+
+! Generic YouTube telemetry pings
+||music.youtube.com/generate_204?
+||www.youtube.com/generate_204?$domain=music.youtube.com
+||youtube.com/generate_204?$domain=music.youtube.com
+
+! Playback and behavioral telemetry
+||music.youtube.com/api/stats/playback?
+||music.youtube.com/api/stats/watchtime?
+||music.youtube.com/api/stats/delayplay?
+||music.youtube.com/api/stats/streamingstats?
+
+||www.youtube.com/api/stats/playback?$domain=music.youtube.com
+||www.youtube.com/api/stats/watchtime?$domain=music.youtube.com
+||www.youtube.com/api/stats/delayplay?$domain=music.youtube.com
+||www.youtube.com/api/stats/streamingstats?$domain=music.youtube.com
+
+||s.youtube.com/api/stats/playback?$domain=music.youtube.com
+||s.youtube.com/api/stats/watchtime?$domain=music.youtube.com
+||s.youtube.com/api/stats/delayplay?$domain=music.youtube.com
+||s.youtube.com/api/stats/streamingstats?$domain=music.youtube.com

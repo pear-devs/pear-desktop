@@ -12,7 +12,11 @@ permissions:
 
 jobs:
   dependency-review:
-    if: github.event.pull_request.draft == false
+    # This action exits 1 when GitHub Dependency graph is disabled. Enable that
+    # repository setting, then set Actions variable ENABLE_DEPENDENCY_REVIEW=true.
+    # Until then the check is explicitly skipped rather than reported as a false
+    # application/CI failure.
+    if: github.event.pull_request.draft == false && vars.ENABLE_DEPENDENCY_REVIEW == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout Repository"

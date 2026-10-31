@@ -46,14 +46,14 @@ jobs:
           run_install: false
 
       - name: Setup NodeJS
-        if: startsWith(matrix.os, 'macOS') != true
+        if: startsWith(matrix.os, 'macos') != true
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
       - name: Setup NodeJS for macOS
-        if: startsWith(matrix.os, 'macOS')
+        if: startsWith(matrix.os, 'macos')
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -101,7 +101,9 @@ jobs:
   comment:
     name: Comment on PR
     needs: [check-permissions, build]
-    if: always() && needs.check-permissions.outputs.has-write-access == 'true'
+    # pull_request tokens from forks are read-only even when the author is a
+    # collaborator. Do not attempt a write API call that GitHub will reject.
+    if: always() && needs.check-permissions.outputs.has-write-access == 'true' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write

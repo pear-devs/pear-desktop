@@ -163,14 +163,22 @@ export const register = (
 
           try {
             const payload = await verify(token, config.secret, 'HS256');
-            const parsedPayload = await JWTPayloadSchema.safeParseAsync(payload);
+            const parsedPayload =
+              await JWTPayloadSchema.safeParseAsync(payload);
 
-            if (!parsedPayload.success || !config.authorizedClients.includes(parsedPayload.data.id)) {
+            if (
+              !parsedPayload.success ||
+              !config.authorizedClients.includes(parsedPayload.data.id)
+            ) {
               ws.close(1008, 'Unauthorized');
               return;
             }
           } catch (err) {
-            console.error(LoggerPrefix, 'WebSocket authentication failed:', err);
+            console.error(
+              LoggerPrefix,
+              'WebSocket authentication failed:',
+              err,
+            );
             ws.close(1008, 'Unauthorized');
             return;
           }

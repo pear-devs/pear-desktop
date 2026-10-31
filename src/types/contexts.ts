@@ -43,7 +43,7 @@ export interface RendererContext<
   ipc: {
     send: IpcRenderer['send'];
     invoke: IpcRenderer['invoke'];
-    on: (event: string, listener: CallableFunction) => void;
+    on: (event: string, listener: CallableFunction) => () => void;
     removeAllListeners: (event: string) => void;
   };
 }

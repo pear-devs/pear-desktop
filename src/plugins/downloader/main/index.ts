@@ -138,15 +138,9 @@ export const getCookieFromWindow = async (win: BrowserWindow) => {
 };
 
 let config: DownloaderPluginConfig;
+let initialization: Promise<void> | undefined;
 
-export const onMainLoad = async ({
-  window: _win,
-  getConfig,
-  ipc,
-}: BackendContext<DownloaderPluginConfig>) => {
-  win = _win;
-  config = await getConfig();
-
+const initializeDownloader = async () => {
   yt = await Innertube.create({
     cache: new UniversalCache(false),
     cookie: await getCookieFromWindow(win),
@@ -212,6 +206,25 @@ export const onMainLoad = async ({
       cleanUp(globalThis);
     }
   }
+};
+
+const ensureInitialized = () => {
+  if (!initialization) {
+    initialization = initializeDownloader().catch((error: unknown) => {
+      initialization = undefined;
+      throw error;
+    });
+  }
+  return initialization;
+};
+
+export const onMainLoad = async ({
+  window: _win,
+  getConfig,
+  ipc,
+}: BackendContext<DownloaderPluginConfig>) => {
+  win = _win;
+  config = await getConfig();
 
   ipc.handle('download-song', (url: string) => downloadSong(url));
   ipc.on('peard:video-src-changed', (data: GetPlayerResponse) => {
@@ -230,12 +243,13 @@ export const onConfigChange = (newConfig: DownloaderPluginConfig) => {
 
 export async function downloadSong(
   url: string,
-  playlistFolder?: string ,
-  trackId?: string ,
+  playlistFolder?: string,
+  trackId?: string,
   increasePlaylistProgress: (value: number) => void = () => {},
 ) {
   let resolvedName;
   try {
+    await ensureInitialized();
     await downloadSongUnsafe(
       false,
       url,
@@ -251,12 +265,13 @@ export async function downloadSong(
 
 export async function downloadSongFromId(
   id: string,
-  playlistFolder?: string ,
-  trackId?: string ,
+  playlistFolder?: string,
+  trackId?: string,
   increasePlaylistProgress: (value: number) => void = () => {},
 ) {
   let resolvedName;
   try {
+    await ensureInitialized();
     await downloadSongUnsafe(
       true,
       id,
@@ -329,8 +344,8 @@ async function downloadSongUnsafe(
   isId: boolean,
   idOrUrl: string,
   setName: (name: string) => void,
-  playlistFolder?: string ,
-  trackId?: string ,
+  playlistFolder?: string,
+  trackId?: string,
   increasePlaylistProgress: (value: number) => void = () => {},
 ) {
   const sendFeedback = (message: unknown, progress?: number) => {
@@ -556,7 +571,8 @@ async function iterableStreamToProcessedUint8Array(
           }),
           ratio,
         );
-        increasePlaylistProgress(0.15 + (ratio * 0.85));
+        const processingProgress = ratio * 0.85;
+        increasePlaylistProgress(0.15 + processingProgress);
       });
 
       const safeVideoNameWithExtension = `${safeVideoName}.${extension}`;
@@ -632,6 +648,13 @@ async function writeID3(
 }
 
 export async function downloadPlaylist(givenUrl?: string | URL) {
+  try {
+    await ensureInitialized();
+  } catch (error: unknown) {
+    sendError(error as Error);
+    return;
+  }
+
   try {
     givenUrl = new URL(givenUrl ?? '');
   } catch {
@@ -780,7 +803,8 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
 
   const increaseProgress = (itemPercentage: number) => {
     const currentProgress = (counter - 1) / (items.length ?? 1);
-    const newProgress = currentProgress + (progressStep * itemPercentage);
+    const itemProgress = progressStep * itemPercentage;
+    const newProgress = currentProgress + itemProgress;
     win.setProgressBar(newProgress);
   };
 
