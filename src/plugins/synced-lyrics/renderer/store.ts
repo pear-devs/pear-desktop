@@ -91,6 +91,10 @@ export const fetchLyrics = (info: SongInfo) => {
 
   const tasks: Promise<void>[] = [];
 
+  // The cache entry is dropped by `refreshLyrics` (e.g. on login/logout), results of searches
+  // that started before that must neither be shown nor repopulate the cache.
+  const isCurrentSearch = () => searchCache.get(info.videoId) === cache;
+
   // prettier-ignore
   for (
     const [providerName, provider] of Object.entries(providers) as [
@@ -107,7 +111,7 @@ export const fetchLyrics = (info: SongInfo) => {
           pCache.state = 'done';
           pCache.data = res;
 
-          if (getSongInfo().videoId === info.videoId) {
+          if (isCurrentSearch() && getSongInfo().videoId === info.videoId) {
             setLyricsStore('lyrics', (old) => {
               return {
                 ...old,
@@ -126,7 +130,7 @@ export const fetchLyrics = (info: SongInfo) => {
 
           console.error(error);
 
-          if (getSongInfo().videoId === info.videoId) {
+          if (isCurrentSearch() && getSongInfo().videoId === info.videoId) {
             setLyricsStore('lyrics', (old) => {
               return {
                 ...old,
@@ -139,9 +143,24 @@ export const fetchLyrics = (info: SongInfo) => {
   }
 
   Promise.allSettled(tasks).then(() => {
+    // invalidated while it was loading, a newer search owns the entry now
+    if (!isCurrentSearch()) return;
+
     cache.state = 'done';
-    searchCache.set(info.videoId, cache);
   });
+};
+
+/**
+ * Drops every cached search (including the ones still loading) and searches the current song again.
+ * Needed when something a provider depends on changes (e.g. the MusixMatch login), otherwise
+ * results fetched before the change stay on screen until the app restarts.
+ * Searches that were started before are ignored once they finish.
+ */
+export const refreshLyrics = () => {
+  searchCache.clear();
+
+  const info = getSongInfo();
+  if (info?.videoId) fetchLyrics(info);
 };
 
 export const retrySearch = (provider: ProviderName, info: SongInfo) => {

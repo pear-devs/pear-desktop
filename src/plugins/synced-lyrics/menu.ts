@@ -1,10 +1,12 @@
+import { dialog, type MenuItemConstructorOptions } from 'electron';
+
 import { t } from '@/i18n';
 
+import { loginToMusixMatch, logoutFromMusixMatch } from './musixmatch-login';
 import { providerNames } from './providers';
 
 import type { SyncedLyricsPluginConfig } from './types';
 import type { MenuContext } from '@/types/contexts';
-import type { MenuItemConstructorOptions } from 'electron';
 
 export const menu = async (
   ctx: MenuContext<SyncedLyricsPluginConfig>,
@@ -39,6 +41,52 @@ export const menu = async (
               },
             }) as const,
         ),
+      ],
+    },
+    {
+      label: 'MusixMatch account',
+      toolTip:
+        'Log in to MusixMatch so lyrics can be fetched with your own token',
+      type: 'submenu',
+      submenu: [
+        {
+          label: config.musixmatchToken
+            ? 'Logged in (click to log in again)'
+            : 'Log in...',
+          toolTip:
+            'Opens musixmatch.com. Log in there, the window closes automatically once the login is detected.',
+          async click() {
+            const { login, cookieNames, cancelled } = await loginToMusixMatch(
+              ctx.window,
+            );
+            if (login) {
+              await ctx.setConfig({
+                musixmatchToken: login.token,
+                musixmatchAppId: login.appId ?? '',
+              });
+              await ctx.refresh();
+            } else if (!cancelled) {
+              dialog.showErrorBox(
+                'MusixMatch login',
+                `No login token was found.\n\nMake sure you are logged in before closing the window.\nCookies seen on musixmatch.com: ${cookieNames.join(', ') || 'none'}`,
+              );
+            }
+          },
+        },
+        {
+          label: 'Log out',
+          enabled: !!config.musixmatchToken,
+          async click() {
+            await logoutFromMusixMatch();
+            // `undefined` would be ignored by the config merge (the old value would stay),
+            // so the values are cleared with an empty string instead
+            await ctx.setConfig({
+              musixmatchToken: '',
+              musixmatchAppId: '',
+            });
+            await ctx.refresh();
+          },
+        },
       ],
     },
     {
