@@ -61,9 +61,13 @@ interface VolumeFade {
   callback?: () => void;
 }
 
+export interface VolumeControllable {
+  volume: number;
+}
+
 // Main class
 export class VolumeFader {
-  private readonly media: HTMLMediaElement;
+  private readonly media: VolumeControllable;
   private readonly logger: VolumeLogger | null;
   private scale: {
     internalToVolume: (level: number) => number;
@@ -76,19 +80,19 @@ export class VolumeFader {
   /**
    * VolumeFader Constructor
    *
-   * @param media {HTMLMediaElement} - audio or video element to be controlled
+   * @param media {VolumeControllable} - object with a volume property to be controlled
    * @param options {Object} - an object with optional settings
    * @throws {TypeError} if options.initialVolume or options.fadeDuration are invalid
    *
    */
-  constructor(media: HTMLMediaElement, options: VolumeFaderOptions) {
-    // Passed media element of correct type?
-    if (media instanceof HTMLMediaElement) {
+  constructor(media: VolumeControllable, options: VolumeFaderOptions) {
+    // Passed object has volume property?
+    if (media && typeof media.volume !== 'undefined') {
       // Save reference to media element
       this.media = media;
     } else {
       // Abort and throw an exception
-      throw new TypeError('Media element expected!');
+      throw new TypeError('Media element with volume property expected!');
     }
 
     // Make sure options is an object
@@ -113,6 +117,15 @@ export class VolumeFader {
 
       // Log setting
       this.logger?.('Using linear fading.');
+    }
+    // Equal power fading?
+    else if (options.fadeScaling === 'equalPower') {
+      this.scale = {
+        // level 0..1 to volume 0..1 (cos/sin curve)
+        internalToVolume: (level: number) => Math.sin(level * Math.PI / 2),
+        volumeToInternal: (level: number) => Math.asin(level) / (Math.PI / 2),
+      };
+      this.logger?.('Using equal power fading.');
     }
     // No linear, but logarithmic fading…
     else {
@@ -139,7 +152,7 @@ export class VolumeFader {
       else {
         // Abort and throw exception
         throw new TypeError(
-          "Expected 'linear', 'logarithmic' or a positive number as fade scaling preference!",
+          "Expected 'linear', 'logarithmic', 'equalPower' or a positive number as fade scaling preference!",
         );
       }
 
@@ -279,6 +292,18 @@ export class VolumeFader {
     this.logger?.('New fade started:', this.fade);
 
     // Return instance for chaining
+    return this;
+  }
+
+  /**
+   * Cancel the current fade immediately without jumping to the target volume.
+   *
+   * @return {Object} VolumeFader instance for chaining
+   */
+  cancelFade() {
+    this.active = false;
+    this.fade = undefined;
+    this.logger?.('Fade canceled.');
     return this;
   }
 
