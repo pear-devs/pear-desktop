@@ -375,6 +375,139 @@
         }
       }
     },
+    "automix": {
+      "description": "Transitions between songs like Apple Music AutoMix: lets real endings play out and segues in as they die away, beat-matches songs with a steady beat (time-stretched, phrase aligned), trims silence, and can also do beat cuts or smooth fades. Don't use together with Crossfade",
+      "menu": {
+        "active": "AutoMix on",
+        "apple-analysis": "Use Apple Music's song analysis (beats, phrases, vocals) when available",
+        "beat-only": "Only beat-matched transitions (Beat Match or Beat Cut, no segues)",
+        "cut-echo": "Echo the old song's last beat on Beat Cuts",
+        "effects": "Apple Music effects on blends (filter sweeps, echoes, reverb)",
+        "spotify-style": "Spotify-style blends (bass swap at the midpoint, filters, no vocal clashes)",
+        "reorder-shape": {
+          "build": "Build up the energy",
+          "label": "Reorder the queue for",
+          "smooth": "Smoothest transitions",
+          "steady": "Keep the energy steady"
+        },
+        "beats": "{{beats}} beats",
+        "blend-length": "Blend length",
+        "fade-length": "Smooth fade length",
+        "respect-albums": "Play albums without transitions",
+        "seconds": "{{seconds}} seconds",
+        "show-mix-card": "Show \"AutoMixing\" card",
+        "artwork-fade": "Cross-fade artwork while mixing",
+        "tempo-range": {
+          "label": "Tempo matching",
+          "off": "Off (no time-stretching)",
+          "value": "Up to ±{{percent}}%"
+        },
+        "transition": {
+          "auto": "Automatic (recommended)",
+          "label": "Transition style"
+        }
+      },
+      "name": "AutoMix [Beta]",
+      "style": {
+        "blend": "Beat Match",
+        "cut": "Beat Cut",
+        "segue": "Segue",
+        "smooth": "Fade"
+      },
+      "ui": {
+        "detail": {
+          "apple": "Planned with Apple Music's analysis of the songs",
+          "blend": "{{bars}} bars · {{from}} → {{to}} BPM · stretched {{stretch}}%",
+          "entry": "Comes into the next song at {{time}}",
+          "entry-vocal": "Comes into the next song at {{time}}, finishing as its vocals start at {{vocal}}",
+          "cut": "Cut on the downbeat · {{bpm}} BPM",
+          "effect": "Apple Music effect: {{name}}",
+          "spotify-effect": "Spotify transition: {{name}}",
+          "keys": "key {{from}} → {{to}}",
+          "lead-in": "{{seconds}} s lead-in, lands on the final hit",
+          "segue": "Plays the ending out, next song in as it dies away",
+          "segue-cold": "Next song lands right on the final hit",
+          "smooth": "{{seconds}} s fade"
+        },
+        "low-quality": "Only a lower quality stream ({{quality}}) was available for mixing, so the transition may sound duller than normal playback",
+        "mixing": "AutoMixing",
+        "off": "AutoMix off",
+        "on": "AutoMix",
+        "mix-now": {
+          "armed": "Mixing soon",
+          "busy": "Getting ready…",
+          "idle": "Mix now",
+          "title": "Start the transition into the next song now, on the next bar (or phrase) it can",
+          "unavailable": "Next song isn't ready"
+        },
+        "reorder": {
+          "already": "Already in the best order",
+          "busy": "Analysing {{done}}/{{total}}",
+          "changed": "The queue changed, can't undo",
+          "failed": "Couldn't reorder",
+          "label": "Reorder",
+          "mixing": "Wait for the transition to finish",
+          "nothing": "Nothing to reorder",
+          "title": "Reorder the upcoming songs for the smoothest AutoMix transitions",
+          "undo": "Undo",
+          "undo-title": "Moved {{moved}} songs · beat-matched {{matched}} of {{transitions}} (was {{was}}) · {{clashes}} key clashes. Click to put the queue back",
+          "undone": "Order restored"
+        },
+        "reason": {
+          "analysis-failed": "couldn't download or analyse a song",
+          "no-next": "nothing queued after this song",
+          "no-room": "no good mix point left in this song",
+          "repeat-one": "repeat one is on",
+          "same-album": "next song is from the same album",
+          "version-mismatch": "the playing version doesn't match the analysed audio"
+        },
+        "hint": {
+          "analyzing": "Analysing the beats of this song and the next one",
+          "analyzing-heading": "Picking a transition…",
+          "click-off": "Click the AutoMix button to turn it off",
+          "click-on": "Click the AutoMix button to turn it on",
+          "next": "Next: {{style}}",
+          "now": "Mixing now: {{style}}",
+          "off-heading": "AutoMix is off",
+          "waiting-heading": "No transition planned",
+          "when": "Into \"{{title}}\" at {{time}}"
+        },
+        "why": {
+          "fallback": "Not enough room for the preferred mix, so it uses this instead",
+          "key-clash": "The beats match but the keys clash ({{from}} vs {{to}}), so the overlap is kept short",
+          "late-change": "The next song changed too recently to analyse, so it fades smoothly into it",
+          "beat-only-cut": "A beat-matched blend isn't possible here (tempos too far apart, or no room), so it cuts on the downbeat instead (beat-matched transitions only)",
+          "cold-ending": "This song stops on a hit, so it gets to finish and the next song lands right on that hit",
+          "ending-blend": "This song stops on the beat, so the next one is beat-matched in underneath its last bars and takes over on the final hit",
+          "loud-handover": "This song ends on a hit and the next one starts straight away, so it cuts on the downbeat",
+          "natural-ending": "This song has a real ending, so it plays out and the next one comes in as it dies away",
+          "natural-fade": "The beats can't be matched, so the next song fades in underneath this one's outro, filtered at first so they don't clash",
+          "cold-lead-in": "The beats can't be matched, so the next song's intro rises in under this one's last moments and takes over on its final hit",
+          "no-beat": "There's no steady beat to lock to, so it fades smoothly",
+          "preference": "Chosen in the AutoMix settings",
+          "tempo-match": "The tempos are close, so the next song is time-stretched and its beats locked to this one",
+          "tempo-mismatch": "The tempos are too far apart to beat-match, so it fades smoothly"
+        },
+        "timeline": {
+          "bars": "Downbeats",
+          "bass": "bass swap",
+          "button": "Transition details",
+          "close": "Close",
+          "done": "Transition done",
+          "high": "Highs",
+          "in": "Transition in {{time}}",
+          "level": "What you'll hear",
+          "low": "Bass",
+          "mid": "Mids",
+          "mix": "mix",
+          "mixing": "Mixing · {{percent}}%",
+          "now-playing": "Now playing",
+          "title": "AutoMix transition",
+          "up-next": "Up next",
+          "vocals": "vocals"
+        }
+      }
+    },
     "blur-nav-bar": {
       "description": "Makes navigation bar transparent and blurry",
       "name": "Blur Navigation Bar"
