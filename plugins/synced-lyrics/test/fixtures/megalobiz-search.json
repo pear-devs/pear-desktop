@@ -1,0 +1,43 @@
+{
+ "query": {
+  "title": "Yellow",
+  "artist": "Coldplay",
+  "duration": 269
+ },
+ "count": 3,
+ "results": [
+  {
+   "id": 8510,
+   "title": "Yellow",
+   "artist": "Coldplay",
+   "duration": 269.24,
+   "duration_diff": 0.24,
+   "sync": "manual",
+   "score": 1,
+   "url": "https://megalobiz.com/lrc/8510/yellow",
+   "lrc_url": "https://api.megalobiz.com/api/public/v1/lrc/8510?format=lrc"
+  },
+  {
+   "id": 72486,
+   "title": "Yellow",
+   "artist": "Coldplay",
+   "duration": 271,
+   "duration_diff": 2,
+   "sync": "manual",
+   "score": 1,
+   "url": "https://megalobiz.com/lrc/72486/yellow",
+   "lrc_url": "https://api.megalobiz.com/api/public/v1/lrc/72486?format=lrc"
+  },
+  {
+   "id": 104739,
+   "title": "Yellow",
+   "artist": "Coldplay",
+   "duration": 270.26,
+   "duration_diff": 1.26,
+   "sync": "manual",
+   "score": 1,
+   "url": "https://megalobiz.com/lrc/104739/yellow",
+   "lrc_url": "https://api.megalobiz.com/api/public/v1/lrc/104739?format=lrc"
+  }
+ ]
+}

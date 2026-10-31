@@ -1,0 +1,18 @@
+{
+  "name": "@pear/plugin-auth-proxy-adapter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pear/sdk": "workspace:*",
+    "socks": "^2.8.10"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "electron": "^44.9.0",
+    "vitest": "^5.0.5"
+  }
+}

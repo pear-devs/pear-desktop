@@ -1,0 +1,15 @@
+{
+  "name": "@pear/page",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@pear/sdk": "workspace:*",
+    "@pear/ui": "workspace:*"
+  }
+}

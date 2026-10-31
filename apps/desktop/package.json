@@ -1,0 +1,51 @@
+{
+  "name": "@pear/desktop",
+  "productName": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063",
+  "version": "4.0.0",
+  "description": "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063 Desktop App - including custom plugins",
+  "author": {
+    "name": "th-ch",
+    "email": "th-ch@users.noreply.github.com",
+    "url": "https://github.com/pear-devs/pear-desktop"
+  },
+  "license": "MIT",
+  "repository": "pear-devs/pear-desktop",
+  "private": true,
+  "type": "module",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "start": "electron-vite preview",
+    "typecheck": "tsc -p .",
+    "test:e2e": "electron-vite build && playwright test",
+    "test": "vitest run",
+    "i18n": "nub scripts/i18n.ts",
+    "dist": "electron-vite build && electron-builder --win --mac --linux -p never",
+    "dist:linux": "electron-vite build && electron-builder --linux -p never",
+    "dist:linux:deb-arm64": "electron-vite build && electron-builder --linux deb:arm64 -p never",
+    "dist:linux:rpm-arm64": "electron-vite build && electron-builder --linux rpm:arm64 -p never",
+    "dist:mac": "electron-vite build && electron-builder --mac dmg:x64 -p never",
+    "dist:mac:arm64": "electron-vite build && electron-builder --mac dmg:arm64 -p never",
+    "dist:win": "electron-vite build && electron-builder --win -p never",
+    "dist:win:x64": "electron-vite build && electron-builder --win nsis-web:x64 -p never",
+    "release:linux": "electron-vite build && electron-builder --linux -p always -c.snap.publish=github",
+    "release:mac": "electron-vite build && electron-builder --mac -p always",
+    "release:win": "electron-vite build && electron-builder --win -p always"
+  },
+  "devDependencies": {
+    "@jellybrick/dbus-next": "^0.11.4",
+    "@pear/page": "workspace:*",
+    "@pear/sdk": "workspace:*",
+    "@pear/vite-plugin": "workspace:*",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.18.2",
+    "electron": "^44.9.0",
+    "electron-builder": "26.15.3",
+    "electron-vite": "^6.0.0",
+    "vite": "^8.3.4",
+    "vitest": "^5.0.5",
+    "ws": "^8.22.0"
+  }
+}
