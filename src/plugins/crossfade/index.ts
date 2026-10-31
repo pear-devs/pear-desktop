@@ -1,13 +1,16 @@
 import prompt from 'custom-electron-prompt';
-import { Howl } from 'howler';
 import { Innertube } from '\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js';
 
 import { t } from '@/i18n';
 import { getNetFetchAsFetch } from '@/plugins/utils/main';
+import {
+  mintPoToken,
+  setupYoutubeiEvaluator,
+} from '@/plugins/utils/main/youtubei';
 import promptOptions from '@/providers/prompt-options';
-import { createPlugin } from '@/utils';
+import { createPlugin, LoggerPrefix } from '@/utils';
 
-import { VolumeFader } from './fader';
+import { type VolumeControl, VolumeFader } from './fader';
 
 import type { RendererContext } from '@/types/contexts';
 import type { BrowserWindow } from 'electron';
@@ -165,13 +168,36 @@ export default createPlugin<
   },
 
   async backend({ ipc }) {
+    setupYoutubeiEvaluator();
     const yt = await Innertube.create({
       fetch: getNetFetchAsFetch(),
     });
 
     ipc.handle('audio-url', async (videoID: string) => {
-      const info = await yt.getBasicInfo(videoID);
-      return info.streaming_data?.formats[0].decipher(yt.session.player);
+      try {
+        const poToken = await mintPoToken(
+          yt.session.context.client.visitorData ?? '',
+          videoID,
+        );
+        const info = await yt.getBasicInfo(videoID, {
+          client: 'YTMUSIC',
+          po_token: poToken,
+        });
+        const url = new URL(
+          await info
+            .chooseFormat({ type: 'audio', quality: 'best' })
+            .decipher(yt.session.player),
+        );
+        url.searchParams.set('pot', poToken);
+        return url.toString();
+      } catch (error) {
+        console.error(
+          LoggerPrefix,
+          `[crossfade] Failed to get the stream URL of ${videoID}:`,
+          error,
+        );
+        return '';
+      }
     });
   },
 
@@ -183,139 +209,262 @@ export default createPlugin<
     onConfigChange(newConfig) {
       this.config = newConfig;
     },
-    onPlayerApiReady() {
-      let transitionAudio: Howl; // Howler audio used to fade out the current music
-      let firstVideo = true;
-      let waitForTransition: Promise<unknown>;
+    onPlayerApiReady(api) {
+      const video = document.querySelector('video')!;
 
-      const getStreamURL = async (videoID: string): Promise<string> =>
-        this.ipc?.invoke('audio-url', videoID) as Promise<string>;
+      // The current song as a second, silent stream. Near the end of a song
+      // it takes over the old song, which then fades out on it while the
+      // video already plays the next song.
+      let transitionAudio: HTMLAudioElement | undefined;
+      let transitionVideoID: string | undefined;
+      let currentVideoID: string | undefined;
+      // The end trigger moved the old song to the transition audio and
+      // skipped to the next song; the navigation it causes finishes the handover
+      let handedOver = false;
+      let handoverTimeout: ReturnType<typeof setTimeout> | undefined;
+      const fadingOut = new Set<HTMLAudioElement>();
 
       const getVideoIDFromURL = (url: string) =>
         new URLSearchParams(url.split('?')?.at(-1)).get('v');
 
-      const isReadyToCrossfade = () =>
-        transitionAudio && transitionAudio.state() === 'loaded';
-
-      const watchVideoIDChanges = (cb: (id: string) => void) => {
-        window.navigation.addEventListener('navigate', (event) => {
-          const currentVideoID = getVideoIDFromURL(
-            (event.currentTarget as Navigation).currentEntry?.url ?? '',
-          );
-          const nextVideoID = getVideoIDFromURL(event.destination.url ?? '');
-
-          if (
-            nextVideoID &&
-            currentVideoID &&
-            (firstVideo || nextVideoID !== currentVideoID)
-          ) {
-            if (isReadyToCrossfade()) {
-              crossfade(() => {
-                cb(nextVideoID);
-              });
-            } else {
-              cb(nextVideoID);
-              firstVideo = false;
-            }
-          }
-        });
-      };
-
-      const createAudioForCrossfade = (url: string) => {
-        if (transitionAudio) {
-          transitionAudio.unload();
-        }
-
-        transitionAudio = new Howl({
-          src: url,
-          html5: true,
-          volume: 0,
-        });
-        syncVideoWithTransitionAudio();
-      };
-
-      const syncVideoWithTransitionAudio = () => {
-        const video = document.querySelector('video')!;
-
-        const videoFader = new VolumeFader(video, {
-          fadeScaling: this.config?.fadeScaling,
-          fadeDuration: this.config?.fadeInDuration,
-        });
-
-        transitionAudio.play();
-        transitionAudio.seek(video.currentTime);
-
-        video.addEventListener('seeking', () => {
-          transitionAudio.seek(video.currentTime);
-        });
-
-        video.addEventListener('pause', () => {
-          transitionAudio.pause();
-        });
-
-        video.addEventListener('play', () => {
-          transitionAudio.play();
-          transitionAudio.seek(video.currentTime);
-
-          // Fade in
-          const videoVolume = video.volume;
-          video.volume = 0;
-          videoFader.fadeTo(videoVolume);
-        });
-
-        // Exit just before the end for the transition
-        const transitionBeforeEnd = () => {
-          if (
-            video.currentTime >=
-              video.duration - (this.config?.secondsBeforeEnd ?? 0) &&
-            isReadyToCrossfade()
-          ) {
-            video.removeEventListener('timeupdate', transitionBeforeEnd);
-
-            // Go to next video - XXX: does not support "repeat 1" mode
-            document.querySelector<HTMLButtonElement>('.next-button')?.click();
-          }
-        };
-
-        video.addEventListener('timeupdate', transitionBeforeEnd);
-      };
-
-      const crossfade = (cb: () => void) => {
-        if (!isReadyToCrossfade()) {
-          cb();
-          return;
-        }
-
-        let resolveTransition: () => void;
-        waitForTransition = new Promise<void>((resolve) => {
-          resolveTransition = resolve;
-        });
-
-        const video = document.querySelector('video')!;
-
-        const fader = new VolumeFader(transitionAudio._sounds[0]._node, {
-          initialVolume: video.volume,
-          fadeScaling: this.config?.fadeScaling,
-          fadeDuration: this.config?.fadeOutDuration,
-        });
-
-        // Fade out the music
-        video.volume = 0;
-        fader.fadeOut(() => {
-          resolveTransition();
-          cb();
-        });
-      };
-
-      watchVideoIDChanges(async (videoID) => {
-        await waitForTransition;
-        const url = await getStreamURL(videoID);
-        if (!url) {
-          return;
-        }
-
-        createAudioForCrossfade(url);
+      const fadeOptions = (fadeDuration?: number) => ({
+        fadeScaling: this.config?.fadeScaling,
+        fadeDuration,
       });
+
+      // Video volume. YouTube Music writes `video.volume` for every song
+      // (slider × loudness normalization), also while crossfade holds the
+      // video silent. Its value is kept as the target, and the element
+      // plays at `target × gain`; crossfade only moves the gain.
+      const nativeVolume = Object.getOwnPropertyDescriptor(
+        HTMLMediaElement.prototype,
+        'volume',
+      )!;
+      let targetVolume = video.volume;
+      let gain = 1;
+      const applyVideoVolume = () =>
+        nativeVolume.set!.call(video, targetVolume * gain);
+      Object.defineProperty(video, 'volume', {
+        configurable: true,
+        get: () => targetVolume,
+        set: (volume: number) => {
+          if (!(volume >= 0 && volume <= 1)) {
+            // Throws the native IndexSizeError
+            nativeVolume.set!.call(video, volume);
+          }
+          targetVolume = volume;
+          applyVideoVolume();
+        },
+      });
+      const videoGain: VolumeControl = {
+        get volume() {
+          return gain;
+        },
+        set volume(level: number) {
+          gain = level;
+          applyVideoVolume();
+        },
+      };
+      let videoFader: VolumeFader | undefined;
+      const fadeInVideo = () => {
+        videoFader?.stop();
+        videoGain.volume = 0;
+        videoFader = new VolumeFader(
+          videoGain,
+          fadeOptions(this.config?.fadeInDuration),
+        );
+        videoFader.fadeTo(1, () => {
+          videoFader = undefined;
+        });
+      };
+
+      const unload = (audio: HTMLAudioElement | undefined) => {
+        if (!audio) return;
+        fadingOut.delete(audio);
+        audio.pause();
+        audio.removeAttribute('src');
+        audio.load();
+      };
+
+      const fadeOut = (audio: HTMLAudioElement) => {
+        fadingOut.add(audio);
+        new VolumeFader(
+          audio,
+          fadeOptions(this.config?.fadeOutDuration),
+        ).fadeTo(0, () => unload(audio));
+      };
+
+      const isReadyToCrossfade = () =>
+        !!transitionAudio &&
+        transitionVideoID === currentVideoID &&
+        transitionAudio.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA &&
+        Number.isFinite(transitionAudio.duration);
+
+      // Song time comes from the player API: YouTube Music can append the
+      // next song to the same <video> buffer, and then the element's
+      // currentTime and duration span songs
+      const songTime = () => api.getCurrentTime();
+
+      // A seek leaves the audio tens of ms behind, which seeking again
+      // cannot fix, so small offsets are corrected through the playback rate
+      const syncTransitionAudio = () => {
+        const audio = transitionAudio;
+        if (!audio || handedOver || transitionVideoID !== currentVideoID) {
+          return;
+        }
+        if (video.paused) {
+          audio.pause();
+          return;
+        }
+        if (audio.paused) {
+          audio.currentTime = songTime();
+          audio.play().catch(() => {});
+          return;
+        }
+        const offset = audio.currentTime - songTime();
+        if (Math.abs(offset) > 0.5) {
+          audio.currentTime = songTime();
+          audio.playbackRate = video.playbackRate;
+        } else {
+          // Catch up half the offset per second, at most 5% faster or slower
+          const catchUp = offset / 2;
+          const correction =
+            Math.abs(offset) < 0.005
+              ? 1
+              : Math.min(1.05, Math.max(0.95, 1 - catchUp));
+          audio.playbackRate = video.playbackRate * correction;
+        }
+      };
+
+      const loadTransitionAudio = async (videoID: string) => {
+        const url = (await this.ipc?.invoke('audio-url', videoID)) as string;
+        if (videoID !== currentVideoID) return; // skipped in the meantime
+        unload(transitionAudio);
+        transitionAudio = undefined;
+        if (!url) return; // the next song change is a plain cut
+
+        const audio = new Audio();
+        audio.preload = 'auto';
+        audio.volume = 0;
+        audio.addEventListener('error', () => {
+          if (transitionAudio === audio) {
+            transitionAudio = undefined;
+            unload(audio);
+          }
+        });
+        audio.src = url;
+        transitionAudio = audio;
+        transitionVideoID = videoID;
+        syncTransitionAudio();
+      };
+
+      // Both play the old song for a moment, with an equal-power curve:
+      // switching in one step left a gap, likely because the two paths have
+      // different output delays (the video goes through the app's Web Audio graph)
+      const OVERLAP_MS = 100;
+      const handOver = () => {
+        const audio = transitionAudio!;
+        handedOver = true;
+        videoFader?.stop();
+        videoFader = undefined;
+        audio.playbackRate = video.playbackRate;
+        const startGain = gain;
+        const start = Date.now();
+        const step = () => {
+          const progress = Math.min((Date.now() - start) / OVERLAP_MS, 1);
+          if (progress < 1) {
+            const angle = (progress * Math.PI) / 2;
+            videoGain.volume = startGain * Math.cos(angle);
+            audio.volume = targetVolume * startGain * Math.sin(angle);
+            setTimeout(step, 10);
+            return;
+          }
+          // Exact end values: cos(π/2) isn't 0, and the timeupdate fallback
+          // only fades the next song in from a gain of exactly 0
+          videoGain.volume = 0;
+          audio.volume = targetVolume * startGain;
+          // Go to next video - XXX: does not support "repeat 1" mode
+          api.nextVideo();
+          // No next song: give the old one back to the video
+          handoverTimeout = setTimeout(() => {
+            if (!handedOver) return;
+            handedOver = false;
+            audio.volume = 0;
+            videoGain.volume = startGain;
+          }, 3000);
+        };
+        step();
+      };
+
+      const onSongChange = (videoID: string) => {
+        const previous = transitionAudio;
+        if (handedOver) {
+          clearTimeout(handoverTimeout);
+          handedOver = false;
+          fadeOut(previous!);
+        } else if (previous && isReadyToCrossfade()) {
+          // Manual skip: the video has already switched, so hand over at once
+          previous.playbackRate = video.playbackRate;
+          previous.volume = targetVolume * gain;
+          videoFader?.stop();
+          videoFader = undefined;
+          videoGain.volume = 0;
+          fadeOut(previous);
+        } else {
+          unload(previous);
+        }
+        transitionAudio = undefined;
+        currentVideoID = videoID;
+        loadTransitionAudio(videoID).catch(() => {});
+      };
+
+      window.navigation.addEventListener('navigate', (event) => {
+        const nextVideoID = getVideoIDFromURL(event.destination.url ?? '');
+        if (nextVideoID && nextVideoID !== currentVideoID) {
+          onSongChange(nextVideoID);
+        }
+      });
+
+      video.addEventListener('timeupdate', () => {
+        if (handedOver) return;
+        syncTransitionAudio();
+        // The new song started without a `play` event: don't stay silent
+        if (gain === 0 && !videoFader && !video.paused) fadeInVideo();
+
+        const before = this.config?.secondsBeforeEnd ?? 0;
+        if (!isReadyToCrossfade()) return;
+        // Length from the same song's stream: `getDuration()` is sometimes
+        // short right after a natural transition
+        const length = transitionAudio!.duration;
+        const time = songTime();
+        if (
+          length > before * 2 &&
+          time >= length - before &&
+          time < length - 0.5
+        ) {
+          handOver();
+        }
+      });
+
+      video.addEventListener('seeked', () => {
+        if (transitionAudio && !handedOver) {
+          transitionAudio.currentTime = songTime();
+        }
+      });
+
+      video.addEventListener('pause', () => {
+        transitionAudio?.pause();
+        // A fade-out cannot resume in place; drop it
+        for (const audio of fadingOut) unload(audio);
+      });
+
+      video.addEventListener('play', () => {
+        syncTransitionAudio();
+        if (!handedOver) fadeInVideo();
+      });
+
+      const initialVideoID = getVideoIDFromURL(location.href);
+      if (initialVideoID) onSongChange(initialVideoID);
     },
   },
 });
