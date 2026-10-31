@@ -6,7 +6,10 @@
 /* original style */
 ytmusic-app-layout {
   overflow: auto scroll;
-  height: calc(100vh - var(--menu-bar-height, 36px));
+  /* The layout starts at the top under the fixed title bar (#content is
+     padded for it), so it fills the viewport; 100vh minus the title bar
+     left a gap at the bottom */
+  height: 100vh;
 
   /* fixes laggy list scrolling in large playlists */
   backface-visibility: hidden;
@@ -25,7 +28,13 @@ ytmusic-app-layout::-webkit-scrollbar-thumb {
   background-color: rgb(126, 126, 126);
 }
 
+/* The sidebar drawer and the collapsed sidebar (mini guide) are fixed at
+   the top like the nav bar; the is-bauhaus-sidenav-enabled rules below no
+   longer match current YTM */
 ytmusic-app-layout > [slot='nav-bar'],
+ytmusic-app-layout > [slot='guide'],
+ytmusic-app-layout > [slot='mini-guide'],
+#mini-guide-background.ytmusic-app-layout,
 #nav-bar-background.ytmusic-app-layout {
   top: var(--menu-bar-height, 36px) !important;
 }
