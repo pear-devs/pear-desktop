@@ -86,6 +86,8 @@ export const get = <Key extends Paths<typeof defaultConfig>>(key: Key) =>
 
 export const edit = () => store.openInEditor();
 
+export const getStore = () => store.store as unknown as typeof defaultConfig;
+
 export const watch = (cb: Parameters<IStore['onDidAnyChange']>[0]) => {
-  store.onDidAnyChange(cb);
+  return store.onDidAnyChange(cb);
 };
