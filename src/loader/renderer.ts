@@ -28,7 +28,7 @@ export const createContext = <Config extends PluginConfig>(
     invoke: (event: string, ...args: unknown[]) =>
       window.ipcRenderer.invoke(event, ...args),
     on: (event: string, listener: CallableFunction) => {
-      window.ipcRenderer.on(event, (_, ...args: unknown[]) => {
+      return window.ipcRenderer.subscribe(event, (...args: unknown[]) => {
         // oxlint-disable-next-line typescript/no-unsafe-call
         listener(...args);
       });
