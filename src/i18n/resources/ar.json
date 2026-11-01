@@ -498,6 +498,7 @@
       }
     },
     "do-not-track": {
+      "description": "منع كلي للتتبع بشكل افتراضي",
       "menu": {
         "blocker": "مانع"
       },
