@@ -18,6 +18,15 @@ import {
   loadAllRendererPlugins,
 } from './loader/renderer';
 import { startingPages } from './providers/extracted-data';
+import {
+  getLikeStatus,
+  isShuffled,
+  nextTrack,
+  previousTrack,
+  switchRepeat,
+  toggleShuffle,
+  updateLike,
+} from './providers/player-ui';
 import { setupSongInfo } from './providers/song-info-front';
 
 import type { MusicPlayer } from '@/types/music-player';
@@ -69,14 +78,10 @@ async function onApiLoaded() {
     );
 
   window.ipcRenderer.on('peard:previous-video', () => {
-    document
-      .querySelector<HTMLElement>('.previous-button.ytmusic-player-bar')
-      ?.click();
+    previousTrack();
   });
   window.ipcRenderer.on('peard:next-video', () => {
-    document
-      .querySelector<HTMLElement>('.next-button.ytmusic-player-bar')
-      ?.click();
+    nextTrack();
   });
   window.ipcRenderer.on('peard:play', (_) => {
     api?.playVideo();
@@ -91,21 +96,8 @@ async function onApiLoaded() {
   window.ipcRenderer.on('peard:seek-to', (_, t: number) => api!.seekTo(t));
   window.ipcRenderer.on('peard:seek-by', (_, t: number) => api!.seekBy(t));
   window.ipcRenderer.on('peard:shuffle', () => {
-    document
-      .querySelector<HTMLElement & { queue: { shuffle: () => void } }>(
-        'ytmusic-player-bar',
-      )
-      ?.queue.shuffle();
+    toggleShuffle();
   });
-
-  const isShuffled = () => {
-    const isShuffled =
-      document
-        .querySelector<HTMLElement>('ytmusic-player-bar')
-        ?.attributes.getNamedItem('shuffle-on') ?? null;
-
-    return isShuffled !== null;
-  };
 
   window.ipcRenderer.on('peard:get-shuffle', () => {
     window.ipcRenderer.send('peard:get-shuffle-response', isShuffled());
@@ -114,21 +106,14 @@ async function onApiLoaded() {
   window.ipcRenderer.on(
     'peard:update-like',
     (_, status: 'LIKE' | 'DISLIKE' = 'LIKE') => {
-      document
-        .querySelector<
-          HTMLElement & { updateLikeStatus: (status: string) => void }
-        >('#like-button-renderer')
-        ?.updateLikeStatus(status);
+      updateLike(document, status);
     },
   );
-  window.ipcRenderer.on('peard:switch-repeat', (_, repeat = 1) => {
-    for (let i = 0; i < repeat; i++) {
-      document
-        .querySelector<HTMLElement & { onRepeatButtonClick: () => void }>(
-          'ytmusic-player-bar',
-        )
-        ?.onRepeatButtonClick();
-    }
+  window.ipcRenderer.on('peard:get-like-status', () => {
+    window.ipcRenderer.send('peard:get-like-status-response', getLikeStatus());
+  });
+  window.ipcRenderer.on('peard:switch-repeat', (_, repeat: number = 1) => {
+    switchRepeat(document, repeat);
   });
   window.ipcRenderer.on('peard:update-volume', (_, volume: number) => {
     document
