@@ -10,6 +10,28 @@ env:
   NODE_VERSION: "24.x"
 
 jobs:
+  audio-only-mode-tests:
+    name: Audio-only mode / Node ${{ matrix.node }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22.13.0', '24.x']
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Test audio-only mode
+        run: node --test tests/audio-only-mode.node.mjs
+
   check-permissions:
     permissions:
       contents: read
