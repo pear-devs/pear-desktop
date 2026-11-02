@@ -804,6 +804,10 @@
         }
       }
     },
+    "sfw-music": {
+      "description": "Automatically skips songs marked Explicit by YouTube Music. Pauses if an explicit queue repeats or no next song is available.",
+      "name": "SFW Music"
+    },
     "shortcuts": {
       "description": "Allows setting global hotkeys for playback (play/pause/next/previous) and turning off media OSD by overriding media keys, turning on Ctrl/CMD + F to search, turning on Linux MPRIS support for media keys, and custom hotkeys for advanced users",
       "menu": {
