@@ -909,6 +909,14 @@
         "show-time-codes": {
           "label": "Visualización del código de tiempo",
           "tooltip": "Mostrar los códigos de tiempo junto a la letra"
+        },
+        "show-translation": {
+          "label": "Mostrar traducción",
+          "tooltip": "Muestra una versión traducida de la letra"
+        },
+        "translation-language": {
+          "label": "Idioma de traducción",
+          "tooltip": "Idioma al que se traduce la letra"
         }
       },
       "name": "Letras sincronizadas",
