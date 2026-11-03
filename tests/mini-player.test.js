@@ -1,0 +1,171 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import process from 'node:process';
+
+import { test, expect, _electron as electron } from '@playwright/test';
+
+process.env.NODE_ENV = 'test';
+
+const appPath = path.resolve(import.meta.dirname, '..');
+
+/** A throwaway profile with the mini player enabled. */
+const createUserDataDir = () => {
+  const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ytm-mini-'));
+
+  fs.writeFileSync(
+    path.join(userDataDir, 'config.json'),
+    JSON.stringify({
+      __internal__: { migrations: { version: '3.12.0' } },
+      plugins: {
+        'mini-player': {
+          enabled: true,
+          openOnStart: true,
+          hideMainWindow: false,
+          opacity: 1,
+        },
+      },
+    }),
+  );
+
+  return userDataDir;
+};
+
+const launchWithMiniPlayer = (userDataDir) =>
+  electron.launch({
+    cwd: appPath,
+    args: [
+      appPath,
+      `--user-data-dir=${userDataDir}`,
+      '--no-sandbox',
+      '--disable-gpu',
+      '--whitelisted-ips=',
+      '--disable-dev-shm-usage',
+    ],
+  });
+
+const getMiniPlayerWindow = async (app) => {
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const window = app
+      .windows()
+      .find((candidate) => candidate.url().includes('mini-player'));
+
+    if (window) {
+      return window;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  throw new Error('mini player window never appeared');
+};
+
+test('Mini player - opens, renders pushed state and forwards controls', async () => {
+  test.setTimeout(120_000);
+
+  await withMiniPlayerApp(runAssertions);
+});
+
+/**
+ * Owns the temporary profile from before the launch until after the shutdown,
+ * so neither a failed startup nor a failed assertion leaves anything behind.
+ */
+const withMiniPlayerApp = async (run) => {
+  const userDataDir = createUserDataDir();
+  let app;
+
+  try {
+    app = await launchWithMiniPlayer(userDataDir);
+    await run(app);
+  } finally {
+    if (app) {
+      try {
+        await app.close();
+      } catch (error) {
+        console.warn('mini player test: app.close() failed', error);
+      }
+    }
+
+    fs.rmSync(userDataDir, { recursive: true, force: true });
+  }
+};
+
+const runAssertions = async (app) => {
+  const miniPlayer = await getMiniPlayerWindow(app);
+
+  await miniPlayer.waitForSelector('#bar');
+
+  // The window must be frameless, transparent and on top.
+  const windowFlags = await app.evaluate(({ BrowserWindow }) => {
+    const window = BrowserWindow.getAllWindows().find((candidate) =>
+      candidate.webContents.getURL().includes('mini-player'),
+    );
+
+    return {
+      isAlwaysOnTop: window.isAlwaysOnTop(),
+      isResizable: window.isResizable(),
+      size: window.getSize(),
+    };
+  });
+
+  expect(windowFlags.isAlwaysOnTop).toBe(true);
+  expect(windowFlags.isResizable).toBe(true);
+  expect(windowFlags.size[0]).toBe(480);
+
+  // Push a song state through the same channel the backend uses.
+  await app.evaluate(({ BrowserWindow }) => {
+    const window = BrowserWindow.getAllWindows().find((candidate) =>
+      candidate.webContents.getURL().includes('mini-player'),
+    );
+
+    window.webContents.send('mini-player:state', {
+      title: 'Bohemian Rhapsody',
+      artist: 'Queen',
+      imageSrc: '',
+      isPaused: false,
+      songDuration: 200,
+      elapsedSeconds: 50,
+      likeStatus: 'LIKE',
+      volume: 60,
+      isMuted: false,
+      isShuffled: true,
+      repeatMode: 'ONE',
+    });
+  });
+
+  await expect(miniPlayer.locator('#title')).toHaveText('Bohemian Rhapsody');
+  await expect(miniPlayer.locator('#artist')).toHaveText('Queen');
+  await expect(miniPlayer.locator('#like')).toHaveClass(/liked/);
+  await expect(miniPlayer.locator('#shuffle')).toHaveClass(/active/);
+  await expect(miniPlayer.locator('#repeat')).toHaveClass(/active/);
+  await expect(miniPlayer.locator('#repeat')).toHaveAttribute(
+    'title',
+    'Repeat one',
+  );
+
+  // 50s of 200s => the progress fill covers a quarter of the bar.
+  const fillRatio = await miniPlayer.evaluate(() => {
+    const fill = document.getElementById('fill');
+    const rail = document.getElementById('rail');
+    return (
+      fill.getBoundingClientRect().width / rail.getBoundingClientRect().width
+    );
+  });
+
+  expect(fillRatio).toBeGreaterThan(0.2);
+  expect(fillRatio).toBeLessThan(0.35);
+
+  // Clicking a control must reach the main process over the preload bridge.
+  // Arm the listener in its own awaited step, otherwise the click can beat the
+  // registration and the test hangs until the timeout.
+  await app.evaluate(({ ipcMain }) => {
+    globalThis.__miniPlayerControl = new Promise((resolve) => {
+      ipcMain.once('mini-player:control', (_event, action) => resolve(action));
+    });
+  });
+
+  await miniPlayer.locator('[data-action="next"]').click();
+
+  const action = await app.evaluate(() => globalThis.__miniPlayerControl);
+  expect(action).toBe('next');
+};
