@@ -1,0 +1,7 @@
+#!/bin/sh
+# Installed for everyone by the root `prepare` script (scripts/install-hooks.ts).
+
+# Keep the trademarked app name out of the sources, like pear-desktop always has:
+# escaped in JSON (fixed here; package managers un-escape package.json), never
+# plain in code or docs (reported here).
+exec node scripts/escape-names.ts --staged

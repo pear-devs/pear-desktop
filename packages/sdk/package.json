@@ -1,0 +1,36 @@
+{
+  "name": "@pear/sdk",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./macros": "./src/macros.ts",
+    "./selectors": "./src/selectors.ts",
+    "./protocol": "./src/protocol.ts",
+    "./icon": "./src/icon.ts",
+    "./song-details": "./src/song-details.ts",
+    "./rpc": "./src/rpc.ts",
+    "./core-config": "./src/core-config.ts",
+    "./i18n": "./src/i18n.ts",
+    "./accelerator": "./src/accelerator.ts",
+    "./util": "./src/util.ts",
+    "./jsx-runtime": "./src/jsx-runtime.ts",
+    "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts",
+    "./dom": "./src/dom.tsx",
+    "./stylesheets": "./src/stylesheets.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@valibot/to-json-schema": "^1.8.0",
+    "lightningcss": "^1.33.0",
+    "valibot": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "electron": "^44.9.0",
+    "vitest": "^5.0.5"
+  }
+}

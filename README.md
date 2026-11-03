@@ -4,7 +4,6 @@
 
 [![GitHub release](https://img.shields.io/github/release/pear-devs/pear-desktop.svg?style=for-the-badge)](https://github.com/pear-devs/pear-desktop/releases/)
 [![GitHub license](https://img.shields.io/github/license/pear-devs/pear-desktop.svg?style=for-the-badge)](https://github.com/pear-devs/pear-desktop/blob/master/license)
-[![eslint code style](https://img.shields.io/badge/code_style-eslint-5ed9c7.svg?style=for-the-badge)](https://github.com/pear-devs/pear-desktop/blob/master/eslint.config.mjs)
 [![Build status](https://img.shields.io/github/actions/workflow/status/pear-devs/pear-desktop/build.yml?branch=master&style=for-the-badge)](https://GitHub.com/pear-devs/pear-desktop/releases/)
 [![GitHub All Releases](https://img.shields.io/github/downloads/pear-devs/pear-desktop/total?style=for-the-badge)](https://GitHub.com/pear-devs/pear-desktop/releases/)
 <!--[![AUR](https://img.shields.io/aur/version/pear-desktop-bin?color=blueviolet&style=for-the-badge)](https://aur.archlinux.org/packages/pear-desktop-bin)-->
@@ -21,11 +20,11 @@
 >
 > **No Affiliation**
 >
-> This project, and its contributors, are not affiliated with, authorized by, endorsed by, or in any way officially connected with Google LLC, YouTube, or any of their subsidiaries or affiliates. **This is an independent, non-profit, and unofficial extension developed by a team of volunteers with the goal of providing a desktop experience.**
+> This project, and its contributors, are not affiliated with, authorized by, endorsed by, or in any way officially connected with Google LLC, &#89;&#111;&#117;&#84;&#117;&#98;&#101;, or any of their subsidiaries or affiliates. **This is an independent, non-profit, and unofficial extension developed by a team of volunteers with the goal of providing a desktop experience.**
 >
 > **Trademarks**
 >
-> The names "Google" and "YouTube Music", as well as related names, marks, emblems, and images, are registered trademarks of their respective owners. Any use of these trademarks is for identification and reference purposes only and does not imply any association with the trademark holder. We have no intention of infringing upon these trademarks or causing harm to the trademark holders.
+> The names "Google" and "&#89;&#111;&#117;&#84;&#117;&#98;&#101; Music", as well as related names, marks, emblems, and images, are registered trademarks of their respective owners. Any use of these trademarks is for identification and reference purposes only and does not imply any association with the trademark holder. We have no intention of infringing upon these trademarks or causing harm to the trademark holders.
 >
 > **Limitation of Liability**
 >
@@ -34,6 +33,7 @@
 ## Content
 
 - [Features](#features)
+  - [Plugins](#plugins)
 - [Translation](#translation)
 - [Download](#download)
   - [Arch Linux](#arch-linux)
@@ -51,6 +51,61 @@
 - [Tests](#tests)
 - [License](#license)
 - [FAQ](#faq)
+
+## Features
+
+- **Plugins** for everything from an ad blocker and synced lyrics to Discord, Last.fm and OBS integrations (see the list below).
+- **Settings without restarts**: enable, disable and configure plugins from the in-page settings (<kbd>Ctrl</kbd>+<kbd>,</kbd>, or *Pear Desktop settings* in the sidebar). The same settings open in their own window from the tray or with the `--settings` flag, even when YTM doesn't load.
+- **Themes**: your own CSS files on top of YTM, reloaded when you edit them.
+- **API server** (off by default): a REST and WebSocket API for remotes and stream overlays, documented at `/swagger`.
+- **Your settings carry over** from pear-desktop 3.x, which used the same `config.json`.
+
+### Plugins
+
+| id | name | what it does |
+|---|---|---|
+| `album-actions` | Album actions | Like or dislike every track of an album or playlist at once. |
+| `album-color-theme` | Album color theme | Tints the interface with the colors of the current track's artwork. |
+| `ambient-mode` | Ambient mode | Surrounds the video or cover art with a soft glow of its own colors. |
+| `amuse` | Amuse | Show the current song in the Amuse now-playing widget by 6K Labs. |
+| `audio-compressor` | Audio compressor | Evens out loud and quiet parts with a dynamics compressor. |
+| `auth-proxy-adapter` | Proxy | Sends all traffic through an HTTP or SOCKS proxy, including ones that need a username and password. |
+| `blur-nav-bar` | Blur navigation bar | Makes the top bar translucent with a blur behind it. |
+| `captions-selector` | Captions selector | Pick the captions language from the player bar, and optionally load it automatically. |
+| `clock` | Clock | Shows the current time in the top bar. |
+| `crossfade` | Crossfade | Fades out the end of a track and fades the next one in. |
+| `custom-output-device` | Custom output device | Play through a chosen audio device instead of the system default. |
+| `disable-autoplay` | Disable autoplay | Starts every track paused instead of playing it automatically. |
+| `discord` | Discord Rich Presence | Show your friends what you're listening to in your Discord status. |
+| `do-not-track` | Do Not Track | pear-desktop's ad and tracker blocker: strips ads and tracking data from the player, or filters requests with blocklists, skips ads that still play, and dismisses the Premium reminder YTM shows after them. |
+| `downloader` | Downloader | Downloads songs, albums and playlists to play offline from the Downloads page in your Library, and saves them as tagged audio files with cover art (on request, or always for those upgrading from pear-desktop 3.x), using yt-dlp for what it can't get itself. |
+| `equalizer` | Equalizer | A 10-band equalizer with presets. |
+| `exponential-volume` | Exponential volume | Makes the volume slider follow loudness perception, giving finer control at low volumes. |
+| `in-app-menu` | In-app menu | Replaces the system title bar: the top bar moves the window and holds the app menu. |
+| `lumiastream` | Lumia Stream | Let Lumia Stream react to the songs you play. |
+| `media-controls` | Media controls | Control playback from your desktop's media widgets and keys (MPRIS). (linux only) |
+| `music-together` | Music Together | Listen in sync with friends: host a session, share the code, and everyone hears the same thing. |
+| `navigation` | Navigation buttons | Back and forward buttons in the top bar. |
+| `notifications` | Notifications | Show a desktop notification when a new song starts. |
+| `performance-improvement` | Performance improvement | Lowers CPU use with CY Fung's scripts: batches the page's timers onto animation frames and reuses YTM's list elements. Takes effect after a restart. |
+| `picture-in-picture` | Picture in picture | Watch in a small floating window, from the track menu or a hotkey. |
+| `playback-speed` | Playback speed | Adds a speed control to the player bar (scroll over it for fine steps). |
+| `precise-volume` | Precise volume | Change the volume in fine steps with the scroll wheel or arrow keys, with a volume readout. |
+| `quality-changer` | Video quality changer | Adds a quality picker to the top of the video player. |
+| `scrobbler` | Scrobbler | Scrobble what you listen to to Last.fm and ListenBrainz. |
+| `shortcuts` | Global shortcuts | System-wide keyboard shortcuts that work while the window is in the background. |
+| `skip-disliked-songs` | Skip disliked songs | Skips a track as soon as you dislike it, and whenever a disliked track comes up. |
+| `skip-silences` | Skip silences | Skips over silent parts of tracks. |
+| `sponsorblock` | SponsorBlock | Skips non-music parts of music videos, using segments crowdsourced by SponsorBlock. |
+| `synced-lyrics` | Synced lyrics | Time-synced lyrics in the Lyrics tab, with word-by-word highlighting, click-to-seek and romanization. |
+| `taskbar-mediacontrol` | Taskbar media controls | Previous, play/pause and next buttons in the window's taskbar thumbnail. (win32 only) |
+| `touchbar` | Touch Bar | The current track and playback controls on the MacBook Touch Bar. (darwin only) |
+| `transparent-player` | Transparent player | Makes the window see-through, with a blurred material behind it on Windows 11 and macOS. |
+| `tray` | Tray icon | Playback controls and the current track in the system tray. |
+| `tuna-obs` | Tuna OBS | Show the current song in OBS through the Tuna plugin. |
+| `unobtrusive-player` | Unobtrusive player | Starting a song from a list keeps you where you are instead of opening the full player. |
+| `video-toggle` | Video toggle | Switch between a track's music video and its cover art, or hide the video entirely. |
+| `visualizer` | Visualizer | Shows a music visualizer in place of the album art on the player page. |
 
 ## Translation
 
@@ -124,181 +179,181 @@ winget install pear-devs.pear-desktop
 
 ## Themes
 
-You can load CSS files to change the look of the application (Options > Visual Tweaks > Themes).
+You can load CSS files to change the look of the application (Settings > Appearance > Themes). A theme is reloaded when
+you edit its file.
 
 Some predefined themes are available in https://github.com/kerichdev/themes-for-ytmdesktop-player.
 
 ## Dev
 
+Requires [nub](https://nubjs.com) and Node 22+.
+
 ```bash
 git clone https://github.com/pear-devs/pear-desktop
 cd pear-desktop
-pnpm install --frozen-lockfile
-pnpm dev
+nub install
+nub run dev
 ```
 
-Instead of installing pnpm on your system, you can also use [devcontainers](https://containers.dev/). You can use devcontainers either as a development environment in VS Code, or as a way to easily build the project without installing dependencies on your host system.
+`nub run dev` launches the app and rebuilds it when you change the code. With `PEAR_USER_DATA=/tmp/profile nub run dev`
+it uses a separate profile; without it, it uses the same data folder as an installed Pear Desktop, so it picks up that
+session.
 
-Note that this has it's own limitations (for example, GUI doesn't work on, at least some, Linux hosts).
+The code is a monorepo:
+
+```
+apps/desktop/               Electron main process, preload, tests
+packages/sdk/               plugin API, config schema, selector registry, macros
+packages/page/              page runtime: player facade, plugin runner, audio graph
+packages/ui/                settings (Preact in a shadow DOM)
+packages/vite-plugin-pear/  plugin discovery, host/page splitting, page bundling
+plugins/<id>/               one folder per plugin
+src/i18n/resources/         translations (Weblate)
+docs/plugins.md             plugin authoring guide
+```
+
+Other useful commands:
+
+```bash
+nub run typecheck
+nub run i18n         # adds new English texts to src/i18n/resources/en.json (Weblate's source)
+```
+
+`nub install` also installs a pre-commit hook (`.githooks/`) that keeps the trademarked name of the music service out of
+the sources: it escapes it in JSON files and rejects plain uses in code and docs (write it as unicode escapes in
+strings, or "YTM" in prose). CI checks the same.
 
 ## Build your own plugins
 
 Using plugins, you can:
 
-- manipulate the app - the `BrowserWindow` from electron is passed to the plugin handler
-- change the front by manipulating the HTML/CSS
+- manipulate the app, with the `host` part: the window, the tray, files, other apps
+- change the front, with the `page` part and CSS: YTM's page and its player
+
+The complete guide is [docs/plugins.md](docs/plugins.md).
 
 ### Creating a plugin
 
-Create a folder in `src/plugins/YOUR-PLUGIN-NAME`:
+Scaffold a plugin with:
 
-- `index.ts`: the main file of the plugin
+```bash
+nub scripts/new-plugin.ts my-plugin
+nub install
+```
+
+It creates `plugins/my-plugin/index.ts`. The settings UI is made from `config`, so there's no menu to write.
+
 ```typescript
-import style from './style.css?inline'; // import style as inline
+import { config, definePlugin } from '@pear/sdk';
+import { css } from '@pear/sdk/macros' with { type: 'macro' };
 
-import { createPlugin } from '@/utils';
-
-export default createPlugin({
+export default definePlugin({
+  id: 'my-plugin', // the folder's name
   name: 'Plugin Label',
-  restartNeeded: true, // if value is true, ytmusic show restart dialog
+  description: 'One sentence shown in settings.',
+  restartRequired: false, // true: turning it on or off needs a restart
   config: {
-    enabled: false,
-  }, // your custom config
-  stylesheets: [style], // your custom style,
-  menu: async ({ getConfig, setConfig }) => {
-    // All *Config methods are wrapped Promise<T>
-    const config = await getConfig();
-    return [
-      {
-        label: 'menu',
-        submenu: [1, 2, 3].map((value) => ({
-          label: `value ${value}`,
-          type: 'radio',
-          checked: config.value === value,
-          click() {
-            setConfig({ value });
-          },
-        })),
+    // shown in the settings
+    value: config.number(1, { label: 'Value', min: 1, max: 3, step: 1 }),
+  },
+  style: css`sel(nav_bar) { opacity: 0.9; }`, // applied while the plugin is enabled
+  host: {
+    start(ctx) {
+      ctx.window.maximize();
+      ctx.player.on('trackChange', (track) => ctx.log.info('now playing', track?.title));
+      // apply setting changes without restarting the plugin
+      ctx.onConfigChange((config) => ctx.log.info('value is now', config.value));
+    },
+    // the page part calls these with ctx.host.invoke('hello', name)
+    commands: {
+      hello(name: string) {
+        return `hello ${name}`;
       },
-    ];
+    },
   },
-  backend: {
-    start({ window, ipc }) {
-      window.maximize();
-
-      // you can communicate with renderer plugin
-      ipc.handle('some-event', () => {
-        return 'hello';
-      });
+  page: {
+    async start(ctx) {
+      console.log(await ctx.host.invoke('hello', 'page'));
+      const api = await ctx.player.ready(); // YTM's player
+      ctx.setConfig({ value: api.getVolume() > 50 ? 3 : 1 });
     },
-    // it fired when config changed
-    onConfigChange(newConfig) { /* ... */ },
-    // it fired when plugin disabled
-    stop(context) { /* ... */ },
-  },
-  renderer: {
-    async start(context) {
-      console.log(await context.ipc.invoke('some-event'));
-    },
-    // Only renderer available hook
-    onPlayerApiReady(api, context) {
-      // set plugin config easily
-      context.setConfig({ myConfig: api.getVolume() });
-    },
-    onConfigChange(newConfig) { /* ... */ },
-    stop(_context) { /* ... */ },
-  },
-  preload: {
-    async start({ getConfig }) {
-      const config = await getConfig();
-    },
-    onConfigChange(newConfig) {},
-    stop(_context) {},
   },
 });
 ```
+
+Anything set up through `ctx` is undone when the plugin is turned off, so there's no `stop` to write.
 
 ### Common use cases
 
-- injecting custom CSS: create a `style.css` file in the same folder then:
+- injecting custom CSS: `sel(name)` stands for one of the selectors in `packages/sdk/src/selectors.ts`:
 
 ```typescript
-// index.ts
-import style from './style.css?inline'; // import style as inline
+import { definePlugin } from '@pear/sdk';
+import { css } from '@pear/sdk/macros' with { type: 'macro' };
 
-import { createPlugin } from '@/utils';
-
-export default createPlugin({
+export default definePlugin({
+  id: 'my-plugin',
   name: 'Plugin Label',
-  restartNeeded: true, // if value is true, pear-desktop will show a restart dialog
-  config: {
-    enabled: false,
-  }, // your custom config
-  stylesheets: [style], // your custom style
-  renderer() {} // define renderer hook
+  style: css`sel(nav_bar) { backdrop-filter: blur(8px); }`,
 });
 ```
 
-- If you want to change the HTML:
+- If you want to change the HTML: create elements with JSX in an `index.tsx`, and add them with `ctx.mount`:
 
-```typescript
-import { createPlugin } from '@/utils';
+```tsx
+/** @jsxImportSource @pear/sdk */
+import { definePlugin } from '@pear/sdk';
 
-export default createPlugin({
+export default definePlugin({
+  id: 'my-plugin',
   name: 'Plugin Label',
-  restartNeeded: true, // if value is true, ytmusic will show the restart dialog
-  config: {
-    enabled: false,
-  }, // your custom config
-  renderer() {
-    console.log('hello from renderer');
-  } // define renderer hook
+  page(ctx) {
+    const hello = <button class="my-plugin-hello" onClick={() => ctx.toast('hello')}>Hello</button>;
+    ctx.mount(hello, 'nav_bar.right', 'prepend');
+  },
 });
 ```
 
-- communicating between the front and back: can be done using the ipcMain module from electron. See `index.ts` file and
-  example in `sponsorblock` plugin.
+- communicating between the front and back: the page calls `host.commands` with `ctx.host.invoke`, and the host
+  sends events with `ctx.emit`. See [docs/plugins.md](docs/plugins.md#talking-between-host-and-page).
 
 ## Build
 
 1. Clone the repo
-2. Follow [this guide](https://pnpm.io/installation) to install `pnpm`
-3. Run `pnpm install --frozen-lockfile` to install dependencies
-4. Run `pnpm build:OS`
+2. Follow [this guide](https://nubjs.com) to install `nub`
+3. Run `nub install` to install dependencies
+4. Run `nub run dist:OS`
 
-- `pnpm dist:win` - Windows
-- `pnpm dist:linux` - Linux (amd64)
-- `pnpm dist:linux:deb-arm64` - Linux (arm64 for Debian)
-- `pnpm dist:linux:rpm-arm64` - Linux (arm64 for Fedora)
-- `pnpm dist:mac` - macOS (amd64)
-- `pnpm dist:mac:arm64` - macOS (arm64)
+- `nub run dist:win` - Windows
+- `nub run dist:linux` - Linux (amd64)
+- `nub run dist:linux:deb-arm64` - Linux (arm64 for Debian)
+- `nub run dist:linux:rpm-arm64` - Linux (arm64 for Fedora)
+- `nub run dist:mac` - macOS (amd64)
+- `nub run dist:mac:arm64` - macOS (arm64)
 
 Builds the app for macOS, Linux, and Windows,
-using [electron-builder](https://github.com/electron-userland/electron-builder).
-
-### Building in devcontainer
-
-1. Clone the repo;
-2. Open the folder in VS Code;
-3. Reopen in container when prompted;
-4. Run `pnpm build` as above (choosing the desired target);
-5. Collect the built files from the `dist` folder.
-
-Since devcontainer uses a mount for the workspace, the built files will be available on the host system as well.
+using [electron-builder](https://github.com/electron-userland/electron-builder), into the `pack` folder.
 
 ## Production Preview
 
 ```bash
-pnpm start
+nub run build
+nub run --filter @pear/desktop start
 ```
 
 ## Tests
 
 ```bash
-pnpm test
+nub run test        # unit tests (Vitest)
+nub run test:e2e    # builds the app, then drives it against the real YTM
 ```
 
-Uses [Playwright](https://playwright.dev/) to test the app.
+The end-to-end tests use [Playwright](https://playwright.dev/) to test the app. Never automate Google sign-in in them:
+Google rate-limits the whole IP.
+
+On Linux with Xvfb installed, the apps under test open on a virtual display, so they don't take your keyboard focus;
+the two tests of maximizing and minimizing need a window manager and are skipped there. `PEAR_E2E_SHOW=1 nub run
+test:e2e` opens the apps on your desktop and runs those too.
 
 ## License
 
@@ -308,5 +363,14 @@ MIT © [pear-devs](https://github.com/pear-devs/pear-desktop)
 
 ### Why apps menu isn't showing up?
 
-If `Hide Menu` option is on - you can show the menu with the <kbd>alt</kbd> key (or <kbd>\`</kbd> [backtick] if using
-the in-app-menu plugin)
+If `Hide the menu bar` is on (Settings > Window & Tray) - you can show the menu with the <kbd>alt</kbd> key (or
+<kbd>F10</kbd> if using the in-app-menu plugin)
+
+### Why does YTM skip the cookie consent screen?
+
+The app answers it with "only essential cookies" (`SOCS=CAI`), unless you've chosen otherwise on YTM.
+
+### Musixmatch lyrics are wrong or missing?
+
+Musixmatch (synced-lyrics) needs a Musixmatch user token in the plugin's settings: Musixmatch answers anonymous apps
+with an all-zero token that only gets decoy lyrics.

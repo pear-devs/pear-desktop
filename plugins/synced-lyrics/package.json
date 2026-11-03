@@ -1,0 +1,27 @@
+{
+  "name": "@pear/plugin-synced-lyrics",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dehoist/romanize-thai": "1.0.0",
+    "@indic-transliteration/sanscript": "1.3.3",
+    "@pear/sdk": "workspace:*",
+    "chinese-conv": "^4.0.0",
+    "es-hangul": "^2.4.0",
+    "hanja": "^1.1.5",
+    "kuroshiro": "^1.2.1",
+    "kuroshiro-analyzer-kuromoji": "^1.1.0",
+    "pinyin-pro": "^3.29.5",
+    "preact": "^10.29.8",
+    "yaml": "^2.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "electron": "^44.9.0",
+    "vitest": "^5.0.5"
+  }
+}

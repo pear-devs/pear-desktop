@@ -24,33 +24,26 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - name: Setup nub and NodeJS
+        uses: nubjs/setup-nub@c7b970ec04655a2f0a111cd436cc182a3b660e7a # v0.6.0
         with:
-          version: 11
-          run_install: false
-
-      - name: Setup NodeJS
-        if: startsWith(matrix.os, 'macOS') != true
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Setup NodeJS for macOS
-        if: startsWith(matrix.os, 'macOS')
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
-        with:
+          nub-version: 0.9.5
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: nub ci
+
+      - name: Check that package.json spells the app name escaped
+        run: node scripts/escape-names.ts --check
+
+      - name: Check that en.json has every English text
+        run: nub run i18n --check
 
       # Only vite build without release if it is a fork, or it is a pull-request
       - name: Vite Build
         if: github.repository == 'pear-devs/pear-desktop' && github.event_name == 'pull_request'
         run: |
-          pnpm build
+          nub run build
 
       # Build and release if it's the main repository and is not pull-request
       - name: Build and release on Mac
@@ -58,7 +51,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pnpm release:mac
+          nub run release:mac
 
       - name: Build and release on Linux
         if: startsWith(matrix.os, 'ubuntu') && (github.repository == 'pear-devs/pear-desktop' && github.event_name != 'pull_request')
@@ -72,21 +65,21 @@ jobs:
           sudo flatpak install -y flathub org.freedesktop.Platform/x86_64/24.08
           sudo flatpak install -y flathub org.freedesktop.Sdk/x86_64/24.08
           sudo flatpak install -y flathub org.electronjs.Electron2.BaseApp/x86_64/24.08
-          pnpm release:linux
+          nub run release:linux
 
       - name: Build and release on Windows
         if: startsWith(matrix.os, 'windows') && (github.repository == 'pear-devs/pear-desktop' && github.event_name != 'pull_request')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pnpm release:win
+          nub run release:win
 
       - name: Test
         uses: coactions/setup-xvfb@b6b4fcfb9f5a895edadc3bc76318fae0ac17c8b3
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
         with:
-          run: pnpm test:debug
+          run: nub run test:e2e
 
 
   release:
@@ -101,31 +94,18 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - name: Setup nub and NodeJS
+        uses: nubjs/setup-nub@c7b970ec04655a2f0a111cd436cc182a3b660e7a # v0.6.0
         with:
-          version: 11
-          run_install: false
-
-      - name: Setup NodeJS
-        if: startsWith(matrix.os, 'macOS') != true
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Setup NodeJS for macOS
-        if: startsWith(matrix.os, 'macOS')
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
-        with:
+          nub-version: 0.9.5
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: nub ci
 
       - name: Get version
         run: |
-          echo "VERSION_TAG=v$(node -pe "require('./package.json').version")" >> $GITHUB_ENV
+          echo "VERSION_TAG=v$(node -pe "require('./apps/desktop/package.json').version")" >> $GITHUB_ENV
 
       - name: Check if version already exists in tags
         run: |
@@ -164,7 +144,7 @@ jobs:
       - name: Update changelog
         if: ${{ env.VERSION_HASH == '' }}
         run: |
-          pnpm changelog
+          nub run changelog
 
       - name: Commit changelog
         if: ${{ env.VERSION_HASH == '' }}

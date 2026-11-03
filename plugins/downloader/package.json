@@ -1,0 +1,23 @@
+{
+  "name": "@pear/plugin-downloader",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@pear/sdk": "workspace:*",
+    "@ffmpeg.wasm/core-mt": "0.12.0",
+    "@ffmpeg.wasm/main": "0.12.0",
+    "bgutils-js": "3.2.0",
+    "node-id3": "0.2.9",
+    "preact": "^10.29.8",
+    "\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js": "17.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "electron": "^44.9.0",
+    "vitest": "^5.0.5"
+  }
+}
