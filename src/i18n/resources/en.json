@@ -514,6 +514,14 @@
             "message": "Argh! Apologies, download failed…",
             "title": "Error in download!"
           },
+          "folder-already-exists": {
+            "buttons": {
+              "cancel": "Cancel",
+              "continue": "Download anyway"
+            },
+            "message": "This playlist folder already exists",
+            "title": "Folder already exists"
+          },
           "start-download-playlist": {
             "buttons": {
               "ok": "OK"
@@ -541,6 +549,7 @@
           "playlist-is-empty": "Playlist is empty",
           "playlist-is-mix-or-private": "Error getting playlist info: make sure it isn't a private or \"Mixed for you\" playlist\n\n{{error}}",
           "preparing-file": "Preparing file…",
+          "retrying-failed": "Retrying {{count}} failed download(s)…",
           "saving": "Saving…",
           "trying-to-get-playlist-id": "Trying to get playlist ID: {{playlistId}}",
           "video-id-not-found": "Video not found",
@@ -550,28 +559,70 @@
       "description": "Downloads MP3 / source audio directly from the interface",
       "menu": {
         "choose-download-folder": "Choose download folder",
+        "custom-preset": {
+          "extension": "File extension (empty = keep source format)",
+          "ffmpeg-args": "FFmpeg arguments (separated by spaces)",
+          "label": "Configure custom preset",
+          "title": "Custom preset"
+        },
         "download-finish-settings": {
           "label": "Download on finish",
           "prompt": {
-            "last-percent": "After x percent",
-            "last-seconds": "Last x seconds",
-            "title": "Configure when to download"
+            "description": "Downloads the song you are currently listening to. The download starts as soon as the selected trigger is reached.",
+            "folder": "Target folder (empty = default download folder)",
+            "last-percent": "Percent played",
+            "last-seconds": "Seconds before the end",
+            "mode": "Trigger",
+            "mode-percent": "After a share of the song was played",
+            "mode-seconds": "Shortly before the song ends",
+            "title": "Automatic download"
           },
           "submenu": {
-            "advanced": "Advanced",
+            "choose-folder": "Choose target folder…",
             "enabled": "Enabled",
-            "mode": "Time mode",
-            "percent": "Percent",
-            "seconds": "Seconds"
+            "settings": "Settings…"
           }
         },
         "download-playlist": "Download playlist",
+        "playlist-max-items": {
+          "description": "Maximum number of songs per playlist download (0 = no limit)",
+          "label": "Playlist item limit",
+          "title": "Playlist item limit"
+        },
         "presets": "Presets",
+        "show-progress": "Show download progress",
         "skip-existing": "Skip existing files"
       },
       "name": "Downloader",
       "renderer": {
-        "can-not-update-progress": "Cannot update progress"
+        "can-not-update-progress": "Cannot update progress",
+        "panel": {
+          "actions": {
+            "cancel": "Cancel download",
+            "clear": "Clear finished",
+            "collapse": "Collapse",
+            "dismiss": "Remove from list",
+            "expand": "Expand",
+            "retry": "Retry"
+          },
+          "active": "{{count}} active",
+          "automatic": "Auto",
+          "idle": "Finished",
+          "playlist": "{{title}} ({{index}}/{{size}})",
+          "status": {
+            "cancelled": "Cancelled",
+            "converting": "Converting…",
+            "done": "Done",
+            "downloading": "Downloading…",
+            "error": "Failed",
+            "preparing": "Preparing…",
+            "queued": "Queued",
+            "saving": "Saving…",
+            "skipped": "Skipped (already exists)",
+            "tagging": "Writing tags…"
+          },
+          "title": "Downloads"
+        }
       },
       "templates": {
         "button": "Download"
