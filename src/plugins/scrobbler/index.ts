@@ -107,6 +107,62 @@ export default createPlugin({
   description: () => t('plugins.scrobbler.description'),
   restartNeeded: true,
   config: defaultConfig,
+  settings: [
+    {
+      fields: [
+        {
+          type: 'switch',
+          key: 'scrobbleOtherMedia',
+          label: () => t('plugins.scrobbler.menu.scrobble-other-media'),
+        },
+        {
+          type: 'switch',
+          key: 'alternativeTitles',
+          label: () => t('plugins.scrobbler.menu.scrobble-alternative-title'),
+        },
+        {
+          type: 'switch',
+          key: 'alternativeArtist',
+          label: () => t('plugins.scrobbler.menu.scrobble-alternative-artist'),
+        },
+      ],
+    },
+    {
+      title: () => 'Last.fm',
+      fields: [
+        {
+          type: 'switch',
+          key: 'scrobblers.lastfm.enabled',
+          label: () => t('main.menu.plugins.enabled'),
+        },
+        {
+          type: 'text',
+          key: 'scrobblers.lastfm.apiKey',
+          label: () => t('plugins.scrobbler.prompt.lastfm.api-key'),
+        },
+        {
+          type: 'text',
+          key: 'scrobblers.lastfm.secret',
+          label: () => t('plugins.scrobbler.prompt.lastfm.api-secret'),
+        },
+      ],
+    },
+    {
+      title: () => 'ListenBrainz',
+      fields: [
+        {
+          type: 'switch',
+          key: 'scrobblers.listenbrainz.enabled',
+          label: () => t('main.menu.plugins.enabled'),
+        },
+        {
+          type: 'text',
+          key: 'scrobblers.listenbrainz.token',
+          label: () => t('plugins.scrobbler.menu.listenbrainz.token'),
+        },
+      ],
+    },
+  ],
   menu: onMenu,
   backend,
 });

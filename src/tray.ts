@@ -11,6 +11,7 @@ import * as config from './config';
 import { restart } from './providers/app-controls';
 import { getSongControls } from './providers/song-controls';
 import { registerCallback, SongInfoEvent } from './providers/song-info';
+import { openSettingsWindow } from './settings-window';
 
 import type { MenuTemplate } from './menu';
 
@@ -116,6 +117,12 @@ export const setUpTray = (app: Electron.App, win: Electron.BrowserWindow) => {
       },
     },
     { type: 'separator' },
+    {
+      label: t('settings-ui.title'),
+      click() {
+        openSettingsWindow();
+      },
+    },
     {
       label: t('main.tray.restart'),
       click: restart,
