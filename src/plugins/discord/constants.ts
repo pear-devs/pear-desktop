@@ -22,4 +22,5 @@ export enum TimerKey {
   ClearActivity = 'clearActivity', // Timer to clear activity when paused
   UpdateTimeout = 'updateTimeout', // Timer for throttled activity updates
   DiscordConnectRetry = 'discordConnectRetry', // Timer for Discord connection retries
+  YouTubeFetchRetry = 'youtubeFetchRetry', // Timer for YouTube user info fetch retries
 }

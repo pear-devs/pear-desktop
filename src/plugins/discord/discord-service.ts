@@ -50,6 +50,11 @@ export class DiscordService {
   mainWindow: Electron.BrowserWindow;
 
   /**
+   * Stores the logged-in Application user information.
+   */
+  private applicationUser: { name: string; avatar: string } | null = null;
+
+  /**
    * Initializes the Discord service with configuration and main window reference.
    * Sets up RPC event listeners.
    * @param mainWindow - Electron BrowserWindow instance.
@@ -125,6 +130,12 @@ export class DiscordService {
       largeImageText: songInfo.album
         ? sanitizeActivityText(songInfo.album)
         : undefined,
+      smallImageKey: config.showApplicationUser
+        ? this.getApplicationUserAvatar()
+        : undefined,
+      smallImageText: config.showApplicationUser
+        ? this.getApplicationUserName()
+        : undefined,
       buttons: buildDiscordButtons(config, songInfo),
     };
 
@@ -174,6 +185,7 @@ export class DiscordService {
    */
   private resetInfo() {
     this.ready = false;
+    this.applicationUser = null;
     this.lastSongInfo = undefined;
     this.lastProgressUpdate = 0;
     this.timerManager.clearAll();
@@ -421,6 +433,52 @@ export class DiscordService {
     return this.rpc.isConnected && this.ready;
   }
 
+  /**
+   * Sets the Application user info used for Rich Presence.
+   * @param user - The user info (name, avatar).
+   */
+  setApplicationUser(user: { name: string; avatar: string }) {
+    if (!user) {
+      if (is.dev()) {
+        console.warn(LoggerPrefix, 'Received undefined Application user info');
+      }
+      return;
+    }
+
+    if (
+      this.applicationUser &&
+      this.applicationUser.name === user.name &&
+      this.applicationUser.avatar === user.avatar
+    ) {
+      return;
+    }
+
+    this.applicationUser = user;
+    if (is.dev()) {
+      console.log(LoggerPrefix, `Fetched Application user: ${user.name}`);
+      console.log(LoggerPrefix, `Fetched Avatar URL: ${user.avatar}`);
+    }
+
+    if (this.lastSongInfo) {
+      this.updateActivity(this.lastSongInfo);
+    }
+  }
+
+  /**
+   * Get the Application user's avatar URL for use in rich presence.
+   * @returns The avatar URL or undefined if not available
+   */
+  private getApplicationUserAvatar(): string | undefined {
+    return this.applicationUser?.avatar ?? undefined;
+  }
+
+  /**
+   * Get the Application user's name for use in rich presence.
+   * @returns The username or undefined if not available
+   */
+  private getApplicationUserName(): string | undefined {
+    return this.applicationUser?.name ?? undefined;
+  }
   /**
    * Cleans up resources: disconnects RPC, clears all timers, and clears callbacks.
    * Should be called when the plugin stops or the application quits.
