@@ -1,4 +1,6 @@
 // This is used for to control the songs
+import { randomUUID } from 'node:crypto';
+
 import { type BrowserWindow, ipcMain } from 'electron';
 
 import { LikeType } from '@/types/datahost-get-state';
@@ -115,6 +117,80 @@ export const getSongControls = (win: BrowserWindow) => {
         queueInsertPosition,
       );
     },
+    addSongsToQueue: (videoIds: string[], queueInsertPosition: string) => {
+      if (!Array.isArray(videoIds) || videoIds.length === 0) return;
+      win.webContents.send(
+        'peard:add-many-to-queue',
+        videoIds,
+        queueInsertPosition,
+      );
+    },
+    addSongsToPlaylist: (playlistId: string, videoIds: string[]) =>
+      new Promise<void>((resolve, reject) => {
+        const responseChannel = `peard:add-songs-to-playlist-response:${randomUUID()}`;
+        const timeout = setTimeout(() => {
+          ipcMain.removeAllListeners(responseChannel);
+          reject(new Error('Adding songs to playlist timed out'));
+        }, 10_000);
+
+        ipcMain.once(responseChannel, (_, error?: string) => {
+          clearTimeout(timeout);
+          if (error) {
+            reject(new Error(error));
+          } else {
+            resolve();
+          }
+        });
+
+        win.webContents.send(
+          'peard:add-songs-to-playlist',
+          responseChannel,
+          playlistId,
+          videoIds,
+        );
+      }),
+    getPlaylistInfo: (playlistId: string) =>
+      new Promise<unknown>((resolve, reject) => {
+        const responseChannel = `peard:get-playlist-info-response:${randomUUID()}`;
+        const timeout = setTimeout(() => {
+          ipcMain.removeAllListeners(responseChannel);
+          reject(new Error('Getting playlist info timed out'));
+        }, 15_000);
+
+        ipcMain.once(responseChannel, (_, error?: string, data?: unknown) => {
+          clearTimeout(timeout);
+          if (error) {
+            reject(new Error(error));
+          } else {
+            resolve(data);
+          }
+        });
+
+        win.webContents.send(
+          'peard:get-playlist-info',
+          responseChannel,
+          playlistId,
+        );
+      }),
+    getUserPlaylists: () =>
+      new Promise<unknown>((resolve, reject) => {
+        const responseChannel = `peard:get-user-playlists-response:${randomUUID()}`;
+        const timeout = setTimeout(() => {
+          ipcMain.removeAllListeners(responseChannel);
+          reject(new Error('Getting user playlists timed out'));
+        }, 15_000);
+
+        ipcMain.once(responseChannel, (_, error?: string, data?: unknown) => {
+          clearTimeout(timeout);
+          if (error) {
+            reject(new Error(error));
+          } else {
+            resolve(data);
+          }
+        });
+
+        win.webContents.send('peard:get-user-playlists', responseChannel);
+      }),
     moveSongInQueue: (
       fromIndex: ArgsType<number>,
       toIndex: ArgsType<number>,
@@ -124,6 +200,10 @@ export const getSongControls = (win: BrowserWindow) => {
       if (fromIndexValue === null || toIndexValue === null) return;
 
       win.webContents.send('peard:move-in-queue', fromIndexValue, toIndexValue);
+    },
+    reorderQueue: (order: number[]) => {
+      if (!Array.isArray(order) || order.length < 2) return;
+      win.webContents.send('peard:reorder-queue', order);
     },
     removeSongFromQueue: (index: ArgsType<number>) => {
       const indexValue = parseNumberFromArgsType(index);
@@ -146,5 +226,34 @@ export const getSongControls = (win: BrowserWindow) => {
         });
         win.webContents.send('peard:search', query, params, continuation);
       }),
+    playPlaylist: (
+      playlistId: ArgsType<string>,
+      videoId?: ArgsType<string>,
+    ) => {
+      const pid = parseStringFromArgsType(playlistId);
+      if (!pid) return;
+
+      const vid = videoId ? parseStringFromArgsType(videoId) : null;
+      win.webContents.send('peard:play-playlist', pid, vid ?? undefined);
+    },
+    playArtist: (channelId: ArgsType<string>) => {
+      const id = parseStringFromArgsType(channelId);
+      if (!id) return;
+
+      win.webContents.send('peard:play-artist', id);
+    },
+    playAlbum: (albumId: ArgsType<string>) => {
+      const id = parseStringFromArgsType(albumId);
+      if (!id) return;
+
+      // Album audio playlists / playlist IDs play via the same watch URL flow.
+      if (id.startsWith('OLAK5uy') || id.startsWith('PL')) {
+        const playlistId = id.startsWith('VL') ? id.slice(2) : id;
+        win.webContents.send('peard:play-playlist', playlistId);
+        return;
+      }
+
+      win.webContents.send('peard:play-album', id);
+    },
   };
 };

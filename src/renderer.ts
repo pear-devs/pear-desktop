@@ -36,6 +36,371 @@ let firstDataLoaded = false;
 
 registerWindowDefaultTrustedTypePolicy();
 
+type PlayableEndpoint = {
+  videoId?: string;
+  playlistId?: string;
+};
+
+const collectPlayableEndpoints = (
+  value: unknown,
+  depth = 0,
+  out: PlayableEndpoint[] = [],
+): PlayableEndpoint[] => {
+  if (!value || typeof value !== 'object' || depth > 14) return out;
+
+  const record = value as Record<string, unknown>;
+
+  const watchEndpoint = record.watchEndpoint as
+    | { videoId?: string; playlistId?: string }
+    | undefined;
+  if (watchEndpoint?.videoId || watchEndpoint?.playlistId) {
+    out.push({
+      videoId: watchEndpoint.videoId,
+      playlistId: watchEndpoint.playlistId,
+    });
+  }
+
+  const watchPlaylistEndpoint = record.watchPlaylistEndpoint as
+    | { playlistId?: string }
+    | undefined;
+  if (watchPlaylistEndpoint?.playlistId) {
+    out.push({ playlistId: watchPlaylistEndpoint.playlistId });
+  }
+
+  for (const child of Object.values(record)) {
+    collectPlayableEndpoints(child, depth + 1, out);
+  }
+
+  return out;
+};
+
+const scorePlayableEndpoint = (
+  endpoint: PlayableEndpoint,
+  preferAlbum = false,
+): number => {
+  let score = 0;
+  const playlistId = endpoint.playlistId ?? '';
+
+  if (playlistId.startsWith('OLAK5uy') || playlistId.startsWith('VLOLAK5uy')) {
+    score += 100;
+  }
+  if (preferAlbum && playlistId.includes('OLAK')) {
+    score += 40;
+  }
+  if (endpoint.videoId && playlistId) {
+    score += 20;
+  }
+  if (playlistId.startsWith('RD')) {
+    score -= 50;
+  } else if (playlistId) {
+    score += 10;
+  }
+  if (endpoint.videoId) {
+    score += 5;
+  }
+
+  return score;
+};
+
+const findPlayableEndpoint = (
+  value: unknown,
+  preferAlbum = false,
+): PlayableEndpoint | null => {
+  const endpoints = collectPlayableEndpoints(value);
+  if (endpoints.length === 0) return null;
+
+  return [...endpoints].sort(
+    (a, b) =>
+      scorePlayableEndpoint(b, preferAlbum) -
+      scorePlayableEndpoint(a, preferAlbum),
+  )[0]!;
+};
+
+const getTextRuns = (value: unknown): string | null => {
+  if (!value || typeof value !== 'object') return null;
+  const runs = (value as { runs?: Array<{ text?: string }> }).runs;
+  if (!Array.isArray(runs)) return null;
+  const text = runs
+    .map((run) => run?.text ?? '')
+    .join('')
+    .trim();
+  return text || null;
+};
+
+const parsePlaylistInfo = (playlistId: string, data: unknown) => {
+  const id = playlistId.startsWith('VL') ? playlistId.slice(2) : playlistId;
+  let name: string | null = null;
+  const tracks: Array<{
+    videoId: string | null;
+    title: string | null;
+    artists?: string[];
+    album?: string | null;
+    duration?: string | null;
+  }> = [];
+
+  const visit = (value: unknown, depth = 0) => {
+    if (!value || typeof value !== 'object' || depth > 14) return;
+
+    const record = value as Record<string, unknown>;
+
+    if (!name) {
+      const header =
+        (record.musicDetailHeaderRenderer as Record<string, unknown> | undefined) ??
+        (
+          record.musicEditablePlaylistDetailHeaderRenderer as
+            | { header?: { musicDetailHeaderRenderer?: Record<string, unknown> } }
+            | undefined
+        )?.header?.musicDetailHeaderRenderer ??
+        (record.musicResponsiveHeaderRenderer as
+          | Record<string, unknown>
+          | undefined);
+      if (header) {
+        name =
+          getTextRuns(header.title) ??
+          getTextRuns(
+            (header as { header?: { title?: unknown } }).header?.title,
+          );
+      }
+    }
+
+    const renderer = record.playlistPanelVideoRenderer as
+      | Record<string, unknown>
+      | undefined;
+    const flexible = record.musicResponsiveListItemRenderer as
+      | Record<string, unknown>
+      | undefined;
+
+    if (renderer) {
+      tracks.push({
+        videoId: (renderer.videoId as string | undefined) ?? null,
+        title: getTextRuns(renderer.title),
+        artists: getTextRuns(renderer.shortBylineText)
+          ? [getTextRuns(renderer.shortBylineText)!]
+          : undefined,
+        duration: getTextRuns(renderer.lengthText),
+      });
+    } else if (flexible) {
+      const videoId =
+        (flexible.playlistItemData as { videoId?: string } | undefined)
+          ?.videoId ??
+        (
+          flexible.navigationEndpoint as
+            | { watchEndpoint?: { videoId?: string } }
+            | undefined
+        )?.watchEndpoint?.videoId ??
+        null;
+      const flexColumns = flexible.flexColumns as
+        | Array<{
+            musicResponsiveListItemFlexColumnRenderer?: {
+              text?: unknown;
+            };
+          }>
+        | undefined;
+      const title = getTextRuns(
+        flexColumns?.[0]?.musicResponsiveListItemFlexColumnRenderer?.text,
+      );
+      const artistsText = getTextRuns(
+        flexColumns?.[1]?.musicResponsiveListItemFlexColumnRenderer?.text,
+      );
+      const fixedColumns = flexible.fixedColumns as
+        | Array<{
+            musicResponsiveListItemFixedColumnRenderer?: {
+              text?: unknown;
+            };
+          }>
+        | undefined;
+      const duration = getTextRuns(
+        fixedColumns?.[0]?.musicResponsiveListItemFixedColumnRenderer?.text,
+      );
+
+      if (videoId || title) {
+        tracks.push({
+          videoId,
+          title,
+          artists: artistsText
+            ? artistsText
+                .split('•')[0]
+                ?.split(',')
+                .map((part) => part.trim())
+                .filter(Boolean)
+            : undefined,
+          duration,
+        });
+      }
+    }
+
+    for (const child of Object.values(record)) {
+      visit(child, depth + 1);
+    }
+  };
+
+  visit(data);
+
+  // Deduplicate accidental deep-walk duplicates while preserving order.
+  const seen = new Set<string>();
+  const uniqueTracks = tracks.filter((track) => {
+    const key = `${track.videoId ?? ''}:${track.title ?? ''}:${track.duration ?? ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+
+  return {
+    id,
+    name,
+    trackCount: uniqueTracks.length,
+    tracks: uniqueTracks,
+  };
+};
+
+const normalizePlaylistId = (browseId: string): string | null => {
+  if (!browseId) return null;
+  if (browseId === 'FEmusic_liked_playlists') return null;
+  if (browseId.startsWith('VL')) return browseId.slice(2);
+  // Library playlists / liked music use VL… or LM / PL…
+  if (
+    browseId.startsWith('PL') ||
+    browseId.startsWith('OLAK5uy') ||
+    browseId === 'LM' ||
+    browseId.startsWith('RD')
+  ) {
+    return browseId;
+  }
+  return null;
+};
+
+const parseTrackCountFromSubtitle = (subtitle: string | null): number | null => {
+  if (!subtitle) return null;
+  const match = subtitle.match(
+    /(\d[\d.,]*)\s+(songs?|canciones?|titres?|titoli|liederen|musiques?)/i,
+  );
+  if (!match?.[1]) return null;
+  const count = Number(match[1].replaceAll(/[.,](?=\d{3}\b)/g, '').replace(',', '.'));
+  // Prefer integer song counts; if decimal parsing looks wrong, strip non-digits.
+  if (Number.isFinite(count) && Number.isInteger(count)) return count;
+  const digits = Number(match[1].replaceAll(/\D/g, ''));
+  return Number.isFinite(digits) ? digits : null;
+};
+
+const parseUserPlaylists = (data: unknown) => {
+  const playlists: Array<{
+    id: string;
+    name: string | null;
+    trackCount?: number | null;
+    author?: string | null;
+  }> = [];
+  const seen = new Set<string>();
+
+  const visit = (value: unknown, depth = 0) => {
+    if (!value || typeof value !== 'object' || depth > 16) return;
+    const record = value as Record<string, unknown>;
+
+    const twoRow = record.musicTwoRowItemRenderer as
+      | Record<string, unknown>
+      | undefined;
+    const listItem = record.musicResponsiveListItemRenderer as
+      | Record<string, unknown>
+      | undefined;
+
+    const extractFromRenderer = (renderer: Record<string, unknown>) => {
+      const browseId =
+        (
+          renderer.navigationEndpoint as
+            | { browseEndpoint?: { browseId?: string } }
+            | undefined
+        )?.browseEndpoint?.browseId ??
+        (
+          (
+            renderer.menu as
+              | {
+                  menuRenderer?: {
+                    items?: Array<{
+                      menuNavigationItemRenderer?: {
+                        navigationEndpoint?: {
+                          browseEndpoint?: { browseId?: string };
+                        };
+                      };
+                    }>;
+                  };
+                }
+              | undefined
+          )?.menuRenderer?.items ?? []
+        )
+          .map(
+            (item) =>
+              item.menuNavigationItemRenderer?.navigationEndpoint
+                ?.browseEndpoint?.browseId,
+          )
+          .find((id): id is string => Boolean(id));
+
+      if (!browseId) return;
+      const id = normalizePlaylistId(browseId);
+      if (!id || seen.has(id)) return;
+
+      const name =
+        getTextRuns(renderer.title) ??
+        getTextRuns(
+          (
+            (renderer.flexColumns as
+              | Array<{
+                  musicResponsiveListItemFlexColumnRenderer?: {
+                    text?: unknown;
+                  };
+                }>
+              | undefined)?.[0]?.musicResponsiveListItemFlexColumnRenderer
+          )?.text,
+        );
+
+      const subtitle =
+        getTextRuns(renderer.subtitle) ??
+        getTextRuns(
+          (
+            (renderer.flexColumns as
+              | Array<{
+                  musicResponsiveListItemFlexColumnRenderer?: {
+                    text?: unknown;
+                  };
+                }>
+              | undefined)?.[1]?.musicResponsiveListItemFlexColumnRenderer
+          )?.text,
+        );
+
+      const subtitleParts = subtitle
+        ? subtitle
+            .split('•')
+            .map((part) => part.trim())
+            .filter(Boolean)
+        : [];
+      const trackCount = parseTrackCountFromSubtitle(subtitle);
+      const author =
+        subtitleParts.find(
+          (part) =>
+            !/\d[\d.,]*\s+(songs?|canciones?|titres?|titoli|liederen|musiques?)/i.test(
+              part,
+            ),
+        ) ?? null;
+
+      seen.add(id);
+      playlists.push({
+        id,
+        name,
+        trackCount,
+        author,
+      });
+    };
+
+    if (twoRow) extractFromRenderer(twoRow);
+    if (listItem) extractFromRenderer(listItem);
+
+    for (const child of Object.values(record)) {
+      visit(child, depth + 1);
+    }
+  };
+
+  visit(data);
+  return { playlists };
+};
+
 async function listenForApiLoad() {
   if (!isApiLoaded) {
     api = document.querySelector('#movie_player');
@@ -188,61 +553,299 @@ async function onApiLoaded() {
     } satisfies QueueResponse);
   });
 
+  const addVideosToQueue = (
+    videoIds: string[],
+    queueInsertPosition: string,
+  ) => {
+    const queue = document.querySelector<QueueElement>('#queue');
+    const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+    if (!app || !Array.isArray(videoIds) || videoIds.length === 0) return;
+
+    const store = queue?.queue.store.store;
+    if (!store) return;
+
+    const payload: {
+      queueInsertPosition: string;
+      videoIds: string[];
+    } = {
+      queueInsertPosition,
+      videoIds,
+    };
+
+    app.networkManager
+      .fetch('/music/get_queue', payload)
+      .then((result) => {
+        if (
+          result &&
+          typeof result === 'object' &&
+          'queueDatas' in result &&
+          Array.isArray(result.queueDatas)
+        ) {
+          const queueItems = store.getState().queue.items;
+          const queueItemsLength = queueItems.length ?? 0;
+          queue?.dispatch({
+            type: 'ADD_ITEMS',
+            payload: {
+              nextQueueItemId: store.getState().queue.nextQueueItemId,
+              index:
+                queueInsertPosition === 'INSERT_AFTER_CURRENT_VIDEO'
+                  ? queueItems.findIndex(
+                      (it) =>
+                        (
+                          it.playlistPanelVideoRenderer ||
+                          it.playlistPanelVideoWrapperRenderer
+                            ?.primaryRenderer.playlistPanelVideoRenderer
+                        )?.selected,
+                    ) + 1 || queueItemsLength
+                  : queueItemsLength,
+              items: result.queueDatas
+                .map((it) =>
+                  typeof it === 'object' && it && 'content' in it
+                    ? it.content
+                    : null,
+                )
+                .filter(Boolean),
+              shuffleEnabled: false,
+              shouldAssignIds: true,
+            },
+          });
+        }
+      })
+      .catch(() => {
+        // ignore get_queue failures
+      });
+  };
+
   window.ipcRenderer.on(
     'peard:add-to-queue',
     (_, videoId: string, queueInsertPosition: string) => {
-      const queue = document.querySelector<QueueElement>('#queue');
-      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
-      if (!app) return;
-
-      const store = queue?.queue.store.store;
-      if (!store) return;
-
-      app.networkManager
-        .fetch('/music/get_queue', {
-          queueContextParams: store.getState().queue.queueContextParams,
-          queueInsertPosition,
-          videoIds: [videoId],
-        })
-        .then((result) => {
-          if (
-            result &&
-            typeof result === 'object' &&
-            'queueDatas' in result &&
-            Array.isArray(result.queueDatas)
-          ) {
-            const queueItems = store.getState().queue.items;
-            const queueItemsLength = queueItems.length ?? 0;
-            queue?.dispatch({
-              type: 'ADD_ITEMS',
-              payload: {
-                nextQueueItemId: store.getState().queue.nextQueueItemId,
-                index:
-                  queueInsertPosition === 'INSERT_AFTER_CURRENT_VIDEO'
-                    ? queueItems.findIndex(
-                        (it) =>
-                          (
-                            it.playlistPanelVideoRenderer ||
-                            it.playlistPanelVideoWrapperRenderer
-                              ?.primaryRenderer.playlistPanelVideoRenderer
-                          )?.selected,
-                      ) + 1 || queueItemsLength
-                    : queueItemsLength,
-                items: result.queueDatas
-                  .map((it) =>
-                    typeof it === 'object' && it && 'content' in it
-                      ? it.content
-                      : null,
-                  )
-                  .filter(Boolean),
-                shuffleEnabled: false,
-                shouldAssignIds: true,
-              },
-            });
-          }
-        });
+      addVideosToQueue([videoId], queueInsertPosition);
     },
   );
+  window.ipcRenderer.on(
+    'peard:add-many-to-queue',
+    (_, videoIds: string[], queueInsertPosition: string) => {
+      addVideosToQueue(videoIds, queueInsertPosition);
+    },
+  );
+  window.ipcRenderer.on(
+    'peard:add-songs-to-playlist',
+    async (
+      _,
+      responseChannel: string,
+      playlistId: string,
+      videoIds: string[],
+    ) => {
+      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+      if (!app) {
+        window.ipcRenderer.send(responseChannel, 'YouTube Music is not ready');
+        return;
+      }
+
+      try {
+        await app.networkManager.fetch('/browse/edit_playlist', {
+          playlistId,
+          actions: videoIds.map((addedVideoId) => ({
+            action: 'ACTION_ADD_VIDEO',
+            addedVideoId,
+          })),
+        });
+        window.ipcRenderer.send(responseChannel);
+      } catch (error) {
+        window.ipcRenderer.send(
+          responseChannel,
+          error instanceof Error
+            ? error.message
+            : 'Failed to add songs to playlist',
+        );
+      }
+    },
+  );
+  window.ipcRenderer.on(
+    'peard:get-playlist-info',
+    async (_, responseChannel: string, playlistId: string) => {
+      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+      if (!app) {
+        window.ipcRenderer.send(responseChannel, 'YouTube Music is not ready');
+        return;
+      }
+
+      try {
+        const browseId = playlistId.startsWith('VL')
+          ? playlistId
+          : `VL${playlistId}`;
+        const data = await app.networkManager.fetch<unknown, { browseId: string }>(
+          '/browse',
+          { browseId },
+        );
+        window.ipcRenderer.send(
+          responseChannel,
+          undefined,
+          parsePlaylistInfo(playlistId, data),
+        );
+      } catch (error) {
+        window.ipcRenderer.send(
+          responseChannel,
+          error instanceof Error
+            ? error.message
+            : 'Failed to get playlist info',
+        );
+      }
+    },
+  );
+  window.ipcRenderer.on(
+    'peard:get-user-playlists',
+    async (_, responseChannel: string) => {
+      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+      if (!app) {
+        window.ipcRenderer.send(responseChannel, 'YouTube Music is not ready');
+        return;
+      }
+
+      try {
+        const data = await app.networkManager.fetch<
+          unknown,
+          { browseId: string }
+        >('/browse', { browseId: 'FEmusic_liked_playlists' });
+        window.ipcRenderer.send(
+          responseChannel,
+          undefined,
+          parseUserPlaylists(data),
+        );
+      } catch (error) {
+        window.ipcRenderer.send(
+          responseChannel,
+          error instanceof Error
+            ? error.message
+            : 'Failed to get user playlists',
+        );
+      }
+    },
+  );
+  const navigateToWatch = (videoId: string, playlistId?: string) => {
+    const list = playlistId ? `&list=${playlistId}` : '';
+    window.location.href = `https://music.youtube.com/watch?v=${videoId}${list}`;
+  };
+
+  const playPlaylistById = async (playlistId: string, videoId?: string) => {
+    const listId = playlistId.startsWith('VL')
+      ? playlistId.slice(2)
+      : playlistId;
+
+    if (videoId) {
+      navigateToWatch(videoId, listId);
+      return;
+    }
+
+    const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+    if (!app) return;
+
+    try {
+      const browseId = playlistId.startsWith('VL')
+        ? playlistId
+        : `VL${playlistId}`;
+      const data = await app.networkManager.fetch<
+        unknown,
+        { browseId: string }
+      >('/browse', { browseId });
+
+      const endpoint = findPlayableEndpoint(data);
+      if (endpoint?.videoId) {
+        navigateToWatch(
+          endpoint.videoId,
+          endpoint.playlistId?.startsWith('VL')
+            ? endpoint.playlistId.slice(2)
+            : (endpoint.playlistId ?? listId),
+        );
+        return;
+      }
+
+      if (endpoint?.playlistId) {
+        const pid = endpoint.playlistId.startsWith('VL')
+          ? endpoint.playlistId.slice(2)
+          : endpoint.playlistId;
+        if (pid !== listId) {
+          await playPlaylistById(pid);
+          return;
+        }
+      }
+
+      const info = parsePlaylistInfo(playlistId, data);
+      const firstVideoId = info.tracks.find((track) => track.videoId)?.videoId;
+      if (firstVideoId) {
+        navigateToWatch(firstVideoId, listId);
+      }
+    } catch {
+      // ignore browse failures
+    }
+  };
+
+  window.ipcRenderer.on(
+    'peard:play-playlist',
+    async (_, playlistId: string, videoId?: string) => {
+      await playPlaylistById(playlistId, videoId);
+    },
+  );
+  window.ipcRenderer.on('peard:play-artist', async (_, channelId: string) => {
+    const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+    if (!app) return;
+
+    try {
+      const data = await app.networkManager.fetch<unknown, { browseId: string }>(
+        '/browse',
+        { browseId: channelId },
+      );
+      const endpoint = findPlayableEndpoint(data);
+      if (!endpoint) return;
+
+      if (endpoint.videoId) {
+        navigateToWatch(endpoint.videoId, endpoint.playlistId);
+        return;
+      }
+
+      if (endpoint.playlistId) {
+        await playPlaylistById(endpoint.playlistId);
+      }
+    } catch {
+      // ignore browse failures
+    }
+  });
+  window.ipcRenderer.on('peard:play-album', async (_, albumId: string) => {
+    const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+    if (!app) return;
+
+    try {
+      const data = await app.networkManager.fetch<unknown, { browseId: string }>(
+        '/browse',
+        { browseId: albumId },
+      );
+      const endpoint = findPlayableEndpoint(data, true);
+
+      if (endpoint?.playlistId?.includes('OLAK') || endpoint?.playlistId?.startsWith('PL')) {
+        await playPlaylistById(endpoint.playlistId);
+        return;
+      }
+
+      if (endpoint?.videoId) {
+        navigateToWatch(endpoint.videoId, endpoint.playlistId);
+        return;
+      }
+
+      if (endpoint?.playlistId) {
+        await playPlaylistById(endpoint.playlistId);
+        return;
+      }
+
+      // Album browse pages often expose tracks without a direct watch endpoint.
+      const info = parsePlaylistInfo(albumId, data);
+      const firstVideoId = info.tracks.find((track) => track.videoId)?.videoId;
+      if (firstVideoId) {
+        navigateToWatch(firstVideoId);
+      }
+    } catch {
+      // ignore browse failures
+    }
+  });
   window.ipcRenderer.on(
     'peard:move-in-queue',
     (_, fromIndex: number, toIndex: number) => {
@@ -256,6 +859,24 @@ async function onApiLoaded() {
       });
     },
   );
+  window.ipcRenderer.on('peard:reorder-queue', (_, order: number[]) => {
+    const queue = document.querySelector<QueueElement>('#queue');
+    if (!queue || !Array.isArray(order) || order.length < 2) return;
+
+    // Apply permutation as successive moves using current positions.
+    const current = order.map((_, index) => index);
+    for (let target = 0; target < order.length; target++) {
+      const desired = order[target];
+      const fromIndex = current.indexOf(desired);
+      if (fromIndex === -1 || fromIndex === target) continue;
+      queue.dispatch({
+        type: 'MOVE_ITEM',
+        payload: { fromIndex, toIndex: target },
+      });
+      const [moved] = current.splice(fromIndex, 1);
+      current.splice(target, 0, moved);
+    }
+  });
   window.ipcRenderer.on('peard:remove-from-queue', (_, index: number) => {
     const queue = document.querySelector<QueueElement>('#queue');
     queue?.dispatch({
