@@ -118,7 +118,7 @@
     "virtua": "0.49.1",
     "vudio": "2.1.1",
     "youtubei.js": "17.2.0",
-    "zod": "4.4.3"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "2.0.0",
