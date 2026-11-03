@@ -201,6 +201,9 @@ importers:
       serve:
         specifier: 14.2.6
         version: 14.2.6
+      simple-youtube-age-restriction-bypass:
+        specifier: github:zerodytrash/Simple-YouTube-Age-Restriction-Bypass
+        version: https://codeload.github.com/zerodytrash/Simple-YouTube-Age-Restriction-Bypass/tar.gz/ec15480219fea8ad76ec2a8d2dfe0f458c9d3944
       socks:
         specifier: 2.8.9
         version: 2.8.9
@@ -3621,6 +3624,11 @@ packages:
   simple-update-notifier@2.0.0:
     resolution: {integrity: sha512-a2B9Y0KlNXl9u/vsW6sTIu9vGEpfKu2wRV6l1H3XEas/0gUIzGzBoP/IouTcUQbm9JWZLH3COxyn03TYlFax6w==}
     engines: {node: '>=10'}
+
+  simple-youtube-age-restriction-bypass@https://codeload.github.com/zerodytrash/Simple-YouTube-Age-Restriction-Bypass/tar.gz/ec15480219fea8ad76ec2a8d2dfe0f458c9d3944:
+    resolution: {gitHosted: true, integrity: sha512-NmZ/CWFyzA53oI9dkVd85QhMS/+OLpz0bEGERIplI5QymLoeBYBok9xEUFmsfyxxBVuTnjVCzZU5qIRNkV09Cg==, tarball: https://codeload.github.com/zerodytrash/Simple-YouTube-Age-Restriction-Bypass/tar.gz/ec15480219fea8ad76ec2a8d2dfe0f458c9d3944}
+    version: 2.5.11
+    engines: {node: '>=18.0.0', npm: '>=7.0.0'}
 
   sirv@3.0.2:
     resolution: {integrity: sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g==}
@@ -7336,6 +7344,8 @@ snapshots:
   simple-update-notifier@2.0.0:
     dependencies:
       semver: 7.8.5
+
+  simple-youtube-age-restriction-bypass@https://codeload.github.com/zerodytrash/Simple-YouTube-Age-Restriction-Bypass/tar.gz/ec15480219fea8ad76ec2a8d2dfe0f458c9d3944: {}
 
   sirv@3.0.2:
     dependencies:
