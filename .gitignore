@@ -1,9 +1,5 @@
+# Dependencies
 node_modules
-/dist
-/pack
-.vscode/settings.json
-.idea
-
 .pnp.*
 .pnpm-store
 .yarn/*
@@ -12,6 +8,52 @@ node_modules
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
-.vite-inspect
 
+# Build outputs & caches
+/dist
+/pack
+/build
+.vite-inspect
+*.tsbuildinfo
+
+# Runtime & Electron / Chromium User Data / Sessions
+UserData/
+userdata/
+tb_cache/
+session-storage/
+IndexedDB/
+Cookies
+Cookies-journal
+Local Storage/
+Session Storage/
+Network/
+GPUCache/
+blob_storage/
+
+# Databases
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE & OS files
+.vscode/*
+!.vscode/extensions.json
+.idea
 .DS_Store
+Thumbs.db
+Desktop.ini
+*.lnk
