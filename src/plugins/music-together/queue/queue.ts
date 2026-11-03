@@ -157,6 +157,18 @@ export class Queue {
     return mapQueueItem((it) => it, this.rawItems);
   }
 
+  get videoIds() {
+    return this.flatItems.map((it) => it?.videoId ?? '');
+  }
+
+  /** Current queue as shown in the player, with known owners attached. */
+  getSnapshot(): VideoData[] {
+    return this.videoIds.map((videoId, index) => ({
+      videoId,
+      ownerId: this._videoList[index]?.ownerId ?? this.owner?.id ?? '',
+    }));
+  }
+
   setOwner(owner: Profile) {
     this.owner = owner;
   }
@@ -175,49 +187,44 @@ export class Queue {
     if (!response) return false;
 
     const items = response.queueDatas.map((it) => it?.content).filter(Boolean);
-    if (!items) return false;
+    if (!items.length) return false;
 
-    this.internalDispatch = true;
-    this._videoList = this._videoList.map(
-      (it) =>
-        ({
-          videoId: it.videoId,
-          ownerId: it.ownerId ?? this.owner!.id,
-        }) satisfies VideoData,
+    // get_queue may drop unavailable videos, so track what was actually added
+    const addedIds = mapQueueItem(
+      (it) => it?.videoId ?? '',
+      items as QueueItem[],
     );
+    const added: VideoData[] =
+      addedIds.length === videos.length
+        ? videos
+        : addedIds.map((videoId) => ({
+            videoId,
+            ownerId:
+              videos.find((it) => it.videoId === videoId)?.ownerId ??
+              this.owner?.id ??
+              '',
+          }));
 
     const state = this.queue.queue.store.store.getState();
+    const length = state.queue.items.length;
+    const insertAt = Math.min(index ?? length, length);
 
+    this.internalDispatch = true;
     this.queue?.dispatch({
       type: 'ADD_ITEMS',
       payload: {
         nextQueueItemId: state.queue.nextQueueItemId,
-        index:
-          index ??
-          (state.queue.items.length ? state.queue.items.length - 1 : null) ??
-          0,
+        index: insertAt,
         items,
         shuffleEnabled: false,
         shouldAssignIds: true,
       },
     });
-
-    const insertedItem = this._videoList[index ?? this._videoList.length];
-    if (
-      !insertedItem ||
-      (insertedItem.videoId !== videos[0].videoId &&
-        insertedItem.ownerId !== videos[0].ownerId)
-    ) {
-      this._videoList.splice(
-        index ?? this._videoList.length,
-        0,
-        ...videos.map((it) => ({
-          ...it,
-          ownerId: it.ownerId ?? this.owner?.id,
-        })),
-      );
-    }
-
+    this._videoList.splice(
+      Math.min(insertAt, this._videoList.length),
+      0,
+      ...added,
+    );
     this.internalDispatch = false;
     setTimeout(() => {
       this.initQueue();
@@ -321,29 +328,29 @@ export class Queue {
           return;
         }
         if (event.type === 'ADD_ITEMS') {
+          // Local state is only updated once the host echoes the event back
           if (this.ignoreFlag) {
             this.ignoreFlag = false;
+            const items = (
+              event.payload! as {
+                items: QueueItem[];
+              }
+            ).items;
             const videoList = mapQueueItem(
               (it) =>
                 ({
                   videoId: it!.videoId,
                   ownerId: this.owner!.id,
                 }) satisfies VideoData,
-              (
-                event.payload! as {
-                  items: QueueItem[];
-                }
-              ).items,
+              items,
             );
-            const index = this._videoList.length;
+            // the queue is cleared first, so jump to the song that was played
+            const index = Math.max(
+              0,
+              mapQueueItem((it) => it?.selected, items).findIndex(Boolean),
+            );
 
             if (videoList.length > 0) {
-              this._videoList = [
-                ...videoList.map((it) => ({
-                  ...it,
-                  ownerId: it.ownerId ?? this.owner?.id,
-                })),
-              ];
               this.broadcast({
                 // play
                 type: 'ADD_SONGS',
@@ -378,20 +385,6 @@ export class Queue {
                   items: QueueItem[];
                 }
               ).items,
-            );
-            this._videoList.splice(
-              event.payload && Object.hasOwn(event.payload, 'index')
-                ? (
-                    event.payload as {
-                      index: number;
-                    }
-                  ).index
-                : this._videoList.length,
-              0,
-              ...videoList.map((it) => ({
-                ...it,
-                ownerId: it.ownerId ?? this.owner?.id,
-              })),
             );
             this.broadcast({
               // add playlist
@@ -507,6 +500,16 @@ export class Queue {
   }
 
   async syncVideo() {
+    // Usually only ownership changed; skip the refetch, which resets the queue
+    const currentIds = this.videoIds;
+    if (
+      currentIds.length === this._videoList.length &&
+      currentIds.every((id, i) => id === this._videoList[i].videoId)
+    ) {
+      this.syncQueueOwner();
+      return true;
+    }
+
     const response = await getMusicQueueRenderer(
       this._videoList.map((it) => it.videoId),
     );

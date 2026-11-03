@@ -24,3 +24,17 @@ export const mapQueueItem = <T>(
       return undefined;
     })
     .map(map);
+
+/** Cheap FNV-1a fingerprint of the queue order, used to detect desync. */
+export const hashVideoIds = (videoIds: string[]) => {
+  let hash = 0x811c9dc5;
+  for (const id of videoIds) {
+    for (let i = 0; i < id.length; i++) {
+      hash ^= id.charCodeAt(i);
+      hash = Math.imul(hash, 0x01000193);
+    }
+    hash ^= 0x2c; // separator
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return `${videoIds.length}:${(hash >>> 0).toString(16)}`;
+};
