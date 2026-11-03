@@ -3,7 +3,7 @@ import prompt, { type KeybindOptions } from 'custom-electron-prompt';
 import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 
-import type { ShortcutsPluginConfig } from './index';
+import type { SeekSecondsKey, ShortcutsPluginConfig } from './index';
 import type { MenuTemplate } from '@/menu';
 import type { MenuContext } from '@/types/contexts';
 import type { BrowserWindow } from 'electron';
@@ -12,6 +12,7 @@ export const onMenu = async ({
   window,
   getConfig,
   setConfig,
+  refresh,
 }: MenuContext<ShortcutsPluginConfig>): Promise<MenuTemplate> => {
   const config = await getConfig();
 
@@ -50,31 +51,108 @@ export const onMenu = async ({
             'next',
             config.global?.next,
           ),
+          kb(
+            t('plugins.shortcuts.prompt.keybind.keybind-options.seek-forward'),
+            'seekForward',
+            config.global?.seekForward,
+          ),
+          kb(
+            t('plugins.shortcuts.prompt.keybind.keybind-options.seek-backward'),
+            'seekBackward',
+            config.global?.seekBackward,
+          ),
         ],
-        height: 270,
+        height: 370,
         ...promptOptions(),
       },
       win,
     );
 
     if (output) {
-      const newConfig = { ...config };
+      const global = { ...config.global };
 
       for (const { value, accelerator } of output) {
-        newConfig.global[value as keyof ShortcutsPluginConfig['global']] =
-          accelerator;
+        global[value as keyof ShortcutsPluginConfig['global']] = accelerator;
       }
 
-      setConfig(config);
+      config.global = global;
+      await setConfig({ global });
+      // Rebuild the menu so the prompt shows the new keybinds next time
+      await refresh();
     }
     // Else -> pressed cancel
   }
+
+  async function promptSeekSeconds(
+    key: SeekSecondsKey,
+    title: string,
+    label: string,
+    win: BrowserWindow,
+  ) {
+    const output = await prompt(
+      {
+        title,
+        label,
+        value: config[key],
+        type: 'counter',
+        counterOptions: { minimum: 1, maximum: 600, multiFire: true },
+        width: 380,
+        ...promptOptions(),
+      },
+      win,
+    );
+
+    // The counter prompt returns a string, but seek controls need a number
+    const seconds = Number(output);
+    if (output && Number.isFinite(seconds) && seconds > 0) {
+      config[key] = seconds;
+      await setConfig({ [key]: seconds });
+      await refresh();
+    }
+  }
+
+  const seekSecondsItem = (
+    key: SeekSecondsKey,
+    menuKey: string,
+    promptKey: string,
+  ): MenuTemplate => [
+    {
+      label: t(`plugins.shortcuts.menu.${menuKey}`, { seconds: config[key] }),
+      click: () =>
+        promptSeekSeconds(
+          key,
+          t(`plugins.shortcuts.prompt.${promptKey}.title`),
+          t(`plugins.shortcuts.prompt.${promptKey}.label`),
+          window,
+        ),
+    },
+  ];
 
   return [
     {
       label: t('plugins.shortcuts.menu.set-keybinds'),
       click: () => promptKeybind(config, window),
     },
+    ...seekSecondsItem(
+      'seekForwardSeconds',
+      'set-seek-forward-seconds',
+      'seek-forward-seconds',
+    ),
+    ...seekSecondsItem(
+      'seekBackwardSeconds',
+      'set-seek-backward-seconds',
+      'seek-backward-seconds',
+    ),
+    ...seekSecondsItem(
+      'podcastSeekForwardSeconds',
+      'set-podcast-seek-forward-seconds',
+      'seek-forward-seconds',
+    ),
+    ...seekSecondsItem(
+      'podcastSeekBackwardSeconds',
+      'set-podcast-seek-backward-seconds',
+      'seek-backward-seconds',
+    ),
     {
       label: t('plugins.shortcuts.menu.override-media-keys'),
       type: 'checkbox',
