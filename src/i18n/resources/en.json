@@ -723,6 +723,10 @@
     },
     "playback-speed": {
       "description": "Listen fast, listen slow! Adds a slider that controls song speed",
+      "menu": {
+        "allow-extreme-speeds": "Allow extreme speeds (may sound choppy)",
+        "pitch-follows-speed": "Pitch follows speed (smoother, no chipmunk filter)"
+      },
       "name": "Playback Speed",
       "templates": {
         "button": "Speed"
