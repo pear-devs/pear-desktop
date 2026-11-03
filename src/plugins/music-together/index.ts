@@ -7,6 +7,7 @@ import { waitForElement } from '@/utils/wait-for-element';
 
 import { Connection, type ConnectionEventUnion } from './connection';
 import { Queue } from './queue';
+import { hashVideoIds } from './queue/utils';
 import style from './style.css?inline';
 import settingHTML from './templates/setting.html?raw';
 import {
@@ -40,6 +41,30 @@ type RawAccountData = {
   };
 };
 
+// Max drift (seconds) between host and guest before the guest seeks
+const DRIFT_THRESHOLD = 1.5;
+// Min time (ms) between corrective seeks, so the player can rebuffer
+const SEEK_COOLDOWN = 4_000;
+// Backoff (ms) between full queue resyncs when the guest detects desync
+const RESYNC_BACKOFF_MIN = 5_000;
+const RESYNC_BACKOFF_MAX = 60_000;
+
+/**
+ * Runs tasks one after another. Events must be applied in the order they were
+ * received, otherwise slow ones (e.g. fetching song data) get overtaken.
+ */
+const createSerialRunner = () => {
+  let tail: Promise<void> = Promise.resolve();
+  return (task: () => Promise<void> | void) => {
+    tail = tail
+      .then(task)
+      .catch((err) =>
+        console.error('Music Together: failed to process event', err),
+      );
+    return tail;
+  };
+};
+
 export default createPlugin<
   unknown,
   unknown,
@@ -63,6 +88,7 @@ export default createPlugin<
     stateInterval?: number;
     updateNext: boolean;
     ignoreChange: boolean;
+    lastHostState?: number;
     rollbackInjector?: () => void;
     me?: Omit<Profile, 'id'>;
     profiles: Record<string, Profile>;
@@ -120,16 +146,7 @@ export default createPlugin<
     async videoChangeListener(event: CustomEvent<VideoDataChanged>) {
       if (event.detail.name === 'dataloaded' || this.updateNext) {
         if (this.connection?.mode === 'host') {
-          const videoList: VideoData[] =
-            this.queue?.flatItems.map(
-              (it, index) =>
-                ({
-                  videoId: it!.videoId,
-                  ownerId:
-                    this.queue?.videoList[index]?.ownerId ??
-                    this.connection!.id,
-                }) satisfies VideoData,
-            ) ?? [];
+          const videoList = this.queue?.getSnapshot() ?? [];
 
           this.queue?.setVideoList(videoList, false);
           this.queue?.syncQueueOwner();
@@ -149,12 +166,11 @@ export default createPlugin<
 
       const state = this.playerApi?.getPlayerState();
       if (state !== 1 && state !== 2) return;
+      // the host already has this state (usually we just applied it from them)
+      if (state === this.lastHostState) return;
 
-      await this.connection.broadcast('SYNC_PROGRESS', {
-        // progress: this.playerApi?.getCurrentTime(),
-        state: this.playerApi?.getPlayerState(),
-        // index: this.queue?.selectedIndex ?? 0,
-      });
+      this.lastHostState = state;
+      await this.connection.broadcast('SYNC_PROGRESS', { state });
     },
 
     /* connection */
@@ -323,9 +339,9 @@ export default createPlugin<
             break;
           }
           case 'SYNC_QUEUE': {
-            await this.connection?.broadcast('SYNC_QUEUE', {
-              videoList: this.queue?.videoList ?? [],
-            });
+            const videoList = this.queue?.getSnapshot() ?? [];
+            this.queue?.setVideoList(videoList, false);
+            await this.connection?.broadcast('SYNC_QUEUE', { videoList });
             break;
           }
           case 'SYNC_PROGRESS': {
@@ -347,7 +363,11 @@ export default createPlugin<
               }
             }
             if (permissionLevel >= 1) {
-              if (typeof event.payload?.index === 'number') {
+              if (
+                typeof event.payload?.index === 'number' &&
+                event.payload.index >= 0 &&
+                event.payload.index < (this.queue?.videoIds.length ?? 0)
+              ) {
                 const nowIndex = this.queue?.selectedIndex ?? 0;
 
                 if (nowIndex !== event.payload.index) {
@@ -359,7 +379,7 @@ export default createPlugin<
             break;
           }
           case 'CONNECTION_CLOSED': {
-            this.queue?.off(listener);
+            this.queue?.off(queueListener);
             break;
           }
           default: {
@@ -376,8 +396,11 @@ export default createPlugin<
           }
         }
       };
-      this.connection.on(listener);
-      this.queue?.on(listener);
+      const run = createSerialRunner();
+      const queueListener = (event: ConnectionEventUnion) =>
+        run(() => listener(event));
+      this.connection.on((event, conn) => run(() => listener(event, conn)));
+      this.queue?.on(queueListener);
 
       setTimeout(() => {
         this.ignoreChange = false;
@@ -410,6 +433,12 @@ export default createPlugin<
       });
 
       let resolveIgnore: number | null = null;
+      let lastSeekAt = 0;
+      let hashMismatches = 0;
+      let resyncAllowedAt = 0;
+      let resyncBackoff = RESYNC_BACKOFF_MIN;
+      this.lastHostState = undefined;
+
       const queueListener = async (event: ConnectionEventUnion) => {
         this.ignoreChange = true;
         switch (event.type) {
@@ -459,7 +488,10 @@ export default createPlugin<
           this.ignoreChange = false;
         }, 16); // wait 1 frame
       };
-      const listener = async (event: ConnectionEventUnion) => {
+      const listener = async (
+        event: ConnectionEventUnion,
+        receivedAt = performance.now(),
+      ) => {
         this.ignoreChange = true;
         switch (event.type) {
           case 'CLEAR_QUEUE': {
@@ -524,20 +556,72 @@ export default createPlugin<
             break;
           }
           case 'SYNC_PROGRESS': {
-            if (typeof event.payload?.progress === 'number') {
-              const currentTime = this.playerApi?.getCurrentTime() ?? 0;
-              if (Math.abs(event.payload.progress - currentTime) > 3)
-                this.playerApi?.seekTo(event.payload.progress);
-            }
-            if (this.playerApi?.getPlayerState() !== event.payload?.state) {
-              if (event.payload?.state === 2) this.playerApi?.pauseVideo();
-              if (event.payload?.state === 1) this.playerApi?.playVideo();
-            }
-            if (typeof event.payload?.index === 'number') {
-              const nowIndex = this.queue?.selectedIndex ?? 0;
+            const payload = event.payload;
+            if (!payload) break;
 
-              if (nowIndex !== event.payload.index) {
-                this.queue?.setIndex(event.payload.index);
+            // Self-heal: if our queue differs from the host's, ask for a full copy
+            if (typeof payload.queueHash === 'string' && this.queue) {
+              if (hashVideoIds(this.queue.videoIds) === payload.queueHash) {
+                hashMismatches = 0;
+                resyncBackoff = RESYNC_BACKOFF_MIN;
+              } else if (
+                ++hashMismatches >= 2 &&
+                performance.now() >= resyncAllowedAt
+              ) {
+                console.warn('Music Together: queue out of sync, resyncing');
+                hashMismatches = 0;
+                resyncAllowedAt = performance.now() + resyncBackoff;
+                resyncBackoff = Math.min(resyncBackoff * 2, RESYNC_BACKOFF_MAX);
+                await this.connection?.broadcast('SYNC_QUEUE', undefined);
+              }
+            }
+
+            let indexChanged = false;
+            if (
+              typeof payload.index === 'number' &&
+              payload.index >= 0 &&
+              payload.index < (this.queue?.videoIds.length ?? 0) &&
+              this.queue?.selectedIndex !== payload.index
+            ) {
+              this.queue?.setIndex(payload.index);
+              indexChanged = true;
+            }
+
+            if (typeof payload.state === 'number') {
+              this.lastHostState = payload.state;
+            }
+            if (this.playerApi?.getPlayerState() !== payload.state) {
+              if (payload.state === 2) this.playerApi?.pauseVideo();
+              if (payload.state === 1) this.playerApi?.playVideo();
+            }
+
+            // Only correct drift once we are on the same song and not buffering
+            const sameVideo =
+              !payload.videoId ||
+              payload.videoId === this.playerApi?.getVideoData()?.video_id;
+            if (
+              typeof payload.progress === 'number' &&
+              !indexChanged &&
+              sameVideo &&
+              this.playerApi?.getPlayerState() !== 3
+            ) {
+              let target = payload.progress;
+              if (payload.state === 1) {
+                // account for network delay and time spent waiting in the queue
+                const delay =
+                  (this.connection?.latency ?? 0) +
+                  (performance.now() - receivedAt);
+                target += delay / 1000;
+              }
+
+              const currentTime = this.playerApi?.getCurrentTime() ?? 0;
+              const now = performance.now();
+              if (
+                Math.abs(target - currentTime) > DRIFT_THRESHOLD &&
+                now - lastSeekAt > SEEK_COOLDOWN
+              ) {
+                lastSeekAt = now;
+                this.playerApi?.seekTo(target);
               }
             }
             break;
@@ -582,7 +666,18 @@ export default createPlugin<
         }, 16); // wait 1 frame
       };
 
-      this.connection.on(listener);
+      const run = createSerialRunner();
+      let latestProgress = 0;
+      this.connection.on((event) => {
+        if (event.type !== 'SYNC_PROGRESS') return run(() => listener(event));
+
+        // Progress updates are full snapshots, skip any that are already stale
+        const seq = ++latestProgress;
+        const receivedAt = performance.now();
+        return run(async () => {
+          if (seq === latestProgress) await listener(event, receivedAt);
+        });
+      });
       this.queue?.on(queueListener);
 
       if (!this.me) this.me = getDefaultProfile(this.connection.id);
@@ -763,12 +858,14 @@ export default createPlugin<
 
       this.stateInterval = window.setInterval(() => {
         if (this.connection?.mode !== 'host') return;
-        const index = this.queue?.selectedIndex ?? 0;
+        if (this.connection.getConnections().length === 0) return;
 
         this.connection.broadcast('SYNC_PROGRESS', {
           progress: this.playerApi?.getCurrentTime(),
           state: this.playerApi?.getPlayerState(),
-          index,
+          index: this.queue?.selectedIndex ?? 0,
+          videoId: this.playerApi?.getVideoData()?.video_id,
+          queueHash: this.queue ? hashVideoIds(this.queue.videoIds) : undefined,
         });
       }, 1000);
 

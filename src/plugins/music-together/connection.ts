@@ -19,9 +19,17 @@ export type ConnectionEventMap = {
   SYNC_PROFILE: { profiles: Record<string, Profile> } | undefined;
   SYNC_QUEUE: { videoList: VideoData[] } | undefined;
   SYNC_PROGRESS:
-    | { progress?: number; state?: number; index?: number }
+    | {
+        progress?: number;
+        state?: number;
+        index?: number;
+        videoId?: string;
+        queueHash?: string;
+      }
     | undefined;
   PERMISSION: Permission | undefined;
+  PING: { sentAt: number };
+  PONG: { sentAt: number };
   CONNECTION_CLOSED: null;
 };
 export type ConnectionEventUnion = {
@@ -51,6 +59,8 @@ const RECOVERABLE_PEER_ERRORS = new Set([
   PeerErrorType.SocketClosed,
 ]);
 
+const PING_INTERVAL = 5_000;
+
 export class Connection {
   private peer: Peer;
   private _mode: ConnectionMode = 'disconnected';
@@ -58,6 +68,9 @@ export class Connection {
 
   private isDestroyed = false;
   private isReconnecting = false;
+
+  private pingInterval?: ReturnType<typeof setInterval>;
+  private _latency = 0;
 
   private waitOpen: PromiseUtil<string> = {} as PromiseUtil<string>;
   private listeners: ConnectionListener[] = [];
@@ -162,6 +175,14 @@ export class Connection {
     });
 
     await Promise.race([this.registerConnection(conn), unavailable]);
+
+    const ping = () => {
+      if (!conn.open) return;
+      conn.send({ type: 'PING', payload: { sentAt: performance.now() } });
+    };
+    ping();
+    this.pingInterval = setInterval(ping, PING_INTERVAL);
+
     return conn;
   }
 
@@ -189,6 +210,11 @@ export class Connection {
 
   public get mode() {
     return this._mode;
+  }
+
+  /** Estimated one-way latency to the host in ms (guest only). */
+  public get latency() {
+    return this._latency;
   }
 
   public getConnections() {
@@ -246,6 +272,8 @@ export class Connection {
   private cleanup() {
     this._mode = 'disconnected';
     this.connections = {};
+    clearInterval(this.pingInterval);
+    this.pingInterval = undefined;
 
     for (const listener of this.listeners) {
       listener({ type: 'CONNECTION_CLOSED', payload: null }, null);
@@ -272,6 +300,22 @@ export class Connection {
             !data.type
           ) {
             console.warn('Music Together: Invalid data', data);
+            return;
+          }
+
+          const event = data as ConnectionEventUnion;
+          if (event.type === 'PING') {
+            conn.send({ type: 'PONG', payload: event.payload });
+            return;
+          }
+          if (event.type === 'PONG') {
+            const rtt = performance.now() - event.payload.sentAt;
+            if (rtt >= 0 && rtt < 5_000) {
+              // smooth out jitter
+              this._latency = this._latency
+                ? (this._latency * 0.7) + ((rtt / 2) * 0.3)
+                : rtt / 2;
+            }
             return;
           }
 
