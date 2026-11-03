@@ -118,8 +118,11 @@ export class LRCLib implements LyricProvider {
       await this.sleepWithJitter(delayMs);
     }
 
-    throw new Error(
-      `bad HTTPStatus(${lastStatus}${lastStatusText ? ` ${lastStatusText}` : ''})`,
+    throw Object.assign(
+      new Error(
+        `bad HTTPStatus(${lastStatus}${lastStatusText ? ` ${lastStatusText}` : ''})`,
+      ),
+      { status: lastStatus },
     );
   }
 
@@ -165,7 +168,8 @@ export class LRCLib implements LyricProvider {
         }
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error));
-        if (isLast) break;
+        const status = (error as { status?: number }).status;
+        if (isLast || status === 429 || status === 503) break;
       }
     }
 
@@ -256,8 +260,9 @@ export class LRCLib implements LyricProvider {
     return {
       title: closestResult.trackName,
       artists: closestResult.artistName
-        .split(ARTIST_SPLIT_PATTERN)
-        .map((i) => i.trim()),
+        .split(/[&,]|\s+(?:feat\.?|ft\.?)\s+/i)
+        .map((i) => i.trim())
+        .filter(Boolean),
       lines: raw
         ? LRC.parse(raw).lines.map((l) => ({
             ...l,
