@@ -1,0 +1,36 @@
+/* Small accent touches for the Catppuccin Mocha palette. Applied only while
+   the theme is active; colors come from the --pear-theme-* vars. */
+
+body.pear-catppuccin-theme ::selection {
+  background: color-mix(in srgb, var(--pear-theme-accent) 30%, transparent);
+  color: var(--pear-theme-text);
+}
+
+body.pear-catppuccin-theme
+  ytmusic-guide-entry-renderer.is-active
+  #line.ytmusic-guide-entry-renderer {
+  background: var(--pear-theme-accent) !important;
+}
+
+body.pear-catppuccin-theme
+  ytmusic-guide-entry-renderer.is-active
+  tp-yt-paper-item {
+  color: var(--pear-theme-accent) !important;
+}
+
+body.pear-catppuccin-theme ytmusic-nav-bar .tab.selected {
+  color: var(--pear-theme-accent) !important;
+  border-bottom-color: var(--pear-theme-accent) !important;
+}
+
+body.pear-catppuccin-theme *::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--pear-theme-accent) 35%, transparent);
+  border-radius: 4px;
+}
+
+body.pear-catppuccin-theme
+  ytmusic-player-bar
+  #progress-bar.ytmusic-player-bar:hover
+  .paper-slider-knob {
+  box-shadow: 0 0 6px var(--pear-theme-accent);
+}
