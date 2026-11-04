@@ -57,6 +57,10 @@ export class Separator {
         graphOptimizationLevel: 'basic',
       });
       return new Separator(ort, session);
+    } catch (error) {
+      // The runtime remembers a failed start, so only a fresh copy can try again.
+      runtime = null;
+      throw error;
     } finally {
       URL.revokeObjectURL(glue);
     }
