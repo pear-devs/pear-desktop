@@ -1,4 +1,5 @@
 import { findStream } from './audio-tap';
+import { log } from './diagnostics';
 import { Separator } from './separator';
 import { SongAudio } from './song-audio';
 import {
@@ -57,6 +58,7 @@ export class StemEngine {
   private playhead = 0;
   private vocalGain = 0;
   private playerHasAudio = false;
+  private song: SongAudio | null = null;
 
   constructor(
     private readonly ipc: Ipc,
@@ -94,13 +96,16 @@ export class StemEngine {
   play(videoId: string, duration: number) {
     if (videoId === this.videoId) return;
 
+    log(`play ${videoId} duration ${duration}`);
     this.videoId = videoId;
+    this.song = null;
     this.doneBlocks = new Set();
     this.playhead = 0;
     const job = ++this.currentJob;
 
     this.run(job, videoId, duration).catch((error: unknown) => {
       console.error('[karaoke] AI vocals failed:', error);
+      log(`failed ${videoId}: ${String(error)}`);
       if (job === this.currentJob) {
         // Lets the next try start clean, without holding on to the GPU.
         const failed = this.separator;
@@ -109,6 +114,11 @@ export class StemEngine {
         this.onStatus('failed');
       }
     });
+  }
+
+  describe() {
+    const done = [...this.doneBlocks].sort((a, b) => a - b).join(',');
+    return `video=${this.videoId} blockNow=${getBlockAt(this.playhead)} done=${done} playerHasAudio=${this.playerHasAudio} song=${this.song?.describe() ?? 'none'}`;
   }
 
   setPlayhead(time: number) {
@@ -185,6 +195,8 @@ export class StemEngine {
     });
 
     const song = new SongAudio(stream, duration);
+    this.song = song;
+    log(`stream found for ${videoId}: ${stream.describe()}`);
     const { left, right } = song;
     const blockCount = getBlockCount(song.length);
     const vocalsLeft = new Float32Array(song.length);

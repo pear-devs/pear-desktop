@@ -1,4 +1,5 @@
 import { type AudioStream, StreamList } from './audio-streams';
+import { log } from './diagnostics';
 import { startsWithHeader } from './webm';
 
 let isCapturing = false;
@@ -15,7 +16,9 @@ const capture = (buffer: SourceBuffer, data: BufferSource) => {
     return;
   }
 
-  audioBuffers.get(buffer)?.append(view);
+  const stream = audioBuffers.get(buffer);
+  if (!stream) log(`audio with no stream, ${view.length} bytes`);
+  stream?.append(view);
 };
 
 // These must be in place before the player starts, because the first thing it
@@ -25,6 +28,7 @@ const capture = (buffer: SourceBuffer, data: BufferSource) => {
 const addSourceBuffer = MediaSource.prototype.addSourceBuffer;
 MediaSource.prototype.addSourceBuffer = function (type: string) {
   const buffer = addSourceBuffer.call(this, type);
+  if (type.startsWith('audio/')) log(`source buffer ${type}`);
   if (type.startsWith('audio/webm')) audioBuffers.set(buffer, null);
   return buffer;
 };
@@ -42,6 +46,15 @@ SourceBuffer.prototype.appendBuffer = function (data: BufferSource) {
   }
   appendBuffer.call(this, data);
 };
+
+// oxlint-disable-next-line typescript/unbound-method
+const changeType = SourceBuffer.prototype.changeType;
+SourceBuffer.prototype.changeType = function (type: string) {
+  if (audioBuffers.has(this)) log(`source buffer changed to ${type}`);
+  changeType.call(this, type);
+};
+
+export const describeStreams = () => streams.describe();
 
 export const setCapturing = (value: boolean) => {
   isCapturing = value;

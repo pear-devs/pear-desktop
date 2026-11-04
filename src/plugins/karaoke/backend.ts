@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import { existsSync, mkdirSync, statSync } from 'node:fs';
+import { appendFile, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { app, net } from 'electron';
@@ -55,8 +55,25 @@ const getModel = async (onProgress: (percent: number) => void) => {
   return await downloadModel(path, onProgress);
 };
 
+const LOG_FILE = 'diagnostics.log';
+const MAX_LOG_BYTES = 4 * 1024 * 1024;
+
+const startLog = async () => {
+  const folder = join(app.getPath('userData'), 'karaoke');
+  mkdirSync(folder, { recursive: true });
+
+  const path = join(folder, LOG_FILE);
+  if (existsSync(path) && statSync(path).size > MAX_LOG_BYTES) await rm(path);
+  return path;
+};
+
 export const backend = createBackend<object, KaraokePluginConfig>({
-  start(ctx) {
+  async start(ctx) {
+    const logPath = await startLog();
+    ctx.ipc.on('karaoke:log', (line: string) => {
+      appendFile(logPath, `${line}\n`).catch(() => null);
+    });
+
     ctx.ipc.handle('karaoke:get-runtime', async () => ({
       wasm: await readFile(wasmPath),
       model: await getModel((percent) => {

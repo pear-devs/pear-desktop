@@ -8,7 +8,8 @@ import { waitForElement } from '@/utils/wait-for-element';
 import { AudioRoute } from './audio-route';
 import { KaraokeButton } from './components/KaraokeButton';
 import { KaraokeOverlay } from './components/KaraokeOverlay';
-import { hasStreams, setCapturing } from './stems/audio-tap';
+import { describeStreams, hasStreams, setCapturing } from './stems/audio-tap';
+import { log, setLogSink } from './stems/diagnostics';
 import { StemEngine, type StemStatus } from './stems/stem-engine';
 
 import type { KaraokePluginConfig, LyricsSize } from './types';
@@ -19,9 +20,12 @@ const FLOATING_BUTTON_DELAY_MS = 6000;
 const SYNC_INTERVAL_MS = 100;
 
 // Playback time without AI vocals before starting them over. Seeking and new
-// songs normally take a few seconds to be covered.
-const RECOVERY_DELAY_MS = 15000;
+// songs normally take up to about 8 s to be covered, and a known failure does
+// not need to wait for that.
+const RECOVERY_DELAY_MS = 10000;
+const FAILED_RECOVERY_DELAY_MS = 1500;
 const NO_RECOVERY_NEAR_END_SECONDS = 15;
+const LOG_INTERVAL_MS = 10000;
 
 // The classic player bar, and the redesigned one some sessions are served.
 const PLAYER_CONTROLS =
@@ -47,6 +51,7 @@ let engine: StemEngine | null = null;
 let isStartingStems = false;
 let stemSession = 0;
 let lastCoveredAt = 0;
+let lastLoggedAt = 0;
 let recoveredVideoId: string | null = null;
 let syncTimer: ReturnType<typeof setInterval> | null = null;
 let unmountButton: (() => void) | null = null;
@@ -125,11 +130,23 @@ const startStems = async (audioContext: AudioContext) => {
   }
 };
 
+const describeState = () => {
+  const video = document.querySelector('video');
+  const buffered = video
+    ? Array.from({ length: video.buffered.length }, (_, index) => {
+        const start = video.buffered.start(index).toFixed(0);
+        return `${start}-${video.buffered.end(index).toFixed(0)}`;
+      }).join(',')
+    : '';
+  return `t=${video?.currentTime.toFixed(1)} dur=${video?.duration.toFixed(1)} ready=${video?.readyState} volume=${video?.volume.toFixed(2)} muted=${video?.muted} paused=${video?.paused} src=${video?.src.slice(0, 12)} buffered=${buffered} ad=${Boolean(document.querySelector('.ad-showing'))} status=${stemStatus()} engine={${engine?.describe() ?? 'none'}} streams=${describeStreams()}`;
+};
+
 // Does what turning the AI option off and on does: starts capture and the model
 // over, and loads the song again so that all of its audio arrives. Once per song,
 // because a song that cannot work should not keep interrupting playback.
 const recoverStems = (videoId: string) => {
   console.warn('[karaoke] AI vocals stopped, starting them over');
+  log(`RECOVERY ${describeState()}`);
   recoveredVideoId = videoId;
   stopStems();
   setStemStatus('recovering');
@@ -184,12 +201,18 @@ const syncStems = () => {
     stemStatus() !== 'loading-model' &&
     video.duration - time > NO_RECOVERY_NEAR_END_SECONDS;
 
+  if (Date.now() - lastLoggedAt > LOG_INTERVAL_MS) {
+    lastLoggedAt = Date.now();
+    log(`state useStems=${useStems} ${describeState()}`);
+  }
+
   if (useStems || !isDueStems) {
     lastCoveredAt = Date.now();
   } else if (
     videoId &&
     videoId !== recoveredVideoId &&
-    Date.now() - lastCoveredAt > RECOVERY_DELAY_MS
+    Date.now() - lastCoveredAt >
+      (stemStatus() === 'failed' ? FAILED_RECOVERY_DELAY_MS : RECOVERY_DELAY_MS)
   ) {
     recoverStems(videoId);
   }
@@ -261,6 +284,7 @@ export const renderer = createRenderer<object, KaraokePluginConfig>({
   async start(ctx) {
     currentRun++;
     context = ctx;
+    setLogSink((line) => ctx.ipc.send('karaoke:log', line));
     ctx.ipc.on('karaoke:model-progress', setModelProgress);
     applyConfig(await ctx.getConfig());
     document.addEventListener('peard:audio-can-play', onAudioCanPlay, {
@@ -319,6 +343,7 @@ export const renderer = createRenderer<object, KaraokePluginConfig>({
     currentRun++;
     exit();
     setCapturing(false);
+    setLogSink(null);
     context?.ipc.removeAllListeners('karaoke:model-progress');
     context = null;
     document.removeEventListener('peard:audio-can-play', onAudioCanPlay);

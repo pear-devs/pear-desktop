@@ -78,6 +78,15 @@ export class SongAudio {
     this.ranges = [...this.earlierRanges, ...ranges];
   }
 
+  describe() {
+    const seconds = (samples: number) =>
+      (samples / SOURCE_SAMPLE_RATE).toFixed(1);
+    const ranges = this.ranges
+      .map((range) => `${seconds(range.start)}-${seconds(range.end)}`)
+      .join(',');
+    return `length=${seconds(this.length)} ranges=${ranges}`;
+  }
+
   /** Whether a stretch of the song has arrived, allowing for its last moments. */
   has(start: number, end: number) {
     const target = Math.min(end, this.length - SOURCE_SAMPLE_RATE);

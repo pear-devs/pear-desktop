@@ -1,3 +1,4 @@
+import { log } from './diagnostics';
 import {
   type Cluster,
   parseDuration,
@@ -12,6 +13,8 @@ const DURATION_TOLERANCE_SECONDS = 1.5;
 // them. Each stream only holds a few megabytes of compressed audio.
 const STREAMS_KEPT = 6;
 
+const LARGE_PENDING_BYTES = 1024 * 1024;
+
 const isSameHeader = (a: Uint8Array, b: Uint8Array) =>
   a.length === b.length && a.every((byte, index) => byte === b[index]);
 
@@ -22,6 +25,7 @@ export class AudioStream {
   readonly duration: number | null;
   private readonly clusters = new Map<number, Cluster>();
   private pending = new Uint8Array();
+  private reportedPending = 0;
 
   constructor(readonly header: Uint8Array) {
     this.duration = parseDuration(header);
@@ -43,6 +47,21 @@ export class AudioStream {
       this.clusters.set(cluster.startMs, cluster);
       this.version++;
     }
+
+    if (
+      rest.length > LARGE_PENDING_BYTES &&
+      rest.length > this.reportedPending
+    ) {
+      this.reportedPending = rest.length;
+      log(`stream ${this.duration} stuck with ${rest.length} unread bytes`);
+    }
+  }
+
+  describe() {
+    const times = this.getClusters()
+      .map((cluster) => cluster.startMs)
+      .sort((a, b) => a - b);
+    return `duration=${this.duration} clusters=${times.length} first=${times[0]} last=${times.at(-1)} pending=${this.pending.length}`;
   }
 
   getClusters() {
@@ -62,6 +81,9 @@ export class StreamList {
       isSameHeader(stream.header, header),
     );
     const stream = existing ?? new AudioStream(header);
+    log(
+      `header ${header.length} bytes, duration ${stream.duration}, ${existing ? 'repeated' : 'new'}`,
+    );
 
     this.streams = this.streams.filter((other) => other !== stream);
     this.streams.push(stream);
@@ -81,6 +103,10 @@ export class StreamList {
       }
     }
     return null;
+  }
+
+  describe() {
+    return this.streams.map((stream) => `[${stream.describe()}]`).join(' ');
   }
 
   get isEmpty() {
