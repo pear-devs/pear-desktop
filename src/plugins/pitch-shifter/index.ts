@@ -27,7 +27,7 @@ export default createPlugin({
   name: () => t('plugins.pitch-shifter.name'),
   description: () => t('plugins.pitch-shifter.description'),
   restartNeeded: false,
-  addedVersion: '3.12.X',
+  addedVersion: '3.13.X',
   config: {
     enabled: false,
     semitones: 0,
