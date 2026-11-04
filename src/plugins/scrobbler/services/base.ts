@@ -20,5 +20,18 @@ export abstract class ScrobblerBase {
     songInfo: SongInfo,
     config: ScrobblerPluginConfig,
     setConfig: SetConfType,
+    startedAtSeconds: number,
+  ): void;
+
+  public abstract love(
+    songInfo: SongInfo,
+    config: ScrobblerPluginConfig,
+    setConfig: SetConfType,
+  ): void;
+
+  public abstract unlove(
+    songInfo: SongInfo,
+    config: ScrobblerPluginConfig,
+    setConfig: SetConfType,
   ): void;
 }
