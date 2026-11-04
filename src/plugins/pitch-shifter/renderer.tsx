@@ -19,6 +19,9 @@ import type { MusicPlayer } from '@/types/music-player';
 const [semitones, setSemitones] = createSignal(0);
 
 let enabled = false;
+// Bumped by every start() and stop(), so a start() still waiting on its
+// config can tell it is no longer the current one.
+let lifecycle = 0;
 let saveSemitones: ((value: number) => void) | undefined;
 
 // Other plugins (Equalizer, Audio Compressor, visualizers) connect their nodes
@@ -27,12 +30,15 @@ let saveSemitones: ((value: number) => void) | undefined;
 // in its original key on top of the shifted one. So the shifter takes over
 // the destination instead: `input` replaces `audioContext.destination` on the
 // context, and everything that reaches it is shifted on its way to the real
-// output. When the plugin is off, `input` connects straight to the output.
+// output. When the plugin is off, `input` connects straight to the output and
+// the shifter node is dropped, so it stops processing and does not replay old
+// buffered audio when it is turned back on.
 let graph:
   | {
       context: AudioContext;
       input: GainNode;
       output: AudioDestinationNode;
+      processorLoaded: boolean;
       shifter?: AudioWorkletNode;
     }
   | undefined;
@@ -56,13 +62,27 @@ const applySemitones = () => {
 
 const route = () => {
   if (!graph) return;
-  const { input, output, shifter } = graph;
+  const { context, input, output } = graph;
   input.disconnect();
-  if (enabled && shifter) {
-    input.connect(shifter);
-  } else {
+
+  if (!enabled || !graph.processorLoaded) {
+    if (graph.shifter) {
+      graph.shifter.port.postMessage('dispose');
+      graph.shifter.disconnect();
+      graph.shifter = undefined;
+    }
     input.connect(output);
+    return;
   }
+
+  if (!graph.shifter) {
+    graph.shifter = new AudioWorkletNode(context, PROCESSOR_NAME, {
+      outputChannelCount: [2],
+    });
+    graph.shifter.connect(output);
+    applySemitones();
+  }
+  input.connect(graph.shifter);
 };
 
 const installGraph = (
@@ -80,17 +100,12 @@ const installGraph = (
   } catch {}
   source.connect(input);
   input.connect(output);
-  graph = { context, input, output };
+  graph = { context, input, output, processorLoaded: false };
 
   loadProcessor(context)
     .then(() => {
       if (graph?.context !== context) return;
-      const shifter = new AudioWorkletNode(context, PROCESSOR_NAME, {
-        outputChannelCount: [2],
-      });
-      shifter.connect(output);
-      graph.shifter = shifter;
-      applySemitones();
+      graph.processorLoaded = true;
       route();
     })
     .catch((error) => {
@@ -168,6 +183,7 @@ export const start = async ({
   getConfig,
   setConfig,
 }: RendererContext<PitchShifterPluginConfig>) => {
+  const current = ++lifecycle;
   enabled = true;
   saveSemitones = (value) => setConfig({ semitones: value });
   // Listen before awaiting anything, so the first track is not missed.
@@ -176,7 +192,9 @@ export const start = async ({
     passive: true,
   });
 
-  setSemitones(clampSemitones((await getConfig()).semitones));
+  const config = await getConfig();
+  if (current !== lifecycle) return;
+  setSemitones(clampSemitones(config.semitones));
   applySemitones();
   route();
 };
@@ -192,6 +210,7 @@ export const onConfigChange = (config: PitchShifterPluginConfig) => {
 };
 
 export const stop = () => {
+  lifecycle++;
   enabled = false;
   saveSemitones = undefined;
   window.removeEventListener('peard:audio-can-play', audioCanPlayHandler, {
