@@ -56,6 +56,9 @@ const readUnsigned = (bytes: Uint8Array, start: number, length: number) => {
 export const startsWithHeader = (bytes: Uint8Array) =>
   readId(bytes, 0)?.id === EBML_HEADER;
 
+export const startsWithCluster = (bytes: Uint8Array) =>
+  readId(bytes, 0)?.id === CLUSTER;
+
 /** Reads the duration in seconds from a stream's header, when it has one. */
 export const parseDuration = (header: Uint8Array) => {
   const view = new DataView(

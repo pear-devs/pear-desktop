@@ -18,6 +18,11 @@ import type { MusicPlayer } from '@/types/music-player';
 const FLOATING_BUTTON_DELAY_MS = 6000;
 const SYNC_INTERVAL_MS = 100;
 
+// Playback time without AI vocals before starting them over. Seeking and new
+// songs normally take a few seconds to be covered.
+const RECOVERY_DELAY_MS = 15000;
+const NO_RECOVERY_NEAR_END_SECONDS = 15;
+
 // The classic player bar, and the redesigned one some sessions are served.
 const PLAYER_CONTROLS =
   '.right-controls-buttons, .ytMusicMiniPlayerRightSection';
@@ -41,6 +46,8 @@ let context: RendererContext<KaraokePluginConfig> | null = null;
 let engine: StemEngine | null = null;
 let isStartingStems = false;
 let stemSession = 0;
+let lastCoveredAt = 0;
+let recoveredVideoId: string | null = null;
 let syncTimer: ReturnType<typeof setInterval> | null = null;
 let unmountButton: (() => void) | null = null;
 let unmountFloatingButton: (() => void) | null = null;
@@ -112,9 +119,23 @@ const startStems = async (audioContext: AudioContext) => {
 
     stems.setVocalGain(vocalLevel());
     engine = stems;
+    lastCoveredAt = Date.now();
   } finally {
     isStartingStems = false;
   }
+};
+
+// Does what turning the AI option off and on does: starts capture and the model
+// over, and loads the song again so that all of its audio arrives. Once per song,
+// because a song that cannot work should not keep interrupting playback.
+const recoverStems = (videoId: string) => {
+  console.warn('[karaoke] AI vocals stopped, starting them over');
+  recoveredVideoId = videoId;
+  stopStems();
+  setStemStatus('recovering');
+  setCapturing(false);
+  setCapturing(aiVocals);
+  requestAudioNodes();
 };
 
 // Keeps the stems on the video's clock, and decides which audio is heard.
@@ -155,6 +176,23 @@ const syncStems = () => {
 
   engine.sync(time, useStems && isAdvancing);
   route.setStemMix(useStems, video.muted ? 0 : video.volume);
+
+  const isDueStems =
+    isAdvancing &&
+    !isAdPlaying &&
+    video.playbackRate === 1 &&
+    stemStatus() !== 'loading-model' &&
+    video.duration - time > NO_RECOVERY_NEAR_END_SECONDS;
+
+  if (useStems || !isDueStems) {
+    lastCoveredAt = Date.now();
+  } else if (
+    videoId &&
+    videoId !== recoveredVideoId &&
+    Date.now() - lastCoveredAt > RECOVERY_DELAY_MS
+  ) {
+    recoverStems(videoId);
+  }
 };
 
 const onAudioCanPlay = ({ detail }: CustomEvent<Compressor>) => {

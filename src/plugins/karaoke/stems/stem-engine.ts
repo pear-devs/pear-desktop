@@ -27,6 +27,7 @@ export type StemStatus =
   | 'loading-model'
   | 'separating'
   | 'ready'
+  | 'recovering'
   | 'failed';
 
 type Ipc = RendererContext<KaraokePluginConfig>['ipc'];
@@ -101,8 +102,10 @@ export class StemEngine {
     this.run(job, videoId, duration).catch((error: unknown) => {
       console.error('[karaoke] AI vocals failed:', error);
       if (job === this.currentJob) {
-        // Lets the next song try again.
+        // Lets the next try start clean, without holding on to the GPU.
+        const failed = this.separator;
         this.separator = null;
+        failed?.then((it) => it.release()).catch(() => null);
         this.onStatus('failed');
       }
     });
@@ -194,6 +197,7 @@ export class StemEngine {
     };
 
     while (isCurrent()) {
+      song.useStream(findStream(duration) ?? stream);
       await song.update();
 
       const block = pickNextBlock(

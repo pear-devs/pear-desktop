@@ -11,6 +11,7 @@ const { MODEL_SPEC_BINS, MODEL_SPEC_FRAMES, TRAINING_SAMPLES } = CONSTANTS;
 // The model outputs drums, bass, other and vocals, in that order.
 const VOCALS_TRACK = 3;
 const TIME_OUTPUT_RANK = 4;
+const RELEASE_WAIT_MS = 5000;
 
 const createScriptUrl = (source: string) =>
   URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
@@ -137,7 +138,13 @@ export class Separator {
   }
 
   async release() {
-    await this.lastRun.catch(() => null);
+    // A stuck run must not stop the session from being released.
+    await Promise.race([
+      this.lastRun.catch(() => null),
+      new Promise((resolve) => {
+        setTimeout(resolve, RELEASE_WAIT_MS);
+      }),
+    ]);
     await this.session.release();
   }
 }

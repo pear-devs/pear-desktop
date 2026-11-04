@@ -1,7 +1,7 @@
 import { SOURCE_SAMPLE_RATE } from './stem-math';
 import { groupIntoRuns } from './webm';
 
-import type { AudioStream } from './audio-tap';
+import type { AudioStream } from './audio-streams';
 
 type Range = { start: number; end: number };
 
@@ -28,8 +28,10 @@ export class SongAudio {
   private ranges: Range[] = [];
   private decodedVersion = -1;
 
+  private earlierRanges: Range[] = [];
+
   constructor(
-    private readonly stream: AudioStream,
+    private stream: AudioStream,
     duration: number,
   ) {
     const samples = Math.ceil(duration * SOURCE_SAMPLE_RATE);
@@ -39,6 +41,15 @@ export class SongAudio {
 
   get length() {
     return this.left.length;
+  }
+
+  /** Follows the player when it moves this song to a new stream. */
+  useStream(stream: AudioStream) {
+    if (stream === this.stream) return;
+
+    this.stream = stream;
+    this.earlierRanges = this.ranges;
+    this.decodedVersion = -1;
   }
 
   /** Decodes whatever has arrived since the last call. */
@@ -64,7 +75,7 @@ export class SongAudio {
       this.right.set(right.subarray(0, length), start);
       ranges.push({ start, end: start + length });
     }
-    this.ranges = ranges;
+    this.ranges = [...this.earlierRanges, ...ranges];
   }
 
   /** Whether a stretch of the song has arrived, allowing for its last moments. */

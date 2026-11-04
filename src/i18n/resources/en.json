@@ -608,6 +608,7 @@
         "loading-model": "AI vocals: loading the model…",
         "model-progress": "AI vocals: downloading the model, {{percent}}%",
         "ready": "AI vocals are on",
+        "recovering": "AI vocals: restarting…",
         "separating": "AI vocals: separating…"
       },
       "lyrics": {
