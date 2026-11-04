@@ -18,7 +18,9 @@ const loadProcessor = () => {
     `(${registerPitchShifterProcessor.toString()})(${JSON.stringify(PROCESSOR_NAME)});`,
     {
       sampleRate: SAMPLE_RATE,
-      AudioWorkletProcessor: class {},
+      AudioWorkletProcessor: class {
+        port = {};
+      },
       registerProcessor: (name, processor) => {
         expect(name).toBe(PROCESSOR_NAME);
         Processor = processor;

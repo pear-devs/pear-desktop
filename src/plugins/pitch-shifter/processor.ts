@@ -270,12 +270,19 @@ export const registerPitchShifterProcessor = (name: string) => {
     channels: ChannelShifter[];
     wet: number;
     frame: Float32Array;
+    disposed: boolean;
 
     constructor() {
       super();
       this.channels = [];
       this.wet = 0;
       this.frame = new Float32Array(2);
+      this.disposed = false;
+      // The renderer posts 'dispose' when it drops the node. Returning false
+      // from process() then lets the browser stop running it.
+      this.port.onmessage = ({ data }) => {
+        if (data === 'dispose') this.disposed = true;
+      };
     }
 
     process(
@@ -309,7 +316,7 @@ export const registerPitchShifterProcessor = (name: string) => {
         this.wet = wet;
       }
 
-      return true;
+      return !this.disposed;
     }
   }
 
