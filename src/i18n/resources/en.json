@@ -694,6 +694,16 @@
       },
       "name": "Notifications"
     },
+    "omniblock": {
+      "description": "Blocks ads and trackers at every level so your music and videos play without interruptions",
+      "menu": {
+        "network-blocker": "Network Blocking",
+        "json-pruning": "Data Cleaning",
+        "dom-removal": "Ad Removal",
+        "ad-skipper": "Video Ad Skipper"
+      },
+      "name": "OmniBlock"
+    },
     "performance-improvement": {
       "description": "Improve performance by enabling experimental scripts",
       "name": "Performance improvement [Beta]"

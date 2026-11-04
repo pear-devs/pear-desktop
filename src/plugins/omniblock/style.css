@@ -1,0 +1,57 @@
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-module,
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-player-overlay,
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-player-overlay-instream-info,
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-action-interstitial,
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-action-interstitial-background,
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-image-overlay,
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-overlay-container,
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-message-container,
+body:not(.omniblock-cosmetic-disabled) .video-ads,
+body:not(.omniblock-cosmetic-disabled) ytd-action-companion-ad-renderer,
+body:not(.omniblock-cosmetic-disabled) ytd-display-ad-renderer,
+body:not(.omniblock-cosmetic-disabled) ytd-video-masthead-ad-advertiser-info-renderer,
+body:not(.omniblock-cosmetic-disabled) ytd-video-masthead-ad-primary-video-renderer,
+body:not(.omniblock-cosmetic-disabled) ytd-in-feed-ad-layout-renderer,
+body:not(.omniblock-cosmetic-disabled) ytd-promoted-sparkles-web-renderer,
+body:not(.omniblock-cosmetic-disabled) yt-about-this-ad-renderer,
+body:not(.omniblock-cosmetic-disabled) yt-mealbar-promo-renderer,
+body:not(.omniblock-cosmetic-disabled) ytd-statement-banner-renderer,
+body:not(.omniblock-cosmetic-disabled) ytd-banner-promo-renderer,
+body:not(.omniblock-cosmetic-disabled) .tp-yt-paper-dialog[role="dialog"] ytd-mealbar-promo-renderer,
+body:not(.omniblock-cosmetic-disabled) .ytmusic-mealbar-promo-renderer,
+body:not(.omniblock-cosmetic-disabled) ytmusic-mealbar-promo-renderer,
+body:not(.omniblock-cosmetic-disabled) ytmusic-message-renderer,
+body:not(.omniblock-cosmetic-disabled) #player-ads,
+body:not(.omniblock-cosmetic-disabled) ad-slot-renderer,
+body:not(.omniblock-cosmetic-disabled) .ad-showing,
+body:not(.omniblock-cosmetic-disabled) .ad-interrupting,
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-text-overlay,
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-visit-advertiser-button,
+body:not(.omniblock-cosmetic-disabled) .ytp-sponsorship-badge,
+body:not(.omniblock-cosmetic-disabled) .ytp-sponsorship-overlay,
+body:not(.omniblock-cosmetic-disabled) [class*="sponsor" i],
+body:not(.omniblock-cosmetic-disabled) [class*="ad-badge" i],
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-preview-container,
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-simple-ad-badge,
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-overlay-ad-badge,
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-client-side-rendered-companion-ad,
+body:not(.omniblock-cosmetic-disabled) ytd-ad-slot-renderer {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  top: -9999px !important;
+  left: -9999px !important;
+  z-index: -9999 !important;
+}
+
+body:not(.omniblock-cosmetic-disabled) .ytp-ad-skip-button-container {
+  opacity: 1 !important;
+  z-index: 999999 !important;
+  display: block !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
