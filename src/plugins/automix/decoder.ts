@@ -146,11 +146,17 @@ export const decodeAndAnalyze = async (
 ): Promise<AnalyzedTrack> => {
   const decoder = new OfflineAudioContext(2, 1, sampleRate);
   // decodeAudioData detaches its input, so hand it a private copy
-  const buffer = await decoder.decodeAudioData(bytes.slice().buffer);
-  const bands = await renderBands(buffer);
+  // Only the ends are kept: the whole decoded song (~90 MB for four minutes)
+  // can go before the analysis, the heaviest step, runs
+  const { ends, ...bands } = await decoder
+    .decodeAudioData(bytes.slice().buffer)
+    .then(async (buffer) => ({
+      ...(await renderBands(buffer)),
+      ends: sliceEnds(buffer),
+    }));
   const analysis = analyzeTrack(bands);
   const loudness = loudnessCurve(bands.full, bands.sampleRate);
-  return { videoId, analysis, loudness, ...sliceEnds(buffer) };
+  return { videoId, analysis, loudness, ...ends };
 };
 
 /**

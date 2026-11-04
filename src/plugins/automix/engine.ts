@@ -512,6 +512,8 @@ export class AutoMixEngine {
   private source: MediaElementAudioSourceNode | null = null;
   /** Taps what the player actually plays, to measure its true position */
   private tap: AnalyserNode | null = null;
+  /** Reused for reading the tap, which is read many times a second while mixing */
+  private tapBuffer: Float32Array<ArrayBuffer> | null = null;
   /**
    * What the player is really playing minus what its currentTime says, in
    * seconds; measured from the audio itself at each hand-off
@@ -527,6 +529,11 @@ export class AutoMixEngine {
 
   private readonly tracks = new Map<string, Promise<AnalyzedTrack | null>>();
   private readonly ready = new Map<string, AnalyzedTrack>();
+  /**
+   * Songs whose start (`head`, only needed to mix into them) was let go
+   * while they played; analysed again if one comes up to be mixed into
+   */
+  private readonly headless = new Set<string>();
   /**
    * Tempo / key summaries for reordering the queue, by video id, most
    * recently used last. Saved between sessions
@@ -592,6 +599,7 @@ export class AutoMixEngine {
       // Analyse the songs again with (or without) Apple Music's analysis
       this.tracks.clear();
       this.ready.clear();
+      this.headless.clear();
     }
     this.config = config;
     if (!config.active && this.mix) this.abort();
@@ -612,6 +620,10 @@ export class AutoMixEngine {
     document.removeEventListener('peard:audio-can-play', this.onAudioCanPlay);
     this.tap?.disconnect();
     this.tap = null;
+    this.tapBuffer = null;
+    // Hand back the song audio they hold
+    this.stretch?.dropBuffers().catch(() => {});
+    this.stretchOut?.dropBuffers().catch(() => {});
     this.stretch?.disconnect();
     this.stretch = null;
     this.stretchOut?.disconnect();
@@ -626,6 +638,7 @@ export class AutoMixEngine {
     this.unsubscribeQueue = null;
     this.tracks.clear();
     this.ready.clear();
+    this.headless.clear();
   }
 
   /* ------------------------------------------------------------------ */
@@ -697,8 +710,7 @@ export class AutoMixEngine {
     const tap = this.tap;
     const context = this.context;
     if (!tap || !context) return null;
-    const capture = new Float32Array(tap.fftSize);
-    tap.getFloatTimeDomainData(capture);
+    const capture = this.readTap(tap);
     const capturedAt = context.currentTime;
     const reported = this.songTime(video);
 
@@ -717,6 +729,15 @@ export class AutoMixEngine {
     if (Math.abs(offset) > SYNC_SEARCH_SECONDS) return null;
     this.playerOffset = offset;
     return { position, at: capturedAt };
+  }
+
+  /** The tap's latest audio, in a buffer that's reused (use it right away) */
+  private readTap(tap: AnalyserNode) {
+    if (this.tapBuffer?.length !== tap.fftSize) {
+      this.tapBuffer = new Float32Array(tap.fftSize);
+    }
+    tap.getFloatTimeDomainData(this.tapBuffer);
+    return this.tapBuffer;
   }
 
   /**
@@ -748,8 +769,7 @@ export class AutoMixEngine {
     const tap = this.tap;
     const context = this.context;
     if (!tap || !context) return null;
-    const all = new Float32Array(tap.fftSize);
-    tap.getFloatTimeDomainData(all);
+    const all = this.readTap(tap);
     const heardAt = context.currentTime;
     const capture = all.subarray(
       all.length - Math.round(HEAR_SECONDS * head.buffer.sampleRate),
@@ -1134,6 +1154,38 @@ export class AutoMixEngine {
         this.ready.delete(id);
       }
     }
+    for (const id of [...this.headless]) {
+      if (!this.tracks.has(id)) this.headless.delete(id);
+    }
+  }
+
+  /**
+   * Lets go of the playing song's start (a minute of audio, ~20 MB): it's
+   * only played to mix into the song, which is over. Only call with no mix
+   * running, as a mix plays the incoming song's start
+   */
+  private releaseHead(videoId: string) {
+    const track = this.ready.get(videoId);
+    if (!track || this.headless.has(videoId) || track.head.length <= 1) return;
+    const released: AnalyzedTrack = {
+      ...track,
+      head: new AudioBuffer({
+        length: 1,
+        numberOfChannels: track.head.numberOfChannels,
+        sampleRate: track.head.sampleRate,
+      }),
+    };
+    this.ready.set(videoId, released);
+    // The settled promise holds the track too
+    this.tracks.set(videoId, Promise.resolve(released));
+    this.headless.add(videoId);
+  }
+
+  /** A song is up to be mixed into: if its start was let go, analyse it again */
+  private needHead(videoId: string) {
+    if (!this.headless.delete(videoId)) return;
+    this.tracks.delete(videoId);
+    this.ready.delete(videoId);
   }
 
   /* ------------------------------------------------------------------ */
@@ -1298,6 +1350,7 @@ export class AutoMixEngine {
     const nextId = this.next?.videoId;
     const afterNextId = this.afterNext?.videoId;
     this.pruneTracks([id, nextId, afterNextId]);
+    this.releaseHead(id);
 
     const blocked: AutoMixWaitReason | null =
       !nextId || nextId === id
@@ -1314,6 +1367,7 @@ export class AutoMixEngine {
     }
 
     this.ensureTrack(id);
+    this.needHead(nextId);
     this.ensureTrack(nextId);
 
     // Sought back before where a mix-now was decoded from: it can't play
@@ -1333,7 +1387,10 @@ export class AutoMixEngine {
 
     // Look one song further so reordering the queue is usually covered
     const to = this.ready.get(nextId);
-    if (to && afterNextId && afterNextId !== id) this.ensureTrack(afterNextId);
+    if (to && afterNextId && afterNextId !== id) {
+      this.needHead(afterNextId);
+      this.ensureTrack(afterNextId);
+    }
 
     // The next song changed too late (or couldn't be analysed): rather than
     // stopping dead, fade into it once the end of this song gets close
@@ -2988,6 +3045,13 @@ export class AutoMixEngine {
           } catch {
             // The player's source changed meanwhile
           }
+        }
+        // The stretchers keep their own copy of the audio they played (up
+        // to 1.5 min each): let it go between mixes. Not while another mix
+        // runs, which may be using them; each mix hands them its own anyway
+        if (!this.mix) {
+          this.stretch?.dropBuffers().catch(() => {});
+          this.stretchOut?.dropBuffers().catch(() => {});
         }
       },
       (fadeSeconds + 6) * 1000,
