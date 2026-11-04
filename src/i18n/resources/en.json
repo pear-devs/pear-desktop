@@ -600,6 +600,44 @@
       },
       "name": "In-App Menu"
     },
+    "karaoke": {
+      "button": "Karaoke mode",
+      "description": "Sing along: reduces centered vocals and shows big, timed lyrics. Needs the Synced Lyrics plugin.",
+      "ai": {
+        "failed": "AI vocals are unavailable, so the filter is being used.",
+        "loading-model": "AI vocals: loading the model…",
+        "model-progress": "AI vocals: downloading the model, {{percent}}%",
+        "ready": "AI vocals are on",
+        "separating": "AI vocals: separating…"
+      },
+      "lyrics": {
+        "after-ad": "Lyrics will start after the ad.",
+        "not-found": "No synced lyrics found for this song.",
+        "searching": "Searching for lyrics…"
+      },
+      "menu": {
+        "lyrics-size": {
+          "label": "Lyrics size",
+          "large": "Large",
+          "medium": "Medium",
+          "small": "Small"
+        },
+        "ai-vocals": {
+          "label": "AI vocal separation",
+          "tooltip": "Uses your graphics card for much cleaner results. Downloads a 172 MB model once."
+        }
+      },
+      "name": "Karaoke",
+      "overlay": {
+        "exit-hint": "Press Esc to exit",
+        "lyrics-earlier": "Lyrics earlier",
+        "lyrics-later": "Lyrics later",
+        "mono": "This track is mono, so vocals can't be separated from the music.",
+        "needs-synced-lyrics": "Turn on the Synced Lyrics plugin to see lyrics here.",
+        "vocals": "Vocals",
+        "vocals-may-leak": "Audio Compressor or Equalizer is on, so vocals may still come through."
+      }
+    },
     "lumiastream": {
       "description": "Adds Lumia Stream support",
       "name": "Lumia Stream [Beta]"

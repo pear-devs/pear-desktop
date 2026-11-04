@@ -1,0 +1,71 @@
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync } from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
+import { app, net } from 'electron';
+import wasmPath from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?asset';
+
+import { createBackend } from '@/utils';
+
+import type { KaraokePluginConfig } from './types';
+
+const MODEL_URL =
+  'https://huggingface.co/timcsy/demucs-web-onnx/resolve/main/htdemucs_embedded.onnx';
+const MODEL_FILE = 'htdemucs_embedded.onnx';
+const MODEL_SHA256 =
+  'e5e425c17683f163a472462eb5f5a4ffcd11c31858d57fbd0833b012d8b88077';
+
+const downloadModel = async (
+  path: string,
+  onProgress: (percent: number) => void,
+) => {
+  const response = await net.fetch(MODEL_URL);
+  if (!response.ok || !response.body) {
+    throw new Error(`Model download failed: ${response.status}`);
+  }
+
+  const total = Number(response.headers.get('content-length')) || 0;
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    if (total) onProgress(Math.round((received / total) * 100));
+  }
+
+  const model = Buffer.concat(chunks);
+  const hash = createHash('sha256').update(model).digest('hex');
+  if (hash !== MODEL_SHA256) throw new Error('Model checksum did not match');
+
+  await writeFile(path, model);
+  return model;
+};
+
+const getModel = async (onProgress: (percent: number) => void) => {
+  const folder = join(app.getPath('userData'), 'karaoke');
+  mkdirSync(folder, { recursive: true });
+
+  const path = join(folder, MODEL_FILE);
+  if (existsSync(path)) return await readFile(path);
+  return await downloadModel(path, onProgress);
+};
+
+export const backend = createBackend<object, KaraokePluginConfig>({
+  start(ctx) {
+    ctx.ipc.handle('karaoke:get-runtime', async () => ({
+      wasm: await readFile(wasmPath),
+      model: await getModel((percent) => {
+        ctx.ipc.send('karaoke:model-progress', percent);
+      }),
+    }));
+  },
+
+  stop(ctx) {
+    ctx.ipc.removeHandler('karaoke:get-runtime');
+  },
+});
