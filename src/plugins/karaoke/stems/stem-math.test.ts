@@ -6,6 +6,7 @@ import {
   getBlockCount,
   getOverlapWeight,
   pickNextBlock,
+  placeRun,
   SEGMENT_SAMPLES,
   SOURCE_SAMPLE_RATE,
 } from './stem-math';
@@ -48,6 +49,18 @@ test('stops at the end of the song', () => {
 test('waits for audio that has not arrived', () => {
   expect(pickNextBlock(new Set(), 0, 30, (block) => block > 1)).toBe(2);
   expect(pickNextBlock(new Set(), 0, 30, () => false)).toBeNull();
+});
+
+test('places a run at its start time', () => {
+  expect(placeRun(1000, 0)).toEqual({ target: 44100, skip: 0 });
+});
+
+test('applies the shift of the stream', () => {
+  expect(placeRun(1000, -0.5)).toEqual({ target: 22050, skip: 0 });
+});
+
+test('drops what a shift moves before the start of the song', () => {
+  expect(placeRun(0, -0.1)).toEqual({ target: 0, skip: 4410 });
 });
 
 test('fades segments in and out', () => {

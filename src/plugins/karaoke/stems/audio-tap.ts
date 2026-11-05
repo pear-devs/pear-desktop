@@ -1,6 +1,10 @@
 import { type AudioStream, StreamList } from './audio-streams';
 import { log } from './diagnostics';
+import { findHeaderEnd, isMp4Header } from './mp4';
 import { startsWithHeader } from './webm';
+
+const isCapturedType = (type: string) =>
+  type.startsWith('audio/webm') || type.startsWith('audio/mp4');
 
 let isCapturing = false;
 const streams = new StreamList();
@@ -12,7 +16,20 @@ const capture = (buffer: SourceBuffer, data: BufferSource) => {
     : new Uint8Array(data);
 
   if (startsWithHeader(view)) {
-    audioBuffers.set(buffer, streams.open(view.slice()));
+    const stream = streams.open(view.slice());
+    stream.timeOffset = buffer.timestampOffset;
+    audioBuffers.set(buffer, stream);
+    log(`stream starts at offset ${buffer.timestampOffset}`);
+    return;
+  }
+
+  if (isMp4Header(view)) {
+    const headerEnd = findHeaderEnd(view);
+    const stream = streams.open(view.slice(0, headerEnd));
+    stream.timeOffset = buffer.timestampOffset;
+    audioBuffers.set(buffer, stream);
+    log(`stream starts at offset ${buffer.timestampOffset}`);
+    if (headerEnd < view.length) stream.append(view.subarray(headerEnd));
     return;
   }
 
@@ -29,7 +46,7 @@ const addSourceBuffer = MediaSource.prototype.addSourceBuffer;
 MediaSource.prototype.addSourceBuffer = function (type: string) {
   const buffer = addSourceBuffer.call(this, type);
   if (type.startsWith('audio/')) log(`source buffer ${type}`);
-  if (type.startsWith('audio/webm')) audioBuffers.set(buffer, null);
+  if (isCapturedType(type)) audioBuffers.set(buffer, null);
   return buffer;
 };
 
@@ -50,7 +67,11 @@ SourceBuffer.prototype.appendBuffer = function (data: BufferSource) {
 // oxlint-disable-next-line typescript/unbound-method
 const changeType = SourceBuffer.prototype.changeType;
 SourceBuffer.prototype.changeType = function (type: string) {
-  if (audioBuffers.has(this)) log(`source buffer changed to ${type}`);
+  if (audioBuffers.has(this)) {
+    log(`source buffer changed to ${type}`);
+    // What comes next is in another format, and must not reach the old stream.
+    audioBuffers.set(this, null);
+  }
   changeType.call(this, type);
 };
 

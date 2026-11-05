@@ -33,6 +33,13 @@ export const pickNextBlock = (
   return null;
 };
 
+/** Where a decoded run goes in the song, given the player's shift of the stream. */
+export const placeRun = (startMs: number, offsetSeconds: number) => {
+  const seconds = startMs / 1000;
+  const start = Math.round((seconds + offsetSeconds) * SOURCE_SAMPLE_RATE);
+  return { target: Math.max(0, start), skip: Math.max(0, -start) };
+};
+
 /** Fades a segment in and out so that overlapping segments blend. */
 export const getOverlapWeight = (index: number, length: number) => {
   const fade = BLOCK_SAMPLES * 0.5;

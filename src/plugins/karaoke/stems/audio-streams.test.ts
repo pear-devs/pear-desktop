@@ -55,7 +55,7 @@ test('continues a stream when the player repeats its header', () => {
   second.append(cluster(5000));
 
   expect(second).toBe(first);
-  expect(first.getClusters()).toHaveLength(2);
+  expect(first.getChunks()).toHaveLength(2);
 });
 
 test('prefers the newest stream of the same length', () => {
@@ -86,7 +86,7 @@ test('recovers from a cluster that was abandoned part way', () => {
   stream.append(cluster(0).subarray(0, 8));
   stream.append(cluster(5000));
 
-  expect(stream.getClusters().map((it) => it.startMs)).toEqual([5000]);
+  expect(stream.getChunks().map((it) => it.startMs)).toEqual([5000]);
 });
 
 test('still joins a cluster split across appends', () => {
@@ -96,7 +96,7 @@ test('still joins a cluster split across appends', () => {
   stream.append(whole.subarray(0, 8));
   stream.append(whole.subarray(8));
 
-  expect(stream.getClusters()).toHaveLength(1);
+  expect(stream.getChunks()).toHaveLength(1);
 });
 
 test('reports when it is empty', () => {

@@ -67,25 +67,25 @@ test('copes with a missing duration', () => {
 });
 
 test('reads cluster times', () => {
-  const { clusters, rest } = takeClusters(new Uint8Array(cluster(1000, 500)));
-  expect(clusters).toHaveLength(1);
-  expect(clusters[0].startMs).toBe(1000);
-  expect(clusters[0].endMs).toBe(1520);
+  const { chunks, rest } = takeClusters(new Uint8Array(cluster(1000, 500)));
+  expect(chunks).toHaveLength(1);
+  expect(chunks[0].startMs).toBe(1000);
+  expect(chunks[0].endMs).toBe(1520);
   expect(rest).toHaveLength(0);
 });
 
 test('keeps a split cluster for later', () => {
   const whole = new Uint8Array(cluster(0, 100));
   const first = takeClusters(whole.subarray(0, 9));
-  expect(first.clusters).toHaveLength(0);
+  expect(first.chunks).toHaveLength(0);
 
   const joined = new Uint8Array([...first.rest, ...whole.subarray(9)]);
-  expect(takeClusters(joined).clusters).toHaveLength(1);
+  expect(takeClusters(joined).chunks).toHaveLength(1);
 });
 
 test('takes several clusters from one append', () => {
   const bytes = new Uint8Array([...cluster(0, 100), ...cluster(120, 100)]);
-  expect(takeClusters(bytes).clusters).toHaveLength(2);
+  expect(takeClusters(bytes).chunks).toHaveLength(2);
 });
 
 test('skips other elements between clusters', () => {
@@ -93,7 +93,7 @@ test('skips other elements between clusters', () => {
     ...element([0xec], [0, 0, 0]),
     ...cluster(0, 100),
   ]);
-  expect(takeClusters(bytes).clusters).toHaveLength(1);
+  expect(takeClusters(bytes).chunks).toHaveLength(1);
 });
 
 test('groups unbroken audio, and splits at a seek', () => {

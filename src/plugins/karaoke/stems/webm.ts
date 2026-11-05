@@ -12,7 +12,7 @@ const TIMECODE_SCALE = 0x2ad7b1;
 const DEFAULT_TIMECODE_SCALE = 1_000_000;
 const OPUS_FRAME_MS = 20;
 
-export type Cluster = {
+export type Chunk = {
   startMs: number;
   endMs: number;
   bytes: Uint8Array;
@@ -129,7 +129,7 @@ const parseClusterTimes = (
  * cluster, so whatever is left over must be retried with more data.
  */
 export const takeClusters = (bytes: Uint8Array) => {
-  const clusters: Cluster[] = [];
+  const chunks: Chunk[] = [];
   let position = 0;
 
   while (position < bytes.length) {
@@ -143,7 +143,7 @@ export const takeClusters = (bytes: Uint8Array) => {
     if (bodyEnd > bytes.length) break;
 
     if (id.id === CLUSTER) {
-      clusters.push({
+      chunks.push({
         ...parseClusterTimes(bytes, bodyStart, bodyEnd),
         bytes: bytes.slice(position, bodyEnd),
       });
@@ -151,21 +151,21 @@ export const takeClusters = (bytes: Uint8Array) => {
     position = bodyEnd;
   }
 
-  return { clusters, rest: bytes.slice(position) };
+  return { chunks, rest: bytes.slice(position) };
 };
 
 /** Splits clusters into runs of unbroken audio. A seek leaves a gap. */
-export const groupIntoRuns = (clusters: Cluster[], maxGapMs = 100) => {
-  const sorted = [...clusters].sort((a, b) => a.startMs - b.startMs);
-  const runs: Cluster[][] = [];
+export const groupIntoRuns = (chunks: Chunk[], maxGapMs = 100) => {
+  const sorted = [...chunks].sort((a, b) => a.startMs - b.startMs);
+  const runs: Chunk[][] = [];
 
-  for (const cluster of sorted) {
+  for (const chunk of sorted) {
     const run = runs.at(-1);
     const previous = run?.at(-1);
-    if (run && previous && cluster.startMs - previous.endMs <= maxGapMs) {
-      run.push(cluster);
+    if (run && previous && chunk.startMs - previous.endMs <= maxGapMs) {
+      run.push(chunk);
     } else {
-      runs.push([cluster]);
+      runs.push([chunk]);
     }
   }
   return runs;

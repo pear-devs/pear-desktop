@@ -1,4 +1,4 @@
-import { SOURCE_SAMPLE_RATE } from './stem-math';
+import { placeRun, SOURCE_SAMPLE_RATE } from './stem-math';
 import { groupIntoRuns } from './webm';
 
 import type { AudioStream } from './audio-streams';
@@ -59,21 +59,21 @@ export class SongAudio {
     this.decodedVersion = version;
 
     const ranges: Range[] = [];
-    for (const run of groupIntoRuns(this.stream.getClusters())) {
+    for (const run of groupIntoRuns(this.stream.getChunks())) {
       const song = await decodeRun(
         this.stream.header,
-        run.map((cluster) => cluster.bytes),
+        run.map((chunk) => chunk.bytes),
       );
 
-      const start = Math.round((run[0].startMs / 1000) * SOURCE_SAMPLE_RATE);
-      const length = Math.min(song.length, this.length - start);
+      const { target, skip } = placeRun(run[0].startMs, this.stream.timeOffset);
+      const length = Math.min(song.length - skip, this.length - target);
       if (length <= 0) continue;
 
       const left = song.getChannelData(0);
       const right = song.numberOfChannels > 1 ? song.getChannelData(1) : left;
-      this.left.set(left.subarray(0, length), start);
-      this.right.set(right.subarray(0, length), start);
-      ranges.push({ start, end: start + length });
+      this.left.set(left.subarray(skip, skip + length), target);
+      this.right.set(right.subarray(skip, skip + length), target);
+      ranges.push({ start: target, end: target + length });
     }
     this.ranges = [...this.earlierRanges, ...ranges];
   }
