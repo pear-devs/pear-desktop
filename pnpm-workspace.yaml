@@ -23,3 +23,5 @@ patchedDependencies:
 engineStrict: true
 minimumReleaseAgeExclude:
   - vite@8.1.0
+  # Renovate security update: happy-dom@21.0.4
+  - happy-dom@21.0.4
