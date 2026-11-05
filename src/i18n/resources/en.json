@@ -617,6 +617,15 @@
         "searching": "Searching for lyrics…"
       },
       "menu": {
+        "phone-link": {
+          "detail": "Copied. Open it on a phone on the same Wi-Fi. Anyone with this link on your network can control playback.",
+          "label": "Show phone link",
+          "no-network": "No home network was found."
+        },
+        "phone-remote": {
+          "label": "Phone remote",
+          "tooltip": "Show lyrics and control playback from a phone on the same network"
+        },
         "lyrics-size": {
           "label": "Lyrics size",
           "large": "Large",

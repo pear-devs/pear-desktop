@@ -1,8 +1,11 @@
+import { clipboard, dialog, type MenuItemConstructorOptions } from 'electron';
+
 import { t } from '@/i18n';
+
+import { getPhoneLink } from './phone-server';
 
 import type { KaraokePluginConfig, LyricsSize } from './types';
 import type { MenuContext } from '@/types/contexts';
-import type { MenuItemConstructorOptions } from 'electron';
 
 const lyricsSizes: LyricsSize[] = ['small', 'medium', 'large'];
 
@@ -19,6 +22,32 @@ export const menu = async (
       checked: config.aiVocals,
       click(item) {
         ctx.setConfig({ aiVocals: item.checked });
+      },
+    },
+    {
+      label: t('plugins.karaoke.menu.phone-remote.label'),
+      toolTip: t('plugins.karaoke.menu.phone-remote.tooltip'),
+      type: 'checkbox',
+      checked: config.phoneRemote,
+      click(item) {
+        ctx.setConfig({ phoneRemote: item.checked });
+      },
+    },
+    {
+      label: t('plugins.karaoke.menu.phone-link.label'),
+      enabled: config.phoneRemote,
+      async click() {
+        const link = getPhoneLink();
+        if (link) clipboard.writeText(link);
+
+        await dialog.showMessageBox(ctx.window, {
+          type: 'info',
+          title: t('plugins.karaoke.menu.phone-link.label'),
+          message: link ?? t('plugins.karaoke.menu.phone-link.no-network'),
+          detail: link
+            ? t('plugins.karaoke.menu.phone-link.detail')
+            : undefined,
+        });
       },
     },
     {

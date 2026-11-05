@@ -8,7 +8,16 @@ import wasmPath from 'onnxruntime-web/ort-wasm-simd-threaded.asyncify.wasm?asset
 
 import { createBackend } from '@/utils';
 
+import {
+  type PhoneLine,
+  setPhoneLines,
+  setPhoneState,
+  startPhoneServer,
+  stopPhoneServer,
+} from './phone-server';
+
 import type { KaraokePluginConfig } from './types';
+import type { BackendContext } from '@/types/contexts';
 
 const MODEL_URL =
   'https://huggingface.co/timcsy/demucs-web-onnx/resolve/main/htdemucs_embedded.onnx';
@@ -67,8 +76,31 @@ const startLog = async () => {
   return path;
 };
 
+const applyPhoneRemote = (
+  ctx: BackendContext<KaraokePluginConfig>,
+  isOn: boolean,
+) => {
+  if (!isOn) {
+    stopPhoneServer();
+    return;
+  }
+
+  startPhoneServer((action, value) => {
+    ctx.ipc.send('karaoke:phone-command', action, value);
+  });
+};
+
+let context: BackendContext<KaraokePluginConfig> | null = null;
+
 export const backend = createBackend<object, KaraokePluginConfig>({
   async start(ctx) {
+    context = ctx;
+    ctx.ipc.on('karaoke:phone-state', setPhoneState);
+    ctx.ipc.on('karaoke:phone-lines', (lines: PhoneLine[]) => {
+      setPhoneLines(lines);
+    });
+    applyPhoneRemote(ctx, (await ctx.getConfig()).phoneRemote);
+
     const logPath = await startLog();
     ctx.ipc.on('karaoke:log', (line: string) => {
       appendFile(logPath, `${line}\n`).catch(() => null);
@@ -82,7 +114,12 @@ export const backend = createBackend<object, KaraokePluginConfig>({
     }));
   },
 
+  onConfigChange(config) {
+    if (context) applyPhoneRemote(context, config.phoneRemote);
+  },
+
   stop(ctx) {
+    stopPhoneServer();
     ctx.ipc.removeHandler('karaoke:get-runtime');
   },
 });

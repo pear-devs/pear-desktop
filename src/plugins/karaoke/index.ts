@@ -23,6 +23,7 @@ export default createPlugin<
     vocalReduction: 1,
     lyricsSize: 'medium',
     aiVocals: false,
+    phoneRemote: false,
   },
 
   menu,

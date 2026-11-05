@@ -2,12 +2,15 @@ import { createSignal, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 
 import { t } from '@/i18n';
+import { getSongInfo } from '@/providers/song-info-front';
 import { createRenderer } from '@/utils';
 import { waitForElement } from '@/utils/wait-for-element';
 
 import { AudioRoute } from './audio-route';
 import { KaraokeButton } from './components/KaraokeButton';
 import { KaraokeOverlay } from './components/KaraokeOverlay';
+import { loadOffset, nudgeOffset, saveOffset } from './lyric-offset';
+import { getLyricsState } from './lyrics';
 import { describeStreams, hasStreams, setCapturing } from './stems/audio-tap';
 import { log, setLogSink } from './stems/diagnostics';
 import { StemEngine, type StemStatus } from './stems/stem-engine';
@@ -26,6 +29,7 @@ const RECOVERY_DELAY_MS = 10000;
 const FAILED_RECOVERY_DELAY_MS = 1500;
 const NO_RECOVERY_NEAR_END_SECONDS = 15;
 const LOG_INTERVAL_MS = 10000;
+const PHONE_INTERVAL_MS = 500;
 
 // The classic player bar, and the redesigned one some sessions are served.
 const PLAYER_CONTROLS =
@@ -50,6 +54,8 @@ let context: RendererContext<KaraokePluginConfig> | null = null;
 let engine: StemEngine | null = null;
 let isStartingStems = false;
 let stemSession = 0;
+let phoneTimer: ReturnType<typeof setInterval> | null = null;
+let phoneLinesKey = '';
 let lastCoveredAt = 0;
 let lastLoggedAt = 0;
 let recoveredVideoId: string | null = null;
@@ -95,10 +101,60 @@ const applyVocalLevel = (level: number) => {
   engine?.setVocalGain(level);
 };
 
+const sendPhoneState = () => {
+  const video = document.querySelector('video');
+  if (!(context && video)) return;
+
+  const { title, alternativeTitle, artist, videoId } = getSongInfo();
+  const lyrics = getLyricsState();
+  const lines = lyrics.status === 'ready' ? lyrics.lines : [];
+  const linesKey = `${videoId}:${lines.length}`;
+
+  if (linesKey !== phoneLinesKey) {
+    phoneLinesKey = linesKey;
+    context.ipc.send(
+      'karaoke:phone-lines',
+      lines.map((line) => ({
+        t: line.timeInMs,
+        d: line.duration ?? 0,
+        x: line.text.trim(),
+      })),
+    );
+  }
+
+  context.ipc.send('karaoke:phone-state', {
+    title: alternativeTitle ?? title,
+    artist,
+    time: video.currentTime,
+    duration: video.duration || 0,
+    paused: video.paused,
+    ad: Boolean(document.querySelector('.ad-showing')),
+    karaoke: isActive(),
+    vocalLevel: vocalLevel(),
+    offsetMs: loadOffset(videoId),
+    linesKey,
+    lyricsMessage:
+      lyrics.status === 'searching'
+        ? t('plugins.karaoke.lyrics.searching')
+        : t('plugins.karaoke.lyrics.not-found'),
+  });
+};
+
+const applyPhoneRemote = (isOn: boolean) => {
+  if (isOn) {
+    phoneLinesKey = '';
+    phoneTimer ??= setInterval(sendPhoneState, PHONE_INTERVAL_MS);
+  } else {
+    if (phoneTimer !== null) clearInterval(phoneTimer);
+    phoneTimer = null;
+  }
+};
+
 const applyConfig = (config: KaraokePluginConfig) => {
   const wasOn = aiVocals;
   aiVocals = config.aiVocals;
   setCapturing(aiVocals);
+  applyPhoneRemote(config.phoneRemote);
   setLyricsSize(config.lyricsSize);
   applyVocalLevel(1 - config.vocalReduction);
   if (!aiVocals) stopStems();
@@ -268,6 +324,44 @@ const toggle = () => {
   else enter().catch(console.error);
 };
 
+const onPhoneCommand = (action: string, value: unknown) => {
+  const video = document.querySelector('video');
+  const number = typeof value === 'number' ? value : 0;
+
+  switch (action) {
+    case 'toggle-play': {
+      if (video?.paused) playerApi?.playVideo();
+      else playerApi?.pauseVideo();
+      break;
+    }
+    case 'previous': {
+      playerApi?.previousVideo();
+      break;
+    }
+    case 'next': {
+      playerApi?.nextVideo();
+      break;
+    }
+    case 'seek': {
+      playerApi?.seekTo(number);
+      break;
+    }
+    case 'vocals': {
+      changeVocalLevel(Math.min(1, Math.max(0, number)));
+      break;
+    }
+    case 'nudge-lyrics': {
+      const { videoId } = getSongInfo();
+      saveOffset(videoId, nudgeOffset(loadOffset(videoId), number));
+      break;
+    }
+    case 'toggle-karaoke': {
+      toggle();
+      break;
+    }
+  }
+};
+
 const mount = (parent: Element, content: () => unknown) => {
   const host = document.createElement('div');
   host.style.display = 'contents';
@@ -286,6 +380,7 @@ export const renderer = createRenderer<object, KaraokePluginConfig>({
     context = ctx;
     setLogSink((line) => ctx.ipc.send('karaoke:log', line));
     ctx.ipc.on('karaoke:model-progress', setModelProgress);
+    ctx.ipc.on('karaoke:phone-command', onPhoneCommand);
     applyConfig(await ctx.getConfig());
     document.addEventListener('peard:audio-can-play', onAudioCanPlay, {
       passive: true,
@@ -344,7 +439,9 @@ export const renderer = createRenderer<object, KaraokePluginConfig>({
     exit();
     setCapturing(false);
     setLogSink(null);
+    applyPhoneRemote(false);
     context?.ipc.removeAllListeners('karaoke:model-progress');
+    context?.ipc.removeAllListeners('karaoke:phone-command');
     context = null;
     document.removeEventListener('peard:audio-can-play', onAudioCanPlay);
     unmountButton?.();
