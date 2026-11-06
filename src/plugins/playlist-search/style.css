@@ -1,0 +1,74 @@
+:root {
+  --ps4ytm-secondary: rgba(154, 152, 152, 0.93);
+  --ps4ytm-secondary-light: rgba(255, 255, 255, 0.87);
+}
+
+.ps4ytm-wrapper {
+  position: relative;
+  padding: 8px 16px;
+}
+
+#ps4ytm-dialog-wrapper {
+  margin-top: 10px;
+}
+
+.ps4ytm-input {
+  border: none;
+  height: 40px;
+
+  width: 100%;
+  padding: 8px 0 8px 10px;
+  box-sizing: border-box;
+
+  font-family: inherit;
+  font-size: 14px;
+  text-indent: 35px;
+  background-color: transparent;
+  color: var(--ps4ytm-secondary-light);
+
+  border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  transition: border-bottom-color 0.6s ease;
+}
+
+.ps4ytm-input::placeholder {
+  color: var(--ps4ytm-secondary);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.ps4ytm-input:focus {
+  border-bottom-color: var(--ps4ytm-secondary-light);
+  outline: none;
+}
+
+#no-playlists-message {
+  display: none;
+  padding: 24px;
+  text-align: center;
+  color: var(--ps4ytm-secondary);
+  font-size: 14px;
+}
+
+#sidebar-no-playlists-message {
+  display: none;
+  padding: 16px;
+  text-align: center;
+  color: var(--ps4ytm-secondary);
+  font-size: 12px;
+}
+
+.search-icon {
+  position: absolute;
+  top: 50%;
+  left: 28px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  color: var(--ps4ytm-secondary);
+}
+
+body.ps4ytm-opening-save-to-playlist ytmusic-menu-popup-renderer {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: none !important;
+}
