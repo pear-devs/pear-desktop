@@ -55,14 +55,24 @@ export default definePlugin({
       height: 100%;
       transform: none;
     }
+    sel(player.song_video) .html5-video-container {
+      height: 100%;
+    }
     sel(player.container):not([video-mode]):not([player-ui-state='MINIPLAYER']) {
       overflow: visible;
+    }
+    sel(player.container):not([video-mode]):not(.video-mode):not([player-ui-state='MINIPLAYER']):not([is-mweb-modernization-enabled]) {
+      width: 100%;
+      margin: 0 auto !important;
     }
     sel(player.side_panel) {
       z-index: 0;
     }
-    sel(player.av_toggle) {
+    /* The glow stays behind the song/video switch (pear-desktop#2520). */
+    sel(player.av_toggle) .song-button,
+    sel(player.av_toggle) .video-button {
       z-index: 1;
+      background-color: transparent;
     }
   `,
   page(ctx) {
