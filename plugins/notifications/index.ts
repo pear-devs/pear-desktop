@@ -5,6 +5,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { config, definePlugin, livePosition, type HostContextOf, type NowPlaying, type Track } from "@pear/sdk";
+import { pearIconBitmap } from "@pear/sdk/icon";
 import { embed } from "@pear/sdk/macros" with { type: "macro" };
 import { isPlaying } from "@pear/sdk/util";
 import { type NativeImage, nativeImage, net, Notification } from "electron";
@@ -40,6 +41,9 @@ const PREVIOUS_ACTION = 0;
 const NEXT_ACTION = 2;
 
 type ButtonIcon = keyof typeof BUTTON_ICONS;
+
+/** The app's icon, shown instead of missing artwork as pear-desktop did. */
+const appIcon = () => nativeImage.createFromBitmap(pearIconBitmap(ICON_SIZE), { width: ICON_SIZE, height: ICON_SIZE });
 
 /** The artwork: a centered square like the original's "logo" style, or as is (banners). */
 async function artwork(url: string | undefined, square = true): Promise<NativeImage | undefined> {
@@ -161,7 +165,7 @@ function createNotifier(ctx: Ctx) {
     const style = ctx.config.toastStyle;
     const image = await artwork(track.artworkUrl, usesLogo(style));
     if (id !== generation) return;
-    const imagePath = image ? files.saveArtwork(image, usesLogo(style)) : "";
+    const imagePath = image ? files.saveArtwork(image, usesLogo(style)) : files.appIcon();
     close();
     const title = track.title || ctx.t("plugins.notifications.playing", "Playing");
     const notification = new Notification({
@@ -195,7 +199,7 @@ function createNotifier(ctx: Ctx) {
     const notification = new Notification({
       title: track.title || ctx.t("plugins.notifications.playing", "Playing"),
       body: track.artist,
-      ...(icon ? { icon } : {}),
+      icon: icon ?? appIcon(),
       silent: true,
       urgency: ctx.config.urgency,
       ...(interactive ? { actions: actionButtons(ctx, paused) } : {}),
@@ -245,7 +249,17 @@ function actionButtons(ctx: Ctx, paused: boolean): Electron.NotificationAction[]
 function notificationFiles(ctx: Ctx) {
   const folder = join(ctx.app.getPath("userData"), "notifications");
   let iconPaths: Record<ButtonIcon, string> | undefined;
+  let appIconPath: string | undefined;
   return {
+    /** The app icon's file, for toasts of tracks without artwork. */
+    appIcon() {
+      if (appIconPath) return appIconPath;
+      mkdirSync(folder, { recursive: true });
+      const path = join(folder, "app-icon.png");
+      writeFileSync(path, appIcon().toPNG());
+      appIconPath = path;
+      return path;
+    },
     buttonIcons() {
       if (iconPaths) return iconPaths;
       mkdirSync(folder, { recursive: true });
@@ -260,7 +274,13 @@ function notificationFiles(ctx: Ctx) {
     saveArtwork(image: NativeImage, logo: boolean) {
       mkdirSync(folder, { recursive: true });
       const path = join(folder, logo ? "art-logo.png" : "art-banner.png");
-      writeFileSync(path, image.toPNG());
+      try {
+        writeFileSync(path, image.toPNG());
+      } catch (error) {
+        // As pear-desktop: the app icon instead.
+        ctx.log.warn("couldn't save the artwork", error);
+        return this.appIcon();
+      }
       return path;
     },
   };
