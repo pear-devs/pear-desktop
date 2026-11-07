@@ -1,5 +1,5 @@
 // Scrobbles to Last.fm and/or ListenBrainz: "now playing" when a track starts
-// or resumes, a scrobble once it has really been listened to (see tracker.ts).
+// or resumes, a scrobble once it is halfway through (see tracker.ts).
 
 import { definePlugin } from "@pear/sdk";
 import { lastFmAuthorizer } from "./auth.ts";

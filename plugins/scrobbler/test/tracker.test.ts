@@ -33,16 +33,17 @@ function setup() {
 }
 
 describe("scrobbleThreshold", () => {
-  it("is half the duration, capped at 4 minutes", () => {
+  it("is half the duration (rounded up), capped at 4 minutes, as pear-desktop", () => {
     expect(scrobbleThreshold(200)).toBe(100);
+    expect(scrobbleThreshold(201)).toBe(101);
     expect(scrobbleThreshold(600)).toBe(240);
   });
-  it("never scrobbles tracks of 30 seconds or less", () => {
-    expect(scrobbleThreshold(30)).toBeNull();
-    expect(scrobbleThreshold(12)).toBeNull();
+  it("applies to short tracks too", () => {
+    expect(scrobbleThreshold(30)).toBe(15);
+    expect(scrobbleThreshold(12)).toBe(6);
   });
-  it("uses 4 minutes when the duration is unknown", () => {
-    expect(scrobbleThreshold(0)).toBe(240);
+  it("never scrobbles when the duration is unknown", () => {
+    expect(scrobbleThreshold(0)).toBeNull();
   });
 });
 
@@ -76,7 +77,7 @@ describe("ScrobbleTracker", () => {
     t.set({ status: "paused" });
     t.advance(300);
     expect(t.scrobbles).toHaveLength(0);
-    expect(t.tracker.listened(t.now())).toBe(60);
+    expect(t.tracker.position(t.now())).toBe(60);
     t.set({ status: "playing" });
     expect(t.nowPlaying).toHaveLength(2);
     t.advance(40);
@@ -95,19 +96,28 @@ describe("ScrobbleTracker", () => {
     expect(t.scrobbles).toHaveLength(1);
   });
 
-  it("does not count seeking forward as listening", () => {
+  it("goes by the position: seeking past the threshold counts", () => {
     const t = setup();
     t.set({ track: track("a", 200), status: "playing" });
     t.advance(10);
     t.set({ positionSeconds: 150 });
-    t.advance(10);
-    expect(t.scrobbles).toHaveLength(0);
+    expect(t.scrobbles).toHaveLength(1);
   });
 
-  it("never scrobbles short tracks but still reports them as playing", () => {
+  it("scrobbles short tracks too, at half their length", () => {
     const t = setup();
     t.set({ track: track("jingle", 25), status: "playing" });
-    t.advance(25);
+    t.advance(12);
+    expect(t.scrobbles).toHaveLength(0);
+    t.advance(1);
+    expect(t.nowPlaying).toHaveLength(1);
+    expect(t.scrobbles).toHaveLength(1);
+  });
+
+  it("never scrobbles a track of unknown length", () => {
+    const t = setup();
+    t.set({ track: track("live", 0), status: "playing" });
+    t.advance(600);
     expect(t.nowPlaying).toHaveLength(1);
     expect(t.scrobbles).toHaveLength(0);
     expect(t.tracker.timeUntilScrobble(t.now())).toBeNull();
@@ -161,6 +171,7 @@ describe("ScrobbleTracker", () => {
     t.set({ track: track("a", 200), status: "playing" });
     t.advance(50);
     t.set({ track: null, status: "idle" });
-    expect(t.tracker.listened(t.now())).toBe(0);
+    expect(t.tracker.position(t.now())).toBe(0);
+    expect(t.tracker.timeUntilScrobble(t.now())).toBeNull();
   });
 });
