@@ -1,6 +1,8 @@
 import type { Renderer, Stage } from "../config.ts";
 import { importSource } from "../load.ts";
 
+const INPUT_GAIN = 1.25;
+
 // The loaded module, kept across restarts.
 let butterchurn: Promise<ButterchurnModule> | undefined;
 
@@ -9,7 +11,9 @@ export async function butterchurnRenderer({ ctx, graph, canvas, size }: Stage): 
   butterchurn ??= ctx.host.invoke("butterchurn").then((source) => importSource<ButterchurnModule>(source));
   const [module, preset] = await Promise.all([butterchurn, ctx.host.invoke("preset", ctx.config.preset)]);
   if (ctx.signal.aborted) return;
+  // pear-desktop fed butterchurn a little louder than the track.
   const input = graph.context.createGain();
+  input.gain.value = INPUT_GAIN;
   ctx.onCleanup(() => input.disconnect());
   graph.tap(input);
   const visualizer = module.default.createVisualizer(graph.context, canvas, size());
