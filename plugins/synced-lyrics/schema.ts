@@ -24,8 +24,9 @@ export const schema = {
     ],
     { label: "Current line effect" },
   ),
+  // ♪ by default, as pear-desktop. "Nothing" leaves the break's line blank, as its " " did.
   gapText: config.select(
-    "dots",
+    "note",
     [
       { value: "dots", label: "Animated dots" },
       { value: "bullets", label: "•••" },

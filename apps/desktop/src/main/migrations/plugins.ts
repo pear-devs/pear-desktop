@@ -182,7 +182,7 @@ export const PLUGIN_MIGRATIONS: Record<string, PluginMigration> = {
   // showLyricsEvenIfInexact keep their names and values.
   "synced-lyrics": (entry) => {
     // defaultTextString: what fills instrumental gaps; ♪ by default in pear-desktop
-    // (which didn't store defaults), animated dots in the rewrite.
+    // (which didn't store defaults) and in the rewrite. " " showed a blank line, as "none" does.
     setNew(entry, "gapText", gapText(entry.defaultTextString));
     const chinese = entry.convertChineseCharacter;
     if (typeof chinese === "string" && Object.hasOwn(CHINESE_CONVERSIONS, chinese)) {
