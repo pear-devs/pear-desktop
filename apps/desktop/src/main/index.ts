@@ -40,7 +40,23 @@ function main() {
   const requests = new PageRequests(send);
   const menuItems = new MenuItems();
   // pear-desktop's app protocol: links control playback; plugins hear about them too.
-  const links = new ProtocolLinks((action) => player.control(action));
+  const links = new ProtocolLinks(
+    (action) => player.control(action),
+    (task) => {
+      const window = mainWindow.window;
+      if (task.type === "page") {
+        requests.request("core", task.event, task.payload).catch((error) => console.warn("[pear] protocol link:", error));
+      } else if (task.type === "fullscreen") {
+        window?.setFullScreen(task.fullscreen);
+        requests.request("core", "fullscreen:set", task.fullscreen).catch((error) => console.warn("[pear] protocol link:", error));
+      } else if (window) {
+        // As pear-desktop: YTM's own shortcut for its search box.
+        window.webContents.sendInputEvent({ type: "keyDown", keyCode: "/" });
+        window.webContents.sendInputEvent({ type: "char", keyCode: "/" });
+        window.webContents.sendInputEvent({ type: "keyUp", keyCode: "/" });
+      }
+    },
+  );
   let api: ApiServer | undefined;
 
   links.handleOpenUrl(app);

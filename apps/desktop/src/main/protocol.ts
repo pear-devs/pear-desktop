@@ -86,19 +86,68 @@ export function protocolActions({ command, args }: ProtocolCommand): PlayerActio
   }
 }
 
+/** pear-desktop's commands beyond the player's controls: the queue, full screen and search box. */
+export type ProtocolTask =
+  | { type: "page"; event: string; payload?: unknown }
+  | { type: "fullscreen"; fullscreen: boolean }
+  | { type: "open-search" };
+
+const QUEUE_POSITIONS = new Set(["INSERT_AT_END", "INSERT_AFTER_CURRENT_VIDEO"]);
+const index = (value: string | undefined) => {
+  const parsed = number(value);
+  return parsed !== undefined && Number.isInteger(parsed) && parsed >= 0 ? parsed : undefined;
+};
+
+/** The commands that act on the page or window (the API server's queue requests do the same). */
+export function protocolTasks({ command, args }: ProtocolCommand): ProtocolTask[] {
+  switch (command) {
+    case "addSongToQueue": {
+      const [videoId, position = "INSERT_AT_END"] = args;
+      if (!videoId || !QUEUE_POSITIONS.has(position)) return [];
+      return [{ type: "page", event: "queue:add", payload: { videoId, insertPosition: position } }];
+    }
+    case "moveSongInQueue": {
+      const fromIndex = index(args[0]);
+      const toIndex = index(args[1]);
+      return fromIndex === undefined || toIndex === undefined ? [] : [{ type: "page", event: "queue:move", payload: { fromIndex, toIndex } }];
+    }
+    case "removeSongFromQueue": {
+      const at = index(args[0]);
+      return at === undefined ? [] : [{ type: "page", event: "queue:remove", payload: at }];
+    }
+    case "setQueueIndex": {
+      const at = index(args[0]);
+      return at === undefined ? [] : [{ type: "page", event: "queue:set-index", payload: at }];
+    }
+    case "clearQueue":
+      return [{ type: "page", event: "queue:clear" }];
+    case "setFullscreen": {
+      const value = args[0];
+      return value === "true" || value === "false" ? [{ type: "fullscreen", fullscreen: value === "true" }] : [];
+    }
+    case "openSearchBox":
+      return [{ type: "open-search" }];
+    default:
+      return [];
+  }
+}
+
 export type ProtocolListener = (command: string, args: string[]) => void;
 
-/** Runs the links that reach this instance: playback controls, then plugins' listeners. */
+/** Runs the links that reach this instance: playback controls, the queue and window, then plugins' listeners. */
 export class ProtocolLinks {
   #listeners = new Set<ProtocolListener>();
   #control: (action: PlayerAction) => void;
+  #perform: (task: ProtocolTask) => void;
 
-  constructor(control: (action: PlayerAction) => void) {
+  constructor(control: (action: PlayerAction) => void, perform: (task: ProtocolTask) => void = () => {}) {
     this.#control = control;
+    this.#perform = perform;
   }
 
   run({ command, args }: ProtocolCommand) {
     for (const action of protocolActions({ command, args })) this.#control(action);
+    for (const task of protocolTasks({ command, args })) this.#perform(task);
     for (const listener of this.#listeners) listener(command, args);
   }
 
