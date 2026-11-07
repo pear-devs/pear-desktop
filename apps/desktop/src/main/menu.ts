@@ -17,6 +17,9 @@ export interface MenuEnvironment {
   pluginItems(): readonly PluginMenuItem[];
   alwaysOnTop(): boolean;
   setAlwaysOnTop(value: boolean): void;
+  /** Whether this instance holds the single-instance lock (another launch then focuses it). */
+  singleInstanceLock(): boolean;
+  setSingleInstanceLock(value: boolean): void;
   /** config.json */
   settingsPath: string;
   restart(): void;
@@ -53,6 +56,13 @@ function optionsMenu(env: MenuEnvironment, contents: Contents, settings: MenuIte
     label: t("main.menu.options.label", "Options"),
     submenu: [
       ...(leading.length > 0 ? [...leading, { type: "separator" } as const] : []),
+      {
+        // Off, another launch starts a second instance instead of focusing this one.
+        label: t("main.menu.options.submenu.single-instance-lock", "Single Instance Lock"),
+        type: "checkbox",
+        checked: env.singleInstanceLock(),
+        click: (item) => env.setSingleInstanceLock(item.checked),
+      },
       {
         id: ALWAYS_ON_TOP_ID,
         label: t("main.menu.options.submenu.always-on-top", "Always on top"),

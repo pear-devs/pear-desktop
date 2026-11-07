@@ -82,6 +82,11 @@ function main() {
       pluginItems: () => menuItems.items,
       alwaysOnTop: () => settings.core("window").alwaysOnTop,
       setAlwaysOnTop: (alwaysOnTop) => core.set("window", { alwaysOnTop }),
+      singleInstanceLock: () => app.hasSingleInstanceLock(),
+      setSingleInstanceLock: (locked) => {
+        if (!locked && app.hasSingleInstanceLock()) app.releaseSingleInstanceLock();
+        else if (locked && !app.hasSingleInstanceLock()) app.requestSingleInstanceLock();
+      },
       settingsPath: settings.path,
       restart: () => {
         app.relaunch(relaunchOptions());

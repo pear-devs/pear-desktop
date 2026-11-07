@@ -127,6 +127,8 @@ test.describe("in-app menu", () => {
     await expect(menus.first()).toBeVisible();
     await expect(menuItem(menus.first(), "Settings")).toBeFocused();
     await page.keyboard.press("ArrowDown");
+    await expect(menus.first().getByRole("menuitemcheckbox", { name: /^Single Instance Lock/ })).toBeFocused();
+    await page.keyboard.press("ArrowDown");
     await expect(menus.first().getByRole("menuitemcheckbox", { name: /^Always on top/ })).toBeFocused();
     await page.keyboard.press("ArrowRight");
     await expect(menuItem(menus.first(), "Reload")).toBeFocused();

@@ -39,7 +39,7 @@ test("the application menu, and hiding its bar", async ({ launch }) => {
     expect(initial.labels.slice(1)).toEqual(["Options", "View", "Navigation", "About"]);
   } else {
     expect(initial.labels).toEqual(["Options", "View", "Navigation", "About"]);
-    expect(initial.submenus.Options).toEqual(["Settings…", "Always on top", "Toggle DevTools", "Edit config.json"]);
+    expect(initial.submenus.Options).toEqual(["Settings…", "Single Instance Lock", "Always on top", "Toggle DevTools", "Edit config.json"]);
     // Hidden; Alt shows it.
     expect(initial).toMatchObject({ autoHide: true, visible: false });
     await setCore(page, "window", { hideMenu: false });
