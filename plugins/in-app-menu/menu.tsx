@@ -110,8 +110,13 @@ export class TitleBar {
 
   /** Shows or hides the top-level menus. */
   toggleCollapsed() {
+    this.setCollapsed(!this.#collapsed);
+  }
+
+  setCollapsed(collapsed: boolean) {
+    if (collapsed === this.#collapsed) return;
     this.close();
-    this.#collapsed = !this.#collapsed;
+    this.#collapsed = collapsed;
     this.#menus.hidden = this.#collapsed;
     this.#root.querySelector(".toggle")?.setAttribute("aria-expanded", String(!this.#collapsed));
     // Fresh labels (the language may have changed), and the buttons come in one by one again.

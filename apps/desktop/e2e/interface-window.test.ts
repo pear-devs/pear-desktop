@@ -3,7 +3,7 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./fixtures.ts";
 import { waitForTrackPlaying } from "./helpers/playback.ts";
-import { setConfig, setEnabled } from "./helpers/plugins.ts";
+import { setConfig, setCore, setEnabled } from "./helpers/plugins.ts";
 import { overlay } from "./helpers/settings.ts";
 import { screenshot, windowInfo } from "./helpers/window.ts";
 import { mainWindow, NO_WINDOW_MANAGER, playTestTrack } from "./launch.ts";
@@ -149,6 +149,16 @@ test.describe("in-app menu", () => {
     await expect(menuBar(page)).toBeHidden();
     await collapseToggle(page).click();
     await expectMenuItems(menuBar(page), ["Options", "View", "Navigation", "About"]);
+
+    // It follows the option when it changes, but not other window options.
+    await setCore(page, "window", { hideMenu: false });
+    await setCore(page, "window", { hideMenu: true });
+    await expect(menuBar(page)).toBeHidden();
+    await collapseToggle(page).click();
+    await setCore(page, "window", { alwaysOnTop: true });
+    await expect(menuBar(page)).toBeVisible();
+    await setCore(page, "window", { hideMenu: false, alwaysOnTop: false });
+    await expect(menuBar(page)).toBeVisible();
   });
 
   test.describe("with a window manager", () => {

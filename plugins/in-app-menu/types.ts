@@ -7,8 +7,6 @@ export interface WindowState {
   maximized: boolean;
   fullscreen: boolean;
   alwaysOnTop: boolean;
-  /** The core's "Hide the menu bar" option: the menus start collapsed, as in pear-desktop. */
-  hideMenu: boolean;
 }
 
 /** An item of the application menu, as the page draws it. */

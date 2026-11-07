@@ -39,6 +39,7 @@ export class Settings {
   #data: StoredConfig;
   #plugins = new Map<string, PluginState>();
   #core: CoreConfigs;
+  #coreListeners = new Set<(section: CoreSection) => void>();
   #writeTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(userData: string, plugins: readonly AnyPlugin[], appVersion: string, platform: string = process.platform) {
@@ -96,7 +97,14 @@ export class Settings {
       this.#data.options = { ...this.#data.options, ...next };
       this.#scheduleWrite();
     }
+    for (const listener of this.#coreListeners) listener(section);
     return next;
+  }
+
+  /** Hears every change of a core section; returns the unsubscribe. */
+  onCoreChange(listener: (section: CoreSection) => void) {
+    this.#coreListeners.add(listener);
+    return () => void this.#coreListeners.delete(listener);
   }
 
   get window(): WindowState | undefined {

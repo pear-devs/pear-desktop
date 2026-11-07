@@ -4,6 +4,7 @@
 
 import type { App, BrowserWindow, BrowserWindowConstructorOptions, Session, WebRequest } from "electron";
 import { type ConfigOf, type ConfigShape, onPlatform } from "./config.ts";
+import type { CoreConfigOf, PluginCoreSection } from "./core-config.ts";
 import type { NowPlaying, PlayerAction, Track, PlaybackStatus, Unsubscribe, YTPlayerApi } from "./player.ts";
 import type { RpcMethods, RpcSchemas } from "./rpc.ts";
 import type { SelectorName } from "./selectors.ts";
@@ -60,6 +61,10 @@ interface CommonContext<C> {
    */
   t(key: string, fallback?: string, vars?: Readonly<Record<string, unknown>>): string;
   readonly log: Logger;
+  /** A section of the app's own settings, as it is now (read-only), e.g. `ctx.core("window").hideMenu`. */
+  core<S extends PluginCoreSection>(section: S): Readonly<CoreConfigOf<S>>;
+  /** Called with a core section when it changes (settings, menu, API); stops with the plugin. */
+  onCoreChange<S extends PluginCoreSection>(section: S, listener: (config: Readonly<CoreConfigOf<S>>) => void): void;
 }
 
 /** Node-style event emitters: Electron's app, windows, nativeTheme… */

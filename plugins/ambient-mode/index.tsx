@@ -55,7 +55,7 @@ export default definePlugin({
       height: 100%;
       transform: none;
     }
-    sel(player.song_video) .html5-video-container {
+    sel(player.video_container) {
       height: 100%;
     }
     sel(player.container):not([video-mode]):not([player-ui-state='MINIPLAYER']) {
@@ -69,8 +69,8 @@ export default definePlugin({
       z-index: 0;
     }
     /* The glow stays behind the song/video switch (pear-desktop#2520). */
-    sel(player.av_toggle) .song-button,
-    sel(player.av_toggle) .video-button {
+    sel(player.song_button),
+    sel(player.video_button) {
       z-index: 1;
       background-color: transparent;
     }

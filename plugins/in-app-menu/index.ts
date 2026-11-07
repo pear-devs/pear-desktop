@@ -86,7 +86,5 @@ function windowState(window: BrowserWindow): WindowState {
     maximized: window.isMaximized(),
     fullscreen: window.isFullScreen(),
     alwaysOnTop: window.isAlwaysOnTop(),
-    // The core sets it from its hideMenu option (macOS has no such option).
-    hideMenu: process.platform !== "darwin" && window.isMenuBarAutoHide(),
   };
 }

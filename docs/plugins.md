@@ -141,6 +141,7 @@ host: {
 | | |
 |---|---|
 | `config`, `setConfig(patch)`, `onConfigChange(fn)` | the plugin's settings |
+| `core(section)`, `onCoreChange(section, fn)` | the app's own settings, read-only: `general`, `window`, `appearance`, `advanced`, `site` (e.g. `ctx.core("window").hideMenu`) |
 | `player.state` | what's playing: track, status, position, volume… |
 | `player.on("change" \| "trackChange", fn)` | follow the player |
 | `player.control(action)` | play, pause, skip… (see "Player actions") |
@@ -168,6 +169,7 @@ host: {
 | | |
 |---|---|
 | `config`, `setConfig(patch)`, `onConfigChange(fn)` | the plugin's settings |
+| `core(section)`, `onCoreChange(section, fn)` | the app's own settings, as on the host |
 | `player.state`, `player.control(action)` | as on the host |
 | `player.on(event, fn)` | `trackLoading`, `trackChange`, `statusChange`, `timeUpdate`, `volumeChange`, `adChange`, `change` |
 | `player.ready()`, `player.api` | YTM's player object, once it exists |

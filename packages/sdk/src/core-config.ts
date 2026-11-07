@@ -254,6 +254,10 @@ export const CORE_SECTIONS = {
 
 export type CoreSection = keyof typeof CORE_SECTIONS;
 
+/** The core sections plugins may read: all but the API server's (it holds the token secret). */
+export type PluginCoreSection = Exclude<CoreSection, "apiServer">;
+export type CoreConfigOf<S extends CoreSection> = ConfigOf<(typeof CORE_SECTIONS)[S]>;
+
 export function isCoreSection(name: string): name is CoreSection {
   return Object.hasOwn(CORE_SECTIONS, name);
 }

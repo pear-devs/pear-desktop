@@ -44,6 +44,8 @@ export class PluginRunner {
   #pageErrors = new Map<string, string>();
   #listeners = new Map<string, Map<string, Set<EventListener>>>();
   #handlers = new Map<string, Map<string, RequestHandler>>();
+  /** `ctx.onCoreChange` listeners of the running plugins. */
+  #coreListeners = new Set<(section: CoreSection) => void>();
   #audio: Promise<AudioGraph> | undefined;
   #windowVisible: boolean;
   #bridge: Bridge;
@@ -99,6 +101,7 @@ export class PluginRunner {
 
   applyCore(section: CoreSection, state: CoreState) {
     this.#host.setCore(section, state);
+    for (const listener of this.#coreListeners) listener(section);
   }
 
   /** Whether the window is on screen (`ctx.isWindowVisible`). */
@@ -249,6 +252,14 @@ export class PluginRunner {
       signal: scope.signal,
       t: this.t,
       log: createLogger(id),
+      core: (section) => host.core[section].config as never,
+      onCoreChange: (section, listener) => {
+        const onChange = (changed: CoreSection) => {
+          if (changed === section) listener(host.core[section].config as never);
+        };
+        this.#coreListeners.add(onChange);
+        scope.onStop(() => void this.#coreListeners.delete(onChange));
+      },
     };
     return { scope, ctx };
   }

@@ -7,6 +7,10 @@ export const selectors = {
   // ---- app
   app: "ytmusic-app",
   "app.layout": "ytmusic-app-layout",
+  /** The layout's slots: the page's content, the nav bar and the player page. */
+  "app.content": "ytmusic-app-layout > #content",
+  "app.nav_bar_slot": 'ytmusic-app-layout > [slot="nav-bar"]',
+  "app.player_page_slot": 'ytmusic-app-layout > [slot="player-page"]',
 
   // ---- player (the video and the player page)
   "player.api": "#movie_player",
@@ -23,7 +27,14 @@ export const selectors = {
   "player.song_image_img": "#song-image #thumbnail img",
   "player.song_video": "#song-video",
   "player.song_video_wrapper": "#song-video .player-wrapper",
+  "player.video_container": "#song-video .html5-video-container",
   "player.av_toggle": "ytmusic-av-toggle",
+  "player.song_button": "ytmusic-av-toggle .song-button",
+  "player.video_button": "ytmusic-av-toggle .video-button",
+  /** The player page's mini-player button. */
+  "player.minimize_button": ".player-minimize-button",
+  /** The player page's side panel (queue, lyrics) in YTM's mini player. */
+  "player.mini_side_panel": "ytmusic-player-page[is-mweb-modernization-enabled] .side-panel.ytmusic-player-page",
   "player.native_av_toggle": "ytmusic-player-page #av-id",
 
   // ---- player bar
@@ -102,6 +113,9 @@ export const selectors = {
   "guide.sidebar": "ytmusic-guide-renderer",
   "guide.background": "#guide-wrapper",
   "guide.mini_background": "#mini-guide-background",
+  /** The room the layout keeps for the sidebar (the new sidebar, `is-bauhaus-sidenav-enabled`). */
+  "guide.spacer": "ytmusic-app[is-bauhaus-sidenav-enabled] #guide-spacer.ytmusic-app",
+  "guide.mini_spacer": "ytmusic-app[is-bauhaus-sidenav-enabled] #mini-guide-spacer.ytmusic-app",
   /** The full and the collapsed ("mini") sidebar; each has its own primary section. */
   "guide.full": "#guide-renderer",
   "guide.mini": "#mini-guide-renderer",
@@ -117,6 +131,8 @@ export const selectors = {
   "browse.page": "#browse-page",
   /** The browse page's element; its `.data` is the server's answer it draws. */
   "browse.response": "ytmusic-browse-response",
+  /** A row of a browse page's lists (tracks, albums…). */
+  "browse.list_item": "ytmusic-browse-response .ytmusic-responsive-list-item-renderer",
   /** The bar of tabs some browse pages have (the Library's: Library, Downloads). */
   "browse.tabs": "ytmusic-browse-response ytmusic-tabs",
   /** The page's shelves, in its section list. */

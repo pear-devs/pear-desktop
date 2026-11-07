@@ -16,9 +16,6 @@ const PIP_ICON =
 const MENU_CLICK_WINDOW_MS = 2000;
 // YTM's own clean-up after its full screen happens within this.
 const SETTLE_MS = 500;
-// The player page's "minimize" (mini-player) button. Not in the sdk's selector
-// list yet; it would be `player.minimize_button`.
-const MINIMIZE_BUTTON = ".player-minimize-button";
 
 export function startPage(ctx: Ctx) {
   const mode = fullScreenMode(ctx);
@@ -44,7 +41,7 @@ function minimizeButton(ctx: Ctx, mode: { readonly active: boolean }, toggle: ()
   const onClick = (event: MouseEvent) => {
     if (mode.active) return;
     const target = event.target instanceof Element ? event.target : null;
-    if (!target?.closest(MINIMIZE_BUTTON)) return;
+    if (!target?.closest(ctx.sel("player.minimize_button"))) return;
     event.preventDefault();
     event.stopPropagation();
     toggle();

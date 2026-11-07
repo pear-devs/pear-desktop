@@ -14,49 +14,49 @@ export const pageStyles = css`
     /* fixes laggy list scrolling in large playlists */
     backface-visibility: hidden;
   }
-  ytmusic-app-layout#layout {
+  sel(app.layout)#layout {
     --ytmusic-nav-bar-offset: 0px;
   }
-  ytmusic-app-layout > #content {
+  sel(app.content) {
     padding-top: var(--menu-bar-height);
   }
-  ytmusic-app-layout::-webkit-scrollbar {
+  sel(app.layout)::-webkit-scrollbar {
     width: var(--ytmusic-scrollbar-width);
   }
-  ytmusic-app-layout::-webkit-scrollbar-thumb {
+  sel(app.layout)::-webkit-scrollbar-thumb {
     background-color: rgb(126, 126, 126);
   }
 
-  ytmusic-app-layout > [slot="nav-bar"],
+  sel(app.nav_bar_slot),
   sel(nav_bar.background).ytmusic-app-layout {
     top: var(--menu-bar-height) !important;
   }
   sel(nav_bar.divider).ytmusic-app-layout {
     top: calc(var(--ytmusic-nav-bar-height) + var(--menu-bar-height)) !important;
   }
-  ytmusic-app[is-bauhaus-sidenav-enabled] #guide-spacer.ytmusic-app,
-  ytmusic-app[is-bauhaus-sidenav-enabled] #mini-guide-spacer.ytmusic-app {
+  sel(guide.spacer),
+  sel(guide.mini_spacer) {
     margin-top: calc(var(--ytmusic-nav-bar-height) + var(--menu-bar-height)) !important;
   }
   @media (max-width: 935px) {
-    ytmusic-app[is-bauhaus-sidenav-enabled] #guide-spacer.ytmusic-app {
+    sel(guide.spacer) {
       margin-top: var(--menu-bar-height) !important;
     }
-    ytmusic-app[is-bauhaus-sidenav-enabled] #mini-guide-spacer.ytmusic-app {
+    sel(guide.mini_spacer) {
       margin-top: calc(var(--ytmusic-nav-bar-height) + var(--menu-bar-height)) !important;
     }
   }
 
-  ytmusic-app-layout > [slot="player-page"] {
+  sel(app.player_page_slot) {
     margin-top: var(--menu-bar-height);
     height: calc(100vh - var(--menu-bar-height) - var(--ytmusic-nav-bar-height) - var(--ytmusic-player-bar-height)) !important;
   }
-  ytmusic-guide-renderer {
+  sel(guide.sidebar) {
     height: calc(100vh - var(--menu-bar-height) - var(--ytmusic-nav-bar-height)) !important;
   }
 
   /* the mini player */
-  ytmusic-app-layout ytmusic-player-page[is-mweb-modernization-enabled] .side-panel.ytmusic-player-page {
+  sel(player.mini_side_panel) {
     transform: translate(
       0,
       calc(
@@ -71,7 +71,7 @@ export const pageStyles = css`
     scrollbar-color: unset;
   }
   /* fixes the scrollbar lagging behind in large playlists */
-  ytmusic-browse-response .ytmusic-responsive-list-item-renderer {
+  sel(browse.list_item) {
     will-change: transform;
   }
 

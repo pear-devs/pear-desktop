@@ -23,7 +23,17 @@ export async function startPage(ctx: Ctx) {
   ctx.host.on("state", (next) => controls?.showMaximized((next as WindowState).maximized));
 
   // Until a restart after enabling, the system title bar is still there: the bar then doesn't move the window.
-  const bar = new TitleBar(ctx, { collapsed: state.hideMenu, controls: controls?.element });
+  // The core's "Hide the menu bar" option (not on macOS): the menus start collapsed, as in
+  // pear-desktop, and follow the option when it changes.
+  const hideMenu = (config: { hideMenu: boolean }) => state.platform !== "darwin" && config.hideMenu;
+  let hidden = hideMenu(ctx.core("window"));
+  const bar = new TitleBar(ctx, { collapsed: hidden, controls: controls?.element });
+  // Only when the option itself changes (the section also holds e.g. "Always on top").
+  ctx.onCoreChange("window", (config) => {
+    if (hideMenu(config) === hidden) return;
+    hidden = hideMenu(config);
+    bar.setCollapsed(hidden);
+  });
   bar.host.toggleAttribute("data-frameless", state.frameless);
   if (state.frameless && state.platform === "darwin") bar.host.toggleAttribute("data-traffic-lights", true);
   if (state.frameless && state.platform === "win32") bar.host.toggleAttribute("data-caption-buttons", true);

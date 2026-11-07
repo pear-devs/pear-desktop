@@ -331,6 +331,14 @@ export class PluginHost {
       onCleanup: (fn) => cleanups.add(fn),
       t: this.t,
       log: createLogger(id),
+      core: (section) => settings.core(section),
+      onCoreChange: (section, listener) => {
+        cleanups.add(
+          settings.onCoreChange((changed) => {
+            if (changed === section && !instance.stopped) listener(settings.core(section));
+          }),
+        );
+      },
     };
   }
 }
