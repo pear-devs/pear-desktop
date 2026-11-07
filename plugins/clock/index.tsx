@@ -28,11 +28,12 @@ export default definePlugin({
     const clock = (<time class="pear-clock" />) as HTMLTimeElement;
 
     // Config changes restart the page part, which rebuilds the format.
-    const format = new Intl.DateTimeFormat(undefined, {
-      hour: "numeric",
-      minute: "2-digit",
-      ...(ctx.config.displaySeconds ? { second: "2-digit" } : {}),
+    // pear-desktop's format: English, whatever the system locale.
+    const format = new Intl.DateTimeFormat("en", {
       hour12: ctx.config.hour12,
+      hour: "numeric",
+      minute: "numeric",
+      second: ctx.config.displaySeconds ? "numeric" : undefined,
     });
     const tick = () => {
       const now = new Date();
