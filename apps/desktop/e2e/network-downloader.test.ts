@@ -18,6 +18,7 @@ import { barLayout, inBar, sel } from "./helpers/player-bar.ts";
 
 // Rick Astley, "Whenever You Need Somebody": an album page that works logged out.
 const ALBUM_URL = ytmUrl("/playlist?list=OLAK5uy_nmDUsWOMoEcz0SsVqUwir0oxu-k1oUyXE");
+const ALBUM_TITLE = "Whenever You Need Somebody";
 // The weekly global chart: a playlist page that works logged out.
 const PLAYLIST_URL = ytmUrl("/playlist?list=PL4fGSI1pDJn6puJdseH2Rt9sMvt9E2M4i");
 /** Makes the plugin act as if neither is installed (see plugins/downloader/index.ts). */
@@ -457,19 +458,21 @@ test("downloader cancels and retries from the Downloads page's queue, leaving no
   await expect(queue(page).locator(".strip-title")).toHaveText(/^Downloading /);
   await expect(queue(page).locator(".strip-sub")).toHaveText(/left|\/s|Starting|Converting/);
   await openQueue(page);
-  // Its songs, one downloading with its progress.
-  await expect(rows(page)).toHaveCount(2);
-  await expect(queue(page).locator(".row-progress").first()).toBeVisible();
-
+  // Its songs, one downloading with its progress. The album is short and quick, so
+  // cancel as soon as a song is under way rather than waiting on the rows.
+  const downloading = async () => (await jobs(page))[0]?.items?.some((item) => item.status === "active" && (item.downloaded ?? 0) > 0) ?? false;
+  await expect.poll(downloading, { timeout: 60_000, intervals: [50] }).toBe(true);
   await stripButton(page, "Cancel").click();
-  const album = row(page, "album");
+  expect(await rows(page).count()).toBeGreaterThan(0);
+  // Named after the album once it's known, as pear-desktop.
+  const album = row(page, ALBUM_TITLE);
   await expect(album.locator(".row-state")).toHaveText("Cancelled");
   await expect(queue(page).locator(".strip-title")).toHaveText("Download cancelled");
   expect(songFiles(folder).filter((file) => /\.(part|temp\.\w+|meta\.txt|cover\.jpg)$/.test(file))).toEqual([]);
 
   // Retry downloads it again, and the popover says so.
   await action(album, "Retry").click();
-  await expect(queue(page).locator(".strip-title")).toHaveText(/^(Downloading album|Waiting · album)/);
+  await expect(queue(page).locator(".strip-title")).toHaveText(new RegExp(`^(Downloading|Waiting ·) ${ALBUM_TITLE}`));
   await goHome(page);
   await preview(page);
   await expect(popover(page).locator(".summary-phase")).toHaveText(/Downloading|Waiting/);

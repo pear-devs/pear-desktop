@@ -207,6 +207,15 @@ test("transparent player makes the window see-through", async ({ launch }) => {
   expect((await windowInfo(app)).background).toBe("#030303");
 });
 
+/**
+ * Keys go to the page rather than a focused control. Not by clicking: a click
+ * could land on a control (in a 1280×800 window, (5, 400) is the sidebar's Sign in).
+ */
+async function focusPage(page: Page) {
+  await page.bringToFront();
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+}
+
 test("leaving picture in picture keeps the core always-on-top option", async ({ launch }) => {
   const app = await launch({
     core: { window: { alwaysOnTop: true } },
@@ -218,7 +227,7 @@ test("leaving picture in picture keeps the core always-on-top option", async ({ 
   expect((await windowInfo(app)).alwaysOnTop).toBe(true);
   const before = await windowInfo(app);
 
-  await page.locator("body").click({ position: { x: 5, y: 400 } });
+  await focusPage(page);
   await page.keyboard.press("p");
   await expect.poll(async () => (await windowInfo(app)).bounds.width).toBe(PIP_SIZE.width);
   await page.keyboard.press("p");
@@ -279,7 +288,7 @@ test("picture in picture shrinks the window and restores it", async ({ launch })
   expect((await windowInfo(app)).bounds.width).toBe(before.bounds.width);
 
   // The hotkey toggles too.
-  await page.locator("body").click({ position: { x: 5, y: 400 } });
+  await focusPage(page);
   await page.keyboard.press("p");
   await expect.poll(async () => (await windowInfo(app)).bounds.width).toBe(PIP_SIZE.width);
   await setEnabled(page, "picture-in-picture", false);
@@ -289,7 +298,7 @@ test("picture in picture shrinks the window and restores it", async ({ launch })
   // The browser's own picture-in-picture pops out just the video.
   await setConfig(page, "picture-in-picture", { useNativePiP: true });
   await setEnabled(page, "picture-in-picture", true);
-  await page.locator("body").click({ position: { x: 5, y: 400 } });
+  await focusPage(page);
   await page.keyboard.press("p");
   await expect.poll(() => page.evaluate(() => document.pictureInPictureElement?.tagName)).toBe("VIDEO");
   expect((await windowInfo(app)).bounds.width).toBe(before.bounds.width);

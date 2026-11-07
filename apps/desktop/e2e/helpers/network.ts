@@ -17,7 +17,8 @@ export const randomPort = () => PORT_BASE + Math.floor(Math.random() * PORT_RANG
 
 /** Waits until the API server at `base` answers. */
 export async function waitForApi(base: string) {
-  await expect.poll(async () => (await fetch(`${base}/doc`).catch(() => null))?.status).toBe(200);
+  // As long as the app gets to start (other apps may be starting alongside).
+  await expect.poll(async () => (await fetch(`${base}/doc`).catch(() => null))?.status, { timeout: 30_000 }).toBe(200);
 }
 
 /** A CONNECT proxy that records the tunnels it opened; with `credentials`, it requires Basic auth. */

@@ -112,13 +112,14 @@ test("crossfade plays the end of a track over the start of the next, as pear-des
       const stream = window.__streams!.at(-1);
       return { outgoing: !!stream && !stream.paused, volume: stream?.volume ?? 0, next: window.__pearRuntime!.player.state.status };
     });
-  await expect.poll(async () => (await overlap()).outgoing, { timeout: 10_000 }).toBe(true);
-  await waitForTrackPlaying(page);
-  // Both at once, the outgoing one fading.
-  const during = await overlap();
-  expect(during.next).toBe("playing");
-  expect(during.outgoing).toBe(true);
-  expect(during.volume).toBeLessThan(1);
+  // Both at once, the outgoing one fading. Checked in one go: the fade is over a
+  // second or two after the switch, about when the next track reports playing.
+  await expect
+    .poll(async () => {
+      const { outgoing, volume, next } = await overlap();
+      return outgoing && next === "playing" && volume < 1;
+    }, { timeout: 10_000, intervals: [100] })
+    .toBe(true);
   // The fade-out ends the second stream; the next track is at full volume.
   await expect.poll(async () => (await overlap()).outgoing, { timeout: 10_000 }).toBe(false);
   await expect.poll(fadeGain, { timeout: 20_000 }).toBeGreaterThan(0.99);

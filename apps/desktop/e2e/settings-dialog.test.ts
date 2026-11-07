@@ -57,8 +57,15 @@ test("another section opens at its top, not where the last one was scrolled to",
   const body = overlay(page).locator(".body");
   const scrollTop = () => body.evaluate((element) => element.scrollTop);
   await openSection(page, "Plugins");
-  await body.evaluate((element) => element.scrollTo(0, 2000));
-  await expect.poll(scrollTop).toBeGreaterThan(0);
+  // Opening a section scrolls it to the top once it has painted (an effect, so a
+  // little later): scroll until that has happened and the scroll sticks.
+  await expect
+    .poll(async () => {
+      await body.evaluate((element) => element.scrollTo(0, 2000));
+      await page.waitForTimeout(100);
+      return scrollTop();
+    })
+    .toBeGreaterThan(0);
   await openSection(page, "Developer Tweaks");
   await expect.poll(scrollTop).toBe(0);
 });
