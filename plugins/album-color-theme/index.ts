@@ -1,8 +1,9 @@
 import { config, definePlugin } from "@pear/sdk";
 import { css } from "@pear/sdk/macros" with { type: "macro" };
-import { averageColor, formatRgb, themeColors } from "./color.ts";
+import { averageColor, formatRgb, type Rgb, themeColors } from "./color.ts";
 
 const ACTIVE = "pear-album-color";
+const BLACK: Rgb = [0, 0, 0];
 const SAMPLE_SIZE = 32;
 
 // YTM's dark palette, each color mixed with the artwork color. The colors come
@@ -152,13 +153,12 @@ export default definePlugin({
       const current = ++generation;
       const url = thumbnailUrl(ctx.player.api?.getPlayerResponse().videoDetails?.thumbnail?.thumbnails) ??
         ctx.player.state.track?.artworkUrl;
-      const average = url ? await sampleImage(url).catch((error) => ctx.log.warn("couldn't sample artwork", error)) : undefined;
+      // No artwork at all: the theme keeps the last track's colors.
+      if (!url) return;
+      const average = await sampleImage(url).catch((error: unknown) => ctx.log.warn("couldn't sample artwork", error));
       if (current !== generation || ctx.signal.aborted) return;
-      if (!average) {
-        root.classList.remove(ACTIVE);
-        return;
-      }
-      const { color, dark } = themeColors(average);
+      // Artwork that can't be sampled tints black, as in pear-desktop.
+      const { color, dark } = average ? themeColors(average) : { color: BLACK, dark: BLACK };
       colors.update(`:root{--pear-album-color:${formatRgb(color)};--pear-album-color-dark:${formatRgb(dark)}}`);
       root.classList.add(ACTIVE);
     };
