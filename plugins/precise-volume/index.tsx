@@ -3,9 +3,15 @@ import { config, definePlugin, type PageContextOf } from "@pear/sdk";
 import { css } from "@pear/sdk/macros" with { type: "macro" };
 import { clamp, debounce } from "@pear/sdk/util";
 import { globalShortcut } from "electron";
+import { readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 const HUD_MS = 1500;
 const SLIDER_MS = 2500;
+/** Waits this long after the last change before saving the volume, as pear-desktop did. */
+const SAVE_MS = 1000;
+/** The volume kept between sessions, in userData (pear-desktop kept it in its config as `savedVolume`). */
+const SAVED_VOLUME_FILE = "precise-volume.json";
 
 const schema = {
   steps: config.number(1, { label: "Step", min: 1, max: 100, step: 1, unit: "%" }),
@@ -66,6 +72,16 @@ export default definePlugin({
       }
       if (failed.length > 0) throw new Error(`couldn't register ${failed.join(", ")} (invalid or used by another app)`);
     },
+    commands: {
+      /** The volume saved last session, or `null` if none was saved. */
+      savedVolume(): number | null {
+        return readSavedVolume(join(this.app.getPath("userData"), SAVED_VOLUME_FILE));
+      },
+      saveVolume(volume: number) {
+        if (!isVolume(volume)) return;
+        writeFileSync(join(this.app.getPath("userData"), SAVED_VOLUME_FILE), JSON.stringify({ volume: Math.round(volume) }));
+      },
+    },
   },
   page: {
     async start(ctx) {
@@ -94,16 +110,49 @@ export default definePlugin({
         showSlider();
       };
 
+      // Restore last session's volume, then save it whenever it changes,
+      // from the slider too, as pear-desktop did.
+      const saved = await ctx.host.invoke("savedVolume").catch((error: unknown) => {
+        ctx.log.warn("couldn't read the saved volume", error);
+        return null;
+      });
+      if (saved !== null && Math.round(position()) !== saved) ctx.player.control({ type: "volume", value: saved });
+      let lastSaved = saved ?? Math.round(position());
+      const save = debounce(() => {
+        const volume = Math.round(position());
+        if (volume === lastSaved) return;
+        lastSaved = volume;
+        void ctx.host.invoke("saveVolume", volume).catch((error: unknown) => ctx.log.warn("couldn't save the volume", error));
+      }, SAVE_MS);
+      ctx.onCleanup(save.cancel);
+
       listenForWheel(ctx, change);
       listenForArrows(ctx, change);
       ctx.host.on("step", (direction) => change(Number(direction)));
-      ctx.player.on("volumeChange", () => setTooltips(position()));
-      setTooltips(position());
+      ctx.player.on("volumeChange", () => {
+        setTooltips(position());
+        save();
+      });
+      setTooltips(saved ?? position());
     },
     // Every option is read when used.
     onConfigChange() {},
   },
 });
+
+/** The saved volume in `file`, or `null` when there is none (or it isn't a volume). */
+function readSavedVolume(file: string): number | null {
+  try {
+    const { volume } = JSON.parse(readFileSync(file, "utf8")) as { volume?: unknown };
+    return isVolume(volume) ? Math.round(volume) : null;
+  } catch {
+    return null;
+  }
+}
+
+function isVolume(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100;
+}
 
 /** The big "42%" readout; returns a function showing a volume for a moment. */
 function volumeHud(ctx: Ctx) {

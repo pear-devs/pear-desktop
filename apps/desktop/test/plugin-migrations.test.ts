@@ -129,6 +129,13 @@ describe("pear-desktop plugin options", () => {
     expect(twice("precise-volume", { globalShortcuts: "none" })).toEqual({ globalShortcuts: "none" });
   });
 
+  test("precise-volume: the saved volume moves to its own file", () => {
+    const files = (entry: Json) => migrate(from312({ plugins: { "precise-volume": entry } }), "4.0.0").files;
+    expect(files({ enabled: true, savedVolume: 42.4 })).toEqual({ "precise-volume.json": { volume: 42 } });
+    expect(files({ enabled: true, savedVolume: 130 })).toEqual({ "precise-volume.json": { volume: 100 } });
+    expect(files({ enabled: true })).toEqual({});
+  });
+
   test("scrobbler: one entry per service becomes flat options", () => {
     const entry = twice("scrobbler", {
       scrobbleOtherMedia: false,
