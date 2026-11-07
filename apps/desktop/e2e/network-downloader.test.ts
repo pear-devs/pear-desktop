@@ -252,7 +252,7 @@ test("downloader keeps songs in the app unless asked, and saves them to the fold
   // The site's page lists it too, signed out as well (the site loads its offline database only for accounts).
   await expect(page.locator("ytmusic-offline-item-section-renderer").getByText("Downloaded songs")).toBeVisible();
   await showFinished(page);
-  const song = finishedRow(page, "Test song");
+  const song = finishedRow(page, "Never Gonna Give You Up");
   await expect(song.locator(".row-sub")).toContainText("In the app");
   await action(song, "Save to the download folder").click();
   await expect.poll(() => songFiles(folder), { timeout: 60_000 }).toEqual(["Never Gonna Give You Up.opus"]);
@@ -454,7 +454,7 @@ test("downloader cancels and retries from the Downloads page's queue, leaving no
   await expect.poll(async () => (await jobs(page))[0]?.progress ?? 0, { timeout: 60_000 }).toBeGreaterThan(0);
   // The sidebar entry counts the running download.
   await expect(page.locator("pear-downloader-entry").first().locator(".badge")).toHaveText("1");
-  await expect(queue(page).locator(".strip-title")).toHaveText(/^Downloading album/);
+  await expect(queue(page).locator(".strip-title")).toHaveText(/^Downloading /);
   await expect(queue(page).locator(".strip-sub")).toHaveText(/left|\/s|Starting|Converting/);
   await openQueue(page);
   // Its songs, one downloading with its progress.
@@ -497,7 +497,7 @@ test("downloader pauses a playlist, keeping its parts, and resumes it without do
   };
   await expect.poll(started, { timeout: 60_000, intervals: [50] }).toBe(true);
   await stripButton(page, "Pause").click();
-  await expect(queue(page).locator(".strip-title")).toHaveText(/^Paused · album/);
+  await expect(queue(page).locator(".strip-title")).toHaveText(/^Paused · Whenever You Need Somebody/);
   await expect(rows(page).first().locator(".row-state")).toHaveText("Paused");
   const parts = () => songFiles(folder).filter((file) => file.endsWith(".part"));
   expect(parts().length).toBeGreaterThan(0);
@@ -552,9 +552,9 @@ test("downloader's Downloads page: opened by its sidebar entry, Ctrl+J and the m
   const id = await invoke<number>(page, "downloader", "download", { videoId: TEST_TRACK }, "Test song");
   await invoke(page, "downloader", "pause", id);
   await expect(queue(page).getByRole("region", { name: "Download queue" })).toBeVisible();
-  await expect(queue(page).locator(".strip-title")).toHaveText("Paused · Test song");
+  await expect(queue(page).locator(".strip-title")).toHaveText("Paused · Never Gonna Give You Up");
   await openQueue(page);
-  const queued = row(page, "Test song");
+  const queued = row(page, "Never Gonna Give You Up");
   await expect(queued.locator(".row-state")).toHaveText("Paused");
   await action(queued, "Cancel").click();
   await expect(queued.locator(".row-state")).toHaveText("Cancelled");
@@ -579,7 +579,7 @@ test("downloader notifies when a download finishes while the window is hidden", 
   await invoke(page, "downloader", "download", { videoId: TEST_TRACK }, "Test song");
   await expect
     .poll(() => app.evaluate(() => (globalThis as unknown as { shownNotifications: string[] }).shownNotifications), { timeout: 90_000 })
-    .toEqual(["Saved “Test song”"]);
+    .toEqual(["Saved “Never Gonna Give You Up”"]);
 });
 
 test("downloader adds Download to the menus of songs and albums, as pear-desktop", async ({ launch, tempDir }) => {
@@ -597,9 +597,10 @@ test("downloader adds Download to the menus of songs and albums, as pear-desktop
   await expect(item).toBeVisible();
   await item.click();
   await expect(item).toBeHidden();
+  // Named after the track, as pear-desktop, not after its id.
   await expect
     .poll(async () => ((await invoke(page, "downloader", "state")) as { active?: { label: string } }).active?.label, { timeout: 10_000 })
-    .toMatch(/^[\w-]{11}$/);
+    .toBe("Never Gonna Give You Up");
   expect(await page.evaluate(() => window.__pearRuntime!.player.state.track)).toBeNull();
   await invoke(page, "downloader", "cancel");
 });

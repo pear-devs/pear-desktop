@@ -7,6 +7,7 @@ import {
   type Capabilities,
   isDownloadablePlaylist,
   menuTarget,
+  normalizePlaylistId,
   overallProgress,
   parseLine,
   parseProbe,
@@ -77,11 +78,37 @@ describe("buildArgs", () => {
     expect(valueOf(buildArgs(options({ format: "m4a" })), "--format")).toBe("bestaudio[ext=m4a]/bestaudio/best");
   });
 
-  test("keeps the streamed audio as it is for the source format", () => {
+  test("keeps the downloaded file as it is for the source format (.webm, .m4a), as pear-desktop did", () => {
     const args = buildArgs(options({ format: "source", capabilities: { ...caps, mutagen: true } }));
-    expect(valueOf(args, "--audio-format")).toBe("best");
-    expect(args).toContain("--embed-thumbnail");
-    expect(buildArgs(options({ format: "source" }))).not.toContain("--embed-thumbnail");
+    expect(args).not.toContain("--extract-audio");
+    expect(args).not.toContain("--audio-format");
+    expect(args).toContain("--embed-metadata");
+    // yt-dlp can't put a cover into WebM.
+    expect(args).not.toContain("--embed-thumbnail");
+  });
+
+  test("MP3 at a constant 256 kbps, as pear-desktop's preset", () => {
+    expect(valueOf(buildArgs(options()), "--audio-quality")).toBe("256K");
+    expect(valueOf(buildArgs(options({ format: "opus" })), "--audio-quality")).toBe("0");
+  });
+
+  test("titles and artists without the video's dressing, as pear-desktop's cleanupName", () => {
+    const args = buildArgs(options());
+    const replacements = args.flatMap((arg, i) => (arg === "--replace-in-metadata" ? [args.slice(i + 1, i + 4)] : []));
+    expect(replacements[0]).toEqual(["title,track,artist,creator,uploader,channel", String.raw`(?i)\s*(- topic)$`, ""]);
+    expect(replacements.map(([, pattern]) => pattern)).toContain(String.raw`(?i)\s*[(|\[]official(.*?)[)|\]]`);
+    expect(replacements.every(([fields]) => fields !== "playlist_title")).toBe(true);
+  });
+
+  test("playlist folders as pear-desktop named them, and the list's title for the label", () => {
+    const args = buildArgs(options({ target: { videoId: "", playlistId: "PL1" } }));
+    const folder = args.flatMap((arg, i) => (arg === "--replace-in-metadata" && args[i + 1] === "playlist_title" ? [args.slice(i + 2, i + 4)] : []));
+    expect(folder[0]).toEqual([String.raw`[<>:"/\\|?*\x00-\x1f]+`, " "]);
+    expect(folder).toContainEqual([" {2,}", " "]);
+    expect(args).toContain("before_dl:pear-list %(playlist_title|)s");
+    // Not for songs, nor without playlist folders.
+    expect(buildArgs(options())).not.toContain("playlist_title");
+    expect(buildArgs(options({ target: { videoId: "", playlistId: "PL1" }, playlistFolders: false }))).not.toContain("playlist_title");
   });
 
   test("keeps templates inside the download folder", () => {
@@ -127,6 +154,8 @@ describe("parseLine", () => {
       file: "/music/Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster).webm",
     });
     expect(parseLine("pear-convert")).toEqual({ type: "convert" });
+    expect(parseLine("pear-list My Playlist")).toEqual({ type: "list", title: "My Playlist" });
+    expect(parseLine("pear-list ")).toBeUndefined();
     expect(parseLine("pear-done /music/Pear Desktop/A - B.mp3\n")).toEqual({ type: "done", file: "/music/Pear Desktop/A - B.mp3" });
     expect(parseLine("ERROR: [\u0079\u006f\u0075\u0074\u0075\u0062\u0065] abc: Video unavailable")).toEqual({ type: "error", message: "[\u0079\u006f\u0075\u0074\u0075\u0062\u0065] abc: Video unavailable" });
     expect(parseLine("WARNING: something")).toEqual({ type: "warning", message: "something" });
@@ -158,6 +187,13 @@ describe("helpers", () => {
     expect(isDownloadablePlaylist("RDCLAK5uy_abc")).toBe(true);
     expect(isDownloadablePlaylist("RDAMVMabc")).toBe(false);
     expect(isDownloadablePlaylist(undefined)).toBe(false);
+  });
+  test("a playlist's radio stands for the playlist, as in pear-desktop", () => {
+    expect(normalizePlaylistId("RDAMPLPLabc")).toBe("PLabc");
+    expect(normalizePlaylistId("PLabc")).toBe("PLabc");
+    expect(normalizePlaylistId("RDAMVMabc")).toBe("RDAMVMabc");
+    expect(normalizePlaylistId("RDAMPL")).toBeUndefined();
+    expect(normalizePlaylistId(null)).toBeUndefined();
   });
   test("overall progress spans playlist items", () => {
     expect(overallProgress(1, 1, 0.5)).toBe(0.5);
@@ -199,5 +235,20 @@ describe("pear-desktop's Custom preset, session and menus", () => {
     expect(menuTarget(["watch?playlist=OLAK5uy_album"])).toEqual({ videoId: "", playlistId: "OLAK5uy_album" });
     expect(menuTarget(["playlist?list=PLxyz"])).toEqual({ videoId: "", playlistId: "PLxyz" });
     expect(menuTarget(["browse/UCartist"])).toBeUndefined();
+    // A playlist's radio is the playlist.
+    expect(menuTarget(["watch?playlist=RDAMPLPLxyz"])).toEqual({ videoId: "", playlistId: "PLxyz" });
+  });
+
+  test("an episode's menu is for the episode, not its podcast", () => {
+    // The episode's menu: "Go to podcast" (a playlist) and items without links.
+    const menu = ["#", "playlist?list=PLpodcast"];
+    expect(menuTarget(menu, ["watch?v=episode0001&list=PLpodcast", "browse/MPSPxyz"])).toEqual({ videoId: "episode0001" });
+    expect(menuTarget(menu, ["podcast/episode0002"])).toEqual({ videoId: "episode0002" });
+    expect(menuTarget(["#"], ["podcast/episode0002"])).toEqual({ videoId: "episode0002" });
+    // A podcast's or a playlist's own card is the whole list.
+    expect(menuTarget(menu, ["browse/MPSPxyz"])).toEqual({ videoId: "", playlistId: "PLpodcast" });
+    expect(menuTarget(menu, ["playlist?list=PLpodcast", "watch?v=episode0001"])).toEqual({ videoId: "", playlistId: "PLpodcast" });
+    // An album's "Shuffle play" stays the album, whatever the row.
+    expect(menuTarget(["watch?playlist=OLAK5uy_album"], ["watch?v=abcdefghijk"])).toEqual({ videoId: "", playlistId: "OLAK5uy_album" });
   });
 });

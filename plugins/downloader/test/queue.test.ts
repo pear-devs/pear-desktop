@@ -45,6 +45,21 @@ function queueWith(engine: Engine, options: Partial<QueueOptions> = {}) {
 const statuses = (queue: DownloadQueue) => queue.jobs.map((job) => [job.label, job.status]);
 
 describe("download queue", () => {
+  test("a job is called what the engine found, not the video id it was queued with", async () => {
+    const naming: Engine = {
+      name: "built-in",
+      download: async (_job, progress) => {
+        progress.named("Never Gonna Give You Up");
+        return { files: ["/music/a.mp3"] };
+      },
+    };
+    const { queue, results } = queueWith(naming);
+    queue.add({ videoId: "dQw4w9WgXcQ" }, "dQw4w9WgXcQ");
+    await expect.poll(() => results).toHaveLength(1);
+    expect(results[0]!.label).toBe("Never Gonna Give You Up");
+    expect(queue.jobs[0]!.label).toBe("Never Gonna Give You Up");
+  });
+
   test("remembers the songs a job kept in the app, until they are exported", async () => {
     const keeping: Engine = { name: "built-in", download: async () => ({ files: [], kept: ["aaaaaaaaaaa"] }) };
     const { queue, results } = queueWith(keeping);

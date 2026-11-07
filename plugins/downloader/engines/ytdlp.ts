@@ -2,11 +2,12 @@
 
 import { type ChildProcess, execFile, spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, readdir, rm } from "node:fs/promises";
+import { basename, dirname, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import type { ReadyTools } from "../tools.ts";
 import { type ArgsOptions, buildArgs, overallProgress, parseDestination, parseLine } from "../ytdlp.ts";
-import { type Engine, type EngineJob, type EngineResult, isPause, type Progress } from "./types.ts";
+import { type Engine, type EngineJob, type EngineResult, folderExists, isPause, type Progress } from "./types.ts";
 
 export interface YtDlpOptions {
   /** The tools for the next job; may download them first. */
@@ -42,6 +43,12 @@ export class YtDlpEngine implements Engine {
   }
 
   async #spawn(tools: ReadyTools, options: ArgsOptions, progress: Progress, signal: AbortSignal): Promise<EngineResult> {
+    const { target } = options;
+    const playlist = target.playlistId !== undefined;
+    // As pear-desktop: a whole list isn't downloaded into a folder that is there already, unless skipping existing files.
+    const refuseExisting = playlist && !target.items?.length && options.playlistFolders && !options.skipExisting;
+    const existing = refuseExisting ? new Set(await readdir(options.folder).catch(() => [])) : undefined;
+    let refused: string | undefined;
     // Its own process group, so cancelling also stops the ffmpeg it runs.
     const child = spawn(tools.ytDlp, buildArgs(options), { stdio: ["ignore", "pipe", "pipe"], windowsHide: true, detached: !WINDOWS });
     const kill = () => killTree(child);
@@ -63,11 +70,21 @@ export class YtDlpEngine implements Engine {
           // The list's length comes with its first song; the others appear as yt-dlp gets to them.
           if (!listed && event.count > 1) progress.songs(Array.from({ length: event.count }, (_, i) => ({ index: i + 1 })));
           listed = true;
+          if (!playlist) progress.named(event.title);
           progress.item(event.index, event.count, event.title);
           return progress.song({ index: event.index, status: "active", videoId: event.videoId, title: event.title });
-        case "file":
+        case "list":
+          return progress.named(event.title);
+        case "file": {
+          const folder = dirname(event.file);
+          if (existing && !refused && resolve(dirname(folder)) === resolve(options.folder) && existing.has(basename(folder))) {
+            refused = folderExists(folder);
+            kill();
+            return;
+          }
           started.add(event.file);
           return;
+        }
         case "progress":
           progress.song({ index: item.index, bytes: event.bytes, ...(event.total ? { total: event.total } : {}) });
           return progress.download(overallProgress(item.index, item.count, event.total ? event.bytes / event.total : 0));
@@ -94,6 +111,7 @@ export class YtDlpEngine implements Engine {
       });
       // Stopped (cancelled or paused): what it saved so far is the queue's to judge.
       signal.throwIfAborted();
+      if (refused) return { files, error: refused };
       // Playlists may have a few unavailable items; that's still a success.
       if (code !== 0 && files.length === 0) return { files, error: errors.at(-1) ?? `yt-dlp exited with code ${code}` };
       return { files };

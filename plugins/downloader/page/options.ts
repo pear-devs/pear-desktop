@@ -1,14 +1,14 @@
 // What a download is called, and the album or playlist the page shows.
 
 import type { Translate } from "@pear/sdk/i18n";
-import { type DownloadTarget, isAlbum, isDownloadablePlaylist } from "../ytdlp.ts";
+import { type DownloadTarget, isAlbum, isDownloadablePlaylist, normalizePlaylistId } from "../ytdlp.ts";
 import type { Ctx } from "./types.ts";
 
 export type StartDownload = (target: DownloadTarget, label: string) => void;
 
-/** The album or playlist the page shows (radios and mixes don't count). */
+/** The album or playlist the page shows (radios and mixes don't count; a playlist's radio is that playlist). */
 export function pagePlaylist() {
-  const id = new URL(location.href).searchParams.get("list") ?? undefined;
+  const id = normalizePlaylistId(new URL(location.href).searchParams.get("list"));
   return isDownloadablePlaylist(id) ? id : undefined;
 }
 

@@ -55,6 +55,8 @@ export function startPage(ctx: Ctx) {
   const preview = downloadsPopover(ctx, entry, () => openDownloads({ expanded: true }));
   // The app menu, the tray and the settings' button.
   ctx.host.on("open-downloads", () => openDownloads());
+  // What the host has to say, e.g. that the app menu's "Download playlist" found none.
+  ctx.host.on("toast", (text) => toast(String(text)));
   showState(button, state, t);
 
   const apply = (next: DownloaderState) => {

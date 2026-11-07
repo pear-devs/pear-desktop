@@ -2,6 +2,7 @@
 // Pure functions (no Electron, no processes) so they are unit-testable.
 
 import { YTM_ORIGIN, ytmUrl } from "@pear/sdk/util";
+import { cleanupArgs } from "./names.ts";
 
 /**
  * "source": the audio as streamed (usually Opus), without re-encoding.
@@ -65,6 +66,15 @@ const FORMAT_SELECTORS: Record<AudioFormat, string> = {
   custom: "bestaudio/best",
 };
 
+/** A playlist's radio ("RDAMPL<id>") stands for the playlist itself, as pear-desktop downloaded it. */
+const PLAYLIST_RADIO = "RDAMPL";
+
+/** The playlist an id is about: a playlist's radio is that playlist. */
+export function normalizePlaylistId(playlistId: string | null | undefined): string | undefined {
+  if (!playlistId) return undefined;
+  return playlistId.startsWith(PLAYLIST_RADIO) ? playlistId.slice(PLAYLIST_RADIO.length) || undefined : playlistId;
+}
+
 /** Radios and mixes ("RD…") are endless, except YTM's curated "RDCLAK…" playlists. */
 export const isDownloadablePlaylist = (playlistId: string | undefined): playlistId is string =>
   !!playlistId && (!playlistId.startsWith("RD") || playlistId.startsWith("RDCLAK"));
@@ -78,8 +88,8 @@ export function canEmbedCover(format: AudioFormat, capabilities: Capabilities, c
     return ext === "mp3" || ext === "flac" ? capabilities.ffmpeg : capabilities.mutagen;
   }
   if (format === "mp3") return capabilities.ffmpeg;
-  // Opus or M4A, whichever was streamed: mutagen writes both.
-  if (format === "source") return capabilities.mutagen;
+  // The stream as it came (WebM, usually), which yt-dlp can't put a cover in; pear-desktop didn't either.
+  if (format === "source") return false;
   if (format === "m4a") return capabilities.mutagen || capabilities.atomicParsley;
   return capabilities.mutagen;
 }
@@ -88,7 +98,10 @@ export function buildArgs(options: ArgsOptions): string[] {
   const playlist = options.target.playlistId !== undefined;
   const url = playlist ? ytmUrl(`/playlist?list=${options.target.playlistId}`) : ytmUrl(`/watch?v=${options.target.videoId}`);
   const template = (options.template.trim() || DEFAULT_TEMPLATE).replace(/^[/\\]+/, "");
-  const output = playlist && options.playlistFolders ? `%(playlist_title,playlist_id)s/${template}` : template;
+  const folders = playlist && options.playlistFolders;
+  const output = folders ? `%(playlist_title,playlist_id)s/${template}` : template;
+  // "Source" keeps the downloaded file as it is, named by its container (.webm, .m4a), as pear-desktop did.
+  const extract = options.format !== "source";
 
   const args = [
     "--newline",
@@ -108,12 +121,10 @@ export function buildArgs(options: ArgsOptions): string[] {
     "after_move:pear-done %(filepath)s",
     "--format",
     FORMAT_SELECTORS[options.format],
-    "--extract-audio",
-    "--audio-format",
-    audioFormatArg(options),
-    "--audio-quality",
-    "0",
+    ...(extract ? ["--extract-audio", "--audio-format", audioFormatArg(options), "--audio-quality", audioQuality(options.format)] : []),
     "--embed-metadata",
+    // Titles and artists without "(Official Video)", "VEVO", " - Topic"…, as pear-desktop named and tagged them.
+    ...cleanupArgs(),
     "--paths",
     options.folder,
     "--output",
@@ -121,6 +132,10 @@ export function buildArgs(options: ArgsOptions): string[] {
     playlist ? "--yes-playlist" : "--no-playlist",
     options.skipExisting ? "--no-overwrites" : "--force-overwrites",
   ];
+  // The list's title, for the download's label.
+  if (playlist) args.push("--print", "before_dl:pear-list %(playlist_title|)s");
+  // The list's folder as pear-desktop named it: reserved characters become spaces.
+  if (folders) args.push(...PLAYLIST_FOLDER_ARGS);
   // pear-desktop's Custom preset: its ffmpeg arguments for the conversion.
   if (options.format === "custom" && options.customArgs?.trim()) args.push("--postprocessor-args", `ExtractAudio+ffmpeg_o:${options.customArgs.trim()}`);
   if (options.cookiesFile) args.push("--cookies", options.cookiesFile);
@@ -140,6 +155,17 @@ export function buildArgs(options: ArgsOptions): string[] {
   return args;
 }
 
+/** pear-desktop's "mp3 (256kbps)": constant 256 kbps; the best quality otherwise. */
+const audioQuality = (format: AudioFormat) => (format === "mp3" ? "256K" : "0");
+
+/** filenamify(title, { replacement: " " }): reserved characters as one space, no runs of spaces, nothing around. */
+const PLAYLIST_FOLDER_ARGS = [
+  [String.raw`[<>:"/\\|?*\x00-\x1f]+`, " "],
+  [String.raw`\.+$`, ""],
+  [" {2,}", " "],
+  ["^ +| +$", ""],
+].flatMap(([pattern, replacement]) => ["--replace-in-metadata", "playlist_title", pattern!, replacement!]);
+
 /** yt-dlp's --audio-format; "best" keeps the streamed codec and only remuxes it. */
 function audioFormatArg(options: ArgsOptions) {
   if (options.format === "source") return "best";
@@ -149,6 +175,8 @@ function audioFormatArg(options: ArgsOptions) {
 
 export type OutputEvent =
   | { type: "item"; index: number; count: number; videoId: string; title: string }
+  /** The playlist's title. */
+  | { type: "list"; title: string }
   /** Bytes of the current song received, and in all when yt-dlp knows or estimates it. */
   | { type: "progress"; bytes: number; total: number | undefined }
   /** The file the song is downloaded to (its partial download is `<file>.part`). */
@@ -175,6 +203,10 @@ export function parseLine(line: string): OutputEvent | undefined {
   if (text.startsWith("pear-item ")) {
     const [, index, count, videoId, ...title] = text.split(" ");
     return { type: "item", index: number(index) ?? 1, count: number(count) ?? 1, videoId: videoId ?? "", title: title.join(" ") };
+  }
+  if (text.startsWith("pear-list ")) {
+    const title = text.slice("pear-list ".length).trim();
+    return title && title !== "NA" ? { type: "list", title } : undefined;
   }
   if (text.startsWith("pear-file ")) return { type: "file", file: text.slice("pear-file ".length) };
   if (text === "pear-convert") return { type: "convert" };
@@ -208,14 +240,52 @@ export function overallProgress(index: number, count: number, fraction: number) 
   return Math.min(1, (Math.max(1, index) - 1 + fraction) / total);
 }
 
-/** What a YTM menu's links point at, as pear-desktop read them: a playlist or album, else a track. */
-export function menuTarget(hrefs: readonly string[]): DownloadTarget | undefined {
+/**
+ * What a YTM menu is for, from its links and those of the row it was opened
+ * from: a playlist or album, else a track. An episode's menu links to its
+ * podcast ("Go to podcast"), which is a playlist: the episode is what it's for.
+ */
+export function menuTarget(hrefs: readonly string[], row: readonly string[] = []): DownloadTarget | undefined {
+  const rowVideo = rowVideoId(row);
   let videoId: string | undefined;
   for (const href of hrefs) {
-    const url = new URL(href, YTM_ORIGIN);
-    const playlist = url.searchParams.get("playlist") ?? (url.pathname === "/playlist" ? url.searchParams.get("list") : null);
-    if (playlist && isDownloadablePlaylist(playlist)) return { videoId: "", playlistId: playlist };
-    videoId ??= url.searchParams.get("v") ?? undefined;
+    const url = parseHref(href);
+    if (!url) continue;
+    // "Shuffle play" or "Start radio" of a list, or "Go to playlist" / "Go to podcast".
+    const played = url.searchParams.get("playlist");
+    const linked = url.pathname === "/playlist" ? url.searchParams.get("list") : null;
+    const playlist = normalizePlaylistId(played ?? linked);
+    if (isDownloadablePlaylist(playlist)) {
+      if (!played && rowVideo) return { videoId: rowVideo };
+      return { videoId: "", playlistId: playlist };
+    }
+    videoId ??= videoIdOf(url);
   }
+  videoId ??= rowVideo;
   return videoId ? { videoId } : undefined;
+}
+
+/** The track a row shows (a song or an episode); none for a row of a playlist. */
+function rowVideoId(hrefs: readonly string[]) {
+  let videoId: string | undefined;
+  for (const href of hrefs) {
+    const url = parseHref(href);
+    if (!url) continue;
+    if (url.pathname === "/playlist" || url.pathname.startsWith("/browse/VL")) return undefined;
+    videoId ??= videoIdOf(url);
+  }
+  return videoId;
+}
+
+/** A track's id from its link: `watch?v=<id>`, or an episode's `podcast/<id>`. */
+function videoIdOf(url: URL) {
+  return url.searchParams.get("v") ?? /^\/podcast\/([\w-]{11})$/.exec(url.pathname)?.[1] ?? undefined;
+}
+
+function parseHref(href: string) {
+  try {
+    return new URL(href, YTM_ORIGIN);
+  } catch {
+    return undefined;
+  }
 }

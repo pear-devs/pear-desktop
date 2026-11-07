@@ -8,13 +8,14 @@ import { mkdir, open, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { errorMessage } from "@pear/sdk/util";
 import { Innertube, Platform, type Types, UniversalCache, type YT, YTNodes, type YTMusic } from "\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js";
-import { type BuiltInFormat, type Converter, type Cover, codecOf, outputFor, preferredContainer, type Tags } from "../convert.ts";
+import { type BuiltInFormat, type Converter, type Cover, outputFor, preferredContainer, sourceOf, type Tags } from "../convert.ts";
 import type { Lyrics, LyricsQuery } from "../lyrics.ts";
 import type { KeepOptions, OfflineList, OfflineSong, OfflineStore } from "../offline.ts";
 import { Archive } from "../archive.ts";
 import { playlistFolder, renderTemplate, type TemplateFields } from "../template.ts";
+import { cleanupName } from "../names.ts";
 import { isAlbum } from "../ytdlp.ts";
-import { type Engine, type EngineJob, type EngineResult, isPause, type Progress, RecoverableError, type SongUpdate } from "./types.ts";
+import { type Engine, type EngineJob, type EngineResult, folderExists, isPause, type Progress, RecoverableError, type SongUpdate } from "./types.ts";
 
 /** The stream is fetched in parts of this size, as the site's player does; one request for all of it is refused. */
 const CHUNK_BYTES = 10 * 1024 * 1024;
@@ -217,6 +218,8 @@ interface SongProgress {
   skipped(): void;
   /** Its partial download stays for later. */
   keep(file: string): void;
+  /** The song's title, once looked up; for a job of that one song. */
+  named?(title: string): void;
 }
 
 export class InnertubeEngine implements Engine {
@@ -246,6 +249,18 @@ export class InnertubeEngine implements Engine {
     signal: AbortSignal,
   ): Promise<EngineResult> {
     const { list, entries } = await recoverable(() => this.#list(yt, playlistId, options.playlistLimit), signal);
+    progress.named(list.title);
+    // As pear-desktop: a list of one song is that song, without a folder of its own.
+    if (entries.length === 1 && (!only || only.includes(1))) {
+      const entry = entries[0]!;
+      progress.songs([{ index: 1, videoId: entry.videoId, title: entry.title }]);
+      const { file, kept } = await this.#song(yt, entry, undefined, options, songProgress(progress, entry, 0, 1), signal);
+      return { files: file ? [file] : [], kept: kept ? [kept] : [] };
+    }
+    // Nor into a folder that is there already, unless skipping existing files (a list it continues made its folder itself).
+    const exporting = options.exportFiles || !this.#options.store;
+    const folder = join(options.folder, playlistFolder({ playlist_title: list.title, playlist_id: list.id }));
+    if (!only && exporting && options.playlistFolders && !options.skipExisting && existsSync(folder)) throw new Error(folderExists(folder));
     const wanted = only ? entries.filter((entry) => only.includes(entry.index)) : entries;
     progress.songs(entries.map(({ index, videoId, title }) => ({ index, videoId, title })));
     const saved: SongOutcome[] = [];
@@ -355,9 +370,10 @@ export class InnertubeEngine implements Engine {
     const session = this.#options.session;
     let poToken = await session.poToken(yt, entry.videoId);
     const { info, tags } = await recoverable(() => this.#lookup(yt, entry.videoId, poToken), signal);
+    progress.named?.(tags.title);
     if (list?.album) Object.assign(tags, albumTags(list.album, entry.index, list.count));
     const format = await recoverable(async () => chooseAudio(info, options.format), signal);
-    const { ext, codecArgs } = outputFor(options.format, { codec: codecOf(format.mime_type) });
+    const { ext, codecArgs } = outputFor(options.format, sourceOf(format.mime_type));
 
     const fields = templateFields(entry, tags, ext, list, info.basic_info.duration);
     const relative = renderTemplate(options.template, fields);
@@ -423,7 +439,7 @@ export class InnertubeEngine implements Engine {
     const kept = await this.#options.store?.kept(videoId);
     const info = kept?.track.export;
     if (!kept || !info) throw new Error(`${videoId} isn't in the downloads, or was kept before it could be exported`);
-    const { ext, codecArgs } = outputFor(options.format, { codec: codecOf(kept.track.format.mimeType) });
+    const { ext, codecArgs } = outputFor(options.format, sourceOf(kept.track.format.mimeType));
     const fields: TemplateFields = { ...info.fields, ext };
     const relative = renderTemplate(options.template, fields);
     const folder = info.inList && options.playlistFolders ? join(options.folder, playlistFolder(fields)) : options.folder;
@@ -672,14 +688,12 @@ function chooseAudio(info: YTMusic.TrackInfo | YT.VideoInfo, format: BuiltInForm
   throw lastError;
 }
 
-/** Song channels are named "<artist> - Topic". */
-const cleanArtist = (name: string | undefined) => name?.replace(/ - Topic$/, "");
-
 function trackTags(info: YTMusic.TrackInfo): Tags {
   const album = info.player_overlays?.browser_media_session?.as(YTNodes.BrowserMediaSession).album?.text;
   return {
-    title: info.basic_info.title ?? info.basic_info.id ?? "",
-    artist: cleanArtist(info.basic_info.author),
+    // As pear-desktop: without "(Official Video)", "VEVO", " - Topic"…
+    title: cleanupName(info.basic_info.title ?? "") || info.basic_info.id || "",
+    artist: cleanupName(info.basic_info.author),
     album: album && album !== "N/A" ? album : undefined,
   };
 }
@@ -751,6 +765,7 @@ function songProgress(progress: Progress, entry: Entry, position: number, count:
   const song = songUpdates(progress, entry);
   return {
     ...song,
+    named: (title) => progress.named(title),
     download: (bytes, total) => {
       song.bytes(bytes, total);
       if (total) progress.download(overall((bytes / total) * DOWNLOAD_SHARE));

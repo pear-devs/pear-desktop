@@ -352,6 +352,12 @@ export class DownloadQueue {
       this.#emit();
     };
     return {
+      named: (label) => {
+        const name = label.trim();
+        if (!name || name === job.label) return;
+        job.label = name;
+        emit(true);
+      },
       item: (index, count, title) => {
         running.item = { index, count, title };
         job.stage = "downloading";
@@ -470,11 +476,15 @@ function savedFiles(job: Job) {
   return [...new Set([...job.files, ...songs])];
 }
 
-/** What is left of a job's target: a resumed album or playlist skips the songs it did. */
+/**
+ * What is left of a job's target: a resumed album or playlist skips the songs it
+ * did. Once listed, it names its songs even when none was done, so the engine
+ * knows it continues (its folder is its own already).
+ */
 function remainingTarget(job: Job): DownloadTarget {
   const items = job.items ?? [];
   const isDone = (item: JobItem) => item.status === "done" || item.status === "skipped";
-  if (!job.target.playlistId || !items.some(isDone)) return job.target;
+  if (!job.target.playlistId || items.length === 0) return job.target;
   const left = items.filter((item) => !isDone(item)).map((item) => item.index);
   const wanted = job.target.items;
   return { ...job.target, items: wanted ? left.filter((index) => wanted.includes(index)) : left };

@@ -33,6 +33,9 @@ const RESERVED_RUN = /([<>:"/\\|?*\u0000-\u001f\u007f])[<>:"/\\|?*\u0000-\u001f\
 const WINDOWS_RESERVED = /^(con|prn|aux|nul|com\d|lpt\d)$/i;
 const MAX_NAME_LENGTH = 255;
 const REPLACEMENT = "_";
+/** pear-desktop named a playlist's folder with filenamify(title, { replacement: " " }), at most 100 characters. */
+const FOLDER_REPLACEMENT = " ";
+const MAX_FOLDER_LENGTH = 100;
 
 /** Fields yt-dlp also knows under another name. */
 function aliases(fields: TemplateFields): Record<string, unknown> {
@@ -59,19 +62,26 @@ function format(value: unknown, flags: string, width: string, type: string) {
 }
 
 /** A field value as part of a file name: never a path separator or a character file systems refuse. */
-function cleanValue(value: string) {
-  return value.replace(RESERVED_RUN, "$1").replace(RESERVED, REPLACEMENT);
+function cleanValue(value: string, replacement = REPLACEMENT) {
+  return value.replace(RESERVED_RUN, "$1").replace(RESERVED, replacement);
+}
+
+interface SegmentOptions {
+  replacement?: string;
+  maxLength?: number;
 }
 
 /** A whole path segment, as filenamify made it: no reserved names, no trailing dots or spaces, not too long. */
-export function cleanSegment(segment: string, platform = process.platform) {
-  let name = cleanValue(segment).trim().replace(/[. ]+$/, "");
+export function cleanSegment(segment: string, platform = process.platform, { replacement = REPLACEMENT, maxLength = MAX_NAME_LENGTH }: SegmentOptions = {}) {
+  let name = cleanValue(segment, replacement).trim().replace(/[. ]+$/, "");
+  // filenamify leaves no runs of its replacement (a space: no double spaces).
+  if (replacement === FOLDER_REPLACEMENT) name = name.replace(/ {2,}/g, " ");
   if (name === "" || name === "." || name === "..") name = REPLACEMENT;
   if (WINDOWS_RESERVED.test(name.split(".")[0]!)) name = `${name}!`;
-  if (name.length > MAX_NAME_LENGTH) {
+  if (name.length > maxLength) {
     const dot = name.lastIndexOf(".");
     const ext = dot > 0 && name.length - dot <= 8 ? name.slice(dot) : "";
-    name = name.slice(0, MAX_NAME_LENGTH - ext.length) + ext;
+    name = name.slice(0, maxLength - ext.length) + ext;
   }
   // macOS stores names decomposed itself; elsewhere one spelling keeps "skip existing" working.
   return platform === "darwin" ? name : name.normalize("NFC");
@@ -96,7 +106,7 @@ export function renderTemplate(template: string, fields: TemplateFields, platfor
     .join("/");
 }
 
-/** The playlist's own folder, as yt-dlp names it (`%(playlist_title,playlist_id)s`). */
+/** The playlist's own folder (`%(playlist_title,playlist_id)s`), as pear-desktop named it: reserved characters as spaces. */
 export function playlistFolder(fields: Pick<TemplateFields, "playlist_title" | "playlist_id">, platform = process.platform) {
-  return cleanSegment(fields.playlist_title || fields.playlist_id || MISSING, platform);
+  return cleanSegment(fields.playlist_title || fields.playlist_id || MISSING, platform, { replacement: FOLDER_REPLACEMENT, maxLength: MAX_FOLDER_LENGTH });
 }

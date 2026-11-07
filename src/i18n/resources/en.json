@@ -995,7 +995,8 @@
         "saved": "Saved “{{title}}”",
         "show": "Show",
         "downloads": "Downloads",
-        "cannot-export": "Can't save it to the folder: {{error}}"
+        "cannot-export": "Can't save it to the folder: {{error}}",
+        "no-playlist": "There's no playlist here to download"
       },
       "labels": {
         "album": "album",

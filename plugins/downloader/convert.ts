@@ -12,11 +12,14 @@ import type { AudioFormat } from "./ytdlp.ts";
 
 /** The formats the built-in engine writes (the Custom preset stays with yt-dlp). */
 export type BuiltInFormat = Exclude<AudioFormat, "custom">;
-export type Extension = "mp3" | "m4a" | "opus";
+/** "webm" and "mp4": the Source format keeps the stream's own container, as pear-desktop named it. */
+export type Extension = "mp3" | "m4a" | "opus" | "webm" | "mp4";
 
 /** What a stream holds, from its MIME type. */
 export interface SourceStream {
   codec: "opus" | "aac" | "other";
+  /** Its container, as pear-desktop's table of streams named it (audio-only MP4 is "m4a"). */
+  container?: "webm" | "m4a" | "mp4" | undefined;
 }
 
 export interface Tags {
@@ -69,16 +72,32 @@ export function outputFor(format: BuiltInFormat, source: SourceStream): { ext: E
   const copy = ["-c:a", "copy"];
   switch (format) {
     case "mp3":
-      // yt-dlp's --audio-quality 0: the best VBR.
-      return { ext: "mp3", codecArgs: ["-c:a", "libmp3lame", "-q:a", "0"] };
+      // pear-desktop's "mp3 (256kbps)": constant 256 kbps.
+      return { ext: "mp3", codecArgs: ["-c:a", "libmp3lame", "-b:a", "256k"] };
     case "m4a":
       return { ext: "m4a", codecArgs: source.codec === "aac" ? copy : ["-c:a", "aac", "-b:a", "256k"] };
     case "opus":
       return { ext: "opus", codecArgs: source.codec === "opus" ? copy : ["-c:a", "libopus", "-b:a", "160k"] };
     case "source":
+      // The stream as it came, in its container (.webm for Opus), so pear-desktop's files are found again.
+      if (source.container) return { ext: source.container, codecArgs: copy };
       return source.codec === "aac" ? { ext: "m4a", codecArgs: copy } : { ext: "opus", codecArgs: copy };
   }
 }
+
+/** A stream's container from its MIME type ("audio/webm; codecs=…"). */
+export function containerOf(mimeType: string): SourceStream["container"] {
+  const [type, subtype] = mimeType.split(";")[0]!.trim().toLowerCase().split("/");
+  if (subtype === "webm") return "webm";
+  if (subtype === "mp4") return type === "audio" ? "m4a" : "mp4";
+  return undefined;
+}
+
+/** What a stream of that MIME type holds. */
+export const sourceOf = (mimeType: string): SourceStream => ({ codec: codecOf(mimeType), container: containerOf(mimeType) });
+
+/** Files that take the cover as an attached picture; Opus carries it in its tags, WebM not at all. */
+const takesPicture = (ext: Extension) => ext === "mp3" || ext === "m4a" || ext === "mp4";
 
 /** The stream to ask for: one in the codec the format keeps as it is. */
 export function preferredContainer(format: BuiltInFormat): "mp4" | "webm" | "any" {
@@ -99,11 +118,11 @@ export const codecOf = (mimeType: string): SourceStream["codec"] => {
 const escapeMetadata = (value: string) => value.replace(/[=;#\\\n]/g, (char) => `\\${char}`);
 
 /**
- * ReplayGain 2.0 (reference −18 LUFS) for MP3; Opus has its own R128 tag (−23 LUFS,
- * Q7.8). ffmpeg's MP4 muxer drops tags it doesn't know, so M4A gets none.
+ * ReplayGain 2.0 (reference −18 LUFS) for MP3 and WebM; Opus has its own R128 tag
+ * (−23 LUFS, Q7.8). ffmpeg's MP4 muxer drops tags it doesn't know, so M4A gets none.
  */
 export function loudnessTags(ext: Extension, loudness: Loudness): Record<string, string> {
-  if (ext === "m4a") return {};
+  if (ext === "m4a" || ext === "mp4") return {};
   if (ext === "opus") {
     const q78 = Math.round((-23 - loudness.integrated) * 256);
     return { R128_TRACK_GAIN: String(Math.max(-32768, Math.min(32767, q78))) };
@@ -181,20 +200,21 @@ export function pictureBlock(cover: Cover) {
 export interface ArgsInput {
   input: string;
   metadataFile: string;
-  /** The cover as a separate input (MP3 and M4A); Opus carries it in the metadata. */
+  /** The cover as a separate input (MP3, M4A and MP4); Opus carries it in the metadata, WebM can't. */
   coverFile?: string | undefined;
   output: string;
   ext: Extension;
   codecArgs: string[];
 }
 
-/** ffmpeg's arguments for a conversion with tags and, for MP3 and M4A, the cover as an attached picture. */
+/** ffmpeg's arguments for a conversion with tags and, for MP3, M4A and MP4, the cover as an attached picture. */
 export function ffmpegArgs({ input, metadataFile, coverFile, output, ext, codecArgs }: ArgsInput): string[] {
+  const picture = coverFile !== undefined && takesPicture(ext);
   const args = ["-i", input, "-i", metadataFile];
-  if (coverFile && ext !== "opus") args.push("-i", coverFile);
+  if (picture) args.push("-i", coverFile);
   // Only the audio and the tags given here (no video, no tags of the stream such as its encoder).
   args.push("-map", "0:a:0", "-map_metadata", "1", "-map_metadata:s:a", "-1", ...codecArgs);
-  if (coverFile && ext !== "opus") {
+  if (picture) {
     args.push("-map", "2:v", "-c:v", "copy", "-disposition:v", "attached_pic");
     if (ext === "mp3") args.push("-metadata:s:v", "title=Album cover", "-metadata:s:v", "comment=Cover (front)");
   }
@@ -204,7 +224,8 @@ export function ffmpegArgs({ input, metadataFile, coverFile, output, ext, codecA
 }
 
 /** The muxer, so temporary names don't decide it. */
-const muxerOf = (ext: Extension) => (ext === "m4a" ? "ipod" : ext === "opus" ? "ogg" : "mp3");
+const MUXERS: Record<Extension, string> = { mp3: "mp3", m4a: "ipod", opus: "ogg", webm: "webm", mp4: "mp4" };
+const muxerOf = (ext: Extension) => MUXERS[ext];
 
 /** The tags for the metadata file: Opus's cover goes in as a picture block. */
 function metadataFor(job: Pick<ConvertJob, "ext" | "tags" | "cover">, loudness: Loudness | undefined) {
@@ -234,7 +255,7 @@ export class NativeConverter implements Converter {
   async convert(job: ConvertJob) {
     const loudness = job.replayGain ? await this.#loudness(job.input, job.signal) : undefined;
     const metadataFile = `${job.output}.meta.txt`;
-    const coverFile = job.cover && job.ext !== "opus" ? `${job.output}.cover.jpg` : undefined;
+    const coverFile = job.cover && takesPicture(job.ext) ? `${job.output}.cover.jpg` : undefined;
     try {
       await writeFile(metadataFile, ffmetadata(metadataFor(job, loudness)));
       if (coverFile) await writeFile(coverFile, job.cover!.data);
@@ -362,7 +383,7 @@ export class WasmConverter implements Converter {
       // MP3 tags come from node-id3 afterwards.
       const metadata = mp3 ? metadataOf({ title: job.tags.title }, job.ext) : metadataFor(job, loudness);
       ffmpeg.FS("writeFile", names.metadata, new TextEncoder().encode(ffmetadata(metadata)));
-      const cover = !mp3 && job.cover && job.ext !== "opus";
+      const cover = !mp3 && job.cover && takesPicture(job.ext);
       if (cover) ffmpeg.FS("writeFile", names.cover, job.cover!.data);
       const args = ffmpegArgs({
         input: names.input,

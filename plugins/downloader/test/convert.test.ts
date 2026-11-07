@@ -3,6 +3,7 @@ import {
   chooseConverter,
   type Converter,
   codecOf,
+  containerOf,
   ffmetadata,
   ffmpegArgs,
   loudnessTags,
@@ -12,13 +13,15 @@ import {
   parseProgressLine,
   pictureBlock,
   preferredContainer,
+  sourceOf,
 } from "../convert.ts";
 
 const after = (args: string[], flag: string) => args.filter((_, i) => args[i - 1] === flag);
 
 describe("formats", () => {
   test("streams are copied when the format keeps their codec", () => {
-    expect(outputFor("mp3", { codec: "opus" })).toEqual({ ext: "mp3", codecArgs: ["-c:a", "libmp3lame", "-q:a", "0"] });
+    // pear-desktop's "mp3 (256kbps)".
+    expect(outputFor("mp3", { codec: "opus" })).toEqual({ ext: "mp3", codecArgs: ["-c:a", "libmp3lame", "-b:a", "256k"] });
     expect(outputFor("m4a", { codec: "aac" })).toEqual({ ext: "m4a", codecArgs: ["-c:a", "copy"] });
     expect(outputFor("m4a", { codec: "opus" }).codecArgs).toContain("aac");
     expect(outputFor("opus", { codec: "opus" })).toEqual({ ext: "opus", codecArgs: ["-c:a", "copy"] });
@@ -28,6 +31,18 @@ describe("formats", () => {
     expect(preferredContainer("opus")).toBe("webm");
     expect(codecOf('audio/webm; codecs="opus"')).toBe("opus");
     expect(codecOf('audio/mp4; codecs="mp4a.40.2"')).toBe("aac");
+  });
+
+  test("Source keeps the stream's container, named as pear-desktop named it", () => {
+    expect(containerOf('audio/webm; codecs="opus"')).toBe("webm");
+    expect(containerOf('audio/mp4; codecs="mp4a.40.2"')).toBe("m4a");
+    expect(containerOf('video/mp4; codecs="avc1.42001E, mp4a.40.2"')).toBe("mp4");
+    expect(containerOf("audio/ogg")).toBeUndefined();
+    expect(outputFor("source", sourceOf('audio/webm; codecs="opus"'))).toEqual({ ext: "webm", codecArgs: ["-c:a", "copy"] });
+    expect(outputFor("source", sourceOf('audio/mp4; codecs="mp4a.40.2"'))).toEqual({ ext: "m4a", codecArgs: ["-c:a", "copy"] });
+    expect(outputFor("source", sourceOf('video/mp4; codecs="avc1.42001E, mp4a.40.2"')).ext).toBe("mp4");
+    // Other formats don't depend on the container.
+    expect(outputFor("opus", sourceOf('audio/webm; codecs="opus"')).ext).toBe("opus");
   });
 });
 
@@ -56,6 +71,14 @@ describe("ffmpegArgs", () => {
     expect(after(args, "-i")).toEqual(["in.part", "meta.txt"]);
     expect(after(args, "-map")).toEqual(["0:a:0"]);
     expect(after(args, "-f")).toEqual(["ogg"]);
+  });
+
+  test("WebM: tags, but no cover (the muxer refuses pictures)", () => {
+    const args = ffmpegArgs({ ...base, ext: "webm", coverFile: "cover.jpg" });
+    expect(after(args, "-i")).toEqual(["in.part", "meta.txt"]);
+    expect(after(args, "-map")).toEqual(["0:a:0"]);
+    expect(after(args, "-map_metadata")).toEqual(["1"]);
+    expect(after(args, "-f")).toEqual(["webm"]);
   });
 
   test("without a cover, only the audio", () => {
@@ -118,6 +141,7 @@ describe("ReplayGain", () => {
     expect(loudnessTags("mp3", { integrated: -21.8, peak: -17.9 }).REPLAYGAIN_TRACK_GAIN).toBe("+3.80 dB");
     expect(loudnessTags("opus", loudness)).toEqual({ R128_TRACK_GAIN: String(-9 * 256) });
     expect(loudnessTags("m4a", loudness)).toEqual({});
+    expect(loudnessTags("webm", loudness)).toEqual(loudnessTags("mp3", loudness));
   });
 });
 

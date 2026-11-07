@@ -8,7 +8,7 @@ import { type DownloaderState, downloadFolder, downloaderOf, openDownloads, star
 import type { Job } from "./jobs.ts";
 import type { OfflineData, OfflineList, OfflineTrack } from "./offline.ts";
 import { startPage } from "./page/index.ts";
-import type { DownloadTarget } from "./ytdlp.ts";
+import { type DownloadTarget, normalizePlaylistId } from "./ytdlp.ts";
 
 export default definePlugin({
   id: "downloader",
@@ -28,7 +28,7 @@ export default definePlugin({
       download(target?: DownloadTarget, label?: string) {
         const { queue } = downloaderOf(this);
         const track = this.player.state.track;
-        const resolved = target ?? (track ? { videoId: track.videoId } : undefined);
+        const resolved = target ? withPlaylist(target) : track ? { videoId: track.videoId } : undefined;
         if (!resolved?.videoId && !resolved?.playlistId) throw new Error(this.t("plugins.downloader.errors.nothing-playing", "nothing is playing"));
         return queue.add(resolved, label ?? (track?.videoId === resolved.videoId ? track.title : resolved.videoId));
       },
@@ -657,7 +657,13 @@ export default definePlugin({
 /** The RPC's video or playlist, if it named one. */
 function requestedTarget(videoId: string | undefined, playlistId: string | undefined): DownloadTarget | undefined {
   if (!videoId && !playlistId) return undefined;
-  const target: DownloadTarget = { videoId: videoId ?? "" };
-  if (playlistId) target.playlistId = playlistId;
-  return target;
+  return withPlaylist({ videoId: videoId ?? "", ...(playlistId ? { playlistId } : {}) });
+}
+
+/** A playlist's radio ("RDAMPL…") downloads the playlist, as pear-desktop did. */
+function withPlaylist(target: DownloadTarget): DownloadTarget {
+  const playlistId = normalizePlaylistId(target.playlistId);
+  if (target.playlistId === undefined || playlistId === target.playlistId) return target;
+  const { playlistId: _radio, ...rest } = target;
+  return playlistId ? { ...rest, playlistId } : rest;
 }

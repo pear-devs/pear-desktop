@@ -26,6 +26,8 @@ export interface SongUpdate {
 
 /** How a job is going, as `JobState` shows it. */
 export interface Progress {
+  /** What the job is called, once the engine knows: the song's or the list's title. */
+  named(label: string): void;
   /** Item `index` of `count` (both 1-based) started. */
   item(index: number, count: number, title: string): void;
   /** How much of the job is downloaded, 0–1 over all its items. */
@@ -80,5 +82,8 @@ export class RecoverableError extends Error {
     this.items = options.items;
   }
 }
+
+/** pear-desktop's error for a playlist's folder that is there already (when not skipping existing files). */
+export const folderExists = (folder: string) => `The folder ${folder} already exists`;
 
 export const isRecoverable = (error: unknown): error is RecoverableError => error instanceof RecoverableError;

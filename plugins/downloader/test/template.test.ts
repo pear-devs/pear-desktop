@@ -32,7 +32,12 @@ describe("renderTemplate", () => {
     expect(cleanSegment("a".repeat(300) + ".mp3", "linux").endsWith(".mp3")).toBe(true);
     // One spelling of accents, so "skip existing" finds files again.
     expect(cleanSegment(`Beyonce${String.fromCharCode(0x301)}`, "linux")).toBe(`Beyonc${String.fromCharCode(0xe9)}`);
-    expect(playlistFolder({ playlist_title: "My: List", playlist_id: "PL1" }, "linux")).toBe("My_ List");
+    // pear-desktop's playlist folders: reserved characters as spaces, no runs of them, at most 100 characters.
+    expect(playlistFolder({ playlist_title: "My: List", playlist_id: "PL1" }, "linux")).toBe("My List");
+    expect(playlistFolder({ playlist_title: "AC/DC | Best?", playlist_id: "PL1" }, "linux")).toBe("AC DC Best");
+    expect(playlistFolder({ playlist_title: "x".repeat(150), playlist_id: "PL1" }, "linux")).toHaveLength(100);
+    // Files keep "_".
+    expect(renderTemplate("%(title)s.%(ext)s", { ...song, title: "My: Song" }, "linux")).toBe("My_ Song.mp3");
     expect(playlistFolder({ playlist_id: "PL1" }, "linux")).toBe("PL1");
   });
 });
