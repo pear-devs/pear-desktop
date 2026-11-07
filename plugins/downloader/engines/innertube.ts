@@ -250,14 +250,7 @@ export class InnertubeEngine implements Engine {
   ): Promise<EngineResult> {
     const { list, entries } = await recoverable(() => this.#list(yt, playlistId, options.playlistLimit), signal);
     progress.named(list.title);
-    // As pear-desktop: a list of one song is that song, without a folder of its own.
-    if (entries.length === 1 && (!only || only.includes(1))) {
-      const entry = entries[0]!;
-      progress.songs([{ index: 1, videoId: entry.videoId, title: entry.title }]);
-      const { file, kept } = await this.#song(yt, entry, undefined, options, songProgress(progress, entry, 0, 1), signal);
-      return { files: file ? [file] : [], kept: kept ? [kept] : [] };
-    }
-    // Nor into a folder that is there already, unless skipping existing files (a list it continues made its folder itself).
+    // A list of one song gets its folder too, as with yt-dlp. Not into a folder that is there already, unless skipping existing files (a list it continues made its folder itself).
     const exporting = options.exportFiles || !this.#options.store;
     const folder = join(options.folder, playlistFolder({ playlist_title: list.title, playlist_id: list.id }));
     if (!only && exporting && options.playlistFolders && !options.skipExisting && existsSync(folder)) throw new Error(folderExists(folder));
