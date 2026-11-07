@@ -47,3 +47,22 @@ export function navigationAction(url: string): NavigationAction {
   if (parsed.origin === YTM_ORIGIN || isAuthFlow(parsed)) return "allow";
   return "external";
 }
+
+/**
+ * Where YTM is restricted, it redirects to the video site's /premium page;
+ * pear-desktop sent those to Google sign-in instead, which leads back to YTM.
+ */
+export function restrictedRegionRedirect(url: string): string | undefined {
+  const parsed = URL.parse(url);
+  // YTM's own /premium (its upgrade page) is a page of its own, not the restriction.
+  const videoSite = parsed && parsed.origin !== YTM_ORIGIN && (parsed.hostname === VIDEO_SITE || parsed.hostname.endsWith(`.${VIDEO_SITE}`));
+  if (!parsed || !videoSite || parsed.pathname !== "/premium") return undefined;
+  const signin = new URL("/signin", VIDEO_SITE_ORIGIN);
+  signin.searchParams.set("action_handle_signin", "true");
+  signin.searchParams.set("next", `${YTM_ORIGIN}/`);
+  const login = new URL("/ServiceLogin", GOOGLE_AUTH_ORIGIN);
+  login.searchParams.set("ltmpl", "music");
+  login.searchParams.set("service", VIDEO_SITE.split(".")[0]!);
+  login.searchParams.set("continue", signin.toString());
+  return login.toString();
+}

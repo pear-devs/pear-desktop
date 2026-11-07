@@ -7,7 +7,7 @@ import { CHANNEL, type HostEvent } from "@pear/sdk/protocol";
 import { chromeUserAgent, isGoogleAuth, isYtmUrl, YTM_ORIGIN } from "../shared/user-agent.ts";
 import { APP_NAME, relaunchOptions } from "./app-identity.ts";
 import type { Settings, WindowState } from "./config.ts";
-import { navigationAction, windowOpenAction } from "./links.ts";
+import { navigationAction, restrictedRegionRedirect, windowOpenAction } from "./links.ts";
 import { errorPage, loadFailureAction } from "./load-failure.ts";
 import type { PluginHost } from "./plugins.ts";
 import { openSettingsWindow, settingsWindowContents } from "./settings-window.ts";
@@ -246,6 +246,13 @@ function routeLinks(window: BrowserWindow) {
     if (action === "load") void window.loadURL(url);
     if (action === "external") void shell.openExternal(url);
     return { action: "deny" };
+  });
+  // Regions where YTM is restricted: its redirect to /premium goes to sign-in instead.
+  window.webContents.on("will-redirect", (event) => {
+    const signin = restrictedRegionRedirect(event.url);
+    if (!signin) return;
+    event.preventDefault();
+    void window.loadURL(signin);
   });
   // Only page-initiated navigations: redirects (sign-in's way back) don't come here.
   window.webContents.on("will-navigate", (event) => {

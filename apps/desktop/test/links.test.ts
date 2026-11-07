@@ -1,6 +1,6 @@
 import { YTM_ORIGIN } from "@pear/sdk/util";
 import { describe, expect, test } from "vitest";
-import { navigationAction, windowOpenAction } from "../src/main/links.ts";
+import { navigationAction, restrictedRegionRedirect, windowOpenAction } from "../src/main/links.ts";
 
 const VIDEO_SITE = new URL(YTM_ORIGIN).hostname.replace(/^music\./, "");
 
@@ -42,5 +42,23 @@ describe("navigationAction", () => {
     ["pear://settings/", "deny"],
   ])("%s → %s", (url, expected) => {
     expect(navigationAction(url)).toBe(expected);
+  });
+});
+
+describe("restrictedRegionRedirect", () => {
+  test("the video site's /premium goes to Google sign-in, back to YTM", () => {
+    const signin = URL.parse(restrictedRegionRedirect(`https://www.${VIDEO_SITE}/premium?x=1`)!)!;
+    expect(signin.origin).toBe("https://accounts.google.com");
+    expect(signin.pathname).toBe("/ServiceLogin");
+    expect(signin.searchParams.get("ltmpl")).toBe("music");
+    const next = URL.parse(signin.searchParams.get("continue")!)!;
+    expect(next.origin).toBe(`https://www.${VIDEO_SITE}`);
+    expect(next.searchParams.get("next")).toBe(`${YTM_ORIGIN}/`);
+  });
+
+  test("other redirects are left alone", () => {
+    expect(restrictedRegionRedirect(`${YTM_ORIGIN}/premium`)).toBeUndefined();
+    expect(restrictedRegionRedirect(`https://www.${VIDEO_SITE}/watch?v=x`)).toBeUndefined();
+    expect(restrictedRegionRedirect("https://example.com/premium")).toBeUndefined();
   });
 });
