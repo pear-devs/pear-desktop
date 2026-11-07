@@ -38,10 +38,10 @@ export default definePlugin({
       step: 1,
       description: "Amuse expects 9863.",
     }),
-    hostname: config.string("0.0.0.0", {
+    hostname: config.string("", {
       label: "Address to listen on",
-      description: "0.0.0.0 (as pear-desktop) lets widgets on other devices reach it; 127.0.0.1 keeps it to this computer.",
-      placeholder: "0.0.0.0",
+      description: "Empty (as pear-desktop) listens on every address, IPv4 and IPv6, so widgets on other devices reach it; 127.0.0.1 keeps it to this computer.",
+      placeholder: "All addresses",
     }),
   },
   host: {
@@ -60,7 +60,8 @@ export default definePlugin({
       });
       await new Promise<void>((resolve, reject) => {
         server.once("error", reject);
-        server.listen(ctx.config.port, ctx.config.hostname || "0.0.0.0", () => {
+        // No address: Node's default, every IPv6 and IPv4 address (::), like pear-desktop's server.
+        server.listen(ctx.config.port, ctx.config.hostname.trim() || undefined, () => {
           server.off("error", reject);
           resolve();
         });

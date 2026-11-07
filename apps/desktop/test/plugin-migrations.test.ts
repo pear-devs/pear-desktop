@@ -226,7 +226,7 @@ const EXPECTED: Record<string, { enabled: boolean; config: Json }> = {
     enabled: true,
     config: { interpolationTime: 3000, quality: 1000, size: 125, buffer: 20, opacity: 60, blur: 25, fullscreen: true },
   },
-  amuse: { enabled: true, config: { port: 9863, hostname: "0.0.0.0" } },
+  amuse: { enabled: true, config: { port: 9863, hostname: "" } },
   "audio-compressor": { enabled: true, config: { threshold: -50, ratio: 12, knee: 40, attack: 0, release: 250 } },
   "auth-proxy-adapter": {
     enabled: true,
