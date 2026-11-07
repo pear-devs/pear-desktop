@@ -143,7 +143,7 @@ test.describe("in-app menu", () => {
   test("starts collapsed when the menu bar is hidden", async ({ launch }) => {
     // macOS has no hideMenu option.
     test.skip(process.platform === "darwin", "no hideMenu option on macOS");
-    const app = await launch({ plugins: { "in-app-menu": { enabled: true } }, core: { window: { hideMenu: true } } });
+    const app = await launch({ plugins: { "in-app-menu": { enabled: true } }, core: { window: { hideMenu: true, hideMenuWarned: true } } });
     const page = await mainWindow(app);
     await expect(collapseToggle(page)).toHaveAttribute("aria-expanded", "false");
     await expect(menuBar(page)).toBeHidden();

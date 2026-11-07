@@ -128,6 +128,16 @@ export class Settings {
     this.#scheduleWrite();
   }
 
+  /** Whether the user was told how to bring back the hidden menu bar (pear-desktop's options.hideMenuWarned). */
+  get hideMenuWarned() {
+    return isRecord(this.#data.options) && this.#data.options.hideMenuWarned === true;
+  }
+
+  set hideMenuWarned(warned: boolean) {
+    this.#data.options = { ...this.#data.options, hideMenuWarned: warned };
+    this.#scheduleWrite();
+  }
+
   /** Writes pending changes immediately (on quit). */
   flush() {
     if (this.#writeTimer === undefined) return;

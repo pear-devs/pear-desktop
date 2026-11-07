@@ -19,7 +19,7 @@ const NARROW_WINDOW = 700;
 const THEME_RELOAD_MS = 10_000;
 
 test("the application menu, and hiding its bar", async ({ launch }) => {
-  const app = await launch({ core: { window: { hideMenu: true } } });
+  const app = await launch({ core: { window: { hideMenu: true, hideMenuWarned: true } } });
   const page = await mainWindow(app);
   const menu = () =>
     app.evaluate(({ BrowserWindow, Menu }) => {

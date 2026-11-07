@@ -13,11 +13,12 @@ import type { PluginHost } from "./plugins.ts";
 import { openSettingsWindow, settingsWindowContents } from "./settings-window.ts";
 import { alive, appIcon, focusWindow, secureWebPreferences } from "./windows.ts";
 
-const MIN_WIDTH = 360;
-const MIN_HEIGHT = 300;
+// pear-desktop's sizes.
+const MIN_WIDTH = 325;
+const MIN_HEIGHT = 425;
 /** YTM's own background, so the window doesn't flash white while loading. */
 const BACKGROUND_COLOR = "#030303";
-const DEFAULT_SIZE = { width: 1280, height: 800 };
+const DEFAULT_SIZE = { width: 1100, height: 550 };
 
 /** The standalone settings window only follows state, not page-runtime traffic. */
 const SETTINGS_EVENTS = new Set<HostEvent["type"]>(["plugin-state", "plugin-error", "plugin-status", "core-state"]);

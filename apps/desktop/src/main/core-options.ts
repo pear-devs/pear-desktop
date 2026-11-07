@@ -2,7 +2,7 @@
 // its own): their state for the settings UI and the page, and the options that
 // take effect live.
 
-import { app } from "electron";
+import { app, type BrowserWindow, dialog } from "electron";
 import type { CoreSection } from "@pear/sdk/core-config";
 import type { Translate } from "@pear/sdk/i18n";
 import type { CoreState } from "@pear/sdk/protocol";
@@ -74,10 +74,24 @@ export class CoreOptions {
     const window = this.#mainWindow.window;
     if (!window) return;
     window.setAlwaysOnTop(options.alwaysOnTop);
-    if (process.platform !== "darwin") applyHideMenu(window, options.hideMenu);
+    if (process.platform !== "darwin") {
+      applyHideMenu(window, options.hideMenu);
+      if (options.hideMenu && !this.#settings.hideMenuWarned) this.#warnHiddenMenu(window);
+    }
     if (process.platform === "win32" || process.platform === "darwin") {
       app.setLoginItemSettings({ openAtLogin: options.startAtLogin, args: [] });
     }
+  }
+
+  /** Once, as pear-desktop: how to show the menu bar again. */
+  #warnHiddenMenu(window: BrowserWindow) {
+    this.#settings.hideMenuWarned = true;
+    void dialog.showMessageBox(window, {
+      type: "info",
+      title: this.#t("main.dialog.hide-menu-enabled.title", "Hide Menu Enabled"),
+      message: this.#t("main.dialog.hide-menu-enabled.message", "Hide Menu is enabled"),
+      detail: this.#t("main.dialog.hide-menu-enabled.detail", "Menu is hidden, use 'Alt' to show it (or 'Escape' if using In-App Menu)"),
+    });
   }
 
   #applyAppearance() {
