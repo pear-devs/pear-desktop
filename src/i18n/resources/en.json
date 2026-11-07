@@ -215,6 +215,10 @@
       },
       "hide": "Hide window",
       "settings": "Settings…"
+    },
+    "error-page": {
+      "message": "Cannot load {{applicationName}}… Internet disconnected?",
+      "retry": "Retry"
     }
   },
   "plugins": {

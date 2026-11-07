@@ -8,6 +8,7 @@ import { chromeUserAgent, isGoogleAuth, isYtmUrl, YTM_ORIGIN } from "../shared/u
 import { APP_NAME } from "./app-identity.ts";
 import type { Settings, WindowState } from "./config.ts";
 import { navigationAction, windowOpenAction } from "./links.ts";
+import { errorPage, loadFailureAction } from "./load-failure.ts";
 import type { PluginHost } from "./plugins.ts";
 import { openSettingsWindow, settingsWindowContents } from "./settings-window.ts";
 import { alive, appIcon, focusWindow, secureWebPreferences } from "./windows.ts";
@@ -115,7 +116,7 @@ export class MainWindow {
     routeLinks(window);
     this.#saveBounds(window);
     this.#reportVisibility(window);
-    openHomeWhenOffline(window);
+    this.#handleLoadFailures(window);
     void window.loadURL(net.isOnline() ? startUrl(settings.core("general"), settings.lastUrl) : `${YTM_ORIGIN}/`);
     return window;
   }
@@ -175,6 +176,27 @@ export class MainWindow {
     window.on("restore", report);
   }
 
+  /** Offline, the home page (which works offline); otherwise pear-desktop's error page with a Retry. */
+  #handleLoadFailures(window: BrowserWindow) {
+    window.webContents.on("did-fail-load", (_event, errorCode, description, url, isMainFrame) => {
+      if (!isMainFrame) return;
+      const action = loadFailureAction(errorCode, url);
+      if (action === "ignore") return;
+      if (action === "home") {
+        void window.loadURL(`${YTM_ORIGIN}/`);
+        return;
+      }
+      console.warn(`[pear] couldn't load ${url}: ${description} (${errorCode})`);
+      const t = this.#plugins.t;
+      const text = {
+        title: APP_NAME,
+        message: t("main.error-page.message", "Cannot load {{applicationName}}… Internet disconnected?"),
+        retry: t("main.error-page.retry", "Retry"),
+      };
+      void window.loadURL(errorPage(url, text));
+    });
+  }
+
   #saveBounds(window: BrowserWindow) {
     const settings = this.#settings;
     const save = () => {
@@ -205,24 +227,6 @@ function routeLinks(window: BrowserWindow) {
     if (action === "allow") return;
     event.preventDefault();
     if (action === "external") void shell.openExternal(event.url);
-  });
-}
-
-/**
- * Chromium's errors for a page that failed to load for want of a network
- * (net_error_list.h); the site's service worker turns those into ERR_FAILED (-2).
- */
-const OFFLINE_ERRORS = new Set([-2, -21, -105, -106, -109, -118, -137]);
-
-/**
- * Offline, the site's service worker answers for its home page only (from its
- * cached app shell, with the Downloads page a click away); any other page
- * fails to load, so the home page loads instead.
- */
-function openHomeWhenOffline(window: BrowserWindow) {
-  window.webContents.on("did-fail-load", (_event, errorCode, _description, url, isMainFrame) => {
-    if (!isMainFrame || !OFFLINE_ERRORS.has(errorCode) || !isYtmUrl(url) || new URL(url).pathname === "/") return;
-    void window.loadURL(`${YTM_ORIGIN}/`);
   });
 }
 
