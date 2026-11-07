@@ -18,6 +18,9 @@ export interface LaunchOptions {
   userData?: string;
 }
 
+/** The window the tests are written for (the app's default is pear-desktop's smaller 1100×550). */
+const TEST_WINDOW_SIZE = { width: 1280, height: 800 };
+
 /** How long the page runtime and the test track get to load. */
 const LOAD_TIMEOUT_MS = 30_000;
 
@@ -32,6 +35,8 @@ function configFile({ plugins = {}, core = {} }: LaunchOptions) {
   return {
     plugins: entries,
     options: Object.assign({}, ...Object.values(options)),
+    // The tests' layout assumptions hold at this size, whatever the app's default.
+    "window-size": TEST_WINDOW_SIZE,
     __internal__: { migrations: { version: APP_VERSION } },
   };
 }
@@ -39,8 +44,11 @@ function configFile({ plugins = {}, core = {} }: LaunchOptions) {
 /** Launch the built app with a fresh, isolated profile. */
 export async function launchApp(options: LaunchOptions = {}) {
   const userData = options.userData ?? mkdtempSync(join(tmpdir(), "pear-e2e-"));
-  if (options.config || options.plugins || options.core) {
+  // A profile the test brought keeps its config; a fresh one gets the test window size.
+  if (options.config || !options.userData) {
     writeFileSync(join(userData, "config.json"), JSON.stringify(options.config ?? configFile(options)));
+  } else if (options.plugins || options.core) {
+    writeFileSync(join(userData, "config.json"), JSON.stringify(configFile(options)));
   }
   const virtual = process.env[E2E_DISPLAY];
   const app = await electron.launch({
