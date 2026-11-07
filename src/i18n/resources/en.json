@@ -349,6 +349,12 @@
     },
     "audio-compressor": {
       "description": "Apply compression to audio (lowers the volume of the loudest parts of the signal and raises the volume of the softest parts)",
+      "menu": {
+        "auto-track-gain": "Auto track gain (boost quiet tracks)",
+        "maximum-gain": {
+          "label": "Maximum gain"
+        }
+      },
       "name": "Audio Compressor"
     },
     "auth-proxy-adapter": {
