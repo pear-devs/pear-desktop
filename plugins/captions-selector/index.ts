@@ -45,7 +45,9 @@ export default definePlugin({
 
     const languageName = (track: CaptionTrack) => track.displayName ?? track.languageName ?? track.languageCode;
 
-    // As pear-desktop: the choice is remembered (None forgets it) and confirmed in a toast.
+    // As pear-desktop: the choice is remembered (None forgets it), confirmed in a toast,
+    // and playback goes on (the player can stop when the captions track changes).
+    const resume = () => ctx.setTimeout(() => api.playVideo(), 0);
     const select = (track: CaptionTrack) => {
       ctx.setConfig({ lastCaptionsCode: track.languageCode });
       api.setOption("captions", "track", { languageCode: track.languageCode });
@@ -54,11 +56,13 @@ export default definePlugin({
           language: languageName(track),
         }),
       );
+      resume();
     };
     const selectNone = () => {
       ctx.setConfig({ lastCaptionsCode: "" });
       api.setOption("captions", "track", {});
       ctx.toast(ctx.t("plugins.captions-selector.toast.caption-disabled", "Captions disabled"));
+      resume();
     };
 
     const choices = () => {
