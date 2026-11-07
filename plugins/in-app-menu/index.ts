@@ -5,13 +5,14 @@ import { inAppMenuConfig } from "./config.ts";
 import { startPage } from "./page.ts";
 import type { MenuNode, WindowAction, WindowState } from "./types.ts";
 
-// The native caption buttons Windows draws over the top bar match YTM's nav bar.
-const NAV_BAR_HEIGHT = 64;
+/** The title bar's height in the page (CSS pixels): the native caption buttons Windows draws over it match it. */
+const TITLE_BAR_HEIGHT = 32;
+const TITLE_BAR_OVERLAY = { color: "#00000000", symbolColor: "#ffffff", height: TITLE_BAR_HEIGHT };
 
-/** The window without the system title bar, by platform (Linux and the rest: no frame). */
+/** The window without the system title bar, by platform (Linux and the rest: no frame). As in pear-desktop. */
 const FRAMELESS_OPTIONS: Partial<Record<string, BrowserWindowConstructorOptions>> = {
-  darwin: { titleBarStyle: "hiddenInset" },
-  win32: { titleBarStyle: "hidden", titleBarOverlay: { color: "#00000000", symbolColor: "#ffffff", height: NAV_BAR_HEIGHT } },
+  darwin: { titleBarStyle: "hidden" },
+  win32: { titleBarStyle: "hidden", titleBarOverlay: TITLE_BAR_OVERLAY },
 };
 
 const STATE_EVENTS = ["maximize", "unmaximize", "enter-full-screen", "leave-full-screen", "always-on-top-changed"];
@@ -31,6 +32,14 @@ export default definePlugin({
     start(ctx) {
       const sendState = () => ctx.emit("state", windowState(ctx.window));
       for (const event of STATE_EVENTS) ctx.listen(ctx.window, event, sendState);
+      if (frameless && process.platform === "win32") {
+        // The caption buttons keep to the bar's height when the page is zoomed (as of each load, like pear-desktop).
+        const contents = ctx.window.webContents;
+        const fitOverlay = () =>
+          ctx.window.setTitleBarOverlay({ ...TITLE_BAR_OVERLAY, height: Math.floor(TITLE_BAR_HEIGHT * contents.getZoomFactor()) });
+        fitOverlay();
+        ctx.listen(contents, "dom-ready", fitOverlay);
+      }
     },
     commands: {
       state() {
@@ -77,5 +86,7 @@ function windowState(window: BrowserWindow): WindowState {
     maximized: window.isMaximized(),
     fullscreen: window.isFullScreen(),
     alwaysOnTop: window.isAlwaysOnTop(),
+    // The core sets it from its hideMenu option (macOS has no such option).
+    hideMenu: process.platform !== "darwin" && window.isMenuBarAutoHide(),
   };
 }

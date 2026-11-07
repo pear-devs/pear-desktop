@@ -5,11 +5,24 @@ const OPEN_SUBMENU_KEYS = new Set(["ArrowRight", "Enter", " "]);
 
 export const opensSubmenu = (event: KeyboardEvent) => OPEN_SUBMENU_KEYS.has(event.key);
 
-/** F10 alone toggles the menu, as in most desktop apps. */
+/**
+ * The backtick alone shows or hides the menus, as in pear-desktop. Not while typing
+ * (pear-desktop's window-wide shortcut toggled the menus on a backtick typed into
+ * the search box too).
+ */
 export function isMenuKey(event: KeyboardEvent) {
-  const hasModifier = event.ctrlKey || event.altKey || event.metaKey || event.shiftKey;
-  return event.key === "F10" && !hasModifier;
+  const hasModifier = event.ctrlKey || event.altKey || event.metaKey;
+  return event.key === "`" && !hasModifier && !event.repeat && !isTyping(event);
 }
+
+function isTyping(event: KeyboardEvent) {
+  const target = event.composedPath()[0];
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
+  return target instanceof HTMLInputElement && !NON_TEXT_INPUTS.has(target.type);
+}
+
+const NON_TEXT_INPUTS = new Set(["button", "checkbox", "radio", "range", "submit", "reset", "color", "file", "image"]);
 
 export interface PanelKeys {
   items: HTMLButtonElement[];

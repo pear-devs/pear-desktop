@@ -1,11 +1,12 @@
 // Where menu panels open, kept on screen.
 
-/** Between the trigger and the top-level menu. */
-const TRIGGER_GAP = 6;
+// As in pear-desktop.
+/** Between a menu's button in the title bar and its panel. */
+const TRIGGER_GAP = 8;
 /** Between a submenu and the item that opened it. */
-const SUBMENU_GAP = 4;
-/** A panel's padding plus border: a submenu moves up by it so its first item lines up with its owner. */
-const PANEL_INSET = 7;
+const SUBMENU_GAP = 8;
+/** A panel's padding: a submenu moves up by it so its first item lines up with its owner. */
+const PANEL_INSET = 4;
 /** The closest a panel comes to the window's edges. */
 const SCREEN_MARGIN = 8;
 
