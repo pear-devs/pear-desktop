@@ -20,9 +20,24 @@ const PAGE = `<!doctype html>
 <body><script src="app.js"></script></body>
 </html>`;
 
-/** Must run before `app.whenReady()`. */
+/** pear-desktop's privileges for the web: CSP bypassed, CORS, fetch, service workers and streaming. */
+const WEB_PRIVILEGES = {
+  standard: true,
+  bypassCSP: true,
+  allowServiceWorkers: true,
+  supportFetchAPI: true,
+  corsEnabled: true,
+  stream: true,
+  codeCache: true,
+};
+
+/** Must run before `app.whenReady()`, once (a second call replaces the first): the settings' scheme and the web's. */
 export function registerSettingsScheme() {
-  protocol.registerSchemesAsPrivileged([{ scheme: "pear", privileges: { standard: true, secure: true } }]);
+  protocol.registerSchemesAsPrivileged([
+    { scheme: "pear", privileges: { standard: true, secure: true } },
+    { scheme: "http", privileges: WEB_PRIVILEGES },
+    { scheme: "https", privileges: WEB_PRIVILEGES },
+  ]);
 }
 
 /** Must run after `app.whenReady()`. */
