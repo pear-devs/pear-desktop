@@ -16,34 +16,40 @@ const magGlassSvg = `
 </svg>`;
 
 const templates = {
-  'sidebarSearchWrapper': `
+  'sidebarSearchWrapper': () => `
         <div id="ps4ytm-sidebar-wrapper" class="ps4ytm-wrapper">
             <span class="search-icon" aria-hidden="true">
                 ${magGlassSvg}
             </span>
-            <input type="text" class="ps4ytm-input" id="sidebar-playlist-search-input" placeholder="Search playlists" title="Search playlists (Cmd/Ctrl+F)" autocomplete="off">
+            <input type="text" class="ps4ytm-input" id="sidebar-playlist-search-input" placeholder="${t('plugins.playlist-search.templates.placeholder')}" title="${t('plugins.playlist-search.templates.title')}" autocomplete="off">
         </div>
     `,
-  'sidebar-no-playlists-message': `
-       <div id="sidebar-no-playlists-message">No playlists found</div>
+  'sidebar-no-playlists-message': () => `
+       <div id="sidebar-no-playlists-message">${t('plugins.playlist-search.templates.no-results')}</div>
     `,
-  'dialogSearchWrapper': `
+  'dialogSearchWrapper': () => `
         <div id="ps4ytm-dialog-wrapper" class="ps4ytm-wrapper">
             <span class="search-icon" aria-hidden="true">
                 ${magGlassSvg}
             </span>
-            <input type="text" class="ps4ytm-input" id="playlist-search-input" placeholder="Search playlists" title="Search playlists (Cmd/Ctrl+F)" autocomplete="off">
+            <input type="text" class="ps4ytm-input" id="playlist-search-input" placeholder="${t('plugins.playlist-search.templates.placeholder')}" title="${t('plugins.playlist-search.templates.title')}" autocomplete="off">
         </div>
     `,
-  'dialog-no-playlists-message': `
-        <div id="no-playlists-message">No playlists found</div>
+  'dialog-no-playlists-message': () => `
+        <div id="no-playlists-message">${t('plugins.playlist-search.templates.no-results')}</div>
     `,
 };
 
-const loadTemplate = (templateName: keyof typeof templates) => {
+/**
+ * Parse an HTML template string into a DOM element.
+ *
+ * @param templateName - The key identifying the template generator to render.
+ * @returns The parsed root HTMLElement.
+ */
+const loadTemplate = (templateName: keyof typeof templates): HTMLElement => {
   const parser = new DOMParser();
   const doc = parser.parseFromString(
-    templates[templateName].trim(),
+    templates[templateName]().trim(),
     'text/html',
   );
   return doc.body.firstElementChild as HTMLElement;
@@ -52,8 +58,12 @@ const loadTemplate = (templateName: keyof typeof templates) => {
 let isDialogVisible = false;
 let sidebarObserver: MutationObserver | null = null;
 let dialogObserver: MutationObserver | null = null;
+let sidebarInitTimeout: ReturnType<typeof setTimeout> | null = null;
 let boundFocusListener: ((e: KeyboardEvent) => void) | null = null;
 
+/**
+ * Locate YouTube Music's sidebar playlist container and inject the search input and empty-state elements.
+ */
 function initializeSidebarPlaylistFilter() {
   const playlistSection = document.querySelector(
     'ytmusic-guide-section-renderer:nth-of-type(2)',
@@ -91,6 +101,11 @@ function initializeSidebarPlaylistFilter() {
   }
   playlistsContainer.insertAdjacentElement('afterend', noResultsMessage);
 
+  /**
+   * Filter sidebar playlist items according to the query text.
+   *
+   * @param event - The input event from the sidebar search box.
+   */
   const handleFilter = (event: Event) => {
     const target = event.target as HTMLInputElement;
     const searchTerm = target.value.toLowerCase().trim();
@@ -121,6 +136,9 @@ function initializeSidebarPlaylistFilter() {
   searchInput.addEventListener('input', handleFilter);
 }
 
+/**
+ * Inject the search input and empty-state element into the 'Add to playlist' dialog.
+ */
 const initializePlaylistFilter = () => {
   const dialog = document.querySelector('ytmusic-add-to-playlist-renderer');
   if (!dialog || dialog.querySelector('#playlist-search-input')) {
@@ -142,6 +160,11 @@ const initializePlaylistFilter = () => {
   playlistsContainer.insertAdjacentElement('beforebegin', wrapper);
   playlistsContainer.insertAdjacentElement('afterend', noResultsMessage);
 
+  /**
+   * Filter playlist options in the dialog according to the query text.
+   *
+   * @param event - The input event from the dialog search box.
+   */
   const handleFilter = (event: Event) => {
     const target = event.target as HTMLInputElement;
     const searchTerm = target.value.toLowerCase().trim();
@@ -172,6 +195,9 @@ const initializePlaylistFilter = () => {
   searchInput.focus();
 };
 
+/**
+ * Monitor the visibility of the 'Add to playlist' dialog and dispatch lifecycle events.
+ */
 function checkDialogState() {
   const dialogElement = document.querySelector(
     'tp-yt-paper-dialog:has(ytmusic-add-to-playlist-renderer)',
@@ -188,6 +214,9 @@ function checkDialogState() {
   }
 }
 
+/**
+ * Reset search input and show all playlist options when the dialog closes.
+ */
 const resetFilter = () => {
   const searchInput = document.getElementById(
     'playlist-search-input',
@@ -212,6 +241,9 @@ const resetFilter = () => {
   });
 };
 
+/**
+ * Programmatically open the player action menu and click 'Save to playlist' or focus the dialog search if already open.
+ */
 function triggerSaveToPlaylist() {
   const dialogElement = document.querySelector(
     'tp-yt-paper-dialog:has(ytmusic-add-to-playlist-renderer)',
@@ -236,6 +268,11 @@ function triggerSaveToPlaylist() {
   );
   if (!menuButton) return;
 
+  /**
+   * Search menu items in the popup listbox for the 'Save to playlist' option and click it.
+   *
+   * @returns True if a matching option was found and clicked, false otherwise.
+   */
   const clickPlaylistItem = (): boolean => {
     const listbox = document.querySelector<HTMLElement>(
       'ytmusic-menu-popup-renderer tp-yt-paper-listbox',
@@ -305,6 +342,9 @@ function triggerSaveToPlaylist() {
 
   document.body.classList.add('ps4ytm-opening-save-to-playlist');
 
+  /**
+   * Remove the visual indicator class when menu interaction concludes.
+   */
   const cleanup = () => {
     document.body.classList.remove('ps4ytm-opening-save-to-playlist');
   };
@@ -348,7 +388,7 @@ export default createPlugin({
   stylesheets: [style],
   renderer: {
     start() {
-      setTimeout(initializeSidebarPlaylistFilter, 1000);
+      sidebarInitTimeout = setTimeout(initializeSidebarPlaylistFilter, 1000);
 
       sidebarObserver = new MutationObserver(() => {
         initializeSidebarPlaylistFilter();
@@ -414,6 +454,11 @@ export default createPlugin({
       document.addEventListener('keydown', boundFocusListener);
     },
     stop() {
+      if (sidebarInitTimeout) {
+        clearTimeout(sidebarInitTimeout);
+        sidebarInitTimeout = null;
+      }
+
       if (sidebarObserver) sidebarObserver.disconnect();
       if (dialogObserver) dialogObserver.disconnect();
 
