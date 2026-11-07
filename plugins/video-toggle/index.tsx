@@ -195,7 +195,7 @@ function customSwitch(ctx: Ctx, setAttribute: SetAttribute) {
     setAttribute(player, "playback-mode", shown ? OMV : ATV);
     songVideo.style.display = shown ? "block" : "none";
     songImage.style.display = shown ? "none" : "block";
-    if (!shown) forceThumbnail(ctx);
+    forceThumbnail(ctx, hasVideo);
   };
   ctx.onCleanup(() => {
     for (const name of ["player.song_video", "player.song_image"] as const) {
@@ -218,7 +218,7 @@ function customSwitch(ctx: Ctx, setAttribute: SetAttribute) {
     const keepChoice = () => {
       const wanted = visible() ? OMV : ATV;
       if (player.getAttribute("playback-mode") !== wanted) apply();
-      if (!visible()) forceThumbnail(ctx);
+      forceThumbnail(ctx, hasVideo);
     };
     ctx.observe(player, { attributes: true, attributeFilter: ["playback-mode"] }, keepChoice);
     const image = ctx.$("player.song_image_img");
@@ -233,13 +233,16 @@ function customSwitch(ctx: Ctx, setAttribute: SetAttribute) {
   });
 }
 
-// For video tracks YTM leaves a placeholder in the cover-art slot; use the video's thumbnail.
-function forceThumbnail(ctx: Ctx) {
+// Video tracks get the video's highest-res thumbnail as their cover art, as in pear-desktop
+// (YTM's is small, or a placeholder); other tracks only lose a placeholder.
+function forceThumbnail(ctx: Ctx, isVideo: boolean) {
   const image = ctx.$<HTMLImageElement>("player.song_image_img");
   const thumbnails = ctx.player.api?.getPlayerResponse().videoDetails?.thumbnail?.thumbnails ?? [];
   const best = thumbnails.toSorted((a, b) => b.width * b.height - a.width * a.height)[0];
-  if (!image || !best || !image.src.startsWith("data:")) return;
-  image.src = best.url.split("?")[0]!;
+  if (!image || !best || (!isVideo && !image.src.startsWith("data:"))) return;
+  const url = best.url.split("?")[0]!;
+  // The src observer calls back here; only a different image is written.
+  if (image.src !== url) image.src = url;
 }
 
 /** The settings that need a restart: all but hideVideo. */
