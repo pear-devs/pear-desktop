@@ -39,3 +39,9 @@ declare module '*.css?inline' {
 
   export default css;
 }
+
+declare module '*.js?raw' {
+  const javascript: string;
+
+  export default javascript;
+}
