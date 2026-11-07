@@ -37,6 +37,8 @@ export class MainWindow {
   /** Whether the page runtime of the current page is up (it can show the in-page settings). */
   #runtimeUp = false;
   #electronUserAgent = "";
+  /** The starting page to move to once the resumed song's page is up. */
+  #pendingStartingPage: string | undefined;
   #ytmUserAgent = "";
 
   constructor(settings: Settings, plugins: PluginHost) {
@@ -92,7 +94,20 @@ export class MainWindow {
 
   /** A page runtime said hello; it can show the in-page settings if it is this window's. */
   runtimeBootstrapped(sender: Electron.WebContents) {
-    if (this.#window && sender === this.#window.webContents) this.#runtimeUp = true;
+    if (!this.#window || sender !== this.#window.webContents) return;
+    this.#runtimeUp = true;
+    const browseId = this.#pendingStartingPage;
+    this.#pendingStartingPage = undefined;
+    if (browseId) void sender.executeJavaScript(navigateInApp(browseId)).catch((error) => console.warn("[pear] couldn't open the starting page", error));
+  }
+
+  /** The playing song, reopened at the next start (pear-desktop's resumeOnStart). */
+  rememberTrack(track: { videoId: string; playlistId?: string } | null) {
+    if (!track?.videoId) return;
+    const url = new URL("/watch", `${YTM_ORIGIN}/`);
+    url.searchParams.set("v", track.videoId);
+    if (track.playlistId) url.searchParams.set("list", track.playlistId);
+    this.#settings.lastUrl = url.toString();
   }
 
   create() {
@@ -125,7 +140,11 @@ export class MainWindow {
     this.#saveBounds(window);
     this.#reportVisibility(window);
     this.#handleLoadFailures(window);
-    void window.loadURL(net.isOnline() ? startUrl(settings.core("general"), settings.lastUrl) : `${YTM_ORIGIN}/`);
+    const general = settings.core("general");
+    const start = net.isOnline() ? startUrl(general, settings.lastUrl) : `${YTM_ORIGIN}/`;
+    // As pear-desktop: the last song loads, and the page then moves to the starting page.
+    this.#pendingStartingPage = isYtmUrl(start) && new URL(start).pathname === "/watch" ? startingBrowseId(general.startingPage) : undefined;
+    void window.loadURL(start);
     return window;
   }
 
@@ -163,9 +182,6 @@ export class MainWindow {
       if (!isSameDocument) this.#runtimeUp = false;
       const userAgent = isGoogleAuth(url) ? this.#electronUserAgent : this.#ytmUserAgent;
       if (window.webContents.getUserAgent() !== userAgent) window.webContents.setUserAgent(userAgent);
-    });
-    window.webContents.on("did-navigate-in-page", (_, url, isMainFrame) => {
-      if (isMainFrame && isYtmUrl(url)) this.#settings.lastUrl = url;
     });
   }
 
@@ -274,11 +290,29 @@ export function windowTitle(settings: Settings, window: BrowserWindow) {
   return settings.core("appearance").customWindowTitle || window.webContents.getTitle() || APP_NAME;
 }
 
-/** The last YTM page (never straight into a track) if enabled, otherwise the starting page. */
+/** The last song if enabled (pear-desktop's resumeOnStart), otherwise the starting page. */
 function startUrl(general: { resumeOnStart: boolean; startingPage: StartingPage }, lastUrl: string | undefined) {
   const last = general.resumeOnStart && lastUrl ? URL.parse(lastUrl) : null;
-  if (last && last.origin === YTM_ORIGIN && last.pathname !== "/watch") return last.toString();
+  if (last && last.origin === YTM_ORIGIN) return last.toString();
   return new URL(STARTING_PAGES[general.startingPage] ?? "/", `${YTM_ORIGIN}/`).toString();
+}
+
+/** The browse id of a starting page other than YTM's default ("FEmusic_home" for Home). */
+function startingBrowseId(page: StartingPage) {
+  if (!page) return undefined;
+  return STARTING_PAGES[page]?.replace(/^\/browse\//, "");
+}
+
+/** Page script: YTM's own in-app navigation to a browse page, once its app is up (as pear-desktop). */
+function navigateInApp(browseId: string) {
+  return `(async () => {
+    await customElements.whenDefined("ytmusic-app");
+    for (let i = 0; i < 100; i++) {
+      const app = document.querySelector("ytmusic-app");
+      if (typeof app?.navigate === "function") return void app.navigate(${JSON.stringify(browseId)});
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  })()`;
 }
 
 function windowBounds(saved: WindowState | undefined): Partial<Rect> {

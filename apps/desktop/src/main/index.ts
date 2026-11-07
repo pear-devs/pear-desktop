@@ -36,6 +36,7 @@ function main() {
   const { send, openSettings } = mainWindow;
   const core = new CoreOptions(settings, plugins.t, mainWindow);
   const player = new PlayerMirror((action) => send({ type: "player-control", action }));
+  player.on("trackChange", (track) => mainWindow.rememberTrack(track));
   const requests = new PageRequests(send);
   const menuItems = new MenuItems();
   // pear-desktop's app protocol: links control playback; plugins hear about them too.
