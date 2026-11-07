@@ -20,6 +20,19 @@ const MIN_HEIGHT = 425;
 const BACKGROUND_COLOR = "#030303";
 const DEFAULT_SIZE = { width: 1100, height: 550 };
 
+/**
+ * macOS without a title bar (pear-desktop's music-player.css): YTM's top bar
+ * moves the window and makes room for the traffic lights.
+ */
+const MAC_TITLE_BAR_CSS = `
+ytmusic-nav-bar { position: relative; }
+ytmusic-nav-bar::before { content: ""; position: absolute; inset: 0; -webkit-user-select: none; app-region: drag; }
+ytmusic-nav-bar > .left-content > *, ytmusic-nav-bar > .center-content > *, ytmusic-nav-bar > .right-content > *,
+iron-icon, ytmusic-pivot-bar-item-renderer, .tab-title, a, tp-yt-iron-dropdown, tp-yt-paper-dialog { app-region: no-drag; }
+ytmusic-app-layout#layout { --ytmusic-nav-bar-offset: 24px; --ytmusic-nav-bar-height: calc(64px + var(--ytmusic-nav-bar-offset)); }
+ytmusic-app-layout#layout ytmusic-nav-bar { padding-top: var(--ytmusic-nav-bar-offset); }
+`;
+
 /** The standalone settings window only follows state, not page-runtime traffic. */
 const SETTINGS_EVENTS = new Set<HostEvent["type"]>(["plugin-state", "plugin-error", "plugin-status", "core-state"]);
 
@@ -140,6 +153,10 @@ export class MainWindow {
     this.#saveBounds(window);
     this.#reportVisibility(window);
     this.#handleLoadFailures(window);
+    // The in-app menu draws its own title bar (with room for the traffic lights).
+    if (process.platform === "darwin" && !settings.plugin("in-app-menu")?.enabled) {
+      window.webContents.on("dom-ready", () => void window.webContents.insertCSS(MAC_TITLE_BAR_CSS));
+    }
     const general = settings.core("general");
     const start = net.isOnline() ? startUrl(general, settings.lastUrl) : `${YTM_ORIGIN}/`;
     // As pear-desktop: the last song loads, and the page then moves to the starting page.
@@ -160,6 +177,8 @@ export class MainWindow {
       title: settings.core("appearance").customWindowTitle || APP_NAME,
       icon: appIcon(),
       autoHideMenuBar: settings.core("window").hideMenu,
+      // As pear-desktop, macOS has no title bar: the traffic lights sit in YTM's top bar.
+      ...(process.platform === "darwin" ? { titleBarStyle: "hiddenInset" as const } : {}),
     };
     // …but not geometry, visibility or the security-relevant preferences.
     const enforced: BrowserWindowConstructorOptions = {
