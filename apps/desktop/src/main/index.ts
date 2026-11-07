@@ -3,7 +3,7 @@
 import { app, session } from "electron";
 import hostPlugins from "virtual:pear/host-plugins";
 import { ApiServer } from "./api/index.ts";
-import { relaunchOptions, setAppIdentity } from "./app-identity.ts";
+import { registerStartMenuShortcut, relaunchOptions, setAppIdentity } from "./app-identity.ts";
 import { hideOnClose, onActivate } from "./close.ts";
 import { Settings } from "./config.ts";
 import { seedConsent } from "./consent.ts";
@@ -52,6 +52,7 @@ function main() {
 
   app.whenReady().then(async () => {
     console.info(`[pear] startup: app ready after ${Math.round(performance.now())}ms`);
+    registerStartMenuShortcut();
     plugins.setI18n(loadI18n(resolveLanguage(settings.core("general").language, app.getLocale())));
     const router = new WebRequestRouter(session.defaultSession);
     setupNet(router.scoped("core"), { electronUserAgent: mainWindow.useYtmUserAgent() });
