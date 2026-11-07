@@ -125,6 +125,12 @@ export const ADVANCED = {
     label: "Clear the cache at startup",
     group: "Performance",
   }),
+  overrideUserAgent: config.bool(false, {
+    label: "Override the user agent",
+    description: "Tell \u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music this is Chrome rather than an Electron app. Google sign-in always sees the app as it is.",
+    group: "Network",
+    restart: true,
+  }),
   proxy: config.string("", {
     label: "Proxy",
     description: "For proxies that need a username and password, use the Proxy plugin.",

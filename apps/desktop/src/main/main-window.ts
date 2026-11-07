@@ -49,10 +49,15 @@ export class MainWindow {
     return alive(this.#window);
   }
 
-  /** Once the app is ready: YTM gets a Chrome UA, Google sign-in Electron's (returned). */
+  /**
+   * Once the app is ready: YTM gets Electron's UA, or a Chrome one with
+   * advanced.overrideUserAgent (pear-desktop's option); Google sign-in always
+   * gets Electron's (returned).
+   */
   useYtmUserAgent() {
     this.#electronUserAgent = app.userAgentFallback;
-    this.#ytmUserAgent = chromeUserAgent(this.#electronUserAgent);
+    const override = this.#settings.core("advanced").overrideUserAgent;
+    this.#ytmUserAgent = override ? chromeUserAgent(this.#electronUserAgent) : this.#electronUserAgent;
     app.userAgentFallback = this.#ytmUserAgent;
     return this.#electronUserAgent;
   }

@@ -2343,6 +2343,10 @@
         "label": "Feature flag overrides",
         "description": "One flag per entry, as name=value (true, false, a number or text). Unknown names do nothing.",
         "placeholder": "flag_name=false"
+      },
+      "overrideUserAgent": {
+        "label": "Override the user agent",
+        "description": "Tell \u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063 this is Chrome rather than an Electron app. Google sign-in always sees the app as it is."
       }
     },
     "groups": {

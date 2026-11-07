@@ -5,7 +5,8 @@
 import { YTM_ORIGIN, ytmUrl } from "@pear/sdk/util";
 import { expect, test } from "./fixtures.ts";
 
-test("accounts.google.com sees the honest Electron UA", async ({ app }) => {
+test("accounts.google.com sees the honest Electron UA, also when YTM gets Chrome's", async ({ launch }) => {
+  const app = await launch({ core: { advanced: { overrideUserAgent: true } } });
   const page = await app.firstWindow();
   await page.waitForURL((url) => url.origin === YTM_ORIGIN);
   const ytmUserAgent = await page.evaluate(() => navigator.userAgent);
