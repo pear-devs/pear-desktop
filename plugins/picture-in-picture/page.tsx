@@ -1,6 +1,6 @@
 /** @jsxImportSource @pear/sdk */
-// The page side: YTM's full-screen player while in the small window, the hotkey
-// and the entry in the track's menu.
+// The page side: YTM's full-screen player while in the small window, the hotkey,
+// the player page's mini-player button and the entry in the track's menu.
 
 import type { PageContextOf } from "@pear/sdk";
 import { matchesAccelerator } from "@pear/sdk/accelerator";
@@ -16,6 +16,9 @@ const PIP_ICON =
 const MENU_CLICK_WINDOW_MS = 2000;
 // YTM's own clean-up after its full screen happens within this.
 const SETTLE_MS = 500;
+// The player page's "minimize" (mini-player) button. Not in the sdk's selector
+// list yet; it would be `player.minimize_button`.
+const MINIMIZE_BUTTON = ".player-minimize-button";
 
 export function startPage(ctx: Ctx) {
   const mode = fullScreenMode(ctx);
@@ -28,7 +31,25 @@ export function startPage(ctx: Ctx) {
 
   const toggle = () => togglePip(ctx);
   handleKeys(ctx, mode, toggle);
+  minimizeButton(ctx, mode, toggle);
   trackMenuEntry(ctx, toggle);
+}
+
+/**
+ * As pear-desktop: the player page's mini-player button opens picture-in-picture
+ * instead. In the small window, leaving YTM's full screen (its exit button)
+ * leaves it, see `startPage`.
+ */
+function minimizeButton(ctx: Ctx, mode: { readonly active: boolean }, toggle: () => void) {
+  const onClick = (event: MouseEvent) => {
+    if (mode.active) return;
+    const target = event.target instanceof Element ? event.target : null;
+    if (!target?.closest(MINIMIZE_BUTTON)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    toggle();
+  };
+  ctx.listen(document, "click", onClick, { capture: true });
 }
 
 /** The browser's picture-in-picture when wanted and possible, else the small window. */
