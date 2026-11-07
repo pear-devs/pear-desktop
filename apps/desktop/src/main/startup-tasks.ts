@@ -12,11 +12,20 @@ import { CHECK_DELAY_MS, checkForUpdates, shouldCheck } from "./updates.ts";
 /** Like pear-desktop: clear the cache once the page has settled. */
 const CLEAR_CACHE_DELAY_MS = 20_000;
 
+/**
+ * Chromium features pear-desktop set: overlay scrollbars (not the Fluent ones
+ * that replaced them), and on Wayland a title bar drawn by the app where the
+ * compositor draws none (GNOME).
+ */
+const CORE_FEATURES = { enabled: ["OverlayScrollbar", "WaylandWindowDecorations"], disabled: ["FluentScrollbar"] };
+
 /** Must run before `app.whenReady()`. */
 export function beforeReady(app: App, settings: Settings, plugins: PluginHost) {
   if (settings.core("advanced").disableHardwareAcceleration) app.disableHardwareAcceleration();
   registerSettingsScheme();
   const features = plugins.beforeReady(app);
+  for (const feature of CORE_FEATURES.enabled) features.enabled.add(feature);
+  for (const feature of CORE_FEATURES.disabled) features.disabled.add(feature);
   if (features.enabled.size > 0) app.commandLine.appendSwitch("enable-features", [...features.enabled].join(","));
   if (features.disabled.size > 0) app.commandLine.appendSwitch("disable-features", [...features.disabled].join(","));
 }
