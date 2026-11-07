@@ -1,11 +1,11 @@
 // The YTM window: its options and saved bounds, the user agent per destination,
 // the title, and the page it starts on. Also the channel to its page runtime.
 
-import { app, type BrowserWindowConstructorOptions, BrowserWindow, net, screen, shell } from "electron";
+import { app, type BrowserWindowConstructorOptions, BrowserWindow, dialog, net, screen, shell } from "electron";
 import { STARTING_PAGES, type StartingPage } from "@pear/sdk/core-config";
 import { CHANNEL, type HostEvent } from "@pear/sdk/protocol";
 import { chromeUserAgent, isGoogleAuth, isYtmUrl, YTM_ORIGIN } from "../shared/user-agent.ts";
-import { APP_NAME } from "./app-identity.ts";
+import { APP_NAME, relaunchOptions } from "./app-identity.ts";
 import type { Settings, WindowState } from "./config.ts";
 import { navigationAction, windowOpenAction } from "./links.ts";
 import { errorPage, loadFailureAction } from "./load-failure.ts";
@@ -109,8 +109,10 @@ export class MainWindow {
 
     // YTM asks "leave page?" while playing, which would silently cancel quitting.
     window.webContents.on("will-prevent-unload", (event) => event.preventDefault());
-    window.webContents.on("render-process-gone", () => {
+    window.webContents.on("render-process-gone", (_event, details) => {
       this.#runtimeUp = false;
+      // A clean exit is the window closing, not a crash.
+      if (details.reason !== "clean-exit") void this.#crashed(window, details);
     });
     this.#followNavigation(window);
     routeLinks(window);
@@ -174,6 +176,30 @@ export class MainWindow {
     window.on("hide", report);
     window.on("minimize", report);
     window.on("restore", report);
+  }
+
+  /** pear-desktop's dialog when the page crashed or was killed: wait, relaunch the app or quit. */
+  async #crashed(window: BrowserWindow, details: Electron.RenderProcessGoneDetails) {
+    const t = this.#plugins.t;
+    console.error(t("main.console.unresponsive.details", "Unresponsive Error!\n{{error}}", { error: JSON.stringify(details, null, "\t") }));
+    const { response } = await dialog.showMessageBox(window, {
+      type: "error",
+      title: t("main.dialog.unresponsive.title", "Window Unresponsive"),
+      message: t("main.dialog.unresponsive.message", "The Application is Unresponsive"),
+      detail: t("main.dialog.unresponsive.detail", "We are sorry for the inconvenience! please choose what to do:"),
+      buttons: [
+        t("main.dialog.unresponsive.buttons.wait", "Wait"),
+        t("main.dialog.unresponsive.buttons.relaunch", "Relaunch"),
+        t("main.dialog.unresponsive.buttons.quit", "Quit"),
+      ],
+      cancelId: 0,
+    });
+    if (response === 1) {
+      app.relaunch(relaunchOptions());
+      app.quit();
+    } else if (response === 2) {
+      app.quit();
+    }
   }
 
   /** Offline, the home page (which works offline); otherwise pear-desktop's error page with a Retry. */
