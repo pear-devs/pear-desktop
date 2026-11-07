@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { ConnectionLike, ConnectionListener, ConnectionMode } from "../connection.ts";
+import { accountFromMenu } from "../account.ts";
 import { Queue, type QueueElement, type QueueItem, type StoreEvent } from "../queue.ts";
 import { Together, type TogetherEnvironment } from "../together.ts";
 import type { ConnectionEventMap, ConnectionEventUnion } from "../types.ts";
@@ -93,6 +94,7 @@ function environment(network: Network, id: string, queue: ReturnType<typeof fake
     player: () => null,
     toast: (message) => toasts.push(message),
     t: (_key, fallback = "", vars) => fallback.replace(/{{(\w+)}}/g, (_, name: string) => String(vars?.[name] ?? "")),
+    account: () => null,
     name: () => id,
     defaultPermission: () => "playlist",
     log: { warn() {}, error() {} },
@@ -102,6 +104,41 @@ function environment(network: Network, id: string, queue: ReturnType<typeof fake
 const settle = async () => {
   for (let i = 0; i < 5; i++) await new Promise((resolve) => setTimeout(resolve, 0));
 };
+
+describe("the user's profile", () => {
+  // The header of YTM's /account/account_menu answer, as pear-desktop read it from the open menu.
+  const menu = (header: unknown) => ({
+    actions: [{ openPopupAction: { popup: { multiPageMenuRenderer: { header: { activeAccountHeaderRenderer: header } } } } }],
+  });
+
+  test("is the signed-in account's name, handle and photo", () => {
+    const header = {
+      accountName: { runs: [{ text: "Ada Lovelace" }] },
+      channelHandle: { runs: [{ text: "@ada" }] },
+      accountPhoto: { thumbnails: [{ url: "https://lh3.example/ada=s48", width: 48, height: 48 }] },
+    };
+    expect(accountFromMenu(menu(header))).toEqual({ handleId: "@ada", name: "Ada Lovelace", thumbnail: "https://lh3.example/ada=s48" });
+    // No channel: the name stands in for the handle, as in pear-desktop.
+    expect(accountFromMenu(menu({ accountName: { runs: [{ text: "Ada" }] } }))).toEqual({ handleId: "Ada", name: "Ada", thumbnail: "" });
+    expect(accountFromMenu({ actions: [] })).toBeNull();
+    expect(accountFromMenu(undefined)).toBeNull();
+  });
+
+  test("falls back to the name setting when signed out", async () => {
+    const network = new Network();
+    const signedIn = new Together({
+      ...environment(network, "host-id", fakeQueue(), []),
+      account: () => ({ handleId: "@ada", name: "Ada", thumbnail: "photo" }),
+    });
+    expect(await signedIn.host()).toBe(true);
+    expect(signedIn.profiles["host-id"]).toEqual({ id: "host-id", handleId: "@ada", name: "Ada", thumbnail: "photo" });
+
+    const guest = new Together(environment(network, "guest-id", fakeQueue(), []));
+    expect(await guest.join("host-id")).toBe(true);
+    expect(guest.profiles["guest-id"]).toMatchObject({ id: "guest-id", name: "guest-id" });
+    expect(guest.profiles["guest-id"]?.thumbnail).toContain("ui-avatars.com");
+  });
+});
 
 describe("pear-desktop's Music Together", () => {
   test("YTM's own queue changes go to the session instead of the queue", () => {

@@ -1,7 +1,7 @@
 import { config } from "@pear/sdk";
 
 export const schema = {
-  displayName: config.string("", { label: "Your name", placeholder: "Guest 1234", description: "Shown to others in a session." }),
+  displayName: config.string("", { label: "Your name", placeholder: "Guest 1234", description: "Shown to others in a session when you're not signed in; signed in, it's your account's name." }),
   // pear-desktop's permissions (it started every session at "playlist").
   defaultPermission: config.select(
     "playlist",

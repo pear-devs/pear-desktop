@@ -8,6 +8,9 @@ export type Profile = {
   thumbnail: string;
 };
 
+/** The user's own profile, before the session gives it an id. */
+export type Account = Omit<Profile, "id">;
+
 export type VideoData = {
   videoId: string;
   ownerId: string;

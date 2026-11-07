@@ -7,7 +7,7 @@ import type { Logger, YTPlayerApi } from "@pear/sdk";
 import type { Translate } from "@pear/sdk/i18n";
 import type { ConnectionLike } from "./connection.ts";
 import { Queue, type QueueElement } from "./queue.ts";
-import { type ConnectionEventMap, type ConnectionEventUnion, getDefaultProfile, type Permission, type Profile, type VideoData } from "./types.ts";
+import { type Account, type ConnectionEventMap, type ConnectionEventUnion, getDefaultProfile, type Permission, type Profile, type VideoData } from "./types.ts";
 
 /** What the session needs from the page, so tests can fake it. */
 export interface TogetherEnvironment {
@@ -17,7 +17,9 @@ export interface TogetherEnvironment {
   /** YTM's toast. */
   toast(message: string): void;
   t: Translate;
-  /** The user's name for others (empty: "Guest 1234"). */
+  /** The signed-in account, as pear-desktop used for the user's profile; `null` when signed out. */
+  account(): Account | null;
+  /** The user's name for others when signed out (empty: "Guest 1234"). */
   name(): string;
   defaultPermission(): Permission;
   log: Pick<Logger, "warn" | "error">;
@@ -49,7 +51,8 @@ export class Together {
   /** Hosting or joining is under way. */
   connecting = false;
   #env: TogetherEnvironment;
-  #me: Omit<Profile, "id"> | undefined;
+  /** The profile used while signed out, made once so it keeps its id. */
+  #guest: Account | undefined;
   #ignoreChange = false;
   /** The queue changed after a track loaded: share the follow-up change too. */
   #shareFollowUp = false;
@@ -82,12 +85,14 @@ export class Together {
   }
 
   #profile(id: string): Profile {
-    const name = this.#env.name().trim();
-    if (!this.#me) {
-      const { id: _, ...me } = getDefaultProfile(id, Date.now().toString(), name || undefined);
-      this.#me = me;
+    const account = this.#env.account();
+    if (account) return { id, ...account };
+    if (!this.#guest) {
+      const name = this.#env.name().trim();
+      const { id: _, ...guest } = getDefaultProfile(id, Date.now().toString(), name || undefined);
+      this.#guest = guest;
     }
-    return { id, ...this.#me };
+    return { id, ...this.#guest };
   }
 
   #putProfile(id: string, profile?: Profile) {

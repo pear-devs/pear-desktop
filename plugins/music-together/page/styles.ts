@@ -179,6 +179,7 @@ export const panelStyles = css`
   .people li { display: flex; align-items: center; gap: 10px; }
   .avatar { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: #fff; font-size: 11px; font-weight: 600; }
   .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .me { display: flex; align-items: center; gap: 10px; }
   .tag { padding: 0 7px; border-radius: 999px; background: var(--raised); color: var(--muted); font-size: 11px; }
   .tag.host { background: rgb(198 228 122 / 0.14); color: var(--accent); }
 
