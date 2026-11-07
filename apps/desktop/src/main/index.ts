@@ -3,7 +3,7 @@
 import { app, session } from "electron";
 import hostPlugins from "virtual:pear/host-plugins";
 import { ApiServer } from "./api/index.ts";
-import { setAppIdentity } from "./app-identity.ts";
+import { relaunchOptions, setAppIdentity } from "./app-identity.ts";
 import { hideOnClose, onActivate } from "./close.ts";
 import { Settings } from "./config.ts";
 import { seedConsent } from "./consent.ts";
@@ -84,7 +84,7 @@ function main() {
       setAlwaysOnTop: (alwaysOnTop) => core.set("window", { alwaysOnTop }),
       settingsPath: settings.path,
       restart: () => {
-        app.relaunch();
+        app.relaunch(relaunchOptions());
         app.quit();
       },
     };

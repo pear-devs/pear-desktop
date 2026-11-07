@@ -10,6 +10,7 @@ import {
   type PluginInfo,
 } from "@pear/sdk/protocol";
 import { isSettingsUrl, isYtmUrl } from "../shared/user-agent.ts";
+import { relaunchOptions } from "./app-identity.ts";
 import type { PageRequests } from "./page-requests.ts";
 import type { PlayerMirror } from "./player.ts";
 import type { PluginHost } from "./plugins.ts";
@@ -58,7 +59,7 @@ export function setupIpc({ plugins, player, requests, settingsPath, onRuntimeBoo
     ping: (message) => `pong: ${message}`,
     "app:version": () => app.getVersion(),
     "app:relaunch": () => {
-      app.relaunch();
+      app.relaunch(relaunchOptions());
       app.exit(0);
     },
     "plugin:set-enabled": async (id, enabled) => void (await plugins.setEnabled(String(id), Boolean(enabled))),

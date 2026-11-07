@@ -17,3 +17,12 @@ export function setAppIdentity() {
   app.commandLine.appendSwitch("class", APP_ID);
   if (process.platform === "win32") app.setAppUserModelId(APP_ID);
 }
+
+/**
+ * Restarts the app. A portable Windows build runs from a temporary copy it
+ * extracts; relaunching that copy would lose the portable exe (and its folder).
+ */
+export function relaunchOptions(): Electron.RelaunchOptions {
+  const portable = process.env.PORTABLE_EXECUTABLE_FILE;
+  return portable ? { execPath: portable } : {};
+}

@@ -138,7 +138,9 @@ function menu(ctx: Ctx, state: NowPlaying, toggleWindow: () => void): MenuItemCo
     {
       label: ctx.t("main.tray.restart", "Restart App"),
       click: () => {
-        app.relaunch();
+        // A portable Windows build relaunches its exe, not the temporary copy it runs from.
+        const portable = process.env.PORTABLE_EXECUTABLE_FILE;
+        app.relaunch(portable ? { execPath: portable } : {});
         app.quit();
       },
     },
