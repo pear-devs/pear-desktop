@@ -27,16 +27,15 @@ mac:
   compression: maximum
 win:
   icon: ../../assets/generated/icons/win/icon.ico
+  # No ia32: Electron dropped 32-bit Windows builds after 43.
   target:
     - target: nsis-web
       arch:
         - x64
-        - ia32
         - arm64
     - target: portable
       arch:
         - x64
-        - ia32
         - arm64
   compression: maximum
 nsisWeb:
