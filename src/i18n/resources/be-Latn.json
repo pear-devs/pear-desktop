@@ -1,1 +1,11 @@
-{}
+{
+  "common": {
+    "console": {
+      "plugins": {
+        "execute-failed": "Pamyłka padčas vykanannia dadatku {{pluginName}}::{{contextName}}",
+        "executed-at-ms": "Dadatak {{pluginName}}::{{contextName}} byŭ vykanany za {{ms}}ms",
+        "initialize-failed": "Pamyłka padčas inicyjalizacyi dadatku \"{{pluginName}}\""
+      }
+    }
+  }
+}
