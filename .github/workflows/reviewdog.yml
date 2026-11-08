@@ -28,17 +28,28 @@ jobs:
       - name: Install dependencies
         run: nub ci --ignore-scripts
 
+      # Only the PR's sources, linted with the base branch's dependencies and config:
+      # nothing from the PR is installed or run (pull_request_target has write access).
       - name: Checkout PR source files
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          sparse-checkout: src
+          sparse-checkout: |
+            apps
+            packages
+            plugins
+            scripts
           path: __pr_src
 
+      # The workspaces keep their own node_modules (plugins/<id>/node_modules…), so the
+      # PR's files go over them in place (by content: checkouts seconds apart share
+      # mtimes): --delete drops files the PR removed, and
+      # node_modules is neither copied nor deleted.
       - name: Overlay PR source
         run: |
-          rm -rf src
-          cp -r __pr_src/src src
+          for dir in apps packages plugins scripts; do
+            rsync -a --checksum --delete --exclude node_modules "__pr_src/$dir/" "$dir/"
+          done
           rm -rf __pr_src
 
       - name: Setup reviewdog
