@@ -28,7 +28,7 @@ importers:
         version: link:../../packages/vite-plugin-pear
       '@playwright/test':
         specifier: ^1.64.1
-        version: 1.64.1(electron@44.9.0)
+        version: 1.64.1(electron@44.10.2)
       '@types/node':
         specifier: ^24.0.0
         version: 24.19.2
@@ -36,8 +36,8 @@ importers:
         specifier: ^8.18.2
         version: 8.18.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
       electron-builder:
         specifier: 26.15.3
         version: 26.15.3(electron-builder-squirrel-windows@26.15.3)
@@ -79,8 +79,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
@@ -138,8 +138,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/album-color-theme:
     dependencies:
@@ -151,8 +151,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
@@ -167,8 +167,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/amuse:
     dependencies:
@@ -180,8 +180,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/audio-compressor:
     dependencies:
@@ -193,8 +193,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/auth-proxy-adapter:
     dependencies:
@@ -209,8 +209,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
@@ -225,8 +225,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/captions-selector:
     dependencies:
@@ -238,8 +238,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/clock:
     dependencies:
@@ -251,8 +251,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/crossfade:
     dependencies:
@@ -267,8 +267,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/custom-output-device:
     dependencies:
@@ -280,8 +280,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/disable-autoplay:
     dependencies:
@@ -293,8 +293,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/discord:
     dependencies:
@@ -309,8 +309,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
@@ -328,8 +328,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
@@ -362,8 +362,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
@@ -378,8 +378,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/exponential-volume:
     dependencies:
@@ -391,8 +391,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/in-app-menu:
     dependencies:
@@ -404,8 +404,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/lumiastream:
     dependencies:
@@ -417,8 +417,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/media-controls:
     dependencies:
@@ -433,8 +433,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
@@ -455,8 +455,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
@@ -471,8 +471,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/notifications:
     dependencies:
@@ -484,8 +484,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
@@ -500,8 +500,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/picture-in-picture:
     dependencies:
@@ -513,8 +513,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/playback-speed:
     dependencies:
@@ -526,8 +526,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/precise-volume:
     dependencies:
@@ -539,8 +539,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/quality-changer:
     dependencies:
@@ -552,8 +552,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/scrobbler:
     dependencies:
@@ -565,8 +565,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
@@ -581,8 +581,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/skip-disliked-songs:
     dependencies:
@@ -594,8 +594,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/skip-silences:
     dependencies:
@@ -607,8 +607,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/sponsorblock:
     dependencies:
@@ -620,8 +620,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
@@ -666,8 +666,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
       vitest:
         specifier: ^5.0.5
         version: 5.0.5(@types/node@24.19.2)(vite@8.3.4(@types/node@24.19.2)(yaml@2.9.1))
@@ -682,8 +682,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/touchbar:
     dependencies:
@@ -695,8 +695,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/transparent-player:
     dependencies:
@@ -708,8 +708,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/tray:
     dependencies:
@@ -721,8 +721,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/tuna-obs:
     dependencies:
@@ -734,8 +734,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/unobtrusive-player:
     dependencies:
@@ -747,8 +747,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/video-toggle:
     dependencies:
@@ -760,8 +760,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
   plugins/visualizer:
     dependencies:
@@ -785,8 +785,8 @@ importers:
         specifier: ^24.0.0
         version: 24.19.2
       electron:
-        specifier: ^44.9.0
-        version: 44.9.0
+        specifier: ^44.10.2
+        version: 44.10.2
 
 packages:
 
@@ -1937,8 +1937,8 @@ packages:
     resolution: {integrity: sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg==}
     engines: {node: '>=8.0.0'}
 
-  electron@44.9.0:
-    resolution: {integrity: sha512-boP8zA5OIoMGYe3uWP4IqB1VJNoEzdHYgcBaVYnd1DBv5TogwXkbM4yJGSfNmYCzalVQ5J3TAIbaKOY+ILTnyg==}
+  electron@44.10.2:
+    resolution: {integrity: sha512-Bz+GV+9Xj++3RW95NYfzp5Wgivf61BgWTPBxYTOUETytVB1uLUAOdSM39Dn/V3PGYeGTE6LYeCTR5SCiu3BR2A==}
     engines: {node: '>= 22.12.0'}
     hasBin: true
 
@@ -3581,9 +3581,9 @@ snapshots:
       tslib: 2.8.1
       webcrypto-core: 1.9.2
 
-  '@playwright/test@1.64.1(electron@44.9.0)':
+  '@playwright/test@1.64.1(electron@44.10.2)':
     dependencies:
-      playwright: 1.64.1(electron@44.9.0)
+      playwright: 1.64.1(electron@44.10.2)
     transitivePeerDependencies:
       - bufferutil
       - chromium-bidi
@@ -4309,7 +4309,7 @@ snapshots:
       - original-fs
       - supports-color
 
-  electron@44.9.0:
+  electron@44.10.2:
     dependencies:
       '@electron-internal/extract-zip': 1.0.5
       '@electron/get': 5.1.0
@@ -4883,13 +4883,13 @@ snapshots:
       pvutils: 1.2.0
       tslib: 2.8.1
 
-  playwright-core@1.64.1(electron@44.9.0):
+  playwright-core@1.64.1(electron@44.10.2):
     dependencies:
-      electron: 44.9.0
+      electron: 44.10.2
 
-  playwright@1.64.1(electron@44.9.0):
+  playwright@1.64.1(electron@44.10.2):
     dependencies:
-      playwright-core: 1.64.1(electron@44.9.0)
+      playwright-core: 1.64.1(electron@44.10.2)
     transitivePeerDependencies:
       - bufferutil
       - chromium-bidi

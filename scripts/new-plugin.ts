@@ -33,7 +33,7 @@ write(
       type: "module",
       scripts: { typecheck: "tsc -p ." },
       dependencies,
-      devDependencies: { "@types/node": "^24.0.0", electron: "^44.9.0" },
+      devDependencies: { "@types/node": "^24.0.0", electron: "^44.10.2" },
     },
     null,
     2,
