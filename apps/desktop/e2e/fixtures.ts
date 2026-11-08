@@ -4,6 +4,7 @@
 //   test.use({ appOptions: { plugins: { clock: { enabled: true } } } });
 //   test("…", async ({ app, page }) => { … });
 
+import type { ChildProcess } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -39,6 +40,25 @@ export async function closeApp(app: App) {
   );
   const timedOut = new Promise<false>((resolve) => setTimeout(() => resolve(false), CLOSE_TIMEOUT_MS));
   if (!(await Promise.race([closed, timedOut])) && process.exitCode === null) process.kill("SIGKILL");
+  // app.close() can return before the process is gone, and until then it holds the
+  // profile's single-instance lock: an app launched again on the same profile would
+  // hand over to it and quit without a window.
+  if (!(await exited(process, CLOSE_TIMEOUT_MS))) {
+    process.kill("SIGKILL");
+    await exited(process, CLOSE_TIMEOUT_MS);
+  }
+}
+
+/** Whether the process exits within `ms`. */
+function exited(process: ChildProcess, ms: number) {
+  if (process.exitCode !== null || process.signalCode !== null) return Promise.resolve(true);
+  return new Promise<boolean>((resolve) => {
+    const timer = setTimeout(() => resolve(false), ms);
+    process.once("exit", () => {
+      clearTimeout(timer);
+      resolve(true);
+    });
+  });
 }
 
 export type Launch = (options?: LaunchOptions) => Promise<App>;
