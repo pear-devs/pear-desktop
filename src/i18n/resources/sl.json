@@ -150,6 +150,13 @@
           "visual-tweaks": {
             "label": "Vizualni popravki",
             "submenu": {
+              "custom-window-title": {
+                "label": "Naslovno okno po meri",
+                "prompt": {
+                  "label": "Vnesite poljubno ime okna: (pustite prazno da onemogočite)",
+                  "placeholder": "Primer:{{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "Privzeto",
                 "force-show": "Prisilno pokaži",
