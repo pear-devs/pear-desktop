@@ -2,3 +2,7 @@ packages:
   - apps/*
   - packages/*
   - plugins/*
+
+overrides:
+  # GHSA-g3hv-75wg-m249 (fixed in 11.0.1); used at build time by electron-builder only.
+  "minimatch@>=7.0.0 <11.0.1": "^11.0.1"
