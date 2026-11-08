@@ -23,8 +23,6 @@
     "i18n": "nub scripts/i18n.ts",
     "dist": "electron-vite build && node scripts/electron-builder.ts --win --mac --linux -p never",
     "dist:linux": "electron-vite build && node scripts/electron-builder.ts --linux -p never",
-    "dist:linux:deb-arm64": "electron-vite build && node scripts/electron-builder.ts --linux deb:arm64 -p never",
-    "dist:linux:rpm-arm64": "electron-vite build && node scripts/electron-builder.ts --linux rpm:arm64 -p never",
     "dist:mac": "electron-vite build && node scripts/electron-builder.ts --mac dmg:x64 -p never",
     "dist:mac:arm64": "electron-vite build && node scripts/electron-builder.ts --mac dmg:arm64 -p never",
     "dist:win": "electron-vite build && node scripts/electron-builder.ts --win -p never",

@@ -69,8 +69,6 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           nub run dist:linux
-          nub run dist:linux:deb-arm64
-          nub run dist:linux:rpm-arm64
 
       - name: Build on Windows
         if: startsWith(matrix.os, 'windows')

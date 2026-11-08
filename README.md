@@ -325,9 +325,7 @@ export default definePlugin({
 4. Run `nub run dist:OS`
 
 - `nub run dist:win` - Windows
-- `nub run dist:linux` - Linux (amd64)
-- `nub run dist:linux:deb-arm64` - Linux (arm64 for Debian)
-- `nub run dist:linux:rpm-arm64` - Linux (arm64 for Fedora)
+- `nub run dist:linux` - Linux (amd64 and arm64)
 - `nub run dist:mac` - macOS (amd64)
 - `nub run dist:mac:arm64` - macOS (arm64)
 
