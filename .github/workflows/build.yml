@@ -66,6 +66,7 @@ jobs:
           sudo flatpak install -y flathub org.freedesktop.Sdk/x86_64/24.08
           sudo flatpak install -y flathub org.electronjs.Electron2.BaseApp/x86_64/24.08
           nub run release:linux
+          nub run release:linux:armv7l
 
       - name: Build and release on Windows
         if: startsWith(matrix.os, 'windows') && (github.repository == 'pear-devs/pear-desktop' && github.event_name != 'pull_request')

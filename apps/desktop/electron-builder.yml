@@ -48,7 +48,8 @@ linux:
   desktop:
     entry:
       StartupWMClass: "com.github.th-ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063"
-  # No armv7l: Electron dropped 32-bit ARM Linux builds (44 has none to package).
+  # No armv7l here: Electron dropped 32-bit ARM Linux builds after 43. dist:linux:armv7l
+  # (and release:linux:armv7l) package the same bundle with Electron 43 instead.
   target:
     - target: AppImage
       arch:

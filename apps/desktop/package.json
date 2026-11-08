@@ -23,11 +23,13 @@
     "i18n": "nub scripts/i18n.ts",
     "dist": "electron-vite build && node scripts/electron-builder.ts --win --mac --linux -p never",
     "dist:linux": "electron-vite build && node scripts/electron-builder.ts --linux -p never",
+    "dist:linux:armv7l": "electron-vite build && node scripts/electron-builder.ts --linux AppImage:armv7l deb:armv7l tar.gz:armv7l freebsd:armv7l -c.electronVersion=43.8.7 -p never",
     "dist:mac": "electron-vite build && node scripts/electron-builder.ts --mac dmg:x64 -p never",
     "dist:mac:arm64": "electron-vite build && node scripts/electron-builder.ts --mac dmg:arm64 -p never",
     "dist:win": "electron-vite build && node scripts/electron-builder.ts --win -p never",
     "dist:win:x64": "electron-vite build && node scripts/electron-builder.ts --win nsis-web:x64 -p never",
     "release:linux": "electron-vite build && node scripts/electron-builder.ts --linux -p always -c.snap.publish=github",
+    "release:linux:armv7l": "electron-vite build && node scripts/electron-builder.ts --linux AppImage:armv7l deb:armv7l tar.gz:armv7l freebsd:armv7l -c.electronVersion=43.8.7 -p always",
     "release:mac": "electron-vite build && node scripts/electron-builder.ts --mac -p always",
     "release:win": "electron-vite build && node scripts/electron-builder.ts --win -p always"
   },

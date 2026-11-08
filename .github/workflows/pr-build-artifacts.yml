@@ -69,6 +69,7 @@ jobs:
         if: startsWith(matrix.os, 'ubuntu')
         run: |
           nub run dist:linux
+          nub run dist:linux:armv7l
 
       - name: Build on Windows
         if: startsWith(matrix.os, 'windows')
