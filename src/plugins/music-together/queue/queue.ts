@@ -255,6 +255,21 @@ export class Queue {
       payload: index,
     });
     this.internalDispatch = false;
+    this.showPlayer();
+  }
+
+  showPlayer() {
+    if (!this.queue || this.videoIds.length === 0) return;
+
+    const state = this.queue.queue.store.store.getState();
+    if (state.navigation?.playerUiState !== 'INACTIVE') return;
+
+    this.internalDispatch = true;
+    this.queue.dispatch({
+      type: 'SET_PLAYER_UI_STATE',
+      payload: 'PLAYER_BAR_ONLY',
+    });
+    this.internalDispatch = false;
   }
 
   moveItem(fromIndex: number, toIndex: number) {

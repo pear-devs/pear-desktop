@@ -590,6 +590,7 @@ export default createPlugin<
             if (typeof payload.state === 'number') {
               this.lastHostState = payload.state;
             }
+            this.queue?.showPlayer();
             if (this.playerApi?.getPlayerState() !== payload.state) {
               if (payload.state === 2) this.playerApi?.pauseVideo();
               if (payload.state === 1) this.playerApi?.playVideo();
