@@ -161,6 +161,24 @@ export class Queue {
     return this.flatItems.map((it) => it?.videoId ?? '');
   }
 
+  /**
+   * Finds where a song is in this queue. Positions can differ between users
+   * (e.g. unavailable songs get dropped), so prefer the entry with the same
+   * video id closest to `hint`. Returns -1 if the song isn't in the queue.
+   */
+  resolveIndex(hint: number, videoId?: string) {
+    const ids = this.videoIds;
+    if (!videoId) return hint >= 0 && hint < ids.length ? hint : -1;
+    if (ids[hint] === videoId) return hint;
+
+    let best = -1;
+    ids.forEach((id, i) => {
+      if (id !== videoId) return;
+      if (best < 0 || Math.abs(i - hint) < Math.abs(best - hint)) best = i;
+    });
+    return best;
+  }
+
   /** Current queue as shown in the player, with known owners attached. */
   getSnapshot(): VideoData[] {
     return this.videoIds.map((videoId, index) => ({
@@ -377,6 +395,7 @@ export class Queue {
                     type: 'SET_INDEX',
                     payload: {
                       index,
+                      videoId: videoList[index]?.videoId,
                     },
                   },
                 ],

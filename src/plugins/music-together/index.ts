@@ -6,6 +6,7 @@ import { createPlugin } from '@/utils';
 import { waitForElement } from '@/utils/wait-for-element';
 
 import { Connection, type ConnectionEventUnion } from './connection';
+import { PlaybackHold } from './hold';
 import { Queue } from './queue';
 import { hashVideoIds } from './queue/utils';
 import style from './style.css?inline';
@@ -48,6 +49,21 @@ const SEEK_COOLDOWN = 4_000;
 // Backoff (ms) between full queue resyncs when the guest detects desync
 const RESYNC_BACKOFF_MIN = 5_000;
 const RESYNC_BACKOFF_MAX = 60_000;
+// Max time (ms) the host waits for every guest to load a new song before
+// starting it anyway
+const TRANSITION_TIMEOUT = 8_000;
+// Max time (ms) a guest stays paused waiting for the host to start the song
+const GUEST_HOLD_TIMEOUT = 12_000;
+// Min time (ms) between song switches caused by periodic syncs, so a song
+// that is still loading isn't restarted over and over
+const INDEX_SYNC_COOLDOWN = 5_000;
+
+const PLAYER_ENDED = 0;
+
+const logError = (err: unknown) => console.error('Music Together:', err);
+
+const createTransitionId = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
 /**
  * Runs tasks one after another. Events must be applied in the order they were
@@ -74,6 +90,7 @@ export default createPlugin<
     api: AppElement | null;
     queue?: Queue;
     playerApi?: MusicPlayer;
+    hold: PlaybackHold;
     showPrompt: (title: string, label: string) => Promise<string>;
     popups: {
       host: ReturnType<typeof createHostPopup>;
@@ -139,11 +156,15 @@ export default createPlugin<
       spinner: HTMLElement;
     },
     profiles: {},
+    hold: new PlaybackHold(),
     showPrompt: () => Promise.resolve(''),
     api: null,
 
     /* events */
     async videoChangeListener(event: CustomEvent<VideoDataChanged>) {
+      // the queue is mid-change, the transition itself keeps everyone in sync
+      if (this.hold.active) return;
+
       if (event.detail.name === 'dataloaded' || this.updateNext) {
         if (this.connection?.mode === 'host') {
           const videoList = this.queue?.getSnapshot() ?? [];
@@ -160,7 +181,11 @@ export default createPlugin<
     },
 
     async videoStateChangeListener() {
+      // pause right away if a song starts while waiting for everyone
+      this.hold.tick();
+
       if (this.connection?.mode !== 'guest') return;
+      if (this.hold.active) return;
       if (this.ignoreChange) return;
       if (this.permission !== 'all') return;
 
@@ -204,6 +229,117 @@ export default createPlugin<
       this.queue?.initQueue();
       this.queue?.injection();
 
+      /*
+       * Song changes run as transitions: everyone pauses and loads the new
+       * song, guests report TRANSITION_READY, and once all of them are ready
+       * (or TRANSITION_TIMEOUT passes) the host sends TRANSITION_GO and
+       * everyone starts it together.
+       */
+      type Transition = {
+        id: string;
+        videoId: string;
+        pending: Set<string>;
+        hostReady: boolean;
+      };
+      let transition: Transition | undefined;
+
+      const guestPeers = () =>
+        this.connection
+          ?.getConnections()
+          .filter((conn) => conn.open)
+          .map((conn) => conn.peer) ?? [];
+
+      const finishTransition = async () => {
+        const finished = transition;
+        transition = undefined;
+        // guests may be waiting even if the change never got a target song
+        await this.connection?.broadcast('TRANSITION_GO', {
+          transitionId: finished?.id,
+          progress: this.playerApi?.getCurrentTime() ?? 0,
+        });
+        // a newer song change may have started while sending, it owns the hold
+        if (!transition) this.hold.release(true);
+      };
+
+      /** Release guests that paused for a change that turned out to be a no-op. */
+      const releaseWaitingGuests = async () => {
+        if (this.hold.active) return; // a GO is coming anyway
+        await this.connection?.broadcast('TRANSITION_GO', {
+          progress: this.playerApi?.getCurrentTime() ?? 0,
+        });
+      };
+
+      const checkTransition = (current: Transition) => {
+        if (transition !== current) return;
+        if (current.hostReady && current.pending.size === 0) {
+          finishTransition().catch(logError);
+        }
+      };
+
+      /** Pause until the upcoming song change has been applied everywhere. */
+      const holdForChange = () => {
+        if (guestPeers().length === 0) return;
+        this.hold.start(TRANSITION_TIMEOUT, () => {
+          finishTransition().catch(logError);
+        });
+      };
+
+      const changeSong = async (index: number, videoId?: string) => {
+        if (!this.queue) return;
+
+        const target = this.queue.resolveIndex(index, videoId);
+        if (target < 0) {
+          console.warn('Music Together: song to play is not in the queue', {
+            index,
+            videoId,
+          });
+          await releaseWaitingGuests();
+          return;
+        }
+        const targetId = this.queue.videoIds[target];
+
+        const peers = guestPeers();
+        if (peers.length === 0) {
+          this.queue.setIndex(target);
+          return;
+        }
+
+        // already switching to this song (e.g. several users asked for it)
+        if (transition?.videoId === targetId) return;
+        if (
+          !transition &&
+          !this.hold.active &&
+          this.queue.selectedIndex === target &&
+          this.playerApi?.getVideoData()?.video_id === targetId
+        ) {
+          await releaseWaitingGuests();
+          return;
+        }
+
+        const current: Transition = {
+          id: createTransitionId(),
+          videoId: targetId,
+          pending: new Set(peers),
+          hostReady: false,
+        };
+        transition = current;
+        this.hold.start(TRANSITION_TIMEOUT, () => {
+          finishTransition().catch(logError);
+        });
+
+        this.queue.setIndex(target);
+        await this.connection?.broadcast('SET_INDEX', {
+          index: target,
+          videoId: targetId,
+          transitionId: current.id,
+        });
+
+        this.hold.expect(targetId, () => {
+          current.hostReady = true;
+          checkTransition(current);
+        });
+      };
+
       this.connection.onConnections((connection) => {
         if (!connection) {
           this.api?.toastService?.show(
@@ -214,6 +350,11 @@ export default createPlugin<
         }
 
         if (!connection.open) {
+          // don't keep waiting for someone who left
+          if (transition?.pending.delete(connection.peer)) {
+            checkTransition(transition);
+          }
+
           this.api?.toastService?.show(
             t('plugins.music-together.toast.user-disconnected', {
               name: this.profiles[connection.peer]?.name,
@@ -238,15 +379,21 @@ export default createPlugin<
               return;
             }
 
+            // the queue is being replaced, a new song follows shortly
+            holdForChange();
             this.queue?.clear();
             await this.connection?.broadcast('CLEAR_QUEUE', null);
             break;
           }
           case 'SET_INDEX': {
-            this.queue?.setIndex(event.payload.index);
-            await this.connection?.broadcast('SET_INDEX', {
-              index: event.payload.index,
-            });
+            await changeSong(event.payload.index, event.payload.videoId);
+            break;
+          }
+          case 'TRANSITION_READY': {
+            if (conn && transition?.id === event.payload.transitionId) {
+              transition.pending.delete(conn.peer);
+              checkTransition(transition);
+            }
             break;
           }
           case 'ADD_SONGS': {
@@ -264,19 +411,25 @@ export default createPlugin<
               }),
             );
 
-            await this.queue?.addVideos(videoList, event.payload.index);
-            await this.connection?.broadcast(
-              'ADD_SONGS',
-              {
-                ...event.payload,
-                videoList,
-              },
-              event.after,
-            );
-
             const afterevent = event.after?.at(0);
-            if (afterevent?.type === 'SET_INDEX') {
-              this.queue?.setIndex(afterevent.payload.index);
+            const playsSong = afterevent?.type === 'SET_INDEX';
+            if (playsSong) {
+              holdForChange();
+              // handled here, don't let the generic "after" handling run it again
+              event.after = undefined;
+            }
+
+            await this.queue?.addVideos(videoList, event.payload.index);
+            await this.connection?.broadcast('ADD_SONGS', {
+              ...event.payload,
+              videoList,
+            });
+
+            if (playsSong) {
+              await changeSong(
+                afterevent.payload.index,
+                afterevent.payload.videoId,
+              );
             }
 
             break;
@@ -351,7 +504,8 @@ export default createPlugin<
             if (this.permission === 'host-only') permissionLevel = 0;
             if (!conn) permissionLevel = 3;
 
-            if (permissionLevel >= 2) {
+            // play/pause/seek from guests would fight the transition's pause
+            if (permissionLevel >= 2 && !this.hold.active) {
               if (typeof event.payload?.progress === 'number') {
                 const currentTime = this.playerApi?.getCurrentTime() ?? 0;
                 if (Math.abs(event.payload.progress - currentTime) > 3)
@@ -362,18 +516,19 @@ export default createPlugin<
                 if (event.payload?.state === 1) this.playerApi?.playVideo();
               }
             }
-            if (permissionLevel >= 1) {
-              if (
-                typeof event.payload?.index === 'number' &&
-                event.payload.index >= 0 &&
-                event.payload.index < (this.queue?.videoIds.length ?? 0)
-              ) {
-                const nowIndex = this.queue?.selectedIndex ?? 0;
-
-                if (nowIndex !== event.payload.index) {
-                  this.queue?.setIndex(event.payload.index);
-                }
-              }
+            if (
+              permissionLevel >= 1 &&
+              typeof event.payload?.index === 'number' &&
+              event.payload.index >= 0
+            ) {
+              // someone picked a song in the queue (or the song ended)
+              await changeSong(
+                event.payload.index,
+                event.payload.videoId ??
+                  (conn
+                    ? undefined
+                    : this.queue?.videoIds[event.payload.index]),
+              );
             }
 
             break;
@@ -437,12 +592,65 @@ export default createPlugin<
       let hashMismatches = 0;
       let resyncAllowedAt = 0;
       let resyncBackoff = RESYNC_BACKOFF_MIN;
+      let lastIndexSyncAt = 0;
       this.lastHostState = undefined;
+
+      // song change the host asked for, see the host's transition comment
+      type GuestTransition = {
+        id: string;
+        index: number;
+        videoId: string;
+        requestedQueue: boolean;
+      };
+      let transition: GuestTransition | undefined;
+
+      /** Stay paused until the host says everyone is ready. */
+      const holdForHost = () => {
+        this.hold.start(GUEST_HOLD_TIMEOUT, () => {
+          console.warn('Music Together: host never started the song, playing');
+          transition = undefined;
+          this.hold.release(true);
+        });
+      };
+
+      const applyTransition = async () => {
+        const current = transition;
+        if (!current || !this.queue) return;
+
+        const index = this.queue.resolveIndex(current.index, current.videoId);
+        if (index < 0) {
+          // our queue is missing the song, get the host's (retried on SYNC_QUEUE)
+          if (!current.requestedQueue) {
+            current.requestedQueue = true;
+            await this.connection?.broadcast('SYNC_QUEUE', undefined);
+          }
+          return;
+        }
+
+        if (
+          this.queue.selectedIndex !== index ||
+          this.playerApi?.getVideoData()?.video_id !== current.videoId
+        ) {
+          this.queue.setIndex(index);
+        }
+        this.hold.expect(current.videoId, () => {
+          if (transition !== current) return;
+          this.connection
+            ?.broadcast('TRANSITION_READY', { transitionId: current.id })
+            .catch(logError);
+        });
+      };
+
+      // we started a song change, pause until the host has synced everyone
+      const holdForOwnChange = () => {
+        if (this.permission !== 'host-only') holdForHost();
+      };
 
       const queueListener = async (event: ConnectionEventUnion) => {
         this.ignoreChange = true;
         switch (event.type) {
           case 'CLEAR_QUEUE': {
+            holdForOwnChange();
             await this.connection?.broadcast('CLEAR_QUEUE', null);
             break;
           }
@@ -453,6 +661,7 @@ export default createPlugin<
             break;
           }
           case 'ADD_SONGS': {
+            if (event.after?.at(0)?.type === 'SET_INDEX') holdForOwnChange();
             await this.connection?.broadcast(
               'ADD_SONGS',
               {
@@ -475,6 +684,26 @@ export default createPlugin<
             break;
           }
           case 'SYNC_PROGRESS': {
+            const index = event.payload?.index;
+            if (typeof index === 'number') {
+              // the song ended and YouTube Music moved on by itself; the host
+              // does the same, so asking for it too could skip a song
+              if (this.playerApi?.getPlayerState() === PLAYER_ENDED) break;
+
+              if (this.permission === 'host-only') {
+                await this.connection?.broadcast('SYNC_QUEUE', undefined);
+                break;
+              }
+
+              holdForOwnChange();
+              await this.connection?.broadcast('SYNC_PROGRESS', {
+                ...event.payload,
+                // positions can differ between users, the id can't
+                videoId: this.queue?.videoIds[index],
+              });
+              break;
+            }
+
             if (this.permission === 'host-only')
               await this.connection?.broadcast('SYNC_QUEUE', undefined);
             else
@@ -495,11 +724,45 @@ export default createPlugin<
         this.ignoreChange = true;
         switch (event.type) {
           case 'CLEAR_QUEUE': {
+            // the queue is being replaced, a new song follows shortly
+            holdForHost();
             this.queue?.clear();
             break;
           }
           case 'SET_INDEX': {
-            this.queue?.setIndex(event.payload.index);
+            const { index, videoId, transitionId } = event.payload;
+            if (transitionId && videoId) {
+              transition = {
+                id: transitionId,
+                index,
+                videoId,
+                requestedQueue: false,
+              };
+              holdForHost();
+              await applyTransition();
+            } else {
+              // host on an older version
+              this.queue?.setIndex(index);
+            }
+            break;
+          }
+          case 'TRANSITION_GO': {
+            transition = undefined;
+            if (!this.hold.active) break;
+            this.hold.release(false);
+
+            // start where the host is, accounting for the time it took to get here
+            const delayMs =
+              (this.connection?.latency ?? 0) + performance.now() - receivedAt;
+            const delaySeconds = delayMs / 1000;
+            const target = event.payload.progress + delaySeconds;
+            const currentTime = this.playerApi?.getCurrentTime() ?? 0;
+            if (Math.abs(target - currentTime) > 0.5) {
+              this.playerApi?.seekTo(target);
+            }
+            lastSeekAt = performance.now();
+            this.lastHostState = 1;
+            this.playerApi?.playVideo();
             break;
           }
           case 'ADD_SONGS': {
@@ -539,6 +802,8 @@ export default createPlugin<
           case 'SYNC_QUEUE': {
             if (Array.isArray(event.payload?.videoList)) {
               await this.queue?.setVideoList(event.payload.videoList);
+              // the song we're switching to may only now be in our queue
+              if (transition) await applyTransition();
             }
             break;
           }
@@ -558,6 +823,8 @@ export default createPlugin<
           case 'SYNC_PROGRESS': {
             const payload = event.payload;
             if (!payload) break;
+            // mid song change, the transition decides what plays and when
+            if (this.hold.active) break;
 
             // Self-heal: if our queue differs from the host's, ask for a full copy
             if (typeof payload.queueHash === 'string' && this.queue) {
@@ -576,15 +843,28 @@ export default createPlugin<
               }
             }
 
+            // Catch up if we're on a different song than the host. Match by video
+            // id, since the same position can hold a different song for us, and
+            // leave a song that is still loading alone instead of restarting it.
             let indexChanged = false;
+            const playingId = this.playerApi?.getVideoData()?.video_id;
             if (
               typeof payload.index === 'number' &&
-              payload.index >= 0 &&
-              payload.index < (this.queue?.videoIds.length ?? 0) &&
-              this.queue?.selectedIndex !== payload.index
+              this.queue &&
+              (payload.videoId
+                ? payload.videoId !== playingId
+                : this.queue.selectedIndex !== payload.index) &&
+              performance.now() - lastIndexSyncAt > INDEX_SYNC_COOLDOWN
             ) {
-              this.queue?.setIndex(payload.index);
-              indexChanged = true;
+              const index = this.queue.resolveIndex(
+                payload.index,
+                payload.videoId,
+              );
+              if (index >= 0) {
+                lastIndexSyncAt = performance.now();
+                this.queue.setIndex(index);
+                indexChanged = true;
+              }
             }
 
             if (typeof payload.state === 'number') {
@@ -700,7 +980,11 @@ export default createPlugin<
         progress._update = (...args) => {
           const now = args[0];
 
-          if (this.permission === 'all' && typeof now === 'number') {
+          if (
+            this.permission === 'all' &&
+            !this.hold.active &&
+            typeof now === 'number'
+          ) {
             const currentTime = this.playerApi?.getCurrentTime() ?? 0;
             if (Math.abs(now - currentTime) > 3)
               this.connection?.broadcast('SYNC_PROGRESS', {
@@ -742,6 +1026,8 @@ export default createPlugin<
     },
 
     onStop() {
+      // don't leave the player paused mid song change
+      this.hold.release(true);
       if (this.connection?.mode !== 'disconnected') {
         this.connection?.disconnect();
       }
@@ -860,6 +1146,8 @@ export default createPlugin<
       this.stateInterval = window.setInterval(() => {
         if (this.connection?.mode !== 'host') return;
         if (this.connection.getConnections().length === 0) return;
+        // mid song change, the queue position isn't meaningful yet
+        if (this.hold.active) return;
 
         this.connection.broadcast('SYNC_PROGRESS', {
           progress: this.playerApi?.getCurrentTime(),
@@ -1013,6 +1301,7 @@ export default createPlugin<
         getProfile: (id) => this.profiles[id],
       });
       this.playerApi = playerApi;
+      this.hold.setPlayer(playerApi);
 
       this.playerApi.addEventListener(
         'onStateChange',

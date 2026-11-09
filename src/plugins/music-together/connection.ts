@@ -14,7 +14,11 @@ export type ConnectionEventMap = {
   ADD_SONGS: { videoList: VideoData[]; index?: number };
   REMOVE_SONG: { index: number };
   MOVE_SONG: { fromIndex: number; toIndex: number };
-  SET_INDEX: { index: number };
+  SET_INDEX: { index: number; videoId?: string; transitionId?: string };
+  // a guest has loaded the song of a transition and is waiting to play
+  TRANSITION_READY: { transitionId: string };
+  // everyone may start playing the new song
+  TRANSITION_GO: { transitionId?: string; progress: number };
   IDENTIFY: { profile: Profile } | undefined;
   SYNC_PROFILE: { profiles: Record<string, Profile> } | undefined;
   SYNC_QUEUE: { videoList: VideoData[] } | undefined;
