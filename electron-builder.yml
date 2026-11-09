@@ -109,6 +109,9 @@ deb:
     - libasound2
     - libgbm1
 pacman:
+  # standard Arch package naming (name-version-pkgrel-arch) and compression
+  artifactName: ${name}-${version}-1-x86_64.pkg.tar.zst
+  compression: zstd
   # electron-builder's default list names packages Arch no longer ships
   # (http-parser, libappindicator-gtk3), which makes `pacman -U` refuse it
   depends:
