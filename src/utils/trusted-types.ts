@@ -10,11 +10,28 @@ export let defaultTrustedTypePolicy: Pick<
 >;
 
 export const registerWindowDefaultTrustedTypePolicy = () => {
-  if (window.trustedTypes && window.trustedTypes.createPolicy) {
-    defaultTrustedTypePolicy = window.trustedTypes.createPolicy('default', {
-      createHTML: (input) => input,
-      createScriptURL: (input) => input,
-      createScript: (input) => input,
-    });
+  if (!window.trustedTypes?.createPolicy) return;
+  const rules = {
+    createHTML: (input: string) => input,
+    createScriptURL: (input: string) => input,
+    createScript: (input: string) => input,
+  };
+  // The page (or another script) may already own the "default" policy, and
+  // createPolicy throws on a duplicate name, which would stop the whole
+  // renderer, so fall back to a policy of our own.
+  try {
+    defaultTrustedTypePolicy = window.trustedTypes.createPolicy(
+      'default',
+      rules,
+    );
+  } catch {
+    try {
+      defaultTrustedTypePolicy = window.trustedTypes.createPolicy(
+        'pear-desktop',
+        rules,
+      );
+    } catch (error) {
+      console.warn('[YTMusic] Could not create a Trusted Types policy', error);
+    }
   }
 };
