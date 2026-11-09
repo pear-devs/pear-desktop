@@ -994,8 +994,11 @@ export default createPlugin<
         if (this.connection?.mode === 'host') popup = hostPopup;
         if (this.connection?.mode === 'guest') popup = guestPopup;
 
-        if (popup.isShowing()) popup.dismiss();
-        else popup.showAtAnchor(setting);
+        // close any popup left over from a different mode
+        [settingPopup, hostPopup, guestPopup].forEach((other) => {
+          if (other !== popup) other.dismiss();
+        });
+        popup.toggleAtAnchor(setting);
       });
 
       /* account data getter */

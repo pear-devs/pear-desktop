@@ -60,12 +60,37 @@ export const Popup = (props: PopupProps) => {
 
   document.body.append(popup);
 
+  // Only one outside-click listener may exist at a time, and it must be removed
+  // however the popup gets closed. A leftover listener would close the popup
+  // again on the very click that reopens it.
+  let closeListener: ((event: MouseEvent) => void) | null = null;
+  let closeTimer: number | undefined;
+  const detachCloseListener = () => {
+    if (closeTimer !== undefined) {
+      clearTimeout(closeTimer);
+      closeTimer = undefined;
+    }
+    if (closeListener) {
+      document.removeEventListener('click', closeListener);
+      closeListener = null;
+    }
+  };
+
+  const isShowing = () => popup.style.getPropertyValue('opacity') === '1';
+  const dismiss = () => {
+    detachCloseListener();
+    popup.style.setProperty('opacity', '0');
+    popup.style.setProperty('pointer-events', 'none');
+  };
+
   return {
     element: popup,
     container,
     items,
 
     show(x: number, y: number, anchor?: HTMLElement) {
+      detachCloseListener();
+
       let left = x;
       let top = y;
 
@@ -86,32 +111,29 @@ export const Popup = (props: PopupProps) => {
       popup.style.setProperty('opacity', '1');
       popup.style.setProperty('pointer-events', 'unset');
 
-      setTimeout(() => {
-        const onClose = (event: MouseEvent) => {
-          const isPopupClick = event
-            .composedPath()
-            .some((element) => element === popup);
-          if (!isPopupClick) {
-            this.dismiss();
-            document.removeEventListener('click', onClose);
-          }
+      closeTimer = window.setTimeout(() => {
+        closeTimer = undefined;
+        closeListener = (event: MouseEvent) => {
+          const path = event.composedPath();
+          if (path.includes(popup)) return;
+          // the anchor toggles the popup itself
+          if (anchor && path.includes(anchor)) return;
+          dismiss();
         };
-        document.addEventListener('click', onClose);
+        document.addEventListener('click', closeListener);
       }, 16);
     },
     showAtAnchor(anchor: HTMLElement) {
       const { x, y } = anchor.getBoundingClientRect();
       this.show(x, y, anchor);
     },
-
-    isShowing() {
-      return popup.style.getPropertyValue('opacity') === '1';
+    toggleAtAnchor(anchor: HTMLElement) {
+      if (isShowing()) dismiss();
+      else this.showAtAnchor(anchor);
     },
 
-    dismiss() {
-      popup.style.setProperty('opacity', '0');
-      popup.style.setProperty('pointer-events', 'none');
-    },
+    isShowing,
+    dismiss,
   };
 };
 
