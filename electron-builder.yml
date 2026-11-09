@@ -108,6 +108,20 @@ deb:
     - libuuid1
     - libasound2
     - libgbm1
+pacman:
+  # electron-builder's default list names packages Arch no longer ships
+  # (http-parser, libappindicator-gtk3), which makes `pacman -U` refuse it
+  depends:
+    - gtk3
+    - libnotify
+    - nss
+    - libxss
+    - libxtst
+    - xdg-utils
+    - at-spi2-core
+    - util-linux-libs
+    - alsa-lib
+    - mesa
 rpm:
   depends:
     - libuuid
