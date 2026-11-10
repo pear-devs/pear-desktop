@@ -8,6 +8,8 @@
  * left out: the engine's shared tempo glide already does what they do.
  */
 
+import type { HandoffRecipe, TransitionPlan } from './planner';
+
 /** What a lane automates, on the per-song chain built in the engine */
 export type EffectParam =
   /** Song level after everything (Apple's RECEIVE_MIXER out_gain) */
@@ -28,7 +30,14 @@ export type EffectParam =
   /** The rest of the send, passed on as is (follows delayMix by itself) */
   | 'delayDry'
   | 'delayFeedback'
-  | 'delayLowpass';
+  | 'delayLowpass'
+  /**
+   * A DJ isolator's low kill: a 24 dB/oct (Linkwitz-Riley) high-pass, 10 Hz
+   * when open. Takes the bass out cleanly, unlike a shelf
+   */
+  | 'lowCut'
+  /** ...and its counterpart, a 24 dB/oct low-pass, keeping only the bass */
+  | 'highCut';
 
 /**
  * Apple's curve names: "ease-out-p" is x^p and "ease-in-p" is
@@ -53,7 +62,7 @@ export interface Lane {
   place: [At, At];
 }
 
-export type EffectFamily = 'filter' | 'hiphop' | 'pop' | 'spotify';
+export type EffectFamily = 'filter' | 'hiphop' | 'pop' | 'spotify' | 'handoff';
 
 export interface EffectStyle {
   /** Apple's style id */
@@ -75,6 +84,12 @@ export interface EffectStyle {
   repeats?: { at: At; bars: number }[];
   /** When the repeater lets go of the song again (default: never) */
   repeatEnd?: At;
+  /** Corner of the incoming song's bass shelf, Hz (default CROSSOVER_HZ) */
+  inShelfHz?: number;
+  /** When the outgoing song has nothing left to play (default: the end) */
+  outEnd?: At;
+  /** Lanes may start this long before the window (to cut just ahead of a beat) */
+  preroll?: number;
   outgoing: Lane[];
   incoming: Lane[];
 }
@@ -290,7 +305,11 @@ export const withBassSwap = (
   style: EffectStyle,
   at: [number, number] | undefined,
 ): EffectStyle => {
-  if (!at || !style.outgoing.some((item) => item.param === 'bass')) {
+  if (
+    !at ||
+    style.family === 'handoff' ||
+    !style.outgoing.some((item) => item.param === 'bass')
+  ) {
     return style;
   }
   const swap = bassSwap(at);
@@ -413,6 +432,8 @@ export const EFFECT_DEFAULTS: Record<EffectParam, number> = {
   delayDry: 1,
   delayFeedback: 0,
   delayLowpass: 20_000,
+  lowCut: 10,
+  highCut: 20_000,
 };
 
 export const ease = (curve: Curve, x: number) => {
@@ -458,12 +479,15 @@ const RAMP_POINTS = 24;
  * last value. The incoming song is silent until its level lane brings it in.
  */
 export const scheduleLanes = (
-  params: Partial<Record<EffectParam, AudioParam>>,
+  params: Partial<Record<EffectParam, AudioParam | AudioParam[]>>,
   lanes: Lane[],
   start: number,
   duration: number,
   side: 'outgoing' | 'incoming',
+  /** Lanes may reach this far before the window start */
+  preroll = 0,
 ) => {
+  const earliest = start - preroll;
   const neutral = (name: EffectParam) =>
     name === 'gain' && side === 'incoming' ? 0 : EFFECT_DEFAULTS[name];
   const byParam = new Map<EffectParam, Lane[]>();
@@ -479,34 +503,47 @@ export const scheduleLanes = (
     byParam.set(item.param, [...(byParam.get(item.param) ?? []), item]);
   }
   for (const [name, items] of byParam) {
-    const param = params[name];
-    if (!param) continue;
-    const clamp = (value: number) =>
-      Math.min(param.maxValue, Math.max(param.minValue, value));
-    const timed = items
-      .map((item) => ({ item, times: laneTimes(item, start, duration) }))
-      .sort((a, b) => a.times.from - b.times.from);
-    param.cancelScheduledValues(start);
-    param.setValueAtTime(clamp(neutral(name)), start);
-    const first = timed[0];
-    param.setValueAtTime(
-      clamp(first.item.from),
-      Math.max(start, Math.min(first.times.placed, first.times.from)),
-    );
-    for (const { item, times } of timed) {
-      const { from, to } = times;
-      param.setValueAtTime(clamp(item.from), Math.max(start, from));
-      if (to <= from) {
-        param.setValueAtTime(clamp(item.to), Math.max(start, from));
-        continue;
-      }
-      for (let k = 1; k <= RAMP_POINTS; k++) {
-        const x = k / RAMP_POINTS;
-        param.linearRampToValueAtTime(
-          clamp(laneValue(item, x)),
-          from + ((to - from) * x),
-        );
-      }
+    const given = params[name];
+    for (const param of Array.isArray(given) ? given : given ? [given] : []) {
+      scheduleParam(param, items, start, duration, earliest, neutral(name));
+    }
+  }
+};
+
+/** One parameter's lanes, in order (see scheduleLanes) */
+const scheduleParam = (
+  param: AudioParam,
+  items: Lane[],
+  start: number,
+  duration: number,
+  earliest: number,
+  neutralValue: number,
+) => {
+  const clamp = (value: number) =>
+    Math.min(param.maxValue, Math.max(param.minValue, value));
+  const timed = items
+    .map((item) => ({ item, times: laneTimes(item, start, duration) }))
+    .sort((a, b) => a.times.from - b.times.from);
+  param.cancelScheduledValues(earliest);
+  param.setValueAtTime(clamp(neutralValue), earliest);
+  const first = timed[0];
+  param.setValueAtTime(
+    clamp(first.item.from),
+    Math.max(earliest, Math.min(first.times.placed, first.times.from)),
+  );
+  for (const { item, times } of timed) {
+    const { from, to } = times;
+    param.setValueAtTime(clamp(item.from), Math.max(earliest, from));
+    if (to <= from) {
+      param.setValueAtTime(clamp(item.to), Math.max(earliest, from));
+      continue;
+    }
+    for (let k = 1; k <= RAMP_POINTS; k++) {
+      const x = k / RAMP_POINTS;
+      param.linearRampToValueAtTime(
+        clamp(laneValue(item, x)),
+        from + ((to - from) * x),
+      );
     }
   }
 };
@@ -589,6 +626,110 @@ export const pickSpotifyEffect = (bars: number, seed: string): EffectStyle => {
 export const effectById = (id: number | undefined) =>
   [...EFFECT_STYLES, ...SPOTIFY_STYLES].find((style) => style.id === id);
 
+/** Where a DJ isolator splits the bass off (both reels measure ~300 Hz, LR4) */
+const ISOLATOR_HZ = 300;
+/** How long an isolator switch takes, either side of the bar line */
+const SWITCH = 0.025;
+
+const HANDOFF_NAMES: Record<HandoffRecipe['kind'], string> = {
+  pickup: 'Pickup hand-off',
+  outro: 'Outro swap',
+};
+
+/**
+ * The lanes of a DJ hand-off (see handoff.ts and HandoffRecipe), measured
+ * from two Spotify Mix custom transitions against the original recordings
+ */
+export const handoffStyle = (recipe: HandoffRecipe): EffectStyle => {
+  if (recipe.kind === 'outro') {
+    // Both at full level; the basses swap half way, the old song stops on
+    // its last beat (its tail is cut)
+    return {
+      id: 202,
+      name: HANDOFF_NAMES.outro,
+      family: 'handoff',
+      bars: recipe.bars,
+      outEnd: [1, 0.01],
+      outgoing: [
+        lane('lowCut', 10, ISOLATOR_HZ, 'log', [0, 1], [[0.5, -SWITCH], [0.5, SWITCH]]),
+        lane('gain', 1, 0, 'linear', [0, 1], [[1, -0.01], [1, 0.005]]),
+      ],
+      incoming: [
+        lane('gain', 0, 1, 'linear', [0, 1], [0, [0, 0.008]]),
+        set('lowCut', ISOLATOR_HZ),
+        lane('lowCut', ISOLATOR_HZ, 10, 'log', [0, 1], [[0.5, -SWITCH], [0.5, SWITCH]]),
+      ],
+    };
+  }
+
+  const { gapBars: gap, overlapBars: overlap, decayBars } = recipe;
+  const u = 1 / (gap + overlap + decayBars);
+  const bar = (bars: number, seconds = 0): At => [bars * u, seconds];
+  const swap = gap + overlap;
+  const outgoing: Lane[] = [];
+  if (gap) {
+    // Cut just ahead of the downbeat that ends the breakdown: nothing rings
+    outgoing.push(lane('gain', 1, 0, 'linear', [0, 1], [bar(0, -0.015), bar(0, -0.005)]));
+  }
+  if (overlap) {
+    // One bar of only the old song's kick and bass, a little lifted
+    if (gap) {
+      outgoing.push(
+        set('highCut', ISOLATOR_HZ, bar(gap, -0.06)),
+        set('bass', recipe.liftDb, bar(gap, -0.06)),
+        lane('gain', 0, 1, 'linear', [0, 1], [bar(gap, -0.04), bar(gap)]),
+      );
+    } else {
+      outgoing.push(
+        lane('highCut', 20_000, ISOLATOR_HZ, 'log', [0, 1], [bar(0, -0.03), bar(0)]),
+        set('bass', recipe.liftDb, bar(0, -0.03)),
+      );
+    }
+    outgoing.push(
+      lane('gain', 1, 0, 'linear', [0, 1], [bar(swap, -SWITCH), bar(swap, SWITCH)]),
+    );
+  } else if (!gap) {
+    outgoing.push(lane('gain', 1, 0, 'linear', [0, 1], [bar(0, -0.015), bar(0, 0.005)]));
+  }
+
+  // The new song from its first note, at full level; no bass of its own
+  // while the old one carries the beat; then its bass lands hot and eases
+  // back (front-loaded, as measured: +4.8, 3.8, 2.0, 1.3 dB every 2 bars)
+  const incoming: Lane[] = [lane('gain', 0, 1, 'linear', [0, 1], [0, [0, 0.005]])];
+  if (overlap) {
+    incoming.push(
+      lane('lowCut', 10, ISOLATOR_HZ, 'log', [0, 1], [bar(gap, -0.12), bar(gap, -0.08)]),
+      lane('lowCut', ISOLATOR_HZ, 10, 'log', [0, 1], [bar(swap, -SWITCH), bar(swap, SWITCH)]),
+    );
+  }
+  if (recipe.shelfDb > 0) {
+    incoming.push(lane('bass', recipe.shelfDb, 0, 'in-2', [0, 1], [bar(swap), 1]));
+  }
+  return {
+    id: 201,
+    name: HANDOFF_NAMES.pickup,
+    family: 'handoff',
+    bars: gap + overlap + decayBars,
+    inShelfHz: ISOLATOR_HZ,
+    outEnd: bar(swap, 0.05),
+    preroll: 0.1,
+    outgoing,
+    incoming,
+  };
+};
+
+/** The effect style a plan is dressed in, if any (a hand-off's own lanes) */
+export const styleOf = (plan: TransitionPlan) => {
+  if (plan.style !== 'blend') return undefined;
+  return plan.recipe ? handoffStyle(plan.recipe) : effectById(plan.effect);
+};
+
 /** Display name of a plan's effect, whichever kind it is */
 export const effectName = (id: number | undefined) =>
-  id === CROSSFADE_REVERB.id ? CROSSFADE_REVERB.name : effectById(id)?.name;
+  id === CROSSFADE_REVERB.id
+    ? CROSSFADE_REVERB.name
+    : id === 201
+      ? HANDOFF_NAMES.pickup
+      : id === 202
+        ? HANDOFF_NAMES.outro
+        : effectById(id)?.name;

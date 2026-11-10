@@ -23,6 +23,7 @@ export const bassSwapWindow = (
 ): [number, number] | undefined => {
   if (
     plan.style !== 'blend' ||
+    plan.recipe ||
     plan.holdOutgoing ||
     plan.beat <= 0 ||
     to.bassEntry === undefined

@@ -66,6 +66,23 @@ const describeStyle = (plan: TransitionPlan) => {
   const to = Math.round(plan.toBpm);
   switch (plan.style) {
     case 'blend':
+      if (plan.recipe?.kind === 'pickup') {
+        return t('plugins.automix.ui.detail.pickup-handoff', {
+          bars: plan.recipe.decayBars,
+          from,
+          to,
+          stretch: (Math.abs(plan.rate - 1) * 100).toFixed(1),
+        });
+      }
+      if (plan.recipe?.kind === 'outro') {
+        return t('plugins.automix.ui.detail.outro-swap', {
+          bars: plan.recipe.bars,
+          half: plan.recipe.bars / 2,
+          from,
+          to,
+          stretch: (Math.abs(plan.rate - 1) * 100).toFixed(1),
+        });
+      }
       return t('plugins.automix.ui.detail.blend', {
         bars: Math.max(1, Math.round(plan.duration / (plan.beat * 4))),
         from,
@@ -165,7 +182,7 @@ const hintFor = (status: AutoMixStatus): Hint => {
         ...(effectName(plan.effect)
           ? [
               t(
-                effectById(plan.effect)?.family === 'spotify'
+                effectById(plan.effect)?.family === 'spotify' || plan.recipe
                   ? 'plugins.automix.ui.detail.spotify-effect'
                   : 'plugins.automix.ui.detail.effect',
                 { name: effectName(plan.effect) },

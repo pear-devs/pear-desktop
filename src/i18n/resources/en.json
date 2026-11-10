@@ -382,6 +382,7 @@
         "apple-analysis": "Use Apple Music's song analysis (beats, phrases, vocals) when available",
         "beat-only": "Only beat-matched transitions (Beat Match or Beat Cut, no segues)",
         "cut-echo": "Echo the old song's last beat on Beat Cuts",
+        "dj-handoffs": "DJ hand-offs (full-level outro over intro, bass handed over on the bar, no vocal clashes)",
         "effects": "Apple Music effects on blends (filter sweeps, echoes, reverb)",
         "spotify-style": "Spotify-style blends (bass swap at the midpoint, filters, no vocal clashes)",
         "reorder-shape": {
@@ -418,6 +419,8 @@
         "detail": {
           "apple": "Planned with Apple Music's analysis of the songs",
           "blend": "{{bars}} bars · {{from}} → {{to}} BPM · stretched {{stretch}}%",
+          "pickup-handoff": "Cut on the breakdown, pickup in the gap, bass handed over a bar later, then {{bars}} bars to settle · {{from}} → {{to}} BPM · stretched {{stretch}}%",
+          "outro-swap": "{{bars}} bars of outro over intro at full level, bass handed over at bar {{half}} · {{from}} → {{to}} BPM · stretched {{stretch}}%",
           "entry": "Comes into the next song at {{time}}",
           "entry-vocal": "Comes into the next song at {{time}}, finishing as its vocals start at {{vocal}}",
           "cut": "Cut on the downbeat · {{bpm}} BPM",
@@ -479,6 +482,8 @@
           "beat-only-cut": "A beat-matched blend isn't possible here (tempos too far apart, or no room), so it cuts on the downbeat instead (beat-matched transitions only)",
           "cold-ending": "This song stops on a hit, so it gets to finish and the next song lands right on that hit",
           "ending-blend": "This song stops on the beat, so the next one is beat-matched in underneath its last bars and takes over on the final hit",
+          "pickup-handoff": "This song has a breakdown and the next one opens with a pickup, so it cuts as the breakdown ends, drops the pickup into the gap and hands the bass over a bar later",
+          "outro-swap": "This song's outro and the next one's intro have no vocals, so they play together at full level, the bass is handed over half way and this song stops on its last beat",
           "loud-handover": "This song ends on a hit and the next one starts straight away, so it cuts on the downbeat",
           "natural-ending": "This song has a real ending, so it plays out and the next one comes in as it dies away",
           "natural-fade": "The beats can't be matched, so the next song fades in underneath this one's outro, filtered at first so they don't clash",

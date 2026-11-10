@@ -12,10 +12,10 @@ import { t } from '@/i18n';
 
 import {
   EFFECT_DEFAULTS,
-  effectById,
   effectName,
   laneTimes,
   laneValue,
+  styleOf,
   withBassSwap,
   type EffectParam,
   type Lane,
@@ -79,7 +79,7 @@ const levelsAt = (plan: TransitionPlan, time: number) => {
   const sine = Math.sin((Math.min(1, x / d) * Math.PI) / 2);
   const cosine = Math.cos((Math.min(1, x / d) * Math.PI) / 2);
   const ring = (after: number) => Math.exp(-after / (ENDING_RING / 4));
-  const style = plan.style === 'blend' ? effectById(plan.effect) : undefined;
+  const style = styleOf(plan);
   if (style) {
     return {
       out: x > d + 0.1 ? 0 : laneLevel(style.outgoing, 'gain', x, d, 1),
@@ -122,7 +122,10 @@ const filterGains = (
   let lowpass = 20_000;
   let highpass = 10;
   let bassDb = 0;
-  const style = plan.style === 'blend' ? effectById(plan.effect) : undefined;
+  // A hand-off's isolator (24 dB/oct, so twice a 2nd-order filter's cut)
+  let lowCut = 10;
+  let highCut = 20_000;
+  const style = styleOf(plan);
   const swap = plan.bassSwapAt ?? [0.45, 0.55];
   const shelf = (fromDb: number, toDb: number) =>
     x <= swap[0] * d ? fromDb : x >= swap[1] * d ? toDb
@@ -130,10 +133,12 @@ const filterGains = (
   if (style) {
     const lanes = withBassSwap(style, plan.bassSwapAt)[side === 'out' ? 'outgoing' : 'incoming'];
     const at = (param: EffectParam) => laneLevel(lanes, param, Math.max(0, x), d, EFFECT_DEFAULTS[param]);
-    if (x >= 0) {
+    if (x >= -(style.preroll ?? 0)) {
       lowpass = at('lowpass');
       highpass = at('highpass');
       bassDb = at('bass');
+      lowCut = at('lowCut');
+      highCut = at('highCut');
     } else if (side === 'in') {
       bassDb = at('bass');
     }
@@ -161,6 +166,8 @@ const filterGains = (
   const gain = (band: Band) =>
     lowpassGain(BAND_HZ[band], lowpass) *
     highpassGain(BAND_HZ[band], highpass) *
+    (lowpassGain(BAND_HZ[band], highCut) ** 2) *
+    (highpassGain(BAND_HZ[band], lowCut) ** 2) *
     (band === 'low' ? 10 ** (bassDb / 20) : 1);
   return { low: gain('low'), mid: gain('mid'), high: gain('high') };
 };

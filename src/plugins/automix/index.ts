@@ -74,6 +74,12 @@ export default createPlugin({
         click: (item) => setConfig({ cutEcho: item.checked }),
       },
       {
+        label: t('plugins.automix.menu.dj-handoffs'),
+        type: 'checkbox',
+        checked: config.djHandoffs,
+        click: (item) => setConfig({ djHandoffs: item.checked }),
+      },
+      {
         label: t('plugins.automix.menu.effects'),
         type: 'checkbox',
         checked: config.effects,

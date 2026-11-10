@@ -5,13 +5,14 @@ import { alignApple, withApple } from './apple-analysis';
 import {
   decodeAndAnalyze,
   decodeWindow,
+  HEAD_SECONDS,
   LOUDNESS_HOP,
   type AnalyzedTrack,
 } from './decoder';
 import {
   CROSSFADE_REVERB,
   EFFECT_DEFAULTS,
-  effectById,
+  styleOf,
   withBassSwap,
   effectName,
   scheduleLanes,
@@ -183,7 +184,7 @@ interface OutgoingChain {
   /** Last node before the dry gain (where an echo send taps in) */
   tap: AudioNode;
   /** What an effect style's lanes automate, when the blend has one */
-  fx?: Partial<Record<EffectParam, AudioParam>>;
+  fx?: Partial<Record<EffectParam, AudioParam | AudioParam[]>>;
   /** A beat repeater's way in: the song's level, and where loops go */
   repeat?: { song: GainNode; into: AudioNode; loops: AudioBufferSourceNode[] };
   nodes: AudioNode[];
@@ -460,6 +461,87 @@ const bassSwap = (plan: TransitionPlan, mixAt: number) => {
 const filterOpenBy = (plan: TransitionPlan) =>
   plan.holdOutgoing ? plan.duration : plan.duration * 0.7;
 
+/**
+ * A DJ isolator's 24 dB/oct cut, as two 2nd-order Butterworth stages (a
+ * Linkwitz-Riley filter); its lane drives both. Neutral: wide open.
+ */
+const isolator = (context: BaseAudioContext, type: 'highpass' | 'lowpass') => {
+  const stages = [0, 1].map(() => {
+    const node = context.createBiquadFilter();
+    node.type = type;
+    node.Q.value = Math.SQRT1_2;
+    node.frequency.value = EFFECT_DEFAULTS[type === 'highpass' ? 'lowCut' : 'highCut'];
+    return node;
+  });
+  stages[0].connect(stages[1]);
+  return stages;
+};
+
+/** A hand-off that can't be played as planned (see startMix) */
+class HandoffRefused extends Error {}
+
+/** Where a hand-off's basses swap, as fractions of its window */
+const handoffSwap = (plan: TransitionPlan): [number, number] => {
+  const recipe = plan.recipe;
+  if (recipe?.kind !== 'pickup') return [0.49, 0.51];
+  const at =
+    (recipe.gapBars + recipe.overlapBars) /
+    (recipe.gapBars + recipe.overlapBars + recipe.decayBars);
+  return [Math.max(0, at - 0.005), at + 0.005];
+};
+
+/** Loudest sample of a buffer from `from` to `to` seconds */
+const peakOf = (buffer: AudioBuffer, from: number, to: number) => {
+  const first = Math.max(0, Math.floor(from * buffer.sampleRate));
+  const last = Math.min(buffer.length, Math.ceil(to * buffer.sampleRate));
+  let peak = 0;
+  for (let c = 0; c < buffer.numberOfChannels; c++) {
+    const data = buffer.getChannelData(c);
+    for (let i = first; i < last; i++) {
+      const sample = Math.abs(data[i]);
+      if (sample > peak) peak = sample;
+    }
+  }
+  return peak;
+};
+
+/**
+ * A pickup hand-off with its boosts held down so the songs never clip: the
+ * new bass's shelf against the next song's peaks after the swap, and the
+ * old song's bass lift against both songs' peaks over the bar they share
+ * (a limiter would add latency and pump; this only lowers the boosts)
+ */
+const withHeadroom = (
+  plan: TransitionPlan,
+  from: AnalyzedTrack,
+  to: AnalyzedTrack | undefined,
+  volume: number,
+): TransitionPlan => {
+  const recipe = plan.recipe;
+  if (recipe?.kind !== 'pickup' || !to || volume <= 0) return plan;
+  const bar = plan.beat * 4;
+  const swap = (recipe.gapBars + recipe.overlapBars) * bar;
+  const inAt = (time: number) => plan.mixIn + (time * plan.rate);
+  const roomDb = (peak: number) =>
+    peak > 0 ? 20 * Math.log10(0.98 / (peak * volume)) : Number.POSITIVE_INFINITY;
+  const landing = peakOf(to.head, inAt(swap), inAt(swap + (2 * bar)));
+  const shared = recipe.overlapBars
+    ? peakOf(
+        from.tail,
+        plan.mixOut + (recipe.gapBars * bar) - from.tailStart,
+        plan.mixOut + (swap) - from.tailStart,
+      ) + peakOf(to.head, inAt(recipe.gapBars * bar), inAt(swap))
+    : 0;
+  return {
+    ...plan,
+    recipe: {
+      ...recipe,
+      shelfDb: clamp(roomDb(landing), 0, recipe.shelfDb),
+      liftDb: clamp(roomDb(shared), 0, recipe.liftDb),
+    },
+  };
+};
+
 /** Time between taking over the outgoing track and the audible mix */
 export const prerollFor = (plan: TransitionPlan) =>
   clamp((plan.beat * 4) + 0.5, 4, 6);
@@ -526,6 +608,8 @@ export class AutoMixEngine {
   private stretchContext: AudioContext | null = null;
   /** Song pair (from>to) that couldn't split its stretch: plan it without */
   private noSplitFor = '';
+  /** A pair whose hand-off couldn't be played (no copy of the next song) */
+  private noHandoffFor = '';
 
   private readonly tracks = new Map<string, Promise<AnalyzedTrack | null>>();
   private readonly ready = new Map<string, AnalyzedTrack>();
@@ -1015,10 +1099,12 @@ export class AutoMixEngine {
         ? undefined
         : plan.holdOutgoing
           ? [1 - ((plan.beat || 0.5) / 2 / plan.duration), 1]
-          : (plan.bassSwapAt ??
-            (effectById(plan.effect)?.outgoing.some((lane) => lane.param === 'bass')
-              ? [0.375, 0.625]
-              : [0.45, 0.55]));
+          : plan.recipe
+            ? handoffSwap(plan)
+            : (plan.bassSwapAt ??
+              (styleOf(plan)?.outgoing.some((lane) => lane.param === 'bass')
+                ? [0.375, 0.625]
+                : [0.45, 0.55]));
     const value: TransitionTimeline = {
       plan,
       fromTitle: mix?.fromTitle ?? this.currentTitle,
@@ -1441,6 +1527,8 @@ export class AutoMixEngine {
         splitStretch,
         smoothSeconds: this.config.smoothSeconds,
         beatOnly: this.config.beatOnly,
+        handoffs: this.config.djHandoffs && this.noHandoffFor !== `${id}>${nextId}`,
+        headSeconds: HEAD_SECONDS,
         earliestMixOut: Math.max(
           this.songTime(video) + MIX_NOW_LEAD,
           from.tailStart + MIX_NOW_LEAD,
@@ -1449,7 +1537,10 @@ export class AutoMixEngine {
       // Beat grids get the kicks within a few tens of ms: line them up on
       // what the two copies actually play
       if (plan && to) {
-        const aligned = alignKicks(plan, from.tail, from.tailStart, to.head);
+        // A pickup hand-off's songs first play together a bar or so in
+        const together =
+          plan.recipe?.kind === 'pickup' ? plan.recipe.gapBars * plan.beat * 4 : 0;
+        const aligned = alignKicks(plan, from.tail, from.tailStart, to.head, together);
         // Swap the basses where the next song's bass really comes in
         const bassSwapAt = bassSwapWindow(aligned.plan, to.analysis);
         plan = {
@@ -1542,7 +1633,7 @@ export class AutoMixEngine {
       return node;
     };
 
-    const style = plan.style === 'blend' ? effectById(plan.effect) : undefined;
+    const style = styleOf(plan);
     if (style) return this.buildDressedOutgoing(context, source, style, plan);
 
     const sweepsHighpass =
@@ -1608,6 +1699,11 @@ export class AutoMixEngine {
     bass.type = 'lowshelf';
     bass.frequency.value = CROSSOVER_HZ;
     bass.gain.value = 0;
+    // A hand-off's isolator, only on styles that use it
+    const uses = (param: EffectParam) =>
+      style.outgoing.some((item) => item.param === param);
+    const lowCut = uses('lowCut') ? isolator(context, 'highpass') : [];
+    const highCut = uses('highCut') ? isolator(context, 'lowpass') : [];
     const dryMix = context.createGain();
     const send = context.createGain();
     send.gain.value = 0;
@@ -1624,6 +1720,8 @@ export class AutoMixEngine {
       highpass,
       lowpass,
       bass,
+      ...lowCut,
+      ...highCut,
       dryMix,
       send,
       wet,
@@ -1641,8 +1739,14 @@ export class AutoMixEngine {
     }
     source.connect(sourceGain).connect(input);
     highpass.connect(lowpass).connect(bass);
-    bass.connect(dryMix).connect(dry);
-    bass.connect(send);
+    let shaped: AudioNode = bass;
+    for (const stages of [lowCut, highCut]) {
+      if (stages.length === 0) continue;
+      shaped.connect(stages[0]);
+      shaped = stages[1];
+    }
+    shaped.connect(dryMix).connect(dry);
+    shaped.connect(send);
     const fx: OutgoingChain['fx'] = {
       gain: dry.gain,
       input: input.gain,
@@ -1652,6 +1756,8 @@ export class AutoMixEngine {
       send: send.gain,
       wet: wet.gain,
       dry: dryMix.gain,
+      lowCut: lowCut.map((node) => node.frequency),
+      highCut: highCut.map((node) => node.frequency),
     };
 
     let sendOut: AudioNode = send;
@@ -1695,7 +1801,7 @@ export class AutoMixEngine {
       input,
       dry,
       master,
-      tap: bass,
+      tap: shaped,
       fx,
       repeat,
       nodes,
@@ -1763,7 +1869,7 @@ export class AutoMixEngine {
 
     switch (plan.style) {
       case 'blend': {
-        const style = effectById(plan.effect);
+        const style = styleOf(plan);
         if (chain.fx && style) {
           scheduleLanes(
             chain.fx,
@@ -1771,11 +1877,14 @@ export class AutoMixEngine {
             mixAt,
             duration,
             'outgoing',
+            style.preroll,
           );
           if (clock) {
             this.scheduleRepeats(context, chain, style, mixAt, duration, clock);
           }
-          chain.source.stop(mixAt + duration + 0.1);
+          chain.source.stop(
+            (style.outEnd === undefined ? mixAt + duration : timeIn(style.outEnd, mixAt, duration)) + 0.1,
+          );
           break;
         }
         if (plan.holdOutgoing) {
@@ -1907,8 +2016,12 @@ export class AutoMixEngine {
     const stretch = this.stretch;
     if (stretched && !stretch) return undefined;
 
+    // A hand-off may start the next song just after the mix point (its
+    // pickup fills the bar after): our copy gets silence in front of it,
+    // which also gives the stretcher its run-up
+    const pad = plan.mixIn < 0 && stretched ? 1 - plan.mixIn : 0;
     // Run the stretcher a moment early so it's settled when it's heard
-    const lead = stretched ? Math.min(1, plan.mixIn / plan.rate) : 0;
+    const lead = stretched ? Math.min(1, (plan.mixIn + pad) / plan.rate) : 0;
     const steps: RateStep[] = [{ at: mixAt - lead, rate: plan.rate }];
     if (stretched && glideDuring) {
       steps.push(...blendGlide(mixAt, mixEnd, plan.rate));
@@ -1947,7 +2060,7 @@ export class AutoMixEngine {
     // A blend's bass swap needs our copy (the player can't be EQ'd), so the
     // player only takes over once the swap is done, or once an effect
     // style's filters have opened all the way
-    const style = plan.style === 'blend' ? effectById(plan.effect) : undefined;
+    const style = styleOf(plan);
     const handOverFrom = Math.max(
       stretched
         ? steady + 0.25
@@ -1967,9 +2080,14 @@ export class AutoMixEngine {
     let advance: IncomingHead['advance'];
     if (stretch && stretched) {
       source = stretch;
-      const channels = Array.from({ length: to.head.numberOfChannels }, (_, c) =>
-        to.head.getChannelData(c).slice(),
-      );
+      const padFrames = Math.round(pad * to.head.sampleRate);
+      const channels = Array.from({ length: to.head.numberOfChannels }, (_, c) => {
+        const data = to.head.getChannelData(c);
+        if (padFrames === 0) return data.slice();
+        const padded = new Float32Array(padFrames + data.length);
+        padded.set(data, padFrames);
+        return padded;
+      });
       // Messages are handled in order, so no need to wait between them
       Promise.all([
         stretch.dropBuffers(),
@@ -1981,7 +2099,7 @@ export class AutoMixEngine {
           outputTime: context.currentTime,
           output: steps[0].at,
           active: true,
-          input: position(steps[0].at),
+          input: position(steps[0].at) + (padFrames / to.head.sampleRate),
           rate: steps[0].rate,
         }),
       ]).catch(() => {});
@@ -2003,7 +2121,10 @@ export class AutoMixEngine {
     } else {
       const buffer = context.createBufferSource();
       buffer.buffer = to.head;
-      buffer.start(mixAt, plan.mixIn);
+      buffer.start(
+        mixAt + Math.max(0, -plan.mixIn / plan.rate),
+        Math.max(0, plan.mixIn),
+      );
       source = buffer;
     }
 
@@ -2016,23 +2137,30 @@ export class AutoMixEngine {
       lowpass.type = 'lowpass';
       const bass = context.createBiquadFilter();
       bass.type = 'lowshelf';
-      bass.frequency.value = CROSSOVER_HZ;
+      bass.frequency.value = style.inShelfHz ?? CROSSOVER_HZ;
       // Only the lanes a style has are scheduled: the rest must start open
       // (a biquad's default is 350 Hz, which muffles or thins the song)
       highpass.frequency.value = EFFECT_DEFAULTS.highpass;
       lowpass.frequency.value = EFFECT_DEFAULTS.lowpass;
-      stages.push(highpass, lowpass, bass, gain);
+      const uses = (param: EffectParam) =>
+        style.incoming.some((item) => item.param === param);
+      const lowCut = uses('lowCut') ? isolator(context, 'highpass') : [];
+      const highCut = uses('highCut') ? isolator(context, 'lowpass') : [];
+      stages.push(highpass, lowpass, bass, ...lowCut, ...highCut, gain);
       scheduleLanes(
         {
           gain: gain.gain,
           highpass: highpass.frequency,
           lowpass: lowpass.frequency,
           bass: bass.gain,
+          lowCut: lowCut.map((node) => node.frequency),
+          highCut: highCut.map((node) => node.frequency),
         },
         withBassSwap(style, plan.bassSwapAt).incoming,
         mixAt,
         plan.duration,
         'incoming',
+        style.preroll,
       );
     } else if (plan.filterIn) {
       // Thin at first so the two songs don't muddy, opening up fully by the
@@ -2125,8 +2253,10 @@ export class AutoMixEngine {
     // overlap (see blendGlide), so neither changes speed while heard alone.
     // Not when the old song plays out at full volume to its final hit
     const glideMixAt = startAt + (plan.mixOut - startOffset);
+    // A hand-off leaves the old song alone: the new one matches it
     const glide =
       plan.style === 'blend' &&
+      !plan.recipe &&
       !plan.holdOutgoing &&
       Math.abs(plan.rate - 1) >= 0.001 &&
       Boolean(outStretch && this.stretch) &&
@@ -2134,6 +2264,7 @@ export class AutoMixEngine {
       glideMixAt - startAt >= OUT_HANDOFF + 0.2;
     const split =
       !glide &&
+      !plan.recipe &&
       needsSplit &&
       plan.style === 'blend' &&
       Boolean(outStretch && this.stretch) &&
@@ -2158,7 +2289,7 @@ export class AutoMixEngine {
           duration: plan.duration / outRate,
           beat: plan.beat / outRate,
         }
-      : plan;
+      : withHeadroom(plan, from, to, video.muted ? 0 : video.volume);
 
     // The old song's tempo over time: 1x at the hand-off, then a glide to
     // outRate shortly after the stretched copy has taken over
@@ -2248,12 +2379,19 @@ export class AutoMixEngine {
       if ((split || glide) && !head) {
         throw new Error('no stretched copy to split with');
       }
+      if (!head && timed.recipe) {
+        // A hand-off is our copy's lanes: without it, it'd be a long blend
+        // in the wrong place. Plan this pair again without one
+        throw new HandoffRefused();
+      }
       if (!head && chain.fx) {
         // An effect style needs our copy of the new song to filter, which
         // isn't there: a plain equal-power blend instead
-        for (const [name, param] of Object.entries(chain.fx)) {
-          param.cancelScheduledValues(mixAt);
-          param.setValueAtTime(EFFECT_DEFAULTS[name as EffectParam], mixAt);
+        for (const [name, given] of Object.entries(chain.fx)) {
+          for (const param of Array.isArray(given) ? given : [given]) {
+            param.cancelScheduledValues(mixAt);
+            param.setValueAtTime(EFFECT_DEFAULTS[name as EffectParam], mixAt);
+          }
         }
         if (chain.repeat) {
           chain.repeat.song.gain.cancelScheduledValues(mixAt);
@@ -2271,6 +2409,12 @@ export class AutoMixEngine {
       // over the player, which hasn't been touched yet
       chain.source.stop();
       for (const node of chain.nodes) node.disconnect();
+      if (error instanceof HandoffRefused) {
+        this.noHandoffFor = pair;
+        this.plan = null;
+        this.planKey = '';
+        return;
+      }
       if (split || glide) {
         refuseSplit();
         return;

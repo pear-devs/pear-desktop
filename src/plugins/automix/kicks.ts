@@ -128,17 +128,23 @@ export const alignKicks = (
   tail: AudioBuffer,
   tailStart: number,
   head: AudioBuffer,
+  /**
+   * Seconds into the blend the two songs first play together (a hand-off
+   * starts the next song a bar after its mix point)
+   */
+  from = 0,
 ): { plan: TransitionPlan; nudge: number } => {
   const unchanged = { plan, nudge: 0 };
   if (plan.style !== 'blend' || plan.beat <= 0) return unchanged;
-  const span = Math.min(plan.duration, MAX_SPAN);
+  const span = Math.min(plan.duration - from, MAX_SPAN);
+  if (span <= 0) return unchanged;
 
-  const outgoing = kickEnvelope(tail, plan.mixOut - tailStart, span);
+  const outgoing = kickEnvelope(tail, plan.mixOut + from - tailStart, span);
   // The incoming copy, a little either side, mapped onto the outgoing's time
   const margin = MAX_NUDGE * plan.rate;
   const source = kickEnvelope(
     head,
-    plan.mixIn - margin,
+    plan.mixIn + (from * plan.rate) - margin,
     (span * plan.rate) + (2 * margin),
   );
   if (!outgoing || !source) return unchanged;

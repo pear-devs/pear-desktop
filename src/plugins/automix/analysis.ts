@@ -78,7 +78,62 @@ export interface TrackAnalysis {
   traits?: SongTraits;
   /** Apple Music's main genre (e.g. "Dance"), for the effect styles */
   genre?: string;
+  /**
+   * How loud the song is over time, per band, so a mix can find its
+   * breakdowns, where its beat stops and how sparse an intro is
+   */
+  levels?: BandLevels;
 }
+
+/** Mean-square level per LEVEL_HOP seconds, per band */
+export interface BandLevels {
+  hop: number;
+  low: Float32Array;
+  mid: Float32Array;
+  full: Float32Array;
+}
+
+const LEVEL_HOP = 0.05;
+
+const bandLevels = (bands: AnalysisBands): BandLevels => {
+  const hop = Math.max(1, Math.round(bands.sampleRate * LEVEL_HOP));
+  const power = (signal: Float32Array) => {
+    const out = new Float32Array(Math.floor(signal.length / hop));
+    for (let i = 0; i < out.length; i++) {
+      let sum = 0;
+      for (let k = i * hop; k < (i + 1) * hop; k++) sum += signal[k] * signal[k];
+      out[i] = sum / hop;
+    }
+    return out;
+  };
+  return {
+    hop: hop / bands.sampleRate,
+    low: power(bands.low),
+    mid: power(bands.mid),
+    full: power(bands.full),
+  };
+};
+
+/**
+ * Level of one band of a song from `from` to `to` (song seconds), in dB on
+ * the same scale as bodyLoudness; undefined when it isn't known there
+ */
+export const levelDb = (
+  track: TrackAnalysis,
+  band: 'low' | 'mid' | 'full',
+  from: number,
+  to: number,
+) => {
+  const levels = track.levels;
+  if (!levels) return undefined;
+  const data = levels[band];
+  const first = Math.max(0, Math.floor(from / levels.hop));
+  const last = Math.min(data.length, Math.ceil(to / levels.hop));
+  if (last <= first) return undefined;
+  let sum = 0;
+  for (let i = first; i < last; i++) sum += data[i];
+  return 10 * Math.log10((sum / (last - first)) + 1e-12);
+};
 
 const HOP = 128;
 const MIN_BPM = 60;
@@ -753,5 +808,6 @@ export const analyzeTrack = (bands: AnalysisBands): TrackAnalysis => {
     ),
     start,
     end,
+    levels: bandLevels(bands),
   };
 };
