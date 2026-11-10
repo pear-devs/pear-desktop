@@ -58,22 +58,6 @@ export interface PlannerOptions {
    * phrase if one is close) instead of waiting for the outro
    */
   asap?: boolean;
-  /**
-   * Beat cuts drop the next song in like a DJ: a beat or two of silence
-   * before the downbeat, then the next song lands past its intro, a little
-   * louder, and settles back to its own level
-   */
-  drop?: boolean;
-}
-
-/** How a dropped beat cut lands (see PlannerOptions.drop) */
-export interface DropShape {
-  /** Seconds of silence before the downbeat (the old song stops early) */
-  gap: number;
-  /** Level the next song lands at, settling back to 1 */
-  boost: number;
-  /** Seconds it takes to settle back to its own level */
-  ease: number;
 }
 
 export interface TransitionPlan {
@@ -101,8 +85,6 @@ export interface TransitionPlan {
    * only arrives after the usual swap (measured from the audio)
    */
   bassSwapAt?: [number, number];
-  /** A beat cut dropped in after a moment of silence, landing louder */
-  drop?: DropShape;
   /** Bring the incoming song in high-passed, opening up as it fades in */
   filterIn?: boolean;
   /** Camelot keys at the mix point, when detected (e.g. "8A") */
@@ -376,42 +358,6 @@ const entryPoint = (track: TrackAnalysis) => {
   return grid.find((time) => time >= audible) ?? track.leadingSilenceEnd;
 };
 
-/** Beats of silence before a dropped cut lands */
-const DROP_GAP_BEATS = 2;
-/** Longest silence before a drop, for slow songs */
-const DROP_GAP_MAX = 1.2;
-/** How much louder a dropped song lands */
-const DROP_BOOST_DB = 2;
-/** Bars it takes a dropped song to settle back to its own level */
-const DROP_EASE_BARS = 2;
-/**
- * Latest a drop may land in the next song: only its first minute is decoded
- * for mixing, and our copy plays until it has settled
- */
-const DROP_ENTRY_LIMIT = 40;
-
-/**
- * Where to drop into the next song: past a quiet intro, on the first
- * phrase (else bar) where it plays at full strength with its bass in, as
- * long as no vocal line is cut into. The song's first bar when its intro is
- * short, it never gets going in time, or every spot lands mid-line.
- */
-const dropEntry = (track: TrackAnalysis) => {
-  const start = entryPoint(track);
-  const bar = track.beatPeriod * BAR_BEATS;
-  const body = Math.max(track.introEnd, track.bassEntry ?? 0);
-  if (!bar || body - start < 2 * bar) return start;
-  const from = body - (bar / 2);
-  const to = Math.min(body + (4 * bar), DROP_ENTRY_LIMIT);
-  const singing = (time: number) =>
-    track.vocals?.some(
-      (region) => region.start < time - 0.1 && region.end > time + 0.1,
-    ) ?? false;
-  const pick = (grid: number[]) =>
-    grid.find((time) => time >= from && time <= to && !singing(time));
-  return pick(track.phrases ?? []) ?? pick(track.downbeats) ?? start;
-};
-
 /** The last hit of a song that stops on the beat, if the grid reaches it */
 const finalHit = (track: TrackAnalysis) => {
   const last = track.beats.at(-1);
@@ -626,18 +572,14 @@ const planCut = (
         limit,
       ) ?? latestGridPoint(from.beats, options.earliestMixOut, limit));
   if (mixOut === undefined) return null;
-  // A drop stops the old song a beat or two before the downbeat
-  const gap = options.drop
-    ? Math.min(from.beatPeriod * DROP_GAP_BEATS, DROP_GAP_MAX)
-    : 0;
   // Never cut a line off mid-way: wait for the first downbeat (else beat)
   // after it, as long as that's still before the song ends
-  const cutAt = mixOut - gap;
+  const cutAt = mixOut;
   const line = from.vocals?.find(
     (region) => region.start < cutAt && region.end > cutAt + 0.1,
   );
   const after = (grid: number[]) =>
-    line && grid.find((time) => time - gap >= line.end && time <= end);
+    line && grid.find((time) => time >= line.end && time <= end);
   const afterLine = after(from.downbeats) ?? after(from.beats) ?? undefined;
   if (afterLine !== undefined) mixOut = afterLine;
 
@@ -645,16 +587,7 @@ const planCut = (
     style: 'cut',
     reason: 'fallback',
     mixOut,
-    mixIn: options.drop
-      ? dropEntry(to)
-      : (vocalEntry(to, entryPoint(to), 0) ?? entryPoint(to)),
-    drop: options.drop
-      ? {
-          gap,
-          boost: 10 ** (DROP_BOOST_DB / 20),
-          ease: from.beatPeriod * BAR_BEATS * DROP_EASE_BARS,
-        }
-      : undefined,
+    mixIn: vocalEntry(to, entryPoint(to), 0) ?? entryPoint(to),
     duration: from.beatPeriod,
     rate: 1,
     beat: from.beatPeriod,
@@ -1066,7 +999,6 @@ export const planTransition = (
               ? '-'
               : Math.round(to.vocalEntry * 10) / 10,
           endsAbruptly: endsAbruptly(from),
-          dropIn: plan.drop ? Math.round(plan.mixIn * 10) / 10 : '-',
         },
       };
     }

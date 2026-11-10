@@ -16,11 +16,6 @@ export type AutoMixPluginConfig = {
   beatOnly: boolean;
   /** Echo the old song's last beat under the next one on a beat cut */
   cutEcho: boolean;
-  /**
-   * Beat cuts drop the next song in: a beat or two of silence, then it
-   * lands past its intro, a little louder, settling back
-   */
-  cutDrop: boolean;
   /** Dress beat-matched blends in Apple Music's effect styles (filters, echoes, reverb) */
   effects: boolean;
   /**
@@ -52,7 +47,6 @@ export const defaultConfig: AutoMixPluginConfig = {
   smoothSeconds: 10,
   beatOnly: false,
   cutEcho: false,
-  cutDrop: false,
   effects: true,
   spotifyStyle: false,
   respectAlbums: true,

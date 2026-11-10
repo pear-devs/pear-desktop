@@ -382,7 +382,6 @@
         "apple-analysis": "Use Apple Music's song analysis (beats, phrases, vocals) when available",
         "beat-only": "Only beat-matched transitions (Beat Match or Beat Cut, no segues)",
         "cut-echo": "Echo the old song's last beat on Beat Cuts",
-        "cut-drop": "Drop Beat Cuts in (a beat of silence, then the next song lands past its intro)",
         "effects": "Apple Music effects on blends (filter sweeps, echoes, reverb)",
         "spotify-style": "Spotify-style blends (bass swap at the midpoint, filters, no vocal clashes)",
         "reorder-shape": {
