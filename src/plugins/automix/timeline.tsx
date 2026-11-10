@@ -75,7 +75,8 @@ const laneLevel = (
 const levelsAt = (plan: TransitionPlan, time: number) => {
   const x = time - plan.mixOut;
   const d = Math.max(0.05, plan.duration);
-  if (x < 0) return { out: 1, in: 0 };
+  // A drop's silence: the old song stops a beat or two before the downbeat
+  if (x < 0) return { out: plan.drop && x >= -plan.drop.gap ? 0 : 1, in: 0 };
   const sine = Math.sin((Math.min(1, x / d) * Math.PI) / 2);
   const cosine = Math.cos((Math.min(1, x / d) * Math.PI) / 2);
   const ring = (after: number) => Math.exp(-after / (ENDING_RING / 4));
@@ -87,8 +88,11 @@ const levelsAt = (plan: TransitionPlan, time: number) => {
     };
   }
   switch (plan.style) {
-    case 'cut':
-      return { out: 0, in: 1 };
+    case 'cut': {
+      const drop = plan.drop;
+      if (!drop || x >= drop.ease) return { out: 0, in: 1 };
+      return { out: 0, in: drop.boost + ((1 - drop.boost) * (x / drop.ease)) };
+    }
     case 'segue':
       return { out: Math.exp(-x / (d / 4)), in: 1 };
     default:
@@ -156,7 +160,8 @@ const filterGains = (
       highpass = sweep(x, 0, plan.holdOutgoing ? d : 0.7 * d, 500, 20);
     }
   } else if (plan.style === 'cut' && side === 'out') {
-    highpass = sweep(x, -4 * (plan.beat || 0.5), 0, 20, 900);
+    const stop = -(plan.drop?.gap ?? 0);
+    highpass = sweep(x, stop - (4 * (plan.beat || 0.5)), stop, 20, 900);
   }
   const gain = (band: Band) =>
     lowpassGain(BAND_HZ[band], lowpass) *

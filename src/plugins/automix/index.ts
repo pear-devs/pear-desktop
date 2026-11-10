@@ -74,6 +74,12 @@ export default createPlugin({
         click: (item) => setConfig({ cutEcho: item.checked }),
       },
       {
+        label: t('plugins.automix.menu.cut-drop'),
+        type: 'checkbox',
+        checked: config.cutDrop,
+        click: (item) => setConfig({ cutDrop: item.checked }),
+      },
+      {
         label: t('plugins.automix.menu.effects'),
         type: 'checkbox',
         checked: config.effects,

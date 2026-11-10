@@ -460,9 +460,40 @@ const bassSwap = (plan: TransitionPlan, mixAt: number) => {
 const filterOpenBy = (plan: TransitionPlan) =>
   plan.holdOutgoing ? plan.duration : plan.duration * 0.7;
 
-/** Time between taking over the outgoing track and the audible mix */
+/**
+ * Time between taking over the outgoing track and the audible mix (a drop's
+ * build-up bar comes before its silence)
+ */
 export const prerollFor = (plan: TransitionPlan) =>
-  clamp((plan.beat * 4) + 0.5, 4, 6);
+  clamp((plan.beat * 4) + 0.5, 4, 6) + (plan.drop?.gap ?? 0);
+
+/**
+ * How much louder a dropped song can land: the planned boost, held down so
+ * its loudest sample while settling stays under full scale at `volume`
+ */
+const dropBoost = (
+  head: AudioBuffer,
+  plan: TransitionPlan,
+  volume: number,
+) => {
+  const drop = plan.drop;
+  if (!drop) return 1;
+  const from = Math.floor(plan.mixIn * head.sampleRate);
+  const to = Math.min(
+    head.length,
+    Math.ceil((plan.mixIn + (drop.ease * plan.rate)) * head.sampleRate),
+  );
+  let peak = 0;
+  for (let c = 0; c < head.numberOfChannels; c++) {
+    const data = head.getChannelData(c);
+    for (let i = from; i < to; i++) {
+      const sample = Math.abs(data[i]);
+      if (sample > peak) peak = sample;
+    }
+  }
+  const room = peak * volume > 0 ? 0.98 / (peak * volume) : drop.boost;
+  return clamp(Math.min(drop.boost, room), 1, drop.boost);
+};
 
 const equalPowerIn = (() => {
   const curve = new Float32Array(64);
@@ -1441,6 +1472,7 @@ export class AutoMixEngine {
         splitStretch,
         smoothSeconds: this.config.smoothSeconds,
         beatOnly: this.config.beatOnly,
+        drop: this.config.cutDrop,
         earliestMixOut: Math.max(
           this.songTime(video) + MIX_NOW_LEAD,
           from.tailStart + MIX_NOW_LEAD,
@@ -1803,13 +1835,17 @@ export class AutoMixEngine {
 
       case 'cut': {
         // Filter build-up over the last bar, an optional echo throw, then a
-        // hard cut on the downbeat
+        // hard cut on the downbeat. A drop stops the old song a beat or two
+        // early instead, and the silence is left alone (no echo over it)
         const beat = plan.beat || 0.5;
-        const buildFrom = Math.max(context.currentTime, mixAt - (beat * 4));
-        highpass?.frequency.setValueAtTime(20, buildFrom);
-        highpass?.frequency.exponentialRampToValueAtTime(900, mixAt);
+        const stopAt = mixAt - (plan.drop?.gap ?? 0);
+        const buildFrom = Math.max(context.currentTime, stopAt - (beat * 4));
+        if (stopAt > buildFrom) {
+          highpass?.frequency.setValueAtTime(20, buildFrom);
+          highpass?.frequency.exponentialRampToValueAtTime(900, stopAt);
+        }
 
-        if (this.config.cutEcho) {
+        if (this.config.cutEcho && !plan.drop) {
           const send = context.createGain();
           send.gain.value = 0;
           const delay = context.createDelay(2);
@@ -1832,8 +1868,13 @@ export class AutoMixEngine {
           feedback.gain.linearRampToValueAtTime(0, mixAt + (beat * 6));
         }
 
-        dry.gain.setValueAtTime(1, mixAt - 0.01);
-        dry.gain.linearRampToValueAtTime(0, mixAt + 0.04);
+        if (plan.drop) {
+          dry.gain.setValueAtTime(1, Math.max(context.currentTime, stopAt - 0.01));
+          dry.gain.linearRampToValueAtTime(0, stopAt + 0.02);
+        } else {
+          dry.gain.setValueAtTime(1, mixAt - 0.01);
+          dry.gain.linearRampToValueAtTime(0, mixAt + 0.04);
+        }
         chain.source.stop(mixAt + 0.1);
         break;
       }
@@ -1954,6 +1995,8 @@ export class AutoMixEngine {
         : mixAt + (plan.filterIn ? filterOpenBy(plan) : 0.3),
       plan.style === 'blend' ? bassSwap(plan, mixAt).to + 0.1 : 0,
       style ? mixAt + plan.duration + 0.1 : 0,
+      // The player can't play louder than its volume: a drop's boost is ours
+      plan.drop ? mixAt + plan.drop.ease + 0.1 : 0,
     );
     // Room for the player to catch up before the copy runs out
     if (position(handOverFrom) + 6 > to.head.duration) return undefined;
@@ -2066,7 +2109,15 @@ export class AutoMixEngine {
       .connect(context.destination);
 
     // With an effect style, the level is one of the style's lanes
-    if (plan.style === 'cut' || plan.style === 'segue') {
+    if (plan.style === 'cut' && plan.drop) {
+      // Lands a little louder, settling back to its own level by the time
+      // the player takes over (never louder than full scale)
+      const boost = dropBoost(to.head, plan, volume);
+      gain.gain.setValueAtTime(0, mixAt);
+      gain.gain.linearRampToValueAtTime(boost, mixAt + 0.004);
+      gain.gain.setValueAtTime(boost, mixAt + 0.004);
+      gain.gain.linearRampToValueAtTime(1, mixAt + plan.drop.ease);
+    } else if (plan.style === 'cut' || plan.style === 'segue') {
       // The incoming song starts as itself: no fade-in on its first note
       gain.gain.setValueAtTime(0, mixAt);
       gain.gain.linearRampToValueAtTime(1, mixAt + 0.004);
