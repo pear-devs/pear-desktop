@@ -112,11 +112,19 @@ const sweep = (time: number, from: number, to: number, a: number, b: number) =>
  * What the transition's filters leave of each band of one song at a timeline
  * time (amplitude, 0..1), as the engine schedules them
  */
-const filterGains = (
+interface FilterParams {
+  lowpass: number;
+  highpass: number;
+  bassDb: number;
+  lowCut: number;
+  highCut: number;
+}
+
+const filterParams = (
   plan: TransitionPlan,
   side: 'out' | 'in',
   time: number,
-): Record<Band, number> => {
+): FilterParams => {
   const x = time - plan.mixOut;
   const d = Math.max(0.05, plan.duration);
   let lowpass = 20_000;
@@ -163,6 +171,15 @@ const filterGains = (
   } else if (plan.style === 'cut' && side === 'out') {
     highpass = sweep(x, -4 * (plan.beat || 0.5), 0, 20, 900);
   }
+  return { lowpass, highpass, bassDb, lowCut, highCut };
+};
+
+const filterGains = (
+  plan: TransitionPlan,
+  side: 'out' | 'in',
+  time: number,
+): Record<Band, number> => {
+  const { lowpass, highpass, bassDb, lowCut, highCut } = filterParams(plan, side, time);
   const gain = (band: Band) =>
     lowpassGain(BAND_HZ[band], lowpass) *
     highpassGain(BAND_HZ[band], highpass) *
@@ -171,6 +188,40 @@ const filterGains = (
     (band === 'low' ? 10 ** (bassDb / 20) : 1);
   return { low: gain('low'), mid: gain('mid'), high: gain('high') };
 };
+
+/** Deepest bass cut drawn on the EQ line (the bottom of the lane) */
+const EQ_FLOOR_DB = -30;
+
+/**
+ * Where a song's bass sits on the EQ line, -1 (killed) .. 0 (flat): the
+ * isolator's low cut and the low shelf together, at the bass band
+ */
+const eqPosition = (p: FilterParams) => {
+  const db =
+    p.bassDb + (40 * Math.log10(Math.max(1e-6, highpassGain(BAND_HZ.low, p.lowCut))));
+  return Math.max(EQ_FLOOR_DB, Math.min(0, db)) / -EQ_FLOOR_DB;
+};
+
+/**
+ * One DJ filter knob, like Spotify's: 0 open, up to +1 a high-pass closing
+ * in (20 Hz .. 9 kHz), down to -1 a low-pass (16 kHz .. 120 Hz), both
+ * geometric
+ */
+const filterKnob = (p: FilterParams) => {
+  const lowpass = Math.min(p.lowpass, p.highCut);
+  if (p.highpass > 21) {
+    return Math.min(1, Math.log(p.highpass / 20) / Math.log(9000 / 20));
+  }
+  if (lowpass < 16_000) {
+    return -Math.min(1, Math.log(16_000 / lowpass) / Math.log(16_000 / 120));
+  }
+  return 0;
+};
+
+/** Line colours, fixed so the three never get mixed up (as in Spotify's editor) */
+const VOLUME_COLOR = '90, 220, 255';
+const EQ_COLOR = '255, 206, 64';
+const FILTER_COLOR = '190, 140, 255';
 
 interface Layout {
   width: number;
@@ -312,8 +363,36 @@ const drawStatic = (
     ctx.stroke();
     ctx.restore();
   };
-  curve(layout.topY, (l) => l.out, `rgba(${accent}, 0.95)`);
-  curve(layout.bottomY, (l) => l.in, `rgba(${accent}, 0.95)`);
+  curve(layout.topY, (l) => l.out, `rgba(${VOLUME_COLOR}, 0.95)`);
+  curve(layout.bottomY, (l) => l.in, `rgba(${VOLUME_COLOR}, 0.95)`);
+
+  // EQ (bass) and filter lines, centred on each lane: flat / open on the
+  // centre line, a bass cut going down, a high-pass up and a low-pass down
+  const line = (
+    centre: number,
+    side: 'out' | 'in',
+    value: (p: FilterParams) => number,
+    color: string,
+  ) => {
+    ctx.save();
+    ctx.strokeStyle = `rgba(${color}, 0.9)`;
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.beginPath();
+    const steps = Math.ceil(width / (2 * dpr));
+    for (let i = 0; i <= steps; i++) {
+      const px = (i / steps) * width;
+      const time = tl.start + ((px / width) * (tl.end - tl.start));
+      const y = centre - (value(filterParams(plan, side, time)) * half * 0.92);
+      if (i === 0) ctx.moveTo(px, y);
+      else ctx.lineTo(px, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  };
+  for (const [centre, side] of [[layout.topY, 'out'], [layout.bottomY, 'in']] as const) {
+    line(centre, side, eqPosition, EQ_COLOR);
+    line(centre, side, filterKnob, FILTER_COLOR);
+  }
 
   // Labels inside the plot
   const label = (text: string, px: number, y: number, color: string, align: CanvasTextAlign = 'left') => {
@@ -558,7 +637,9 @@ export const TimelinePanel = (props: TimelineProps & { close: () => void }) => {
                 <span><i class="automix-tl-dot" style={{ background: 'rgb(70, 140, 255)' }} />{t('plugins.automix.ui.timeline.low')}</span>
                 <span><i class="automix-tl-dot" style={{ background: 'rgb(255, 168, 64)' }} />{t('plugins.automix.ui.timeline.mid')}</span>
                 <span><i class="automix-tl-dot" style={{ background: 'rgb(236, 240, 255)' }} />{t('plugins.automix.ui.timeline.high')}</span>
-                <span><i class="automix-tl-line" />{t('plugins.automix.ui.timeline.level')}</span>
+                <span><i class="automix-tl-line" style={{ 'background': `rgb(${VOLUME_COLOR})`, 'box-shadow': `0 0 6px rgba(${VOLUME_COLOR}, 0.7)` }} />{t('plugins.automix.ui.timeline.level')}</span>
+                <span><i class="automix-tl-line" style={{ 'background': `rgb(${EQ_COLOR})`, 'box-shadow': 'none' }} />{t('plugins.automix.ui.timeline.eq')}</span>
+                <span><i class="automix-tl-line" style={{ 'background': `rgb(${FILTER_COLOR})`, 'box-shadow': 'none' }} />{t('plugins.automix.ui.timeline.filter')}</span>
                 <span><i class="automix-tl-tick" />{t('plugins.automix.ui.timeline.bars')}</span>
               </div>
               <div class="automix-tl-why">
