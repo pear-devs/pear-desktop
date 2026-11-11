@@ -84,8 +84,6 @@ export interface EffectStyle {
   repeats?: { at: At; bars: number }[];
   /** When the repeater lets go of the song again (default: never) */
   repeatEnd?: At;
-  /** Corner of the incoming song's bass shelf, Hz (default CROSSOVER_HZ) */
-  inShelfHz?: number;
   /** When the outgoing song has nothing left to play (default: the end) */
   outEnd?: At;
   /** Lanes may start this long before the window (to cut just ahead of a beat) */
@@ -626,10 +624,8 @@ export const pickSpotifyEffect = (bars: number, seed: string): EffectStyle => {
 export const effectById = (id: number | undefined) =>
   [...EFFECT_STYLES, ...SPOTIFY_STYLES].find((style) => style.id === id);
 
-/** Where a DJ isolator splits the bass off (both reels measure ~300 Hz, LR4) */
+/** Where a DJ isolator splits the bass off (~300 Hz, 24 dB/oct) */
 const ISOLATOR_HZ = 300;
-/** Peak of an outro swap's high-pass bump on the old song, Hz */
-const HIGHPASS_BUMP_HZ = 190;
 /** How long an isolator switch takes, either side of the bar line */
 const SWITCH = 0.025;
 
@@ -639,8 +635,8 @@ const HANDOFF_NAMES: Record<HandoffRecipe['kind'], string> = {
 };
 
 /**
- * The lanes of a DJ hand-off (see handoff.ts and HandoffRecipe), measured
- * from two Spotify Mix custom transitions against the original recordings
+ * The lanes of a DJ hand-off (see handoff.ts and HandoffRecipe): both songs
+ * at full level, the bass handed over with an isolator on a bar line
  */
 export const handoffStyle = (recipe: HandoffRecipe): EffectStyle => {
   if (recipe.kind === 'outro') {
@@ -653,12 +649,6 @@ export const handoffStyle = (recipe: HandoffRecipe): EffectStyle => {
       bars: recipe.bars,
       outEnd: [1, 0.01],
       outgoing: [
-        // The high-pass bump from Spotify's own Did It First into Ainvayi
-        // (its filter knob 0.5 -> 0.685 -> 0.5, i.e. ~190 Hz): the old song
-        // thins out over the first bar as the new one comes in, and is full
-        // again before its bass goes
-        lane('highpass', 20, HIGHPASS_BUMP_HZ, 'log', [0, 1], [0, 1 / recipe.bars]),
-        lane('highpass', HIGHPASS_BUMP_HZ, 20, 'log', [0, 1], [1 / recipe.bars, 0.5]),
         lane('lowCut', 10, ISOLATOR_HZ, 'log', [0, 1], [[0.5, -SWITCH], [0.5, SWITCH]]),
         lane('gain', 1, 0, 'linear', [0, 1], [[1, -0.01], [1, 0.005]]),
       ],
@@ -670,8 +660,8 @@ export const handoffStyle = (recipe: HandoffRecipe): EffectStyle => {
     };
   }
 
-  const { gapBars: gap, overlapBars: overlap, decayBars } = recipe;
-  const u = 1 / (gap + overlap + decayBars);
+  const { gapBars: gap, overlapBars: overlap, afterBars } = recipe;
+  const u = 1 / (gap + overlap + afterBars);
   const bar = (bars: number, seconds = 0): At => [bars * u, seconds];
   const swap = gap + overlap;
   const outgoing: Lane[] = [];
@@ -680,17 +670,15 @@ export const handoffStyle = (recipe: HandoffRecipe): EffectStyle => {
     outgoing.push(lane('gain', 1, 0, 'linear', [0, 1], [bar(0, -0.015), bar(0, -0.005)]));
   }
   if (overlap) {
-    // One bar of only the old song's kick and bass, a little lifted
+    // One bar of only the old song's kick and bass under the new song
     if (gap) {
       outgoing.push(
         set('highCut', ISOLATOR_HZ, bar(gap, -0.06)),
-        set('bass', recipe.liftDb, bar(gap, -0.06)),
         lane('gain', 0, 1, 'linear', [0, 1], [bar(gap, -0.04), bar(gap)]),
       );
     } else {
       outgoing.push(
         lane('highCut', 20_000, ISOLATOR_HZ, 'log', [0, 1], [bar(0, -0.03), bar(0)]),
-        set('bass', recipe.liftDb, bar(0, -0.03)),
       );
     }
     outgoing.push(
@@ -700,9 +688,8 @@ export const handoffStyle = (recipe: HandoffRecipe): EffectStyle => {
     outgoing.push(lane('gain', 1, 0, 'linear', [0, 1], [bar(0, -0.015), bar(0, 0.005)]));
   }
 
-  // The new song from its first note, at full level; no bass of its own
-  // while the old one carries the beat; then its bass lands hot and eases
-  // back (front-loaded, as measured: +4.8, 3.8, 2.0, 1.3 dB every 2 bars)
+  // The new song from its first note, at full level, with no bass of its
+  // own while the old one carries the beat
   const incoming: Lane[] = [lane('gain', 0, 1, 'linear', [0, 1], [0, [0, 0.005]])];
   if (overlap) {
     incoming.push(
@@ -710,15 +697,11 @@ export const handoffStyle = (recipe: HandoffRecipe): EffectStyle => {
       lane('lowCut', ISOLATOR_HZ, 10, 'log', [0, 1], [bar(swap, -SWITCH), bar(swap, SWITCH)]),
     );
   }
-  if (recipe.shelfDb > 0) {
-    incoming.push(lane('bass', recipe.shelfDb, 0, 'in-2', [0, 1], [bar(swap), 1]));
-  }
   return {
     id: 201,
     name: HANDOFF_NAMES.pickup,
     family: 'handoff',
-    bars: gap + overlap + decayBars,
-    inShelfHz: ISOLATOR_HZ,
+    bars: gap + overlap + afterBars,
     outEnd: bar(swap, 0.05),
     preroll: 0.1,
     outgoing,

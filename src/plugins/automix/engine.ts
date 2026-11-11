@@ -486,60 +486,8 @@ const handoffSwap = (plan: TransitionPlan): [number, number] => {
   if (recipe?.kind !== 'pickup') return [0.49, 0.51];
   const at =
     (recipe.gapBars + recipe.overlapBars) /
-    (recipe.gapBars + recipe.overlapBars + recipe.decayBars);
+    (recipe.gapBars + recipe.overlapBars + recipe.afterBars);
   return [Math.max(0, at - 0.005), at + 0.005];
-};
-
-/** Loudest sample of a buffer from `from` to `to` seconds */
-const peakOf = (buffer: AudioBuffer, from: number, to: number) => {
-  const first = Math.max(0, Math.floor(from * buffer.sampleRate));
-  const last = Math.min(buffer.length, Math.ceil(to * buffer.sampleRate));
-  let peak = 0;
-  for (let c = 0; c < buffer.numberOfChannels; c++) {
-    const data = buffer.getChannelData(c);
-    for (let i = first; i < last; i++) {
-      const sample = Math.abs(data[i]);
-      if (sample > peak) peak = sample;
-    }
-  }
-  return peak;
-};
-
-/**
- * A pickup hand-off with its boosts held down so the songs never clip: the
- * new bass's shelf against the next song's peaks after the swap, and the
- * old song's bass lift against both songs' peaks over the bar they share
- * (a limiter would add latency and pump; this only lowers the boosts)
- */
-const withHeadroom = (
-  plan: TransitionPlan,
-  from: AnalyzedTrack,
-  to: AnalyzedTrack | undefined,
-  volume: number,
-): TransitionPlan => {
-  const recipe = plan.recipe;
-  if (recipe?.kind !== 'pickup' || !to || volume <= 0) return plan;
-  const bar = plan.beat * 4;
-  const swap = (recipe.gapBars + recipe.overlapBars) * bar;
-  const inAt = (time: number) => plan.mixIn + (time * plan.rate);
-  const roomDb = (peak: number) =>
-    peak > 0 ? 20 * Math.log10(0.98 / (peak * volume)) : Number.POSITIVE_INFINITY;
-  const landing = peakOf(to.head, inAt(swap), inAt(swap + (2 * bar)));
-  const shared = recipe.overlapBars
-    ? peakOf(
-        from.tail,
-        plan.mixOut + (recipe.gapBars * bar) - from.tailStart,
-        plan.mixOut + (swap) - from.tailStart,
-      ) + peakOf(to.head, inAt(recipe.gapBars * bar), inAt(swap))
-    : 0;
-  return {
-    ...plan,
-    recipe: {
-      ...recipe,
-      shelfDb: clamp(roomDb(landing), 0, recipe.shelfDb),
-      liftDb: clamp(roomDb(shared), 0, recipe.liftDb),
-    },
-  };
 };
 
 /** Time between taking over the outgoing track and the audible mix */
@@ -2137,7 +2085,7 @@ export class AutoMixEngine {
       lowpass.type = 'lowpass';
       const bass = context.createBiquadFilter();
       bass.type = 'lowshelf';
-      bass.frequency.value = style.inShelfHz ?? CROSSOVER_HZ;
+      bass.frequency.value = CROSSOVER_HZ;
       // Only the lanes a style has are scheduled: the rest must start open
       // (a biquad's default is 350 Hz, which muffles or thins the song)
       highpass.frequency.value = EFFECT_DEFAULTS.highpass;
@@ -2289,7 +2237,7 @@ export class AutoMixEngine {
           duration: plan.duration / outRate,
           beat: plan.beat / outRate,
         }
-      : withHeadroom(plan, from, to, video.muted ? 0 : video.volume);
+      : plan;
 
     // The old song's tempo over time: 1x at the hand-off, then a glide to
     // outRate shortly after the stretched copy has taken over

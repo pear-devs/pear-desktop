@@ -1,12 +1,11 @@
 /**
- * DJ hand-offs, after two Spotify Mix custom transitions measured against
- * the original recordings (SexyBack into Gimme More, Did It First into
- * Ainvayi Ainvayi). Both songs play at full level the whole time; the mix is
+ * DJ hand-offs. Both songs play at full level the whole time; the mix is
  * done by handing the low end from one song to the other with a band kill
- * (LR4 at ~300 Hz) switched on a bar line, so there is only ever one bass,
- * and the two vocals never overlap. What makes them land is where they sit:
- * on landmarks of both songs, found here from the band levels and Apple
- * Music's vocals / phrases.
+ * (24 dB/oct at ~300 Hz) switched on a bar line, so there is only ever one
+ * bass, and two vocals never overlap. What makes them land is where they
+ * sit: on landmarks of both songs (phrases, sections, where a beat ends,
+ * breakdowns, vocals), found here from the band levels and Apple Music's
+ * vocals / phrases rather than at a fixed distance from the end.
  *
  * - Outro swap: the next song's sparse intro plays under the old song's
  *   instrumental outro for 8 (or 4) bars, the basses swap half way and the
@@ -14,8 +13,7 @@
  * - Pickup hand-off: the old song is cut at the end of one of its own
  *   breakdowns; the next song starts from its first note, so its pickup
  *   (a tag, a count-in line) fills the bar after; for one bar the old song's
- *   kick and bass carry the new song's top end; then the basses swap and the
- *   new bass lands a few dB hot, easing back over 14 bars.
+ *   kick and bass carry the new song's top end; then the basses swap.
  */
 
 import { levelDb, type TrackAnalysis } from './analysis';
@@ -51,13 +49,8 @@ const HANDOFF_MAX_EARLY = 45;
 const PUNCHY_DB = 3;
 /** A pickup must be at least this loud (mids) against the song's body */
 const PICKUP_DB = 12;
-/** Bars the new bass takes to ease back to its own level */
-const DECAY_BARS = 14;
-const MIN_DECAY_BARS = 4;
-/** The old song's bass while it carries the beat for a bar */
-const LIFT_DB = 2;
-/** The new bass when it lands */
-const SHELF_DB = 5;
+/** Bars after the swap our copy plays before the player takes over */
+const AFTER_BARS = 1;
 
 /**
  * Seconds of the next song our copy still plays after a hand-off's window:
@@ -127,7 +120,7 @@ const lowBar = (track: TrackAnalysis, at: number, bar: number) =>
 /**
  * Where the old song's beat stops for good: the first downbeat whose bar is
  * far quieter in the lows than the bars before, with the beat never coming
- * back after it. Did It First: −23 dB, then only its last hit ringing out.
+ * back after it (a song whose drums stop dead drops ~20 dB or more).
  */
 const beatEnd = (from: TrackAnalysis) => {
   const bar = from.beatPeriod * BAR_BEATS;
@@ -230,8 +223,7 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
     }
     // Never two vocals at once: the old song may still sing (ad-libs) over
     // the new one's instrumental intro, but not over its pickup line in the
-    // last beats (Spotify's Did It First into Ainvayi keeps Did It First's
-    // tags under Ainvayi's riff)
+    // last beats
     if (!vocalFree(from, exit - (3 * from.beatPeriod), exit - 0.1, from.beatPeriod)) {
       notes.push(`${bars}: sung at the end`);
       continue;
@@ -253,7 +245,7 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
         rejected.head++;
         continue;
       }
-      // A pickup line just before the arrival is fine (reel 2 has one)
+      // A pickup line just before the arrival is fine (many hooks start a beat or two early)
       if (!vocalFree(to, mixIn, lands - (3 * to.beatPeriod), to.beatPeriod)) {
         rejected.sung++;
         continue;
@@ -264,9 +256,9 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
         rejected.dense++;
         continue;
       }
-      // ...it comes in on a section of its own (Spotify's own Did It First
-      // into Ainvayi starts Ainvayi on its brass riff, where the mids jump
-      // ~8 dB), and something arrives as the old song stops (hook, bass)
+      // ...it comes in on a section of its own (a riff or a groove starting:
+      // the mids step up), and something arrives as the old song stops
+      // (the hook, the bass, the full band)
       const after = levelDb(to, 'full', lands, lands + (2 * barIn));
       const entering = levelDb(to, 'mid', mixIn, mixIn + barIn);
       const before = levelDb(to, 'mid', Math.max(0, mixIn - barIn), mixIn);
@@ -393,19 +385,16 @@ export const planPickupHandoff = (c: HandoffContext): Handoff | null => {
   }
   if (!best) return null;
 
-  // The new song's copy plays until its bass has eased back: fit the head
+  // Our copy of the new song has to cover the hand-off
   const mixIn = first - (gapBars * bar * rate);
-  let decayBars = DECAY_BARS;
-  const fits = (k: number) =>
-    mixIn + ((gapBars + overlapBars + k) * bar * rate) + HEAD_AFTER <= c.headSeconds;
-  while (decayBars > MIN_DECAY_BARS && !fits(decayBars)) decayBars--;
-  if (!fits(decayBars)) return null;
+  const window = gapBars + overlapBars + AFTER_BARS;
+  if (mixIn + (window * bar * rate) + HEAD_AFTER > c.headSeconds) return null;
 
   return {
     style: 'blend',
     mixOut: best.at,
     mixIn,
-    duration: (gapBars + overlapBars + decayBars) * bar,
+    duration: window * bar,
     rate,
     beat: from.beatPeriod,
     fromBpm: from.bpm,
@@ -415,9 +404,7 @@ export const planPickupHandoff = (c: HandoffContext): Handoff | null => {
       kind: 'pickup',
       gapBars,
       overlapBars,
-      decayBars,
-      liftDb: LIFT_DB,
-      shelfDb: SHELF_DB,
+      afterBars: AFTER_BARS,
     },
     score: best.depth + (gapBars ? 3 : 0),
   };

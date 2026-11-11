@@ -76,7 +76,6 @@ export interface PlannerOptions {
  * - pickup: the old song is cut at the end of its breakdown, the next one's
  *   pickup fills the bar after (gap), then for one bar the old song's kick
  *   and bass carry the next one's top end (overlap), then the basses swap
- *   and the new bass lands hot, easing back over the rest of the window
  * - outro: the next song's intro plays under the old song's outro at full
  *   level, the basses swap half way, the old song stops on its last beat
  */
@@ -85,11 +84,8 @@ export type HandoffRecipe =
       kind: 'pickup';
       gapBars: number;
       overlapBars: number;
-      decayBars: number;
-      /** Old song's bass lift while it carries the beat, dB */
-      liftDb: number;
-      /** New song's low shelf when its bass lands, dB, easing to 0 */
-      shelfDb: number;
+      /** Bars after the swap still played from our copy before the player takes over */
+      afterBars: number;
     }
   | { kind: 'outro'; bars: number };
 
@@ -1108,7 +1104,7 @@ export const planTransition = (
           handoff: handoff?.recipe
             ? `${handoff.recipe.kind}${
                 handoff.recipe.kind === 'pickup'
-                  ? ` ${handoff.recipe.gapBars}+${handoff.recipe.overlapBars}+${handoff.recipe.decayBars}`
+                  ? ` ${handoff.recipe.gapBars}+${handoff.recipe.overlapBars}+${handoff.recipe.afterBars}`
                   : ` ${handoff.recipe.bars} bars`
               } score ${handoff.score.toFixed(1)}`
             : options.handoffs

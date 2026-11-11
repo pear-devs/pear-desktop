@@ -68,7 +68,6 @@ const describeStyle = (plan: TransitionPlan) => {
     case 'blend':
       if (plan.recipe?.kind === 'pickup') {
         return t('plugins.automix.ui.detail.pickup-handoff', {
-          bars: plan.recipe.decayBars,
           from,
           to,
           stretch: (Math.abs(plan.rate - 1) * 100).toFixed(1),
