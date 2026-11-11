@@ -6,7 +6,7 @@ export type AutoMixPluginConfig = {
   /** AutoMix toggle shown in the player bar (the plugin stays loaded) */
   active: boolean;
   transition: TransitionPreference;
-  /** Length of a beat-matched blend, in beats */
+  /** Length of a beat-matched blend, in beats; 0 = picked per pair */
   blendBeats: number;
   /** Max time-stretch of the incoming song to match tempos (0.05 = ±5%) */
   maxStretch: number;
@@ -48,7 +48,7 @@ export const defaultConfig: AutoMixPluginConfig = {
   enabled: false,
   active: true,
   transition: 'auto',
-  blendBeats: 16,
+  blendBeats: 0,
   maxStretch: 0.05,
   smoothSeconds: 10,
   beatOnly: false,

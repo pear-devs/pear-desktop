@@ -33,7 +33,7 @@ export type TransitionReason =
 
 export interface PlannerOptions {
   preference: TransitionPreference;
-  /** Length of a beat-matched blend, in beats of the outgoing track */
+  /** Length of a beat-matched blend, in beats of the outgoing track; 0 = auto */
   blendBeats: number;
   /** Maximum relative time-stretch applied to a track (0.08 = ±8%) */
   maxStretch: number;
@@ -182,6 +182,24 @@ const SEGUE_MAX_WAIT = 8;
 const LEAD_IN_MIN = 1.5;
 const LEAD_IN_MAX = 5;
 const LEAD_IN_DEFAULT = 3;
+
+/** Auto blend length: the longest whole phrase that fits in this many seconds */
+const AUTO_BLEND_SECONDS = 20;
+const AUTO_BLEND_BEATS = [8, 16, 32];
+/** ...and no longer than this when the keys clash (heard as briefly as possible) */
+const CLASH_BLEND_BEATS = 8;
+
+/**
+ * Blend length for a pair when it's left to AutoMix: the longest whole
+ * phrase that fits in AUTO_BLEND_SECONDS at the old song's tempo (fast songs
+ * blend over more beats than slow ones), short when the keys clash
+ */
+const autoBlendBeats = (from: TrackAnalysis, clash: boolean) => {
+  const beat = from.beatPeriod || 0.5;
+  const fitting = AUTO_BLEND_BEATS.filter((beats) => beats * beat <= AUTO_BLEND_SECONDS);
+  const best = fitting.at(-1) ?? AUTO_BLEND_BEATS[0];
+  return clash ? Math.min(best, CLASH_BLEND_BEATS) : best;
+};
 
 /** Our own grid must be at least this sure for a hand-off's hard switches */
 const HANDOFF_TEMPO_CONFIDENCE = 0.6;
@@ -885,6 +903,10 @@ export const planTransition = (
   const clashes = (plan: TransitionPlan) =>
     clash && overlap(plan) >= TONAL_CLASH;
 
+  // A blend length left to AutoMix is picked for this pair
+  if (options.blendBeats <= 0) {
+    options = { ...options, blendBeats: autoBlendBeats(from, clash) };
+  }
   const gridsOk = hasBeatGrid(from) && hasBeatGrid(to);
   const stretchOk =
     gridsOk &&
@@ -1110,6 +1132,7 @@ export const planTransition = (
               ? '-'
               : Math.round(to.vocalEntry * 10) / 10,
           endsAbruptly: endsAbruptly(from),
+          blendBeats: options.blendBeats,
           handoff: handoff?.recipe
             ? `${handoff.recipe.kind}${
                 handoff.recipe.kind === 'pickup'

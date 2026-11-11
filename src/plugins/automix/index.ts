@@ -94,10 +94,13 @@ export default createPlugin({
       radio(
         t('plugins.automix.menu.blend-length'),
         config.blendBeats,
-        [8, 16, 32].map((beats) => [
-          beats,
-          t('plugins.automix.menu.beats', { beats }),
-        ]),
+        [
+          [0, t('plugins.automix.menu.blend-auto')],
+          ...[8, 16, 32].map((beats): [number, string] => [
+            beats,
+            t('plugins.automix.menu.beats', { beats }),
+          ]),
+        ],
         (blendBeats) => setConfig({ blendBeats }),
       ),
       radio(
