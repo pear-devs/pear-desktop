@@ -714,6 +714,13 @@ const SPOTIFY_PICKS: [number, number][] = [
   [117, 3], // Bass Swap Low Pass Filter In
   [103, 1], // Bass Swap
   // Not in that sample, but Spotify offers them: now and then
+  [102, 1], // Eq Swap (all three bands swap)
+  [104, 1], // Bass Swap Filter In
+  [105, 1], // Bass Swap Filter Out
+  [107, 1], // Bass And Mid Swap
+  [116, 1], // Bass Swap At End
+  [118, 1], // Bass Swap Low Pass Filter Out
+  [119, 1], // Low Pass Filter Fade In Out
   [120, 1], // Dissolve
   [121, 1], // Surge
   [122, 1], // Afterglow

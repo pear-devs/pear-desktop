@@ -37,6 +37,8 @@ const SPARSE_DB = 4;
 /** Spotify EQ styles an outro swap moves the bass with (see spotify-catalog.ts) */
 const EQ_BASS_SWAP = 4;
 const EQ_BASS_CROSSFADE = 3;
+const EQ_BASS_SWAP_AT_END = 10;
+const EQ_BASS_SWAP_AT_START = 11;
 /** A looped slice must be the beat within this of its usual level (lows) */
 const LOOP_GROOVE_DB = 4;
 /** How many bars before the exit a clean bar to loop is looked for */
@@ -274,12 +276,21 @@ const strongBass = (track: TrackAnalysis, at: number, length: number) => {
 };
 
 /**
- * How the bass goes over: a hard swap on the bar only where both basses
- * really hit there; otherwise it glides across (a swap into a thin bass, or
- * out of one that's already gone, is what sounds abrupt)
+ * How the bass goes over, with Spotify's EQ styles, from where each song's
+ * bass really is: swapped on the bar half way when both hit there; kept on
+ * the old song until the end when the new one's only comes in later; handed
+ * to the new song straight away when the old one's is already gone; glided
+ * across when both are thin (a swap into a thin bass, or out of one that's
+ * gone, is what sounds abrupt)
  */
 const bassMove = (outStrong: boolean, inStrong: boolean) =>
-  outStrong && inStrong ? EQ_BASS_SWAP : EQ_BASS_CROSSFADE;
+  outStrong && inStrong
+    ? EQ_BASS_SWAP
+    : outStrong
+      ? EQ_BASS_SWAP_AT_END
+      : inStrong
+        ? EQ_BASS_SWAP_AT_START
+        : EQ_BASS_CROSSFADE;
 
 /** Both songs' vocals and levels are known, and the keys allow an overlap */
 const canOverlap = (c: HandoffContext) =>
