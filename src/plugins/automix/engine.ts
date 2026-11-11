@@ -1621,7 +1621,7 @@ export class AutoMixEngine {
 
     this.emit({
       phase: 'ready',
-      plan,
+      plan: plan.style === 'cut' ? { ...plan, cutEnding: this.cutEnding(plan) } : plan,
       seekBy:
         plan.mixOut - prerollFor(plan) - SEEK_MARGIN + this.timelineOffset(video),
       songLength: Number.isFinite(video.duration) ? video.duration : undefined,

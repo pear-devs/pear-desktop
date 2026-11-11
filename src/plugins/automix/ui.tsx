@@ -129,7 +129,12 @@ const describeStyle = (plan: TransitionPlan) => {
         stretch: (Math.abs(plan.rate - 1) * 100).toFixed(1),
       });
     case 'cut':
-      return t('plugins.automix.ui.detail.cut', { bpm: from });
+      return [
+        t('plugins.automix.ui.detail.cut', { bpm: from }),
+        ...(plan.cutEnding
+          ? [t(`plugins.automix.ui.detail.cut-ending.${plan.cutEnding}`)]
+          : []),
+      ].join(' · ');
     case 'segue':
       return t(
         plan.reason === 'cold-ending'

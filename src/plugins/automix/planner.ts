@@ -140,6 +140,8 @@ export interface TransitionPlan {
   bassSwapAt?: [number, number];
   /** A DJ hand-off rather than a fade (see HandoffRecipe) */
   recipe?: HandoffRecipe;
+  /** How a cut ends the old song (set by the engine from the settings) */
+  cutEnding?: 'filter' | 'brake' | 'spinback';
   /**
    * How likely the transition is to sound good, 0..1, from what's known
    * about the pair (see confidenceOf), with what held it back

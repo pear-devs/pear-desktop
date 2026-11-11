@@ -433,6 +433,11 @@
           "entry": "Comes into the next song at {{time}}",
           "entry-vocal": "Comes into the next song at {{time}}, finishing as its vocals start at {{vocal}}",
           "cut": "Cut on the downbeat · {{bpm}} BPM",
+          "cut-ending": {
+            "filter": "ends with a filter build-up",
+            "brake": "ends with a vinyl stop",
+            "spinback": "ends with a spinback"
+          },
           "effect": "Apple Music effect: {{name}}",
           "spotify-effect": "Spotify transition: {{name}}",
           "keys": "key {{from}} → {{to}}",
