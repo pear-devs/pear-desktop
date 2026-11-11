@@ -69,6 +69,10 @@ export const describeConfidence = (plan: TransitionPlan) => {
         );
       case 'vocals':
         return t('plugins.automix.ui.confidence.vocals', { percent: note.percent });
+      case 'energy':
+        return note.softer && note.drop < 6
+          ? t('plugins.automix.ui.confidence.softer')
+          : t('plugins.automix.ui.confidence.energy', { drop: note.drop });
       default:
         return t('plugins.automix.ui.confidence.late');
     }

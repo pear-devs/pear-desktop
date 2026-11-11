@@ -1,3 +1,4 @@
+import { levelDb, type TempoSection, type TrackAnalysis } from './analysis';
 import {
   pickCrossfadeReverb,
   pickEffect,
@@ -6,8 +7,6 @@ import {
 } from './effects';
 import { outroNotes, planHandoff } from './handoff';
 import { keysClash, keysDiagonal } from './key';
-
-import type { TempoSection, TrackAnalysis } from './analysis';
 
 export type TransitionStyle = 'blend' | 'segue' | 'cut' | 'smooth';
 export type TransitionPreference = 'auto' | TransitionStyle;
@@ -229,7 +228,74 @@ export type ConfidenceNote =
   | { kind: 'stretch'; percent: number }
   | { kind: 'keys'; from: string; to: string; diagonal: boolean }
   | { kind: 'vocals'; percent: number }
+  | { kind: 'energy'; drop: number; softer: boolean }
   | { kind: 'late' };
+
+/**
+ * How much energy a transition loses: the old song's loudness (and bass) in
+ * the bars before it leaves against the next song's in the bars after it
+ * takes over, in dB. Positive = the next song is calmer there
+ */
+export interface EnergyStep {
+  drop: number;
+  bassDrop: number;
+  /**
+   * The next song is a softer kind of song altogether (Apple's acousticness
+   * well up, e.g. a dance number into a ballad), however loud it's mastered
+   */
+  softer: boolean;
+}
+
+/** Acousticness this much higher makes the next song a softer one */
+const SOFTER_ACOUSTICNESS = 0.3;
+
+/** Seconds each side of the transition the energy is measured over */
+const ENERGY_SECONDS = 8;
+/** A next song this much quieter (dB) where it takes over is a step down */
+const ENERGY_DROP_DB = 6;
+/** ... or one whose bass falls away by this much */
+const ENERGY_BASS_DROP_DB = 9;
+
+export const energyStep = (
+  from: TrackAnalysis,
+  to: TrackAnalysis,
+  plan: Pick<TransitionPlan, 'mixOut' | 'mixIn' | 'duration' | 'rate'>,
+): EnergyStep | undefined => {
+  const landing = plan.mixIn + (plan.duration * plan.rate);
+  const before = levelDb(from, 'full', plan.mixOut - ENERGY_SECONDS, plan.mixOut);
+  const after = levelDb(to, 'full', landing, landing + ENERGY_SECONDS);
+  if (before === undefined || after === undefined) return undefined;
+  const lowBefore = levelDb(from, 'low', plan.mixOut - ENERGY_SECONDS, plan.mixOut);
+  const lowAfter = levelDb(to, 'low', landing, landing + ENERGY_SECONDS);
+  const acoustic = (track: TrackAnalysis) => track.traits?.acousticness;
+  const softer =
+    acoustic(from) !== undefined &&
+    acoustic(to) !== undefined &&
+    acoustic(to)! - acoustic(from)! >= SOFTER_ACOUSTICNESS;
+  return {
+    drop: before - after,
+    bassDrop:
+      lowBefore === undefined || lowAfter === undefined ? 0 : lowBefore - lowAfter,
+    softer,
+  };
+};
+
+/** The next song is clearly calmer where it takes over */
+const stepsDown = (energy: EnergyStep | undefined) =>
+  Boolean(
+    energy &&
+      (energy.softer ||
+        energy.drop >= ENERGY_DROP_DB ||
+        energy.bassDrop >= ENERGY_BASS_DROP_DB),
+  );
+
+/**
+ * A transition that hits hard (a cut, or a DJ hand-off: both songs at full
+ * level, switched on a bar line): into a song that's clearly calmer it lands
+ * like a door slammed on a quiet room
+ */
+const hitsHard = (plan: TransitionPlan) =>
+  Boolean(plan.recipe) || plan.style === 'cut';
 
 /**
  * How likely a planned transition is to sound good, 0..1: the kind of
@@ -244,8 +310,29 @@ const confidenceOf = (
   to: TrackAnalysis,
   clash: boolean,
   diagonal: boolean,
+  energy?: EnergyStep,
 ): { confidence: number; notes: ConfidenceNote[] } => {
   const factors: { factor: number; note: ConfidenceNote }[] = [];
+  // Losing energy at the hand-over: worst when it hits hard, still felt in
+  // a blend, natural for a song that plays its ending out or fades
+  if (
+    energy &&
+    (energy.softer || energy.drop > 3 || energy.bassDrop > ENERGY_BASS_DROP_DB)
+  ) {
+    // A softer song counts as a clear step down even at the same level
+    const drop = Math.max(energy.drop, energy.bassDrop - 3, energy.softer ? 8 : 0);
+    const factor = hitsHard(plan)
+      ? 1 - Math.min(0.5, 0.05 * drop)
+      : plan.style === 'blend'
+        ? 1 - Math.min(0.35, 0.03 * (drop - 3))
+        : 1 - Math.min(0.15, 0.015 * (drop - 6));
+    if (factor < 1) {
+      factors.push({
+        factor,
+        note: { kind: 'energy', drop: Math.round(energy.drop), softer: energy.softer },
+      });
+    }
+  }
   const styleFactor: Record<TransitionStyle, number> = {
     blend: 1,
     segue: 0.9,
@@ -291,6 +378,9 @@ const confidenceOf = (
     .map(({ note }) => note);
   return { confidence, notes };
 };
+
+/** Auto blends into a clearly calmer song are drawn out to this many beats */
+const CALM_BLEND_BEATS = 32;
 
 /** Our own grid must be at least this sure for a hand-off's hard switches */
 const HANDOFF_TEMPO_CONFIDENCE = 0.6;
@@ -996,6 +1086,7 @@ export const planTransition = (
     clash && overlap(plan) >= TONAL_CLASH;
 
   // A blend length left to AutoMix is picked for this pair
+  const autoBlend = options.blendBeats <= 0;
   if (options.blendBeats <= 0) {
     options = { ...options, blendBeats: autoBlendBeats(from, to, clash) };
   }
@@ -1160,8 +1251,8 @@ export const planTransition = (
     }
   };
 
-  for (const { style, plan } of plans()) {
-    if (plan) {
+  const finish = (style: TransitionStyle, plan: TransitionPlan, energy?: EnergyStep): TransitionPlan => {
+    {
       const seed = `${outgoing.appleId ?? outgoing.duration}|${incoming.appleId ?? incoming.duration}`;
       let effect: number | undefined;
       const bars = plan.duration / ((plan.beat || 0.5) * 4);
@@ -1210,6 +1301,7 @@ export const planTransition = (
         to,
         clash,
         keysDiagonal(outgoing.end.key, incoming.start.key),
+        energy,
       );
       return {
         ...finished,
@@ -1257,9 +1349,42 @@ export const planTransition = (
               ? 'none fits'
               : 'off',
           outro: outroNotes || '-',
+          energyDrop: energy ? Math.round(energy.drop * 10) / 10 : '-',
+          bassDrop: energy ? Math.round(energy.bassDrop * 10) / 10 : '-',
+          softer: energy?.softer ?? '-',
         },
       };
     }
+  };
+
+  // A hard hit into a clearly calmer song is passed over for what's next in
+  // line (kept only if nothing else fits, or a cut was asked for); a blend
+  // into one is drawn out, so the old song's energy drains away gradually
+  let spare: { style: TransitionStyle; plan: TransitionPlan; energy?: EnergyStep } | undefined;
+  for (const candidate of plans()) {
+    let { plan } = candidate;
+    if (!plan) continue;
+    let energy = energyStep(from, to, plan);
+    if (stepsDown(energy)) {
+      if (hitsHard(plan) && options.preference !== 'cut') {
+        spare ??= { style: candidate.style, plan, energy };
+        continue;
+      }
+      if (
+        plan.style === 'blend' &&
+        !plan.holdOutgoing &&
+        autoBlend &&
+        !clash &&
+        options.blendBeats < CALM_BLEND_BEATS
+      ) {
+        const longer = planBlend(from, to, { ...options, blendBeats: CALM_BLEND_BEATS });
+        if (longer) {
+          plan = longer;
+          energy = energyStep(from, to, longer) ?? energy;
+        }
+      }
+    }
+    return finish(candidate.style, plan, energy);
   }
-  return null;
+  return spare ? finish(spare.style, spare.plan, spare.energy) : null;
 };

@@ -458,6 +458,8 @@
           "keys": "keys clash ({{from}} → {{to}})",
           "keys-diagonal": "diagonal key move ({{from}} → {{to}})",
           "vocals": "two singers for {{percent}}% of it",
+          "energy": "next song is calmer there (−{{drop}} dB)",
+          "softer": "next song is a softer one",
           "late": "next song changed late"
         },
         "low-quality": "Only a lower quality stream ({{quality}}) was available for mixing, so the transition may sound duller than normal playback",
