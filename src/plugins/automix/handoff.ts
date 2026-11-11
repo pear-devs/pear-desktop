@@ -185,8 +185,13 @@ const outroExit = (from: TrackAnalysis) => {
  * level, bass swapped half way, the old song stopping on its last beat as
  * the next one's hook (or bass) arrives
  */
+/** Why the last outro swap planned was or wasn't possible, for the debug log */
+export let outroNotes = '';
+
 export const planOutroSwap = (c: HandoffContext): Handoff | null => {
   const { from, to, rate } = c;
+  const notes: string[] = [];
+  outroNotes = '';
   const bar = from.beatPeriod * BAR_BEATS;
   const barIn = to.beatPeriod * BAR_BEATS;
   // Two vocals must never overlap, so both songs' vocals must be known
@@ -198,10 +203,15 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
     !to.vocals ||
     c.outroClash
   ) {
+    outroNotes = c.outroClash ? 'key clash' : 'no levels or vocals';
     return null;
   }
   const exit = outroExit(from);
-  if (exit === undefined) return null;
+  if (exit === undefined) {
+    outroNotes = 'no exit';
+    return null;
+  }
+  notes.push(`exit ${exit.toFixed(2)}`);
 
   const entry = entryPoint(to);
   // Where the next song can arrive: the start of a phrase (else every 4th
@@ -214,8 +224,19 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
 
   for (const bars of OUTRO_BARS) {
     const start = exit - (bars * bar);
-    if (start < c.earliestMixOut || bars * bar > OUTRO_MAX_SECONDS) continue;
-    if (!vocalFree(from, start, exit - 0.1, from.beatPeriod)) continue;
+    if (start < c.earliestMixOut || bars * bar > OUTRO_MAX_SECONDS) {
+      notes.push(`${bars}: too early or long`);
+      continue;
+    }
+    // Never two vocals at once: the old song may still sing (ad-libs) over
+    // the new one's instrumental intro, but not over its pickup line in the
+    // last beats (Spotify's Did It First into Ainvayi keeps Did It First's
+    // tags under Ainvayi's riff)
+    if (!vocalFree(from, exit - (3 * from.beatPeriod), exit - 0.1, from.beatPeriod)) {
+      notes.push(`${bars}: sung at the end`);
+      continue;
+    }
+    const rejected = { head: 0, sung: 0, dense: 0 };
 
     const span = bars * bar * rate;
     // Each place it could arrive, with the stretch of intro under the old
@@ -228,14 +249,21 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
     ];
     let best: { mixIn: number; lands: number; score: number } | undefined;
     for (const { mixIn, lands } of windows) {
-      if (mixIn < 0 || lands + HEAD_AFTER > c.headSeconds) continue;
+      if (mixIn < 0 || lands + HEAD_AFTER > c.headSeconds) {
+        rejected.head++;
+        continue;
+      }
       // A pickup line just before the arrival is fine (reel 2 has one)
       if (!vocalFree(to, mixIn, lands - (3 * to.beatPeriod), to.beatPeriod)) {
+        rejected.sung++;
         continue;
       }
       // Two dense songs at full level would be mud: the intro must be sparse
       const under = levelDb(to, 'full', mixIn, lands);
-      if (under === undefined || under > to.bodyLoudness - SPARSE_DB) continue;
+      if (under === undefined || under > to.bodyLoudness - SPARSE_DB) {
+        rejected.dense++;
+        continue;
+      }
       // ...it comes in on a section of its own (Spotify's own Did It First
       // into Ainvayi starts Ainvayi on its brass riff, where the mids jump
       // ~8 dB), and something arrives as the old song stops (hook, bass)
@@ -251,7 +279,13 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
         after - under + sectionStep + (vocalNear(lands) ? 2 : 0);
       if (!best || score > best.score) best = { mixIn, lands, score };
     }
-    if (!best || best.score < ARRIVAL_DB) continue;
+    if (!best || best.score < ARRIVAL_DB) {
+      notes.push(
+        `${bars}: ${best ? `best ${best.mixIn.toFixed(1)} score ${best.score.toFixed(1)}` : 'none'} (head ${rejected.head} sung ${rejected.sung} dense ${rejected.dense})`,
+      );
+      continue;
+    }
+    outroNotes = notes.join('; ');
 
     const landsOnVocal = vocalNear(best.lands) ? to.vocalEntry : undefined;
     return {
@@ -268,6 +302,7 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
       score: (bars / 4) + (best.score / 4),
     };
   }
+  outroNotes = notes.join('; ');
   return null;
 };
 

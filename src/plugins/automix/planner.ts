@@ -4,7 +4,7 @@ import {
   pickSpotifyEffect,
   CROSSFADE_REVERB,
 } from './effects';
-import { planHandoff } from './handoff';
+import { outroNotes, planHandoff } from './handoff';
 import { keysClash, keysDiagonal } from './key';
 
 import type { TempoSection, TrackAnalysis } from './analysis';
@@ -1114,6 +1114,7 @@ export const planTransition = (
             : options.handoffs
               ? 'none fits'
               : 'off',
+          outro: outroNotes || '-',
         },
       };
     }
