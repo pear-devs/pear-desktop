@@ -21,6 +21,7 @@ export type DownloaderPluginConfig = {
   customPresetSetting: Preset;
   skipExisting: boolean;
   playlistMaxItems?: number;
+  maxParallelDownloads?: number;
 };
 
 export const defaultConfig: DownloaderPluginConfig = {
@@ -37,6 +38,7 @@ export const defaultConfig: DownloaderPluginConfig = {
   customPresetSetting: DefaultPresetList['mp3 (256kbps)'], // Presets
   skipExisting: false,
   playlistMaxItems: undefined,
+  maxParallelDownloads: 1,
 };
 
 export default createPlugin({
