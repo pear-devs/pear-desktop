@@ -540,7 +540,12 @@ export const planPickupHandoff = (c: HandoffContext): Handoff | null => {
 export const planHandoff = (
   c: HandoffContext,
   prefer: 'any' | 'pickup',
+  /** Debug only: this hand-off whenever it fits (to hear it) */
+  force?: 'pickup' | 'outro' | 'loop',
 ): Handoff | null => {
+  if (force === 'loop') return planLoopSwap(c);
+  if (force === 'outro') return planOutroSwap(c);
+  if (force === 'pickup') return planPickupHandoff(c);
   const pickup = planPickupHandoff(c);
   if (prefer === 'pickup') return pickup;
   const outro = planOutroSwap(c);

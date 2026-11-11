@@ -70,6 +70,8 @@ export interface PlannerOptions {
   handoffs?: boolean;
   /** Seconds of the next song decoded for mixing (our copy can't go past it) */
   headSeconds?: number;
+  /** Debug only: plan this hand-off whenever it fits */
+  forceHandoff?: 'pickup' | 'outro' | 'loop';
 }
 
 /**
@@ -1055,6 +1057,7 @@ export const planTransition = (
             headSeconds: options.headSeconds ?? HEAD_SECONDS_DEFAULT,
           },
           handoffPrefer,
+          options.forceHandoff,
         )
       : null;
 

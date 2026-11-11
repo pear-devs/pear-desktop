@@ -22,7 +22,11 @@ import {
 } from './effects';
 import { bassSwapWindow } from './bass';
 import { alignKicks } from './kicks';
-import { planTransition, type TransitionPlan } from './planner';
+import {
+  planTransition,
+  type PlannerOptions,
+  type TransitionPlan,
+} from './planner';
 import { getQueueStore, largeArt, readQueue, type QueueTrack } from './queue';
 import {
   loadSummaries,
@@ -1523,6 +1527,7 @@ export class AutoMixEngine {
         beatOnly: this.config.beatOnly,
         handoffs: this.config.djHandoffs && this.noHandoffFor !== `${id}>${nextId}`,
         headSeconds: HEAD_SECONDS,
+        forceHandoff: this.forcedHandoff(),
         earliestMixOut: Math.max(
           this.songTime(video) + MIX_NOW_LEAD,
           from.tailStart + MIX_NOW_LEAD,
@@ -2755,6 +2760,21 @@ export class AutoMixEngine {
    * Wanted vs actual levels, 5x a second while mixing. Opt in from the
    * DevTools console: localStorage.setItem('automix-debug', '1')
    */
+  /**
+   * DevTools console, with debug on: localStorage.setItem(
+   * 'automix-force-handoff', 'loop' | 'outro' | 'pickup') plans that
+   * hand-off whenever it fits, to hear it
+   */
+  private forcedHandoff(): PlannerOptions['forceHandoff'] {
+    if (!this.debugEnabled()) return undefined;
+    try {
+      const value = localStorage.getItem('automix-force-handoff');
+      return value === 'loop' || value === 'outro' || value === 'pickup' ? value : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
   private debugEnabled() {
     try {
       return localStorage.getItem(DEBUG_KEY) === '1';
