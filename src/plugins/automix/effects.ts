@@ -11,6 +11,7 @@
 import {
   EQ_STYLES,
   FILTER_STYLES,
+  FX_STYLES,
   PRESETS,
   VOLUME_STYLES,
   type CatalogCurve,
@@ -377,21 +378,55 @@ export const catalogEq = (id: number): Side => {
   };
 };
 
+/** A catalog curve with its values mapped */
+const mapCurve = (curve: CatalogCurve, map: (y: number) => number): CatalogCurve =>
+  curve.map((value, i) => (i % 2 ? map(value) : value));
+
+/** Reverb tail of Spotify's reverb sends, seconds */
+const SPOTIFY_REVERB_SECONDS = 4;
+
+/**
+ * The old song's effect send of a Spotify fx style: its dry/wet (0..1 =
+ * 0..100 % wet) as the send into an echo or reverb and the dry level
+ */
+const fxLanes = (id: number): Lane[] => {
+  const fx = FX_STYLES[id];
+  if (!fx) return [];
+  const lanes = [
+    set('wet', 1),
+    ...curveLanes('send', mapCurve(fx.out, (wet) => Math.min(1, wet * 2))),
+    ...curveLanes('dry', mapCurve(fx.out, (wet) => 1 - wet)),
+  ];
+  if (fx.kind !== 'reverb') {
+    // An echo keeps repeating and fades; a delay is a shorter tail
+    lanes.push(
+      set('delayMix', 1),
+      set('delayFeedback', fx.kind === 'echo' ? 0.5 : 0.3),
+      set('delayLowpass', 5000),
+    );
+  }
+  return lanes;
+};
+
 /** One of Spotify's presets, exactly as its catalog defines it */
 const catalogPreset = (id: number): EffectStyle => {
   const preset = PRESETS[id];
   const volumeStyle = VOLUME_STYLES[preset.volume];
   const filter = FILTER_STYLES[preset.filter];
   const eq = catalogEq(preset.eq);
+  const fx = FX_STYLES[preset.fx];
   return {
     id: 100 + id,
     name: preset.name.replace(/([a-z])([A-Z])/g, '$1 $2'),
     family: 'spotify',
     bars: 4,
+    delay: fx ? fx.kind !== 'reverb' : undefined,
+    reverb: fx?.kind === 'reverb' ? SPOTIFY_REVERB_SECONDS : undefined,
     outgoing: [
       ...(volumeStyle ? curveLanes('gain', volumeStyle.out) : []),
       ...eq.outgoing,
       ...(filter ? curveLanes('djFilter', filter.out) : []),
+      ...fxLanes(preset.fx),
     ],
     incoming: [
       ...(volumeStyle ? curveLanes('gain', volumeStyle.in) : []),
@@ -406,9 +441,12 @@ const catalogPreset = (id: number): EffectStyle => {
  * own catalog (the cuts and the echo / reverb / riser presets aren't blends
  * AutoMix plays this way)
  */
-export const SPOTIFY_STYLES: EffectStyle[] = [1, 2, 3, 4, 5, 7, 8, 9, 10, 16, 17, 18, 19].map(
-  catalogPreset,
-);
+export const SPOTIFY_STYLES: EffectStyle[] = [
+  1, 2, 3, 4, 5, 7, 8, 9, 10, 16, 17, 18, 19,
+  // ...and the ones with an effect send: Dissolve (echo), Surge and
+  // Afterglow (reverb)
+  20, 21, 22,
+].map(catalogPreset);
 
 /** Spotify only uses these three on its 2-bar blends */
 const SHORT_SPOTIFY_STYLES = [101, 110, 117];
@@ -675,6 +713,10 @@ const SPOTIFY_PICKS: [number, number][] = [
   [108, 3], // Filter Fade Out
   [117, 3], // Bass Swap Low Pass Filter In
   [103, 1], // Bass Swap
+  // Not in that sample, but Spotify offers them: now and then
+  [120, 1], // Dissolve
+  [121, 1], // Surge
+  [122, 1], // Afterglow
 ];
 
 export const effectById = (id: number | undefined) =>

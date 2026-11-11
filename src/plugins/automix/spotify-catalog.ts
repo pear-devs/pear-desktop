@@ -81,3 +81,35 @@ export const FILTER_STYLES: Record<number, { out: CatalogCurve; in: CatalogCurve
   13: { out: [0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1, 1, 1, 1], in: [0, 0, 0, 0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1, 0.5] },
   14: { out: [0, 0.5, 0.5, 0.5, 0.5, 0.5, 1, 0.7784], in: [0, 0.5, 1, 0.5] },
 };
+
+/** Effect sends on the old song: raw 0..1 = 0..100 % wet (Spotify fx styles) */
+export const FX_STYLES: Record<number, { kind: 'reverb' | 'echo' | 'delay'; out: CatalogCurve }> = {
+  1: { kind: 'reverb', out: [0, 0, 0.5, 0.5, 0.5, 0.5, 1, 0.5] },
+  2: { kind: 'reverb', out: [0, 0, 0.5, 0, 0.5, 0, 0.99999, 0.5, 0.99999, 0, 1, 0] },
+  3: { kind: 'reverb', out: [0, 0, 0.5, 0, 0.5, 0, 1, 0.5] },
+  4: { kind: 'echo', out: [0, 0, 0.5, 0, 0.5, 0, 0.99999, 0.5, 0.99999, 0, 1, 0] },
+  5: { kind: 'echo', out: [0, 0, 0.5, 0, 0.5, 0, 1, 0.5] },
+  6: { kind: 'echo', out: [0, 0, 0.5, 0, 0.5, 0, 0.99999, 0.5, 0.99999, 0, 1, 0] },
+  7: { kind: 'echo', out: [0, 0, 0.5, 0, 0.5, 0, 1, 0.5] },
+  8: { kind: 'delay', out: [0, 0, 0.5, 0, 0.5, 0, 0.99999, 0.5, 0.99999, 0, 1, 0] },
+  9: { kind: 'delay', out: [0, 0, 0.5, 0, 0.5, 0, 0.99999, 0.5, 0.99999, 0, 1, 0] },
+  10: { kind: 'echo', out: [0, 0, 0.5, 0, 0.5, 0, 0.99999, 0.5, 0.99999, 0, 1, 0] },
+  11: { kind: 'echo', out: [0, 0, 0.5, 0, 0.5, 0, 1, 0.5] },
+};
+
+/**
+ * Noise sweeps (risers) of the filter styles: raw 0.5 = none; the noise
+ * colour's own value mapping is in effects.ts
+ */
+export const NOISE_STYLES: Record<number, { out: CatalogCurve; in: CatalogCurve; resonanceOut: CatalogCurve; resonanceIn: CatalogCurve }> = {
+  5: { out: [], in: [], resonanceOut: [0, 0.5, 1, 0.5], resonanceIn: [0, 0.5, 1, 0.5] },
+  6: { out: [], in: [], resonanceOut: [0, 0.5, 1, 0.5], resonanceIn: [0, 0.5, 1, 0.5] },
+  7: { out: [], in: [], resonanceOut: [0, 0.5, 1, 0.5], resonanceIn: [0, 0.5, 1, 0.5] },
+  9: { out: [], in: [], resonanceOut: [0, 0.5, 1, 0.5], resonanceIn: [0, 0.5, 1, 0.5] },
+  10: { out: [], in: [], resonanceOut: [0, 0.5, 1, 0.5], resonanceIn: [0, 0.5, 1, 0.5] },
+  11: { out: [], in: [], resonanceOut: [0, 0.5, 1, 0.5], resonanceIn: [0, 0.5, 1, 0.5] },
+  12: { out: [], in: [], resonanceOut: [0, 0.5, 1, 0.5], resonanceIn: [0, 0.5, 1, 0.5] },
+  13: { out: [], in: [], resonanceOut: [0, 0.5, 1, 0.5], resonanceIn: [0, 0.5, 1, 0.5] },
+  14: { out: [], in: [], resonanceOut: [0, 0.5, 1, 0.5], resonanceIn: [0, 0.5, 1, 0.5] },
+  15: { out: [0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.53125, 0.62, 0.53125, 0.62, 1, 0.83], in: [0, 0.5, 1, 0.5], resonanceOut: [], resonanceIn: [] },
+};
