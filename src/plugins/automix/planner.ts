@@ -87,7 +87,16 @@ export type HandoffRecipe =
       /** Bars after the swap still played from our copy before the player takes over */
       afterBars: number;
     }
-  | { kind: 'outro'; bars: number };
+  | {
+      kind: 'outro';
+      bars: number;
+      /**
+       * Spotify EQ style for the bass: BassSwap (4, swapped on the bar half
+       * way) where both basses hit hard there, else BassCrossfade (3, the
+       * bass glides across the whole overlap)
+       */
+      eq: number;
+    };
 
 export interface TransitionPlan {
   style: TransitionStyle;

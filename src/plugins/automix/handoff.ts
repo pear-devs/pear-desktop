@@ -34,6 +34,11 @@ const OUTRO_BARS = [8, 4];
 const OUTRO_MAX_SECONDS = 16.5;
 /** The next song's intro under the old song must be this much under its body */
 const SPARSE_DB = 4;
+/** Spotify EQ styles an outro swap moves the bass with (see spotify-catalog.ts) */
+const EQ_BASS_SWAP = 4;
+const EQ_BASS_CROSSFADE = 3;
+/** Both basses within this of their usual level at the swap: swap it hard */
+const HARD_SWAP_DB = 6;
 /** ...and get at least this much louder where it arrives, as the old one stops */
 const ARRIVAL_DB = 3;
 
@@ -280,6 +285,22 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
     outroNotes = notes.join('; ');
 
     const landsOnVocal = vocalNear(best.lands) ? to.vocalEntry : undefined;
+    // A hard bass swap on the bar only where both basses really hit there;
+    // otherwise the bass glides across (a swap into a thin bass, or out of
+    // one that's already gone, is what sounds abrupt)
+    const swapOut = start + (bars * bar / 2);
+    const swapIn = best.mixIn + (span / 2);
+    const bassAt = (track: TrackAnalysis, at: number, length: number) =>
+      levelDb(track, 'low', at, at + length);
+    const bassBody = (track: TrackAnalysis) =>
+      levelDb(track, 'low', track.introEnd, track.outroStart);
+    const strong = (here: number | undefined, body: number | undefined) =>
+      here !== undefined && body !== undefined && here >= body - HARD_SWAP_DB;
+    const eq =
+      strong(bassAt(from, swapOut - bar, bar), bassBody(from)) &&
+      strong(bassAt(to, swapIn, barIn), bassBody(to))
+        ? EQ_BASS_SWAP
+        : EQ_BASS_CROSSFADE;
     return {
       style: 'blend',
       mixOut: start,
@@ -290,7 +311,7 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
       fromBpm: from.bpm,
       toBpm: to.bpm,
       landsOnVocal,
-      recipe: { kind: 'outro', bars },
+      recipe: { kind: 'outro', bars, eq },
       score: (bars / 4) + (best.score / 4),
     };
   }

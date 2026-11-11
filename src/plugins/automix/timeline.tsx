@@ -11,8 +11,11 @@ import {
 import { t } from '@/i18n';
 
 import {
+  djHighpass,
+  djLowpass,
   EFFECT_DEFAULTS,
   effectName,
+  eqGain,
   laneTimes,
   laneValue,
   styleOf,
@@ -118,6 +121,9 @@ interface FilterParams {
   bassDb: number;
   lowCut: number;
   highCut: number;
+  /** Spotify-style 3-band EQ gains (linear), 1 when not used */
+  midGain: number;
+  highGain: number;
 }
 
 const filterParams = (
@@ -133,6 +139,8 @@ const filterParams = (
   // A hand-off's isolator (24 dB/oct, so twice a 2nd-order filter's cut)
   let lowCut = 10;
   let highCut = 20_000;
+  let midGain = 1;
+  let highGain = 1;
   const style = styleOf(plan);
   const swap = plan.bassSwapAt ?? [0.45, 0.55];
   const shelf = (fromDb: number, toDb: number) =>
@@ -147,8 +155,15 @@ const filterParams = (
       bassDb = at('bass');
       lowCut = at('lowCut');
       highCut = at('highCut');
+      // Spotify's filter knob and 3-band EQ
+      const knob = at('djFilter');
+      lowpass = Math.min(lowpass, djLowpass(knob));
+      highpass = Math.max(highpass, djHighpass(knob));
+      bassDb += 20 * Math.log10(Math.max(1e-6, eqGain(at('eqLow'))));
+      midGain = eqGain(at('eqMid'));
+      highGain = eqGain(at('eqHigh'));
     } else if (side === 'in') {
-      bassDb = at('bass');
+      bassDb = at('bass') + (20 * Math.log10(Math.max(1e-6, eqGain(at('eqLow')))));
     }
   } else if (plan.style === 'blend') {
     if (plan.holdOutgoing) {
@@ -171,7 +186,7 @@ const filterParams = (
   } else if (plan.style === 'cut' && side === 'out') {
     highpass = sweep(x, -4 * (plan.beat || 0.5), 0, 20, 900);
   }
-  return { lowpass, highpass, bassDb, lowCut, highCut };
+  return { lowpass, highpass, bassDb, lowCut, highCut, midGain, highGain };
 };
 
 const filterGains = (
@@ -179,12 +194,14 @@ const filterGains = (
   side: 'out' | 'in',
   time: number,
 ): Record<Band, number> => {
-  const { lowpass, highpass, bassDb, lowCut, highCut } = filterParams(plan, side, time);
+  const { lowpass, highpass, bassDb, lowCut, highCut, midGain, highGain } =
+    filterParams(plan, side, time);
   const gain = (band: Band) =>
     lowpassGain(BAND_HZ[band], lowpass) *
     highpassGain(BAND_HZ[band], highpass) *
     (lowpassGain(BAND_HZ[band], highCut) ** 2) *
     (highpassGain(BAND_HZ[band], lowCut) ** 2) *
+    (band === 'mid' ? midGain : band === 'high' ? highGain : 1) *
     (band === 'low' ? 10 ** (bassDb / 20) : 1);
   return { low: gain('low'), mid: gain('mid'), high: gain('high') };
 };

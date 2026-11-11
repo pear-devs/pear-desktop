@@ -487,6 +487,42 @@ const isolator = (context: BaseAudioContext, type: 'highpass' | 'lowpass') => {
   return stages;
 };
 
+/** Where Spotify-style 3-band EQ splits the bands (a DJ isolator's crossovers) */
+const EQ_LOW_HZ = 300;
+const EQ_HIGH_HZ = 3000;
+
+/**
+ * A DJ mixer's 3-band EQ as an isolator: the song split into bass, mids and
+ * highs with 24 dB/oct crossovers, each band through its own gain (at 1 the
+ * bands add back up to the song), so a band can be turned down or killed
+ */
+const threeBandEq = (context: BaseAudioContext) => {
+  const input = context.createGain();
+  const output = context.createGain();
+  const [lowA, lowB] = isolator(context, 'lowpass');
+  const [midHpA, midHpB] = isolator(context, 'highpass');
+  const [midLpA, midLpB] = isolator(context, 'lowpass');
+  const [highA, highB] = isolator(context, 'highpass');
+  for (const node of [lowA, lowB, midLpA, midLpB]) node.frequency.value = EQ_LOW_HZ;
+  for (const node of [midHpA, midHpB]) node.frequency.value = EQ_LOW_HZ;
+  for (const node of [midLpA, midLpB, highA, highB]) node.frequency.value = EQ_HIGH_HZ;
+  const low = context.createGain();
+  const mid = context.createGain();
+  const high = context.createGain();
+  input.connect(lowA); lowB.connect(low).connect(output);
+  input.connect(midHpA); midHpB.connect(midLpA); midLpB.connect(mid).connect(output);
+  input.connect(highA); highB.connect(high).connect(output);
+  return {
+    input,
+    output,
+    params: { eqLow: low.gain, eqMid: mid.gain, eqHigh: high.gain },
+    nodes: [input, output, lowA, lowB, midHpA, midHpB, midLpA, midLpB, highA, highB, low, mid, high],
+  };
+};
+
+const usesEq = (lanes: { param: EffectParam }[]) =>
+  lanes.some((item) => item.param === 'eqLow' || item.param === 'eqMid' || item.param === 'eqHigh');
+
 /** A hand-off that can't be played as planned (see startMix) */
 class HandoffRefused extends Error {}
 
@@ -1706,6 +1742,12 @@ export class AutoMixEngine {
       shaped.connect(stages[0]);
       shaped = stages[1];
     }
+    const eq = usesEq(style.outgoing) ? threeBandEq(context) : undefined;
+    if (eq) {
+      shaped.connect(eq.input);
+      shaped = eq.output;
+      nodes.push(...eq.nodes);
+    }
     shaped.connect(dryMix).connect(dry);
     shaped.connect(send);
     const fx: OutgoingChain['fx'] = {
@@ -1719,6 +1761,7 @@ export class AutoMixEngine {
       dry: dryMix.gain,
       lowCut: lowCut.map((node) => node.frequency),
       highCut: highCut.map((node) => node.frequency),
+      ...eq?.params,
     };
 
     let sendOut: AudioNode = send;
@@ -2090,6 +2133,7 @@ export class AutoMixEngine {
     }
 
     const stages: AudioNode[] = [];
+    let inEq: ReturnType<typeof threeBandEq> | undefined;
     if (style) {
       // Apple's incoming lanes: the song comes in through its filters
       const highpass = context.createBiquadFilter();
@@ -2107,7 +2151,10 @@ export class AutoMixEngine {
         style.incoming.some((item) => item.param === param);
       const lowCut = uses('lowCut') ? isolator(context, 'highpass') : [];
       const highCut = uses('highCut') ? isolator(context, 'lowpass') : [];
-      stages.push(highpass, lowpass, bass, ...lowCut, ...highCut, gain);
+      inEq = usesEq(style.incoming) ? threeBandEq(context) : undefined;
+      stages.push(highpass, lowpass, bass, ...lowCut, ...highCut);
+      if (inEq) stages.push(inEq.input);
+      stages.push(gain);
       scheduleLanes(
         {
           gain: gain.gain,
@@ -2116,6 +2163,7 @@ export class AutoMixEngine {
           bass: bass.gain,
           lowCut: lowCut.map((node) => node.frequency),
           highCut: highCut.map((node) => node.frequency),
+          ...inEq?.params,
         },
         withBassSwap(style, plan.bassSwapAt).incoming,
         mixAt,
@@ -2150,7 +2198,11 @@ export class AutoMixEngine {
     }
     if (!style) stages.push(gain);
     stages
-      .reduce<AudioNode>((from, node) => from.connect(node), source)
+      // The EQ's bands come back together at its output
+      .reduce<AudioNode>((from, node) => {
+        from.connect(node);
+        return inEq && node === inEq.input ? inEq.output : node;
+      }, source)
       .connect(master)
       .connect(context.destination);
 

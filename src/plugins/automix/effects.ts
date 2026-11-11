@@ -8,6 +8,14 @@
  * left out: the engine's shared tempo glide already does what they do.
  */
 
+import {
+  EQ_STYLES,
+  FILTER_STYLES,
+  PRESETS,
+  VOLUME_STYLES,
+  type CatalogCurve,
+} from './spotify-catalog';
+
 import type { HandoffRecipe, TransitionPlan } from './planner';
 
 /** What a lane automates, on the per-song chain built in the engine */
@@ -37,7 +45,16 @@ export type EffectParam =
    */
   | 'lowCut'
   /** ...and its counterpart, a 24 dB/oct low-pass, keeping only the bass */
-  | 'highCut';
+  | 'highCut'
+  /**
+   * Spotify's 3-band DJ EQ, raw as Spotify stores it: 0 = kill, 0.5 = flat,
+   * 1 = +6 dB (see eqGain)
+   */
+  | 'eqLow'
+  | 'eqMid'
+  | 'eqHigh'
+  /** Spotify's one-knob DJ filter, raw: 0.5 open, 0 low-pass, 1 high-pass */
+  | 'djFilter';
 
 /**
  * Apple's curve names: "ease-out-p" is x^p and "ease-in-p" is
@@ -249,42 +266,7 @@ export const EFFECT_STYLES: EffectStyle[] = [
  */
 const BASS_CUT_DB = -30;
 const SWAP: [At, At] = [0.375, 0.625];
-/** Hard volume steps get a short ramp so they don't click */
-const STEP = 0.02;
-const step = (param: EffectParam, from: number, to: number, at: number) =>
-  lane(param, from, to, 'linear', [0, 1], [at, [at, STEP]]);
-
 type Side = { outgoing: Lane[]; incoming: Lane[] };
-
-const volume = {
-  /** Both songs at full level; the old one stops at the end */
-  fullOverlap: {
-    outgoing: [step('gain', 1, 0, 1 - (STEP / 4))],
-    incoming: [step('gain', 0, 1, 0)],
-  },
-  /**
-   * Spotify's cross shape drops the old song dead at 60 % and starts the new
-   * one at 40 %, which sounds like a cut (and cuts a short blend off half
-   * way). Ours keeps the overlap but fades: the new song rises over 20–60 %,
-   * the old one falls over 40–80 %, both constant power.
-   */
-  crossShape: {
-    outgoing: [lane('gain', 1, 0, 'in-0.5', [0, 1], [0.4, 0.8])],
-    incoming: [lane('gain', 0, 1, 'out-0.5', [0, 1], [0.2, 0.6])],
-  },
-  slowInSlowOut: {
-    outgoing: [lane('gain', 1, 0, 'linear', [0, 1], [0.5, 1])],
-    incoming: [lane('gain', 0, 1, 'linear', [0, 1], [0, 0.5])],
-  },
-  slowInFastOutAtEnd: {
-    outgoing: [step('gain', 1, 0, 1 - (STEP / 4))],
-    incoming: [lane('gain', 0, 1, 'linear', [0, 1], [0, 0.5])],
-  },
-  fastInAtStartSlowOut: {
-    outgoing: [lane('gain', 1, 0, 'linear', [0, 1], [0.5, 1])],
-    incoming: [step('gain', 0, 1, 0)],
-  },
-} satisfies Record<string, Side>;
 
 /** Bass out of the old song and into the new one around the midpoint */
 const bassSwap = (at: [At, At] = SWAP): Side => ({
@@ -323,33 +305,6 @@ export const withBassSwap = (
   return { ...style, ...moved };
 };
 
-/** The new song opens from a 120 Hz low-pass over the first half */
-const lowpassIn: Side = {
-  outgoing: [],
-  incoming: [
-    lane('lowpass', 120, 16_000, 'log', [0, 1], [0, 0.5]),
-    set('lowpass', 20_000, 0.5),
-  ],
-};
-/** The old song closes down to a 120 Hz low-pass over the second half */
-const lowpassOut: Side = {
-  outgoing: [lane('lowpass', 16_000, 120, 'log', [0, 1], [0.5, 1])],
-  incoming: [],
-};
-/** The new song opens from a 9 kHz high-pass over the first half */
-const highpassIn: Side = {
-  outgoing: [],
-  incoming: [
-    lane('highpass', 9000, 20, 'log', [0, 1], [0, 0.5]),
-    set('highpass', 10, 0.5),
-  ],
-};
-/** The old song thins out to a 9 kHz high-pass over the second half */
-const highpassOut: Side = {
-  outgoing: [lane('highpass', 20, 9000, 'log', [0, 1], [0.5, 1])],
-  incoming: [],
-};
-
 /** Parts later in the list replace earlier ones on the same parameter */
 const compose = (...sides: Side[]): Side => {
   const merge = (pick: (side: Side) => Lane[]) =>
@@ -364,54 +319,70 @@ const compose = (...sides: Side[]): Side => {
   };
 };
 
-const spotify = (id: number, name: string, side: Side): EffectStyle => ({
-  id: 100 + id,
-  name,
-  family: 'spotify',
-  bars: 4,
-  ...side,
-});
+/** A Spotify catalog curve as lanes on one parameter */
+const curveLanes = (param: EffectParam, curve: CatalogCurve): Lane[] => {
+  const lanes: Lane[] = [];
+  for (let i = 0; i + 3 < curve.length; i += 2) {
+    const [x0, y0, x1, y1] = curve.slice(i, i + 4);
+    lanes.push(
+      x1 <= x0
+        ? set(param, y1, x0)
+        : lane(param, y0, y1, 'linear', [0, 1], [x0, x1]),
+    );
+  }
+  return lanes;
+};
+
+/** The EQ lanes of one of Spotify's EQ styles, both songs */
+export const catalogEq = (id: number): Side => {
+  const eq = EQ_STYLES[id];
+  if (!eq) return { outgoing: [], incoming: [] };
+  return {
+    outgoing: [
+      ...curveLanes('eqLow', eq.lowOut),
+      ...curveLanes('eqMid', eq.midOut),
+      ...curveLanes('eqHigh', eq.highOut),
+    ],
+    incoming: [
+      ...curveLanes('eqLow', eq.lowIn),
+      ...curveLanes('eqMid', eq.midIn),
+      ...curveLanes('eqHigh', eq.highIn),
+    ],
+  };
+};
+
+/** One of Spotify's presets, exactly as its catalog defines it */
+const catalogPreset = (id: number): EffectStyle => {
+  const preset = PRESETS[id];
+  const volumeStyle = VOLUME_STYLES[preset.volume];
+  const filter = FILTER_STYLES[preset.filter];
+  const eq = catalogEq(preset.eq);
+  return {
+    id: 100 + id,
+    name: preset.name.replace(/([a-z])([A-Z])/g, '$1 $2'),
+    family: 'spotify',
+    bars: 4,
+    outgoing: [
+      ...(volumeStyle ? curveLanes('gain', volumeStyle.out) : []),
+      ...eq.outgoing,
+      ...(filter ? curveLanes('djFilter', filter.out) : []),
+    ],
+    incoming: [
+      ...(volumeStyle ? curveLanes('gain', volumeStyle.in) : []),
+      ...eq.incoming,
+      ...(filter ? curveLanes('djFilter', filter.in) : []),
+    ],
+  };
+};
 
 /**
- * The presets Spotify's planner picks from by itself (its EQ-only "Blend"
- * is left out, and two pairs of presets that sound the same are kept once)
+ * The presets Spotify's planner picks from for beat-matched blends, from its
+ * own catalog (the cuts and the echo / reverb / riser presets aren't blends
+ * AutoMix plays this way)
  */
-export const SPOTIFY_STYLES: EffectStyle[] = [
-  spotify(1, 'Fade', compose(volume.crossShape, bassSwap())),
-  spotify(
-    3,
-    'Rise',
-    // Spotify swaps the bass at the very end, but its high-pass has taken
-    // the old song's bass away well before: swapped half way, like the rest
-    compose(volume.fullOverlap, bassSwap(), lowpassIn, highpassOut),
-  ),
-  spotify(
-    4,
-    'Melt',
-    compose(volume.slowInSlowOut, bassSwap(), highpassIn, highpassOut),
-  ),
-  spotify(
-    5,
-    'Filter out',
-    compose(volume.slowInFastOutAtEnd, bassSwap(), highpassOut),
-  ),
-  spotify(
-    9,
-    'Filter in',
-    compose(volume.fastInAtStartSlowOut, bassSwap(), highpassIn),
-  ),
-  spotify(
-    10,
-    'Filter in and out',
-    compose(volume.fullOverlap, bassSwap(), highpassIn, highpassOut),
-  ),
-  spotify(17, 'Wave', compose(volume.fullOverlap, bassSwap(), lowpassIn, lowpassOut)),
-  spotify(
-    18,
-    'Low-pass out',
-    compose(volume.slowInFastOutAtEnd, bassSwap(), lowpassOut),
-  ),
-];
+export const SPOTIFY_STYLES: EffectStyle[] = [1, 2, 3, 4, 5, 7, 8, 9, 10, 16, 17, 18, 19].map(
+  catalogPreset,
+);
 
 /** Spotify only uses these three on its 2-bar blends */
 const SHORT_SPOTIFY_STYLES = [101, 110, 117];
@@ -432,6 +403,39 @@ export const EFFECT_DEFAULTS: Record<EffectParam, number> = {
   delayLowpass: 20_000,
   lowCut: 10,
   highCut: 20_000,
+  eqLow: 0.5,
+  eqMid: 0.5,
+  eqHigh: 0.5,
+  djFilter: 0.5,
+};
+
+/**
+ * Spotify's EQ value mapping (its AutomationValueSemantics): 0 kills the
+ * band, 0 .. 0.5 is -48 .. -1.5 dB geometric, 0.5 flat, 0.5 .. 1 is
+ * +0.64 .. +6 dB geometric. Returns the band's linear gain.
+ */
+export const eqGain = (raw: number) => {
+  if (raw <= 0) return 0;
+  if (Math.abs(raw - 0.5) < 1e-6) return 1;
+  const db =
+    raw < 0.5
+      ? -48 * ((1.5 / 48) ** (raw / 0.5))
+      : 0.638_943 * ((6 / 0.638_943) ** ((raw - 0.5) / 0.5));
+  return 10 ** (db / 20);
+};
+
+/** Spotify's filter knob, low-pass side: 120 Hz (0) .. 16 kHz (0.5), open above */
+export const djLowpass = (raw: number) =>
+  raw >= 0.5 ? 20_000 : 120 * ((16_000 / 120) ** (Math.max(0, raw) / 0.5));
+/** ...and high-pass side: open below 0.5, 20 Hz (0.5) .. 9 kHz (1) */
+export const djHighpass = (raw: number) =>
+  raw <= 0.5 ? 10 : 20 * ((9000 / 20) ** (Math.min(1, raw - 0.5) / 0.5));
+
+/** Raw lane values turned into what each AudioParam takes */
+const PARAM_MAP: Partial<Record<EffectParam, (raw: number) => number>> = {
+  eqLow: eqGain,
+  eqMid: eqGain,
+  eqHigh: eqGain,
 };
 
 export const ease = (curve: Curve, x: number) => {
@@ -500,10 +504,21 @@ export const scheduleLanes = (
   for (const item of [...lanes, ...mirrored]) {
     byParam.set(item.param, [...(byParam.get(item.param) ?? []), item]);
   }
+  const all = (given: AudioParam | AudioParam[] | undefined) =>
+    Array.isArray(given) ? given : given ? [given] : [];
   for (const [name, items] of byParam) {
-    const given = params[name];
-    for (const param of Array.isArray(given) ? given : given ? [given] : []) {
-      scheduleParam(param, items, start, duration, earliest, neutral(name));
+    if (name === 'djFilter') {
+      // One knob drives both filters
+      for (const param of all(params.lowpass)) {
+        scheduleParam(param, items, start, duration, earliest, 0.5, djLowpass);
+      }
+      for (const param of all(params.highpass)) {
+        scheduleParam(param, items, start, duration, earliest, 0.5, djHighpass);
+      }
+      continue;
+    }
+    for (const param of all(params[name])) {
+      scheduleParam(param, items, start, duration, earliest, neutral(name), PARAM_MAP[name]);
     }
   }
 };
@@ -516,9 +531,10 @@ const scheduleParam = (
   duration: number,
   earliest: number,
   neutralValue: number,
+  map: (raw: number) => number = (raw) => raw,
 ) => {
   const clamp = (value: number) =>
-    Math.min(param.maxValue, Math.max(param.minValue, value));
+    Math.min(param.maxValue, Math.max(param.minValue, map(value)));
   const timed = items
     .map((item) => ({ item, times: laneTimes(item, start, duration) }))
     .sort((a, b) => a.times.from - b.times.from);
@@ -640,8 +656,8 @@ const HANDOFF_NAMES: Record<HandoffRecipe['kind'], string> = {
  */
 export const handoffStyle = (recipe: HandoffRecipe): EffectStyle => {
   if (recipe.kind === 'outro') {
-    // Both at full level; the basses swap half way, the old song stops on
-    // its last beat (its tail is cut)
+    // Both at full level (Spotify's FullOverlap); the bass goes over with
+    // one of Spotify's EQ styles; the old song stops on its last beat
     return {
       id: 202,
       name: HANDOFF_NAMES.outro,
@@ -649,13 +665,12 @@ export const handoffStyle = (recipe: HandoffRecipe): EffectStyle => {
       bars: recipe.bars,
       outEnd: [1, 0.01],
       outgoing: [
-        lane('lowCut', 10, ISOLATOR_HZ, 'log', [0, 1], [[0.5, -SWITCH], [0.5, SWITCH]]),
+        ...catalogEq(recipe.eq).outgoing,
         lane('gain', 1, 0, 'linear', [0, 1], [[1, -0.01], [1, 0.005]]),
       ],
       incoming: [
         lane('gain', 0, 1, 'linear', [0, 1], [0, [0, 0.008]]),
-        set('lowCut', ISOLATOR_HZ),
-        lane('lowCut', ISOLATOR_HZ, 10, 'log', [0, 1], [[0.5, -SWITCH], [0.5, SWITCH]]),
+        ...catalogEq(recipe.eq).incoming,
       ],
     };
   }
