@@ -748,7 +748,14 @@ export const handoffStyle = (recipe: HandoffRecipe): EffectStyle => {
       name: HANDOFF_NAMES.loop,
       family: 'handoff',
       bars: recipe.bars,
-      repeats: [{ at: 0, bars: recipe.loopBeats / 4, behind: true }],
+      // ...rolling over its last quarter like Spotify's beat roll (looping
+      // style 5): the slice shortens to a beat, half a beat, a quarter
+      repeats: [
+        { at: 0, bars: recipe.loopBeats / 4, behind: true },
+        { at: 0.75, bars: 1 / 4 },
+        { at: 0.875, bars: 1 / 8 },
+        { at: 0.9375, bars: 1 / 16 },
+      ],
       repeatEnd: [1, 0.01],
       outEnd: [0, 0.05],
       outgoing: [
