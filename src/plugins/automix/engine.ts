@@ -56,6 +56,19 @@ export type AutoMixWaitReason =
   | 'version-mismatch'
   | 'no-room';
 
+/** Where getting a transition ready has got to (see AutoMixStatus.steps) */
+export interface AnalysisSteps {
+  done: number;
+  total: number;
+  /** What's running now, and on which song */
+  current: AnalysisStage | 'plan';
+  title?: string;
+}
+
+/** The steps each song goes through before a transition can be planned */
+export type AnalysisStage = 'download' | 'analyse' | 'apple';
+const STAGES: AnalysisStage[] = ['download', 'analyse', 'apple'];
+
 export interface AutoMixStatus {
   phase: AutoMixPhase;
   reason?: AutoMixWaitReason;
@@ -69,6 +82,8 @@ export interface AutoMixStatus {
   progress?: number;
   /** Stream quality of AutoMix's copy, when it's noticeably worse */
   lowQuality?: string;
+  /** While getting ready: which step is running, of how many */
+  steps?: AnalysisSteps;
   /**
    * Latest point (player seconds) the song can be sought to with the planned
    * transition still going ahead; past it, there's no time left to take over
@@ -606,6 +621,8 @@ export class AutoMixEngine {
   private stretchContext: AudioContext | null = null;
   /** Song pair (from>to) that couldn't split its stretch: plan it without */
   private noSplitFor = '';
+  /** The step each song being loaded is on */
+  private readonly stages = new Map<string, AnalysisStage>();
   /** A pair whose hand-off couldn't be played (no copy of the next song) */
   private noHandoffFor = '';
 
@@ -1139,6 +1156,33 @@ export class AutoMixEngine {
     return this.currentVideoId();
   }
 
+  /**
+   * How far getting this song and the next one ready has got: each goes
+   * through STAGES, then the transition is planned
+   */
+  private stepsFor(id: string, nextId: string): AnalysisSteps {
+    const total = (2 * STAGES.length) + 1;
+    let done = 0;
+    let current: AnalysisSteps['current'] = 'plan';
+    let title: string | undefined;
+    for (const [videoId, name] of [
+      [id, this.currentTitle],
+      [nextId, this.next?.title],
+    ] as const) {
+      if (this.ready.has(videoId)) {
+        done += STAGES.length;
+        continue;
+      }
+      const stage = this.stages.get(videoId) ?? 'download';
+      done += STAGES.indexOf(stage);
+      if (current === 'plan') {
+        current = stage;
+        title = name ?? undefined;
+      }
+    }
+    return { done, total, current, title };
+  }
+
   /** A transition is playing right now */
   get mixing() {
     return this.mix !== null;
@@ -1150,13 +1194,16 @@ export class AutoMixEngine {
     if (this.tracks.has(videoId)) return;
 
     const promise = (async () => {
+      this.stages.set(videoId, 'download');
       const audio = await this.fetchAudio(videoId);
       if (!audio || this.stopped) return null;
+      this.stages.set(videoId, 'analyse');
       const track = await decodeAndAnalyze(
         videoId,
         audio.bytes,
         this.context?.sampleRate ?? 48000,
       );
+      this.stages.set(videoId, 'apple');
       return {
         ...(await this.withAppleAnalysis(track)),
         quality: audio.quality,
@@ -1165,6 +1212,7 @@ export class AutoMixEngine {
     })()
       .catch(() => null)
       .then((track) => {
+        this.stages.delete(videoId);
         if (this.tracks.get(videoId) !== promise) return track;
         if (track) {
           this.ready.set(videoId, track);
@@ -1463,7 +1511,7 @@ export class AutoMixEngine {
     if (!from) {
       this.emit(
         this.tracks.has(id)
-          ? { phase: 'analyzing' }
+          ? { phase: 'analyzing', steps: this.stepsFor(id, nextId) }
           : { phase: 'waiting', reason: 'analysis-failed' },
       );
       return IDLE_TICK_MS;
@@ -1484,7 +1532,7 @@ export class AutoMixEngine {
     if (!to && !late) {
       this.emit(
         this.tracks.has(nextId)
-          ? { phase: 'analyzing' }
+          ? { phase: 'analyzing', steps: this.stepsFor(id, nextId) }
           : { phase: 'waiting', reason: 'analysis-failed' },
       );
       return IDLE_TICK_MS;

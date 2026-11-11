@@ -48,6 +48,37 @@ const formatTime = (seconds: number) => {
 const styleName = (plan: TransitionPlan) =>
   t(`plugins.automix.style.${plan.style}`);
 
+/** "Confidence 82% · keys clash (8A → 2B), stretched 7%" */
+export const describeConfidence = (plan: TransitionPlan) => {
+  if (plan.confidence === undefined) return undefined;
+  const percent = Math.round(plan.confidence * 100);
+  const notes = (plan.confidenceNotes ?? []).slice(0, 2).map((note) => {
+    switch (note.kind) {
+      case 'style':
+        return t(`plugins.automix.ui.confidence.style-${note.style}`);
+      case 'grid':
+        return t('plugins.automix.ui.confidence.grid');
+      case 'stretch':
+        return t('plugins.automix.ui.confidence.stretch', { percent: note.percent });
+      case 'keys':
+        return t(
+          note.diagonal
+            ? 'plugins.automix.ui.confidence.keys-diagonal'
+            : 'plugins.automix.ui.confidence.keys',
+          { from: note.from, to: note.to },
+        );
+      case 'vocals':
+        return t('plugins.automix.ui.confidence.vocals', { percent: note.percent });
+      default:
+        return t('plugins.automix.ui.confidence.late');
+    }
+  });
+  return t('plugins.automix.ui.confidence.line', {
+    percent,
+    notes: notes.length ? ` · ${notes.join(', ')}` : '',
+  });
+};
+
 const describePlan = (plan: TransitionPlan) => {
   const parts = [describeStyle(plan)];
   if (plan.fromKey && plan.toKey) {
@@ -179,6 +210,7 @@ const hintFor = (status: AutoMixStatus): Hint => {
             ]
           : []),
         describePlan(plan),
+        ...(describeConfidence(plan) ? [describeConfidence(plan)!] : []),
         plan.landsOnVocal === undefined
           ? t('plugins.automix.ui.detail.entry', {
               time: formatTime(plan.mixIn),
@@ -221,8 +253,19 @@ const hintFor = (status: AutoMixStatus): Hint => {
       };
     case 'analyzing':
       return {
-        heading: t('plugins.automix.ui.hint.analyzing-heading'),
-        lines: [t('plugins.automix.ui.hint.analyzing')],
+        heading: status.steps
+          ? t('plugins.automix.ui.hint.analyzing-step', {
+              step: Math.min(status.steps.total, status.steps.done + 1),
+              total: status.steps.total,
+            })
+          : t('plugins.automix.ui.hint.analyzing-heading'),
+        lines: [
+          status.steps
+            ? t(`plugins.automix.ui.hint.stage.${status.steps.current}`, {
+                title: status.steps.title ?? '',
+              })
+            : t('plugins.automix.ui.hint.analyzing'),
+        ],
         footer,
       };
     default:

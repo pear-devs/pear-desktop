@@ -442,6 +442,19 @@
           "smooth": "{{seconds}} s fade"
         },
         "seek-marker": "Seek up to here ({{time}}) and the transition into \"{{title}}\" still plays as planned",
+        "confidence": {
+          "line": "Confidence {{percent}}%{{notes}}",
+          "style-cut": "a cut is abrupt",
+          "style-segue": "plays the ending out",
+          "style-smooth": "a fade, the beats can't be matched",
+          "style-blend": "",
+          "grid": "beat grid from our own analysis",
+          "stretch": "stretched {{percent}}%",
+          "keys": "keys clash ({{from}} → {{to}})",
+          "keys-diagonal": "diagonal key move ({{from}} → {{to}})",
+          "vocals": "two singers for {{percent}}% of it",
+          "late": "next song changed late"
+        },
         "low-quality": "Only a lower quality stream ({{quality}}) was available for mixing, so the transition may sound duller than normal playback",
         "mixing": "AutoMixing",
         "off": "AutoMix off",
@@ -476,7 +489,14 @@
         },
         "hint": {
           "analyzing": "Analysing the beats of this song and the next one",
-          "analyzing-heading": "Picking a transition…",
+          "analyzing-heading": "Getting the transition ready…",
+          "analyzing-step": "Getting ready · step {{step}} of {{total}}",
+          "stage": {
+            "download": "Downloading \"{{title}}\" to analyse it",
+            "analyse": "Finding the beats, bars, key and loudness of \"{{title}}\"",
+            "apple": "Looking \"{{title}}\" up in Apple Music for its phrases and vocals",
+            "plan": "Choosing where and how to mix"
+          },
           "click-off": "Click the AutoMix button to turn it off",
           "click-on": "Click the AutoMix button to turn it on",
           "next": "Next: {{style}}",

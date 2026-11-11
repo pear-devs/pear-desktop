@@ -140,6 +140,12 @@ export interface TransitionPlan {
   bassSwapAt?: [number, number];
   /** A DJ hand-off rather than a fade (see HandoffRecipe) */
   recipe?: HandoffRecipe;
+  /**
+   * How likely the transition is to sound good, 0..1, from what's known
+   * about the pair (see confidenceOf), with what held it back
+   */
+  confidence?: number;
+  confidenceNotes?: ConfidenceNote[];
   /** Bring the incoming song in high-passed, opening up as it fades in */
   filterIn?: boolean;
   /** Camelot keys at the mix point, when detected (e.g. "8A") */
@@ -213,6 +219,76 @@ const autoBlendBeats = (from: TrackAnalysis, to: TrackAnalysis, clash: boolean) 
   clash || Math.abs(tempoRatio(from.bpm, to.bpm) - 1) > SHORT_BLEND_STRETCH
     ? SHORT_BLEND_BEATS
     : AUTO_BLEND_BEATS;
+
+/** What lowered a transition's confidence, for the UI to explain */
+export type ConfidenceNote =
+  | { kind: 'style'; style: TransitionStyle }
+  | { kind: 'grid' }
+  | { kind: 'stretch'; percent: number }
+  | { kind: 'keys'; from: string; to: string; diagonal: boolean }
+  | { kind: 'vocals'; percent: number }
+  | { kind: 'late' };
+
+/**
+ * How likely a planned transition is to sound good, 0..1: the kind of
+ * transition (a DJ hand-off or a beat-matched blend is the best a pair can
+ * get; a cut is abrupt by nature), how sure the beat grids are, how far the
+ * next song is stretched, whether the keys fit, and how much of it has two
+ * singers at once. The notes say what held it back, biggest first.
+ */
+const confidenceOf = (
+  plan: TransitionPlan,
+  from: TrackAnalysis,
+  to: TrackAnalysis,
+  clash: boolean,
+  diagonal: boolean,
+): { confidence: number; notes: ConfidenceNote[] } => {
+  const factors: { factor: number; note: ConfidenceNote }[] = [];
+  const styleFactor: Record<TransitionStyle, number> = {
+    blend: 1,
+    segue: 0.9,
+    smooth: 0.75,
+    cut: 0.7,
+  };
+  if (plan.reason === 'late-change') {
+    factors.push({ factor: 0.5, note: { kind: 'late' } });
+  } else if (styleFactor[plan.style] < 1) {
+    factors.push({ factor: styleFactor[plan.style], note: { kind: 'style', style: plan.style } });
+  }
+  const matched = plan.style === 'blend';
+  if (matched) {
+    const apple = Boolean(from.appleId && from.phrases?.length && to.appleId && to.phrases?.length);
+    const sure = Math.min(from.tempoConfidence, to.tempoConfidence);
+    if (!apple) {
+      factors.push({ factor: 0.85 * (0.6 + (0.4 * sure)), note: { kind: 'grid' } });
+    }
+    const stretch = Math.abs(plan.rate - 1);
+    if (stretch >= 0.01) {
+      factors.push({
+        factor: 1 - Math.min(0.5, stretch * 4),
+        note: { kind: 'stretch', percent: Math.round(stretch * 1000) / 10 },
+      });
+    }
+    if ((clash || diagonal) && plan.fromKey && plan.toKey) {
+      factors.push({
+        factor: clash && !diagonal ? 0.6 : 0.85,
+        note: { kind: 'keys', from: plan.fromKey, to: plan.toKey, diagonal },
+      });
+    }
+    if (plan.vocalClash && plan.vocalClash > 0.05) {
+      factors.push({
+        factor: 1 - (0.6 * Math.min(1, plan.vocalClash)),
+        note: { kind: 'vocals', percent: Math.round(plan.vocalClash * 100) },
+      });
+    }
+  }
+  const confidence = factors.reduce((value, { factor }) => value * factor, 1);
+  const notes = factors
+    .filter(({ factor }) => factor < 0.98)
+    .sort((a, b) => a.factor - b.factor)
+    .map(({ note }) => note);
+  return { confidence, notes };
+};
 
 /** Our own grid must be at least this sure for a hand-off's hard switches */
 const HANDOFF_TEMPO_CONFIDENCE = 0.6;
@@ -1115,17 +1191,29 @@ export const planTransition = (
       ) {
         effect = CROSSFADE_REVERB.id;
       }
-      return {
+      const finished: TransitionPlan = {
         ...plan,
         effect,
         reason: reasonFor(plan),
-        tonalOverlap: style === 'blend' ? overlap(plan) : undefined,
         vocalClash:
           style === 'blend'
             ? vocalClash(from, to, plan.mixOut, plan.mixIn, plan.duration, plan.rate)
             : undefined,
         fromKey: outgoing.end.key?.camelot,
         toKey: incoming.start.key?.camelot,
+      };
+      const rated = confidenceOf(
+        finished,
+        from,
+        to,
+        clash,
+        keysDiagonal(outgoing.end.key, incoming.start.key),
+      );
+      return {
+        ...finished,
+        confidence: rated.confidence,
+        confidenceNotes: rated.notes,
+        tonalOverlap: style === 'blend' ? overlap(plan) : undefined,
         landsOnVocal: vocalLanding(to, plan),
         appleAnalysis: Boolean(outgoing.appleId ?? incoming.appleId),
         checks: {
