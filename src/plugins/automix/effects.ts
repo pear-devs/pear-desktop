@@ -628,6 +628,8 @@ export const effectById = (id: number | undefined) =>
 
 /** Where a DJ isolator splits the bass off (both reels measure ~300 Hz, LR4) */
 const ISOLATOR_HZ = 300;
+/** Peak of an outro swap's high-pass bump on the old song, Hz */
+const HIGHPASS_BUMP_HZ = 190;
 /** How long an isolator switch takes, either side of the bar line */
 const SWITCH = 0.025;
 
@@ -651,6 +653,12 @@ export const handoffStyle = (recipe: HandoffRecipe): EffectStyle => {
       bars: recipe.bars,
       outEnd: [1, 0.01],
       outgoing: [
+        // The high-pass bump from Spotify's own Did It First into Ainvayi
+        // (its filter knob 0.5 -> 0.685 -> 0.5, i.e. ~190 Hz): the old song
+        // thins out over the first bar as the new one comes in, and is full
+        // again before its bass goes
+        lane('highpass', 20, HIGHPASS_BUMP_HZ, 'log', [0, 1], [0, 1 / recipe.bars]),
+        lane('highpass', HIGHPASS_BUMP_HZ, 20, 'log', [0, 1], [1 / recipe.bars, 0.5]),
         lane('lowCut', 10, ISOLATOR_HZ, 'log', [0, 1], [[0.5, -SWITCH], [0.5, SWITCH]]),
         lane('gain', 1, 0, 'linear', [0, 1], [[1, -0.01], [1, 0.005]]),
       ],

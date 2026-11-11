@@ -294,6 +294,22 @@ export const keysCompatible = (a: MusicalKey, b: MusicalKey) => {
   return steps === 0 || (steps === 1 && letterA === letterB);
 };
 
+/**
+ * A diagonal move on the Camelot wheel (one step round and across, e.g.
+ * 3B to 2A): a DJ's energy move, fine over instrumental parts, not for
+ * long vocal blends
+ */
+export const keysDiagonal = (a?: MusicalKey | null, b?: MusicalKey | null) => {
+  if (!a || !b) return false;
+  const numberA = Number.parseInt(a.camelot, 10);
+  const numberB = Number.parseInt(b.camelot, 10);
+  const steps = Math.min(
+    Math.abs(numberA - numberB),
+    12 - Math.abs(numberA - numberB),
+  );
+  return steps === 1 && a.camelot.at(-1) !== b.camelot.at(-1);
+};
+
 /** True only when both keys are clear enough and they don't fit together */
 export const keysClash = (a?: MusicalKey | null, b?: MusicalKey | null) =>
   Boolean(

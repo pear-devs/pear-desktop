@@ -36,6 +36,8 @@ const OUTRO_BARS = [8, 4];
 const OUTRO_MAX_SECONDS = 16.5;
 /** The next song's intro under the old song must be this much under its body */
 const SPARSE_DB = 4;
+/** ...and get at least this much louder where it arrives, as the old one stops */
+const ARRIVAL_DB = 3;
 
 /** A breakdown's bars are this much quieter (lows) than the bars before it */
 const BREAKDOWN_DB = 5;
@@ -73,6 +75,8 @@ export interface HandoffContext {
   rate: number;
   /** The keys clash while both songs are tonal */
   clash: boolean;
+  /** ...too much for an outro swap (diagonal moves are fine there) */
+  outroClash: boolean;
   earliestMixOut: number;
   headSeconds: number;
 }
@@ -192,7 +196,7 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
     !to.levels ||
     !from.vocals ||
     !to.vocals ||
-    c.clash
+    c.outroClash
   ) {
     return null;
   }
@@ -200,12 +204,13 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
   if (exit === undefined) return null;
 
   const entry = entryPoint(to);
-  // Where the next song really arrives: its first line (else its bass)
-  const target = to.vocalEntry ?? to.bassEntry ?? to.introEnd;
-  const grid = to.phrases?.length ? to.phrases : to.downbeats;
-  const arrival =
-    grid.find((time) => time >= target - (barIn / 2)) ??
-    to.downbeats.find((time) => time >= target - (barIn / 2));
+  // Where the next song can arrive: the start of a phrase (else every 4th
+  // bar), early enough for our copy of it
+  const grid = to.phrases?.length
+    ? to.phrases
+    : to.downbeats.filter((_, i) => i % 4 === 0);
+  const vocalNear = (time: number) =>
+    to.vocalEntry !== undefined && Math.abs(to.vocalEntry - time) <= barIn;
 
   for (const bars of OUTRO_BARS) {
     const start = exit - (bars * bar);
@@ -213,25 +218,46 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
     if (!vocalFree(from, start, exit - 0.1, from.beatPeriod)) continue;
 
     const span = bars * bar * rate;
-    let mixIn = arrival === undefined ? entry : arrival - span;
-    // An intro shorter than the overlap: the overlap is the song's first bars
-    if (mixIn < entry - 0.05) mixIn = entry;
-    const lands = mixIn + span;
-    if (mixIn < 0 || lands + HEAD_AFTER > c.headSeconds) continue;
-    // A pickup line just before the arrival is fine (reel 2 has one)
-    if (!vocalFree(to, mixIn, lands - (3 * to.beatPeriod), to.beatPeriod)) continue;
-    // Two dense songs at full level would be mud: the intro must be sparse
-    const level = levelDb(to, 'full', mixIn, lands);
-    if (level === undefined || level > to.bodyLoudness - SPARSE_DB) continue;
+    // Each place it could arrive, with the stretch of intro under the old
+    // song before it; the song's own first bars too, when nothing fits
+    const windows = [
+      ...grid
+        .filter((time) => time - span >= entry - 0.05)
+        .map((time) => ({ mixIn: time - span, lands: time })),
+      { mixIn: entry, lands: entry + span },
+    ];
+    let best: { mixIn: number; lands: number; score: number } | undefined;
+    for (const { mixIn, lands } of windows) {
+      if (mixIn < 0 || lands + HEAD_AFTER > c.headSeconds) continue;
+      // A pickup line just before the arrival is fine (reel 2 has one)
+      if (!vocalFree(to, mixIn, lands - (3 * to.beatPeriod), to.beatPeriod)) {
+        continue;
+      }
+      // Two dense songs at full level would be mud: the intro must be sparse
+      const under = levelDb(to, 'full', mixIn, lands);
+      if (under === undefined || under > to.bodyLoudness - SPARSE_DB) continue;
+      // ...it comes in on a section of its own (Spotify's own Did It First
+      // into Ainvayi starts Ainvayi on its brass riff, where the mids jump
+      // ~8 dB), and something arrives as the old song stops (hook, bass)
+      const after = levelDb(to, 'full', lands, lands + (2 * barIn));
+      const entering = levelDb(to, 'mid', mixIn, mixIn + barIn);
+      const before = levelDb(to, 'mid', Math.max(0, mixIn - barIn), mixIn);
+      if (after === undefined) continue;
+      const sectionStep =
+        entering !== undefined && before !== undefined && mixIn >= barIn
+          ? Math.max(0, entering - before)
+          : 0;
+      const score =
+        after - under + sectionStep + (vocalNear(lands) ? 2 : 0);
+      if (!best || score > best.score) best = { mixIn, lands, score };
+    }
+    if (!best || best.score < ARRIVAL_DB) continue;
 
-    const landsOnVocal =
-      to.vocalEntry !== undefined && Math.abs(to.vocalEntry - lands) <= barIn
-        ? to.vocalEntry
-        : undefined;
+    const landsOnVocal = vocalNear(best.lands) ? to.vocalEntry : undefined;
     return {
       style: 'blend',
       mixOut: start,
-      mixIn,
+      mixIn: best.mixIn,
       duration: bars * bar,
       rate,
       beat: from.beatPeriod,
@@ -239,7 +265,7 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
       toBpm: to.bpm,
       landsOnVocal,
       recipe: { kind: 'outro', bars },
-      score: (bars / 4) + (landsOnVocal === undefined ? 0 : 1),
+      score: (bars / 4) + (best.score / 4),
     };
   }
   return null;

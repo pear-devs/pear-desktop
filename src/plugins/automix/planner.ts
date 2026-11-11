@@ -5,7 +5,7 @@ import {
   CROSSFADE_REVERB,
 } from './effects';
 import { planHandoff } from './handoff';
-import { keysClash } from './key';
+import { keysClash, keysDiagonal } from './key';
 
 import type { TempoSection, TrackAnalysis } from './analysis';
 
@@ -1003,6 +1003,9 @@ export const planTransition = (
             to,
             rate: handoffRate,
             clash,
+            // An outro swap's overlap is instrumental against instrumental
+            outroClash:
+              clash && !keysDiagonal(outgoing.end.key, incoming.start.key),
             earliestMixOut: options.earliestMixOut,
             headSeconds: options.headSeconds ?? HEAD_SECONDS_DEFAULT,
           },
