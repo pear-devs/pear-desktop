@@ -336,12 +336,18 @@ const curveLanes = (param: EffectParam, curve: CatalogCurve): Lane[] => {
     const [x0, y0, x1, y1] = curve.slice(i, i + 4);
     // A step (or a near-instant ramp) becomes a short, smooth move centred
     // on it: equal-power on the volume, so a swap doesn't dip or bump
+    // Holds add nothing (a value stays where its last move left it) and
+    // would cut into a softened step's ramp: only the start value is kept
+    if (y0 === y1) {
+      if (lanes.length === 0) lanes.push(set(param, y0, x0));
+      continue;
+    }
     const instant = x1 - x0 < 0.02;
-    if (instant && y0 !== y1) {
+    if (instant) {
       const centre = (x0 + x1) / 2;
       const curveKind = param === 'gain' ? (y1 > y0 ? 'out-0.5' : 'in-0.5') : 'linear';
       lanes.push(lane(param, y0, y1, curveKind, [0, 1], [[centre, -soften / 2], [centre, soften / 2]]));
-    } else if (x1 > x0) {
+    } else {
       lanes.push(lane(param, y0, y1, 'linear', [0, 1], [x0, x1]));
     }
   }
