@@ -319,16 +319,31 @@ const compose = (...sides: Side[]): Side => {
   };
 };
 
+/**
+ * How long Spotify's instant steps take here, in seconds. Its curves jump
+ * (a volume dropping dead, a band killed in 1/128 of the window), which
+ * through a short blend lands as three hard edges within a second or two:
+ * the shapes and timing are kept, the edges are rounded off
+ */
+const STEP_SECONDS: Partial<Record<EffectParam, number>> = { gain: 1.2 };
+const STEP_SECONDS_DEFAULT = 0.6;
+
 /** A Spotify catalog curve as lanes on one parameter */
 const curveLanes = (param: EffectParam, curve: CatalogCurve): Lane[] => {
   const lanes: Lane[] = [];
+  const soften = STEP_SECONDS[param] ?? STEP_SECONDS_DEFAULT;
   for (let i = 0; i + 3 < curve.length; i += 2) {
     const [x0, y0, x1, y1] = curve.slice(i, i + 4);
-    lanes.push(
-      x1 <= x0
-        ? set(param, y1, x0)
-        : lane(param, y0, y1, 'linear', [0, 1], [x0, x1]),
-    );
+    // A step (or a near-instant ramp) becomes a short, smooth move centred
+    // on it: equal-power on the volume, so a swap doesn't dip or bump
+    const instant = x1 - x0 < 0.02;
+    if (instant && y0 !== y1) {
+      const centre = (x0 + x1) / 2;
+      const curveKind = param === 'gain' ? (y1 > y0 ? 'out-0.5' : 'in-0.5') : 'linear';
+      lanes.push(lane(param, y0, y1, curveKind, [0, 1], [[centre, -soften / 2], [centre, soften / 2]]));
+    } else if (x1 > x0) {
+      lanes.push(lane(param, y0, y1, 'linear', [0, 1], [x0, x1]));
+    }
   }
   return lanes;
 };
