@@ -1867,6 +1867,56 @@ export class AutoMixEngine {
     });
   }
 
+  /** The ending a Beat Cut gets (see AutoMixPluginConfig.cutEnding) */
+  private cutEnding(plan: TransitionPlan): 'filter' | 'brake' | 'spinback' {
+    const ending = this.config.cutEnding ?? 'filter';
+    if (ending !== 'mixed') return ending;
+    const endings = ['filter', 'brake', 'spinback'] as const;
+    return endings[Math.floor(plan.mixOut * 7) % endings.length];
+  }
+
+  /**
+   * A spinback: over the last beat before the cut the record is spun back,
+   * fast, through the bars just played (reversed, slowing as it goes), and
+   * the song itself drops out under it
+   */
+  private spinback(
+    context: AudioContext,
+    chain: OutgoingChain,
+    mixAt: number,
+    beat: number,
+    clock: OutgoingClock,
+  ) {
+    const buffer = chain.source.buffer;
+    const start = mixAt - beat;
+    if (!buffer || start <= context.currentTime) return;
+    const span = Math.min(2 * beat, clock.position(start) - clock.tailStart);
+    const end = Math.round((clock.position(start) - clock.tailStart) * buffer.sampleRate);
+    const length = Math.round(span * buffer.sampleRate);
+    if (length < buffer.sampleRate * 0.1) return;
+    const reversed = context.createBuffer(buffer.numberOfChannels, length, buffer.sampleRate);
+    for (let c = 0; c < buffer.numberOfChannels; c++) {
+      const from = buffer.getChannelData(c);
+      const to = reversed.getChannelData(c);
+      for (let i = 0; i < length; i++) to[i] = from[end - 1 - i] ?? 0;
+    }
+    const spin = context.createBufferSource();
+    spin.buffer = reversed;
+    const level = context.createGain();
+    spin.connect(level).connect(chain.master);
+    // Fast at first, slowing as it goes, fading: the two beats spin back in one
+    // (a linear slow-down averaging span / beat)
+    spin.playbackRate.setValueAtTime((2 * span / beat) - 0.3, start);
+    spin.playbackRate.linearRampToValueAtTime(0.3, mixAt);
+    level.gain.setValueAtTime(0.9, start);
+    level.gain.linearRampToValueAtTime(0, mixAt);
+    spin.start(start);
+    spin.stop(mixAt + 0.05);
+    chain.dry.gain.setValueAtTime(1, start);
+    chain.dry.gain.linearRampToValueAtTime(0, start + 0.03);
+    chain.nodes.push(spin, level);
+  }
+
   /** Schedules the outgoing side of the transition, sample accurately */
   private scheduleOutgoing(
     context: AudioContext,
@@ -1923,12 +1973,22 @@ export class AutoMixEngine {
       }
 
       case 'cut': {
-        // Filter build-up over the last bar, an optional echo throw, then a
-        // hard cut on the downbeat
+        // Filter build-up over the last bar (or a vinyl stop or a spinback,
+        // Spotify's jogwheel styles), an optional echo throw, then a hard
+        // cut on the downbeat
         const beat = plan.beat || 0.5;
-        const buildFrom = Math.max(context.currentTime, mixAt - (beat * 4));
-        highpass?.frequency.setValueAtTime(20, buildFrom);
-        highpass?.frequency.exponentialRampToValueAtTime(900, mixAt);
+        const ending = this.cutEnding(plan);
+        if (ending === 'brake') {
+          // The platter brakes over the last beat: speed (and pitch) falls
+          chain.source.playbackRate.setValueAtTime(1, Math.max(context.currentTime, mixAt - beat));
+          chain.source.playbackRate.exponentialRampToValueAtTime(0.08, mixAt);
+        } else if (ending === 'spinback' && clock) {
+          this.spinback(context, chain, mixAt, beat, clock);
+        } else {
+          const buildFrom = Math.max(context.currentTime, mixAt - (beat * 4));
+          highpass?.frequency.setValueAtTime(20, buildFrom);
+          highpass?.frequency.exponentialRampToValueAtTime(900, mixAt);
+        }
 
         if (this.config.cutEcho) {
           const send = context.createGain();

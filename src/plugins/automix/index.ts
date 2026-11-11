@@ -73,6 +73,15 @@ export default createPlugin({
         checked: config.cutEcho,
         click: (item) => setConfig({ cutEcho: item.checked }),
       },
+      radio(
+        t('plugins.automix.menu.cut-ending.label'),
+        config.cutEnding,
+        (['filter', 'brake', 'spinback', 'mixed'] as const).map((ending) => [
+          ending,
+          t(`plugins.automix.menu.cut-ending.${ending}`),
+        ]),
+        (cutEnding) => setConfig({ cutEnding }),
+      ),
       {
         label: t('plugins.automix.menu.dj-handoffs'),
         type: 'checkbox',

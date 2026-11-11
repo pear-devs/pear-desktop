@@ -17,6 +17,11 @@ export type AutoMixPluginConfig = {
   /** Echo the old song's last beat under the next one on a beat cut */
   cutEcho: boolean;
   /**
+   * How a Beat Cut ends the old song (Spotify's jogwheel styles): a filter
+   * build-up, a vinyl stop, a spinback, or one of them picked per pair
+   */
+  cutEnding: 'filter' | 'brake' | 'spinback' | 'mixed';
+  /**
    * DJ hand-offs: when a pair allows, both songs play at full level and the
    * bass is handed from one to the other on a bar line (outro over intro,
    * or a pickup dropped in after a breakdown), never two vocals at once
@@ -53,6 +58,7 @@ export const defaultConfig: AutoMixPluginConfig = {
   smoothSeconds: 5,
   beatOnly: false,
   cutEcho: false,
+  cutEnding: 'filter',
   djHandoffs: true,
   effects: true,
   spotifyStyle: false,

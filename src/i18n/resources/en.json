@@ -382,6 +382,13 @@
         "apple-analysis": "Use Apple Music's song analysis (beats, phrases, vocals) when available",
         "beat-only": "Only beat-matched transitions (Beat Match or Beat Cut, no segues)",
         "cut-echo": "Echo the old song's last beat on Beat Cuts",
+        "cut-ending": {
+          "label": "Beat Cut ending",
+          "filter": "Filter build-up",
+          "brake": "Vinyl stop",
+          "spinback": "Spinback",
+          "mixed": "Mixed (picked per pair)"
+        },
         "dj-handoffs": "DJ hand-offs (full-level outro over intro, bass handed over on the bar, no vocal clashes)",
         "effects": "Apple Music effects on blends (filter sweeps, echoes, reverb)",
         "spotify-style": "Spotify-style blends (bass swap at the midpoint, filters, no vocal clashes)",
