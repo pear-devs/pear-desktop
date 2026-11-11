@@ -393,7 +393,7 @@
         },
         "beats": "{{beats}} beats",
         "blend-length": "Blend length",
-        "blend-auto": "Auto (whole phrases, ~16 s, shorter on a key clash)",
+        "blend-auto": "Auto (like Spotify: 4 bars, 2 on a key clash or a big stretch)",
         "fade-length": "Smooth fade length",
         "respect-albums": "Play albums without transitions",
         "seconds": "{{seconds}} seconds",

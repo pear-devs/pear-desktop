@@ -198,23 +198,21 @@ const LEAD_IN_MIN = 1.5;
 const LEAD_IN_MAX = 5;
 const LEAD_IN_DEFAULT = 3;
 
-/** Auto blend length: the longest whole phrase that fits in this many seconds */
-const AUTO_BLEND_SECONDS = 20;
-const AUTO_BLEND_BEATS = [8, 16, 32];
-/** ...and no longer than this when the keys clash (heard as briefly as possible) */
-const CLASH_BLEND_BEATS = 8;
-
 /**
- * Blend length for a pair when it's left to AutoMix: the longest whole
- * phrase that fits in AUTO_BLEND_SECONDS at the old song's tempo (fast songs
- * blend over more beats than slow ones), short when the keys clash
+ * Auto blend length, as Spotify's own planner does it: beat-matched blends
+ * are short, 4 bars, and 2 when the keys clash or the next song has to be
+ * stretched a lot (over 48 pairs it never went past 4 bars)
  */
-const autoBlendBeats = (from: TrackAnalysis, clash: boolean) => {
-  const beat = from.beatPeriod || 0.5;
-  const fitting = AUTO_BLEND_BEATS.filter((beats) => beats * beat <= AUTO_BLEND_SECONDS);
-  const best = fitting.at(-1) ?? AUTO_BLEND_BEATS[0];
-  return clash ? Math.min(best, CLASH_BLEND_BEATS) : best;
-};
+const AUTO_BLEND_BEATS = 16;
+const SHORT_BLEND_BEATS = 8;
+/** Stretch past which an auto blend is the short one */
+const SHORT_BLEND_STRETCH = 0.05;
+
+/** Blend length for a pair when it's left to AutoMix (see AUTO_BLEND_BEATS) */
+const autoBlendBeats = (from: TrackAnalysis, to: TrackAnalysis, clash: boolean) =>
+  clash || Math.abs(tempoRatio(from.bpm, to.bpm) - 1) > SHORT_BLEND_STRETCH
+    ? SHORT_BLEND_BEATS
+    : AUTO_BLEND_BEATS;
 
 /** Our own grid must be at least this sure for a hand-off's hard switches */
 const HANDOFF_TEMPO_CONFIDENCE = 0.6;
@@ -921,7 +919,7 @@ export const planTransition = (
 
   // A blend length left to AutoMix is picked for this pair
   if (options.blendBeats <= 0) {
-    options = { ...options, blendBeats: autoBlendBeats(from, clash) };
+    options = { ...options, blendBeats: autoBlendBeats(from, to, clash) };
   }
   const gridsOk = hasBeatGrid(from) && hasBeatGrid(to);
   const stretchOk =

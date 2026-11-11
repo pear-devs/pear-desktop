@@ -656,12 +656,26 @@ export const pickCrossfadeReverb = (seed: string) => djb2(seed) % 2 === 0;
  * of the pair too)
  */
 export const pickSpotifyEffect = (bars: number, seed: string): EffectStyle => {
-  const candidates =
-    bars <= 2
-      ? SPOTIFY_STYLES.filter((style) => SHORT_SPOTIFY_STYLES.includes(style.id))
-      : SPOTIFY_STYLES;
-  return candidates[djb2(seed) % candidates.length];
+  if (bars <= 2) {
+    const short = SPOTIFY_STYLES.filter((style) => SHORT_SPOTIFY_STYLES.includes(style.id));
+    return short[djb2(seed) % short.length];
+  }
+  // Weighted the way Spotify's own planner picks for beat-matched pairs
+  // (its GetComputedTransitions over 48 pairs of rap and Bollywood)
+  const pool = SPOTIFY_PICKS.flatMap(([id, weight]) => Array.from({ length: weight }, () => id));
+  const id = pool[djb2(seed) % pool.length];
+  return SPOTIFY_STYLES.find((style) => style.id === id) ?? SPOTIFY_STYLES[0];
 };
+
+/** Spotify preset id (+100) and how often Spotify chose it for a beat-matched pair */
+const SPOTIFY_PICKS: [number, number][] = [
+  [110, 6], // Filter Fade In Out
+  [109, 4], // Filter Fade In
+  [101, 4], // Simple Fade
+  [108, 3], // Filter Fade Out
+  [117, 3], // Bass Swap Low Pass Filter In
+  [103, 1], // Bass Swap
+];
 
 export const effectById = (id: number | undefined) =>
   [...EFFECT_STYLES, ...SPOTIFY_STYLES].find((style) => style.id === id);
