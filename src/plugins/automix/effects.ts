@@ -98,7 +98,12 @@ export interface EffectStyle {
    * each point. `bars` is the slice length, from Apple's rate index into
    * 1/1, 1/2, 1/4, 1/8, 1/16, 1/32, 1/64 (of a bar)
    */
-  repeats?: { at: At; bars: number }[];
+  repeats?: {
+    at: At;
+    bars: number;
+    /** The slice ends at the point instead of starting there: the last bars before it */
+    behind?: boolean;
+  }[];
   /** When the repeater lets go of the song again (default: never) */
   repeatEnd?: At;
   /** When the outgoing song has nothing left to play (default: the end) */
@@ -669,6 +674,7 @@ const SWITCH = 0.025;
 const HANDOFF_NAMES: Record<HandoffRecipe['kind'], string> = {
   pickup: 'Pickup hand-off',
   outro: 'Outro swap',
+  loop: 'Loop swap',
 };
 
 /**
@@ -676,6 +682,29 @@ const HANDOFF_NAMES: Record<HandoffRecipe['kind'], string> = {
  * at full level, the bass handed over with an isolator on a bar line
  */
 export const handoffStyle = (recipe: HandoffRecipe): EffectStyle => {
+  if (recipe.kind === 'loop') {
+    // The old song's last full bar(s) before its exit loop on (Spotify's
+    // looping styles), carrying the beat under the next song's way in; the
+    // bass goes over with one of Spotify's EQ styles; the loop stops at the
+    // end of the window
+    return {
+      id: 203,
+      name: HANDOFF_NAMES.loop,
+      family: 'handoff',
+      bars: recipe.bars,
+      repeats: [{ at: 0, bars: recipe.loopBeats / 4, behind: true }],
+      repeatEnd: [1, 0.01],
+      outEnd: [0, 0.05],
+      outgoing: [
+        ...catalogEq(recipe.eq).outgoing,
+        lane('gain', 1, 0, 'linear', [0, 1], [[1, -0.01], [1, 0.005]]),
+      ],
+      incoming: [
+        lane('gain', 0, 1, 'linear', [0, 1], [0, [0, 0.008]]),
+        ...catalogEq(recipe.eq).incoming,
+      ],
+    };
+  }
   if (recipe.kind === 'outro') {
     // Both at full level (Spotify's FullOverlap); the bass goes over with
     // one of Spotify's EQ styles; the old song stops on its last beat
@@ -759,4 +788,6 @@ export const effectName = (id: number | undefined) =>
       ? HANDOFF_NAMES.pickup
       : id === 202
         ? HANDOFF_NAMES.outro
-        : effectById(id)?.name;
+        : id === 203
+          ? HANDOFF_NAMES.loop
+          : effectById(id)?.name;

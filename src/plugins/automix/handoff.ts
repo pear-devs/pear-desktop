@@ -37,6 +37,10 @@ const SPARSE_DB = 4;
 /** Spotify EQ styles an outro swap moves the bass with (see spotify-catalog.ts) */
 const EQ_BASS_SWAP = 4;
 const EQ_BASS_CROSSFADE = 3;
+/** A looped slice must be the beat within this of its usual level (lows) */
+const LOOP_GROOVE_DB = 4;
+/** How many bars before the exit a clean bar to loop is looked for */
+const LOOP_SEARCH_BARS = 3;
 /** Both basses within this of their usual level at the swap: swap it hard */
 const HARD_SWAP_DB = 6;
 /** ...and get at least this much louder where it arrives, as the old one stops */
@@ -186,6 +190,104 @@ const outroExit = (from: TrackAnalysis) => {
 /** Why the last outro swap planned was or wasn't possible, for the debug log */
 export let outroNotes = '';
 
+interface Arrival {
+  mixIn: number;
+  lands: number;
+  score: number;
+}
+
+/**
+ * Where the next song comes in under a full-level overlap of `span` of its
+ * own seconds: a sparse, vocal-free stretch of it that starts on a section
+ * of its own and ends where something arrives (its hook, its bass, the
+ * full band). Undefined, with why, when nothing fits
+ */
+const findArrival = (
+  c: HandoffContext,
+  span: number,
+): { best?: Arrival; why: string } => {
+  const { to } = c;
+  const barIn = to.beatPeriod * BAR_BEATS;
+  const entry = entryPoint(to);
+  // Where the next song can arrive: the start of a phrase (else every 4th
+  // bar), early enough for our copy of it
+  const grid = to.phrases?.length
+    ? to.phrases
+    : to.downbeats.filter((_, i) => i % 4 === 0);
+  const vocalNear = (time: number) =>
+    to.vocalEntry !== undefined && Math.abs(to.vocalEntry - time) <= barIn;
+  // Each place it could arrive, with the stretch of intro under the old
+  // song before it; the song's own first bars too, when nothing fits
+  const windows = [
+    ...grid
+      .filter((time) => time - span >= entry - 0.05)
+      .map((time) => ({ mixIn: time - span, lands: time })),
+    { mixIn: entry, lands: entry + span },
+  ];
+  const rejected = { head: 0, sung: 0, dense: 0 };
+  let best: Arrival | undefined;
+  for (const { mixIn, lands } of windows) {
+    if (mixIn < 0 || lands + HEAD_AFTER > c.headSeconds) {
+      rejected.head++;
+      continue;
+    }
+    // A pickup line just before the arrival is fine (many hooks start a beat or two early)
+    if (!vocalFree(to, mixIn, lands - (3 * to.beatPeriod), to.beatPeriod)) {
+      rejected.sung++;
+      continue;
+    }
+    // Two dense songs at full level would be mud: the intro must be sparse
+    const under = levelDb(to, 'full', mixIn, lands);
+    if (under === undefined || under > to.bodyLoudness - SPARSE_DB) {
+      rejected.dense++;
+      continue;
+    }
+    // ...it comes in on a section of its own (a riff or a groove starting:
+    // the mids step up), and something arrives as the old song stops
+    // (the hook, the bass, the full band)
+    const after = levelDb(to, 'full', lands, lands + (2 * barIn));
+    const entering = levelDb(to, 'mid', mixIn, mixIn + barIn);
+    const before = levelDb(to, 'mid', Math.max(0, mixIn - barIn), mixIn);
+    if (after === undefined) continue;
+    const sectionStep =
+      entering !== undefined && before !== undefined && mixIn >= barIn
+        ? Math.max(0, entering - before)
+        : 0;
+    const score = after - under + sectionStep + (vocalNear(lands) ? 2 : 0);
+    if (!best || score > best.score) best = { mixIn, lands, score };
+  }
+  if (best && best.score >= ARRIVAL_DB) return { best, why: '' };
+  const tried = best
+    ? `best ${best.mixIn.toFixed(1)} score ${best.score.toFixed(1)}`
+    : 'none';
+  return {
+    why: `${tried} (head ${rejected.head} sung ${rejected.sung} dense ${rejected.dense})`,
+  };
+};
+
+const bassBody = (track: TrackAnalysis) =>
+  levelDb(track, 'low', track.introEnd, track.outroStart);
+const strongBass = (track: TrackAnalysis, at: number, length: number) => {
+  const here = levelDb(track, 'low', at, at + length);
+  const body = bassBody(track);
+  return here !== undefined && body !== undefined && here >= body - HARD_SWAP_DB;
+};
+
+/**
+ * How the bass goes over: a hard swap on the bar only where both basses
+ * really hit there; otherwise it glides across (a swap into a thin bass, or
+ * out of one that's already gone, is what sounds abrupt)
+ */
+const bassMove = (outStrong: boolean, inStrong: boolean) =>
+  outStrong && inStrong ? EQ_BASS_SWAP : EQ_BASS_CROSSFADE;
+
+/** Both songs' vocals and levels are known, and the keys allow an overlap */
+const canOverlap = (c: HandoffContext) =>
+  c.from.beatPeriod > 0 &&
+  c.to.beatPeriod > 0 &&
+  Boolean(c.from.levels && c.to.levels && c.from.vocals && c.to.vocals) &&
+  !c.outroClash;
+
 export const planOutroSwap = (c: HandoffContext): Handoff | null => {
   const { from, to, rate } = c;
   const notes: string[] = [];
@@ -193,14 +295,7 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
   const bar = from.beatPeriod * BAR_BEATS;
   const barIn = to.beatPeriod * BAR_BEATS;
   // Two vocals must never overlap, so both songs' vocals must be known
-  if (
-    !(bar > 0 && barIn > 0) ||
-    !from.levels ||
-    !to.levels ||
-    !from.vocals ||
-    !to.vocals ||
-    c.outroClash
-  ) {
+  if (!canOverlap(c)) {
     outroNotes = c.outroClash ? 'key clash' : 'no levels or vocals';
     return null;
   }
@@ -210,15 +305,6 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
     return null;
   }
   notes.push(`exit ${exit.toFixed(2)}`);
-
-  const entry = entryPoint(to);
-  // Where the next song can arrive: the start of a phrase (else every 4th
-  // bar), early enough for our copy of it
-  const grid = to.phrases?.length
-    ? to.phrases
-    : to.downbeats.filter((_, i) => i % 4 === 0);
-  const vocalNear = (time: number) =>
-    to.vocalEntry !== undefined && Math.abs(to.vocalEntry - time) <= barIn;
 
   for (const bars of OUTRO_BARS) {
     const start = exit - (bars * bar);
@@ -233,74 +319,17 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
       notes.push(`${bars}: sung at the end`);
       continue;
     }
-    const rejected = { head: 0, sung: 0, dense: 0 };
-
     const span = bars * bar * rate;
-    // Each place it could arrive, with the stretch of intro under the old
-    // song before it; the song's own first bars too, when nothing fits
-    const windows = [
-      ...grid
-        .filter((time) => time - span >= entry - 0.05)
-        .map((time) => ({ mixIn: time - span, lands: time })),
-      { mixIn: entry, lands: entry + span },
-    ];
-    let best: { mixIn: number; lands: number; score: number } | undefined;
-    for (const { mixIn, lands } of windows) {
-      if (mixIn < 0 || lands + HEAD_AFTER > c.headSeconds) {
-        rejected.head++;
-        continue;
-      }
-      // A pickup line just before the arrival is fine (many hooks start a beat or two early)
-      if (!vocalFree(to, mixIn, lands - (3 * to.beatPeriod), to.beatPeriod)) {
-        rejected.sung++;
-        continue;
-      }
-      // Two dense songs at full level would be mud: the intro must be sparse
-      const under = levelDb(to, 'full', mixIn, lands);
-      if (under === undefined || under > to.bodyLoudness - SPARSE_DB) {
-        rejected.dense++;
-        continue;
-      }
-      // ...it comes in on a section of its own (a riff or a groove starting:
-      // the mids step up), and something arrives as the old song stops
-      // (the hook, the bass, the full band)
-      const after = levelDb(to, 'full', lands, lands + (2 * barIn));
-      const entering = levelDb(to, 'mid', mixIn, mixIn + barIn);
-      const before = levelDb(to, 'mid', Math.max(0, mixIn - barIn), mixIn);
-      if (after === undefined) continue;
-      const sectionStep =
-        entering !== undefined && before !== undefined && mixIn >= barIn
-          ? Math.max(0, entering - before)
-          : 0;
-      const score =
-        after - under + sectionStep + (vocalNear(lands) ? 2 : 0);
-      if (!best || score > best.score) best = { mixIn, lands, score };
-    }
-    if (!best || best.score < ARRIVAL_DB) {
-      notes.push(
-        `${bars}: ${best ? `best ${best.mixIn.toFixed(1)} score ${best.score.toFixed(1)}` : 'none'} (head ${rejected.head} sung ${rejected.sung} dense ${rejected.dense})`,
-      );
+    const { best, why } = findArrival(c, span);
+    if (!best) {
+      notes.push(`${bars}: ${why}`);
       continue;
     }
     outroNotes = notes.join('; ');
-
-    const landsOnVocal = vocalNear(best.lands) ? to.vocalEntry : undefined;
-    // A hard bass swap on the bar only where both basses really hit there;
-    // otherwise the bass glides across (a swap into a thin bass, or out of
-    // one that's already gone, is what sounds abrupt)
-    const swapOut = start + (bars * bar / 2);
-    const swapIn = best.mixIn + (span / 2);
-    const bassAt = (track: TrackAnalysis, at: number, length: number) =>
-      levelDb(track, 'low', at, at + length);
-    const bassBody = (track: TrackAnalysis) =>
-      levelDb(track, 'low', track.introEnd, track.outroStart);
-    const strong = (here: number | undefined, body: number | undefined) =>
-      here !== undefined && body !== undefined && here >= body - HARD_SWAP_DB;
-    const eq =
-      strong(bassAt(from, swapOut - bar, bar), bassBody(from)) &&
-      strong(bassAt(to, swapIn, barIn), bassBody(to))
-        ? EQ_BASS_SWAP
-        : EQ_BASS_CROSSFADE;
+    const eq = bassMove(
+      strongBass(from, start + (bars * bar / 2) - bar, bar),
+      strongBass(to, best.mixIn + (span / 2), barIn),
+    );
     return {
       style: 'blend',
       mixOut: start,
@@ -310,12 +339,85 @@ export const planOutroSwap = (c: HandoffContext): Handoff | null => {
       beat: from.beatPeriod,
       fromBpm: from.bpm,
       toBpm: to.bpm,
-      landsOnVocal,
+      landsOnVocal:
+        to.vocalEntry !== undefined && Math.abs(to.vocalEntry - best.lands) <= barIn
+          ? to.vocalEntry
+          : undefined,
       recipe: { kind: 'outro', bars, eq },
       score: (bars / 4) + (best.score / 4),
     };
   }
   outroNotes = notes.join('; ');
+  return null;
+};
+
+/**
+ * Loop swap: the old song's last full bar before its exit (where its beat
+ * stops, or its fade starts) loops on, carrying the beat under the next
+ * song's way in, for songs whose own outro can't carry a blend. The looped
+ * slice has to be the beat at full strength with nobody singing on it.
+ */
+export const planLoopSwap = (c: HandoffContext): Handoff | null => {
+  const { from, to, rate } = c;
+  const bar = from.beatPeriod * BAR_BEATS;
+  const barIn = to.beatPeriod * BAR_BEATS;
+  if (!canOverlap(c)) return null;
+  const exit = outroExit(from);
+  if (exit === undefined) return null;
+  // The slice to loop: a bar (else half a bar) of the beat at full strength
+  // with nobody singing on it, ending on a bar line no line is sung across;
+  // the closest such to the exit, up to LOOP_SEARCH_BARS back (the old song
+  // is left there, before a line it would otherwise cut into)
+  const groove = median(
+    [2, 3, 4, 5]
+      .map((k) => lowBar(from, exit - (k * bar), bar))
+      .filter((db): db is number => db !== undefined),
+  );
+  const sung = (at: number) =>
+    from.vocals?.some((region) => region.start < at - 0.1 && region.end > at + 0.1) ?? false;
+  let mixOut: number | undefined;
+  let loopBeats: number | undefined;
+  for (let k = 0; k <= LOOP_SEARCH_BARS && mixOut === undefined; k++) {
+    const sliceEnd = exit - (k * bar);
+    if (sliceEnd < c.earliestMixOut || sung(sliceEnd)) continue;
+    loopBeats = [4, 2].find((beats) => {
+      const sliceStart = sliceEnd - (beats * from.beatPeriod);
+      const level = levelDb(from, 'low', sliceStart, sliceEnd);
+      return (
+        vocalFree(from, sliceStart, sliceEnd, from.beatPeriod / 4) === true &&
+        level !== undefined &&
+        Number.isFinite(groove) &&
+        level >= groove - LOOP_GROOVE_DB
+      );
+    });
+    if (loopBeats !== undefined) mixOut = sliceEnd;
+  }
+  if (mixOut === undefined || loopBeats === undefined) return null;
+  const slice = loopBeats * from.beatPeriod;
+  for (const bars of OUTRO_BARS) {
+    if (bars * bar > OUTRO_MAX_SECONDS) continue;
+    const span = bars * bar * rate;
+    const { best } = findArrival(c, span);
+    if (!best) continue;
+    const eq = bassMove(
+      strongBass(from, mixOut - slice, slice),
+      strongBass(to, best.mixIn + (span / 2), barIn),
+    );
+    return {
+      style: 'blend',
+      mixOut,
+      mixIn: best.mixIn,
+      duration: bars * bar,
+      rate,
+      beat: from.beatPeriod,
+      fromBpm: from.bpm,
+      toBpm: to.bpm,
+      landsOnVocal: undefined,
+      recipe: { kind: 'loop', bars, loopBeats, eq },
+      // A loop stands in for a real outro: only used when there isn't one
+      score: bars / 8,
+    };
+  }
   return null;
 };
 
@@ -445,5 +547,5 @@ export const planHandoff = (
   if (pickup?.recipe?.kind === 'pickup' && pickup.recipe.gapBars > 0) {
     return pickup;
   }
-  return outro ?? pickup;
+  return outro ?? pickup ?? planLoopSwap(c);
 };

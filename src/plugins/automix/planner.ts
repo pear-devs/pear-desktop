@@ -29,7 +29,8 @@ export type TransitionReason =
   | 'key-clash'
   | 'beat-only-cut'
   | 'pickup-handoff'
-  | 'outro-swap';
+  | 'outro-swap'
+  | 'loop-swap';
 
 export interface PlannerOptions {
   preference: TransitionPreference;
@@ -86,6 +87,18 @@ export type HandoffRecipe =
       overlapBars: number;
       /** Bars after the swap still played from our copy before the player takes over */
       afterBars: number;
+    }
+  | {
+      /**
+       * The old song's last bar(s) before its exit loop on under the next
+       * song's intro, for songs whose own outro can't carry a blend (it
+       * fades, stops, or is sung)
+       */
+      kind: 'loop';
+      bars: number;
+      /** Beats in the looped slice */
+      loopBeats: number;
+      eq: number;
     }
   | {
       kind: 'outro';
@@ -208,6 +221,7 @@ const HEAD_SECONDS_DEFAULT = 60;
 /** Effect ids the hand-offs are shown under (see effects.ts) */
 export const PICKUP_HANDOFF_ID = 201;
 export const OUTRO_SWAP_ID = 202;
+export const LOOP_SWAP_ID = 203;
 
 /** Both songs need a clearly steady beat before they get a DJ-style blend */
 export const DJ_TEMPO_CONFIDENCE = 0.45;
@@ -977,7 +991,11 @@ export const planTransition = (
   const reasonFor = (plan: TransitionPlan): TransitionReason => {
     const { style } = plan;
     if (plan.recipe) {
-      return plan.recipe.kind === 'pickup' ? 'pickup-handoff' : 'outro-swap';
+      return plan.recipe.kind === 'pickup'
+        ? 'pickup-handoff'
+        : plan.recipe.kind === 'loop'
+          ? 'loop-swap'
+          : 'outro-swap';
     }
     if (options.preference !== 'auto') {
       return style === options.preference ? 'preference' : 'fallback';
@@ -1069,7 +1087,12 @@ export const planTransition = (
       let effect: number | undefined;
       const bars = plan.duration / ((plan.beat || 0.5) * 4);
       if (plan.recipe) {
-        effect = plan.recipe.kind === 'pickup' ? PICKUP_HANDOFF_ID : OUTRO_SWAP_ID;
+        effect =
+          plan.recipe.kind === 'pickup'
+            ? PICKUP_HANDOFF_ID
+            : plan.recipe.kind === 'loop'
+              ? LOOP_SWAP_ID
+              : OUTRO_SWAP_ID;
       } else if (
         options.spotifyStyle &&
         plan.style === 'blend' &&

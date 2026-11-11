@@ -73,6 +73,15 @@ const describeStyle = (plan: TransitionPlan) => {
           stretch: (Math.abs(plan.rate - 1) * 100).toFixed(1),
         });
       }
+      if (plan.recipe?.kind === 'loop') {
+        return t('plugins.automix.ui.detail.loop-swap', {
+          beats: plan.recipe.loopBeats,
+          bars: plan.recipe.bars,
+          from,
+          to,
+          stretch: (Math.abs(plan.rate - 1) * 100).toFixed(1),
+        });
+      }
       if (plan.recipe?.kind === 'outro') {
         return t('plugins.automix.ui.detail.outro-swap', {
           bars: plan.recipe.bars,

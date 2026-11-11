@@ -1838,7 +1838,10 @@ export class AutoMixEngine {
       bars: point.bars,
     }));
     const first = points[0].at;
-    const sliceStart = clock.position(first) - clock.tailStart;
+    // A slice behind the point is the bar(s) just played: looping it carries
+    // the beat on past where the song itself stops or fades
+    const behind = style.repeats[0].behind ? style.repeats[0].bars * 4 * clock.beat : 0;
+    const sliceStart = Math.max(0, clock.position(first) - clock.tailStart - behind);
     chain.repeat.song.gain.setValueAtTime(0, first);
     if (end < mixAt + duration) chain.repeat.song.gain.setValueAtTime(1, end);
     points.forEach((point, i) => {
