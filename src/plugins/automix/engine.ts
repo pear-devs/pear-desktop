@@ -65,6 +65,14 @@ export interface AutoMixStatus {
   progress?: number;
   /** Stream quality of AutoMix's copy, when it's noticeably worse */
   lowQuality?: string;
+  /**
+   * Latest point (player seconds) the song can be sought to with the planned
+   * transition still going ahead; past it, there's no time left to take over
+   * from the player and it's planned again
+   */
+  seekBy?: number;
+  /** Length of the playing song (player seconds), to place seekBy */
+  songLength?: number;
 }
 
 /** One song's waveform on the transition's timeline, split into bands */
@@ -399,6 +407,8 @@ const LATE_PLAN_SECONDS = 25;
 const MIX_NOW_SECONDS = 60;
 /** Seconds a mix-now needs at least to set its transition up */
 const MIX_NOW_LEAD = 6.5;
+/** How far before the last moment to take over the seek marker sits */
+const SEEK_MARGIN = 1;
 
 /** Stand-in for a next song we couldn't analyse in time: fade into its start */
 const unknownTrack: TrackAnalysis = {
@@ -1523,6 +1533,9 @@ export class AutoMixEngine {
     this.emit({
       phase: 'ready',
       plan,
+      seekBy:
+        plan.mixOut - prerollFor(plan) - SEEK_MARGIN + this.timelineOffset(video),
+      songLength: Number.isFinite(video.duration) ? video.duration : undefined,
       fromTitle: this.currentTitle,
       toTitle: this.next?.title,
       lowQuality: [from, to]

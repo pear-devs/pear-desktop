@@ -432,6 +432,7 @@
           "segue-cold": "Next song lands right on the final hit",
           "smooth": "{{seconds}} s fade"
         },
+        "seek-marker": "Seek up to here ({{time}}) and the transition into \"{{title}}\" still plays as planned",
         "low-quality": "Only a lower quality stream ({{quality}}) was available for mixing, so the transition may sound duller than normal playback",
         "mixing": "AutoMixing",
         "off": "AutoMix off",

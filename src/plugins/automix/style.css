@@ -781,3 +781,20 @@ ytmusic-player-bar.automix-mixing {
     transform: translateY(14px) scale(0.98);
   }
 }
+
+/* Latest point to seek to with the planned transition still going ahead */
+.automix-seek-marker {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.55);
+  transform: translateY(-50%);
+  /* Clicks seek through it */
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.9;
+}

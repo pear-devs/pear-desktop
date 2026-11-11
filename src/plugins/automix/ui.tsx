@@ -481,6 +481,54 @@ const HoverCard = (props: {
   );
 };
 
+/**
+ * A dot on the player's seek bar at the latest point to seek to with the
+ * planned transition still going ahead (seeking past it plans again)
+ */
+const SeekMarker = (props: { status: Accessor<AutoMixStatus> }) => {
+  const dot = document.createElement('div');
+  dot.className = 'automix-seek-marker';
+  const place = (current: AutoMixStatus) => {
+    const bar = document.querySelector<HTMLElement>(
+      'ytmusic-player-bar #progress-bar',
+    );
+    const at = current.seekBy;
+    const length = current.songLength;
+    if (
+      !bar ||
+      current.phase !== 'ready' ||
+      at === undefined ||
+      !length ||
+      at <= 0 ||
+      at >= length
+    ) {
+      dot.remove();
+      return;
+    }
+    if (dot.parentElement !== bar) {
+      if (getComputedStyle(bar).position === 'static') bar.style.position = 'relative';
+      bar.append(dot);
+    }
+    dot.style.left = `${(at / length) * 100}%`;
+    dot.title = t('plugins.automix.ui.seek-marker', {
+      title: current.toTitle ?? '',
+      time: formatTime(at),
+    });
+  };
+  let latest: AutoMixStatus = { phase: 'inactive' };
+  createEffect(() => {
+    latest = props.status();
+    place(latest);
+  });
+  // The player bar can be re-rendered: keep the dot on it
+  const timer = window.setInterval(() => place(latest), 2000);
+  onCleanup(() => {
+    window.clearInterval(timer);
+    dot.remove();
+  });
+  return null;
+};
+
 /** Eases the blend's progress so artwork and colour start and settle gently */
 const calm = (progress: number) => {
   const x = Math.min(1, Math.max(0, progress));
@@ -805,6 +853,7 @@ export const mountUi = (props: UiProps) => {
             <ArtworkFade status={props.status} />
           </Show>
           <MixCard {...props} />
+          <SeekMarker status={props.status} />
           <HoverCard anchor={anchor} status={props.status} />
           <Show when={details()}>
             <TimelinePanel
