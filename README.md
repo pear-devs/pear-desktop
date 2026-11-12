@@ -367,8 +367,3 @@ If `Hide the menu bar` is on (Settings > Window & Tray) - you can show the menu 
 ### Why does YTM skip the cookie consent screen?
 
 The app answers it with "only essential cookies" (`SOCS=CAI`), unless you've chosen otherwise on YTM.
-
-### Musixmatch lyrics are wrong or missing?
-
-Musixmatch (synced-lyrics) needs a Musixmatch user token in the plugin's settings: Musixmatch answers anonymous apps
-with an all-zero token that only gets decoy lyrics.

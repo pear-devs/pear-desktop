@@ -8,7 +8,6 @@ export const schema = {
       { value: "auto", label: "Best available" },
       { value: "LRCLib", label: "LRCLIB" },
       { value: "YTMusic", label: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065 Music" },
-      { value: "MusixMatch", label: "Musixmatch" },
       { value: "Megalobiz", label: "Megalobiz" },
       { value: "LyricsGenius", label: "Genius" },
     ],
@@ -61,12 +60,6 @@ export const schema = {
   showLyricsEvenIfInexact: config.bool(true, {
     label: "Show lyrics even if inexact",
     description: "Also try looser searches; may occasionally match a different version of the song.",
-  }),
-  musixmatchToken: config.string("", {
-    label: "Musixmatch user token",
-    description:
-      "Musixmatch only serves lyrics to signed-in apps: the usertoken of your own Musixmatch desktop app session. Without one, Musixmatch reports that it needs it.",
-    secret: true,
   }),
 };
 

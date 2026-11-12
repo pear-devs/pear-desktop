@@ -81,7 +81,7 @@ describe("LyricsStore", () => {
 
     // The arrows go through every provider, wrapping around, whatever they found.
     store.step(1);
-    expect(store.selected).toBe("MusixMatch");
+    expect(store.selected).toBe("Megalobiz");
     expect(store.current).toEqual({ status: "done", result: null });
     expect(store.shown).toBeNull();
     store.step(-2);

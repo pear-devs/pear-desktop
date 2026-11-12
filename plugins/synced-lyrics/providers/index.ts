@@ -5,20 +5,13 @@ import { genius } from "./genius.ts";
 import type { Fetch } from "./http.ts";
 import { lrclib } from "./lrclib.ts";
 import { megalobiz } from "./megalobiz.ts";
-import { musixmatch, type MusixmatchOptions } from "./musixmatch.ts";
 import { ytmusic } from "./ytmusic.ts";
 
-/** Settings and helpers some providers need. */
-export interface ProviderOptions {
-  musixmatch: MusixmatchOptions;
-}
-
-export type Provider = (query: SearchQuery, fetch: Fetch, options: ProviderOptions) => Promise<LyricResult | null>;
+export type Provider = (query: SearchQuery, fetch: Fetch) => Promise<LyricResult | null>;
 
 export const providers: Record<ProviderId, Provider> = {
   LRCLib: lrclib,
   YTMusic: ytmusic,
-  MusixMatch: (query, fetch, options) => musixmatch(query, fetch, options.musixmatch),
   Megalobiz: megalobiz,
   LyricsGenius: genius,
 };

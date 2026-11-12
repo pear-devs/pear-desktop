@@ -21,7 +21,7 @@ export default definePlugin({
     onConfigChange() {},
     commands: {
       search(provider: ProviderId, query: SearchQuery): Promise<LyricResult | null> {
-        return hostOf(this).search(provider, query, { musixmatch: { userToken: this.config.musixmatchToken, t: this.t } });
+        return hostOf(this).search(provider, query);
       },
       /** Opens a lyrics page at its provider (Megalobiz asks to be linked). */
       openSource(url: string) {

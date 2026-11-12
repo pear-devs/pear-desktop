@@ -4,14 +4,11 @@ import { extractLyrics } from "../providers/genius.ts";
 import { SearchCache } from "../providers/index.ts";
 import { lrclib } from "../providers/lrclib.ts";
 import { megalobiz, pickSheet, sheetToResult } from "../providers/megalobiz.ts";
-import { isUsableToken, musixmatch, parseMacro, resetMusixmatchToken } from "../providers/musixmatch.ts";
 import { ytmusic } from "../providers/ytmusic.ts";
 import type { SearchQuery } from "../types.ts";
 // Recorded from the real APIs (October 2026), lyrics cut to a few lines.
 import megalobizLrc from "./fixtures/megalobiz-lrc.json" with { type: "json" };
 import megalobizSearch from "./fixtures/megalobiz-search.json" with { type: "json" };
-import musixmatchDecoy from "./fixtures/musixmatch-macro-decoy.json" with { type: "json" };
-import musixmatchToken from "./fixtures/musixmatch-token-anonymous.json" with { type: "json" };
 
 const query: SearchQuery = {
   videoId: "dQw4w9WgXcQ",
@@ -238,54 +235,5 @@ describe("megalobiz", () => {
 
   test("returns null when nothing matches", async () => {
     expect(await megalobiz(yellow, mockFetch([[/search/, { count: 0, results: [] }]]))).toBeNull();
-  });
-});
-
-describe("musixmatch", () => {
-  const options = { userToken: "", t: (_key: string, english = "") => english };
-
-  test("refuses the all-zero token Musixmatch gives anonymous apps", async () => {
-    resetMusixmatchToken();
-    expect(isUsableToken(musixmatchToken.message.body.user_token)).toBe(false);
-    const fetch = mockFetch([[/token\.get/, musixmatchToken]]);
-    await expect(musixmatch(yellow, fetch, options)).rejects.toThrow(/user token/);
-    // The refusal is remembered for a while instead of asking again for every track.
-    await expect(musixmatch(yellow, fetch, options)).rejects.toThrow(/user token/);
-    expect(fetch.calls.filter((call) => call.includes("token.get"))).toHaveLength(1);
-    expect(fetch.calls.some((call) => call.includes("macro.subtitles.get"))).toBe(false);
-  });
-
-  test("rejects the decoy track it matches with that token", () => {
-    // Asked for Coldplay's Yellow, it "found" another song with made-up lyrics.
-    const decoy = musixmatchDecoy.message.body.macro_calls["matcher.track.get"].message.body.track;
-    expect([decoy.track_name, decoy.artist_name]).toEqual(["NOKIA", "Drake"]);
-    expect(parseMacro(musixmatchDecoy, yellow)).toBeNull();
-  });
-
-  test("reads the lyrics and LRC of the matched track with the user's token", async () => {
-    const answer = structuredClone(musixmatchDecoy) as Record<string, any>;
-    const calls = answer.message.body.macro_calls;
-    Object.assign(calls["matcher.track.get"].message.body.track, { track_name: "Yellow", artist_name: "Coldplay" });
-    calls["track.lyrics.get"].message.body.lyrics.lyrics_body =
-      "Look at the stars\nLook how they shine\n\n******* This Lyrics is NOT for Commercial use *******\n(1409623456789)";
-    calls["track.subtitles.get"].message.body.subtitle_list[0].subtitle.subtitle_body = "[00:33.24] Look at the stars\n[00:36.01] Look how they shine";
-    const fetch = mockFetch([[/macro\.subtitles\.get/, answer]]);
-
-    const result = await musixmatch(yellow, fetch, { ...options, userToken: "2501abc" });
-    expect(fetch.calls).toHaveLength(1);
-    expect(fetch.calls[0]).toContain("usertoken=2501abc");
-    expect(fetch.calls[0]).toContain("q_track=Yellow&q_artist=Coldplay&q_duration=269");
-    expect(result).toMatchObject({ title: "Yellow", artists: ["Coldplay"], plain: "Look at the stars\nLook how they shine" });
-    expect(result?.lines?.map((l) => l.text)).toEqual(["", "Look at the stars", "Look how they shine"]);
-  });
-
-  test("tells when the token is rejected", async () => {
-    const fetch = mockFetch([[/macro/, { message: { header: { status_code: 401, hint: "captcha" }, body: "" } }]]);
-    await expect(musixmatch(yellow, fetch, { ...options, userToken: "2501abc" })).rejects.toThrow(/rejected/);
-  });
-
-  test("handles calls without results", () => {
-    const empty = { message: { header: { status_code: 200 }, body: { macro_calls: { "matcher.track.get": { message: { body: [] } } } } } };
-    expect(parseMacro(empty, yellow)).toBeNull();
   });
 });

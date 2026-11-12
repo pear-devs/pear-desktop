@@ -102,8 +102,8 @@ test("shows synced lyrics in the Lyrics tab, follows playback and seeks on click
   await expect(picker).toHaveAttribute("data-selected", selected);
   await expect(lyrics(page)).toHaveAttribute("data-state", "synced");
   // A dot jumps straight to its provider.
-  await picker.locator('.dot[aria-label="MusixMatch"]').click();
-  await expect(picker).toHaveAttribute("data-selected", "MusixMatch");
+  await picker.locator('.dot[aria-label="Megalobiz"]').click();
+  await expect(picker).toHaveAttribute("data-selected", "Megalobiz");
   await picker.locator(`.dot[aria-label="${selected}"]`).click();
   await expect(lyrics(page)).toHaveAttribute("data-state", "synced");
 
@@ -153,10 +153,17 @@ test("highlights word by word when the provider has word timing", async ({ app, 
   await screenshot(app, "lyrics-words");
 });
 
-test("Megalobiz lyrics as pear-desktop's preferred provider; Musixmatch says it needs a token", async ({ launch }) => {
+test("Megalobiz lyrics as pear-desktop's preferred provider; a failing provider shows its error", async ({ launch }) => {
   test.setTimeout(180_000);
   // pear-desktop's provider name, as its config.json stores it.
-  const page = await mainWindow(await launch({ plugins: { "synced-lyrics": { enabled: true, config: { preferredProvider: "Megalobiz" } } } }));
+  const app = await launch({ plugins: { "synced-lyrics": { enabled: true, config: { preferredProvider: "Megalobiz" } } } });
+  const page = await mainWindow(app);
+  // LRCLIB is down for this test, before any search starts.
+  await app.evaluate(({ session, net }) => {
+    session.defaultSession.protocol.handle("https", (request) =>
+      new URL(request.url).hostname === "lrclib.net" ? new Response("", { status: 503 }) : net.fetch(request, { bypassCustomProtocolHandlers: true }),
+    );
+  });
   await openLyricsTab(page);
 
   const megalobiz = lyrics(page).locator('.picker-item[data-provider="Megalobiz"]');
@@ -167,14 +174,13 @@ test("Megalobiz lyrics as pear-desktop's preferred provider; Musixmatch says it 
   // Megalobiz's terms ask to link to the sheet.
   await expect(lyrics(page).locator(".source a")).toHaveAttribute("href", /^https:\/\/megalobiz\.com\/lrc\/\d+/);
 
-  // Anonymous Musixmatch only has decoy lyrics: it reports why instead of showing them.
-  const musixmatch = lyrics(page).locator('.picker-item[data-provider="MusixMatch"]');
-  await expect(musixmatch).toHaveAttribute("data-status", "error", { timeout: 30_000 });
-  await expect(musixmatch).toHaveAttribute("title", /user token/);
+  const lrclib = lyrics(page).locator('.picker-item[data-provider="LRCLib"]');
+  await expect(lrclib).toHaveAttribute("data-status", "error", { timeout: 30_000 });
+  await expect(lrclib).toHaveAttribute("title", /503/);
   // Selected, it shows the error with a retry button, as pear-desktop does.
-  await lyrics(page).locator('.dot[aria-label="MusixMatch"]').click();
+  await lyrics(page).locator('.dot[aria-label="LRCLib"]').click();
   await expect(lyrics(page)).toHaveAttribute("data-state", "error");
-  await expect(lyrics(page).locator(".error-detail")).toContainText("user token");
+  await expect(lyrics(page).locator(".error-detail")).toContainText("lrclib.net responded 503");
   // The provider's message, not Electron's IPC wrapper around it.
   await expect(lyrics(page).locator(".error-detail")).not.toContainText("invoking remote method");
   await expect(lyrics(page).locator(".retry")).toBeVisible();
