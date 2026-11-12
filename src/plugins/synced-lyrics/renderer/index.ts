@@ -1,91 +1,156 @@
+import { getSongInfo } from '@/providers/song-info-front';
 import { createRenderer } from '@/utils';
-import { waitForElement } from '@/utils/wait-for-element';
 
-import { disposeReactiveRoot } from './reactive-root';
-import { setConfig, setCurrentTime } from './renderer';
-import { fetchLyrics } from './store';
-import { selectors, tabStates } from './utils';
+import { LyricsLifecycle, waitForLyricsElement } from './lifecycle';
+import { disposeReactiveRoot, startReactiveRoot } from './reactive-root';
+import { config, setConfig, setCurrentTime } from './renderer';
+import { cancelSearch, disposeSearch, fetchLyrics } from './store';
+import { selectors, startLyricsTabs, stopLyricsTabs, tabStates } from './utils';
+
+import {
+  migratePreferredProvider,
+  normalizePreferredProvider,
+} from '../preferences';
+import { configureElectronTransport } from '../search/electron-transport';
 
 import type { SyncedLyricsPluginConfig } from '../types';
 import type { SongInfo } from '@/providers/song-info';
-import type { RendererContext } from '@/types/contexts';
 import type { MusicPlayer } from '@/types/music-player';
 
 export let _ytAPI: MusicPlayer | null = null;
-export let netFetch: (
-  url: string,
-  init?: RequestInit,
-) => Promise<[number, string, Record<string, string>]>;
+let lifetime: LyricsLifecycle | undefined;
+let playerCleanup: (() => void) | undefined;
+let headerLifetime: LyricsLifecycle | undefined;
+let headerGeneration = 0;
+let latestInfo: SongInfo | undefined;
 
 export const renderer = createRenderer<
   {
-    observerCallback: MutationCallback;
-    observer?: MutationObserver;
     videoDataChange: () => Promise<void>;
-    updateTimestampInterval?: NodeJS.Timeout | string | number;
+    observer?: MutationObserver;
   },
   SyncedLyricsPluginConfig
 >({
-  onConfigChange(newConfig) {
-    setConfig(newConfig);
+  onConfigChange(newConfig: SyncedLyricsPluginConfig) {
+    const changed =
+      config()?.showLyricsEvenIfInexact !== newConfig.showLyricsEvenIfInexact;
+    setConfig({
+      ...newConfig,
+      preferredProvider: normalizePreferredProvider(
+        newConfig.preferredProvider,
+      ),
+    });
+    if (changed && lifetime && latestInfo) fetchLyrics(latestInfo);
   },
-
-  observerCallback(mutations: MutationRecord[]) {
-    for (const mutation of mutations) {
-      const header = mutation.target as HTMLElement;
-
-      switch (mutation.attributeName) {
-        case 'disabled':
-          header.removeAttribute('disabled');
-          break;
-        case 'aria-selected':
-          tabStates[header.ariaSelected ?? 'false']();
-          break;
-      }
-    }
-  },
-
   async onPlayerApiReady(api: MusicPlayer) {
+    if (!lifetime || lifetime.controller.signal.aborted) return;
+    playerCleanup?.();
     _ytAPI = api;
-
-    api.addEventListener('videodatachange', this.videoDataChange);
-
+    const change = () => {
+      // Stop old work immediately, before richer song-info IPC arrives.
+      if (latestInfo && api.getVideoData()?.video_id !== latestInfo.videoId) {
+        cancelSearch();
+        latestInfo = undefined;
+      }
+      this.videoDataChange().catch((error: unknown) =>
+        console.error('Lyrics header setup failed', error),
+      );
+    };
+    api.addEventListener('videodatachange', change);
+    playerCleanup = () => api.removeEventListener('videodatachange', change);
     await this.videoDataChange();
   },
   async videoDataChange() {
-    if (!this.updateTimestampInterval) {
-      this.updateTimestampInterval = setInterval(
-        () => setCurrentTime((_ytAPI?.getCurrentTime() ?? 0) * 1000),
-        100,
-      );
-    }
-
-    // prettier-ignore
-    this.observer ??= new MutationObserver(this.observerCallback);
-    this.observer.disconnect();
-
-    // Force the lyrics tab to be enabled at all times.
-    const header = await waitForElement<HTMLElement>(selectors.head);
-    {
-      header.removeAttribute('disabled');
-      tabStates[header.ariaSelected ?? 'false']();
-    }
-
-    this.observer.observe(header, { attributes: true });
-    header.removeAttribute('disabled');
-  },
-
-  async start(ctx: RendererContext<SyncedLyricsPluginConfig>) {
-    netFetch = ctx.ipc.invoke.bind(ctx.ipc, 'synced-lyrics:fetch');
-
-    setConfig(await ctx.getConfig());
-
-    ctx.ipc.on('peard:update-song-info', (info: SongInfo) => {
-      fetchLyrics(info);
+    const active = lifetime;
+    if (!active) return;
+    headerLifetime?.dispose();
+    const headerWork = new LyricsLifecycle();
+    headerLifetime = headerWork;
+    const generation = ++headerGeneration;
+    const header = await waitForLyricsElement<HTMLElement>(
+      selectors.head,
+      headerWork.controller.signal,
+    );
+    if (
+      !header ||
+      active.controller.signal.aborted ||
+      headerWork.controller.signal.aborted ||
+      generation !== headerGeneration
+    )
+      return;
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.attributeName === 'disabled')
+          header.removeAttribute('disabled');
+        if (mutation.attributeName === 'aria-selected')
+          tabStates[header.ariaSelected ?? 'false']();
+      }
     });
+    // One header observer per lifetime, replace on track changes.
+    this.observer?.disconnect();
+    this.observer = observer;
+    headerWork.add(() => observer.disconnect());
+    header.removeAttribute('disabled');
+    tabStates[header.ariaSelected ?? 'false']();
+    observer.observe(header, { attributes: true });
   },
-
+  observer: undefined as MutationObserver | undefined,
+  async start(ctx) {
+    lifetime?.dispose();
+    const active = new LyricsLifecycle();
+    lifetime = active;
+    active.add(() => {
+      playerCleanup?.();
+      playerCleanup = undefined;
+      _ytAPI = null;
+    });
+    active.add(() => {
+      headerLifetime?.dispose();
+      headerLifetime = undefined;
+    });
+    configureElectronTransport(ctx.ipc.invoke);
+    active.add(() => configureElectronTransport(undefined));
+    active.add(disposeSearch);
+    startReactiveRoot();
+    active.add(disposeReactiveRoot);
+    startLyricsTabs();
+    active.add(stopLyricsTabs);
+    const timer = setInterval(
+      () => setCurrentTime((_ytAPI?.getCurrentTime() ?? 0) * 1000),
+      100,
+    );
+    active.add(() => clearInterval(timer));
+    active.add(
+      ctx.ipc.on('peard:update-song-info', (info: SongInfo) => {
+        if (active.controller.signal.aborted) return;
+        latestInfo = info;
+        fetchLyrics(info);
+      }),
+    );
+    const configuration = await ctx.getConfig();
+    if (active.controller.signal.aborted) return;
+    const preferredProvider = await migratePreferredProvider(
+      configuration.preferredProvider,
+      ctx.setConfig,
+    );
+    if (active.controller.signal.aborted) return;
+    setConfig({ ...configuration, preferredProvider });
+    const info = getSongInfo();
+    if (info?.videoId) {
+      latestInfo = info;
+      fetchLyrics(info);
+    }
+  },
   stop() {
-    disposeReactiveRoot();
+    lifetime?.dispose();
+    lifetime = undefined;
+    playerCleanup?.();
+    playerCleanup = undefined;
+    this.observer?.disconnect();
+    this.observer = undefined;
+    _ytAPI = null;
+    latestInfo = undefined;
+    headerGeneration++;
+    setCurrentTime(-1);
   },
 });

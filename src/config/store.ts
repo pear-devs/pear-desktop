@@ -1,4 +1,8 @@
-import { blockers } from '@/plugins/do-not-track/types';
+import {
+  blockers,
+  isLegacyCustomBlocker,
+  normalizeBlocker,
+} from '@/plugins/do-not-track/types';
 import { DefaultPresetList, type Preset } from '@/plugins/downloader/types';
 
 import { defaultConfig as defaults } from './defaults';
@@ -20,11 +24,30 @@ export type IStore = InstanceType<
 >;
 
 const migrations = {
+  '>=3.12.2'(store: IStore) {
+    const blockerConfig = store.get(
+      'plugins.do-not-track',
+    ) as TrackerBlockerConfig;
+    if (blockerConfig) {
+      store.set('plugins.do-not-track', {
+        ...blockerConfig,
+        blocker: normalizeBlocker(blockerConfig.blocker),
+        customEnabled:
+          blockerConfig.customEnabled === true ||
+          isLegacyCustomBlocker(blockerConfig.blocker),
+      });
+    }
+  },
   '>=3.12.0'(store: IStore) {
-    const blockerConfig = store.get('plugins.adblocker') as TrackerBlockerConfig;
+    const blockerConfig = store.get(
+      'plugins.adblocker',
+    ) as TrackerBlockerConfig;
     if (blockerConfig) {
       if (!Object.values(blockers).includes(blockerConfig.blocker)) {
-        blockerConfig.blocker = blockers.InPlayer;
+        blockerConfig.customEnabled = isLegacyCustomBlocker(
+          blockerConfig.blocker,
+        );
+        blockerConfig.blocker = normalizeBlocker(blockerConfig.blocker);
       }
       store.set('plugins.do-not-track', blockerConfig);
       store.delete('plugins.adblocker');

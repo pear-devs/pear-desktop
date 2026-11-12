@@ -10,8 +10,7 @@ import { pinyin } from 'pinyin-pro';
 import { render } from 'solid-js/web';
 import { detect } from 'tinyld';
 
-import { waitForElement } from '@/utils/wait-for-element';
-
+import { LyricsLifecycle, waitForLyricsElement } from './lifecycle';
 import { LyricsRenderer, setIsVisible } from './renderer';
 
 export const selectors = {
@@ -22,23 +21,44 @@ export const selectors = {
   },
 };
 
+let tabLifetime: LyricsLifecycle | undefined;
+let mounting: Promise<void> | undefined;
+export const startLyricsTabs = () => {
+  stopLyricsTabs();
+  tabLifetime = new LyricsLifecycle();
+};
+export const stopLyricsTabs = () => {
+  tabLifetime?.dispose();
+  tabLifetime = undefined;
+  mounting = undefined;
+  setIsVisible(false);
+};
+
 export const tabStates: Record<string, () => void> = {
   true: async () => {
+    const lifetime = tabLifetime;
+    if (!lifetime || lifetime.controller.signal.aborted) return;
     setIsVisible(true);
-
-    let container = document.querySelector('#synced-lyrics-container');
-    if (container) return;
-
-    const tabRenderer = await waitForElement<HTMLElement>(
-      selectors.body.tabRenderer,
-    );
-
-    container = Object.assign(document.createElement('div'), {
-      id: 'synced-lyrics-container',
-    });
-
-    tabRenderer.appendChild(container);
-    render(() => <LyricsRenderer />, container);
+    if (mounting || document.querySelector('#synced-lyrics-container')) return;
+    const pending = async () => {
+      const tabRenderer = await waitForLyricsElement<HTMLElement>(
+        selectors.body.tabRenderer,
+        lifetime.controller.signal,
+      );
+      if (!tabRenderer || lifetime.controller.signal.aborted) return;
+      const container = Object.assign(document.createElement('div'), {
+        id: 'synced-lyrics-container',
+      });
+      tabRenderer.appendChild(container);
+      const dispose = render(() => <LyricsRenderer />, container);
+      lifetime.add(() => {
+        dispose();
+        container.remove();
+      });
+    };
+    mounting = pending();
+    await mounting;
+    if (tabLifetime === lifetime) mounting = undefined;
   },
   false: () => {
     setIsVisible(false);
