@@ -45,7 +45,7 @@
     "check": "pnpm lint && pnpm format:check && pnpm typecheck"
   },
   "engines": {
-    "node": ">=22",
+    "node": ">=22.13.0",
     "pnpm": ">=11"
   },
   "dependencies": {
