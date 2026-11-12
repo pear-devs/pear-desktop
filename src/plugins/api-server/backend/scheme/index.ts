@@ -8,3 +8,6 @@ export * from './set-volume';
 export * from './set-fullscreen';
 export * from './queue';
 export * from './search';
+export * from './browse';
+export * from './play';
+export * from './song-details';
