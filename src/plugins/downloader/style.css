@@ -19,3 +19,231 @@
   height: var(--iron-icon-height, 24px);
   animation: var(--iron-icon_-_animation);
 }
+
+/* ----------------------------- progress panel ----------------------------- */
+
+/* The host element must not take part in the page layout at all */
+.ytmd-downloader-panel-host {
+  display: contents;
+}
+
+.ytmd-downloader-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 88px;
+  z-index: 9000;
+
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+
+  font-family: 'Roboto', 'YouTube Sans', sans-serif;
+  color: #fff;
+  background-color: rgba(33, 33, 33, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+
+  animation: ytmd-downloader-slide-in 0.2s ease-out;
+}
+
+@keyframes ytmd-downloader-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ytmd-downloader-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ytmd-downloader-panel--collapsed .ytmd-downloader-panel__header {
+  border-bottom: none;
+}
+
+.ytmd-downloader-panel__icon {
+  width: 16px;
+  height: 16px;
+  fill: rgba(255, 255, 255, 0.85);
+  flex-shrink: 0;
+}
+
+.ytmd-downloader-panel__title {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.ytmd-downloader-panel__count {
+  flex: 1;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ytmd-downloader-panel--collapsed .ytmd-downloader-panel__toggle svg {
+  transform: rotate(180deg);
+}
+
+.ytmd-downloader-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  max-height: 45vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+
+.ytmd-downloader-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  flex-shrink: 0;
+
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.ytmd-downloader-icon-button svg {
+  width: 16px;
+  height: 16px;
+  fill: rgba(255, 255, 255, 0.6);
+  transition: fill 0.15s ease;
+}
+
+.ytmd-downloader-icon-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.ytmd-downloader-icon-button:hover svg {
+  fill: #fff;
+}
+
+.ytmd-downloader-task {
+  padding: 8px 12px;
+  border-left: 2px solid transparent;
+}
+
+.ytmd-downloader-task--done {
+  border-left-color: #2ba640;
+}
+
+.ytmd-downloader-task--error {
+  border-left-color: #f28b82;
+}
+
+.ytmd-downloader-task__head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ytmd-downloader-task__labels {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ytmd-downloader-task__title {
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ytmd-downloader-task__artist {
+  font-size: 11px;
+  line-height: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ytmd-downloader-task__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.ytmd-downloader-task__status {
+  white-space: nowrap;
+}
+
+.ytmd-downloader-task__badge {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background-color: rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.ytmd-downloader-task__percent {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.ytmd-downloader-task__error {
+  font-size: 11px;
+  line-height: 14px;
+  color: #f28b82;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ytmd-downloader-progress {
+  position: relative;
+  height: 3px;
+  border-radius: 2px;
+  background-color: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.ytmd-downloader-progress__fill {
+  height: 100%;
+  border-radius: 2px;
+  background-color: #ff0000;
+  transition: width 0.2s linear;
+}
+
+.ytmd-downloader-progress--indeterminate .ytmd-downloader-progress__fill {
+  width: 40% !important;
+  animation: ytmd-downloader-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes ytmd-downloader-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
