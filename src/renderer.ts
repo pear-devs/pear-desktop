@@ -18,6 +18,7 @@ import {
   loadAllRendererPlugins,
 } from './loader/renderer';
 import { startingPages } from './providers/extracted-data';
+import { setupShareLinks } from './providers/share-links';
 import { setupSongInfo } from './providers/song-info-front';
 
 import type { MusicPlayer } from '@/types/music-player';
@@ -448,6 +449,15 @@ const preload = async () => {
 };
 
 const main = async () => {
+  const setStripMusicFromSharedLinks = setupShareLinks();
+  window.ipcRenderer.on(
+    'peard:strip-music-from-shared-links',
+    (_event, enabled: boolean) => setStripMusicFromSharedLinks(enabled),
+  );
+  setStripMusicFromSharedLinks(
+    window.mainConfig.get('options.stripMusicFromSharedLinks'),
+  );
+
   await loadAllRendererPlugins();
   isPluginLoaded = true;
 
