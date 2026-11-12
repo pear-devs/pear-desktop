@@ -164,6 +164,7 @@ type SubmenuItemProps = BasePanelItemProps & {
   type: 'submenu';
   level: number[];
   children: JSX.Element;
+  checked?: boolean;
 };
 type RadioPanelItemProps = BasePanelItemProps & {
   type: 'radio';
@@ -297,7 +298,12 @@ export const PanelItem = (props: PanelItemProps) => {
       ref={setAnchor}
     >
       <Switch fallback={<div class={itemIconStyle()} />}>
-        <Match when={props.type === 'checkbox' && props.checked}>
+        <Match
+          when={
+            (props.type === 'checkbox' || props.type === 'submenu') &&
+            props.checked
+          }
+        >
           <svg
             class={itemIconStyle()}
             fill="none"
