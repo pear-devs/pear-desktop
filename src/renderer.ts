@@ -18,8 +18,15 @@ import {
   loadAllRendererPlugins,
 } from './loader/renderer';
 import { startingPages } from './providers/extracted-data';
+import { playPlaylist, playVideo } from './providers/play-video';
 import { setupSongInfo } from './providers/song-info-front';
 
+import type {
+  LibraryPlaylistsRequest,
+  LibraryPlaylistsResponse,
+  SearchRequest,
+  SearchResponse,
+} from '@/providers/song-controls';
 import type { MusicPlayer } from '@/types/music-player';
 import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';
@@ -179,9 +186,10 @@ async function onApiLoaded() {
       ?.onVolumeClick();
   });
 
-  window.ipcRenderer.on('peard:get-queue', () => {
+  window.ipcRenderer.on('peard:get-queue', (_, requestId: string) => {
     const queue = document.querySelector<QueueElement>('#queue');
     window.ipcRenderer.send('peard:get-queue-response', {
+      requestId,
       items: queue?.queue.getItems(),
       autoPlaying: queue?.queue.autoPlaying,
       continuation: queue?.queue.continuation,
@@ -280,32 +288,93 @@ async function onApiLoaded() {
       type: 'CLEAR',
     });
   });
+  window.ipcRenderer.on('peard:play-video', (_, videoId: string) => {
+    playVideo(document.querySelector('ytmusic-app'), videoId);
+  });
+  window.ipcRenderer.on('peard:play-playlist', (_, playlistId: string) => {
+    playPlaylist(document.querySelector('ytmusic-app'), playlistId);
+  });
 
   window.ipcRenderer.on(
     'peard:search',
-    async (_, query: string, params?: string, continuation?: string) => {
+    async (_, { requestId, query, params, continuation }: SearchRequest) => {
       const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
       const searchBox =
         document.querySelector<SearchBoxElement>('ytmusic-search-box');
 
-      if (!app || !searchBox) return;
+      if (!app || !searchBox) {
+        window.ipcRenderer.send('peard:search-results', {
+          requestId,
+          error: 'Pear Desktop search is not ready yet.',
+        } satisfies SearchResponse);
+        return;
+      }
 
-      const result = await app.networkManager.fetch<
-        unknown,
-        {
-          query: string;
-          params?: string;
-          continuation?: string;
-          suggestStats?: unknown;
-        }
-      >('/search', {
-        query,
-        params,
-        continuation,
-        suggestStats: searchBox.getSearchboxStats(),
-      });
+      try {
+        const result = await app.networkManager.fetch<
+          unknown,
+          {
+            query: string;
+            params?: string;
+            continuation?: string;
+            suggestStats?: unknown;
+          }
+        >('/search', {
+          query,
+          params,
+          continuation,
+          suggestStats: searchBox.getSearchboxStats(),
+        });
 
-      window.ipcRenderer.send('peard:search-results', result);
+        window.ipcRenderer.send('peard:search-results', {
+          requestId,
+          result,
+        } satisfies SearchResponse);
+      } catch (error) {
+        window.ipcRenderer.send('peard:search-results', {
+          requestId,
+          error: error instanceof Error ? error.message : 'Search failed.',
+        } satisfies SearchResponse);
+      }
+    },
+  );
+  window.ipcRenderer.on(
+    'peard:get-library-playlists',
+    async (_, { requestId, continuation }: LibraryPlaylistsRequest) => {
+      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+
+      if (!app) {
+        window.ipcRenderer.send('peard:get-library-playlists-response', {
+          requestId,
+          error: 'Pear Desktop playlist library is not ready yet.',
+        } satisfies LibraryPlaylistsResponse);
+        return;
+      }
+
+      try {
+        const result = await app.networkManager.fetch<
+          unknown,
+          { browseId: string } | { continuation: string }
+        >(
+          '/browse',
+          continuation
+            ? { continuation }
+            : { browseId: 'FEmusic_liked_playlists' },
+        );
+
+        window.ipcRenderer.send('peard:get-library-playlists-response', {
+          requestId,
+          result,
+        } satisfies LibraryPlaylistsResponse);
+      } catch (error) {
+        window.ipcRenderer.send('peard:get-library-playlists-response', {
+          requestId,
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Playlist library request failed.',
+        } satisfies LibraryPlaylistsResponse);
+      }
     },
   );
 
