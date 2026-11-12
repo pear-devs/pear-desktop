@@ -24,6 +24,20 @@ export interface ScrobblerPluginConfig {
    * @default true
    */
   alternativeArtist: boolean;
+  /**
+   * List of regular expressions used to filter out garbage from track titles and artists
+   */
+  customRegexFilters: string[];
+  /**
+   * Use MusicBrainz to automatically verify and correct song titles and artists
+   *
+   * @default false
+   */
+  useMusicBrainz: boolean;
+  /**
+   * Email address used as contact info for MusicBrainz API User-Agent
+   */
+  musicBrainzEmail: string;
   scrobblers: {
     lastfm: {
       /**
@@ -85,6 +99,74 @@ export const defaultConfig: ScrobblerPluginConfig = {
   scrobbleOtherMedia: true,
   alternativeTitles: true,
   alternativeArtist: true,
+  useMusicBrainz: false,
+  musicBrainzEmail: '',
+  customRegexFilters: [
+    // (Explicit) or [Explicit] or Clean
+    '\\s[([]Explicit[)\\]]',
+    '\\s[([]Clean[)\\]]',
+    // Features
+    '\\s[([]feat\\. [^)\\]]+[)\\]]',
+    '\\s[([]ft\\. [^)\\]]+[)\\]]',
+    // Live
+    '\\s-\\sLive(\\s.+)?$',
+    '\\s[([]Live[)\\]]$',
+    // Parodies and adaptations
+    '\\s\\(Parody of ".*" by .*\\)$',
+    '\\s\\(Lyrical Adaption of ".*"\\)$',
+    // Re-issue
+    '\\sRe-?issue$',
+    '\\s\\[.*?Re-?issue.*?\\]',
+    '\\s\\(.*?Re-?issue.*?\\)',
+    // Remastered
+    'Live\\s\\/\\sRemastered',
+    '\\s[([][^)\\]]*Re-?[Mm]aster(ed)?[^)\\]]*[)\\]]$',
+    '\\s-\\s\\d{4}(\\s-)?\\s.*Re-?[Mm]aster(ed)?.*$',
+    '\\s-\\sRe-?[Mm]aster(ed)?.*$',
+    '\\s\\[Remastered\\]\\s\\(Remastered\\sVersion\\)$',
+    // Versions
+    '\\s[([]Album Version[)\\]]$',
+    '\\s[([]Re-?recorded[)\\]]$',
+    '\\s[([]Single Version[)\\]]$',
+    '\\s[([]Edit[)\\]]$',
+    '\\s-\\sMono Version$',
+    '\\s-\\sStereo Version$',
+    '\\s\\(Deluxe Edition\\)$',
+    '\\s[([]Expanded.*[)\\]]$',
+    '\\s-\\sExpanded Edition$',
+    '\\s[([]Explicit Version[)\\]]',
+    '\\s[([]Bonus Track Edition[)\\]]',
+    '\\s[([]\\d+th\\sAnniversary.*[)\\]]',
+    '\\s-\\sOriginal$',
+    '\\s-\\sOriginal.*Version(\\s\\d{4})?$',
+    // YouTube specific
+    '\\*+\\s?\\S+\\s?\\*+$',
+    '\\[[^\\]]+\\]',
+    '【[^】]+】',
+    '（[^）]+）',
+    '\\([^)]*version\\)$',
+    '\\.(avi|wmv|mpg|mpeg|flv)$',
+    '\\(.*lyrics?\\s*(video)?\\)',
+    '\\((of+icial\\s*)?(track\\s*)?stream\\)',
+    '\\((of+icial\\s*)?((music|hd)\\s*)?(video|audio)\\)',
+    '-\\s(of+icial\\s*)?(music\\s*)?(video|audio)$',
+    '\\(.*Album\\sTrack\\)',
+    '\\(\\s*of+icial\\s*\\)',
+    '\\(\\s*[0-9]{4}\\s*\\)',
+    '\\(\\s*(HD|HQ)\\s*\\)$',
+    '(HD|HQ)\\s?$',
+    '(vid[\u00E9e]o)?\\s?clip\\sof+ici[ae]l',
+    'of+iziel+es\\s*video',
+    'vid[\u00E9e]o\\s?clip',
+    '\\sclip',
+    'full\\s*album',
+    '\\(live.*?\\)$',
+    '\\|.*$',
+    '\\(.*[0-9]{1,2}\\/[0-9]{1,2}\\/[0-9]{2,4}.*\\)',
+    'sub\\s*español',
+    '\\s\\(Letra\\)',
+    '\\s\\(En\\svivo\\)',
+  ],
   scrobblers: {
     lastfm: {
       enabled: false,
