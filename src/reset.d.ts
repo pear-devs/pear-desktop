@@ -38,14 +38,3 @@ declare global {
   }
 }
 
-// import { Howl as _Howl } from 'howler';
-declare module 'howler' {
-  interface Howl {
-    _sounds: {
-      _paused: boolean;
-      _ended: boolean;
-      _id: string;
-      _node: HTMLMediaElement;
-    }[];
-  }
-}
