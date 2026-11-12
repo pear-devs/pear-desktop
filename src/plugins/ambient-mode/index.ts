@@ -101,13 +101,11 @@ export default createPlugin({
         const blurCanvas = document.createElement('canvas');
         blurCanvas.classList.add('html5-blur-canvas');
 
-        const context = blurCanvas.getContext('2d', {
-          willReadFrequently: true,
-        });
+        const context = blurCanvas.getContext('2d');
 
         /* effect */
         let lastEffectWorkId: number | null = null;
-        let lastImageData: ImageData | null = null;
+        let hasDrawnOnce = false;
 
         const onSync = () => {
           if (typeof lastEffectWorkId === 'number')
@@ -124,17 +122,20 @@ export default createPlugin({
             if (!Number.isFinite(height)) height = width;
             if (!height) return;
 
-            context.globalAlpha = 1;
-            if (lastImageData) {
-              const frameOffset =
-                (1 / this.buffer) * (1000 / this.interpolationTime);
-              context.globalAlpha = 1 - (frameOffset * 2); // because of alpha value must be < 1
-              context.putImageData(lastImageData, 0, 0);
-              context.globalAlpha = frameOffset;
-            }
+            // The canvas is never cleared, so the previous frame's pixels
+            // already sit underneath - drawing the new frame at partial
+            // alpha over them blends it into a trailing motion blur without
+            // any CPU pixel readback. globalAlpha silently ignores values
+            // outside [0, 1] (e.g. Infinity when interpolationTime is 0,
+            // the "instant" setting) rather than throwing, so clamp
+            // explicitly instead of relying on that.
+            const frameAlpha =
+              this.interpolationTime > 0
+                ? (1 / this.buffer) * (1000 / this.interpolationTime)
+                : 1;
+            context.globalAlpha = hasDrawnOnce ? Math.min(frameAlpha, 1) : 1;
             context.drawImage(video, 0, 0, width, height);
-
-            lastImageData = context.getImageData(0, 0, width, height); // current image data
+            hasDrawnOnce = true;
 
             lastEffectWorkId = null;
           });
@@ -152,6 +153,7 @@ export default createPlugin({
           blurCanvas.height = Math.floor(
             (newHeight / newWidth) * this.qualityRatio,
           );
+          hasDrawnOnce = false; // resizing the canvas clears its pixels
 
           if (this.isFullscreen) blurCanvas.classList.add('fullscreen');
           else blurCanvas.classList.remove('fullscreen');
