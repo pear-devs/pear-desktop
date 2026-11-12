@@ -336,6 +336,7 @@ async function onApiLoaded() {
         detail: {
           audioContext,
           audioSource,
+          video,
         },
       }),
     );
