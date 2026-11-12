@@ -4,6 +4,7 @@ allowBuilds:
   electron: true
   electron-winstaller: true
   esbuild: true
+  protobufjs: false
   unrs-resolver: true
   utf-8-validate: true
 overrides:

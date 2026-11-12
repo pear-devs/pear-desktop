@@ -1,0 +1,567 @@
+/**
+ * DJ hand-offs. Both songs play at full level the whole time; the mix is
+ * done by handing the low end from one song to the other with a band kill
+ * (24 dB/oct at ~300 Hz) switched on a bar line, so there is only ever one
+ * bass, and two vocals never overlap. What makes them land is where they
+ * sit: on landmarks of both songs (phrases, sections, where a beat ends,
+ * breakdowns, vocals), found here from the band levels and Apple Music's
+ * vocals / phrases rather than at a fixed distance from the end.
+ *
+ * - Outro swap: the next song's sparse intro plays under the old song's
+ *   instrumental outro for 8 (or 4) bars, the basses swap half way and the
+ *   old song stops on its last beat, as the next one's hook arrives.
+ * - Pickup hand-off: the old song is cut at the end of one of its own
+ *   breakdowns; the next song starts from its first note, so its pickup
+ *   (a tag, a count-in line) fills the bar after; for one bar the old song's
+ *   kick and bass carry the new song's top end; then the basses swap.
+ */
+
+import { levelDb, type TrackAnalysis } from './analysis';
+
+import type { TransitionPlan } from './planner';
+
+const BAR_BEATS = 4;
+
+/** A bar this much quieter (lows) than the bars before is where the beat stopped */
+const BEAT_END_DROP_DB = 12;
+/** ...and the rest of the song stays at least this far under them */
+const BEAT_END_STAYS_DB = 9;
+/** Furthest from the end a song's beat end is looked for */
+const BEAT_END_SEARCH = 40;
+/** Overlap of an outro swap, in bars, longest first */
+const OUTRO_BARS = [8, 4];
+/** Longest an outro swap's overlap may be, in seconds (8 bars at ~120 BPM) */
+const OUTRO_MAX_SECONDS = 16.5;
+/** The next song's intro under the old song must be this much under its body */
+const SPARSE_DB = 4;
+/** Spotify EQ styles an outro swap moves the bass with (see spotify-catalog.ts) */
+const EQ_BASS_SWAP = 4;
+const EQ_BASS_CROSSFADE = 3;
+const EQ_BASS_SWAP_AT_END = 10;
+const EQ_BASS_SWAP_AT_START = 11;
+/** A looped slice must be the beat within this of its usual level (lows) */
+const LOOP_GROOVE_DB = 4;
+/** How many bars before the exit a clean bar to loop is looked for */
+const LOOP_SEARCH_BARS = 3;
+/** Both basses within this of their usual level at the swap: swap it hard */
+const HARD_SWAP_DB = 6;
+/** ...and get at least this much louder where it arrives, as the old one stops */
+const ARRIVAL_DB = 3;
+
+/** A breakdown's bars are this much quieter (lows) than the bars before it */
+const BREAKDOWN_DB = 5;
+/** Longest breakdown that is still one (in bars) */
+const BREAKDOWN_MAX_BARS = 8;
+/** After the breakdown the groove must be back within this of before */
+const GROOVE_BACK_DB = 3;
+/** Earliest a pickup hand-off may cut the old song, before its end */
+const HANDOFF_MAX_EARLY = 45;
+/** The next song's first bar must be within this of its body level: punchy */
+const PUNCHY_DB = 3;
+/** A pickup must be at least this loud (mids) against the song's body */
+const PICKUP_DB = 12;
+/** Bars after the swap our copy plays before the player takes over */
+const AFTER_BARS = 1;
+
+/**
+ * Seconds of the next song our copy still plays after a hand-off's window:
+ * the engine's 8 s glide back to the song's own tempo, then a margin for
+ * the player to take over before the copy runs out
+ */
+const HEAD_AFTER = 14.5;
+
+export interface HandoffContext {
+  /** Outgoing song, with its end section's grid */
+  from: TrackAnalysis;
+  /** Incoming song, with its start section's grid */
+  to: TrackAnalysis;
+  /** Incoming playback rate that matches the tempos */
+  rate: number;
+  /** The keys clash while both songs are tonal */
+  clash: boolean;
+  /** ...too much for an outro swap (diagonal moves are fine there) */
+  outroClash: boolean;
+  earliestMixOut: number;
+  headSeconds: number;
+}
+
+type Handoff = Omit<TransitionPlan, 'reason'> & {
+  /** How strong the landmark is, to choose between recipes */
+  score: number;
+};
+
+const median = (values: number[]) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+};
+
+/** First downbeat once the song is audible */
+const entryPoint = (track: TrackAnalysis) => {
+  const audible = track.leadingSilenceEnd - 0.05;
+  const grid = track.downbeats.length > 0 ? track.downbeats : track.beats;
+  return grid.find((time) => time >= audible) ?? track.leadingSilenceEnd;
+};
+
+/**
+ * Whether nobody sings from `from` to `to`: lines shorter than a beat (a
+ * tag, an ad-lib) are let through as long as they add up to under two
+ * beats. Undefined when the song's vocals aren't known.
+ */
+const vocalFree = (
+  track: TrackAnalysis,
+  from: number,
+  to: number,
+  beat: number,
+) => {
+  if (!track.vocals) return undefined;
+  let total = 0;
+  for (const region of track.vocals) {
+    const overlap = Math.min(region.end, to) - Math.max(region.start, from);
+    if (overlap <= 0) continue;
+    if (overlap >= beat) return false;
+    total += overlap;
+  }
+  return total < 2 * beat;
+};
+
+const lowBar = (track: TrackAnalysis, at: number, bar: number) =>
+  levelDb(track, 'low', at, at + bar);
+
+/**
+ * Where the old song's beat stops for good: the first downbeat whose bar is
+ * far quieter in the lows than the bars before, with the beat never coming
+ * back after it (a song whose drums stop dead drops ~20 dB or more).
+ */
+const beatEnd = (from: TrackAnalysis) => {
+  const bar = from.beatPeriod * BAR_BEATS;
+  const end = from.trailingSilenceStart;
+  // The grid can stop short of the last bar: carry it on to the end
+  const grid = [...from.downbeats];
+  const last = grid.at(-1);
+  if (last !== undefined && bar > 0) {
+    for (let time = last + bar; time <= end; time += bar) grid.push(time);
+  }
+  const downbeats = grid.filter(
+    (time) => time >= end - BEAT_END_SEARCH && time <= end,
+  );
+  // The first such bar: the rest of the song staying quiet makes it the end
+  for (const at of downbeats) {
+    const before = [1, 2, 3, 4]
+      .map((k) => lowBar(from, at - (k * bar), bar))
+      .filter((db): db is number => db !== undefined);
+    // From its second beat: a last hit on the downbeat may still ring
+    const here = levelDb(from, 'low', at + from.beatPeriod, at + bar);
+    if (before.length < 4 || here === undefined) continue;
+    const reference = median(before);
+    if (here > reference - BEAT_END_DROP_DB) continue;
+    const after = levelDb(from, 'low', at + from.beatPeriod, end);
+    if (after === undefined || after > reference - BEAT_END_STAYS_DB) continue;
+    return at;
+  }
+  return undefined;
+};
+
+/** Downbeats that start a phrase (Apple's marks, else every 4th from the end) */
+const phraseStarts = (track: TrackAnalysis) =>
+  track.phrases?.length
+    ? track.phrases
+    : track.downbeats.filter((_, i) => (track.downbeats.length - 1 - i) % 4 === 0);
+
+/**
+ * Where the old song should stop for an outro swap: where its beat ends,
+ * or on a song that fades out, the phrase its fade starts at (the fade is
+ * cut, like a DJ would)
+ */
+const outroExit = (from: TrackAnalysis) => {
+  const end = beatEnd(from);
+  if (end !== undefined) return end;
+  const bar = from.beatPeriod * BAR_BEATS;
+  const last = (grid: number[]) =>
+    grid.filter((time) => time <= from.outroStart + (bar / 2)).at(-1);
+  const phrase = last(phraseStarts(from));
+  if (phrase !== undefined && phrase >= from.outroStart - (4 * bar)) return phrase;
+  return last(from.downbeats);
+};
+
+/**
+ * Outro swap: the next song's intro under the old song's outro at full
+ * level, bass swapped half way, the old song stopping on its last beat as
+ * the next one's hook (or bass) arrives
+ */
+/** Why the last outro swap planned was or wasn't possible, for the debug log */
+export let outroNotes = '';
+
+interface Arrival {
+  mixIn: number;
+  lands: number;
+  score: number;
+}
+
+/**
+ * Where the next song comes in under a full-level overlap of `span` of its
+ * own seconds: a sparse, vocal-free stretch of it that starts on a section
+ * of its own and ends where something arrives (its hook, its bass, the
+ * full band). Undefined, with why, when nothing fits
+ */
+const findArrival = (
+  c: HandoffContext,
+  span: number,
+): { best?: Arrival; why: string } => {
+  const { to } = c;
+  const barIn = to.beatPeriod * BAR_BEATS;
+  const entry = entryPoint(to);
+  // Where the next song can arrive: the start of a phrase (else every 4th
+  // bar), early enough for our copy of it
+  const grid = to.phrases?.length
+    ? to.phrases
+    : to.downbeats.filter((_, i) => i % 4 === 0);
+  const vocalNear = (time: number) =>
+    to.vocalEntry !== undefined && Math.abs(to.vocalEntry - time) <= barIn;
+  // Each place it could arrive, with the stretch of intro under the old
+  // song before it; the song's own first bars too, when nothing fits
+  const windows = [
+    ...grid
+      .filter((time) => time - span >= entry - 0.05)
+      .map((time) => ({ mixIn: time - span, lands: time })),
+    { mixIn: entry, lands: entry + span },
+  ];
+  const rejected = { head: 0, sung: 0, dense: 0 };
+  let best: Arrival | undefined;
+  for (const { mixIn, lands } of windows) {
+    if (mixIn < 0 || lands + HEAD_AFTER > c.headSeconds) {
+      rejected.head++;
+      continue;
+    }
+    // A pickup line just before the arrival is fine (many hooks start a beat or two early)
+    if (!vocalFree(to, mixIn, lands - (3 * to.beatPeriod), to.beatPeriod)) {
+      rejected.sung++;
+      continue;
+    }
+    // Two dense songs at full level would be mud: the intro must be sparse
+    const under = levelDb(to, 'full', mixIn, lands);
+    if (under === undefined || under > to.bodyLoudness - SPARSE_DB) {
+      rejected.dense++;
+      continue;
+    }
+    // ...it comes in on a section of its own (a riff or a groove starting:
+    // the mids step up), and something arrives as the old song stops
+    // (the hook, the bass, the full band)
+    const after = levelDb(to, 'full', lands, lands + (2 * barIn));
+    const entering = levelDb(to, 'mid', mixIn, mixIn + barIn);
+    const before = levelDb(to, 'mid', Math.max(0, mixIn - barIn), mixIn);
+    if (after === undefined) continue;
+    const sectionStep =
+      entering !== undefined && before !== undefined && mixIn >= barIn
+        ? Math.max(0, entering - before)
+        : 0;
+    const score = after - under + sectionStep + (vocalNear(lands) ? 2 : 0);
+    if (!best || score > best.score) best = { mixIn, lands, score };
+  }
+  if (best && best.score >= ARRIVAL_DB) return { best, why: '' };
+  const tried = best
+    ? `best ${best.mixIn.toFixed(1)} score ${best.score.toFixed(1)}`
+    : 'none';
+  return {
+    why: `${tried} (head ${rejected.head} sung ${rejected.sung} dense ${rejected.dense})`,
+  };
+};
+
+const bassBody = (track: TrackAnalysis) =>
+  levelDb(track, 'low', track.introEnd, track.outroStart);
+const strongBass = (track: TrackAnalysis, at: number, length: number) => {
+  const here = levelDb(track, 'low', at, at + length);
+  const body = bassBody(track);
+  return here !== undefined && body !== undefined && here >= body - HARD_SWAP_DB;
+};
+
+/**
+ * How the bass goes over, with Spotify's EQ styles, from where each song's
+ * bass really is: swapped on the bar half way when both hit there; kept on
+ * the old song until the end when the new one's only comes in later; handed
+ * to the new song straight away when the old one's is already gone; glided
+ * across when both are thin (a swap into a thin bass, or out of one that's
+ * gone, is what sounds abrupt)
+ */
+const bassMove = (outStrong: boolean, inStrong: boolean) =>
+  outStrong && inStrong
+    ? EQ_BASS_SWAP
+    : outStrong
+      ? EQ_BASS_SWAP_AT_END
+      : inStrong
+        ? EQ_BASS_SWAP_AT_START
+        : EQ_BASS_CROSSFADE;
+
+/** Both songs' vocals and levels are known, and the keys allow an overlap */
+const canOverlap = (c: HandoffContext) =>
+  c.from.beatPeriod > 0 &&
+  c.to.beatPeriod > 0 &&
+  Boolean(c.from.levels && c.to.levels && c.from.vocals && c.to.vocals) &&
+  !c.outroClash;
+
+export const planOutroSwap = (c: HandoffContext): Handoff | null => {
+  const { from, to, rate } = c;
+  const notes: string[] = [];
+  outroNotes = '';
+  const bar = from.beatPeriod * BAR_BEATS;
+  const barIn = to.beatPeriod * BAR_BEATS;
+  // Two vocals must never overlap, so both songs' vocals must be known
+  if (!canOverlap(c)) {
+    outroNotes = c.outroClash ? 'key clash' : 'no levels or vocals';
+    return null;
+  }
+  const exit = outroExit(from);
+  if (exit === undefined) {
+    outroNotes = 'no exit';
+    return null;
+  }
+  notes.push(`exit ${exit.toFixed(2)}`);
+
+  for (const bars of OUTRO_BARS) {
+    const start = exit - (bars * bar);
+    if (start < c.earliestMixOut || bars * bar > OUTRO_MAX_SECONDS) {
+      notes.push(`${bars}: too early or long`);
+      continue;
+    }
+    // Never two vocals at once: the old song may still sing (ad-libs) over
+    // the new one's instrumental intro, but not over its pickup line in the
+    // last beats
+    if (!vocalFree(from, exit - (3 * from.beatPeriod), exit - 0.1, from.beatPeriod)) {
+      notes.push(`${bars}: sung at the end`);
+      continue;
+    }
+    const span = bars * bar * rate;
+    const { best, why } = findArrival(c, span);
+    if (!best) {
+      notes.push(`${bars}: ${why}`);
+      continue;
+    }
+    outroNotes = notes.join('; ');
+    const eq = bassMove(
+      strongBass(from, start + (bars * bar / 2) - bar, bar),
+      strongBass(to, best.mixIn + (span / 2), barIn),
+    );
+    return {
+      style: 'blend',
+      mixOut: start,
+      mixIn: best.mixIn,
+      duration: bars * bar,
+      rate,
+      beat: from.beatPeriod,
+      fromBpm: from.bpm,
+      toBpm: to.bpm,
+      landsOnVocal:
+        to.vocalEntry !== undefined && Math.abs(to.vocalEntry - best.lands) <= barIn
+          ? to.vocalEntry
+          : undefined,
+      recipe: { kind: 'outro', bars, eq },
+      score: (bars / 4) + (best.score / 4),
+    };
+  }
+  outroNotes = notes.join('; ');
+  return null;
+};
+
+/**
+ * Loop swap: the old song's last full bar before its exit (where its beat
+ * stops, or its fade starts) loops on, carrying the beat under the next
+ * song's way in, for songs whose own outro can't carry a blend. The looped
+ * slice has to be the beat at full strength with nobody singing on it.
+ */
+export const planLoopSwap = (c: HandoffContext): Handoff | null => {
+  const { from, to, rate } = c;
+  const bar = from.beatPeriod * BAR_BEATS;
+  const barIn = to.beatPeriod * BAR_BEATS;
+  if (!canOverlap(c)) return null;
+  const exit = outroExit(from);
+  if (exit === undefined) return null;
+  // The slice to loop: a bar (else half a bar) of the beat at full strength
+  // with nobody singing on it, ending on a bar line no line is sung across;
+  // the closest such to the exit, up to LOOP_SEARCH_BARS back (the old song
+  // is left there, before a line it would otherwise cut into)
+  const groove = median(
+    [2, 3, 4, 5]
+      .map((k) => lowBar(from, exit - (k * bar), bar))
+      .filter((db): db is number => db !== undefined),
+  );
+  const sung = (at: number) =>
+    from.vocals?.some((region) => region.start < at - 0.1 && region.end > at + 0.1) ?? false;
+  let mixOut: number | undefined;
+  let loopBeats: number | undefined;
+  for (let k = 0; k <= LOOP_SEARCH_BARS && mixOut === undefined; k++) {
+    const sliceEnd = exit - (k * bar);
+    if (sliceEnd < c.earliestMixOut || sung(sliceEnd)) continue;
+    loopBeats = [4, 2].find((beats) => {
+      const sliceStart = sliceEnd - (beats * from.beatPeriod);
+      const level = levelDb(from, 'low', sliceStart, sliceEnd);
+      return (
+        vocalFree(from, sliceStart, sliceEnd, from.beatPeriod / 4) === true &&
+        level !== undefined &&
+        Number.isFinite(groove) &&
+        level >= groove - LOOP_GROOVE_DB
+      );
+    });
+    if (loopBeats !== undefined) mixOut = sliceEnd;
+  }
+  if (mixOut === undefined || loopBeats === undefined) return null;
+  const slice = loopBeats * from.beatPeriod;
+  for (const bars of OUTRO_BARS) {
+    if (bars * bar > OUTRO_MAX_SECONDS) continue;
+    const span = bars * bar * rate;
+    const { best } = findArrival(c, span);
+    if (!best) continue;
+    const eq = bassMove(
+      strongBass(from, mixOut - slice, slice),
+      strongBass(to, best.mixIn + (span / 2), barIn),
+    );
+    return {
+      style: 'blend',
+      mixOut,
+      mixIn: best.mixIn,
+      duration: bars * bar,
+      rate,
+      beat: from.beatPeriod,
+      fromBpm: from.bpm,
+      toBpm: to.bpm,
+      landsOnVocal: undefined,
+      recipe: { kind: 'loop', bars, loopBeats, eq },
+      // A loop stands in for a real outro: only used when there isn't one
+      score: bars / 8,
+    };
+  }
+  return null;
+};
+
+/**
+ * Longest run of quiet bars (lows) that ends at `at`, against the four bars
+ * before the run: its length and how much quieter it is (0 when none)
+ */
+const breakdownBefore = (from: TrackAnalysis, at: number, bar: number) => {
+  let best = { bars: 0, depth: 0, reference: 0 };
+  for (let n = 1; n <= BREAKDOWN_MAX_BARS; n++) {
+    const reference = [1, 2, 3, 4]
+      .map((k) => lowBar(from, at - ((n + k) * bar), bar))
+      .filter((db): db is number => db !== undefined);
+    const run = Array.from({ length: n }, (_, k) =>
+      lowBar(from, at - ((k + 1) * bar), bar),
+    );
+    if (reference.length < 4 || run.some((db) => db === undefined)) break;
+    const ref = median(reference);
+    const levels = run as number[];
+    if (levels.some((db) => db > ref - BREAKDOWN_DB)) continue;
+    const depth = ref - (levels.reduce((a, b) => a + b, 0) / n);
+    best = { bars: n, depth, reference: ref };
+  }
+  return best;
+};
+
+/**
+ * Pickup hand-off: cut the old song as one of its breakdowns ends, the next
+ * song's pickup in the bar after, then its top end over the old song's beat
+ * for a bar, then the basses swap and the new one lands hot
+ */
+export const planPickupHandoff = (c: HandoffContext): Handoff | null => {
+  const { from, to, rate } = c;
+  const bar = from.beatPeriod * BAR_BEATS;
+  const barIn = to.beatPeriod * BAR_BEATS;
+  if (!(bar > 0 && barIn > 0) || !from.levels || !to.levels) return null;
+
+  // The next song must hit straight away on its first downbeat
+  const first = entryPoint(to);
+  const punch = levelDb(to, 'full', first, first + barIn);
+  if (punch === undefined || punch < to.bodyLoudness - PUNCHY_DB) return null;
+
+  // A real pickup before it (a line, a riff), half a bar to a bar long
+  const pickup = first - to.leadingSilenceEnd;
+  const pickupLevel = levelDb(to, 'mid', to.leadingSilenceEnd, first);
+  const sung = to.vocals?.some(
+    (region) => region.end > to.leadingSilenceEnd && region.start < first,
+  );
+  const gapBars =
+    pickup >= barIn / 2 &&
+    pickup <= barIn + 0.05 &&
+    (sung ||
+      (pickupLevel !== undefined && pickupLevel >= to.bodyLoudness - PICKUP_DB))
+      ? 1
+      : 0;
+  // Keys that clash: no bar of the old beat under the new song's chords
+  const overlapBars = c.clash ? 0 : 1;
+
+  const end = from.trailingSilenceStart;
+  const lo = Math.max(c.earliestMixOut + bar, end - HANDOFF_MAX_EARLY);
+  const hi = Math.min(end - (3 * bar), from.decayPoint);
+  const phrases = new Set(phraseStarts(from));
+  let best: { at: number; score: number; depth: number } | undefined;
+  for (const at of from.downbeats) {
+    if (at < lo || at > hi) continue;
+    const breakdown = breakdownBefore(from, at, bar);
+    if (breakdown.bars === 0) continue;
+    // ...and the groove is back after it, where the old beat is heard
+    const back = lowBar(from, at + (gapBars * bar), bar);
+    if (back === undefined || back < breakdown.reference - GROOVE_BACK_DB) {
+      continue;
+    }
+    // Never cut a line off
+    if (
+      from.vocals?.some(
+        (region) => region.start < at - 0.1 && region.end > at + 0.1,
+      )
+    ) {
+      continue;
+    }
+    const score =
+      breakdown.depth +
+      (phrases.has(at) ? 2 : 0) -
+      ((end - at) / 30);
+    if (!best || score > best.score) {
+      best = { at, score, depth: breakdown.depth };
+    }
+  }
+  if (!best) return null;
+
+  // Our copy of the new song has to cover the hand-off
+  const mixIn = first - (gapBars * bar * rate);
+  const window = gapBars + overlapBars + AFTER_BARS;
+  if (mixIn + (window * bar * rate) + HEAD_AFTER > c.headSeconds) return null;
+
+  return {
+    style: 'blend',
+    mixOut: best.at,
+    mixIn,
+    duration: window * bar,
+    rate,
+    beat: from.beatPeriod,
+    fromBpm: from.bpm,
+    toBpm: to.bpm,
+    landsOnVocal: undefined,
+    recipe: {
+      kind: 'pickup',
+      gapBars,
+      overlapBars,
+      afterBars: AFTER_BARS,
+    },
+    score: best.depth + (gapBars ? 3 : 0),
+  };
+};
+
+/**
+ * The hand-off for a pair, if one fits: a pickup hand-off when the next song
+ * has a pickup to drop on, otherwise an outro swap, otherwise whichever fits
+ */
+export const planHandoff = (
+  c: HandoffContext,
+  prefer: 'any' | 'pickup',
+  /** Debug only: this hand-off whenever it fits (to hear it) */
+  force?: 'pickup' | 'outro' | 'loop',
+): Handoff | null => {
+  if (force === 'loop') return planLoopSwap(c);
+  if (force === 'outro') return planOutroSwap(c);
+  if (force === 'pickup') return planPickupHandoff(c);
+  const pickup = planPickupHandoff(c);
+  if (prefer === 'pickup') return pickup;
+  const outro = planOutroSwap(c);
+  if (pickup?.recipe?.kind === 'pickup' && pickup.recipe.gapBars > 0) {
+    return pickup;
+  }
+  return outro ?? pickup ?? planLoopSwap(c);
+};
