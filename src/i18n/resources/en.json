@@ -769,6 +769,10 @@
         }
       }
     },
+    "resume-shuffle": {
+      "description": "Bring the queue back shuffled when \"Resume last song when app starts\" is enabled",
+      "name": "Resume Shuffle"
+    },
     "scrobbler": {
       "description": "Add scrobbling support (etc. last.fm, Listenbrainz)",
       "dialog": {
