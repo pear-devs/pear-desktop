@@ -1,0 +1,16 @@
+{
+  "name": "@pear/ui",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.tsx",
+    "./standalone": "./src/standalone.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@pear/sdk": "workspace:*",
+    "preact": "^10.29.8"
+  }
+}

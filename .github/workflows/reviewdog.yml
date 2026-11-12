@@ -5,7 +5,7 @@ on: [pull_request_target]
 permissions: {}
 
 env:
-  NODE_VERSION: "24.x"
+  NODE_VERSION: "24" # nub resolves a major, not ranges like 24.x
 
 jobs:
   oxlint:
@@ -19,32 +19,37 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - name: Setup nub and NodeJS
+        uses: nubjs/setup-nub@c7b970ec04655a2f0a111cd436cc182a3b660e7a # v0.6.0
         with:
-          version: 11
-          run_install: false
-
-      - name: Setup NodeJS
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
-        with:
+          nub-version: 0.9.5
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: nub ci --ignore-scripts
 
+      # Only the PR's sources, linted with the base branch's dependencies and config:
+      # nothing from the PR is installed or run (pull_request_target has write access).
       - name: Checkout PR source files
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          sparse-checkout: src
+          sparse-checkout: |
+            apps
+            packages
+            plugins
+            scripts
           path: __pr_src
 
+      # The workspaces keep their own node_modules (plugins/<id>/node_modules…), so the
+      # PR's files go over them in place (by content: checkouts seconds apart share
+      # mtimes): --delete drops files the PR removed, and
+      # node_modules is neither copied nor deleted.
       - name: Overlay PR source
         run: |
-          rm -rf src
-          cp -r __pr_src/src src
+          for dir in apps packages plugins scripts; do
+            rsync -a --checksum --delete --exclude node_modules "__pr_src/$dir/" "$dir/"
+          done
           rm -rf __pr_src
 
       - name: Setup reviewdog
@@ -58,7 +63,7 @@ jobs:
         run: |
           set -o pipefail
 
-          pnpm exec oxlint src --type-aware --format=checkstyle |
+          nub dlx oxlint apps packages plugins scripts --format=checkstyle |
             reviewdog \
               -f=checkstyle \
               -name=oxlint \
