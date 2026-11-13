@@ -10,9 +10,10 @@ import { loadI18n, setLanguage } from '@/i18n';
 
 import * as config from './config';
 import {
-  forceLoadPreloadPlugin,
-  forceUnloadPreloadPlugin,
+  applyPreloadPluginConfig,
   loadAllPreloadPlugins,
+  startPreloadPlugin,
+  stopPreloadPlugin,
 } from './loader/preload';
 
 // @ts-expect-error dummy
@@ -44,19 +45,34 @@ loadI18n().then(async () => {
 });
 
 ipcRenderer.on('plugin:unload', async (_, id: string) => {
-  await forceUnloadPreloadPlugin(id);
+  await stopPreloadPlugin(id);
 });
 ipcRenderer.on('plugin:enable', async (_, id: string) => {
-  await forceLoadPreloadPlugin(id);
+  await startPreloadPlugin(id);
 });
+ipcRenderer.on(
+  'config-changed',
+  (_, id: string, newConfig: Record<string, unknown>) => {
+    applyPreloadPluginConfig(id, newConfig).catch(console.error);
+  },
+);
 
 contextBridge.exposeInMainWorld('mainConfig', config);
 contextBridge.exposeInMainWorld('electronIs', is);
 contextBridge.exposeInMainWorld('ipcRenderer', {
+  // Returns the function that removes the listener: the main world can't
+  // remove it with `off`, as the bridge wraps functions anew on every call.
   on: (
     channel: string,
     listener: (event: IpcRendererEvent, ...args: unknown[]) => void,
-  ) => ipcRenderer.on(channel, listener),
+  ) => {
+    const wrapper = (event: IpcRendererEvent, ...args: unknown[]) =>
+      listener(event, ...args);
+    ipcRenderer.on(channel, wrapper);
+    return () => {
+      ipcRenderer.removeListener(channel, wrapper);
+    };
+  },
   off: (channel: string, listener: (...args: unknown[]) => void) =>
     ipcRenderer.off(channel, listener),
   once: (

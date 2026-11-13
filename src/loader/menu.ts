@@ -1,93 +1,147 @@
-import { deepmerge } from 'deepmerge-ts';
+import prompt from 'custom-electron-prompt';
 import { allPlugins } from 'virtual:plugins';
 
 import * as config from '@/config';
 import { t } from '@/i18n';
-import { setApplicationMenu } from '@/menu';
+import promptOptions from '@/providers/prompt-options';
+import { Platform } from '@/types/plugins';
 import { LoggerPrefix } from '@/utils';
 
+import { buildConfigMenu, type MenuEnv, patchAt } from './menu-builder';
+
+import type { ConfigShape, Label } from '@/plugins/utils/common/config';
 import type { MenuContext } from '@/types/contexts';
-import type { PluginConfig } from '@/types/plugins';
 import type { BrowserWindow, MenuItemConstructorOptions } from 'electron';
 
-const menuTemplateMap: Record<string, MenuItemConstructorOptions[]> = {};
-const createContext = (
+const currentPlatform = (() => {
+  switch (process.platform) {
+    case 'win32':
+      return Platform.Windows;
+    case 'darwin':
+      return Platform.macOS;
+    case 'freebsd':
+      return Platform.Freebsd;
+    default:
+      return Platform.Linux;
+  }
+})();
+
+export const resolveLabel = (label: Label): string => {
+  if (typeof label === 'string') return t(label);
+  if ('text' in label) return label.text;
+  return t(label.key, label.vars);
+};
+
+/**
+ * A plugin's menu items: the ones generated from its config schema, then the
+ * ones its `menu` returns.
+ */
+export const buildPluginMenu = async (
   id: string,
   win: BrowserWindow,
-): MenuContext<PluginConfig> => ({
-  getConfig: async () =>
-    deepmerge(
-      (await allPlugins())[id].config ?? { enabled: false },
-      config.get(`plugins.${id}`) ?? {},
-    ) as PluginConfig,
-  setConfig: async (newConfig) => {
-    config.setPartial(
-      `plugins.${id}`,
-      newConfig,
-      (await allPlugins())[id].config,
-    );
-  },
-  window: win,
-  refresh: async () => {
-    await setApplicationMenu(win);
+  refresh: () => Promise<void> | void,
+): Promise<MenuItemConstructorOptions[]> => {
+  const plugin = (await allPlugins())[id];
+  if (!plugin) return [];
 
-    if (await config.plugins.isEnabled('in-app-menu')) {
-      win.webContents.send('refresh-in-app-menu');
-    }
-  },
-});
+  const state = await config.plugins.getPluginState(id);
+  const setConfig = (patch: Record<string, unknown>) => {
+    config.plugins.setPluginConfig(id, patch);
+    return Promise.resolve();
+  };
 
-export const forceLoadMenuPlugin = async (id: string, win: BrowserWindow) => {
-  try {
-    const plugin = (await allPlugins())[id];
-    if (!plugin) return;
-
-    const menu = plugin.menu?.(createContext(id, win));
-    if (menu) {
-      const result = await menu;
-      if (result.length > 0) {
-        menuTemplateMap[id] = result;
+  const env: MenuEnv = {
+    label: resolveLabel,
+    platform: currentPlatform,
+    set: (path, value) => setConfig(patchAt(path, value)),
+    async prompt(field, path, current) {
+      const title = field.label ? resolveLabel(field.label) : path.join('.');
+      let value: unknown;
+      if (field.kind === 'shortcut') {
+        const output = await prompt(
+          {
+            title,
+            label: title,
+            type: 'keybind',
+            keybindOptions: [
+              {
+                value: 'value',
+                label: title,
+                default: typeof current === 'string' ? current : '',
+              },
+            ],
+            ...promptOptions(),
+          },
+          win,
+        );
+        value = output?.[0]?.accelerator ?? null;
+      } else if (field.kind === 'number') {
+        const output = await prompt(
+          {
+            title,
+            label: title,
+            value: current as number,
+            type: 'counter',
+            counterOptions: {
+              minimum: field.min,
+              maximum: field.max,
+              multiFire: true,
+            },
+            width: 380,
+            ...promptOptions(),
+          },
+          win,
+        );
+        value = output === null ? null : Number(output);
+        if (typeof value === 'number' && !Number.isFinite(value)) value = null;
       } else {
-        return;
+        value = await prompt(
+          {
+            title,
+            label: title,
+            value: typeof current === 'string' ? current : '',
+            type: 'input',
+            inputAttrs: {
+              type: field.secret ? 'password' : 'text',
+              placeholder: field.placeholder ?? '',
+            },
+            width: 380,
+            ...promptOptions(),
+          },
+          win,
+        );
       }
-    } else return;
+      if (value === null || value === undefined) return;
+      await setConfig(patchAt(path, value));
+      await refresh();
+    },
+  };
 
-    console.log(
-      LoggerPrefix,
-      t('common.console.plugins.loaded', { pluginName: `${id}::menu` }),
-    );
-  } catch (err) {
-    console.error(
-      LoggerPrefix,
-      t('common.console.plugins.initialize-failed', {
-        pluginName: `${id}::menu`,
-      }),
-    );
-    console.trace(err);
-  }
-};
+  const schema = plugin.config as ConfigShape | undefined;
+  const items: MenuItemConstructorOptions[] = schema
+    ? buildConfigMenu(schema, state.config, env)
+    : [];
 
-export const loadAllMenuPlugins = async (win: BrowserWindow) => {
-  const pluginConfigs = config.plugins.getPlugins();
-
-  for (const [pluginId, pluginDef] of Object.entries(await allPlugins())) {
-    const config = deepmerge(
-      pluginDef.config ?? { enabled: false },
-      pluginConfigs[pluginId] ?? {},
-    );
-
-    if (config.enabled) {
-      await forceLoadMenuPlugin(pluginId, win);
+  if (plugin.menu) {
+    const ctx: MenuContext<Record<string, unknown>> = {
+      id,
+      config: state.config,
+      setConfig,
+      window: win,
+      refresh,
+    };
+    try {
+      items.push(...(await plugin.menu(ctx)));
+    } catch (error) {
+      console.error(
+        LoggerPrefix,
+        t('common.console.plugins.initialize-failed', {
+          pluginName: `${id}::menu`,
+        }),
+        error,
+      );
     }
   }
-};
 
-export const getMenuTemplate = (
-  id: string,
-): MenuItemConstructorOptions[] | undefined => {
-  return menuTemplateMap[id];
-};
-
-export const getAllMenuTemplate = () => {
-  return menuTemplateMap;
+  return items;
 };

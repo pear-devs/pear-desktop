@@ -10,12 +10,12 @@ import {
 } from '@/utils/trusted-types';
 
 import {
-  createContext,
-  forceLoadRendererPlugin,
-  forceUnloadRendererPlugin,
-  getAllLoadedRendererPlugins,
-  getLoadedRendererPlugin,
+  applyRendererPluginConfig,
   loadAllRendererPlugins,
+  notifyPlayerApiReady,
+  setupRendererPluginIpc,
+  startRendererPlugin,
+  stopRendererPlugin,
 } from './loader/renderer';
 import { startingPages } from './providers/extracted-data';
 import { setupSongInfo } from './providers/song-info-front';
@@ -23,7 +23,6 @@ import { setupSongInfo } from './providers/song-info-front';
 import type { MusicPlayer } from '@/types/music-player';
 import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';
-import type { PluginConfig } from '@/types/plugins';
 import type { QueueElement } from '@/types/queue';
 import type { SearchBoxElement } from '@/types/search-box-element';
 
@@ -314,15 +313,7 @@ async function onApiLoaded() {
   const audioSource = audioContext.createMediaElementSource(video);
   audioSource.connect(audioContext.destination);
 
-  for (const [id, plugin] of Object.entries(getAllLoadedRendererPlugins())) {
-    if (typeof plugin.renderer !== 'function') {
-      await plugin.renderer?.onPlayerApiReady?.call(
-        plugin.renderer,
-        api!,
-        createContext(id),
-      );
-    }
-  }
+  await notifyPlayerApiReady(api!);
 
   if (firstDataLoaded) {
     document.dispatchEvent(
@@ -448,33 +439,20 @@ const preload = async () => {
 };
 
 const main = async () => {
+  setupRendererPluginIpc();
   await loadAllRendererPlugins();
   isPluginLoaded = true;
 
   window.ipcRenderer.on('plugin:unload', async (_event, id: string) => {
-    await forceUnloadRendererPlugin(id);
+    await stopRendererPlugin(id);
   });
   window.ipcRenderer.on('plugin:enable', async (_event, id: string) => {
-    await forceLoadRendererPlugin(id);
-    if (api) {
-      const plugin = getLoadedRendererPlugin(id);
-      if (plugin && typeof plugin.renderer !== 'function') {
-        await plugin.renderer?.onPlayerApiReady?.call(
-          plugin.renderer,
-          api,
-          createContext(id),
-        );
-      }
-    }
+    await startRendererPlugin(id);
   });
-
   window.ipcRenderer.on(
     'config-changed',
-    (_event, id: string, newConfig: PluginConfig) => {
-      const plugin = getAllLoadedRendererPlugins()[id];
-      if (plugin && typeof plugin.renderer !== 'function') {
-        plugin.renderer?.onConfigChange?.call(plugin.renderer, newConfig);
-      }
+    (_event, id: string, newConfig: Record<string, unknown>) => {
+      applyRendererPluginConfig(id, newConfig).catch(console.error);
     },
   );
 

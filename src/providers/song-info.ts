@@ -184,7 +184,12 @@ const callbacks: Set<SongInfoCallback> = new Set();
 
 // This function will allow plugins to register callback that will be triggered when data changes
 export const registerCallback = (callback: SongInfoCallback) => {
-  callbacks.add(callback);
+  // Wrapped, so the same function can be registered twice and removed once.
+  const entry: SongInfoCallback = (info, event) => callback(info, event);
+  callbacks.add(entry);
+  return () => {
+    callbacks.delete(entry);
+  };
 };
 
 const registerProvider = (win: BrowserWindow) => {

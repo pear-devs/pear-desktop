@@ -16,7 +16,7 @@ import { allPlugins } from 'virtual:plugins';
 import { APPLICATION_NAME, setLanguage, t } from '@/i18n';
 
 import * as config from './config';
-import { getAllMenuTemplate, loadAllMenuPlugins } from './loader/menu';
+import { buildPluginMenu } from './loader/menu';
 import { restart } from './providers/app-controls';
 import { startingPages } from './providers/extracted-data';
 import promptOptions from './providers/prompt-options';
@@ -31,10 +31,10 @@ const inAppMenuActive = await config.plugins.isEnabled('in-app-menu');
 const pluginEnabledMenu = async (
   plugin: string,
   label = '',
-  description?: string ,
+  description?: string,
   isNew = false,
   hasSubmenu = false,
-  refreshMenu?: (() => void) ,
+  refreshMenu?: () => void,
 ): Promise<Electron.MenuItemConstructorOptions> => ({
   label: label || plugin,
   sublabel: isNew ? t('main.menu.plugins.new') : undefined,
@@ -66,36 +66,37 @@ export const mainMenuTemplate = async (
 ): Promise<MenuTemplate> => {
   const innerRefreshMenu = () => refreshMenu(win);
   const { navigationHistory } = win.webContents;
-  await loadAllMenuPlugins(win);
 
   const allPluginsStubs = await allPlugins();
+  const labelOf = (id: string) => allPluginsStubs[id]?.name?.() ?? id;
 
-  const menuResult = await Promise.all(
-    Object.entries(getAllMenuTemplate()).map(async ([id, template]) => {
-      const plugin = allPluginsStubs[id];
-      const pluginLabel = plugin?.name?.() ?? id;
-      const pluginDescription = plugin?.description?.() ?? undefined;
-      const isNew = plugin?.addedVersion
-        ? satisfies(packageJson.version, plugin.addedVersion)
-        : false;
+  const pluginMenus = await Promise.all(
+    Object.keys(allPluginsStubs)
+      .sort((a, b) => labelOf(a).localeCompare(labelOf(b)))
+      .map(async (id): Promise<Electron.MenuItemConstructorOptions> => {
+        const plugin = allPluginsStubs[id];
+        const pluginLabel = labelOf(id);
+        const pluginDescription = plugin?.description?.() ?? undefined;
+        const isNew = plugin?.addedVersion
+          ? satisfies(packageJson.version, plugin.addedVersion)
+          : false;
 
-      if (!(await config.plugins.isEnabled(id))) {
-        return [
-          id,
-          await pluginEnabledMenu(
+        const items = (await config.plugins.isEnabled(id))
+          ? await buildPluginMenu(id, win, innerRefreshMenu)
+          : [];
+
+        if (items.length === 0) {
+          return pluginEnabledMenu(
             id,
             pluginLabel,
             pluginDescription,
             isNew,
             true,
             innerRefreshMenu,
-          ),
-        ] as const;
-      }
+          );
+        }
 
-      return [
-        id,
-        {
+        return {
           label: pluginLabel,
           sublabel: isNew ? t('main.menu.plugins.new') : undefined,
           toolTip: pluginDescription,
@@ -109,41 +110,9 @@ export const mainMenuTemplate = async (
               innerRefreshMenu,
             ),
             { type: 'separator' },
-            ...template,
+            ...items,
           ],
-        } satisfies Electron.MenuItemConstructorOptions,
-      ] as const;
-    }),
-  );
-
-  const availablePlugins = Object.keys(await allPlugins());
-  const pluginMenus = await Promise.all(
-    availablePlugins
-      .sort((a, b) => {
-        const aPluginLabel = allPluginsStubs[a]?.name?.() ?? a;
-        const bPluginLabel = allPluginsStubs[b]?.name?.() ?? b;
-
-        return aPluginLabel.localeCompare(bPluginLabel);
-      })
-      .map(async (id) => {
-        const predefinedTemplate = menuResult.find((it) => it[0] === id);
-        if (predefinedTemplate) return predefinedTemplate[1];
-
-        const plugin = allPluginsStubs[id];
-        const pluginLabel = plugin?.name?.() ?? id;
-        const pluginDescription = plugin?.description?.() ?? undefined;
-        const isNew = plugin?.addedVersion
-          ? satisfies(packageJson.version, plugin.addedVersion)
-          : false;
-
-        return pluginEnabledMenu(
-          id,
-          pluginLabel,
-          pluginDescription,
-          isNew,
-          true,
-          innerRefreshMenu,
-        );
+        };
       }),
   );
 

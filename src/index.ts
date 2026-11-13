@@ -7,7 +7,6 @@ import {
   enhanceWebRequest,
   type BetterSession,
 } from '@jellybrick/electron-better-web-request';
-import { deepmerge } from 'deepmerge-ts';
 import {
   BrowserWindow,
   app,
@@ -27,19 +26,20 @@ import electronUpdater from 'electron-updater';
 import { deepEqual } from 'fast-equals';
 import { parse } from 'node-html-parser';
 import { languageResources } from 'virtual:i18n';
-import { allPlugins, mainPlugins } from 'virtual:plugins';
+import { allPlugins } from 'virtual:plugins';
 
 import * as config from '@/config';
 import { APPLICATION_NAME, loadI18n, setLanguage, t } from '@/i18n';
 import {
-  forceLoadMainPlugin,
-  forceUnloadMainPlugin,
-  getAllLoadedMainPlugins,
+  applyMainPluginConfig,
   loadAllMainPlugins,
+  setupPluginIpc,
+  startMainPlugin,
+  stopMainPlugin,
 } from '@/loader/main';
 import { refreshMenu, setApplicationMenu } from '@/menu';
 import musicPlayerCss from '@/music-player.css?inline';
-import { defaultAuthProxyConfig } from '@/plugins/auth-proxy-adapter/config';
+import { resolvePluginState } from '@/plugins/utils/common/config';
 import { fileExists, injectCSS, injectCSSAsFile } from '@/plugins/utils/main';
 import { restart, setupAppControls } from '@/providers/app-controls';
 import {
@@ -51,8 +51,6 @@ import { setupSongInfo } from '@/providers/song-info';
 import { setUpTray } from '@/tray';
 import { LoggerPrefix } from '@/utils';
 import { isTesting } from '@/utils/testing';
-
-import type { PluginConfig } from '@/types/plugins';
 
 // Catch errors and log them
 unhandled({
@@ -154,12 +152,9 @@ if (config.get('options.proxy')) {
   let proxyToUse = '';
   if (authProxyEnabled) {
     // Use proxy from Auth-Proxy-Adapter plugin
-    const authProxyConfig = deepmerge(
-      defaultAuthProxyConfig,
-      config.get('plugins.auth-proxy-adapter') ?? {},
-    ) as typeof defaultAuthProxyConfig;
-
-    const { hostname, port } = authProxyConfig;
+    const { hostname, port } = (
+      await config.plugins.getPluginState('auth-proxy-adapter')
+    ).config as { hostname: string; port: number };
     proxyToUse = `socks5://${hostname}:${port}`;
   } else if (config.get('options.proxy')) {
     // Use global proxy settings
@@ -187,24 +182,16 @@ function onClosed() {
   mainWindow = null;
 }
 
-ipcMain.handle('peard:get-main-plugin-names', async () =>
-  Object.keys(await mainPlugins()),
-);
+let hookedWindow: BrowserWindow | null = null;
+let configWatcherReady = false;
 
 const initHook = async (win: BrowserWindow) => {
-  const allPluginStubs = await allPlugins();
+  hookedWindow = win;
+  setupPluginIpc();
+  if (configWatcherReady) return;
+  configWatcherReady = true;
 
-  ipcMain.handle(
-    'peard:get-config',
-    (_, id: string) =>
-      deepmerge(
-        allPluginStubs[id].config ?? { enabled: false },
-        config.get(`plugins.${id}`) ?? {},
-      ) as PluginConfig,
-  );
-  ipcMain.handle('peard:set-config', (_, name: string, obj: object) =>
-    config.setPartial(`plugins.${name}`, obj, allPluginStubs[name].config),
-  );
+  const allPluginStubs = await allPlugins();
 
   config.watch((newValue, oldValue) => {
     const newPluginConfigList = (newValue?.plugins ?? {}) as Record<
@@ -215,46 +202,44 @@ const initHook = async (win: BrowserWindow) => {
       string,
       unknown
     >;
+    const ids = new Set([
+      ...Object.keys(newPluginConfigList),
+      ...Object.keys(oldPluginConfigList),
+    ]);
 
-    Object.entries(newPluginConfigList).forEach(([id, newPluginConfig]) => {
-      const isEqual = deepEqual(oldPluginConfigList[id], newPluginConfig);
+    for (const id of ids) {
+      if (!allPluginStubs[id]) continue;
+      if (deepEqual(oldPluginConfigList[id], newPluginConfigList[id])) continue;
 
-      if (!isEqual) {
-        const oldConfig = oldPluginConfigList[id] as PluginConfig;
-        const config = deepmerge(
-          allPluginStubs[id].config ?? { enabled: false },
-          newPluginConfig ?? {},
-        ) as PluginConfig;
+      const previous = resolvePluginState(
+        allPluginStubs[id],
+        oldPluginConfigList[id],
+      );
+      const next = resolvePluginState(
+        allPluginStubs[id],
+        newPluginConfigList[id],
+      );
+      const win = hookedWindow;
 
-        if (config.enabled !== oldConfig?.enabled) {
-          if (config.enabled) {
-            win.webContents.send('plugin:enable', id);
-            ipcMain.emit('plugin:enable', id);
-            forceLoadMainPlugin(id, win);
-          } else {
-            win.webContents.send('plugin:unload', id);
-            ipcMain.emit('plugin:unload', id);
-            forceUnloadMainPlugin(id, win);
-          }
-
-          if (allPluginStubs[id]?.restartNeeded) {
-            showNeedToRestartDialog(id);
-          }
+      if (next.enabled !== previous.enabled) {
+        if (next.enabled) {
+          win?.webContents.send('plugin:enable', id);
+          startMainPlugin(id).catch(console.error);
+        } else {
+          win?.webContents.send('plugin:unload', id);
+          stopMainPlugin(id).catch(console.error);
         }
 
-        const mainPlugin = getAllLoadedMainPlugins()[id];
-        if (mainPlugin) {
-          if (config.enabled && typeof mainPlugin.backend !== 'function') {
-            mainPlugin.backend?.onConfigChange?.call(
-              mainPlugin.backend,
-              config,
-            );
-          }
+        if (allPluginStubs[id]?.restartNeeded) {
+          showNeedToRestartDialog(id);
         }
-
-        win.webContents.send('config-changed', id, config);
+        continue;
       }
-    });
+
+      if (!next.enabled) continue;
+      applyMainPluginConfig(id, next.config).catch(console.error);
+      win?.webContents.send('config-changed', id, next.config);
+    }
   });
 };
 
@@ -403,10 +388,10 @@ async function createMainWindow() {
     const scaledY = windowY;
 
     if (
-      scaledX + (scaledWidth / 2) < display.bounds.x - 8 || // Left
-      scaledX + (scaledWidth / 2) > display.bounds.x + display.bounds.width || // Right
+      scaledX + scaledWidth / 2 < display.bounds.x - 8 || // Left
+      scaledX + scaledWidth / 2 > display.bounds.x + display.bounds.width || // Right
       scaledY < display.bounds.y - 8 || // Top
-      scaledY + (scaledHeight / 2) > display.bounds.y + display.bounds.height // Bottom
+      scaledY + scaledHeight / 2 > display.bounds.y + display.bounds.height // Bottom
     ) {
       // Window is offscreen
       if (is.dev()) {
