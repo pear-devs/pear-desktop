@@ -50,5 +50,28 @@
         }
       }
     }
+  },
+  "plugins": {
+    "chromecast": {
+      "description": "Прайгравайце YouTube Music на прымачах Google Cast",
+      "dialog": {
+        "cancel": "Адмяніць",
+        "choose-device": "Выберыце прыладу Cast",
+        "no-devices": {
+          "detail": "Пераканайцеся, што гэты камп'ютар і ваш прыёмнік Cast знаходзяцца ў адной сетцы і што трансляцыя ўключана на прымачы.",
+          "mac-detail": "У macOS дазвольце гэтаму прылажэнню доступ да лакальнай сеткі ў наладах сістэмы.",
+          "message": "Прылады Google Cast не знойдзены"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Спыніць трансляцыю",
+          "message": "Спыніць трансляцыю на {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Аўтаматычная перадача на апошнюю прыладу пры запуску"
+      },
+      "name": "Google Cast"
+    }
   }
 }

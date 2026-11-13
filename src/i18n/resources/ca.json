@@ -406,6 +406,27 @@
         "no-captions": "Subtítols no disponibles per aquesta cançó"
       }
     },
+    "chromecast": {
+      "description": "Reprodueix YouTube Music als receptors de Google Cast",
+      "dialog": {
+        "cancel": "Cancel·la",
+        "choose-device": "Trieu un dispositiu d'emissió",
+        "no-devices": {
+          "detail": "Comproveu que aquest ordinador i el vostre receptor d'emissió estiguin a la mateixa xarxa i que l'emissió estigui activada al receptor.",
+          "mac-detail": "A macOS, permet l'accés a la xarxa local per a aquesta aplicació a la configuració del sistema.",
+          "message": "No s'ha trobat cap dispositiu Google Cast"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Atura l'emissió",
+          "message": "Voleu deixar d'emetre a {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Emet automàticament a l'últim dispositiu a l'inici"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Afegeix un rellotge a la barra de navegació",
       "menu": {

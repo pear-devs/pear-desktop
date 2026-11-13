@@ -406,6 +406,27 @@
         "no-captions": "Keine Untertitel für dieses Lied verfügbar"
       }
     },
+    "chromecast": {
+      "description": "Spielen Sie YouTube Music auf Google Cast-Receivern ab",
+      "dialog": {
+        "cancel": "Abbrechen",
+        "choose-device": "Wählen Sie ein Cast-Gerät",
+        "no-devices": {
+          "detail": "Überprüfen Sie, ob sich dieser Computer und Ihr Cast-Receiver im selben Netzwerk befinden und dass Casting auf dem Receiver aktiviert ist.",
+          "mac-detail": "Erlauben Sie unter macOS den Zugriff auf das lokale Netzwerk für diese App in den Systemeinstellungen.",
+          "message": "Keine Google Cast-Geräte gefunden"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Übertragung beenden",
+          "message": "Casting an {{receiverName}} beenden?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Automatische Übertragung auf das letzte Gerät beim Start"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Füge eine Uhr zur Navigationsleiste hinzu",
       "menu": {

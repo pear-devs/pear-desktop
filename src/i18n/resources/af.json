@@ -104,5 +104,28 @@
         }
       }
     }
+  },
+  "plugins": {
+    "chromecast": {
+      "description": "Speel YouTube Music op Google Cast-ontvangers",
+      "dialog": {
+        "cancel": "Kanselleer",
+        "choose-device": "Kies 'n Cast-toestel",
+        "no-devices": {
+          "detail": "Kontroleer dat hierdie rekenaar en jou Cast-ontvanger op dieselfde netwerk is, en dat uitsaai op die ontvanger geaktiveer is.",
+          "mac-detail": "Op macOS, laat plaaslike netwerktoegang vir hierdie toepassing toe in Stelselinstellings.",
+          "message": "Geen Google Cast-toestelle gevind nie"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Hou op uitsaai",
+          "message": "Hou op om na {{receiverName}} uit te saai?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Saai outomaties uit na die laaste toestel tydens opstart"
+      },
+      "name": "Google Cast"
+    }
   }
 }

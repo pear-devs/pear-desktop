@@ -25,5 +25,28 @@
         "loaded": "i18n'a kargatuta"
       }
     }
+  },
+  "plugins": {
+    "chromecast": {
+      "description": "Erreproduzitu YouTube Music Google Cast hargailuetan",
+      "dialog": {
+        "cancel": "Utzi",
+        "choose-device": "Aukeratu Cast gailu bat",
+        "no-devices": {
+          "detail": "Egiaztatu ordenagailu hau eta zure Cast hargailua sare berean daudela eta hargailuan igortzea gaituta dagoela.",
+          "mac-detail": "MacOS-en, baimendu sare lokaleko sarbidea aplikazio honetara Sistemaren ezarpenetan.",
+          "message": "Ez da aurkitu Google Cast gailurik"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Gelditu igortzeari",
+          "message": "{{receiverName}}-ra igortzeari utzi?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Igorri automatikoki azken gailura abiaraztean"
+      },
+      "name": "Google Cast"
+    }
   }
 }

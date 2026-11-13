@@ -406,6 +406,27 @@
         "no-captions": "Nie znaleziono napisów dla tego utworu"
       }
     },
+    "chromecast": {
+      "description": "Odtwarzaj YouTube Music na odbiornikach Google Cast",
+      "dialog": {
+        "cancel": "Anuluj",
+        "choose-device": "Wybierz urządzenie przesyłające",
+        "no-devices": {
+          "detail": "Sprawdź, czy ten komputer i odbiornik Cast znajdują się w tej samej sieci i czy w odbiorniku jest włączone przesyłanie.",
+          "mac-detail": "W systemie macOS zezwól tej aplikacji na dostęp do sieci lokalnej w Ustawieniach systemu.",
+          "message": "Nie znaleziono urządzeń Google Cast"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Przestań przesyłać",
+          "message": "Zatrzymać przesyłanie do {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Automatyczne przesyłanie na ostatnie urządzenie przy uruchomieniu"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Dodaj zegar do nawigacyjnego baru",
       "menu": {

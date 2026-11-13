@@ -406,6 +406,27 @@
         "no-captions": "tidak tersedia caption untuk lagu ini"
       }
     },
+    "chromecast": {
+      "description": "Putar YouTube Music di penerima Google Cast",
+      "dialog": {
+        "cancel": "Batalkan",
+        "choose-device": "Pilih perangkat Transmisi",
+        "no-devices": {
+          "detail": "Periksa apakah komputer ini dan penerima Transmisi Anda berada di jaringan yang sama, dan transmisi diaktifkan pada penerima.",
+          "mac-detail": "Di macOS, izinkan akses Jaringan Lokal untuk aplikasi ini di Pengaturan Sistem.",
+          "message": "Tidak ada perangkat Google Cast yang ditemukan"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Hentikan transmisi",
+          "message": "Berhenti mentransmisi ke {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Transmisi otomatis ke perangkat terakhir saat startup"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Tambahkan jam ke bilah navigasi",
       "menu": {

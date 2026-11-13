@@ -406,6 +406,27 @@
         "no-captions": "Tiada sarikata untuk lagu ini"
       }
     },
+    "chromecast": {
+      "description": "Mainkan Muzik YouTube pada penerima Google Cast",
+      "dialog": {
+        "cancel": "Batal",
+        "choose-device": "Pilih peranti Cast",
+        "no-devices": {
+          "detail": "Semak sama ada komputer ini dan penerima Cast anda berada pada rangkaian yang sama dan penghantaran didayakan pada penerima.",
+          "mac-detail": "Pada macOS, benarkan akses Rangkaian Tempatan untuk apl ini dalam Tetapan Sistem.",
+          "message": "Tiada peranti Google Cast ditemui"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Berhenti menghantar",
+          "message": "Berhenti menghantar ke {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Hantar automatik ke peranti terakhir semasa dimulakan"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Tambah jam pada bar navigasi",
       "menu": {

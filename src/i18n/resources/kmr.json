@@ -1,1 +1,25 @@
-{}
+{
+  "plugins": {
+    "chromecast": {
+      "description": "Li ser wergirên Google Cast-ê Muzîka YouTube-ê bilîzin",
+      "dialog": {
+        "cancel": "Betal bike",
+        "choose-device": "Amûrek Cast hilbijêrin",
+        "no-devices": {
+          "detail": "Kontrol bikin ku ev komputer û wergirê Cast we li ser heman torê ne, û ku avêtin li ser wergirê çalak be.",
+          "mac-detail": "Li ser macOS-ê, di Mîhengên Pergalê de destûr bidin gihîştina Tora Herêmî ji bo vê sepanê.",
+          "message": "Amûrên Google Cast nehatin dîtin"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Rawestandina avêtinê",
+          "message": "Weşandina {{receiverName}} raweste?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Di destpêkê de otomatîkî ji cîhaza paşîn re were avêtin"
+      },
+      "name": "Google Cast"
+    }
+  }
+}

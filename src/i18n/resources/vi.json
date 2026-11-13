@@ -406,6 +406,27 @@
         "no-captions": "Không có phụ đề nào cho bài hát này"
       }
     },
+    "chromecast": {
+      "description": "Phát YouTube Music trên máy thu Google Cast",
+      "dialog": {
+        "cancel": "Hủy bỏ",
+        "choose-device": "Chọn thiết bị truyền",
+        "no-devices": {
+          "detail": "Kiểm tra xem máy tính này và bộ thu Cast của bạn có nằm trên cùng một mạng không và tính năng truyền đó đã được bật trên bộ thu.",
+          "mac-detail": "Trên macOS, cho phép truy cập Mạng cục bộ cho ứng dụng này trong Cài đặt hệ thống.",
+          "message": "Không tìm thấy thiết bị Google Cast nào"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Dừng truyền",
+          "message": "Dừng truyền tới {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Tự động truyền tới thiết bị cuối cùng khi khởi động"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Thêm đồng hồ vào thanh điều hướng",
       "menu": {

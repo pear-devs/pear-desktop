@@ -304,6 +304,27 @@
         "disable": "Desabilitar adaptador Proxy",
         "enable": "Habilitar adaptador Proxy"
       }
+    },
+    "chromecast": {
+      "description": "Reproduce YouTube Music nos receptores de Google Cast",
+      "dialog": {
+        "cancel": "Cancelar",
+        "choose-device": "Escolle un dispositivo de emisión",
+        "no-devices": {
+          "detail": "Comproba que este ordenador e o teu receptor de emisión están na mesma rede e que a emisión está activada no receptor.",
+          "mac-detail": "En macOS, permite o acceso á rede local para esta aplicación na configuración do sistema.",
+          "message": "Non se atopou ningún dispositivo Google Cast"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Deter a transmisión",
+          "message": "Queres deixar de emitir a {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Transmisión automática ao último dispositivo ao iniciar"
+      },
+      "name": "Google Cast"
     }
   }
 }

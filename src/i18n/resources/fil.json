@@ -402,6 +402,27 @@
         "no-captions": "Walang captions ay available para sa kantang ito"
       }
     },
+    "chromecast": {
+      "description": "I-play ang YouTube Music sa mga receiver ng Google Cast",
+      "dialog": {
+        "cancel": "Kanselahin",
+        "choose-device": "Pumili ng Cast device",
+        "no-devices": {
+          "detail": "Tingnan kung ang computer na ito at ang iyong Cast receiver ay nasa parehong network, at ang pag-cast ay pinagana sa receiver.",
+          "mac-detail": "Sa macOS, payagan ang access sa Local Network para sa app na ito sa Mga Setting ng System.",
+          "message": "Walang nakitang mga Google Cast device"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Itigil ang pag-cast",
+          "message": "Ihinto ang pag-cast sa {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Awtomatikong i-cast sa huling device sa pagsisimula"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Magdagdag ng orasan sa bar ng nabigasyon",
       "menu": {

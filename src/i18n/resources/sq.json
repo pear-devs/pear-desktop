@@ -310,6 +310,27 @@
           }
         }
       }
+    },
+    "chromecast": {
+      "description": "Luaj YouTube Music në marrës të Google Cast",
+      "dialog": {
+        "cancel": "Anulo",
+        "choose-device": "Zgjidhni një pajisje Cast",
+        "no-devices": {
+          "detail": "Kontrolloni që ky kompjuter dhe marrësi juaj Cast janë në të njëjtin rrjet dhe që transmetimi të jetë i aktivizuar në marrës.",
+          "mac-detail": "Në macOS, lejo qasjen në rrjetin lokal për këtë aplikacion te \"Cilësimet e sistemit\".",
+          "message": "Nuk u gjet asnjë pajisje Google Cast"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Ndalo transmetimin",
+          "message": "Të ndalohet transmetimi në {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Transmetimi automatik në pajisjen e fundit në nisje"
+      },
+      "name": "Google Cast"
     }
   }
 }
