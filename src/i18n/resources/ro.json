@@ -401,6 +401,27 @@
         "no-captions": "Nu exista subtitrari disponibile pentru aceasta piesa"
       }
     },
+    "chromecast": {
+      "description": "Redați YouTube Music pe dispozitive Google Cast",
+      "dialog": {
+        "cancel": "Anulați",
+        "choose-device": "Alegeți un dispozitiv Cast",
+        "no-devices": {
+          "detail": "Verificați dacă acest computer și dispozitivul Cast sunt conectate la aceeași rețea și dacă funcția Cast este activată pe dispozitiv.",
+          "mac-detail": "Pe macOS, permiteți accesul la rețeaua locală pentru această aplicație în Setările sistemului.",
+          "message": "Nu s-au găsit dispozitive Google Cast"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Opriți transmiterea",
+          "message": "Opriți transmiterea către {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Transmitere automată către ultimul dispozitiv la pornire"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "menu": {
         "format": {

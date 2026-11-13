@@ -406,6 +406,27 @@
         "no-captions": "Šiai dainai antraštė nepasiekiama"
       }
     },
+    "chromecast": {
+      "description": "Leiskite „YouTube“ muziką „Google Cast“ imtuvuose",
+      "dialog": {
+        "cancel": "Atšaukti",
+        "choose-device": "Pasirinkite perdavimo įrenginį",
+        "no-devices": {
+          "detail": "Patikrinkite, ar šis kompiuteris ir „Cast“ imtuvas yra tame pačiame tinkle ir ar imtuve įgalintas perdavimas.",
+          "mac-detail": "„MacOS“ sistemos nustatymuose leiskite šiai programai pasiekti vietinį tinklą.",
+          "message": "Nerasta jokių „Google Cast“ įrenginių"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Sustabdykite perdavimą",
+          "message": "Sustabdyti perdavimą į {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Automatinis perdavimas į paskutinį įrenginį paleidžiant"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Pridėti laikrodį prie navigacijos lentos",
       "menu": {

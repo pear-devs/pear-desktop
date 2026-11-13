@@ -271,6 +271,27 @@
         "title": "Åpne undertekstvelger"
       }
     },
+    "chromecast": {
+      "description": "Spill YouTube Music på Google Cast-mottakere",
+      "dialog": {
+        "cancel": "Avbryt",
+        "choose-device": "Velg en Cast-enhet",
+        "no-devices": {
+          "detail": "Sjekk at denne datamaskinen og Cast-mottakeren er på samme nettverk, og at casting er aktivert på mottakeren.",
+          "mac-detail": "På macOS, tillat lokalnettverkstilgang for denne appen i systeminnstillinger.",
+          "message": "Fant ingen Google Cast-enheter"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Slutt å caste",
+          "message": "Vil du slutte å caste til {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Automatisk cast til den siste enheten ved oppstart"
+      },
+      "name": "Google Cast"
+    },
     "compact-sidebar": {
       "description": "Alltid sett sidefeltet i kompakt modus",
       "name": "Kompakt sidefelt"

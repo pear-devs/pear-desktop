@@ -207,5 +207,26 @@
     }
   },
   "plugins": {
+    "chromecast": {
+      "description": "Google Cast ග්‍රාහක මත YouTube Music වාදනය කරන්න",
+      "dialog": {
+        "cancel": "අවලංගු කරන්න",
+        "choose-device": "Cast උපාංගයක් තෝරන්න",
+        "no-devices": {
+          "detail": "මෙම පරිගණකය සහ ඔබේ Cast ග්‍රාහකය එකම ජාලයක ඇති බවත්, ග්‍රාහකයේ විකාශනය සබල කර ඇති බවත් පරීක්ෂා කරන්න.",
+          "mac-detail": "macOS මත, පද්ධති සැකසීම් තුළ මෙම යෙදුම සඳහා දේශීය ජාල ප්‍රවේශයට ඉඩ දෙන්න.",
+          "message": "Google Cast උපාංග කිසිවක් හමු නොවීය"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "විකාශනය නවත්වන්න",
+          "message": "{{receiverName}} වෙත විකාශය කිරීම නවත්වන්නද?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "ආරම්භයේදී අවසන් උපාංගයට ස්වයංක්‍රීයව විකාශනය කරන්න"
+      },
+      "name": "Google Cast"
+    }
   }
 }

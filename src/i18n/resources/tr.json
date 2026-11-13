@@ -406,6 +406,27 @@
         "no-captions": "Bu şarkı için altyazı mevcut değil"
       }
     },
+    "chromecast": {
+      "description": "YouTube Music'i Google Cast alıcılarında oynatın",
+      "dialog": {
+        "cancel": "İptal",
+        "choose-device": "Bir Yayın cihazı seçin",
+        "no-devices": {
+          "detail": "Bu bilgisayarın ve Cast alıcınızın aynı ağda olduğundan ve alıcıda yayının etkinleştirildiğinden emin olun.",
+          "mac-detail": "MacOS'ta Sistem Ayarları'nda bu uygulamanın Yerel Ağ erişimine izin verin.",
+          "message": "Google Cast cihazı bulunamadı"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Yayınlamayı durdur",
+          "message": "{{receiverName}}'ye yayın durdurulsun mu?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Başlangıçta son cihaza otomatik yayın"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Navigasyon barına bir saat ekle",
       "menu": {

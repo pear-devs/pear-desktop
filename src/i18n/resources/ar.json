@@ -406,6 +406,27 @@
         "no-captions": "الترجمة لهاته الأغنية غير متاحة"
       }
     },
+    "chromecast": {
+      "description": "شغّل YouTube Music على أجهزة استقبال Google Cast",
+      "dialog": {
+        "cancel": "إلغاء",
+        "choose-device": "اختر جهاز البث",
+        "no-devices": {
+          "detail": "تأكد من أن هذا الكمبيوتر وجهاز استقبال Cast موجودان على نفس الشبكة، ومن تمكين الإرسال على جهاز الاستقبال.",
+          "mac-detail": "على نظام التشغيل macOS، قم بالسماح بالوصول إلى الشبكة المحلية لهذا التطبيق في إعدادات النظام.",
+          "message": "لم يتم العثور على أجهزة Google Cast"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "إيقاف البث",
+          "message": "هل تريد إيقاف الإرسال إلى {{receiverName}}؟"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "إرسال تلقائي إلى الجهاز الأخير عند بدء التشغيل"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "اضف ساعة في شريط التنقل",
       "menu": {

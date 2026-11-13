@@ -11,5 +11,28 @@
         "unload-failed": "Pluginta mana uraykachiyta atirqanchu \"{{pluginName}}\""
       }
     }
+  },
+  "plugins": {
+    "chromecast": {
+      "description": "YouTube Musiku Google Cast chaskiqkunapi pukllay",
+      "dialog": {
+        "cancel": "Sayachiy",
+        "choose-device": "Cast nisqa aparatota akllay",
+        "no-devices": {
+          "detail": "Kay computadora chaymanta Cast chaskiqniyki kikin llikapi kasqankuta qhaway, chaymanta casting chaskiqpi atichisqa kasqanmanta.",
+          "mac-detail": "macOS kaqpi, Sistema Ajustes nisqapi kay ruwanapaq llikaman yaykuyta saqiy.",
+          "message": "Mana Google Cast dispositivokuna tarisqachu"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Apachiyta sayachiy",
+          "message": "¿{{receiverName}} nisqaman apachiyta sayachiychu?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Auto cast qhipa dispositivoman qallariypi"
+      },
+      "name": "Google Cast"
+    }
   }
 }

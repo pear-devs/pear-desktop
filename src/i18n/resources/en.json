@@ -406,6 +406,27 @@
         "no-captions": "No captions available for this song"
       }
     },
+    "chromecast": {
+      "description": "Play YouTube Music on Google Cast receivers",
+      "dialog": {
+        "cancel": "Cancel",
+        "choose-device": "Choose a Cast device",
+        "no-devices": {
+          "detail": "Check that this computer and your Cast receiver are on the same network, and that casting is enabled on the receiver.",
+          "mac-detail": "On macOS, allow Local Network access for this app in System Settings.",
+          "message": "No Google Cast devices found"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Stop casting",
+          "message": "Stop casting to {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Auto cast to the last device on startup"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Add a clock to the navigation bar",
       "name": "Clock",
