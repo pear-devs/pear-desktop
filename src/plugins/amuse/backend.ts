@@ -79,9 +79,7 @@ const formatSongInfo = (info: SongInfo): AmuseSongInfo => {
       durationHuman: toHumanTime(duration),
       url: info.url ?? '',
       id: info.videoId,
-      isVideo:
-        info.mediaType !== MediaType.Audio &&
-        info.mediaType !== MediaType.OriginalMusicVideo,
+      isVideo: info.mediaType !== MediaType.Audio,
       isAdvertisement: false,
       inLibrary: false,
     },
