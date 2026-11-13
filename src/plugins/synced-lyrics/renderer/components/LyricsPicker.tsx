@@ -8,14 +8,12 @@ import { IconStar } from '@mdui/icons/star.js';
 import { IconWarning } from '@mdui/icons/warning.js';
 import {
   createEffect,
-  createMemo,
   createSignal,
   For,
   Index,
   Match,
   onCleanup,
   onMount,
-  runWithOwner,
   type Setter,
   Show,
   Switch,
@@ -32,7 +30,6 @@ import {
   type ProviderState,
 } from '../../providers';
 import { _ytAPI } from '../index';
-import { reactiveOwner } from '../reactive-root';
 import { config } from '../renderer';
 import { currentLyrics, lyricsStore, setLyricsStore } from '../store';
 
@@ -42,9 +39,7 @@ const LocalStorageSchema = z.object({
   provider: ProviderNameSchema,
 });
 
-export const providerIdx = runWithOwner(reactiveOwner, () =>
-  createMemo(() => providerNames.indexOf(lyricsStore.provider)),
-)!;
+const providerIdx = () => providerNames.indexOf(lyricsStore.provider);
 
 const shouldSwitchProvider = (providerData: ProviderState) => {
   if (providerData.state === 'error') return true;

@@ -7,38 +7,39 @@ import {
   isPlayerMenu,
 } from '@/plugins/utils/renderer/check';
 import { getSongMenu } from '@/providers/dom-elements';
+import { createRenderer } from '@/utils';
 
 import { PlaybackSpeedSlider } from './components/slider';
 
 const MIN_PLAYBACK_SPEED = 0.07;
 const MAX_PLAYBACK_SPEED = 16;
 
-const forcePlaybackRate = (e: Event) => {
-  if (e.target instanceof HTMLVideoElement) {
-    const videoElement = e.target;
-    if (videoElement.playbackRate !== speed()) {
-      videoElement.playbackRate = speed();
-    }
-  }
-};
-
 const roundToTwo = (n: number) => Math.round(n * 1e2) / 1e2;
 
-const [speed, setSpeed] = createSignal(1);
-const sliderContainer = document.createElement('div');
+export default createRenderer((ctx) => {
+  const [speed, setSpeed] = createSignal(1);
 
-export const onPlayerApiReady = () => {
-  const observePopupContainer = () => {
-    const updatePlayBackSpeed = () => {
-      const videoElement = document.querySelector<HTMLVideoElement>('video');
-      if (videoElement) {
+  const forcePlaybackRate = (e: Event) => {
+    if (e.target instanceof HTMLVideoElement) {
+      const videoElement = e.target;
+      if (videoElement.playbackRate !== speed()) {
         videoElement.playbackRate = speed();
       }
+    }
+  };
 
-      setSpeed(speed());
-    };
+  const updatePlayBackSpeed = () => {
+    const videoElement = document.querySelector<HTMLVideoElement>('video');
+    if (videoElement) {
+      videoElement.playbackRate = speed();
+    }
 
-    render(
+    setSpeed(speed());
+  };
+
+  const mountSlider = () => {
+    const sliderContainer = document.createElement('div');
+    const dispose = render(
       () => (
         <PlaybackSpeedSlider
           onImmediateValueChanged={(e) => {
@@ -80,46 +81,39 @@ export const onPlayerApiReady = () => {
       ),
       sliderContainer,
     );
-
-    const observer = new MutationObserver(() => {
-      const menu = getSongMenu();
-
-      if (
-        menu &&
-        !menu.contains(sliderContainer) &&
-        isMusicOrVideoTrack() &&
-        isPlayerMenu(menu)
-      ) {
-        menu.prepend(sliderContainer);
-      }
+    ctx.onCleanup(() => {
+      dispose();
+      sliderContainer.remove();
     });
 
     const popupContainer = document.querySelector('ytmusic-popup-container');
     if (popupContainer) {
-      observer.observe(popupContainer, {
-        childList: true,
-        subtree: true,
+      ctx.observe(popupContainer, { childList: true, subtree: true }, () => {
+        const menu = getSongMenu();
+
+        if (
+          menu &&
+          !menu.contains(sliderContainer) &&
+          isMusicOrVideoTrack() &&
+          isPlayerMenu(menu)
+        ) {
+          menu.prepend(sliderContainer);
+        }
+      });
+    }
+
+    const video = document.querySelector<HTMLVideoElement>('video');
+    if (video) {
+      ctx.listen(video, 'ratechange', forcePlaybackRate);
+      ctx.listen(video, 'peard:src-changed', forcePlaybackRate);
+      // Back to normal speed once the slider is gone.
+      ctx.onCleanup(() => {
+        video.playbackRate = 1;
       });
     }
   };
 
-  const observeVideo = () => {
-    const video = document.querySelector<HTMLVideoElement>('video');
-    if (video) {
-      video.addEventListener('ratechange', forcePlaybackRate);
-      video.addEventListener('peard:src-changed', forcePlaybackRate);
-    }
-  };
-
-  observePopupContainer();
-  observeVideo();
-};
-
-export const onUnload = () => {
-  const video = document.querySelector<HTMLVideoElement>('video');
-  if (video) {
-    video.removeEventListener('ratechange', forcePlaybackRate);
-    video.removeEventListener('peard:src-changed', forcePlaybackRate);
-  }
-  getSongMenu()?.removeChild(sliderContainer);
-};
+  // Mounting once is intended: `speed` is read reactively inside the JSX.
+  // oxlint-disable-next-line solid/reactivity
+  ctx.onPlayerApiReady(mountSlider);
+});

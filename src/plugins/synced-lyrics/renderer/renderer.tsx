@@ -3,7 +3,6 @@ import {
   createSignal,
   onCleanup,
   onMount,
-  runWithOwner,
   Show,
   untrack,
 } from 'solid-js';
@@ -17,19 +16,41 @@ import {
   PlainLyrics,
 } from './components';
 import { LyricsPicker } from './components/LyricsPicker';
-import { reactiveOwner } from './reactive-root';
 import { currentLyrics } from './store';
 import { selectors } from './utils';
 
-import type { LineLyrics, SyncedLyricsPluginConfig } from '../types';
+import type { LineLyrics, SyncedLyricsConfig } from '../types';
 
 export const [isVisible, setIsVisible] = createSignal<boolean>(false);
-export const [config, setConfig] =
-  createSignal<SyncedLyricsPluginConfig | null>(null);
+export const [config, setConfig] = createSignal<SyncedLyricsConfig | null>(
+  null,
+);
 
-runWithOwner(reactiveOwner, () => {
+const lineEffectProperties = [
+  '--lyrics-font-size',
+  '--lyrics-line-height',
+  '--lyrics-width',
+  '--lyrics-padding',
+  '--lyrics-animations',
+  '--lyrics-inactive-font-weight',
+  '--lyrics-inactive-opacity',
+  '--lyrics-inactive-scale',
+  '--lyrics-inactive-offset',
+  '--lyrics-active-font-weight',
+  '--lyrics-active-opacity',
+  '--lyrics-active-scale',
+  '--lyrics-active-offset',
+];
+
+/** Applies the line effect while the current reactive owner lives. */
+export const applyLineEffect = () => {
+  onCleanup(() => {
+    for (const property of lineEffectProperties) {
+      document.documentElement.style.removeProperty(property);
+    }
+  });
+
   createEffect(() => {
-    if (!config()?.enabled) return;
     const root = document.documentElement;
 
     // Set the line effect
@@ -125,7 +146,7 @@ runWithOwner(reactiveOwner, () => {
         break;
     }
   });
-});
+};
 
 type LyricsRendererChild =
   | { kind: 'LyricsPicker' }

@@ -1,6 +1,7 @@
-import { contextBridge, webFrame, type BrowserWindow } from 'electron';
+import { contextBridge, webFrame } from 'electron';
 
 import { t } from '@/i18n';
+import { config, type ConfigOf } from '@/plugins/utils/common/config';
 import { createPlugin } from '@/utils';
 
 import {
@@ -12,102 +13,28 @@ import { inject, isInjected } from './injectors/inject';
 import injectCliqzPreload from './injectors/inject-cliqz-preload';
 import { blockers } from './types';
 
-export interface TrackerBlockerConfig {
-  /**
-   * Whether to enable the tracker blocker.
-   * @default true
-   */
-  enabled: boolean;
-  /**
-   * When enabled, the tracker blocker will cache the blocklists.
-   * @default true
-   */
-  cache: boolean;
-  /**
-   * Which tracker blocker to use.
-   * @default blockers.InPlayer
-   */
-  blocker: (typeof blockers)[keyof typeof blockers];
+export const doNotTrackConfig = {
+  /** When enabled, the tracker blocker will cache the blocklists. */
+  cache: config.bool(true),
+  /** Which tracker blocker to use. */
+  blocker: config.select(
+    blockers.InPlayer,
+    [{ value: blockers.WithBlocklists }, { value: blockers.InPlayer }],
+    { label: 'plugins.do-not-track.menu.blocker' },
+  ),
   /**
    * Additional list of filters to use.
    * @example ["https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt"]
-   * @default []
    */
-  additionalBlockLists: string[];
-  /**
-   * Disable the default blocklists.
-   * @default false
-   */
-  disableDefaultLists: boolean;
-}
+  additionalBlockLists: config.list([]),
+  /** Disable the default blocklists. */
+  disableDefaultLists: config.bool(false),
+};
 
-export default createPlugin({
-  name: () => t('plugins.do-not-track.name'),
-  description: () => t('plugins.do-not-track.description'),
-  restartNeeded: false,
-  config: {
-    enabled: false,
-    cache: true,
-    blocker: blockers.InPlayer,
-    additionalBlockLists: [],
-    disableDefaultLists: false,
-  } as TrackerBlockerConfig,
-  menu: async ({ getConfig, setConfig }) => {
-    const config = await getConfig();
+export type TrackerBlockerConfig = ConfigOf<typeof doNotTrackConfig>;
 
-    return [
-      {
-        label: t('plugins.do-not-track.menu.blocker'),
-        submenu: Object.values(blockers).map((blocker) => ({
-          label: blocker,
-          type: 'radio',
-          checked: (config.blocker || blockers.WithBlocklists) === blocker,
-          click() {
-            setConfig({ blocker });
-          },
-        })),
-      },
-    ];
-  },
-  backend: {
-    mainWindow: null as BrowserWindow | null,
-    async start({ getConfig, window }) {
-      const config = await getConfig();
-      this.mainWindow = window;
-
-      if (config.blocker === blockers.WithBlocklists) {
-        await loadTrackerBlockerEngine(
-          window.webContents.session,
-          config.cache,
-          config.additionalBlockLists,
-          config.disableDefaultLists,
-        );
-      }
-    },
-    stop({ window }) {
-      if (isBlockerEnabled(window.webContents.session)) {
-        unloadTrackerBlockerEngine(window.webContents.session);
-      }
-    },
-    async onConfigChange(newConfig) {
-      if (this.mainWindow) {
-        if (
-          newConfig.blocker === blockers.WithBlocklists &&
-          !isBlockerEnabled(this.mainWindow.webContents.session)
-        ) {
-          await loadTrackerBlockerEngine(
-            this.mainWindow.webContents.session,
-            newConfig.cache,
-            newConfig.additionalBlockLists,
-            newConfig.disableDefaultLists,
-          );
-        }
-      }
-    },
-  },
-  preload: {
-    // see #1478
-    script: `const _prunerFn = window._pruner;
+// see #1478
+const prunerScript = `const _prunerFn = window._pruner;
     window._pruner = undefined;
     JSON.parse = new Proxy(JSON.parse, {
       apply() {
@@ -118,22 +45,69 @@ export default createPlugin({
       apply() {
         return Reflect.apply(...arguments).then((o) => _prunerFn(o));
       },
-    }); 0`,
-    async start({ getConfig }) {
-      const config = await getConfig();
+    }); 0`;
 
-      if (config.blocker === blockers.InPlayer && !isInjected()) {
-        inject(contextBridge);
-        await webFrame.executeJavaScript(this.script);
-      } else if (config.blocker === blockers.WithBlocklists) {
-        await injectCliqzPreload();
+export default createPlugin({
+  name: () => t('plugins.do-not-track.name'),
+  description: () => t('plugins.do-not-track.description'),
+  // The preload's injection into the page can't be undone.
+  restartNeeded: true,
+  config: doNotTrackConfig,
+  async backend(ctx) {
+    const { session } = ctx.window.webContents;
+
+    // Load the blocklist engine when switching to it; it isn't restarted
+    // for other changes.
+    ctx.onConfigChange(async (newConfig) => {
+      if (
+        newConfig.blocker === blockers.WithBlocklists &&
+        !isBlockerEnabled(session)
+      ) {
+        await loadTrackerBlockerEngine(
+          session,
+          newConfig.cache,
+          newConfig.additionalBlockLists,
+          newConfig.disableDefaultLists,
+        );
       }
-    },
-    async onConfigChange(newConfig) {
-      if (newConfig.blocker === blockers.InPlayer && !isInjected()) {
-        inject(contextBridge);
-        await webFrame.executeJavaScript(this.script);
+    });
+
+    const config = ctx.config;
+    if (config.blocker === blockers.WithBlocklists) {
+      await loadTrackerBlockerEngine(
+        session,
+        config.cache,
+        config.additionalBlockLists,
+        config.disableDefaultLists,
+      );
+    }
+
+    // Registered after the load: if the plugin stopped meanwhile, this runs at once.
+    ctx.onCleanup(() => {
+      if (isBlockerEnabled(session)) {
+        unloadTrackerBlockerEngine(session);
       }
-    },
+    });
+  },
+  async preload(ctx) {
+    const injectInPlayer = async () => {
+      if (isInjected()) return;
+      inject(contextBridge);
+      await webFrame.executeJavaScript(prunerScript);
+    };
+
+    // Nothing injected can be taken back, so a change never re-runs this
+    // part; switching to the in-player blocker injects it if it isn't yet.
+    ctx.onConfigChange(async (newConfig) => {
+      if (newConfig.blocker === blockers.InPlayer) {
+        await injectInPlayer();
+      }
+    });
+
+    if (ctx.config.blocker === blockers.InPlayer) {
+      await injectInPlayer();
+    } else if (ctx.config.blocker === blockers.WithBlocklists) {
+      await injectCliqzPreload();
+    }
   },
 });

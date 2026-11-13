@@ -16,13 +16,11 @@ import { TransitionGroup } from 'solid-transition-group';
 import { cacheNoArgs } from '@/providers/decorators';
 
 import { IconButton } from './IconButton';
+import { useIpc } from './ipc';
 import { MenuButton } from './MenuButton';
 import { Panel } from './Panel';
 import { PanelItem } from './PanelItem';
 import { WindowController } from './WindowController';
-
-import type { InAppMenuConfig } from '../constants';
-import type { RendererContext } from '@/types/contexts';
 
 const titleStyle = cacheNoArgs(
   () => css`
@@ -179,46 +177,40 @@ const PanelRenderer = (props: PanelRendererProps) => {
 };
 
 export type TitleBarProps = {
-  ipc: RendererContext<InAppMenuConfig>['ipc'];
   isMacOS?: boolean;
   enableController?: boolean;
   initialCollapsed?: boolean;
 };
 export const TitleBar = (props: TitleBarProps) => {
+  const ipc = useIpc();
   const [collapsed, setCollapsed] = createSignal(props.initialCollapsed);
   const [ignoreTransition, setIgnoreTransition] = createSignal(false);
   const [openTarget, setOpenTarget] = createSignal<HTMLElement | null>(null);
   const [menu, setMenu] = createSignal<Menu | null>(null);
   const [mouseY, setMouseY] = createSignal(0);
 
-  const [data, { refetch }] = createResource(
-    async () => (await props.ipc.invoke('get-menu')) as Promise<Menu | null>,
-  );
-  const [isMaximized, { refetch: refetchMaximize }] = createResource(
-    async () =>
-      (await props.ipc.invoke('window-is-maximized')) as Promise<boolean>,
+  const [data, { refetch }] = createResource(() => ipc.invoke('getMenu'));
+  const [isMaximized, { refetch: refetchMaximize }] = createResource(() =>
+    ipc.invoke('windowIsMaximized'),
   );
 
   const handleToggleMaximize = async () => {
     if (isMaximized()) {
-      await props.ipc.invoke('window-unmaximize');
+      await ipc.invoke('windowUnmaximize');
     } else {
-      await props.ipc.invoke('window-maximize');
+      await ipc.invoke('windowMaximize');
     }
     await refetchMaximize();
   };
   const handleMinimize = async () => {
-    await props.ipc.invoke('window-minimize');
+    await ipc.invoke('windowMinimize');
   };
   const handleClose = async () => {
-    await props.ipc.invoke('window-close');
+    await ipc.invoke('windowClose');
   };
 
   const refreshMenuItem = async (originalMenu: Menu, commandId: number) => {
-    const menuItem = (await window.ipcRenderer.invoke(
-      'get-menu-by-id',
-      commandId,
-    )) as MenuItem | null;
+    const menuItem = await ipc.invoke('getMenuById', commandId);
 
     const newMenu = structuredClone(originalMenu);
     const stack = [...(newMenu?.items ?? [])];
@@ -266,51 +258,57 @@ export const TitleBar = (props: TitleBarProps) => {
     setMouseY(e.clientY);
   };
 
+  // Closes the menu when the outside of the panel or sub-panel is clicked
+  const onBodyClick = (e: MouseEvent) => {
+    if (
+      e.target instanceof HTMLElement &&
+      !(
+        e.target.closest('nav[data-ytmd-main-panel]') ||
+        e.target.closest('ul[data-ytmd-sub-panel]')
+      )
+    ) {
+      setOpenTarget(null);
+    }
+  };
+
+  const ytmusicAppLayout = document.querySelector<HTMLElement>('#layout');
+  const onLayoutScroll = () => {
+    if (!ytmusicAppLayout) return;
+    const scrollValue = ytmusicAppLayout.scrollTop;
+    if (scrollValue > 20) {
+      ytmusicAppLayout.classList.add('content-scrolled');
+    } else {
+      ytmusicAppLayout.classList.remove('content-scrolled');
+    }
+  };
+
   onMount(() => {
-    props.ipc.on('close-all-in-app-menu-panel', async () => {
+    ipc.on('closeAllPanels', async () => {
       setIgnoreTransition(true);
       setMenu(null);
       await refetch();
       setMenu(data() ?? null);
       setIgnoreTransition(false);
     });
-    props.ipc.on('refresh-in-app-menu', async () => {
+    // Sent by the core when the application menu changed.
+    ipc.core.on('refresh-in-app-menu', async () => {
       setIgnoreTransition(true);
       await refetch();
       setMenu(data() ?? null);
       setIgnoreTransition(false);
     });
-    props.ipc.on('toggle-in-app-menu', () => {
+    ipc.on('toggleMenu', () => {
       setCollapsed(!collapsed());
     });
 
-    props.ipc.on('window-maximize', refetchMaximize);
-    props.ipc.on('window-unmaximize', refetchMaximize);
+    ipc.on('maximized', refetchMaximize);
+    ipc.on('unmaximized', refetchMaximize);
 
-    // close menu when the outside of the panel or sub-panel is clicked
-    document.body.addEventListener('click', (e) => {
-      if (
-        e.target instanceof HTMLElement &&
-        !(
-          e.target.closest('nav[data-ytmd-main-panel]') ||
-          e.target.closest('ul[data-ytmd-sub-panel]')
-        )
-      ) {
-        setOpenTarget(null);
-      }
-    });
+    document.body.addEventListener('click', onBodyClick);
 
     // tracking mouse position
     window.addEventListener('mousemove', listener);
-    const ytmusicAppLayout = document.querySelector<HTMLElement>('#layout');
-    ytmusicAppLayout?.addEventListener('scroll', () => {
-      const scrollValue = ytmusicAppLayout.scrollTop;
-      if (scrollValue > 20) {
-        ytmusicAppLayout.classList.add('content-scrolled');
-      } else {
-        ytmusicAppLayout.classList.remove('content-scrolled');
-      }
-    });
+    ytmusicAppLayout?.addEventListener('scroll', onLayoutScroll);
   });
 
   createEffect(() => {
@@ -321,6 +319,9 @@ export const TitleBar = (props: TitleBarProps) => {
 
   onCleanup(() => {
     window.removeEventListener('mousemove', listener);
+    document.body.removeEventListener('click', onBodyClick);
+    ytmusicAppLayout?.removeEventListener('scroll', onLayoutScroll);
+    ytmusicAppLayout?.classList.remove('content-scrolled');
   });
 
   return (

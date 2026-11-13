@@ -6,8 +6,7 @@ import { t } from '@/i18n';
 
 import { ScrobblerBase } from './base';
 
-import type { ScrobblerPluginConfig } from '../index';
-import type { SetConfType } from '../main';
+import type { ScrobblerPluginConfig, SetConfType } from '../types';
 import type { SongInfo } from '@/providers/song-info';
 
 interface LastFmData {

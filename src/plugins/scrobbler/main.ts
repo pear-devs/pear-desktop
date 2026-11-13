@@ -1,142 +1,108 @@
-import { type BrowserWindow } from 'electron';
-
-import {
-  registerCallback,
-  MediaType,
-  type SongInfo,
-  SongInfoEvent,
-} from '@/providers/song-info';
+import { MediaType, SongInfoEvent } from '@/providers/song-info';
 import { createBackend } from '@/utils';
 
 import { LastFmScrobbler } from './services/lastfm';
 import { ListenbrainzScrobbler } from './services/listenbrainz';
 
-import type { ScrobblerPluginConfig } from './index';
 import type { ScrobblerBase } from './services/base';
+import type {
+  ScrobblerPluginConfig,
+  scrobblerConfig,
+  SetConfType,
+} from './types';
 
-export type SetConfType = (
-  conf: Partial<Omit<ScrobblerPluginConfig, 'enabled'>>,
-) => void | Promise<void>;
+export default createBackend<typeof scrobblerConfig>(async (ctx) => {
+  const { window } = ctx;
+  const enabledScrobblers = new Map<string, ScrobblerBase>();
+  // The services mutate the config they get and save it whole.
+  const currentConfig = (): ScrobblerPluginConfig =>
+    structuredClone(ctx.config) as ScrobblerPluginConfig;
+  const setConfig: SetConfType = (conf) => ctx.setConfig(conf);
 
-export const backend = createBackend<
-  {
-    config?: ScrobblerPluginConfig;
-    window?: BrowserWindow;
-    enabledScrobblers: Map<string, ScrobblerBase>;
-    toggleScrobblers(
-      config: ScrobblerPluginConfig,
-      window: BrowserWindow,
-    ): void;
-    createSessions(
-      config: ScrobblerPluginConfig,
-      setConfig: SetConfType,
-    ): Promise<void>;
-    setConfig?: SetConfType;
-  },
-  ScrobblerPluginConfig
->({
-  enabledScrobblers: new Map(),
-
-  toggleScrobblers(config: ScrobblerPluginConfig, window: BrowserWindow) {
-    if (config.scrobblers.lastfm && config.scrobblers.lastfm.enabled) {
-      this.enabledScrobblers.set('lastfm', new LastFmScrobbler(window));
+  const toggleScrobblers = (config: Readonly<ScrobblerPluginConfig>) => {
+    if (config.scrobblers.lastfm.enabled) {
+      enabledScrobblers.set('lastfm', new LastFmScrobbler(window));
     } else {
-      this.enabledScrobblers.delete('lastfm');
+      enabledScrobblers.delete('lastfm');
     }
 
-    if (
-      config.scrobblers.listenbrainz &&
-      config.scrobblers.listenbrainz.enabled
-    ) {
-      this.enabledScrobblers.set('listenbrainz', new ListenbrainzScrobbler());
+    if (config.scrobblers.listenbrainz.enabled) {
+      enabledScrobblers.set('listenbrainz', new ListenbrainzScrobbler());
     } else {
-      this.enabledScrobblers.delete('listenbrainz');
+      enabledScrobblers.delete('listenbrainz');
     }
-  },
+  };
 
-  async createSessions(config: ScrobblerPluginConfig, setConfig: SetConfType) {
-    for (const [, scrobbler] of this.enabledScrobblers) {
+  const createSessions = async () => {
+    for (const [, scrobbler] of enabledScrobblers) {
+      const config = currentConfig();
       if (!scrobbler.isSessionCreated(config)) {
         await scrobbler.createSession(config, setConfig);
       }
     }
-  },
+  };
 
-  async start({ getConfig, setConfig, window }) {
-    const config = (this.config = await getConfig());
-    // This will store the timeout that will trigger addScrobble
-    let scrobbleTimer: NodeJS.Timeout | undefined;
+  toggleScrobblers(ctx.config);
+  await createSessions();
 
-    this.window = window;
-    this.toggleScrobblers(config, window);
-    await this.createSessions(config, setConfig);
-    this.setConfig = setConfig;
+  // This will store the timeout that will trigger addScrobble
+  let scrobbleTimer: ReturnType<typeof setTimeout> | undefined;
 
-    registerCallback((songInfo: SongInfo, event) => {
-      if (event === SongInfoEvent.TimeChanged) return;
-      // Set remove the old scrobble timer
-      clearTimeout(scrobbleTimer);
-      if (!songInfo.isPaused) {
-        const configNonnull = this.config!;
-        // Scrobblers normally have no trouble working with official music videos
-        if (
-          !configNonnull.scrobbleOtherMedia &&
-          songInfo.mediaType !== MediaType.Audio &&
-          songInfo.mediaType !== MediaType.OriginalMusicVideo
-        ) {
-          return;
-        }
-
-        // Scrobble when the song is halfway through, or has passed the 4-minute mark
-        const scrobbleTime = Math.min(
-          Math.ceil(songInfo.songDuration / 2),
-          4 * 60,
-        );
-        if (scrobbleTime > (songInfo.elapsedSeconds ?? 0)) {
-          // Scrobble still needs to happen
-          const timeToWait =
-            (scrobbleTime - (songInfo.elapsedSeconds ?? 0)) * 1000;
-          scrobbleTimer = setTimeout(
-            (info, config) => {
-              this.enabledScrobblers.forEach((scrobbler) =>
-                scrobbler.addScrobble(info, config, setConfig),
-              );
-            },
-            timeToWait,
-            songInfo,
-            configNonnull,
-          );
-        }
-
-        this.enabledScrobblers.forEach((scrobbler) =>
-          scrobbler.setNowPlaying(songInfo, configNonnull, setConfig),
-        );
+  ctx.onSongInfo((songInfo, event) => {
+    if (event === SongInfoEvent.TimeChanged) return;
+    // Set remove the old scrobble timer
+    ctx.clearTimeout(scrobbleTimer);
+    if (!songInfo.isPaused) {
+      const config = currentConfig();
+      // Scrobblers normally have no trouble working with official music videos
+      if (
+        !config.scrobbleOtherMedia &&
+        songInfo.mediaType !== MediaType.Audio &&
+        songInfo.mediaType !== MediaType.OriginalMusicVideo
+      ) {
+        return;
       }
-    });
-  },
 
-  async onConfigChange(newConfig: ScrobblerPluginConfig) {
-    this.enabledScrobblers.clear();
+      // Scrobble when the song is halfway through, or has passed the 4-minute mark
+      const scrobbleTime = Math.min(
+        Math.ceil(songInfo.songDuration / 2),
+        4 * 60,
+      );
+      if (scrobbleTime > (songInfo.elapsedSeconds ?? 0)) {
+        // Scrobble still needs to happen
+        const timeToWait =
+          (scrobbleTime - (songInfo.elapsedSeconds ?? 0)) * 1000;
+        scrobbleTimer = ctx.setTimeout(() => {
+          enabledScrobblers.forEach((scrobbler) =>
+            scrobbler.addScrobble(songInfo, config, setConfig),
+          );
+        }, timeToWait);
+      }
 
-    this.toggleScrobblers(newConfig, this.window!);
+      enabledScrobblers.forEach((scrobbler) =>
+        scrobbler.setNowPlaying(songInfo, config, setConfig),
+      );
+    }
+  });
+
+  ctx.onConfigChange(async (newConfig, previous) => {
+    enabledScrobblers.clear();
+    toggleScrobblers(newConfig);
+
     for (const [scrobblerName, scrobblerConfig] of Object.entries(
       newConfig.scrobblers,
     )) {
-      if (scrobblerConfig.enabled) {
-        const scrobbler = this.enabledScrobblers.get(scrobblerName);
-        if (
-          this.config?.scrobblers?.[
-            scrobblerName as keyof typeof newConfig.scrobblers
-          ]?.enabled !== scrobblerConfig.enabled &&
-          scrobbler &&
-          !scrobbler.isSessionCreated(newConfig) &&
-          this.setConfig
-        ) {
-          await scrobbler.createSession(newConfig, this.setConfig);
-        }
+      if (!scrobblerConfig.enabled) continue;
+      const scrobbler = enabledScrobblers.get(scrobblerName);
+      const config = currentConfig();
+      if (
+        previous.scrobblers[scrobblerName as keyof typeof previous.scrobblers]
+          .enabled !== scrobblerConfig.enabled &&
+        scrobbler &&
+        !scrobbler.isSessionCreated(config)
+      ) {
+        await scrobbler.createSession(config, setConfig);
       }
     }
-
-    this.config = newConfig;
-  },
+  });
 });

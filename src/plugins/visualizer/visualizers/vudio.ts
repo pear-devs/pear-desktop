@@ -2,7 +2,7 @@ import Vudio from 'vudio/umd/vudio';
 
 import { Visualizer } from './visualizer';
 
-import type { VisualizerPluginConfig } from '../index';
+import type { VisualizerPluginConfig } from '../types';
 
 class VudioVisualizer extends Visualizer {
   private readonly visualizer: Vudio;

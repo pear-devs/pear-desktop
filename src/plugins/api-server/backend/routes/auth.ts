@@ -5,11 +5,10 @@ import { sign } from 'hono/jwt';
 
 import { t } from '@/i18n';
 
-import { type APIServerConfig, AuthStrategy } from '../../config';
+import { AuthStrategy } from '../../config';
 
 import type { JWTPayload } from '../scheme';
-import type { HonoApp } from '../types';
-import type { BackendContext } from '@/types/contexts';
+import type { ApiServerContext, HonoApp } from '../types';
 
 const routes = {
   request: createRoute({
@@ -41,12 +40,9 @@ const routes = {
   }),
 };
 
-export const register = (
-  app: HonoApp,
-  { getConfig, setConfig }: BackendContext<APIServerConfig>,
-) => {
+export const register = (app: HonoApp, plugin: ApiServerContext) => {
   app.openapi(routes.request, async (ctx) => {
-    const config = await getConfig();
+    const config = plugin.config;
     const { id } = ctx.req.param();
 
     if (config.authorizedClients.includes(id)) {
@@ -74,9 +70,12 @@ export const register = (
       // SKIP CHECK
     }
 
-    if (!config.authorizedClients.includes(id)) {
-      setConfig({
-        authorizedClients: [...config.authorizedClients, id],
+    const { authorizedClients, secret } = plugin.config;
+    if (!authorizedClients.includes(id)) {
+      // The secret is saved too, so that the token outlives a restart.
+      await plugin.setConfig({
+        authorizedClients: [...authorizedClients, id],
+        secret,
       });
     }
 
@@ -85,7 +84,7 @@ export const register = (
         id,
         iat: ~~(Date.now() / 1000),
       } satisfies JWTPayload,
-      config.secret,
+      secret,
     );
 
     ctx.status(200);

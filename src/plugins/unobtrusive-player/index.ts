@@ -42,58 +42,51 @@ const handlePlay = (e: MouseEvent) => {
   }
 };
 
-const handleVideoDataChange = () => {
-  const isPlayerPageOpen =
-    document
-      .querySelector('ytmusic-app-layout')
-      ?.attributes.getNamedItem('player-ui-state')?.value ===
-    'PLAYER_PAGE_OPEN';
-
-  if (
-    document.body.classList.contains('unobtrusive-player--did-play') &&
-    isPlayerPageOpen
-  ) {
-    document.body.classList.add('unobtrusive-player--auto-closing');
-
-    document
-      .querySelector<HTMLButtonElement>('.toggle-player-page-button')
-      ?.click();
-
-    // prevent animation flickering
-    setTimeout(() => {
-      document.body.classList.remove('unobtrusive-player--auto-closing');
-    }, 500);
-  }
-};
-
 export default createPlugin({
   name: () => t('plugins.unobtrusive-player.name'),
   description: () => t('plugins.unobtrusive-player.description'),
   addedVersion: '3.8.x',
   restartNeeded: false,
-  config: {
-    enabled: false,
-  },
   stylesheets: [style],
-  renderer: {
-    start: () => {
-      document.body.classList.add('unobtrusive-player');
-      document.addEventListener('click', handlePlay);
-    },
-    onPlayerApiReady: () => {
-      // Close player page when video changes while
-      // `unobtrusive-player--did-play` className is present.
-      document.addEventListener('videodatachange', handleVideoDataChange);
-    },
-    stop: () => {
-      document.removeEventListener('click', handlePlay);
-      document.removeEventListener('videodatachange', handleVideoDataChange);
+  renderer: (ctx) => {
+    const handleVideoDataChange = () => {
+      const isPlayerPageOpen =
+        document
+          .querySelector('ytmusic-app-layout')
+          ?.attributes.getNamedItem('player-ui-state')?.value ===
+        'PLAYER_PAGE_OPEN';
 
-      [
+      if (
+        document.body.classList.contains('unobtrusive-player--did-play') &&
+        isPlayerPageOpen
+      ) {
+        document.body.classList.add('unobtrusive-player--auto-closing');
+
+        document
+          .querySelector<HTMLButtonElement>('.toggle-player-page-button')
+          ?.click();
+
+        // prevent animation flickering
+        ctx.setTimeout(() => {
+          document.body.classList.remove('unobtrusive-player--auto-closing');
+        }, 500);
+      }
+    };
+
+    document.body.classList.add('unobtrusive-player');
+    ctx.onCleanup(() =>
+      document.body.classList.remove(
         'unobtrusive-player',
         'unobtrusive-player--did-play',
         'unobtrusive-player--auto-closing',
-      ].forEach((className) => document.body.classList.remove(className));
-    },
+      ),
+    );
+    ctx.listen(document, 'click', handlePlay);
+
+    ctx.onPlayerApiReady(() => {
+      // Close player page when video changes while
+      // `unobtrusive-player--did-play` className is present.
+      ctx.listen(document, 'videodatachange', handleVideoDataChange);
+    });
   },
 });

@@ -1,14 +1,13 @@
 declare module 'virtual:plugins' {
-  import type { PluginConfig, PluginDef } from '@/types/plugins';
+  import type { AnyPluginDef } from '@/types/plugins';
 
-  type Plugin = PluginDef<unknown, unknown, unknown, PluginConfig>;
+  export const mainPlugins: () => Promise<Record<string, AnyPluginDef>>;
+  export const preloadPlugins: () => Promise<Record<string, AnyPluginDef>>;
+  export const rendererPlugins: () => Promise<Record<string, AnyPluginDef>>;
 
-  export const mainPlugins: () => Promise<Record<string, Plugin>>;
-  export const preloadPlugins: () => Promise<Record<string, Plugin>>;
-  export const rendererPlugins: () => Promise<Record<string, Plugin>>;
-
+  /** Every plugin's metadata, config schema and (in main) menu. */
   export const allPlugins: () => Promise<
-    Record<string, Omit<Plugin, 'backend' | 'preload' | 'renderer'>>
+    Record<string, Omit<AnyPluginDef, 'backend' | 'preload' | 'renderer'>>
   >;
 }
 

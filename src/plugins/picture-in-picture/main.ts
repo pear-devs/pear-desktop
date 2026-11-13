@@ -1,16 +1,14 @@
 import { app } from 'electron';
 
-import type { PictureInPicturePluginConfig } from './index';
-import type { BackendContext } from '@/types/contexts';
+import { createBackend } from '@/utils';
 
-let config: PictureInPicturePluginConfig;
+import type { PictureInPictureIpc, pictureInPictureConfig } from './types';
 
-export const onMainLoad = async ({
-  window,
-  getConfig,
-  setConfig,
-  ipc: { send, on },
-}: BackendContext<PictureInPicturePluginConfig>) => {
+export default createBackend<
+  typeof pictureInPictureConfig,
+  PictureInPictureIpc
+>((ctx) => {
+  const { window } = ctx;
   let isInPiP = false;
   let originalPosition: number[];
   let originalSize: number[];
@@ -18,12 +16,13 @@ export const onMainLoad = async ({
   let originalMaximized: boolean;
 
   const pipPosition = () =>
-    (config.savePosition && config['pip-position']) || [10, 10];
-  const pipSize = () => (config.saveSize && config['pip-size']) || [450, 275];
+    (ctx.config.savePosition && ctx.config['pip-position']) || [10, 10];
+  const pipSize = () =>
+    (ctx.config.saveSize && ctx.config['pip-size']) || [450, 275];
 
   const togglePiP = () => {
     isInPiP = !isInPiP;
-    setConfig({ isInPiP });
+    ctx.setConfig({ isInPiP });
 
     if (isInPiP) {
       originalFullScreen = window.isFullScreen();
@@ -44,14 +43,14 @@ export const onMainLoad = async ({
       window.setMaximizable(false);
       window.setFullScreenable(false);
 
-      send('peard:pip-toggle', true);
+      ctx.ipc.send('pipToggle', true);
 
       app.dock?.hide();
       window.setVisibleOnAllWorkspaces(true, {
         visibleOnFullScreen: true,
       });
       app.dock?.show();
-      if (config.alwaysOnTop) {
+      if (ctx.config.alwaysOnTop) {
         window.setAlwaysOnTop(true, 'screen-saver', 1);
       }
     } else {
@@ -62,7 +61,7 @@ export const onMainLoad = async ({
       window.setMaximizable(true);
       window.setFullScreenable(true);
 
-      send('peard:pip-toggle', false);
+      ctx.ipc.send('pipToggle', false);
 
       window.setVisibleOnAllWorkspaces(false);
       window.setAlwaysOnTop(false);
@@ -98,27 +97,32 @@ export const onMainLoad = async ({
     }
   };
 
-  config ??= await getConfig();
-  setConfig({ isInPiP });
-  on('plugin:toggle-picture-in-picture', () => {
-    togglePiP();
-  });
+  ctx.setConfig({ isInPiP });
+  ctx.ipc.on('toggle', togglePiP);
 
-  window.on('move', () => {
-    if (config.isInPiP && !config.useNativePiP) {
+  ctx.listen(window, 'move', () => {
+    if (ctx.config.isInPiP && !ctx.config.useNativePiP) {
       const [x, y] = window.getPosition();
-      setConfig({ 'pip-position': [x, y] });
+      ctx.setConfig({ 'pip-position': [x, y] });
     }
   });
 
-  window.on('resize', () => {
-    if (config.isInPiP && !config.useNativePiP) {
+  ctx.listen(window, 'resize', () => {
+    if (ctx.config.isInPiP && !ctx.config.useNativePiP) {
       const [width, height] = window.getSize();
-      setConfig({ 'pip-size': [width, height] });
+      ctx.setConfig({ 'pip-size': [width, height] });
     }
   });
-};
 
-export const onConfigChange = (newConfig: PictureInPicturePluginConfig) => {
-  config = newConfig;
-};
+  // Options are read when used; only "always on top" applies at once.
+  ctx.onConfigChange((config, previous) => {
+    if (config.alwaysOnTop !== previous.alwaysOnTop) {
+      window.setAlwaysOnTop(config.alwaysOnTop);
+    }
+  });
+
+  // Leave PiP (restoring the window) when the plugin stops.
+  ctx.onCleanup(() => {
+    if (isInPiP && !window.isDestroyed()) togglePiP();
+  });
+});

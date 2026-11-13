@@ -10,16 +10,19 @@ import { jwt } from 'hono/jwt';
 import { WebSocketServer } from 'ws';
 
 import { APPLICATION_NAME } from '@/i18n';
-import { registerCallback } from '@/providers/song-info';
 import { createBackend } from '@/utils';
 
 import { API_VERSION } from './api-version';
 import { registerAuth, registerControl, registerWebsocket } from './routes';
 import { JWTPayloadSchema } from './scheme';
 
-import { type APIServerConfig, AuthStrategy } from '../config';
+import {
+  type APIServerConfig,
+  AuthStrategy,
+  type apiServerConfig,
+} from '../config';
 
-import type { BackendType } from './types';
+import type { SongInfo } from '@/providers/song-info';
 import type {
   LikeType,
   RepeatMode,
@@ -27,156 +30,137 @@ import type {
 } from '@/types/datahost-get-state';
 import type { MiddlewareHandler } from 'hono';
 
-export const backend = createBackend<BackendType, APIServerConfig>({
-  async start(ctx) {
-    const config = await ctx.getConfig();
+/** Changing these restarts the server. */
+const serverOptions = [
+  'hostname',
+  'port',
+  'useHttps',
+  'certPath',
+  'keyPath',
+] as const satisfies (keyof APIServerConfig)[];
 
-    this.init(ctx);
-    registerCallback((songInfo) => {
-      this.songInfo = songInfo;
-    });
+export default createBackend<typeof apiServerConfig>((plugin) => {
+  const { core } = plugin.ipc;
 
-    ctx.ipc.on('peard:player-api-loaded', () => {
-      ctx.ipc.send('peard:setup-seeked-listener');
-      ctx.ipc.send('peard:setup-time-changed-listener');
-      ctx.ipc.send('peard:setup-repeat-changed-listener');
-      ctx.ipc.send('peard:setup-like-changed-listener');
-      ctx.ipc.send('peard:setup-volume-changed-listener');
-      ctx.ipc.send('peard:setup-shuffle-changed-listener');
-    });
+  let songInfo: SongInfo | undefined;
+  let currentRepeatMode: RepeatMode | undefined;
+  let volumeState: VolumeState | undefined;
 
-    ctx.ipc.on(
-      'peard:repeat-changed',
-      (mode: RepeatMode) => (this.currentRepeatMode = mode),
-    );
+  plugin.onSongInfo((info) => {
+    songInfo = info;
+  });
 
-    ctx.ipc.on(
-      'peard:volume-changed',
-      (newVolumeState: VolumeState) => (this.volumeState = newVolumeState),
-    );
+  core.on('peard:player-api-loaded', () => {
+    core.send('peard:setup-seeked-listener');
+    core.send('peard:setup-time-changed-listener');
+    core.send('peard:setup-repeat-changed-listener');
+    core.send('peard:setup-like-changed-listener');
+    core.send('peard:setup-volume-changed-listener');
+    core.send('peard:setup-shuffle-changed-listener');
+  });
 
-    this.run(config);
-  },
-  stop() {
-    this.end();
-  },
-  onConfigChange(config) {
-    const old = this.oldConfig;
-    if (
-      old?.hostname === config.hostname &&
-      old?.port === config.port &&
-      old?.useHttps === config.useHttps &&
-      old?.certPath === config.certPath &&
-      old?.keyPath === config.keyPath
-    ) {
-      this.oldConfig = config;
-      return;
+  core.on('peard:repeat-changed', (mode: RepeatMode) => {
+    currentRepeatMode = mode;
+  });
+
+  core.on('peard:volume-changed', (newVolumeState: VolumeState) => {
+    volumeState = newVolumeState;
+  });
+
+  const app = new Hono();
+
+  app.use('*', cors());
+
+  // for web remote control
+  app.use('*', async (ctx, next) => {
+    ctx.header('Access-Control-Allow-Private-Network', 'true');
+    await next();
+  });
+
+  // middlewares
+  const jwtGuard: MiddlewareHandler = async (ctx, next) => {
+    if (ctx.req.path.endsWith(`${API_VERSION}/ws`)) {
+      return await next();
     }
 
-    this.end();
-    this.run(config);
-    this.oldConfig = config;
-  },
+    const config = plugin.config;
 
-  // Custom
-  init(backendCtx) {
-    this.app = new Hono();
-
-    this.app.use('*', cors());
-
-    // for web remote control
-    this.app.use('*', async (ctx, next) => {
-      ctx.header('Access-Control-Allow-Private-Network', 'true');
-      await next();
-    });
-
-    // middlewares
-    const jwtGuard: MiddlewareHandler = async (ctx, next) => {
-      if (ctx.req.path.endsWith(`${API_VERSION}/ws`)) {
-        return await next();
-      }
-
-      const config = await backendCtx.getConfig();
-
-      if (config.authStrategy !== AuthStrategy.NONE) {
-        return await jwt({
-          secret: config.secret,
-          alg: 'HS256',
-        })(ctx, next);
-      }
+    if (config.authStrategy !== AuthStrategy.NONE) {
+      return await jwt({
+        secret: config.secret,
+        alg: 'HS256',
+      })(ctx, next);
+    }
+    return await next();
+  };
+  app.use('/api/*', jwtGuard);
+  app.use('/api/*', async (ctx, next) => {
+    if (ctx.req.path.endsWith(`${API_VERSION}/ws`)) {
       return await next();
-    };
-    this.app.use('/api/*', jwtGuard);
-    this.app.use('/api/*', async (ctx, next) => {
-      if (ctx.req.path.endsWith(`${API_VERSION}/ws`)) {
-        return await next();
-      }
+    }
 
-      const result = await JWTPayloadSchema.spa(await ctx.get('jwtPayload'));
-      const config = await backendCtx.getConfig();
+    const result = await JWTPayloadSchema.spa(await ctx.get('jwtPayload'));
+    const config = plugin.config;
 
-      const isAuthorized =
-        config.authStrategy === AuthStrategy.NONE ||
-        (result.success && config.authorizedClients.includes(result.data.id));
-      if (!isAuthorized) {
-        ctx.status(401);
-        return ctx.body('Unauthorized');
-      }
+    const isAuthorized =
+      config.authStrategy === AuthStrategy.NONE ||
+      (result.success && config.authorizedClients.includes(result.data.id));
+    if (!isAuthorized) {
+      ctx.status(401);
+      return ctx.body('Unauthorized');
+    }
 
-      return await next();
-    });
+    return await next();
+  });
 
-    // routes
-    registerControl(
-      this.app,
-      backendCtx,
-      () => this.songInfo,
-      () => this.currentRepeatMode,
-      () =>
-        backendCtx.window.webContents.executeJavaScript(
-          'document.querySelector("#like-button-renderer")?.likeStatus',
-        ) as Promise<LikeType>,
-      () => this.volumeState,
-    );
-    registerAuth(this.app, backendCtx);
-    registerWebsocket(this.app, backendCtx, upgradeWebSocket);
+  // routes
+  registerControl(
+    app,
+    plugin,
+    () => songInfo,
+    () => currentRepeatMode,
+    () =>
+      plugin.window.webContents.executeJavaScript(
+        'document.querySelector("#like-button-renderer")?.likeStatus',
+      ) as Promise<LikeType>,
+    () => volumeState,
+  );
+  registerAuth(app, plugin);
+  registerWebsocket(app, plugin, upgradeWebSocket);
 
-    // swagger
-    this.app.openAPIRegistry.registerComponent(
-      'securitySchemes',
-      'bearerAuth',
+  // swagger
+  app.openAPIRegistry.registerComponent('securitySchemes', 'bearerAuth', {
+    type: 'http',
+    scheme: 'bearer',
+    bearerFormat: 'JWT',
+  });
+  app.doc('/doc', {
+    openapi: '3.1.0',
+    info: {
+      version: '1.0.0',
+      title: `${APPLICATION_NAME} API Server`,
+      description:
+        'Note: You need to get an access token using the `/auth/{id}` endpoint first to call any API endpoints under `/api`.',
+    },
+    security: [
       {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
+        bearerAuth: [],
       },
-    );
-    this.app.doc('/doc', {
-      openapi: '3.1.0',
-      info: {
-        version: '1.0.0',
-        title: `${APPLICATION_NAME} API Server`,
-        description:
-          'Note: You need to get an access token using the `/auth/{id}` endpoint first to call any API endpoints under `/api`.',
-      },
-      security: [
-        {
-          bearerAuth: [],
-        },
-      ],
-    });
+    ],
+  });
 
-    this.app.get('/swagger', swaggerUI({ url: '/doc' }));
-  },
-  run(config) {
-    if (!this.app) return;
+  app.get('/swagger', swaggerUI({ url: '/doc' }));
 
+  let server: ReturnType<typeof serve> | undefined;
+  let wss: WebSocketServer | undefined;
+
+  const run = (config: APIServerConfig) => {
     try {
-      const wss = new WebSocketServer({ noServer: true });
-      const serveOptions =
+      wss = new WebSocketServer({ noServer: true });
+      const options =
         config.useHttps && config.certPath && config.keyPath
           ? {
-              fetch: this.app.fetch.bind(this.app),
+              fetch: app.fetch.bind(app),
               port: config.port,
               hostname: config.hostname,
               createServer: createHttpsServer,
@@ -187,20 +171,36 @@ export const backend = createBackend<BackendType, APIServerConfig>({
               websocket: { server: wss },
             }
           : {
-              fetch: this.app.fetch.bind(this.app),
+              fetch: app.fetch.bind(app),
               port: config.port,
               hostname: config.hostname,
               createServer: createHttpServer,
               websocket: { server: wss },
             };
 
-      this.server = serve(serveOptions);
+      server = serve(options);
     } catch (err) {
       console.error(err);
     }
-  },
-  end() {
-    this.server?.close();
-    this.server = undefined;
-  },
+  };
+
+  const end = () => {
+    for (const client of wss?.clients ?? []) client.terminate();
+    wss?.close();
+    wss = undefined;
+    server?.close();
+    // Keep-alive connections would keep the old server (and port) alive.
+    if (server && 'closeAllConnections' in server) server.closeAllConnections();
+    server = undefined;
+  };
+
+  run(plugin.config);
+  plugin.onCleanup(end);
+
+  // Only a change of the server's own options restarts it.
+  plugin.onConfigChange((config, previous) => {
+    if (serverOptions.every((key) => config[key] === previous[key])) return;
+    end();
+    run(config);
+  });
 });

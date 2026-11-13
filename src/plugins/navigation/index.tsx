@@ -10,66 +10,58 @@ export default createPlugin({
   name: () => t('plugins.navigation.name'),
   description: () => t('plugins.navigation.description'),
   restartNeeded: false,
-  config: {
-    enabled: true,
-  },
-  renderer: {
-    buttonContainer: document.createElement('div'),
-    start() {
-      if (!this.buttonContainer) {
-        this.buttonContainer = document.createElement('div');
-      }
+  enabledByDefault: true,
+  renderer: (ctx) => {
+    const buttonContainer = document.createElement('div');
 
-      render(
-        () => (
-          <>
-            <mdui-tooltip
-              content={t('plugins.navigation.templates.back.title')}
+    const dispose = render(
+      () => (
+        <>
+          <mdui-tooltip content={t('plugins.navigation.templates.back.title')}>
+            <mdui-button-icon
+              onClick={() => history.back()}
+              style={{ width: '40px', height: '40px' }}
             >
-              <mdui-button-icon
-                onClick={() => history.back()}
-                style={{ width: '40px', height: '40px' }}
-              >
-                <LitElementWrapper
-                  elementClass={IconChevronLeft}
-                  props={{
-                    style: {
-                      'padding': '5px',
-                      'scale': '1.5',
-                      'font-size': '24px',
-                    },
-                  }}
-                />
-              </mdui-button-icon>
-            </mdui-tooltip>
-            <mdui-tooltip
-              content={t('plugins.navigation.templates.forward.title')}
+              <LitElementWrapper
+                elementClass={IconChevronLeft}
+                props={{
+                  style: {
+                    'padding': '5px',
+                    'scale': '1.5',
+                    'font-size': '24px',
+                  },
+                }}
+              />
+            </mdui-button-icon>
+          </mdui-tooltip>
+          <mdui-tooltip
+            content={t('plugins.navigation.templates.forward.title')}
+          >
+            <mdui-button-icon
+              onClick={() => history.forward()}
+              style={{ width: '40px', height: '40px' }}
             >
-              <mdui-button-icon
-                onClick={() => history.forward()}
-                style={{ width: '40px', height: '40px' }}
-              >
-                <LitElementWrapper
-                  elementClass={IconChevronRight}
-                  props={{
-                    style: {
-                      'padding': '5px',
-                      'scale': '1.5',
-                      'font-size': '24px',
-                    },
-                  }}
-                />
-              </mdui-button-icon>
-            </mdui-tooltip>
-          </>
-        ),
-        this.buttonContainer,
-      );
-      const menu = document.querySelector('#right-content');
-      menu?.prepend(this.buttonContainer);
-    },
-    stop() {
-      this.buttonContainer.remove();
-    },
+              <LitElementWrapper
+                elementClass={IconChevronRight}
+                props={{
+                  style: {
+                    'padding': '5px',
+                    'scale': '1.5',
+                    'font-size': '24px',
+                  },
+                }}
+              />
+            </mdui-button-icon>
+          </mdui-tooltip>
+        </>
+      ),
+      buttonContainer,
+    );
+    ctx.onCleanup(() => {
+      dispose();
+      buttonContainer.remove();
+    });
+
+    document.querySelector('#right-content')?.prepend(buttonContainer);
   },
 });

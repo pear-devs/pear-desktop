@@ -1,5 +1,5 @@
 export const defaultPresets = ['bass-booster'] as const;
-export type Preset = (typeof defaultPresets)[number];
+type Preset = (typeof defaultPresets)[number];
 
 export type FilterConfig = {
   type: BiquadFilterType;

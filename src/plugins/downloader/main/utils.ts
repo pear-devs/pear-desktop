@@ -1,12 +1,8 @@
-import { app, type BrowserWindow } from 'electron';
+import { app } from 'electron';
 import is from 'electron-is';
 
 export const getFolder = (customFolder?: string) =>
   customFolder ?? app.getPath('downloads');
-
-export const sendFeedback = (win: BrowserWindow, message?: unknown) => {
-  win.webContents.send('downloader-feedback', message);
-};
 
 export const cropMaxWidth = (image: Electron.NativeImage) => {
   const imageSize = image.getSize();

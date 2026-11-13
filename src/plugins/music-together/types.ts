@@ -23,3 +23,10 @@ export const getDefaultProfile = (
     thumbnail: `https://ui-avatars.com/api/?name=${name}&background=random`,
   };
 };
+
+export type MusicTogetherIpc = {
+  invoke: {
+    /** Asks for a text; null if cancelled. */
+    prompt(title: string, label: string): string | null;
+  };
+};

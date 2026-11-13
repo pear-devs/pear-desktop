@@ -3,7 +3,10 @@ import '@total-typescript/ts-reset';
 import type * as config from './config';
 import type { t } from '@/i18n';
 import type { VideoDataChanged } from '@/types/video-data-changed';
-import type { ipcRenderer as electronIpcRenderer } from 'electron';
+import type {
+  ipcRenderer as electronIpcRenderer,
+  IpcRendererEvent,
+} from 'electron';
 import type is from 'electron-is';
 import type { trustedTypes } from 'trusted-types';
 
@@ -20,7 +23,14 @@ declare global {
 
   interface Window {
     trustedTypes?: typeof trustedTypes;
-    ipcRenderer: typeof electronIpcRenderer;
+    ipcRenderer: Omit<typeof electronIpcRenderer, 'on'> & {
+      /** Returns the function that removes the listener. */
+      on(
+        channel: string,
+        // oxlint-disable-next-line typescript/no-explicit-any
+        listener: (event: IpcRendererEvent, ...args: any[]) => void,
+      ): () => void;
+    };
     mainConfig: typeof config;
     electronIs: typeof is;
     ELECTRON_RENDERER_URL: string | undefined;

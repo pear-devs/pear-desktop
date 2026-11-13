@@ -1,41 +1,24 @@
+// NOTE: vite-plugins/plugin-importer.mts imports this file at build time with
+// a relative path, so it must only import types (no `@/` values).
 import type {
   BackendContext,
   MenuContext,
   PreloadContext,
   RendererContext,
 } from './contexts';
-import type { MusicPlayer } from '@/types/music-player';
+import type { ConfigOf, ConfigShape } from '@/plugins/utils/common/config';
+import type { MenuItemConstructorOptions } from 'electron';
+
+export type { Cleanup } from '@/loader/cleanup';
 
 type Author = string;
+type MaybePromise<T> = T | Promise<T>;
 
-export type PluginConfig = {
-  enabled: boolean;
-};
+/** `{}` as a type: no config fields, no IPC. */
+export type Empty = Record<never, never>;
 
-export type PluginLifecycleSimple<Context, This> = (
-  this: This,
-  ctx: Context,
-) => void | Promise<void>;
-export type PluginLifecycleExtra<Config, Context, This> = This & {
-  start?: PluginLifecycleSimple<Context, This>;
-  stop?: PluginLifecycleSimple<Context, This>;
-  onConfigChange?: (this: This, newConfig: Config) => void | Promise<void>;
-};
-export type RendererPluginLifecycleExtra<Config, Context, This> = This &
-  PluginLifecycleExtra<Config, Context, This> & {
-    onPlayerApiReady?: (
-      this: This,
-      playerApi: MusicPlayer,
-      context: Context,
-    ) => void | Promise<void>;
-  };
-
-export type PluginLifecycle<Config, Context, This> =
-  | PluginLifecycleSimple<Context, This>
-  | PluginLifecycleExtra<Config, Context, This>;
-export type RendererPluginLifecycle<Config, Context, This> =
-  | PluginLifecycleSimple<Context, This>
-  | RendererPluginLifecycleExtra<Config, Context, This>;
+/** What a part's start may return: nothing, or a cleanup run when the plugin stops. */
+export type PartResult = MaybePromise<void | (() => unknown)>;
 
 export enum Platform {
   Windows = 1 << 0,
@@ -44,38 +27,59 @@ export enum Platform {
   Freebsd = 1 << 3,
 }
 
+/**
+ * A plugin's IPC between its backend (main process) and renderer, e.g.
+ *
+ * ```ts
+ * type Ipc = {
+ *   invoke: { pick(labels: string[]): number | null }; // renderer → backend, with a result
+ *   toRenderer: { progress: [value: number] };         // backend → renderer
+ *   toBackend: { toggle: [] };                         // renderer → backend
+ * };
+ * ```
+ */
+export interface IpcShape {
+  invoke?: object;
+  toRenderer?: object;
+  toBackend?: object;
+}
+
+export type BackendPart<S extends ConfigShape, I extends IpcShape> = (
+  ctx: BackendContext<ConfigOf<S>, I>,
+) => PartResult;
+export type PreloadPart<S extends ConfigShape> = (
+  ctx: PreloadContext<ConfigOf<S>>,
+) => PartResult;
+export type RendererPart<S extends ConfigShape, I extends IpcShape> = (
+  ctx: RendererContext<ConfigOf<S>, I>,
+) => PartResult;
+
 export interface PluginDef<
-  BackendProperties,
-  PreloadProperties,
-  RendererProperties,
-  Config extends PluginConfig = PluginConfig,
+  S extends ConfigShape = ConfigShape,
+  I extends IpcShape = IpcShape,
 > {
   name: () => string;
   authors?: Author[];
   description?: () => string;
   addedVersion?: string;
-  config?: Config;
+  /** Platforms the plugin exists on (a `Platform` bit mask). Default: all. */
   platform?: Platform;
-
-  menu?: (
-    ctx: MenuContext<Config>,
-  ) =>
-    | Promise<Electron.MenuItemConstructorOptions[]>
-    | Electron.MenuItemConstructorOptions[];
-  stylesheets?: string[];
+  /** Default: false. */
+  enabledByDefault?: boolean | (() => boolean);
+  /** Turning the plugin on or off asks to restart the app. */
   restartNeeded?: boolean;
+  config?: S;
+  /** Menu items after the ones generated from `config`. */
+  menu?: (
+    ctx: MenuContext<ConfigOf<S>>,
+  ) => MaybePromise<MenuItemConstructorOptions[]>;
+  /** CSS added to the page while the plugin runs. */
+  stylesheets?: string[];
 
-  backend?: {
-    [Key in keyof BackendProperties]: BackendProperties[Key];
-  } & PluginLifecycle<Config, BackendContext<Config>, BackendProperties>;
-  preload?: {
-    [Key in keyof PreloadProperties]: PreloadProperties[Key];
-  } & PluginLifecycle<Config, PreloadContext<Config>, PreloadProperties>;
-  renderer?: {
-    [Key in keyof RendererProperties]: RendererProperties[Key];
-  } & RendererPluginLifecycle<
-    Config,
-    RendererContext<Config>,
-    RendererProperties
-  >;
+  backend?: BackendPart<S, I>;
+  preload?: PreloadPart<S>;
+  renderer?: RendererPart<S, I>;
 }
+
+// oxlint-disable-next-line typescript/no-explicit-any
+export type AnyPluginDef = PluginDef<any, any>;

@@ -1,23 +1,8 @@
 import { t } from '@/i18n';
+import { config } from '@/plugins/utils/common/config';
 import { createPlugin } from '@/utils';
 
-import {
-  defaultPresets,
-  presetConfigs,
-  type Preset,
-  type FilterConfig,
-} from './presets';
-
-import type { MenuTemplate } from '@/menu';
-import type { MenuContext } from '@/types/contexts';
-
-export type EqualizerPluginConfig = {
-  enabled: boolean;
-  filters: FilterConfig[];
-  presets: { [preset in Preset]: boolean };
-};
-
-let appliedFilters: BiquadFilterNode[] = [];
+import { defaultPresets, presetConfigs, type FilterConfig } from './presets';
 
 export default createPlugin({
   name: () => t('plugins.equalizer.name'),
@@ -25,64 +10,54 @@ export default createPlugin({
   restartNeeded: false,
   addedVersion: '3.7.X',
   config: {
-    enabled: false,
-    filters: [],
-    presets: { 'bass-booster': false },
-  } as EqualizerPluginConfig,
-  menu: async ({
-    getConfig,
-    setConfig,
-  }: MenuContext<EqualizerPluginConfig>): Promise<MenuTemplate> => {
-    const config = await getConfig();
-
-    return [
+    filters: config.hidden<FilterConfig[]>([]),
+    presets: config.group(
       {
-        label: t('plugins.equalizer.menu.presets.label'),
-        type: 'submenu',
-        submenu: defaultPresets.map((preset) => ({
-          label: t(`plugins.equalizer.menu.presets.list.${preset}`),
-          type: 'radio',
-          checked: config.presets[preset],
-          click() {
-            setConfig({
-              presets: { ...config.presets, [preset]: !config.presets[preset] },
-            });
-          },
-        })),
+        'bass-booster': config.bool(false, {
+          label: 'plugins.equalizer.menu.presets.list.bass-booster',
+        }),
       },
-    ];
+      { label: 'plugins.equalizer.menu.presets.label' },
+    ),
   },
-  renderer: {
-    async start({ getConfig }) {
-      const config = await getConfig();
+  renderer(ctx) {
+    const appliedFilters: {
+      source: MediaElementAudioSourceNode;
+      filter: BiquadFilterNode;
+    }[] = [];
 
-      document.addEventListener(
-        'peard:audio-can-play',
-        ({ detail: { audioSource, audioContext } }) => {
-          const filtersToApply = config.filters.concat(
-            defaultPresets
-              .filter((preset) => config.presets[preset])
-              .map((preset) => presetConfigs[preset]),
-          );
-          filtersToApply.forEach((filter) => {
-            const biquadFilter = audioContext.createBiquadFilter();
-            biquadFilter.type = filter.type;
-            biquadFilter.frequency.value = filter.frequency; // filter frequency in Hz
-            biquadFilter.Q.value = filter.Q;
-            biquadFilter.gain.value = filter.gain; // filter gain in dB
+    ctx.onCleanup(() => {
+      for (const { source, filter } of appliedFilters) {
+        try {
+          source.disconnect(filter);
+        } catch {}
+        filter.disconnect();
+      }
+    });
 
-            audioSource.connect(biquadFilter);
-            biquadFilter.connect(audioContext.destination);
+    ctx.listen(
+      document,
+      'peard:audio-can-play',
+      ({ detail: { audioSource, audioContext } }) => {
+        const filtersToApply = ctx.config.filters.concat(
+          defaultPresets
+            .filter((preset) => ctx.config.presets[preset])
+            .map((preset) => presetConfigs[preset]),
+        );
+        filtersToApply.forEach((filter) => {
+          const biquadFilter = audioContext.createBiquadFilter();
+          biquadFilter.type = filter.type;
+          biquadFilter.frequency.value = filter.frequency; // filter frequency in Hz
+          biquadFilter.Q.value = filter.Q;
+          biquadFilter.gain.value = filter.gain; // filter gain in dB
 
-            appliedFilters.push(biquadFilter);
-          });
-        },
-        { once: true, passive: true },
-      );
-    },
-    stop() {
-      appliedFilters.forEach((filter) => filter.disconnect());
-      appliedFilters = [];
-    },
+          audioSource.connect(biquadFilter);
+          biquadFilter.connect(audioContext.destination);
+
+          appliedFilters.push({ source: audioSource, filter: biquadFilter });
+        });
+      },
+      { once: true, passive: true },
+    );
   },
 });

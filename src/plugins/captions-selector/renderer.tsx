@@ -6,159 +6,123 @@ import { createRenderer } from '@/utils';
 
 import { CaptionsSettingButton } from './templates/captions-settings-template';
 
-import type { MusicPlayer } from '@/types/music-player';
+import type {
+  CaptionsSelectorIpc,
+  captionsSelectorConfig,
+  LanguageOptions,
+} from './types';
 import type { AppElement } from '@/types/queue';
 
-export interface LanguageOptions {
-  displayName: string;
-  id: string | null;
-  is_default: boolean;
-  is_servable: boolean;
-  is_translateable: boolean;
-  kind: string;
-  languageCode: string; // 2 length
-  languageName: string;
-  name: string | null;
-  vss_id: string;
-}
-
-export interface CaptionsSelectorConfig {
-  enabled: boolean;
-  disableCaptions: boolean;
-  autoload: boolean;
-  lastCaptionsCode: string;
-}
-
-const [hidden, setHidden] = createSignal(false);
-
 export default createRenderer<
-  {
-    captionsSettingsButton?: HTMLElement;
-    captionTrackList: LanguageOptions[] | null;
-    api: MusicPlayer | null;
-    config: CaptionsSelectorConfig | null;
-    videoChangeListener: () => void;
-  },
-  CaptionsSelectorConfig
->({
-  captionTrackList: null,
-  api: null,
-  config: null,
-  videoChangeListener() {
-    if (this.config?.disableCaptions) {
-      setTimeout(() => this.api!.unloadModule('captions'), 100);
-      setHidden(true);
-      return;
-    }
+  typeof captionsSelectorConfig,
+  CaptionsSelectorIpc
+>((ctx) => {
+  const [hidden, setHidden] = createSignal(false);
+  let captionTrackList: LanguageOptions[] = [];
 
-    this.api!.loadModule('captions');
+  ctx.onPlayerApiReady((api) => {
+    const toast = (message: string) =>
+      document
+        .querySelector<AppElement>('ytmusic-app')
+        ?.toastService?.show(message);
 
-    setTimeout(() => {
-      this.captionTrackList =
-        this.api!.getOption('captions', 'tracklist') ?? [];
-
-      if (this.config!.autoload && this.config!.lastCaptionsCode) {
-        this.api?.setOption('captions', 'track', {
-          languageCode: this.config!.lastCaptionsCode,
-        });
+    const onVideoChange = () => {
+      if (ctx.config.disableCaptions) {
+        ctx.setTimeout(() => api.unloadModule('captions'), 100);
+        setHidden(true);
+        return;
       }
 
-      setHidden(!this.captionTrackList?.length);
-    }, 250);
-  },
-  async start({ getConfig }) {
-    this.config = await getConfig();
-  },
-  stop() {
-    this.api?.unloadModule('captions');
-    document
-      .querySelector('video')
-      ?.removeEventListener('peard:src-changed', this.videoChangeListener);
-    if (this.captionsSettingsButton) {
-      document
-        .querySelector('.right-controls-buttons')
-        ?.removeChild(this.captionsSettingsButton);
-    }
-  },
-  onPlayerApiReady(playerApi, { ipc, setConfig }) {
-    this.api = playerApi;
+      api.loadModule('captions');
 
-    render(
+      ctx.setTimeout(() => {
+        captionTrackList =
+          api.getOption<LanguageOptions[]>('captions', 'tracklist') ?? [];
+
+        if (ctx.config.autoload && ctx.config.lastCaptionsCode) {
+          api.setOption('captions', 'track', {
+            languageCode: ctx.config.lastCaptionsCode,
+          });
+        }
+
+        setHidden(!captionTrackList.length);
+      }, 250);
+    };
+
+    const onClick = async () => {
+      if (!captionTrackList.length) {
+        toast(t('plugins.captions-selector.toast.no-captions'));
+        return;
+      }
+
+      const currentTrack = api.getOption<LanguageOptions>('captions', 'track');
+      const currentIndex = currentTrack
+        ? captionTrackList.findIndex(
+            (track) => track.languageCode === currentTrack.languageCode,
+          )
+        : -1;
+
+      const captionLabels = Object.fromEntries(
+        [...captionTrackList.map((track) => track.displayName), 'None'].map(
+          (label, index) => [String(index), label],
+        ),
+      );
+
+      const index = await ctx.ipc.invoke(
+        'pickCaptions',
+        captionLabels,
+        String(currentIndex),
+      );
+      if (index === null) return;
+
+      const newCaptions = captionTrackList[index];
+      await ctx.setConfig({
+        lastCaptionsCode: newCaptions?.languageCode ?? '',
+      });
+      if (newCaptions) {
+        api.setOption('captions', 'track', {
+          languageCode: newCaptions.languageCode,
+        });
+        toast(
+          t('plugins.captions-selector.toast.caption-changed', {
+            language: newCaptions.displayName,
+          }),
+        );
+      } else {
+        api.setOption('captions', 'track', {});
+        toast(t('plugins.captions-selector.toast.caption-disabled'));
+      }
+
+      ctx.setTimeout(() => api.playVideo());
+    };
+
+    const container = document.createElement('div');
+    container.style.display = 'contents';
+    document.querySelector('.right-controls-buttons')?.append(container);
+    const dispose = render(
       () => (
         <Show when={!hidden()}>
           <CaptionsSettingButton
             label={t('plugins.captions-selector.templates.title')}
-            onClick={async () => {
-              const appApi = document.querySelector<AppElement>('ytmusic-app');
-
-              if (this.captionTrackList?.length) {
-                const currentCaptionTrack =
-                  playerApi.getOption<LanguageOptions>('captions', 'track');
-
-                let currentIndex = currentCaptionTrack
-                  ? this.captionTrackList.indexOf(
-                      this.captionTrackList.find(
-                        (track) =>
-                          track.languageCode ===
-                          currentCaptionTrack.languageCode,
-                      )!,
-                    )
-                  : null;
-
-                const captionLabels = [
-                  ...this.captionTrackList.map((track) => track.displayName),
-                  'None',
-                ];
-
-                currentIndex = (await ipc.invoke(
-                  'peard:captions-selector',
-                  captionLabels,
-                  currentIndex,
-                )) as number;
-                if (currentIndex === null) {
-                  return;
-                }
-
-                const newCaptions = this.captionTrackList[currentIndex];
-                setConfig({ lastCaptionsCode: newCaptions?.languageCode });
-                if (newCaptions) {
-                  playerApi.setOption('captions', 'track', {
-                    languageCode: newCaptions.languageCode,
-                  });
-                  appApi?.toastService?.show(
-                    t('plugins.captions-selector.toast.caption-changed', {
-                      language: newCaptions.displayName,
-                    }),
-                  );
-                } else {
-                  playerApi.setOption('captions', 'track', {});
-                  appApi?.toastService?.show(
-                    t('plugins.captions-selector.toast.caption-disabled'),
-                  );
-                }
-
-                setTimeout(() => playerApi.playVideo());
-              } else {
-                appApi?.toastService?.show(
-                  t('plugins.captions-selector.toast.no-captions'),
-                );
-              }
-            }}
-            ref={this.captionsSettingsButton}
+            onClick={onClick}
           />
         </Show>
       ),
-      document.querySelector('.right-controls-buttons')!,
+      container,
     );
+    ctx.onCleanup(() => {
+      dispose();
+      container.remove();
+      api.unloadModule('captions');
+    });
 
-    this.captionTrackList =
-      this.api.getOption<LanguageOptions[]>('captions', 'tracklist') ?? [];
+    captionTrackList =
+      api.getOption<LanguageOptions[]>('captions', 'tracklist') ?? [];
 
-    document
-      .querySelector('video')
-      ?.addEventListener('peard:src-changed', this.videoChangeListener);
-  },
-  onConfigChange(newConfig) {
-    this.config = newConfig;
-  },
+    const video = document.querySelector('video');
+    if (video) ctx.listen(video, 'peard:src-changed', onVideoChange);
+  });
+
+  // Captions settings are read when the video changes; nothing to redo now.
+  ctx.onConfigChange(() => {});
 });

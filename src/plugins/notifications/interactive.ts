@@ -2,36 +2,28 @@ import nextIcon from '@assets/media-icons-black/next.png?asset&asarUnpack';
 import pauseIcon from '@assets/media-icons-black/pause.png?asset&asarUnpack';
 import playIcon from '@assets/media-icons-black/play.png?asset&asarUnpack';
 import previousIcon from '@assets/media-icons-black/previous.png?asset&asarUnpack';
-import { app, type BrowserWindow, Notification } from 'electron';
+import { app, Notification } from 'electron';
 
+import * as appConfig from '@/config';
 import {
   APP_PROTOCOL,
   changeProtocolHandler,
+  setupProtocolHandler,
 } from '@/providers/protocol-handler';
 import { getSongControls } from '@/providers/song-controls';
-import {
-  registerCallback,
-  type SongInfo,
-  SongInfoEvent,
-} from '@/providers/song-info';
+import { type SongInfo, SongInfoEvent } from '@/providers/song-info';
 import { setTrayOnClick, setTrayOnDoubleClick } from '@/tray';
 import { mediaIcons } from '@/types/media-icons';
 
-import { notificationImage, secondsToMinutes, ToastStyles } from './utils';
+import { type NotificationsPluginConfig, ToastStyles } from './types';
+import { notificationImage, secondsToMinutes } from './utils';
 
-import type { NotificationsPluginConfig } from './index';
 import type { BackendContext } from '@/types/contexts';
 
-let songControls: ReturnType<typeof getSongControls>;
-let savedNotification: Notification | undefined;
-
-type Accessor<T> = () => T;
-
-export default (
-  win: BrowserWindow,
-  config: Accessor<NotificationsPluginConfig>,
-  { ipc: { on, send } }: BackendContext<NotificationsPluginConfig>,
-) => {
+export default (ctx: BackendContext<NotificationsPluginConfig>) => {
+  const win = ctx.window;
+  const config = () => ctx.config;
+  let savedNotification: Notification | undefined;
   const sendNotification = (songInfo: SongInfo) => {
     const iconSrc = notificationImage(songInfo, config());
 
@@ -57,13 +49,14 @@ export default (
     });
 
     // To fix the notification not closing
-    setTimeout(() => savedNotification?.close(), 5000);
+    const notification = savedNotification;
+    ctx.setTimeout(() => notification.close(), 5000);
 
-    savedNotification.on('close', () => {
-      savedNotification = undefined;
+    notification.on('close', () => {
+      if (savedNotification === notification) savedNotification = undefined;
     });
 
-    savedNotification.show();
+    notification.show();
   };
 
   const getXml = (songInfo: SongInfo, iconSrc: string) => {
@@ -259,18 +252,18 @@ export default (
     return 'Subtitle';
   };
 
-  songControls = getSongControls(win);
+  const songControls = getSongControls(win);
 
   let currentSeconds = 0;
-  on('peard:player-api-loaded', () =>
-    send('peard:setup-time-changed-listener'),
+  ctx.ipc.core.on('peard:player-api-loaded', () =>
+    ctx.ipc.core.send('peard:setup-time-changed-listener'),
   );
 
   let savedSongInfo: SongInfo;
   let lastUrl: string | undefined;
 
   // Register songInfoCallback
-  registerCallback((songInfo, event) => {
+  ctx.onSongInfo((songInfo, event) => {
     if (event === SongInfoEvent.TimeChanged) {
       currentSeconds = songInfo.elapsedSeconds ?? 0;
     }
@@ -308,11 +301,28 @@ export default (
         win.show();
       }
     });
+
+    // Restore the tray's default behaviour (see src/tray.ts)
+    ctx.onCleanup(() => {
+      setTrayOnClick(() => {
+        if (appConfig.get('options.trayClickPlayPause')) {
+          songControls.playPause();
+        } else if (win.isVisible()) {
+          win.hide();
+          app.dock?.hide();
+        } else {
+          win.show();
+          app.dock?.show();
+        }
+      });
+      setTrayOnDoubleClick(() => {});
+    });
   }
 
-  app.once('before-quit', () => {
+  ctx.listen(app, 'before-quit', () => {
     savedNotification?.close();
   });
+  ctx.onCleanup(() => savedNotification?.close());
 
   changeProtocolHandler((cmd, ...args) => {
     if (Object.keys(songControls).includes(cmd)) {
@@ -322,7 +332,7 @@ export default (
         config().refreshOnPlayPause &&
         (cmd === 'pause' || (cmd === 'play' && !config().unpauseNotification))
       ) {
-        setImmediate(() =>
+        ctx.setTimeout(() =>
           sendNotification({
             ...savedSongInfo,
             isPaused: cmd === 'pause',
@@ -331,5 +341,10 @@ export default (
         );
       }
     }
+  });
+
+  // Restore the default protocol handler
+  ctx.onCleanup(() => {
+    if (!win.isDestroyed()) setupProtocolHandler(win);
   });
 };

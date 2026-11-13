@@ -10,11 +10,7 @@ import { nativeImage, nativeTheme, type NativeImage } from 'electron';
 
 import { t } from '@/i18n';
 import { getSongControls } from '@/providers/song-controls';
-import {
-  registerCallback,
-  type SongInfo,
-  SongInfoEvent,
-} from '@/providers/song-info';
+import { type SongInfo, SongInfoEvent } from '@/providers/song-info';
 import { Platform } from '@/types/plugins';
 import { createPlugin } from '@/utils';
 
@@ -23,11 +19,9 @@ export default createPlugin({
   description: () => t('plugins.taskbar-mediacontrol.description'),
   restartNeeded: true,
   platform: Platform.Windows,
-  config: {
-    enabled: false,
-  },
 
-  backend({ window }) {
+  backend(ctx) {
+    const { window } = ctx;
     let currentSongInfo: SongInfo;
 
     const { playPause, next, previous } = getSongControls(window);
@@ -54,7 +48,7 @@ export default createPlugin({
     };
     let images = getImages();
 
-    nativeTheme.on('updated', () => {
+    ctx.listen(nativeTheme, 'updated', () => {
       images = getImages();
       setThumbar(currentSongInfo);
     });
@@ -92,7 +86,7 @@ export default createPlugin({
       ]);
     };
 
-    registerCallback((songInfo, event) => {
+    ctx.onSongInfo((songInfo, event) => {
       if (event !== SongInfoEvent.TimeChanged) {
         // Update currentsonginfo for win.on('show')
         currentSongInfo = songInfo;
@@ -102,6 +96,10 @@ export default createPlugin({
     });
 
     // Need to set thumbar again after win.show
-    window.on('show', () => setThumbar(currentSongInfo));
+    ctx.listen(window, 'show', () => setThumbar(currentSongInfo));
+
+    ctx.onCleanup(() => {
+      if (!window.isDestroyed()) window.setThumbarButtons([]);
+    });
   },
 });

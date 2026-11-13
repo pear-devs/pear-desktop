@@ -17,6 +17,7 @@
   "scripts": {
     "postinstall": "pnpm install-electron",
     "test": "pnpm playwright test",
+    "test:unit": "vitest run",
     "test:debug": "pnpm cross-env DEBUG=pw:*,-pw:test:protocol playwright test",
     "build": "pnpm electron-vite build",
     "vite:inspect": "pnpm clean && electron-vite build --mode development && pnpm exec serve .vite-inspect",
@@ -156,6 +157,7 @@
     "vite-plugin-inspect": "11.4.1",
     "vite-plugin-resolve": "2.5.2",
     "vite-plugin-solid": "2.11.12",
+    "vitest": "5.1.0",
     "ws": "8.21.0"
   },
   "auto-changelog": {

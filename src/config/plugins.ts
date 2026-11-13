@@ -1,70 +1,54 @@
-import { deepmerge } from 'deepmerge-ts';
 import { allPlugins } from 'virtual:plugins';
 
+import {
+  isPlainObject,
+  mergeDeep,
+  type PluginState,
+  resolvePluginState,
+} from '@/plugins/utils/common/config';
 import { restart } from '@/providers/app-controls';
 
 import { store } from './store';
 
-import type { PluginConfig } from '@/types/plugins';
-
+/** What is stored for every plugin (partial, without defaults). */
 export function getPlugins() {
-  return store.get('plugins') as Record<string, PluginConfig>;
+  return (store.get('plugins') ?? {}) as Record<string, unknown>;
 }
 
-export async function isEnabled(plugin: string) {
-  const pluginConfig = deepmerge(
-    (await allPlugins())[plugin]?.config ?? { enabled: false },
-    (store.get('plugins') as Record<string, PluginConfig>)[plugin] ?? {},
-  );
-  return pluginConfig !== undefined && pluginConfig.enabled;
+/** A plugin's `enabled` flag and config, with defaults applied. */
+export async function getPluginState(id: string): Promise<PluginState> {
+  return resolvePluginState((await allPlugins())[id], getPlugins()[id]);
 }
 
-/**
- * Set options for a plugin
- * @param plugin Plugin name
- * @param options Options to set
- * @param exclude Options to exclude from the options object
- */
-export function setOptions<T>(
-  plugin: string,
-  options: T,
-  exclude: string[] = ['enabled'],
-) {
-  const plugins = store.get('plugins') as Record<string, T>;
-  // HACK: This is a workaround for preventing changed options from being overwritten
-  exclude.forEach((key) => {
-    if (Object.prototype.hasOwnProperty.call(options, key)) {
-      delete options[key as keyof T];
-    }
-  });
+export async function isEnabled(id: string) {
+  return (await getPluginState(id)).enabled;
+}
+
+/** Saves a partial config of a plugin (`enabled` is left alone). */
+export function setPluginConfig(id: string, patch: unknown) {
+  if (!isPlainObject(patch)) return;
+  const values = { ...patch };
+  delete values.enabled;
+  const plugins = getPlugins();
   store.set('plugins', {
     ...plugins,
-    [plugin]: {
-      ...plugins[plugin],
-      ...options,
-    },
+    [id]: mergeDeep(plugins[id] ?? {}, values),
   });
 }
 
-export function setMenuOptions<T>(
-  plugin: string,
-  options: T,
-  exclude: string[] = ['enabled'],
-) {
-  setOptions(plugin, options, exclude);
+function setEnabled(id: string, enabled: boolean) {
+  const plugins = getPlugins();
+  const stored = isPlainObject(plugins[id]) ? plugins[id] : {};
+  store.set('plugins', { ...plugins, [id]: { ...stored, enabled } });
   if (store.get('options.restartOnConfigChanges')) {
     restart();
   }
 }
 
-export function getOptions<T>(plugin: string): T {
-  return (store.get('plugins') as Record<string, T>)[plugin];
+export function enable(id: string) {
+  setEnabled(id, true);
 }
 
-export function enable(plugin: string) {
-  setMenuOptions(plugin, { enabled: true }, []);
-}
-
-export function disable(plugin: string) {
-  setMenuOptions(plugin, { enabled: false }, []);
+export function disable(id: string) {
+  setEnabled(id, false);
 }

@@ -5,18 +5,16 @@ import MprisPlayer, {
   type Position,
   type Track,
 } from '@jellybrick/mpris-service';
-import { type BrowserWindow, ipcMain } from 'electron';
 
 import * as config from '@/config';
 import { APPLICATION_NAME } from '@/i18n';
 import { getSongControls } from '@/providers/song-controls';
-import {
-  registerCallback,
-  type SongInfo,
-  SongInfoEvent,
-} from '@/providers/song-info';
+import { type SongInfo, SongInfoEvent } from '@/providers/song-info';
 import { LoggerPrefix } from '@/utils';
 
+import type { shortcutsConfig } from './types';
+import type { ConfigOf } from '@/plugins/utils/common/config';
+import type { BackendContext } from '@/types/contexts';
 import type { RepeatMode, VolumeState } from '@/types/datahost-get-state';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';
 
@@ -78,7 +76,15 @@ function setupMPRIS() {
   return instance;
 }
 
-export function registerMPRIS(win: BrowserWindow) {
+/** The D-Bus connection behind a player (private in the library's types). */
+const busOf = (player: MprisPlayer) =>
+  (player as unknown as { _bus?: { disconnect(): void } })._bus;
+
+export function registerMPRIS(
+  ctx: BackendContext<ConfigOf<typeof shortcutsConfig>>,
+) {
+  const { window: win } = ctx;
+  const { core } = ctx.ipc;
   const songControls = getSongControls(win);
   const {
     playPause,
@@ -102,40 +108,42 @@ export function registerMPRIS(win: BrowserWindow) {
     };
 
     const player = setupMPRIS();
+    // Releases the MPRIS name; the player's own listeners go with it.
+    ctx.onCleanup(() => busOf(player)?.disconnect());
 
     const seekTo = (event: Position) => {
       if (
         currentSongInfo?.videoId &&
         event.trackId.endsWith(correctId(currentSongInfo.videoId))
       ) {
-        win.webContents.send('peard:seek-to', microToSec(event.position ?? 0));
+        core.send('peard:seek-to', microToSec(event.position ?? 0));
         player.setPosition(event.position ?? 0);
       }
     };
     const seekBy = (offset: number) => {
-      win.webContents.send('peard:seek-by', microToSec(offset));
+      core.send('peard:seek-by', microToSec(offset));
       player.setPosition(player.getPosition() + offset);
     };
 
-    ipcMain.on('peard:player-api-loaded', () => {
-      win.webContents.send('peard:setup-seeked-listener', 'mpris');
-      win.webContents.send('peard:setup-time-changed-listener', 'mpris');
-      win.webContents.send('peard:setup-repeat-changed-listener', 'mpris');
-      win.webContents.send('peard:setup-volume-changed-listener', 'mpris');
-      win.webContents.send('peard:setup-shuffle-changed-listener', 'mpris');
-      win.webContents.send('peard:setup-fullscreen-changed-listener', 'mpris');
-      win.webContents.send('peard:setup-autoplay-changed-listener', 'mpris');
+    core.on('peard:player-api-loaded', () => {
+      core.send('peard:setup-seeked-listener', 'mpris');
+      core.send('peard:setup-time-changed-listener', 'mpris');
+      core.send('peard:setup-repeat-changed-listener', 'mpris');
+      core.send('peard:setup-volume-changed-listener', 'mpris');
+      core.send('peard:setup-shuffle-changed-listener', 'mpris');
+      core.send('peard:setup-fullscreen-changed-listener', 'mpris');
+      core.send('peard:setup-autoplay-changed-listener', 'mpris');
       requestShuffleInformation();
       requestFullscreenInformation();
       requestQueueInformation();
     });
 
-    ipcMain.on('peard:seeked', (_, t: number) => {
+    core.on('peard:seeked', (t: number) => {
       player.setPosition(secToMicro(t));
       player.seeked(secToMicro(t));
     });
 
-    ipcMain.on('peard:repeat-changed', (_, mode: RepeatMode) => {
+    core.on('peard:repeat-changed', (mode: RepeatMode) => {
       switch (mode) {
         case 'NONE': {
           player.setLoopStatus(MprisPlayer.LOOP_STATUS_NONE);
@@ -154,7 +162,7 @@ export function registerMPRIS(win: BrowserWindow) {
       requestQueueInformation();
     });
 
-    ipcMain.on('peard:shuffle-changed', (_, shuffleEnabled: boolean) => {
+    core.on('peard:shuffle-changed', (shuffleEnabled: boolean) => {
       if (player.shuffle === undefined || !player.canUsePlayerControls) {
         return;
       }
@@ -162,7 +170,7 @@ export function registerMPRIS(win: BrowserWindow) {
       player.shuffle = shuffleEnabled ?? !player.shuffle;
     });
 
-    ipcMain.on('peard:fullscreen-changed', (_, changedTo: boolean) => {
+    core.on('peard:fullscreen-changed', (changedTo: boolean) => {
       if (player.fullscreen === undefined || !player.canUsePlayerControls) {
         return;
       }
@@ -171,28 +179,25 @@ export function registerMPRIS(win: BrowserWindow) {
         changedTo !== undefined ? changedTo : !player.fullscreen;
     });
 
-    ipcMain.on(
-      'peard:set-fullscreen',
-      (_, isFullscreen: boolean | undefined) => {
-        if (!player.canUsePlayerControls || isFullscreen === undefined) {
-          return;
-        }
+    core.on('peard:set-fullscreen', (isFullscreen: boolean | undefined) => {
+      if (!player.canUsePlayerControls || isFullscreen === undefined) {
+        return;
+      }
 
-        player.fullscreen = isFullscreen;
-      },
-    );
+      player.fullscreen = isFullscreen;
+    });
 
-    ipcMain.on(
+    core.on(
       'peard:fullscreen-changed-supported',
-      (_, isFullscreenSupported: boolean) => {
+      (isFullscreenSupported: boolean) => {
         player.canUsePlayerControls = isFullscreenSupported;
       },
     );
-    ipcMain.on('peard:autoplay-changed', (_) => {
+    core.on('peard:autoplay-changed', () => {
       requestQueueInformation();
     });
 
-    ipcMain.on('peard:get-queue-response', (_, queue: QueueResponse) => {
+    core.on('peard:get-queue-response', (queue: QueueResponse) => {
       if (!queue) {
         return;
       }
@@ -302,7 +307,7 @@ export function registerMPRIS(win: BrowserWindow) {
       console.trace(error);
     });
 
-    ipcMain.on('peard:volume-changed', (_, newVolumeState: VolumeState) => {
+    core.on('peard:volume-changed', (newVolumeState: VolumeState) => {
       player.volume = newVolumeState.isMuted
         ? 0
         : Number.parseFloat((newVolumeState.state / 100).toFixed(2));
@@ -311,13 +316,13 @@ export function registerMPRIS(win: BrowserWindow) {
     player.on('volume', async (newVolume: number) => {
       if (await config.plugins.isEnabled('precise-volume')) {
         // With precise volume we can set the volume to the exact value.
-        win.webContents.send('setVolume', ~~(newVolume * 100));
+        core.send('setVolume', ~~(newVolume * 100));
       } else {
         setVolume(newVolume * 100);
       }
     });
 
-    registerCallback((songInfo: SongInfo, event) => {
+    ctx.onSongInfo((songInfo: SongInfo, event) => {
       if (event === SongInfoEvent.TimeChanged) {
         player.setPosition(secToMicro(songInfo.elapsedSeconds ?? 0));
         return;

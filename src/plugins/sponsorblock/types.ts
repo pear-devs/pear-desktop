@@ -1,3 +1,27 @@
+import { config } from '@/plugins/utils/common/config';
+
+export const sponsorBlockConfig = {
+  apiURL: config.string('https://sponsor.ajay.app'),
+  categories: config.multi(
+    ['sponsor', 'intro', 'outro', 'interaction', 'selfpromo', 'music_offtopic'],
+    [
+      { value: 'sponsor' },
+      { value: 'intro' },
+      { value: 'outro' },
+      { value: 'interaction' },
+      { value: 'selfpromo' },
+      { value: 'music_offtopic' },
+    ],
+  ),
+};
+
+export type SponsorBlockIpc = {
+  toRenderer: {
+    /** The segments to skip in the video that just loaded. */
+    skip: [segments: Segment[]];
+  };
+};
+
 export type Segment = [number, number];
 
 export interface SkipSegment {

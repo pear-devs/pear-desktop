@@ -1,5 +1,5 @@
 import { Client as DiscordClient } from '@xhayper/discord-rpc';
-import { ActivityType } from 'discord-api-types/v10';
+import { ActivityType, type StatusDisplayType } from 'discord-api-types/v10';
 import is from 'electron-is';
 
 import { t } from '@/i18n';
@@ -14,7 +14,7 @@ import {
   isSeek,
 } from './utils';
 
-import type { DiscordPluginConfig } from './index';
+import type { DiscordPluginConfig } from './types';
 import type { SongInfo } from '@/providers/song-info';
 import type { SetActivity } from '@xhayper/discord-rpc/dist/structures/ClientUser';
 
@@ -114,7 +114,7 @@ export class DiscordService {
 
     const activityInfo: SetActivity = {
       type: ActivityType.Listening,
-      statusDisplayType: config.statusDisplayType,
+      statusDisplayType: config.statusDisplayType as StatusDisplayType,
       details: sanitizeActivityText(
         songInfo.alternativeTitle ?? songInfo.title,
       ), // Song title

@@ -1,116 +1,65 @@
-import { deepmerge } from 'deepmerge-ts';
-import { allPlugins, preloadPlugins } from 'virtual:plugins';
+import { ipcRenderer } from 'electron';
+import { preloadPlugins } from 'virtual:plugins';
 
 import * as config from '@/config';
 import { t } from '@/i18n';
-import { LoggerPrefix, startPlugin, stopPlugin } from '@/utils';
+import { LoggerPrefix } from '@/utils';
 
+import { createBaseContext } from './context';
+import { PluginRunner } from './runner';
+
+import type { ConfigShape } from '@/plugins/utils/common/config';
 import type { PreloadContext } from '@/types/contexts';
-import type { PluginConfig, PluginDef } from '@/types/plugins';
 
-const loadedPluginMap: Record<
-  string,
-  PluginDef<unknown, unknown, unknown>
-> = {};
-const createContext = (id: string): PreloadContext<PluginConfig> => ({
-  getConfig: async () =>
-    deepmerge(
-      (await allPlugins())[id].config ?? { enabled: false },
-      config.get(`plugins.${id}`) ?? {},
-    ) as PluginConfig,
-  setConfig: async (newConfig) => {
-    config.setPartial(
-      `plugins.${id}`,
-      newConfig,
-      (await allPlugins())[id].config,
+// oxlint-disable-next-line typescript/no-explicit-any
+type AnyPreloadContext = PreloadContext<any>;
+
+const runner = new PluginRunner<AnyPreloadContext>({
+  async load(id) {
+    const plugin = (await preloadPlugins())[id];
+    return (
+      plugin && {
+        part: plugin.preload,
+        schema: plugin.config as ConfigShape | undefined,
+      }
     );
   },
-});
-
-export const forceUnloadPreloadPlugin = async (id: string) => {
-  if (!loadedPluginMap[id]) return;
-
-  const hasStopped = await stopPlugin(id, loadedPluginMap[id], {
-    ctx: 'preload',
-    context: createContext(id),
-  });
-  if (hasStopped || (hasStopped === null && loadedPluginMap[id].preload)) {
-    console.log(
-      LoggerPrefix,
-      t('common.console.plugins.unloaded', { pluginName: id }),
-    );
-    delete loadedPluginMap[id];
-  } else {
-    console.error(
-      LoggerPrefix,
-      t('common.console.plugins.unload-failed', { pluginName: id }),
-    );
-  }
-};
-
-export const forceLoadPreloadPlugin = async (id: string) => {
-  try {
-    const plugin = (await preloadPlugins())[id];
-    if (!plugin) return;
-
-    const hasStarted = await startPlugin(id, plugin, {
-      ctx: 'preload',
-      context: createContext(id),
-    });
-
-    if (
-      hasStarted ||
-      (hasStarted === null &&
-        typeof plugin.preload !== 'function' &&
-        plugin.preload)
-    ) {
-      loadedPluginMap[id] = plugin;
-    }
-
+  createContext: (instance) =>
+    createBaseContext(instance, (patch) =>
+      ipcRenderer.invoke('peard:set-config', instance.id, patch),
+    ),
+  onStarted(id) {
     console.log(
       LoggerPrefix,
       t('common.console.plugins.loaded', { pluginName: id }),
     );
-  } catch (err) {
+  },
+  onError(id, _phase, error) {
     console.error(
       LoggerPrefix,
       t('common.console.plugins.initialize-failed', { pluginName: id }),
+      error,
     );
-    console.trace(err);
-  }
-};
+  },
+});
 
 export const loadAllPreloadPlugins = async () => {
-  const pluginConfigs = config.plugins.getPlugins();
-
-  for (const [pluginId, pluginDef] of Object.entries(await preloadPlugins())) {
-    const config = deepmerge(
-      pluginDef.config ?? { enable: false },
-      pluginConfigs[pluginId] ?? {},
-    );
-
-    if (config.enabled) {
-      forceLoadPreloadPlugin(pluginId);
-    } else {
-      if (loadedPluginMap[pluginId]) {
-        forceUnloadPreloadPlugin(pluginId);
-      }
-    }
-  }
+  await Promise.allSettled(
+    Object.keys(await preloadPlugins()).map(async (id) => {
+      const state = await config.plugins.getPluginState(id);
+      if (state.enabled) await runner.start(id, state.config);
+    }),
+  );
 };
 
-export const unloadAllPreloadPlugins = async () => {
-  for (const id of Object.keys(loadedPluginMap)) {
-    await forceUnloadPreloadPlugin(id);
-  }
+export const startPreloadPlugin = async (id: string) => {
+  const state = await config.plugins.getPluginState(id);
+  await runner.start(id, state.config);
 };
 
-export const getLoadedPreloadPlugin = (
+export const stopPreloadPlugin = (id: string) => runner.stop(id);
+
+export const applyPreloadPluginConfig = (
   id: string,
-): PluginDef<unknown, unknown, unknown> | undefined => {
-  return loadedPluginMap[id];
-};
-
-export const getAllLoadedPreloadPlugins = () => {
-  return loadedPluginMap;
-};
+  pluginConfig: Record<string, unknown>,
+) => runner.applyConfig(id, pluginConfig);
