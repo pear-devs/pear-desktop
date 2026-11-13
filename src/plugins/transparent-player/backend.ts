@@ -6,13 +6,16 @@ import {
   MaterialType,
   WINDOWS_MATERIALS,
   MACOS_MATERIALS,
-  type TransparentPlayerConfig,
+  type transparentPlayerConfig,
 } from './types';
 
-import type { BackendContext } from '@/types/contexts';
 import type { BrowserWindow } from 'electron';
 
-const setWindowTransparency = (window: BrowserWindow, material: MaterialType, opacity: number) => {
+const setWindowTransparency = (
+  window: BrowserWindow,
+  material: MaterialType,
+  opacity: number,
+) => {
   // Background materials are only supported on macOS and Windows
   if (is.windows()) {
     if (WINDOWS_MATERIALS.includes(material)) {
@@ -36,19 +39,15 @@ const setWindowTransparency = (window: BrowserWindow, material: MaterialType, op
   window.setBackgroundColor(`rgba(0, 0, 0, ${opacity})`);
 };
 
-export const backend = createBackend({
-  window: null as BrowserWindow | null,
-  async start({ window, getConfig }: BackendContext<TransparentPlayerConfig>) {
-    const config = await getConfig();
-    this.window = window;
-    setWindowTransparency(window, config.type, config.opacity);
-  },
-  onConfigChange(newConfig) {
-    if (!this.window) return;
-    setWindowTransparency(this.window, newConfig.type, newConfig.opacity);
-  },
-  stop({ window }) {
-    setWindowTransparency(window, MaterialType.NONE, 1);
-    this.window = null;
-  },
+export const backend = createBackend<typeof transparentPlayerConfig>((ctx) => {
+  const apply = () =>
+    setWindowTransparency(ctx.window, ctx.config.type, ctx.config.opacity);
+
+  apply();
+  ctx.onConfigChange(apply);
+  ctx.onCleanup(() => {
+    if (!ctx.window.isDestroyed()) {
+      setWindowTransparency(ctx.window, MaterialType.NONE, 1);
+    }
+  });
 });

@@ -8,6 +8,7 @@ import { Transition } from 'solid-transition-group';
 
 import { cacheNoArgs } from '@/providers/decorators';
 
+import { useIpc } from './ipc';
 import { Panel } from './Panel';
 
 const itemStyle = cacheNoArgs(
@@ -181,6 +182,7 @@ export type PanelItemProps =
   | RadioPanelItemProps
   | CheckboxPanelItemProps;
 export const PanelItem = (props: PanelItemProps) => {
+  const ipc = useIpc();
   const [open, setOpen] = createSignal(false);
   const [toolTipOpen, setToolTipOpen] = createSignal(false);
   const [toolTip, setToolTip] = createSignal<HTMLElement | null>(null);
@@ -278,7 +280,9 @@ export const PanelItem = (props: PanelItemProps) => {
   };
 
   const handleClick = async () => {
-    await window.ipcRenderer.invoke('peard:menu-event', props.commandId);
+    if (props.commandId !== undefined) {
+      await ipc.invoke('menuEvent', props.commandId);
+    }
     if (props.type === 'radio') {
       props.onChange?.(!props.checked);
     } else if (props.type === 'checkbox') {

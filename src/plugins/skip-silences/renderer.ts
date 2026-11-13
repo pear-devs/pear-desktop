@@ -1,18 +1,11 @@
-import type { SkipSilencesPluginConfig } from './index';
-import type { RendererContext } from '@/types/contexts';
+import { createRenderer } from '@/utils';
 
-let config: SkipSilencesPluginConfig;
-
-let isSilent = false;
-let hasAudioStarted = false;
+import type { skipSilencesConfig } from './index';
 
 const smoothing = 0.1;
 const threshold = -100; // DB (-100 = absolute silence, 0 = loudest)
 const interval = 2; // Ms
 const history = 10;
-const speakingHistory = Array.from({ length: history }).fill(0) as number[];
-
-let playOrSeekHandler: (() => void) | undefined;
 
 const getMaxVolume = (
   analyser: AnalyserNode,
@@ -30,105 +23,115 @@ const getMaxVolume = (
   return maxVolume;
 };
 
-const audioCanPlayListener = (e: CustomEvent<Compressor>) => {
-  const video = document.querySelector('video');
-  const { audioContext } = e.detail;
-  const sourceNode = e.detail.audioSource;
+export default createRenderer<typeof skipSilencesConfig>((ctx) => {
+  let isSilent = false;
+  let hasAudioStarted = false;
+  const speakingHistory = Array.from({ length: history }).fill(0) as number[];
 
-  // Use an audio analyser similar to Hark
-  // https://github.com/otalk/hark/blob/master/hark.bundle.js
-  const analyser = audioContext.createAnalyser();
-  analyser.fftSize = 512;
-  analyser.smoothingTimeConstant = smoothing;
-  const fftBins = new Float32Array(analyser.frequencyBinCount);
+  // Undoes what was set up for the current audio source
+  let teardown: (() => void) | undefined;
+  ctx.onCleanup(() => teardown?.());
 
-  sourceNode.connect(analyser);
+  // The config is read when it is used; nothing to redo on a change.
+  ctx.onConfigChange(() => {});
 
-  const looper = () => {
-    setTimeout(() => {
-      const currentVolume = getMaxVolume(analyser, fftBins);
+  const audioCanPlayListener = (e: CustomEvent<Compressor>) => {
+    teardown?.();
 
-      let history = 0;
-      if (currentVolume > threshold && isSilent) {
-        // Trigger quickly, short history
-        for (
-          let i = speakingHistory.length - 3;
-          i < speakingHistory.length;
-          i++
-        ) {
-          history += speakingHistory[i];
-        }
+    const video = document.querySelector('video');
+    const { audioContext } = e.detail;
+    const sourceNode = e.detail.audioSource;
 
-        if (history >= 2) {
-          // Not silent
-          isSilent = false;
-          hasAudioStarted = true;
-        }
-      } else if (currentVolume < threshold && !isSilent) {
-        for (const element of speakingHistory) {
-          history += element;
-        }
+    // Use an audio analyser similar to Hark
+    // https://github.com/otalk/hark/blob/master/hark.bundle.js
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = smoothing;
+    const fftBins = new Float32Array(analyser.frequencyBinCount);
 
-        if (
-          history == 0 && // Silent
-          !(
-            video &&
-            (video.paused ||
-              video.seeking ||
-              video.ended ||
-              video.muted ||
-              video.volume === 0)
-          )
-        ) {
-          isSilent = true;
-          skipSilence();
-        }
+    sourceNode.connect(analyser);
+
+    const skipSilence = () => {
+      if (ctx.config.onlySkipBeginning && hasAudioStarted) {
+        return;
       }
 
-      speakingHistory.shift();
-      speakingHistory.push(Number(currentVolume > threshold));
+      if (isSilent && video && !video.paused) {
+        video.currentTime += 0.2; // In s
+      }
+    };
 
-      looper();
-    }, interval);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const looper = () => {
+      timer = ctx.setTimeout(() => {
+        const currentVolume = getMaxVolume(analyser, fftBins);
+
+        let history = 0;
+        if (currentVolume > threshold && isSilent) {
+          // Trigger quickly, short history
+          for (
+            let i = speakingHistory.length - 3;
+            i < speakingHistory.length;
+            i++
+          ) {
+            history += speakingHistory[i];
+          }
+
+          if (history >= 2) {
+            // Not silent
+            isSilent = false;
+            hasAudioStarted = true;
+          }
+        } else if (currentVolume < threshold && !isSilent) {
+          for (const element of speakingHistory) {
+            history += element;
+          }
+
+          if (
+            history == 0 && // Silent
+            !(
+              video &&
+              (video.paused ||
+                video.seeking ||
+                video.ended ||
+                video.muted ||
+                video.volume === 0)
+            )
+          ) {
+            isSilent = true;
+            skipSilence();
+          }
+        }
+
+        speakingHistory.shift();
+        speakingHistory.push(Number(currentVolume > threshold));
+
+        looper();
+      }, interval);
+    };
+
+    looper();
+
+    const playOrSeekHandler = () => {
+      hasAudioStarted = false;
+      skipSilence();
+    };
+
+    video?.addEventListener('play', playOrSeekHandler);
+    video?.addEventListener('seeked', playOrSeekHandler);
+
+    teardown = () => {
+      ctx.clearTimeout(timer);
+      try {
+        sourceNode.disconnect(analyser);
+      } catch {}
+      video?.removeEventListener('play', playOrSeekHandler);
+      video?.removeEventListener('seeked', playOrSeekHandler);
+      teardown = undefined;
+    };
   };
 
-  looper();
-
-  const skipSilence = () => {
-    if (config.onlySkipBeginning && hasAudioStarted) {
-      return;
-    }
-
-    if (isSilent && video && !video.paused) {
-      video.currentTime += 0.2; // In s
-    }
-  };
-
-  playOrSeekHandler = () => {
-    hasAudioStarted = false;
-    skipSilence();
-  };
-
-  video?.addEventListener('play', playOrSeekHandler);
-  video?.addEventListener('seeked', playOrSeekHandler);
-};
-
-export const onRendererLoad = async ({
-  getConfig,
-}: RendererContext<SkipSilencesPluginConfig>) => {
-  config = await getConfig();
-
-  document.addEventListener('peard:audio-can-play', audioCanPlayListener, {
+  ctx.listen(document, 'peard:audio-can-play', audioCanPlayListener, {
     passive: true,
   });
-};
-
-export const onRendererUnload = () => {
-  document.removeEventListener('peard:audio-can-play', audioCanPlayListener);
-
-  if (playOrSeekHandler) {
-    const video = document.querySelector('video');
-    video?.removeEventListener('play', playOrSeekHandler);
-    video?.removeEventListener('seeked', playOrSeekHandler);
-  }
-};
+});

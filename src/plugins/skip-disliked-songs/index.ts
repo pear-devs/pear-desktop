@@ -1,40 +1,38 @@
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
-import { waitForElement } from '@/utils/wait-for-element';
 
-export default createPlugin<
-  unknown,
-  unknown,
-  {
-    observer?: MutationObserver;
-    start(): void;
-    stop(): void;
-  }
->({
+export default createPlugin({
   name: () => t('plugins.skip-disliked-songs.name'),
   description: () => t('plugins.skip-disliked-songs.description'),
   restartNeeded: false,
-  renderer: {
-    start() {
-      waitForElement<HTMLElement>('#like-button-renderer').then(
-        (dislikeBtn) => {
-          this.observer = new MutationObserver(() => {
-            if (dislikeBtn?.getAttribute('like-status') == 'DISLIKE') {
-              document
-                .querySelector<HTMLButtonElement>('yt-icon-button.next-button')
-                ?.click();
-            }
-          });
-          this.observer.observe(dislikeBtn, {
-            attributes: true,
-            childList: false,
-            subtree: false,
-          });
+  renderer: (ctx) => {
+    const observeLikeButton = (likeButton: HTMLElement) => {
+      ctx.observe(
+        likeButton,
+        { attributes: true, childList: false, subtree: false },
+        () => {
+          if (likeButton.getAttribute('like-status') == 'DISLIKE') {
+            document
+              .querySelector<HTMLButtonElement>('yt-icon-button.next-button')
+              ?.click();
+          }
         },
       );
-    },
-    stop() {
-      this.observer?.disconnect();
-    },
+    };
+
+    // Waits for the like button; the polling stops with the plugin.
+    const find = () =>
+      document.querySelector<HTMLElement>('#like-button-renderer');
+    const likeButton = find();
+    if (likeButton) {
+      observeLikeButton(likeButton);
+      return;
+    }
+    const interval = ctx.setInterval(() => {
+      const element = find();
+      if (!element) return;
+      ctx.clearInterval(interval);
+      observeLikeButton(element);
+    }, 100);
   },
 });

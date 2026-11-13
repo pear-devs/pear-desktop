@@ -1,7 +1,6 @@
 import { net } from 'electron';
 
 import { t } from '@/i18n';
-import { registerCallback } from '@/providers/song-info';
 import { createPlugin } from '@/utils';
 
 type LumiaData = {
@@ -27,10 +26,7 @@ export default createPlugin({
   name: () => t('plugins.lumiastream.name'),
   description: () => t('plugins.lumiastream.description'),
   restartNeeded: true,
-  config: {
-    enabled: false,
-  },
-  backend({ ipc }) {
+  backend(ctx) {
     const secToMilisec = (t?: number) =>
       t ? Math.round(Number(t) * 1e3) : undefined;
     const previousStatePaused = null;
@@ -54,6 +50,7 @@ export default createPlugin({
       net
         .fetch(url, {
           method: 'POST',
+          signal: ctx.signal,
           body: JSON.stringify({ token: 'lsmedia_ytmsI7812', data }),
           headers,
         })
@@ -66,11 +63,11 @@ export default createPlugin({
         });
     };
 
-    ipc.on('peard:player-api-loaded', () =>
-      ipc.send('peard:setup-time-changed-listener'),
+    ctx.ipc.core.on('peard:player-api-loaded', () =>
+      ctx.ipc.core.send('peard:setup-time-changed-listener'),
     );
 
-    registerCallback((songInfo) => {
+    ctx.onSongInfo((songInfo) => {
       if (!songInfo.title && !songInfo.artist) {
         return;
       }

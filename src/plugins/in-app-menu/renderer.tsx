@@ -2,11 +2,12 @@ import { createSignal } from 'solid-js';
 import { render } from 'solid-js/web';
 
 import { APPLICATION_NAME } from '@/i18n';
+import { createRenderer } from '@/utils';
 
-import { defaultInAppMenuConfig, type InAppMenuConfig } from './constants';
+import { IpcContext } from './renderer/ipc';
 import { TitleBar } from './renderer/TitleBar';
 
-import type { RendererContext } from '@/types/contexts';
+import type { InAppMenuIpc, inAppMenuConfig } from './types';
 
 const scrollStyle = `
   html::-webkit-scrollbar {
@@ -18,48 +19,39 @@ const isMacOS = navigator.userAgent.includes('Macintosh');
 const isNotWindowsOrMacOS =
   !navigator.userAgent.includes('Windows') && !isMacOS;
 
-const [config, setConfig] = createSignal<InAppMenuConfig>(
-  defaultInAppMenuConfig,
-);
-export const onRendererLoad = async ({
-  getConfig,
-  ipc,
-}: RendererContext<InAppMenuConfig>) => {
-  setConfig(await getConfig());
+export default createRenderer<typeof inAppMenuConfig, InAppMenuIpc>((ctx) => {
+  const [config, setConfig] = createSignal(ctx.config);
+  ctx.onConfigChange((newConfig) => setConfig(newConfig));
 
+  const previousTitle = document.title;
   document.title = APPLICATION_NAME;
-  const stylesheet = new CSSStyleSheet();
-  stylesheet.replaceSync(scrollStyle);
-  document.adoptedStyleSheets = [...document.adoptedStyleSheets, stylesheet];
+  ctx.onCleanup(() => {
+    if (document.title === APPLICATION_NAME) document.title = previousTitle;
+  });
 
-  render(
+  ctx.addStyle(scrollStyle);
+
+  // The title bar must stay a direct child of <body> (its CSS selects it as
+  // a sibling of ytmusic-app), so it is rendered elsewhere and moved there.
+  const container = document.createElement('div');
+  const dispose = render(
     () => (
-      <TitleBar
-        enableController={
-          isNotWindowsOrMacOS && !config().hideDOMWindowControls
-        }
-        initialCollapsed={window.mainConfig.get('options.hideMenu')}
-        ipc={ipc}
-        isMacOS={isMacOS}
-      />
+      <IpcContext.Provider value={ctx.ipc}>
+        <TitleBar
+          enableController={
+            isNotWindowsOrMacOS && !config().hideDOMWindowControls
+          }
+          initialCollapsed={window.mainConfig.get('options.hideMenu')}
+          isMacOS={isMacOS}
+        />
+      </IpcContext.Provider>
     ),
-    document.body,
+    container,
   );
-};
-
-export const onPlayerApiReady = () => {
-  // NOT WORKING AFTER YTM UPDATE (last checked 2024-02-04)
-  //
-  // const htmlHeadStyle = document.querySelector('head > div > style');
-  // if (htmlHeadStyle) {
-  //   // HACK: This is a hack to remove the scrollbar width
-  //   htmlHeadStyle.innerHTML = htmlHeadStyle.innerHTML.replace(
-  //     'html::-webkit-scrollbar {width: var(--ytmusic-scrollbar-width);',
-  //     'html::-webkit-scrollbar { width: 0;',
-  //   );
-  // }
-};
-
-export const onConfigChange = (newConfig: InAppMenuConfig) => {
-  setConfig(newConfig);
-};
+  const nodes = [...container.childNodes];
+  document.body.append(...nodes);
+  ctx.onCleanup(() => {
+    dispose();
+    for (const node of nodes) node.remove();
+  });
+});

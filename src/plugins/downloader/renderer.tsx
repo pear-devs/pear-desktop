@@ -9,37 +9,19 @@ import {
 } from '@/plugins/utils/renderer/check';
 import { getSongMenu } from '@/providers/dom-elements';
 import { getSongInfo } from '@/providers/song-info-front';
+import { createRenderer } from '@/utils';
 
 import { DownloadButton } from './templates/download';
 
-import type { DownloaderPluginConfig } from './index';
-import type { RendererContext } from '@/types/contexts';
+import type { DownloaderIpc, downloaderConfig } from './config';
 
-let download: () => void;
+export default createRenderer<typeof downloaderConfig, DownloaderIpc>((ctx) => {
+  // Options are only read by the backend.
+  ctx.onConfigChange(() => {});
 
-const [downloadButtonText, setDownloadButtonText] = createSignal<string>('');
+  const [downloadButtonText, setDownloadButtonText] = createSignal<string>('');
 
-let buttonContainer: HTMLDivElement | null = null;
-
-const menuObserver = new MutationObserver(() => {
-  const menu = getSongMenu();
-
-  if (
-    !menu ||
-    menu.contains(buttonContainer) ||
-    !(isMusicOrVideoTrack() || isAlbumOrPlaylist()) ||
-    !buttonContainer
-  ) {
-    return;
-  }
-
-  menu.prepend(buttonContainer);
-});
-
-export const onRendererLoad = ({
-  ipc,
-}: RendererContext<DownloaderPluginConfig>) => {
-  download = () => {
+  const download = () => {
     const songMenu = getSongMenu();
 
     let videoUrl = songMenu
@@ -70,43 +52,58 @@ export const onRendererLoad = ({
       }
 
       if (videoUrl.includes('?playlist=')) {
-        ipc.invoke('download-playlist-request', videoUrl);
+        ctx.ipc.invoke('downloadPlaylist', videoUrl);
         return;
       }
     } else {
       videoUrl = getSongInfo().url || window.location.href;
     }
 
-    ipc.invoke('download-song', videoUrl);
+    ctx.ipc.invoke('downloadSong', videoUrl);
   };
 
-  ipc.on('downloader-feedback', (feedback: string) => {
+  ctx.ipc.on('feedback', (feedback) => {
     const targetHtml = feedback || t('plugins.downloader.templates.button');
     setDownloadButtonText(targetHtml);
   });
-};
 
-export const onPlayerApiReady = () => {
-  setDownloadButtonText(t('plugins.downloader.templates.button'));
+  ctx.onPlayerApiReady(() => {
+    setDownloadButtonText(t('plugins.downloader.templates.button'));
 
-  buttonContainer = document.createElement('div');
-  buttonContainer.classList.add(
-    'style-scope',
-    'menu-item',
-    'ytmusic-menu-popup-renderer',
-  );
-  buttonContainer.setAttribute('aria-disabled', 'false');
-  buttonContainer.setAttribute('aria-selected', 'false');
-  buttonContainer.setAttribute('role', 'option');
-  buttonContainer.setAttribute('tabindex', '-1');
+    const buttonContainer = document.createElement('div');
+    buttonContainer.classList.add(
+      'style-scope',
+      'menu-item',
+      'ytmusic-menu-popup-renderer',
+    );
+    buttonContainer.setAttribute('aria-disabled', 'false');
+    buttonContainer.setAttribute('aria-selected', 'false');
+    buttonContainer.setAttribute('role', 'option');
+    buttonContainer.setAttribute('tabindex', '-1');
 
-  render(
-    () => <DownloadButton onClick={download} text={downloadButtonText()} />,
-    buttonContainer,
-  );
+    const dispose = render(
+      () => <DownloadButton onClick={download} text={downloadButtonText()} />,
+      buttonContainer,
+    );
+    ctx.onCleanup(() => {
+      dispose();
+      buttonContainer.remove();
+    });
 
-  menuObserver.observe(document.querySelector('ytmusic-popup-container')!, {
-    childList: true,
-    subtree: true,
+    const popupContainer = document.querySelector('ytmusic-popup-container');
+    if (!popupContainer) return;
+    ctx.observe(popupContainer, { childList: true, subtree: true }, () => {
+      const menu = getSongMenu();
+
+      if (
+        !menu ||
+        menu.contains(buttonContainer) ||
+        !(isMusicOrVideoTrack() || isAlbumOrPlaylist())
+      ) {
+        return;
+      }
+
+      menu.prepend(buttonContainer);
+    });
   });
-};
+});

@@ -1,5 +1,4 @@
 import { createRoute, z } from '@hono/zod-openapi';
-import { ipcMain } from 'electron';
 
 import { getSongControls } from '@/providers/song-controls';
 import {
@@ -25,10 +24,8 @@ import {
   type ResponseSongInfo,
 } from '../scheme';
 
-import type { APIServerConfig } from '../../config';
-import type { HonoApp } from '../types';
+import type { ApiServerContext, HonoApp } from '../types';
 import type { SongInfo } from '@/providers/song-info';
-import type { BackendContext } from '@/types/contexts';
 import type { QueueResponse } from '@/types/music-player-desktop-internal';
 import type { Context } from 'hono';
 
@@ -569,15 +566,45 @@ const routes = {
 
 type PromiseOrValue<T> = T | Promise<T>;
 
+/**
+ * Waits for the next message on a core channel, like `ipcMain.once`, with one
+ * listener for every request (removed when the plugin stops).
+ */
+const createResponseWaiter = <T>(plugin: ApiServerContext, channel: string) => {
+  let waiters: ((value: T) => void)[] = [];
+  plugin.ipc.core.on(channel, (value: T) => {
+    const current = waiters;
+    waiters = [];
+    for (const resolve of current) resolve(value);
+  });
+  return (request: () => void) =>
+    new Promise<T>((resolve) => {
+      waiters.push(resolve);
+      request();
+    });
+};
+
 export const register = (
   app: HonoApp,
-  { window }: BackendContext<APIServerConfig>,
+  plugin: ApiServerContext,
   songInfoGetter: () => PromiseOrValue<SongInfo | undefined>,
   repeatModeGetter: () => PromiseOrValue<RepeatMode | undefined>,
   likeTypeGetter: () => PromiseOrValue<LikeType | undefined>,
   volumeStateGetter: () => PromiseOrValue<VolumeState | undefined>,
 ) => {
-  const controller = getSongControls(window);
+  const controller = getSongControls(plugin.window);
+  const nextShuffleResponse = createResponseWaiter<boolean | undefined>(
+    plugin,
+    'peard:get-shuffle-response',
+  );
+  const nextFullscreenResponse = createResponseWaiter<boolean | undefined>(
+    plugin,
+    'peard:set-fullscreen',
+  );
+  const nextQueueResponse = createResponseWaiter<QueueResponse>(
+    plugin,
+    'peard:get-queue-response',
+  );
 
   app.openapi(routes.previous, (ctx) => {
     controller.previous();
@@ -648,18 +675,9 @@ export const register = (
   });
 
   app.openapi(routes.getShuffleState, async (ctx) => {
-    const stateResponsePromise = new Promise<boolean>((resolve) => {
-      ipcMain.once(
-        'peard:get-shuffle-response',
-        (_, isShuffled: boolean | undefined) => {
-          return resolve(!!isShuffled);
-        },
-      );
-
-      controller.requestShuffleInformation();
-    });
-
-    const isShuffled = await stateResponsePromise;
+    const isShuffled = !!(await nextShuffleResponse(
+      controller.requestShuffleInformation,
+    ));
 
     ctx.status(200);
     return ctx.json({ state: isShuffled });
@@ -711,18 +729,9 @@ export const register = (
   });
 
   app.openapi(routes.getFullscreenState, async (ctx) => {
-    const stateResponsePromise = new Promise<boolean>((resolve) => {
-      ipcMain.once(
-        'peard:set-fullscreen',
-        (_, isFullscreen: boolean | undefined) => {
-          return resolve(!!isFullscreen);
-        },
-      );
-
-      controller.requestFullscreenInformation();
-    });
-
-    const fullscreen = await stateResponsePromise;
+    const fullscreen = !!(await nextFullscreenResponse(
+      controller.requestFullscreenInformation,
+    ));
 
     ctx.status(200);
     return ctx.json({ state: fullscreen });
@@ -747,15 +756,7 @@ export const register = (
 
   // Queue
   const queueInfo = async (ctx: Context) => {
-    const queueResponsePromise = new Promise<QueueResponse>((resolve) => {
-      ipcMain.once('peard:get-queue-response', (_, queue: QueueResponse) => {
-        return resolve(queue);
-      });
-
-      controller.requestQueueInformation();
-    });
-
-    const info = await queueResponsePromise;
+    const info = await nextQueueResponse(controller.requestQueueInformation);
 
     if (!info) {
       ctx.status(204);
@@ -769,15 +770,7 @@ export const register = (
   app.openapi(routes.queueInfo, queueInfo);
 
   app.openapi(routes.nextSongInfo, async (ctx) => {
-    const queueResponsePromise = new Promise<QueueResponse>((resolve) => {
-      ipcMain.once('peard:get-queue-response', (_, queue: QueueResponse) => {
-        return resolve(queue);
-      });
-
-      controller.requestQueueInformation();
-    });
-
-    const queue = await queueResponsePromise;
+    const queue = await nextQueueResponse(controller.requestQueueInformation);
 
     if (!queue?.items || queue.items.length === 0) {
       ctx.status(204);

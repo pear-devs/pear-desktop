@@ -5,41 +5,48 @@ const ignored = {
   types: ['mousewheel', 'keydown', 'keyup'],
 } as const;
 
-type CustomElementPrototype = typeof Element.prototype & {
-  _addEventListener?: typeof Element.prototype.addEventListener;
-};
-
-function overrideAddEventListener() {
+/**
+ * Ignores YTM's own wheel/key listeners on the volume sliders until the page
+ * finished loading. Returns a function that restores `addEventListener` if
+ * that didn't happen yet.
+ */
+export const overrideListener = () => {
   // YO WHAT ARE YOU DOING NOW?!?!
   // Save native addEventListener
-  // @ts-expect-error - We know what we're doing
   // oxlint-disable-next-line typescript/unbound-method
-  Element.prototype._addEventListener = Element.prototype.addEventListener;
+  const original = Element.prototype.addEventListener;
   // Override addEventListener to Ignore specific events in volume-slider
   Element.prototype.addEventListener = function (
+    this: Element,
     type: string,
-    listener: (event: Event) => void,
-    useCapture = false,
+    listener: EventListenerOrEventListenerObject,
+    options?: AddEventListenerOptions | boolean,
   ) {
-    if (!(ignored.id.includes(this.id) && ignored.types.includes(type))) {
-      (this as CustomElementPrototype)._addEventListener!(type, listener, useCapture);
+    if (
+      !(
+        (ignored.id as readonly string[]).includes(this.id) &&
+        (ignored.types as readonly string[]).includes(type)
+      )
+    ) {
+      original.call(this, type, listener, options);
     } else if (window.electronIs.dev()) {
       console.log(`Ignoring event: "${this.id}.${type}()"`);
     }
   };
-}
 
-export const overrideListener = () => {
-  overrideAddEventListener();
+  let restored = false;
+  const restore = () => {
+    if (restored) return;
+    restored = true;
+    Element.prototype.addEventListener = original;
+  };
+
   // Restore original function after finished loading to avoid keeping Element.prototype altered
-  window.addEventListener(
-    'load',
-    () => {
-      Element.prototype.addEventListener = (
-        Element.prototype as CustomElementPrototype
-      )._addEventListener!;
-      (Element.prototype as CustomElementPrototype)._addEventListener = undefined;
-    },
-    { once: true },
-  );
+  if (document.readyState === 'complete') restore();
+  else window.addEventListener('load', restore, { once: true });
+
+  return () => {
+    window.removeEventListener('load', restore);
+    restore();
+  };
 };

@@ -1,36 +1,35 @@
+import { createRoot } from 'solid-js';
+
 import { createRenderer } from '@/utils';
 import { waitForElement } from '@/utils/wait-for-element';
 
-import { disposeReactiveRoot } from './reactive-root';
-import { setConfig, setCurrentTime } from './renderer';
+import { applyLineEffect, setConfig, setCurrentTime } from './renderer';
 import { fetchLyrics } from './store';
-import { selectors, tabStates } from './utils';
+import { selectors, tabStates, unmountLyrics } from './utils';
 
-import type { SyncedLyricsPluginConfig } from '../types';
+import type { syncedLyricsConfig } from '../types';
 import type { SongInfo } from '@/providers/song-info';
-import type { RendererContext } from '@/types/contexts';
 import type { MusicPlayer } from '@/types/music-player';
 
+/** The player API of the running plugin (null while it isn't running). */
 export let _ytAPI: MusicPlayer | null = null;
-export let netFetch: (
-  url: string,
-  init?: RequestInit,
-) => Promise<[number, string, Record<string, string>]>;
 
-export const renderer = createRenderer<
-  {
-    observerCallback: MutationCallback;
-    observer?: MutationObserver;
-    videoDataChange: () => Promise<void>;
-    updateTimestampInterval?: NodeJS.Timeout | string | number;
-  },
-  SyncedLyricsPluginConfig
->({
-  onConfigChange(newConfig) {
-    setConfig(newConfig);
-  },
+export default createRenderer<typeof syncedLyricsConfig>((ctx) => {
+  setConfig({ ...ctx.config });
+  ctx.onConfigChange((newConfig) => setConfig({ ...newConfig }));
 
-  observerCallback(mutations: MutationRecord[]) {
+  createRoot((dispose) => {
+    applyLineEffect();
+    ctx.onCleanup(dispose);
+  });
+
+  ctx.onCleanup(() => {
+    unmountLyrics();
+    _ytAPI = null;
+    setConfig(null);
+  });
+
+  const observer = new MutationObserver((mutations) => {
     for (const mutation of mutations) {
       const header = mutation.target as HTMLElement;
 
@@ -43,49 +42,43 @@ export const renderer = createRenderer<
           break;
       }
     }
-  },
+  });
+  ctx.onCleanup(() => observer.disconnect());
 
-  async onPlayerApiReady(api: MusicPlayer) {
-    _ytAPI = api;
+  let updateTimestampInterval: ReturnType<typeof setInterval> | undefined;
 
-    api.addEventListener('videodatachange', this.videoDataChange);
+  const videoDataChange = async () => {
+    updateTimestampInterval ??= ctx.setInterval(
+      () => setCurrentTime((_ytAPI?.getCurrentTime() ?? 0) * 1000),
+      100,
+    );
 
-    await this.videoDataChange();
-  },
-  async videoDataChange() {
-    if (!this.updateTimestampInterval) {
-      this.updateTimestampInterval = setInterval(
-        () => setCurrentTime((_ytAPI?.getCurrentTime() ?? 0) * 1000),
-        100,
-      );
-    }
-
-    // prettier-ignore
-    this.observer ??= new MutationObserver(this.observerCallback);
-    this.observer.disconnect();
+    observer.disconnect();
 
     // Force the lyrics tab to be enabled at all times.
     const header = await waitForElement<HTMLElement>(selectors.head);
+    if (ctx.signal.aborted) return;
     {
       header.removeAttribute('disabled');
       tabStates[header.ariaSelected ?? 'false']();
     }
 
-    this.observer.observe(header, { attributes: true });
+    observer.observe(header, { attributes: true });
     header.removeAttribute('disabled');
-  },
+  };
 
-  async start(ctx: RendererContext<SyncedLyricsPluginConfig>) {
-    netFetch = ctx.ipc.invoke.bind(ctx.ipc, 'synced-lyrics:fetch');
+  ctx.onPlayerApiReady(async (api) => {
+    _ytAPI = api;
 
-    setConfig(await ctx.getConfig());
+    api.addEventListener('videodatachange', videoDataChange);
+    ctx.onCleanup(() =>
+      api.removeEventListener('videodatachange', videoDataChange),
+    );
 
-    ctx.ipc.on('peard:update-song-info', (info: SongInfo) => {
-      fetchLyrics(info);
-    });
-  },
+    await videoDataChange();
+  });
 
-  stop() {
-    disposeReactiveRoot();
-  },
+  ctx.ipc.core.on('peard:update-song-info', (info: SongInfo) => {
+    fetchLyrics(info);
+  });
 });

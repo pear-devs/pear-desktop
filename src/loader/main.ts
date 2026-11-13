@@ -48,10 +48,15 @@ const createContext = (instance: Instance): AnyBackendContext => {
         cleanups.add(() => ipcMain.removeListener(channel, wrapper));
       },
       once(channel, listener) {
-        const wrapper = (_: IpcMainEvent, ...args: unknown[]) =>
+        let unregister = () => {};
+        const wrapper = (_: IpcMainEvent, ...args: unknown[]) => {
+          unregister();
           listener(...args);
+        };
         ipcMain.once(channel, wrapper);
-        cleanups.add(() => ipcMain.removeListener(channel, wrapper));
+        unregister = cleanups.add(() =>
+          ipcMain.removeListener(channel, wrapper),
+        );
       },
       handle(channel, handler) {
         ipcMain.handle(channel, (_, ...args: unknown[]) => handler(...args));

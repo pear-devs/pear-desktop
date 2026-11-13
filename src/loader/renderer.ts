@@ -51,12 +51,13 @@ const createContext = (instance: Instance): AnyRendererContext => {
         );
       },
       once(channel, listener) {
-        let off = () => {};
-        off = window.ipcRenderer.on(channel, (_, ...args: unknown[]) => {
+        let unregister = () => {};
+        const off = window.ipcRenderer.on(channel, (_, ...args: unknown[]) => {
           off();
+          unregister();
           listener(...args);
         });
-        cleanups.add(() => off());
+        unregister = cleanups.add(off);
       },
       send: (channel, ...args) => window.ipcRenderer.send(channel, ...args),
       invoke: <T>(channel: string, ...args: unknown[]) =>

@@ -8,44 +8,45 @@ import {
   isPlayerMenu,
 } from '@/plugins/utils/renderer/check';
 import { getSongMenu } from '@/providers/dom-elements';
+import { createRenderer } from '@/utils';
 
 import { PictureInPictureButton } from './templates/picture-in-picture-button';
 
-import type { PictureInPicturePluginConfig } from './index';
-import type { RendererContext } from '@/types/contexts';
-import type { MusicPlayer } from '@/types/music-player';
+import type { PictureInPictureIpc, pictureInPictureConfig } from './types';
 
-export const onPlayerApiReady = async (
-  _: MusicPlayer,
-  { ipc, getConfig }: RendererContext<PictureInPicturePluginConfig>,
-) => {
-  const config = await getConfig();
+export default createRenderer<
+  typeof pictureInPictureConfig,
+  PictureInPictureIpc
+>((ctx) => {
+  // Options are read when used.
+  ctx.onConfigChange(() => {});
 
-  const togglePictureInPicture = async () => {
-    if ((await getConfig()).useNativePiP) {
-      const isInPiP = document.pictureInPictureElement !== null;
-      const video = document.querySelector<HTMLVideoElement>('video');
-      const togglePiP = () =>
-        isInPiP
-          ? document.exitPictureInPicture()
-          : video?.requestPictureInPicture();
+  ctx.onPlayerApiReady(() => {
+    const togglePictureInPicture = async () => {
+      if (ctx.config.useNativePiP) {
+        const isInPiP = document.pictureInPictureElement !== null;
+        const video = document.querySelector<HTMLVideoElement>('video');
+        const togglePiP = () =>
+          isInPiP
+            ? document.exitPictureInPicture()
+            : video?.requestPictureInPicture();
 
-      try {
-        await togglePiP();
-        document.querySelector<HTMLButtonElement>('#icon')?.click(); // Close the menu
-        return true;
-      } catch {}
-    }
+        try {
+          await togglePiP();
+          document.querySelector<HTMLButtonElement>('#icon')?.click(); // Close the menu
+          return true;
+        } catch {}
+      }
 
-    ipc.send('plugin:toggle-picture-in-picture');
-    return false;
-  };
+      ctx.ipc.send('toggle');
+      return false;
+    };
 
-  if (config.hotkey) {
-    const hotkeyEvent = toKeyEvent(config.hotkey);
-    window.addEventListener('keydown', (event) => {
+    ctx.listen(window, 'keydown', (event) => {
+      const { hotkey } = ctx.config;
       if (
-        keyEventAreEqual(event, hotkeyEvent) &&
+        hotkey &&
+        keyEventAreEqual(event, toKeyEvent(hotkey)) &&
         !document.querySelector<HTMLElement & { opened: boolean }>(
           'ytmusic-search-box',
         )?.opened
@@ -53,45 +54,44 @@ export const onPlayerApiReady = async (
         togglePictureInPicture();
       }
     });
-  }
 
-  const exitFullScreenButton = document.querySelector<HTMLButtonElement>(
-    '.exit-fullscreen-button',
-  );
-  const getPlayMinimizeButton = () =>
-    document.querySelector('.player-minimize-button');
-  const appLayout = document.querySelector<HTMLElement>('ytmusic-app-layout');
-  const expandMenu = document.querySelector<HTMLElement>('#expanding-menu');
-  const middleControls =
-    document.querySelector<HTMLButtonElement>('.middle-controls');
-  const playerPage = document.querySelector<
-    HTMLElement & { playerPageOpen_: boolean }
-  >('ytmusic-player-page');
-  const togglePlayerPageButton = document.querySelector<HTMLButtonElement>(
-    '.toggle-player-page-button',
-  );
-  const fullScreenButton =
-    document.querySelector<HTMLButtonElement>('.fullscreen-button');
-  const player = document.querySelector<
-    HTMLVideoElement & { onDoubleClick_: (() => void) | undefined }
-  >('#player');
-  const onPlayerDblClick = player?.onDoubleClick_;
-  const mouseLeaveEventListener = () => middleControls?.click();
+    const exitFullScreenButton = document.querySelector<HTMLButtonElement>(
+      '.exit-fullscreen-button',
+    );
+    const getPlayMinimizeButton = () =>
+      document.querySelector('.player-minimize-button');
+    const appLayout = document.querySelector<HTMLElement>('ytmusic-app-layout');
+    const expandMenu = document.querySelector<HTMLElement>('#expanding-menu');
+    const middleControls =
+      document.querySelector<HTMLButtonElement>('.middle-controls');
+    const playerPage = document.querySelector<
+      HTMLElement & { playerPageOpen_: boolean }
+    >('ytmusic-player-page');
+    const togglePlayerPageButton = document.querySelector<HTMLButtonElement>(
+      '.toggle-player-page-button',
+    );
+    const fullScreenButton =
+      document.querySelector<HTMLButtonElement>('.fullscreen-button');
+    const player = document.querySelector<
+      HTMLVideoElement & { onDoubleClick_: (() => void) | undefined }
+    >('#player');
+    const onPlayerDblClick = player?.onDoubleClick_;
+    const mouseLeaveEventListener = () => middleControls?.click();
 
-  const titleBar = document.querySelector<HTMLElement>(
-    'nav[data-ytmd-main-panel]',
-  );
+    const titleBar = document.querySelector<HTMLElement>(
+      'nav[data-ytmd-main-panel]',
+    );
 
-  const pipClickEventListener = async (e: Event) => {
-    e.stopPropagation();
-    e.preventDefault();
-    await togglePictureInPicture();
-  };
+    const pipClickEventListener = async (e: Event) => {
+      e.stopPropagation();
+      e.preventDefault();
+      await togglePictureInPicture();
+    };
 
-  ipc.on('peard:pip-toggle', (isPip: boolean) => {
-    if (exitFullScreenButton && player) {
+    const setPiP = (isPip: boolean) => {
+      if (!exitFullScreenButton || !player) return;
       if (isPip) {
-        exitFullScreenButton?.addEventListener('click', pipClickEventListener);
+        exitFullScreenButton.addEventListener('click', pipClickEventListener);
         getPlayMinimizeButton()?.removeEventListener(
           'click',
           pipClickEventListener,
@@ -125,48 +125,63 @@ export const onPlayerApiReady = async (
           titleBar.style.display = 'flex';
         }
       }
+    };
+
+    let isPip = false;
+    ctx.ipc.on('pipToggle', (value) => {
+      isPip = value;
+      setPiP(value);
+    });
+    ctx.onCleanup(() => {
+      if (isPip) setPiP(false);
+      getPlayMinimizeButton()?.removeEventListener(
+        'click',
+        pipClickEventListener,
+      );
+    });
+
+    getPlayMinimizeButton()?.addEventListener('click', pipClickEventListener);
+
+    const pipButtonContainer = document.createElement('div');
+    pipButtonContainer.classList.add(
+      'style-scope',
+      'menu-item',
+      'ytmusic-menu-popup-renderer',
+    );
+    pipButtonContainer.setAttribute('aria-disabled', 'false');
+    pipButtonContainer.setAttribute('aria-selected', 'false');
+    pipButtonContainer.setAttribute('role', 'option');
+    pipButtonContainer.setAttribute('tabindex', '-1');
+
+    const dispose = render(
+      () => (
+        <PictureInPictureButton
+          onClick={togglePictureInPicture}
+          text={t('plugins.picture-in-picture.templates.button')}
+        />
+      ),
+      pipButtonContainer,
+    );
+    ctx.onCleanup(() => {
+      dispose();
+      pipButtonContainer.remove();
+    });
+
+    const popupContainer = document.querySelector('ytmusic-popup-container');
+    if (popupContainer) {
+      ctx.observe(popupContainer, { childList: true, subtree: true }, () => {
+        const menu = getSongMenu();
+
+        if (
+          menu?.contains(pipButtonContainer) ||
+          !isMusicOrVideoTrack() ||
+          !isPlayerMenu(menu)
+        ) {
+          return;
+        }
+
+        menu?.prepend(pipButtonContainer);
+      });
     }
   });
-
-  getPlayMinimizeButton()?.addEventListener('click', pipClickEventListener);
-
-  const pipButtonContainer = document.createElement('div');
-  pipButtonContainer.classList.add(
-    'style-scope',
-    'menu-item',
-    'ytmusic-menu-popup-renderer',
-  );
-  pipButtonContainer.setAttribute('aria-disabled', 'false');
-  pipButtonContainer.setAttribute('aria-selected', 'false');
-  pipButtonContainer.setAttribute('role', 'option');
-  pipButtonContainer.setAttribute('tabindex', '-1');
-
-  render(
-    () => (
-      <PictureInPictureButton
-        onClick={togglePictureInPicture}
-        text={t('plugins.picture-in-picture.templates.button')}
-      />
-    ),
-    pipButtonContainer,
-  );
-
-  const observer = new MutationObserver(() => {
-    const menu = getSongMenu();
-
-    if (
-      menu?.contains(pipButtonContainer) ||
-      !isMusicOrVideoTrack() ||
-      !isPlayerMenu(menu)
-    ) {
-      return;
-    }
-
-    menu?.prepend(pipButtonContainer);
-  });
-
-  observer.observe(document.querySelector('ytmusic-popup-container')!, {
-    childList: true,
-    subtree: true,
-  });
-};
+});

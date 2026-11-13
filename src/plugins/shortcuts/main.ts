@@ -1,94 +1,87 @@
-import { type BrowserWindow, globalShortcut } from 'electron';
+import { globalShortcut } from 'electron';
 import is from 'electron-is';
-import { register as registerElectronLocalShortcut } from 'electron-localshortcut';
+import {
+  register as registerLocalShortcut,
+  unregister as unregisterLocalShortcut,
+} from 'electron-localshortcut';
 
 import { getSongControls } from '@/providers/song-controls';
+import { createBackend } from '@/utils';
 
 import { registerMPRIS } from './mpris';
 
-import type { ShortcutMappingType, ShortcutsPluginConfig } from './index';
-import type { BackendContext } from '@/types/contexts';
+import type { shortcutsConfig } from './types';
 
-function _registerGlobalShortcut(
-  webContents: Electron.WebContents,
-  shortcut: string,
-  action: (webContents: Electron.WebContents) => void,
-) {
-  globalShortcut.register(shortcut, () => {
-    action(webContents);
-  });
-}
+type ShortcutAction = 'previous' | 'playPause' | 'next';
 
-function _registerLocalShortcut(
-  win: BrowserWindow,
-  shortcut: string,
-  action: (webContents: Electron.WebContents) => void,
-) {
-  registerElectronLocalShortcut(win, shortcut, () => {
-    action(win.webContents);
-  });
-}
-
-export const onMainLoad = async ({
-  getConfig,
-  window,
-}: BackendContext<ShortcutsPluginConfig>) => {
-  const config = await getConfig();
-
+export default createBackend<typeof shortcutsConfig>((ctx) => {
+  const { window } = ctx;
   const songControls = getSongControls(window);
   const { playPause, next, previous } = songControls;
 
-  if (config.overrideMediaKeys) {
-    _registerGlobalShortcut(window.webContents, 'MediaPlayPause', playPause);
-    _registerGlobalShortcut(window.webContents, 'MediaNextTrack', next);
-    _registerGlobalShortcut(window.webContents, 'MediaPreviousTrack', previous);
-  }
+  // Undoes the current shortcuts; redone on config changes, so that MPRIS
+  // keeps running.
+  let unregisterAll: (() => void)[] = [];
+  const unregisterShortcuts = () => {
+    for (const unregister of unregisterAll) unregister();
+    unregisterAll = [];
+  };
+  ctx.onCleanup(unregisterShortcuts);
 
-  if (is.linux()) {
-    registerMPRIS(window);
-  }
+  const registerGlobal = (accelerator: string, action: () => void) => {
+    if (globalShortcut.register(accelerator, action)) {
+      unregisterAll.push(() => globalShortcut.unregister(accelerator));
+    }
+  };
 
-  const { global, local } = config;
-  const shortcutOptions = { global, local };
+  const registerLocal = (accelerator: string, action: () => void) => {
+    registerLocalShortcut(window, accelerator, action);
+    unregisterAll.push(() => {
+      if (!window.isDestroyed()) unregisterLocalShortcut(window, accelerator);
+    });
+  };
 
-  for (const optionType in shortcutOptions) {
-    registerAllShortcuts(
-      shortcutOptions[optionType as 'global' | 'local'],
-      optionType,
-    );
-  }
+  const registerShortcuts = () => {
+    if (ctx.config.overrideMediaKeys) {
+      registerGlobal('MediaPlayPause', playPause);
+      registerGlobal('MediaNextTrack', next);
+      registerGlobal('MediaPreviousTrack', previous);
+    }
 
-  function registerAllShortcuts(container: ShortcutMappingType, type: string) {
-    for (const _action in container) {
-      // HACK: _action is detected as string, but it's actually a key of ShortcutMappingType
-      const action = _action as keyof ShortcutMappingType;
+    const { global, local } = ctx.config;
+    const shortcutOptions = { global, local };
 
-      if (!container[action]) {
-        continue; // Action accelerator is empty
-      }
+    for (const type of ['global', 'local'] as const) {
+      const container = shortcutOptions[type];
+      for (const action of Object.keys(container) as ShortcutAction[]) {
+        const accelerator = container[action];
+        if (!accelerator) {
+          continue; // Action accelerator is empty
+        }
 
-      console.debug(
-        `Registering ${type} shortcut`,
-        container[action],
-        ':',
-        action,
-      );
-      const actionCallback: () => void = songControls[action];
-      if (typeof actionCallback !== 'function') {
-        console.warn('Invalid action', action);
-        continue;
-      }
+        console.debug(`Registering ${type} shortcut`, accelerator, ':', action);
+        const actionCallback: () => void = songControls[action];
+        if (typeof actionCallback !== 'function') {
+          console.warn('Invalid action', action);
+          continue;
+        }
 
-      if (type === 'global') {
-        _registerGlobalShortcut(
-          window.webContents,
-          container[action],
-          actionCallback,
-        );
-      } else {
-        // Type === "local"
-        _registerLocalShortcut(window, local[action], actionCallback);
+        if (type === 'global') {
+          registerGlobal(accelerator, actionCallback);
+        } else {
+          registerLocal(accelerator, actionCallback);
+        }
       }
     }
+  };
+
+  if (is.linux()) {
+    registerMPRIS(ctx);
   }
-};
+
+  registerShortcuts();
+  ctx.onConfigChange(() => {
+    unregisterShortcuts();
+    registerShortcuts();
+  });
+});

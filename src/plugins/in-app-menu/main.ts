@@ -1,37 +1,47 @@
 import {
-  BrowserWindow,
+  type BrowserWindow,
   Menu,
   type MenuItem,
-  ipcMain,
-  nativeImage,
   type WebContents,
 } from 'electron';
-import { register } from 'electron-localshortcut';
+import { register, unregister } from 'electron-localshortcut';
 
-import type { InAppMenuConfig } from './constants';
-import type { BackendContext } from '@/types/contexts';
+import { createBackend } from '@/utils';
 
-export const onMainLoad = ({
-  window: win,
-  ipc: { handle, send },
-}: BackendContext<InAppMenuConfig>) => {
-  win.on('close', () => {
-    send('close-all-in-app-menu-panel');
+import type { InAppMenuIpc, inAppMenuConfig } from './types';
+
+const TOGGLE_SHORTCUT = '`';
+
+/** A menu (item) as plain data the renderer can receive. */
+const serialize = <T>(value: T): T =>
+  JSON.parse(
+    JSON.stringify(value, (key: string, it: unknown) =>
+      key !== 'commandsMap' && key !== 'menu' ? it : undefined,
+    ),
+  ) as T;
+
+export default createBackend<typeof inAppMenuConfig, InAppMenuIpc>((ctx) => {
+  const { window: win, ipc } = ctx;
+
+  ctx.listen(win, 'close', () => {
+    ipc.send('closeAllPanels');
   });
 
-  win.once('ready-to-show', () => {
-    register(win, '`', () => {
-      send('toggle-in-app-menu');
+  let shortcutRegistered = false;
+  ctx.listen(win, 'ready-to-show', () => {
+    if (shortcutRegistered) return;
+    shortcutRegistered = true;
+    register(win, TOGGLE_SHORTCUT, () => {
+      ipc.send('toggleMenu');
     });
   });
+  ctx.onCleanup(() => {
+    if (shortcutRegistered && !win.isDestroyed()) {
+      unregister(win, TOGGLE_SHORTCUT);
+    }
+  });
 
-  handle('get-menu', () =>
-    JSON.parse(
-      JSON.stringify(Menu.getApplicationMenu(), (key: string, value: unknown) =>
-        key !== 'commandsMap' && key !== 'menu' ? value : undefined,
-      ),
-    ),
-  );
+  ipc.handle('getMenu', () => serialize(Menu.getApplicationMenu()));
 
   const getMenuItemById = (commandId: number): MenuItem | null => {
     const menu = Menu.getApplicationMenu();
@@ -51,7 +61,7 @@ export const onMainLoad = ({
     return target;
   };
 
-  ipcMain.handle('peard:menu-event', (event, commandId: number) => {
+  ipc.handle('menuEvent', (commandId) => {
     const target = getMenuItemById(commandId);
     if (target)
       (
@@ -60,30 +70,19 @@ export const onMainLoad = ({
           args1: BrowserWindow | null,
           args3: WebContents,
         ) => void
-      )(undefined, BrowserWindow.fromWebContents(event.sender), event.sender);
+      )(undefined, win, win.webContents);
   });
 
-  handle('get-menu-by-id', (commandId: number) => {
-    const result = getMenuItemById(commandId);
+  ipc.handle('getMenuById', (commandId) =>
+    serialize(getMenuItemById(commandId)),
+  );
 
-    return JSON.parse(
-      JSON.stringify(result, (key: string, value: unknown) =>
-        key !== 'commandsMap' && key !== 'menu' ? value : undefined,
-      ),
-    );
-  });
+  ipc.handle('windowIsMaximized', () => win.isMaximized());
 
-  handle('window-is-maximized', () => win.isMaximized());
-
-  handle('window-close', () => win.close());
-  handle('window-minimize', () => win.minimize());
-  handle('window-maximize', () => win.maximize());
-  win.on('maximize', () => send('window-maximize'));
-  handle('window-unmaximize', () => win.unmaximize());
-  win.on('unmaximize', () => send('window-unmaximize'));
-
-  handle('image-path-to-data-url', (imagePath: string) => {
-    const nativeImageIcon = nativeImage.createFromPath(imagePath);
-    return nativeImageIcon?.toDataURL();
-  });
-};
+  ipc.handle('windowClose', () => win.close());
+  ipc.handle('windowMinimize', () => win.minimize());
+  ipc.handle('windowMaximize', () => win.maximize());
+  ctx.listen(win, 'maximize', () => ipc.send('maximized'));
+  ipc.handle('windowUnmaximize', () => win.unmaximize());
+  ctx.listen(win, 'unmaximize', () => ipc.send('unmaximized'));
+});

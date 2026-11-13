@@ -1,6 +1,7 @@
 import { t } from '@/i18n';
-import { type MusicPlayer } from '@/types/music-player';
 import { createPlugin } from '@/utils';
+
+import type { MusicPlayer } from '@/types/music-player';
 
 const lazySafeTry = (...fns: (() => void)[]) => {
   for (const fn of fns) {
@@ -24,79 +25,13 @@ const createCompressorNode = (
   return compressor;
 };
 
-class Storage {
-  lastSource: MediaElementAudioSourceNode | null = null;
-  lastContext: AudioContext | null = null;
-  lastCompressor: DynamicsCompressorNode | null = null;
-
-  connected: WeakMap<MediaElementAudioSourceNode, DynamicsCompressorNode> =
-    new WeakMap();
-
-  connectToCompressor = (
-    source: MediaElementAudioSourceNode | null = null,
-    audioContext: AudioContext | null = null,
-    compressor: DynamicsCompressorNode | null = null,
-  ): boolean => {
-    if (!(source && audioContext && compressor)) return false;
-
-    const current = this.connected.get(source);
-    if (current === compressor) return false;
-
-    this.lastSource = source;
-    this.lastContext = audioContext;
-    this.lastCompressor = compressor;
-
-    if (current) {
-      lazySafeTry(
-        () => source.disconnect(current),
-        () => current.disconnect(audioContext.destination),
-      );
-    } else {
-      lazySafeTry(() => source.disconnect(audioContext.destination));
-    }
-
-    try {
-      source.connect(compressor);
-      compressor.connect(audioContext.destination);
-      this.connected.set(source, compressor);
-      return true;
-    } catch (error) {
-      console.error('connectToCompressor failed', error);
-      return false;
-    }
-  };
-
-  disconnectCompressor = (): boolean => {
-    const source = this.lastSource;
-    const audioContext = this.lastContext;
-    if (!(source && audioContext)) return false;
-    const current = this.connected.get(source);
-    if (!current) return false;
-
-    lazySafeTry(
-      () => source.connect(audioContext.destination),
-      () => source.disconnect(current),
-      () => current.disconnect(audioContext.destination),
-    );
-    this.connected.delete(source);
-    return true;
-  };
-}
-
-const storage = new Storage();
-
-const audioCanPlayHandler = ({
-  detail: { audioSource, audioContext },
-}: CustomEvent<Compressor>) => {
-  storage.connectToCompressor(
-    audioSource,
-    audioContext,
-    createCompressorNode(audioContext),
-  );
-};
+// The page's audio source and context (created once by the core renderer and
+// only announced on `peard:audio-can-play`), remembered so a restarted run can
+// reconnect at once instead of waiting for the next song.
+let lastAudio: Compressor | null = null;
 
 const ensureAudioContextLoad = (playerApi: MusicPlayer) => {
-  if (playerApi.getPlayerState() !== 1 || storage.lastContext) return;
+  if (playerApi.getPlayerState() !== 1 || lastAudio) return;
 
   playerApi.loadVideoById(
     playerApi.getPlayerResponse().videoDetails.videoId,
@@ -109,25 +44,57 @@ export default createPlugin({
   name: () => t('plugins.audio-compressor.name'),
   description: () => t('plugins.audio-compressor.description'),
 
-  renderer: {
-    onPlayerApiReady(playerApi) {
-      ensureAudioContextLoad(playerApi);
-    },
+  renderer(ctx) {
+    let connected: {
+      source: MediaElementAudioSourceNode;
+      audioContext: AudioContext;
+      compressor: DynamicsCompressorNode;
+    } | null = null;
 
-    start() {
-      document.addEventListener('peard:audio-can-play', audioCanPlayHandler, {
-        passive: true,
-      });
-      storage.connectToCompressor(
-        storage.lastSource,
-        storage.lastContext,
-        storage.lastCompressor,
+    const connect = ({ audioSource: source, audioContext }: Compressor) => {
+      lastAudio = { audioSource: source, audioContext };
+      if (connected?.source === source) return;
+
+      if (connected) {
+        const current = connected;
+        lazySafeTry(
+          () => current.source.disconnect(current.compressor),
+          () => current.compressor.disconnect(current.audioContext.destination),
+        );
+      } else {
+        lazySafeTry(() => source.disconnect(audioContext.destination));
+      }
+
+      const compressor = createCompressorNode(audioContext);
+      try {
+        source.connect(compressor);
+        compressor.connect(audioContext.destination);
+        connected = { source, audioContext, compressor };
+      } catch (error) {
+        console.error('connectToCompressor failed', error);
+        connected = null;
+      }
+    };
+
+    ctx.onCleanup(() => {
+      if (!connected) return;
+      const { source, audioContext, compressor } = connected;
+      lazySafeTry(
+        () => source.connect(audioContext.destination),
+        () => source.disconnect(compressor),
+        () => compressor.disconnect(audioContext.destination),
       );
-    },
+      connected = null;
+    });
 
-    stop() {
-      document.removeEventListener('peard:audio-can-play', audioCanPlayHandler);
-      storage.disconnectCompressor();
-    },
+    ctx.listen(
+      document,
+      'peard:audio-can-play',
+      ({ detail }) => connect(detail),
+      { passive: true },
+    );
+    if (lastAudio) connect(lastAudio);
+
+    ctx.onPlayerApiReady(ensureAudioContextLoad);
   },
 });

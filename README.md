@@ -145,119 +145,104 @@ Note that this has it's own limitations (for example, GUI doesn't work on, at le
 
 Using plugins, you can:
 
-- manipulate the app - the `BrowserWindow` from electron is passed to the plugin handler
+- manipulate the app: the `BrowserWindow` from electron is available to the plugin's backend
 - change the front by manipulating the HTML/CSS
+
+A plugin lives in `src/plugins/YOUR-PLUGIN-NAME/` and has up to three parts, one
+per process: `backend` (main process), `preload` and `renderer` (the page).
+Each part is a function that receives a context (`ctx`) and sets the plugin up.
+Anything registered through `ctx` is undone automatically when the plugin is
+turned off, so there is no `stop` to write.
 
 ### Creating a plugin
 
-Create a folder in `src/plugins/YOUR-PLUGIN-NAME`:
+`index.ts` must export the plugin as `export default createPlugin({...})`:
 
-- `index.ts`: the main file of the plugin
 ```typescript
-import style from './style.css?inline'; // import style as inline
+import style from './style.css?inline';
 
+import { t } from '@/i18n';
+import { config } from '@/plugins/utils/common/config';
 import { createPlugin } from '@/utils';
 
 export default createPlugin({
-  name: 'Plugin Label',
-  restartNeeded: true, // if value is true, ytmusic show restart dialog
+  name: () => t('plugins.my-plugin.name'),
+  description: () => t('plugins.my-plugin.description'),
+  restartNeeded: false, // true: turning it on or off asks to restart the app
+  // The config schema: defaults, types, and the plugin's menu items.
   config: {
-    enabled: false,
-  }, // your custom config
-  stylesheets: [style], // your custom style,
-  menu: async ({ getConfig, setConfig }) => {
-    // All *Config methods are wrapped Promise<T>
-    const config = await getConfig();
-    return [
-      {
-        label: 'menu',
-        submenu: [1, 2, 3].map((value) => ({
-          label: `value ${value}`,
-          type: 'radio',
-          checked: config.value === value,
-          click() {
-            setConfig({ value });
-          },
-        })),
-      },
-    ];
+    showClock: config.bool(true, { label: 'plugins.my-plugin.menu.clock' }),
+    size: config.number(12, {
+      label: 'plugins.my-plugin.menu.size',
+      options: [{ value: 12 }, { value: 16 }, { value: 20 }],
+    }),
+    lastSeen: config.hidden(''), // stored, never shown
   },
-  backend: {
-    start({ window, ipc }) {
-      window.maximize();
+  stylesheets: [style], // added to the page while the plugin is on
+  renderer(ctx) {
+    ctx.config.showClock; // typed: boolean
 
-      // you can communicate with renderer plugin
-      ipc.handle('some-event', () => {
-        return 'hello';
-      });
-    },
-    // it fired when config changed
-    onConfigChange(newConfig) { /* ... */ },
-    // it fired when plugin disabled
-    stop(context) { /* ... */ },
-  },
-  renderer: {
-    async start(context) {
-      console.log(await context.ipc.invoke('some-event'));
-    },
-    // Only renderer available hook
-    onPlayerApiReady(api, context) {
-      // set plugin config easily
-      context.setConfig({ myConfig: api.getVolume() });
-    },
-    onConfigChange(newConfig) { /* ... */ },
-    stop(_context) { /* ... */ },
-  },
-  preload: {
-    async start({ getConfig }) {
-      const config = await getConfig();
-    },
-    onConfigChange(newConfig) {},
-    stop(_context) {},
+    const timer = document.createElement('span');
+    document.body.append(timer);
+    ctx.onCleanup(() => timer.remove());
+
+    ctx.setInterval(() => (timer.textContent = new Date().toLocaleTimeString()), 1000);
+    ctx.listen(document, 'keydown', (event) => { /* KeyboardEvent */ });
+
+    ctx.onPlayerApiReady((api) => {
+      ctx.setConfig({ lastSeen: api.getVideoData().video_id });
+    });
   },
 });
 ```
 
-### Common use cases
+- **Config:** `config.bool`, `number`, `string`, `select`, `shortcut`, `list`,
+  `multi`, `group` (nesting) and `hidden` (runtime state, or shapes no editor
+  exists for). Labelled fields get menu items generated; the optional `menu`
+  adds custom items after them. Read the config with `ctx.config` (always
+  current) and save it with `ctx.setConfig(partial)`.
+- **Config changes** made elsewhere (menu, another process) restart the part,
+  unless it registers `ctx.onConfigChange(listener)` to apply them itself.
+- **Cleanup:** `ctx.listen`, `ctx.setTimeout`/`ctx.setInterval`, `ctx.observe`
+  and `ctx.addStyle` (renderer), `ctx.signal` (aborted on stop), and
+  `ctx.onCleanup(fn)` for anything else. A part may also return a cleanup function.
 
-- injecting custom CSS: create a `style.css` file in the same folder then:
+### Talking between the backend and the renderer
+
+Declare the plugin's IPC as a type, and both sides get typed arguments and results.
+Channels are namespaced per plugin automatically.
 
 ```typescript
+// types.ts
+import { config } from '@/plugins/utils/common/config';
+
+export const myConfig = { folder: config.string('', { label: 'plugins.my-plugin.menu.folder' }) };
+
+export type MyIpc = {
+  invoke: { save(title: string): boolean }; // renderer → backend, with a result
+  toRenderer: { progress: [value: number] }; // backend → renderer
+  toBackend: { cancel: [] }; // renderer → backend
+};
+
+// backend.ts
+export default createBackend<typeof myConfig, MyIpc>((ctx) => {
+  ctx.ipc.handle('save', async (title) => { /* … */ return true; });
+  ctx.ipc.on('cancel', () => { /* … */ });
+  ctx.ipc.send('progress', 0.5);
+});
+
+// renderer.ts
+export default createRenderer<typeof myConfig, MyIpc>(async (ctx) => {
+  const saved = await ctx.ipc.invoke('save', 'My song'); // Promise<boolean>
+  ctx.ipc.on('progress', (value) => { /* number */ });
+});
+
 // index.ts
-import style from './style.css?inline'; // import style as inline
-
-import { createPlugin } from '@/utils';
-
-export default createPlugin({
-  name: 'Plugin Label',
-  restartNeeded: true, // if value is true, pear-desktop will show a restart dialog
-  config: {
-    enabled: false,
-  }, // your custom config
-  stylesheets: [style], // your custom style
-  renderer() {} // define renderer hook
-});
+export default createPlugin({ name, config: myConfig, backend, renderer });
 ```
 
-- If you want to change the HTML:
-
-```typescript
-import { createPlugin } from '@/utils';
-
-export default createPlugin({
-  name: 'Plugin Label',
-  restartNeeded: true, // if value is true, ytmusic will show the restart dialog
-  config: {
-    enabled: false,
-  }, // your custom config
-  renderer() {
-    console.log('hello from renderer');
-  } // define renderer hook
-});
-```
-
-- communicating between the front and back: can be done using the ipcMain module from electron. See `index.ts` file and
-  example in `sponsorblock` plugin.
+The core's own channels (`peard:*`) are available as `ctx.ipc.core`, and are
+cleaned up with the plugin as well.
 
 ## Build
 

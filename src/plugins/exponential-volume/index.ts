@@ -7,14 +7,11 @@ export default createPlugin({
   name: () => t('plugins.exponential-volume.name'),
   description: () => t('plugins.exponential-volume.description'),
   restartNeeded: true,
-  config: {
-    enabled: false,
-  },
-  renderer: {
-    onPlayerApiReady(playerApi) {
+  renderer(ctx) {
+    ctx.onPlayerApiReady((playerApi) => {
       const syncVolume = (playerApi: MusicPlayer) => {
         if (playerApi.getPlayerState() === 3) {
-          setTimeout(() => syncVolume(playerApi), 0);
+          ctx.setTimeout(() => syncVolume(playerApi), 0);
           return;
         }
 
@@ -35,6 +32,8 @@ export default createPlugin({
         'volume',
       );
       Object.defineProperty(HTMLMediaElement.prototype, 'volume', {
+        configurable: true,
+        enumerable: propertyDescriptor?.enumerable,
         get(this: HTMLMediaElement) {
           const lowVolume =
             (propertyDescriptor?.get?.call(this) as number) ?? 0;
@@ -59,7 +58,23 @@ export default createPlugin({
           propertyDescriptor?.set?.call(this, lowVolume);
         },
       });
+
+      ctx.onCleanup(() => {
+        if (propertyDescriptor) {
+          Object.defineProperty(
+            HTMLMediaElement.prototype,
+            'volume',
+            propertyDescriptor,
+          );
+        } else {
+          delete (HTMLMediaElement.prototype as Partial<HTMLMediaElement>)
+            .volume;
+        }
+        // Back to a linear volume
+        playerApi.setVolume(playerApi.getVolume());
+      });
+
       syncVolume(playerApi);
-    },
+    });
   },
 });

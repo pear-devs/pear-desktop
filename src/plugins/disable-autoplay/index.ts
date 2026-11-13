@@ -1,84 +1,49 @@
 import { t } from '@/i18n';
+import { config } from '@/plugins/utils/common/config';
 import { createPlugin } from '@/utils';
 
-import type { MusicPlayer } from '@/types/music-player';
 import type { VideoDataChanged } from '@/types/video-data-changed';
 
-export type DisableAutoPlayPluginConfig = {
-  enabled: boolean;
-  applyOnce: boolean;
-};
-
-export default createPlugin<
-  unknown,
-  unknown,
-  {
-    config: DisableAutoPlayPluginConfig | null;
-    api: MusicPlayer | null;
-    eventListener: (event: CustomEvent<VideoDataChanged>) => void;
-    timeUpdateListener: (e: Event) => void;
-  },
-  DisableAutoPlayPluginConfig
->({
+export default createPlugin({
   name: () => t('plugins.disable-autoplay.name'),
   description: () => t('plugins.disable-autoplay.description'),
   restartNeeded: false,
   config: {
-    enabled: false,
-    applyOnce: false,
+    applyOnce: config.bool(false, {
+      label: 'plugins.disable-autoplay.menu.apply-once',
+    }),
   },
-  menu: async ({ getConfig, setConfig }) => {
-    const config = await getConfig();
+  renderer: (ctx) => {
+    ctx.onPlayerApiReady((api) => {
+      let done = false;
 
-    return [
-      {
-        label: t('plugins.disable-autoplay.menu.apply-once'),
-        type: 'checkbox',
-        checked: config.applyOnce,
-        async click() {
-          const nowConfig = await getConfig();
-          setConfig({
-            applyOnce: !nowConfig.applyOnce,
-          });
+      const timeUpdateListener = (e: Event) => {
+        if (e.target instanceof HTMLVideoElement) {
+          e.target.pause();
+        }
+      };
+
+      ctx.listen(
+        document,
+        'videodatachange',
+        (event: CustomEvent<VideoDataChanged>) => {
+          if (done) return;
+          if (ctx.config.applyOnce) done = true;
+
+          if (event.detail.name === 'dataloaded') {
+            api.pauseVideo();
+            const video = document.querySelector<HTMLVideoElement>('video');
+            if (video) {
+              ctx.listen(video, 'timeupdate', timeUpdateListener, {
+                once: true,
+              });
+            }
+          }
         },
-      },
-    ];
-  },
-  renderer: {
-    config: null,
-    api: null,
-    eventListener(event: CustomEvent<VideoDataChanged>) {
-      if (this.config?.applyOnce) {
-        document.removeEventListener('videodatachange', this.eventListener);
-      }
+      );
+    });
 
-      if (event.detail.name === 'dataloaded') {
-        this.api?.pauseVideo();
-        document
-          .querySelector<HTMLVideoElement>('video')
-          ?.addEventListener('timeupdate', this.timeUpdateListener, {
-            once: true,
-          });
-      }
-    },
-    timeUpdateListener(e: Event) {
-      if (e.target instanceof HTMLVideoElement) {
-        e.target.pause();
-      }
-    },
-    async start({ getConfig }) {
-      this.config = await getConfig();
-    },
-    onPlayerApiReady(api) {
-      this.api = api;
-
-      document.addEventListener('videodatachange', this.eventListener);
-    },
-    stop() {
-      document.removeEventListener('videodatachange', this.eventListener);
-    },
-    onConfigChange(newConfig) {
-      this.config = newConfig;
-    },
+    // `applyOnce` is read on the next video change; nothing to redo now.
+    ctx.onConfigChange(() => {});
   },
 });

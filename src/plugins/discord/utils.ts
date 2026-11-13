@@ -2,7 +2,7 @@ import { APPLICATION_NAME } from '@/i18n';
 
 import { HANGUL_FILLER } from './constants';
 
-import type { DiscordPluginConfig } from './index';
+import type { DiscordPluginConfig } from './types';
 import type { SongInfo } from '@/providers/song-info';
 import type { GatewayActivityButton } from 'discord-api-types/v10';
 

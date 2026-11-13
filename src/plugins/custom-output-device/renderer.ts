@@ -1,80 +1,66 @@
 import { createRenderer } from '@/utils';
 
-import type { CustomOutputPluginConfig } from './index';
-import type { RendererContext } from '@/types/contexts';
-import type { MusicPlayer } from '@/types/music-player';
+import type { customOutputConfig } from './types';
 
-const updateDeviceList = async (
-  context: RendererContext<CustomOutputPluginConfig>,
-) => {
-  const newDevices: Record<string, string> = {};
-  const devices = await navigator.mediaDevices
-    .enumerateDevices()
-    .then((devices) =>
-      devices.filter((device) => device.kind === 'audiooutput'),
-    );
-  for (const device of devices) {
-    newDevices[device.deviceId] = device.label;
-  }
-  const options = await context.getConfig();
-  options.devices = newDevices;
-  context.setConfig(options);
+type SinkableAudioContext = AudioContext & {
+  setSinkId?: (sinkId: string) => Promise<void>;
 };
 
 const updateSinkId = async (
-  audioContext?: AudioContext & {
-    setSinkId?: (sinkId: string) => Promise<void>;
-  },
+  audioContext?: SinkableAudioContext,
   sinkId?: string,
 ) => {
-  if (!audioContext || !sinkId) return;
-  if (!('setSinkId' in audioContext)) return;
-
+  if (!audioContext || sinkId === undefined) return;
   if (typeof audioContext.setSinkId === 'function') {
     await audioContext.setSinkId(sinkId);
   }
 };
 
-export const renderer = createRenderer<
-  {
-    options?: CustomOutputPluginConfig;
-    audioContext?: AudioContext;
-    audioCanPlayHandler: (event: CustomEvent<Compressor>) => Promise<void>;
-  },
-  CustomOutputPluginConfig
->({
-  async audioCanPlayHandler({ detail: { audioContext } }) {
-    this.audioContext = audioContext;
-    await updateSinkId(audioContext, this.options!.output);
-  },
+export default createRenderer<typeof customOutputConfig>((ctx) => {
+  let audioContext: SinkableAudioContext | undefined;
 
-  async onPlayerApiReady(_: MusicPlayer, context) {
-    this.options = await context.getConfig();
-    await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    navigator.mediaDevices.ondevicechange = async () =>
-      await updateDeviceList(context);
+  const updateDeviceList = async () => {
+    const devices = await navigator.mediaDevices
+      .enumerateDevices()
+      .then((devices) =>
+        devices.filter((device) => device.kind === 'audiooutput'),
+      );
+    if (ctx.signal.aborted) return;
+    const newDevices: Record<string, string> = {};
+    for (const device of devices) {
+      newDevices[device.deviceId] = device.label;
+    }
+    await ctx.setConfig({ devices: newDevices });
+  };
 
-    document.addEventListener(
-      'peard:audio-can-play',
-      this.audioCanPlayHandler,
-      {
-        once: true,
-        passive: true,
-      },
-    );
-    await updateDeviceList(context);
-  },
+  ctx.onConfigChange(async (config) => {
+    if (config.output) await updateSinkId(audioContext, config.output);
+  });
 
-  stop() {
-    document.removeEventListener(
-      'peard:audio-can-play',
-      this.audioCanPlayHandler,
-    );
-    navigator.mediaDevices.ondevicechange = null;
-  },
+  // Back to the system's default output
+  ctx.onCleanup(() => updateSinkId(audioContext, '').catch(() => {}));
 
-  async onConfigChange(config) {
-    this.options = config;
-    await updateSinkId(this.audioContext, config.output);
-  },
+  ctx.listen(
+    document,
+    'peard:audio-can-play',
+    async ({ detail }) => {
+      audioContext = detail.audioContext;
+      if (ctx.config.output)
+        await updateSinkId(audioContext, ctx.config.output);
+    },
+    { once: true, passive: true },
+  );
+
+  ctx.onPlayerApiReady(async () => {
+    // Asked only so device labels are available; the stream isn't used.
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: true,
+      video: false,
+    });
+    for (const track of stream.getTracks()) track.stop();
+    if (ctx.signal.aborted) return;
+
+    ctx.listen(navigator.mediaDevices, 'devicechange', updateDeviceList);
+    await updateDeviceList();
+  });
 });

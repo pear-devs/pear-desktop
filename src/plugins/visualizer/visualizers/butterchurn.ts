@@ -3,7 +3,7 @@ import ButterchurnPresets from 'butterchurn-presets';
 
 import { Visualizer } from './visualizer';
 
-import type { VisualizerPluginConfig } from '../index';
+import type { VisualizerPluginConfig } from '../types';
 
 class ButterchurnVisualizer extends Visualizer {
   private readonly visualizer: ReturnType<typeof Butterchurn.createVisualizer>;

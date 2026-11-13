@@ -22,27 +22,49 @@ export const selectors = {
   },
 };
 
+let unmount: (() => void) | undefined;
+// Bumped on unmount, so a mount still waiting for the tab is dropped
+let generation = 0;
+
 export const tabStates: Record<string, () => void> = {
   true: async () => {
     setIsVisible(true);
 
-    let container = document.querySelector('#synced-lyrics-container');
-    if (container) return;
+    if (document.querySelector('#synced-lyrics-container')) return;
 
+    const mountGeneration = generation;
     const tabRenderer = await waitForElement<HTMLElement>(
       selectors.body.tabRenderer,
     );
+    if (
+      mountGeneration !== generation ||
+      document.querySelector('#synced-lyrics-container')
+    ) {
+      return;
+    }
 
-    container = Object.assign(document.createElement('div'), {
+    const container = Object.assign(document.createElement('div'), {
       id: 'synced-lyrics-container',
     });
 
     tabRenderer.appendChild(container);
-    render(() => <LyricsRenderer />, container);
+    const dispose = render(() => <LyricsRenderer />, container);
+    unmount = () => {
+      dispose();
+      container.remove();
+    };
   },
   false: () => {
     setIsVisible(false);
   },
+};
+
+/** Removes the lyrics from the page. */
+export const unmountLyrics = () => {
+  generation++;
+  unmount?.();
+  unmount = undefined;
+  setIsVisible(false);
 };
 
 export const canonicalize = (text: string) => {

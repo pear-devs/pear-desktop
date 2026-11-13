@@ -4,14 +4,12 @@ import { type BrowserWindow } from 'electron';
 import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
 
-import { type ScrobblerPluginConfig } from './index';
-import { type SetConfType, backend } from './main';
-
+import type { ScrobblerPluginConfig, SetConfType } from './types';
 import type { MenuTemplate } from '@/menu';
 import type { MenuContext } from '@/types/contexts';
 
 async function promptLastFmOptions(
-  options: ScrobblerPluginConfig,
+  options: Readonly<ScrobblerPluginConfig>,
   setConfig: SetConfType,
   window: BrowserWindow,
 ) {
@@ -44,20 +42,21 @@ async function promptLastFmOptions(
   );
 
   if (output) {
+    const lastfm: { apiKey?: string; secret?: string } = {};
     if (output[0]) {
-      options.scrobblers.lastfm.apiKey = output[0];
+      lastfm.apiKey = output[0];
     }
 
     if (output[1]) {
-      options.scrobblers.lastfm.secret = output[1];
+      lastfm.secret = output[1];
     }
 
-    setConfig(options);
+    await setConfig({ scrobblers: { lastfm } });
   }
 }
 
 async function promptListenbrainzOptions(
-  options: ScrobblerPluginConfig,
+  options: Readonly<ScrobblerPluginConfig>,
   setConfig: SetConfType,
   window: BrowserWindow,
 ) {
@@ -73,57 +72,25 @@ async function promptListenbrainzOptions(
   );
 
   if (output) {
-    options.scrobblers.listenbrainz.token = output;
-    setConfig(options);
+    await setConfig({ scrobblers: { listenbrainz: { token: output } } });
   }
 }
 
-export const onMenu = async ({
-  window,
-  getConfig,
-  setConfig,
-}: MenuContext<ScrobblerPluginConfig>): Promise<MenuTemplate> => {
-  const config = await getConfig();
-
+export const onMenu = (
+  ctx: MenuContext<ScrobblerPluginConfig>,
+): MenuTemplate => {
+  const { window, config } = ctx;
+  const setConfig: SetConfType = (patch) => ctx.setConfig(patch);
   return [
-    {
-      label: t('plugins.scrobbler.menu.scrobble-other-media'),
-      type: 'checkbox',
-      checked: Boolean(config.scrobbleOtherMedia),
-      click(item) {
-        config.scrobbleOtherMedia = item.checked;
-        setConfig(config);
-      },
-    },
-    {
-      label: t('plugins.scrobbler.menu.scrobble-alternative-title'),
-      type: 'checkbox',
-      checked: Boolean(config.alternativeTitles),
-      click(item) {
-        config.alternativeTitles = item.checked;
-        setConfig(config);
-      },
-    },
-    {
-      label: t('plugins.scrobbler.menu.scrobble-alternative-artist'),
-      type: 'checkbox',
-      checked: Boolean(config.alternativeArtist),
-      click(item) {
-        config.alternativeArtist = item.checked;
-        setConfig(config);
-      },
-    },
     {
       label: 'Last.fm',
       submenu: [
         {
           label: t('main.menu.plugins.enabled'),
           type: 'checkbox',
-          checked: Boolean(config.scrobblers.lastfm?.enabled),
+          checked: Boolean(config.scrobblers.lastfm.enabled),
           click(item) {
-            backend.toggleScrobblers(config, window);
-            config.scrobblers.lastfm.enabled = item.checked;
-            setConfig(config);
+            setConfig({ scrobblers: { lastfm: { enabled: item.checked } } });
           },
         },
         {
@@ -140,11 +107,11 @@ export const onMenu = async ({
         {
           label: t('main.menu.plugins.enabled'),
           type: 'checkbox',
-          checked: Boolean(config.scrobblers.listenbrainz?.enabled),
+          checked: Boolean(config.scrobblers.listenbrainz.enabled),
           click(item) {
-            backend.toggleScrobblers(config, window);
-            config.scrobblers.listenbrainz.enabled = item.checked;
-            setConfig(config);
+            setConfig({
+              scrobblers: { listenbrainz: { enabled: item.checked } },
+            });
           },
         },
         {

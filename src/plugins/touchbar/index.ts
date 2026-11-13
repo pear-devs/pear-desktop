@@ -3,7 +3,7 @@ import { nativeImage, type NativeImage, TouchBar } from 'electron';
 
 import { t } from '@/i18n';
 import { getSongControls } from '@/providers/song-controls';
-import { registerCallback, SongInfoEvent } from '@/providers/song-info';
+import { SongInfoEvent } from '@/providers/song-info';
 import { Platform } from '@/types/plugins';
 import { createPlugin } from '@/utils';
 
@@ -12,10 +12,8 @@ export default createPlugin({
   description: () => t('plugins.touchbar.description'),
   restartNeeded: true,
   platform: Platform.macOS,
-  config: {
-    enabled: false,
-  },
-  backend({ window }) {
+  backend(ctx) {
+    const { window } = ctx;
     const {
       TouchBarButton,
       TouchBarLabel,
@@ -78,11 +76,14 @@ export default createPlugin({
       getSongControls(window);
 
     // If the page is ready, register the callback
-    window.once('ready-to-show', () => {
+    let ready = false;
+    ctx.listen(window, 'ready-to-show', () => {
+      if (ready) return;
+      ready = true;
       controls = [previous, playPause, next, dislike, like];
 
       // Register the callback
-      registerCallback((songInfo, event) => {
+      ctx.onSongInfo((songInfo, event) => {
         if (event === SongInfoEvent.TimeChanged) return;
         // Song information changed, so lets update the touchBar
 
@@ -101,6 +102,10 @@ export default createPlugin({
 
         window.setTouchBar(touchBar);
       });
+    });
+
+    ctx.onCleanup(() => {
+      if (!window.isDestroyed()) window.setTouchBar(null);
     });
   },
 });
