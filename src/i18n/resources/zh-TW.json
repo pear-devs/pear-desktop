@@ -406,6 +406,27 @@
         "no-captions": "這首歌曲沒有可用的字幕"
       }
     },
+    "chromecast": {
+      "description": "在 Google Cast 接收器上播放 YouTube Music",
+      "dialog": {
+        "cancel": "取消",
+        "choose-device": "選擇投射設備",
+        "no-devices": {
+          "detail": "檢查此電腦和您的 Cast 接收器是否位於同一網絡，且接收器上是否啟用了投射。",
+          "mac-detail": "在 macOS 上，在系統設定中允許此應用程式的本機網路存取。",
+          "message": "找不到 Google Cast 設備"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "停止投射",
+          "message": "停止投射到 {{receiverName}}？"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "啟動時自動投射到最後一個設備"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "新增時鐘至應用程式上方",
       "menu": {

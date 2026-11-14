@@ -406,6 +406,27 @@
         "no-captions": "Det finns inga undertexter för den här låten"
       }
     },
+    "chromecast": {
+      "description": "Spela YouTube Music på Google Cast-mottagare",
+      "dialog": {
+        "cancel": "Avbryt",
+        "choose-device": "Välj en Cast-enhet",
+        "no-devices": {
+          "detail": "Kontrollera att den här datorn och din Cast-mottagare finns i samma nätverk och att casting är aktiverat på mottagaren.",
+          "mac-detail": "På macOS, tillåt åtkomst till lokalt nätverk för den här appen i Systeminställningar.",
+          "message": "Inga Google Cast-enheter hittades"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Sluta casta",
+          "message": "Sluta casta till {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Casta automatiskt till den sista enheten vid start"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Lägg till en klocka i navigeringsfältet",
       "menu": {

@@ -219,6 +219,27 @@
           "label": "Sahib adı"
         }
       }
+    },
+    "chromecast": {
+      "description": "Google Cast qəbuledicilərində YouTube Music oxuyun",
+      "dialog": {
+        "cancel": "Ləğv et",
+        "choose-device": "Yayım cihazı seçin",
+        "no-devices": {
+          "detail": "Bu kompüter və Yayım qəbuledicinizin eyni şəbəkədə olduğunu və qəbuledicidə yayımın aktiv olduğunu yoxlayın.",
+          "mac-detail": "macOS-da, Sistem Parametrlərində bu tətbiq üçün Yerli Şəbəkəyə giriş icazəsi verin.",
+          "message": "Heç bir Google Yayım cihazı tapılmadı"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Yayımlamağı dayandırın",
+          "message": "{{receiverName}}-ə yayım dayandırılsın?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Başlanğıcda sonuncu cihaza avtomatik yayım"
+      },
+      "name": "Google Cast"
     }
   }
 }

@@ -388,6 +388,27 @@
         "no-captions": "Tekstityksiä ei ole saatavilla tälle kappaleelle"
       }
     },
+    "chromecast": {
+      "description": "Toista YouTube Music Google Cast -vastaanottimilla",
+      "dialog": {
+        "cancel": "Peruuta",
+        "choose-device": "Valitse Cast-laite",
+        "no-devices": {
+          "detail": "Tarkista, että tämä tietokone ja Cast-vastaanotin ovat samassa verkossa ja että suoratoisto on käytössä vastaanottimessa.",
+          "mac-detail": "Salli macOS:n paikallisverkkokäyttö tälle sovellukselle Järjestelmäasetuksissa.",
+          "message": "Google Cast -laitteita ei löytynyt"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Lopeta suoratoisto",
+          "message": "Lopetetaanko suoratoisto kohteeseen {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Suoratoista automaattisesti viimeiseen laitteeseen käynnistyksen yhteydessä"
+      },
+      "name": "Google Cast"
+    },
     "compact-sidebar": {
       "description": "Asettaa sivupalkin aina kompaktiin tilaan",
       "name": "Kompakti sivupalkki"

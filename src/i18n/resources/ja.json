@@ -406,6 +406,27 @@
         "no-captions": "この曲には字幕がありません"
       }
     },
+    "chromecast": {
+      "description": "Google Cast レシーバーで YouTube Music を再生する",
+      "dialog": {
+        "cancel": "キャンセル",
+        "choose-device": "キャストデバイスを選択してください",
+        "no-devices": {
+          "detail": "このコンピュータとキャスト レシーバーが同じネットワーク上にあり、レシーバーでキャストが有効になっていることを確認してください。",
+          "mac-detail": "macOS では、システム設定でこのアプリのローカル ネットワーク アクセスを許可します。",
+          "message": "Google Cast デバイスが見つかりませんでした"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "キャストを停止する",
+          "message": "{{receiverName}} へのキャストを停止しますか?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "起動時に最後のデバイスに自動キャストします"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "ナビゲーションバーに時計を追加",
       "menu": {

@@ -406,6 +406,27 @@
         "no-captions": "אין כתוביות זמינות לשיר הזה"
       }
     },
+    "chromecast": {
+      "description": "הפעל את YouTube Music במקלטי Google Cast",
+      "dialog": {
+        "cancel": "בטל",
+        "choose-device": "בחר מכשיר Cast",
+        "no-devices": {
+          "detail": "בדוק שהמחשב הזה והמקלט Cast שלך נמצאים באותה רשת, ושההעברה מופעלת במקלט.",
+          "mac-detail": "ב-macOS, אפשר גישה לרשת מקומית עבור אפליקציה זו בהגדרות המערכת.",
+          "message": "לא נמצאו מכשירי Google Cast"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "הפסק את השידור",
+          "message": "להפסיק את השידור אל {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "העברה אוטומטית למכשיר האחרון בעת האתחול"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "הוסף שעון לפס הניווט",
       "menu": {

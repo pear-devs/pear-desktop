@@ -406,6 +406,27 @@
         "no-captions": "Nincsenek elérhető feliratok ehhez a dalhoz"
       }
     },
+    "chromecast": {
+      "description": "Játssz YouTube Music-ot a Google Cast vevőkészülékeken",
+      "dialog": {
+        "cancel": "Mégse",
+        "choose-device": "Válasszon Cast-eszközt",
+        "no-devices": {
+          "detail": "Ellenőrizze, hogy ez a számítógép és a Cast-vevő ugyanarra a hálózatra csatlakozik-e, és hogy az átküldés engedélyezve van-e a vevőn.",
+          "mac-detail": "MacOS rendszeren engedélyezze a helyi hálózati hozzáférést ehhez az alkalmazáshoz a Rendszerbeállításokban.",
+          "message": "Nem találhatók Google Cast-eszközök"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Állítsa le az átküldést",
+          "message": "Leállítja az átküldést {{receiverName}}-re?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Automatikus átküldés az utolsó eszközre indításkor"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Óra hozzáadása a navigációs sávhoz",
       "menu": {

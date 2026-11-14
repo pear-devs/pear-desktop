@@ -220,6 +220,27 @@
         }
       }
     },
+    "chromecast": {
+      "description": "Pustite YouTube Music na Google Cast prijemnicima",
+      "dialog": {
+        "cancel": "Otkaži",
+        "choose-device": "Odaberite Cast uređaj",
+        "no-devices": {
+          "detail": "Provjerite jesu li ovaj računar i vaš Cast prijemnik na istoj mreži i da li je emitiranje omogućeno na prijemniku.",
+          "mac-detail": "Na macOS-u dozvolite pristup lokalnoj mreži za ovu aplikaciju u postavkama sistema.",
+          "message": "Nije pronađen nijedan Google Cast uređaj"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Zaustavi emitovanje",
+          "message": "Zaustaviti emitiranje na {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Automatsko prebacivanje na posljednji uređaj pri pokretanju"
+      },
+      "name": "Google Cast"
+    },
     "discord": {
       "menu": {
         "set-status-display-type": {

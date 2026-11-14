@@ -316,6 +316,27 @@
         }
       }
     },
+    "chromecast": {
+      "description": "Afspil YouTube Music på Google Cast-modtagere",
+      "dialog": {
+        "cancel": "Annuller",
+        "choose-device": "Vælg en Cast-enhed",
+        "no-devices": {
+          "detail": "Tjek, at denne computer og din Cast-modtager er på det samme netværk, og at casting er aktiveret på modtageren.",
+          "mac-detail": "På macOS skal du tillade lokal netværksadgang for denne app i Systemindstillinger.",
+          "message": "Der blev ikke fundet nogen Google Cast-enheder"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Stop castingen",
+          "message": "Vil du stoppe med at caste til {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Automatisk cast til den sidste enhed ved opstart"
+      },
+      "name": "Google Cast"
+    },
     "crossfade": {
       "description": "Fade imellem sange",
       "menu": {

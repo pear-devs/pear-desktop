@@ -40,6 +40,10 @@ import {
 import { refreshMenu, setApplicationMenu } from '@/menu';
 import musicPlayerCss from '@/music-player.css?inline';
 import { defaultAuthProxyConfig } from '@/plugins/auth-proxy-adapter/config';
+import {
+  shouldAutoCast,
+  type AutoCastSettings,
+} from '@/plugins/chromecast/auto-cast';
 import { fileExists, injectCSS, injectCSSAsFile } from '@/plugins/utils/main';
 import { restart, setupAppControls } from '@/providers/app-controls';
 import {
@@ -401,12 +405,14 @@ async function createMainWindow() {
 
     const scaledX = windowX;
     const scaledY = windowY;
+    const halfWidth = scaledWidth / 2;
+    const halfHeight = scaledHeight / 2;
 
     if (
-      scaledX + (scaledWidth / 2) < display.bounds.x - 8 || // Left
-      scaledX + (scaledWidth / 2) > display.bounds.x + display.bounds.width || // Right
+      scaledX + halfWidth < display.bounds.x - 8 || // Left
+      scaledX + halfWidth > display.bounds.x + display.bounds.width || // Right
       scaledY < display.bounds.y - 8 || // Top
-      scaledY + (scaledHeight / 2) > display.bounds.y + display.bounds.height // Bottom
+      scaledY + halfHeight > display.bounds.y + display.bounds.height // Bottom
     ) {
       // Window is offscreen
       if (is.dev()) {
@@ -433,9 +439,16 @@ async function createMainWindow() {
     win.setAlwaysOnTop(true);
   }
 
-  const urlToLoad = config.get('options.resumeOnStart')
-    ? config.get('url')
-    : config.defaultConfig.url;
+  const castStartupConfig =
+    config.plugins.getOptions<AutoCastSettings>('chromecast');
+  const autoCastOnStartup = shouldAutoCast(castStartupConfig);
+  // Start at the idle home page while the Cast backend tries the last receiver.
+  // If it cannot connect, the Cast bridge restores the saved local URL.
+  const urlToLoad = autoCastOnStartup
+    ? config.defaultConfig.url
+    : config.get('options.resumeOnStart')
+      ? config.get('url')
+      : config.defaultConfig.url;
   win.on('closed', onClosed);
 
   win.on('move', () => {

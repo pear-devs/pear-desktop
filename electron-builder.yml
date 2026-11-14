@@ -5,6 +5,7 @@ files:
   - dist
   - assets
   - license
+  - THIRD_PARTY_CAST.md
   - '!node_modules'
   - 'node_modules/custom-electron-prompt/**'
   - 'node_modules/@ghostery/adblocker-electron-preload/**'
@@ -15,6 +16,10 @@ asarUnpack:
   - assets
 mac:
   identity: null
+  extendInfo:
+    NSLocalNetworkUsageDescription: 'Find Google Cast speakers on your local network.'
+    NSBonjourServices:
+      - '_googlecast._tcp'
   target:
     - target: dmg
       arch:

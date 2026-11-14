@@ -7,5 +7,28 @@
         "initialize-failed": "Pamyłka padčas inicyjalizacyi dadatku \"{{pluginName}}\""
       }
     }
+  },
+  "plugins": {
+    "chromecast": {
+      "description": "Prajhravajcie YouTube Music na prymačach Google Cast",
+      "dialog": {
+        "cancel": "Admianic",
+        "choose-device": "Vybierycie pryładu Cast",
+        "no-devices": {
+          "detail": "Pierakanajciesia, što hety kamp'iutar i vaš pryiomnik Cast znachodziacca ŭ adnoj sietcy i što transłiacyia ŭkłiučana na prymačy.",
+          "mac-detail": "U macOS dazvołcie hetamu pryłaženniu dostup da łakałnaj sietki ŭ naładach sistemy.",
+          "message": "Pryłady Google Cast nie znojdzieny"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Spynic transłiacyiu",
+          "message": "Spynic transłiacyiu na {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Aŭtamatyčnaia pieradača na apošniuiu pryładu pry zapusku"
+      },
+      "name": "Google Cast"
+    }
   }
 }

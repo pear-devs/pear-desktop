@@ -406,6 +406,27 @@
         "no-captions": "Sin subtítulos para ésta canción"
       }
     },
+    "chromecast": {
+      "description": "Reproduzca YouTube Music en receptores de Google Cast",
+      "dialog": {
+        "cancel": "Cancelar",
+        "choose-device": "Elige un dispositivo de transmisión",
+        "no-devices": {
+          "detail": "Verifique que esta computadora y su receptor Cast estén en la misma red y que la transmisión esté habilitada en el receptor.",
+          "mac-detail": "En macOS, permita el acceso a la red local para esta aplicación en Configuración del sistema.",
+          "message": "No se encontraron dispositivos Google Cast"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "dejar de transmitir",
+          "message": "¿Dejar de transmitir a {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Transmisión automática al último dispositivo al inicio"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Añade un reloj a la barra de navegación",
       "menu": {

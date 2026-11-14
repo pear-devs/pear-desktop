@@ -345,6 +345,27 @@
         "title": "Opnaðu skjátextavali"
       }
     },
+    "chromecast": {
+      "description": "Spilaðu YouTube Music á Google Cast móttakara",
+      "dialog": {
+        "cancel": "Hætta við",
+        "choose-device": "Veldu Cast tæki",
+        "no-devices": {
+          "detail": "Athugaðu hvort þessi tölva og Cast móttakarinn þinn séu á sama neti og að útsending sé virkjuð á móttakaranum.",
+          "mac-detail": "Í macOS, leyfðu Local Network aðgang fyrir þetta forrit í kerfisstillingum.",
+          "message": "Engin Google Cast tæki fundust"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Stöðva útsendingu",
+          "message": "Hætta að streyma í {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Sendu sjálfvirkt í síðasta tækið við ræsingu"
+      },
+      "name": "Google Cast"
+    },
     "compact-sidebar": {
       "description": "Stilltu hliðarstikuna alltaf í þétta stillingu",
       "name": "Fyrirferðarlítillhliðarstika"

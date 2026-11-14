@@ -352,6 +352,27 @@
         "title": "Odpri izbiro podnapisov"
       }
     },
+    "chromecast": {
+      "description": "Predvajajte YouTube Music na sprejemnikih Google Cast",
+      "dialog": {
+        "cancel": "Prekliči",
+        "choose-device": "Izberite napravo Cast",
+        "no-devices": {
+          "detail": "Preverite, ali sta ta računalnik in vaš sprejemnik Cast v istem omrežju in ali je predvajanje omogočeno na sprejemniku.",
+          "mac-detail": "V macOS dovolite dostop lokalnega omrežja za to aplikacijo v sistemskih nastavitvah.",
+          "message": "Naprav Google Cast ni bilo mogoče najti"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Ustavi oddajanje",
+          "message": "Ustaviti predvajanje na {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Samodejno predvajanje na zadnjo napravo ob zagonu"
+      },
+      "name": "Google Cast"
+    },
     "compact-sidebar": {
       "description": "Vedno izberi kompakten način stranske vrstice",
       "name": "Kompaktna stranska vrstica"

@@ -397,6 +397,27 @@
         "no-captions": "Selle loo jaoks pole subtiitreid saadaval"
       }
     },
+    "chromecast": {
+      "description": "Esitage YouTube Musicut Google Casti vastuvõtjates",
+      "dialog": {
+        "cancel": "Tühista",
+        "choose-device": "Valige Cast-seade",
+        "no-devices": {
+          "detail": "Kontrollige, kas see arvuti ja teie Casti vastuvõtja on samas võrgus ja kas ülekandmine on vastuvõtjas lubatud.",
+          "mac-detail": "MacOS-is lubage süsteemiseadetes sellele rakendusele juurdepääs kohalikule võrgule.",
+          "message": "Google Cast'i seadmeid ei leitud"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Peatage ülekandmine",
+          "message": "Kas lõpetada {{receiverName}}-le ülekandmine?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Automaatne ülekandmine käivitamisel viimasele seadmele"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Lisa navigeerimissibale kell",
       "menu": {

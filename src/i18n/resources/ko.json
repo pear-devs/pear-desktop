@@ -406,6 +406,27 @@
         "no-captions": "이 곡에는 자막이 없습니다"
       }
     },
+    "chromecast": {
+      "description": "Google Cast 수신기에서 YouTube Music을 재생하세요",
+      "dialog": {
+        "cancel": "취소",
+        "choose-device": "Cast 기기 선택",
+        "no-devices": {
+          "detail": "이 컴퓨터와 Cast 수신기가 동일한 네트워크에 있고 수신기에서 전송이 활성화되어 있는지 확인하세요.",
+          "mac-detail": "macOS에서는 시스템 설정에서 이 앱에 대한 로컬 네트워크 액세스를 허용하세요.",
+          "message": "Google Cast 기기를 찾을 수 없습니다."
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "전송 중지",
+          "message": "{{receiverName}}로 전송을 중지하시겠습니까?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "시작 시 마지막 기기로 자동 전송"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "네비게이션 바 옆 시계 추가하기",
       "menu": {

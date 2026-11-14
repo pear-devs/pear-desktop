@@ -101,6 +101,27 @@
     }
   },
   "plugins": {
+    "chromecast": {
+      "description": "Пуштете YouTube Music на ресиверите на Google Cast",
+      "dialog": {
+        "cancel": "Откажи",
+        "choose-device": "Изберете уред Cast",
+        "no-devices": {
+          "detail": "Проверете дали овој компјутер и вашиот Cast приемник се на иста мрежа и дали емитувањето е овозможено на ресиверот.",
+          "mac-detail": "На macOS, дозволете пристап до локална мрежа за оваа апликација во Системски поставки.",
+          "message": "Не се пронајдени уреди на Google Cast"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Престанете со кастингот",
+          "message": "Да се запре емитувањето на {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Автоматско емитување на последниот уред при стартување"
+      },
+      "name": "Google Cast"
+    },
     "video-toggle": {
       "menu": {
         "align": {

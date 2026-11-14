@@ -14,6 +14,7 @@ import {
   forceUnloadPreloadPlugin,
   loadAllPreloadPlugins,
 } from './loader/preload';
+import { setupCastBridge } from './plugins/chromecast/preload-bridge';
 
 // @ts-expect-error dummy
 globalThis.customElements = { define() {} };
@@ -83,6 +84,13 @@ contextBridge.exposeInMainWorld(
   'ELECTRON_RENDERER_URL',
   process.env.ELECTRON_RENDERER_URL,
 );
+
+if (
+  location.hostname === 'music.youtube.com' &&
+  config.plugins.getPlugins()?.chromecast?.enabled !== false
+) {
+  setupCastBridge();
+}
 
 const [path, script] = ipcRenderer.sendSync('get-renderer-script') as [
   string | null,

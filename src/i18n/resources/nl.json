@@ -406,6 +406,27 @@
         "no-captions": "Geen ondertitels beschikbaar voor dit lied"
       }
     },
+    "chromecast": {
+      "description": "Speel YouTube Music op Google Cast-ontvangers",
+      "dialog": {
+        "cancel": "Annuleer",
+        "choose-device": "Kies een Cast-apparaat",
+        "no-devices": {
+          "detail": "Controleer of deze computer en uw Cast-ontvanger zich op hetzelfde netwerk bevinden en of casten is ingeschakeld op de ontvanger.",
+          "mac-detail": "Op macOS: sta lokale netwerktoegang toe voor deze app in Systeeminstellingen.",
+          "message": "Geen Google Cast-apparaten gevonden"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Stop met casten",
+          "message": "Casten naar {{receiverName}} stoppen?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Automatisch casten naar het laatste apparaat bij het opstarten"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Voeg een klok toe aan de navigatiebalk",
       "menu": {

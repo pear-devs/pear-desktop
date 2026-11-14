@@ -406,6 +406,27 @@
         "no-captions": "Pre túto skladbu nie sú dostupné žiadne titulky"
       }
     },
+    "chromecast": {
+      "description": "Prehrávajte YouTube Music na prijímačoch Google Cast",
+      "dialog": {
+        "cancel": "Zrušiť",
+        "choose-device": "Vyberte zariadenie Cast",
+        "no-devices": {
+          "detail": "Skontrolujte, či sú tento počítač a váš prijímač Cast v rovnakej sieti a či je v prijímači povolené prenášanie.",
+          "mac-detail": "V systéme macOS povoľte tejto aplikácii prístup k miestnej sieti v nastaveniach systému.",
+          "message": "Nenašli sa žiadne zariadenia Google Cast"
+        },
+        "ok": "OK",
+        "stop": {
+          "confirm": "Zastaviť odovzdávanie",
+          "message": "Zastaviť prenášanie do {{receiverName}}?"
+        }
+      },
+      "menu": {
+        "auto-cast-on-startup": "Automaticky prenášať do posledného zariadenia pri spustení"
+      },
+      "name": "Google Cast"
+    },
     "clock": {
       "description": "Pridať hodiny do navigačnej lišty",
       "menu": {
