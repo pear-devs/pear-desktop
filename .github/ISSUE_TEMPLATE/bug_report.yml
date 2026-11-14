@@ -57,7 +57,6 @@ body:
     label: What CPU architecture are you using?
     options:
       - x64
-      - ia32
       - arm64 (including Apple Silicon)
       - Other (specify below)
   validations:

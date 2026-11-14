@@ -46,7 +46,7 @@
   },
   "engines": {
     "node": ">=22",
-    "pnpm": ">=11"
+    "pnpm": ">=12"
   },
   "dependencies": {
     "@dehoist/romanize-thai": "1.0.0",

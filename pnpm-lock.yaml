@@ -9,9 +9,9 @@ overrides:
   node-gyp: 13.1.0
   xml2js: 0.6.2
   node-fetch: 3.3.2
-  '@electron/universal': 3.0.4
-  '@babel/runtime': 8.0.0
-  '@xmldom/xmldom@<0.8.12': 0.8.13
+  '@electron/universal': 3.0.6
+  '@babel/runtime': 8.1.2
+  '@xmldom/xmldom@<0.8.12': 0.8.15
 
 patchedDependencies:
   '@malept/flatpak-bundler@0.4.0': c787371eeb2af011ea934e8818a0dad6d7dcb2df31bbb1686babc7231af0183c
@@ -461,8 +461,8 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
-  '@babel/runtime@8.0.0':
-    resolution: {integrity: sha512-sL6cvO2IfkSu/iU+zs2S/w01B7A8V7suXSIKEN4hPFFdZoiPGxrj5pAG0lCaqLWiEIrjKzdznIWuaLcxPR53qw==}
+  '@babel/runtime@8.1.2':
+    resolution: {integrity: sha512-Ay6HdEKZJAeGs6KKJ/ezCK5ssjFmkvUiR0TEGv/B1abyjLWrQ2RU+M507Ppk0NikhvVFhlEFC1/rHfCiYqSUcw==}
 
   '@babel/template@7.29.7':
     resolution: {integrity: sha512-puq+Gf35oI24FeN11LkoUQFqv9uwNeWpxXZi/Ji3rRIoKAzKnxRaZ+Gkj0vKS9ZCiTESfng1N9LyOyXvo+m+Gg==}
@@ -570,8 +570,8 @@ packages:
     peerDependencies:
       electron: '>= 13.0.0'
 
-  '@electron/universal@3.0.4':
-    resolution: {integrity: sha512-G7mNdfZIdPbx54dTorGlV7SN7nHAKlbJU1NjjeuEo7RzEMYBG62+tKpA2VrzocGcvFLxqJI5XYIknca9EijwOw==}
+  '@electron/universal@3.0.6':
+    resolution: {integrity: sha512-MonS1kfkZdSEkLZI0pdR/TCx8ecxwRSFm7sORfwIkDI9UaIbHnk4Mgeqq+Ob9qDQRV8LZ9+hHCmimpA9BRcNxw==}
     engines: {node: '>=22.12.0'}
 
   '@electron/windows-sign@1.2.2':
@@ -1562,10 +1562,9 @@ packages:
     resolution: {integrity: sha512-O/QEEAVe1klBhpvA6WpATzrtC6gnb9dqFFTZV/pl9gZpVlrhk/ZcTw6uPSA6d/FWlAD/hzsxX3ueLfVm8fq5xQ==}
     engines: {node: '>=20'}
 
-  '@xmldom/xmldom@0.8.13':
-    resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
+  '@xmldom/xmldom@0.8.15':
+    resolution: {integrity: sha512-/5NV/vDALVFDXgLmfsy9TRCBlKwO2LNBFzpzvb9iIj+jR+eSc6DLYYvVOdivT/jm7MtU6TebYuRmzEOI7w40UA==}
     engines: {node: '>=10.0.0'}
-    deprecated: this version has critical issues, please update to the latest version
 
   '@zeit/schemas@2.36.0':
     resolution: {integrity: sha512-7kjMwcChYEzMKjeex9ZFXkt1AyNov9R5HZtjBKVsmVpw7pa7ZtlCGvCBC2vnnXctaYN+aRI61HjIqeetZW5ROg==}
@@ -4323,7 +4322,7 @@ snapshots:
       '@babel/core': 7.29.13(supports-color@7.2.0)
       '@babel/helper-plugin-utils': 7.29.7
 
-  '@babel/runtime@8.0.0': {}
+  '@babel/runtime@8.1.2': {}
 
   '@babel/template@7.29.7':
     dependencies:
@@ -4492,7 +4491,7 @@ snapshots:
     dependencies:
       electron: 45.3.2(supports-color@7.2.0)
 
-  '@electron/universal@3.0.4(supports-color@7.2.0)':
+  '@electron/universal@3.0.6(supports-color@7.2.0)':
     dependencies:
       '@electron/asar': 4.2.0
       debug: 4.4.3(supports-color@7.2.0)
@@ -5312,7 +5311,7 @@ snapshots:
       '@vladfrangu/async_event_emitter': 2.4.7
       discord-api-types: 0.38.59
 
-  '@xmldom/xmldom@0.8.13': {}
+  '@xmldom/xmldom@0.8.15': {}
 
   '@zeit/schemas@2.36.0': {}
 
@@ -5377,7 +5376,7 @@ snapshots:
       '@electron/notarize': 2.5.0(supports-color@7.2.0)
       '@electron/osx-sign': 1.3.3(supports-color@7.2.0)
       '@electron/rebuild': 4.2.1(supports-color@7.2.0)
-      '@electron/universal': 3.0.4(supports-color@7.2.0)
+      '@electron/universal': 3.0.6(supports-color@7.2.0)
       '@malept/flatpak-bundler': 0.4.0(patch_hash=c787371eeb2af011ea934e8818a0dad6d7dcb2df31bbb1686babc7231af0183c)(supports-color@7.2.0)
       '@noble/hashes': 1.8.0
       '@peculiar/webcrypto': 1.7.1
@@ -5572,7 +5571,7 @@ snapshots:
 
   butterchurn-presets@3.0.0-beta.4:
     dependencies:
-      '@babel/runtime': 8.0.0
+      '@babel/runtime': 8.1.2
 
   butterchurn@3.0.0-beta.5:
     dependencies:
@@ -6700,7 +6699,7 @@ snapshots:
 
   kuroshiro@1.2.1:
     dependencies:
-      '@babel/runtime': 8.0.0
+      '@babel/runtime': 8.1.2
 
   lazy-val@1.0.5: {}
 
@@ -7189,7 +7188,7 @@ snapshots:
 
   plist@3.1.0:
     dependencies:
-      '@xmldom/xmldom': 0.8.13
+      '@xmldom/xmldom': 0.8.15
       base64-js: 1.5.1
       xmlbuilder: 15.1.1
 
