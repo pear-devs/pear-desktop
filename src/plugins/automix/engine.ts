@@ -10,8 +10,11 @@ import {
   type AnalyzedTrack,
 } from './decoder';
 import {
+  BASS_CUT_DB,
+  bassGain,
   CROSSFADE_REVERB,
   EFFECT_DEFAULTS,
+  neutralParamValue,
   styleOf,
   withBassSwap,
   effectName,
@@ -206,7 +209,8 @@ interface OutgoingChain {
   dry: GainNode;
   master: GainNode;
   highpass?: BiquadFilterNode;
-  lowShelf?: BiquadFilterNode;
+  /** A plain blend's bass level (see bassSplit) */
+  bass?: AudioParam;
   lowpass?: BiquadFilterNode;
   /** Last node before the dry gain (where an echo send taps in) */
   tap: AudioNode;
@@ -402,7 +406,6 @@ const OUT_HANDOFF = 0.5;
 const START_LEAD = 0.25;
 /** Step of the shared tempo glide during a blend */
 const BLEND_GLIDE_STEP = 0.25;
-const CROSSOVER_HZ = 180;
 const SILENT_VOLUME = 0.0001;
 /** Log wanted vs actual levels 5x a second while mixing (opt in) */
 const DEBUG_KEY = 'automix-debug';
@@ -491,20 +494,33 @@ const filterOpenBy = (plan: TransitionPlan) =>
   plan.holdOutgoing ? plan.duration : plan.duration * 0.7;
 
 /**
- * A DJ isolator's 24 dB/oct cut, as two 2nd-order Butterworth stages (a
- * Linkwitz-Riley filter); its lane drives both. Neutral: wide open.
+ * Q of the two 2nd-order sections of a 4th-order Butterworth filter (two of
+ * those in a row make an 8th-order Linkwitz-Riley filter), in dB: a
+ * low-pass or high-pass BiquadFilterNode reads its Q as dB, not as a Q
+ */
+const BUTTERWORTH4_Q = [0.541_196, 1.306_563].map((q) => 20 * Math.log10(q));
+
+/**
+ * A DJ isolator's 48 dB/oct cut: an 8th-order Linkwitz-Riley filter (a
+ * low-pass and a high-pass of it add back up to the song), as four 2nd-order
+ * stages in a row; its lane drives them all. A 24 dB/oct one left a killed
+ * bass at -16 dB an octave under 300 Hz, and that's the part of a bassline
+ * headphones and small speakers carry. Neutral: wide open.
  */
 const isolator = (context: BaseAudioContext, type: 'highpass' | 'lowpass') => {
-  const stages = [0, 1].map(() => {
+  const stages = [...BUTTERWORTH4_Q, ...BUTTERWORTH4_Q].map((q) => {
     const node = context.createBiquadFilter();
     node.type = type;
-    node.Q.value = Math.SQRT1_2;
+    node.Q.value = q;
     node.frequency.value = EFFECT_DEFAULTS[type === 'highpass' ? 'lowCut' : 'highCut'];
     return node;
   });
-  stages[0].connect(stages[1]);
+  stages.slice(1).reduce<AudioNode>((from, node) => from.connect(node), stages[0]);
   return stages;
 };
+
+/** An isolator's first and last stage */
+const ends = (stages: BiquadFilterNode[]) => [stages[0], stages[stages.length - 1]] as const;
 
 /** Where Spotify-style 3-band EQ splits the bands (a DJ isolator's crossovers) */
 const EQ_LOW_HZ = 300;
@@ -512,31 +528,93 @@ const EQ_HIGH_HZ = 3000;
 
 /**
  * A DJ mixer's 3-band EQ as an isolator: the song split into bass, mids and
- * highs with 24 dB/oct crossovers, each band through its own gain (at 1 the
+ * highs with 48 dB/oct crossovers, each band through its own gain (at 1 the
  * bands add back up to the song), so a band can be turned down or killed
  */
 const threeBandEq = (context: BaseAudioContext) => {
   const input = context.createGain();
   const output = context.createGain();
-  const [lowA, lowB] = isolator(context, 'lowpass');
-  const [midHpA, midHpB] = isolator(context, 'highpass');
-  const [midLpA, midLpB] = isolator(context, 'lowpass');
-  const [highA, highB] = isolator(context, 'highpass');
-  for (const node of [lowA, lowB, midLpA, midLpB]) node.frequency.value = EQ_LOW_HZ;
-  for (const node of [midHpA, midHpB]) node.frequency.value = EQ_LOW_HZ;
-  for (const node of [midLpA, midLpB, highA, highB]) node.frequency.value = EQ_HIGH_HZ;
+  const lowStages = isolator(context, 'lowpass');
+  const midHpStages = isolator(context, 'highpass');
+  const midLpStages = isolator(context, 'lowpass');
+  const highStages = isolator(context, 'highpass');
+  for (const node of [...lowStages, ...midHpStages]) node.frequency.value = EQ_LOW_HZ;
+  for (const node of [...midLpStages, ...highStages]) node.frequency.value = EQ_HIGH_HZ;
+  const [lowIn, lowOut] = ends(lowStages);
+  const [midHpIn, midHpOut] = ends(midHpStages);
+  const [midLpIn, midLpOut] = ends(midLpStages);
+  const [highIn, highOut] = ends(highStages);
   const low = context.createGain();
   const mid = context.createGain();
   const high = context.createGain();
-  input.connect(lowA); lowB.connect(low).connect(output);
-  input.connect(midHpA); midHpB.connect(midLpA); midLpB.connect(mid).connect(output);
-  input.connect(highA); highB.connect(high).connect(output);
+  input.connect(lowIn); lowOut.connect(low).connect(output);
+  input.connect(midHpIn); midHpOut.connect(midLpIn); midLpOut.connect(mid).connect(output);
+  input.connect(highIn); highOut.connect(high).connect(output);
   return {
     input,
     output,
     params: { eqLow: low.gain, eqMid: mid.gain, eqHigh: high.gain },
-    nodes: [input, output, lowA, lowB, midHpA, midHpB, midLpA, midLpB, highA, highB, low, mid, high],
+    nodes: [
+      input,
+      output,
+      ...lowStages,
+      ...midHpStages,
+      ...midLpStages,
+      ...highStages,
+      low,
+      mid,
+      high,
+    ],
   };
+};
+
+/**
+ * What a bass swap moves: the song split at the EQ's low crossover, the
+ * bass through `level` (see bassGain) and the rest untouched. A low shelf
+ * used to do this, but even 30 dB down at 60 Hz it left most of 150-400 Hz,
+ * where a bassline is heard on headphones and small speakers
+ */
+const bassSplit = (context: BaseAudioContext) => {
+  const input = context.createGain();
+  const output = context.createGain();
+  const level = context.createGain();
+  const lowStages = isolator(context, 'lowpass');
+  const restStages = isolator(context, 'highpass');
+  for (const node of [...lowStages, ...restStages]) node.frequency.value = EQ_LOW_HZ;
+  const [lowIn, lowOut] = ends(lowStages);
+  const [restIn, restOut] = ends(restStages);
+  input.connect(lowIn); lowOut.connect(level).connect(output);
+  input.connect(restIn); restOut.connect(output);
+  return {
+    input,
+    output,
+    level: level.gain,
+    nodes: [input, output, level, ...lowStages, ...restStages],
+  };
+};
+
+/** RAMP_POINTS-like steps for a bass move scheduled by hand */
+const BASS_RAMP_STEPS = 24;
+
+/**
+ * A bass split's level from `fromDb` to `toDb` between two times, evenly in
+ * dB (as a bass lane moves), killed when it reaches BASS_CUT_DB
+ */
+const rampBass = (
+  param: AudioParam,
+  fromDb: number,
+  toDb: number,
+  start: number,
+  end: number,
+) => {
+  param.setValueAtTime(bassGain(fromDb), start);
+  for (let k = 1; k <= BASS_RAMP_STEPS; k++) {
+    const x = k / BASS_RAMP_STEPS;
+    param.linearRampToValueAtTime(
+      bassGain(fromDb + ((toDb - fromDb) * x)),
+      start + ((end - start) * x),
+    );
+  }
 };
 
 const usesEq = (lanes: { param: EffectParam }[]) =>
@@ -1689,9 +1767,7 @@ export class AutoMixEngine {
     const sweepsHighpass =
       plan.style === 'cut' || (plan.style === 'blend' && !plan.holdOutgoing);
     const highpass = sweepsHighpass ? filter('highpass', 20, 0.9) : undefined;
-    const lowShelf =
-      plan.style === 'blend' ? filter('lowshelf', CROSSOVER_HZ) : undefined;
-    if (lowShelf) lowShelf.gain.value = 0;
+    const bass = plan.style === 'blend' ? bassSplit(context) : undefined;
     const lowpass =
       plan.style === 'smooth' && !plan.holdOutgoing
         ? filter('lowpass', context.sampleRate / 2)
@@ -1701,14 +1777,16 @@ export class AutoMixEngine {
     dry.gain.value = 0;
     const master = context.createGain();
 
-    const filters = [highpass, lowShelf, lowpass].filter(
-      (node): node is BiquadFilterNode => Boolean(node),
-    );
     const sourceGain = context.createGain();
     const input = context.createGain();
     source.connect(sourceGain).connect(input);
     let tap: AudioNode = input;
-    for (const node of filters) tap = tap.connect(node);
+    if (highpass) tap = tap.connect(highpass);
+    if (bass) {
+      tap.connect(bass.input);
+      tap = bass.output;
+    }
+    if (lowpass) tap = tap.connect(lowpass);
     tap.connect(dry).connect(master).connect(context.destination);
 
     return {
@@ -1718,10 +1796,19 @@ export class AutoMixEngine {
       dry,
       master,
       highpass,
-      lowShelf,
+      bass: bass?.level,
       lowpass,
       tap,
-      nodes: [source, sourceGain, input, ...filters, dry, master],
+      nodes: [
+        source,
+        sourceGain,
+        input,
+        ...(highpass ? [highpass] : []),
+        ...(bass?.nodes ?? []),
+        ...(lowpass ? [lowpass] : []),
+        dry,
+        master,
+      ],
       shared: [],
     };
   }
@@ -1745,13 +1832,10 @@ export class AutoMixEngine {
     const lowpass = context.createBiquadFilter();
     lowpass.type = 'lowpass';
     lowpass.frequency.value = 20_000;
-    const bass = context.createBiquadFilter();
-    bass.type = 'lowshelf';
-    bass.frequency.value = CROSSOVER_HZ;
-    bass.gain.value = 0;
-    // A hand-off's isolator, only on styles that use it
+    // The bass split and a hand-off's isolator, only on styles that use them
     const uses = (param: EffectParam) =>
       style.outgoing.some((item) => item.param === param);
+    const bass = uses('bass') ? bassSplit(context) : undefined;
     const lowCut = uses('lowCut') ? isolator(context, 'highpass') : [];
     const highCut = uses('highCut') ? isolator(context, 'lowpass') : [];
     const dryMix = context.createGain();
@@ -1769,7 +1853,7 @@ export class AutoMixEngine {
       input,
       highpass,
       lowpass,
-      bass,
+      ...(bass?.nodes ?? []),
       ...lowCut,
       ...highCut,
       dryMix,
@@ -1788,12 +1872,16 @@ export class AutoMixEngine {
       input.connect(highpass);
     }
     source.connect(sourceGain).connect(input);
-    highpass.connect(lowpass).connect(bass);
-    let shaped: AudioNode = bass;
+    let shaped: AudioNode = highpass.connect(lowpass);
+    if (bass) {
+      shaped.connect(bass.input);
+      shaped = bass.output;
+    }
     for (const stages of [lowCut, highCut]) {
       if (stages.length === 0) continue;
-      shaped.connect(stages[0]);
-      shaped = stages[1];
+      const [first, last] = ends(stages);
+      shaped.connect(first);
+      shaped = last;
     }
     const eq = usesEq(style.outgoing) ? threeBandEq(context) : undefined;
     if (eq) {
@@ -1808,7 +1896,7 @@ export class AutoMixEngine {
       input: input.gain,
       highpass: highpass.frequency,
       lowpass: lowpass.frequency,
-      bass: bass.gain,
+      bass: bass?.level,
       send: send.gain,
       wet: wet.gain,
       dry: dryMix.gain,
@@ -1974,7 +2062,7 @@ export class AutoMixEngine {
     /** Needed by an effect style's beat repeater */
     clock?: OutgoingClock,
   ) {
-    const { dry, highpass, lowShelf, lowpass } = chain;
+    const { dry, highpass, bass, lowpass } = chain;
     const duration = plan.duration;
 
     switch (plan.style) {
@@ -2002,8 +2090,7 @@ export class AutoMixEngine {
           // which rings out briefly under the next song
           const hit = mixAt + duration;
           const swap = bassSwap(plan, mixAt);
-          lowShelf?.gain.setValueAtTime(0, swap.from);
-          lowShelf?.gain.linearRampToValueAtTime(-30, swap.to);
+          if (bass) rampBass(bass, 0, BASS_CUT_DB, swap.from, swap.to);
           dry.gain.setValueAtTime(1, hit + 0.05);
           dry.gain.setTargetAtTime(0, hit + 0.05, ENDING_RING / 4);
           chain.source.stop(hit + ENDING_RING + 0.2);
@@ -2012,8 +2099,7 @@ export class AutoMixEngine {
         // Equal-power crossfade with a DJ style bass swap halfway through
         dry.gain.setValueCurveAtTime(equalPowerOut, mixAt, duration);
         const swap = bassSwap(plan, mixAt);
-        lowShelf?.gain.setValueAtTime(0, swap.from);
-        lowShelf?.gain.linearRampToValueAtTime(-30, swap.to);
+        if (bass) rampBass(bass, 0, BASS_CUT_DB, swap.from, swap.to);
         highpass?.frequency.setValueAtTime(20, mixAt + (duration * 0.55));
         highpass?.frequency.exponentialRampToValueAtTime(400, mixAt + duration);
         chain.source.stop(mixAt + duration + 0.1);
@@ -2249,39 +2335,46 @@ export class AutoMixEngine {
     }
 
     const stages: AudioNode[] = [];
-    let inEq: ReturnType<typeof threeBandEq> | undefined;
+    // Stages that split the song and bring it back together: where the
+    // song comes out of each (for the rest, the node itself)
+    const exits = new Map<AudioNode, AudioNode>();
+    const pushSplit = (split: { input: AudioNode; output: AudioNode }) => {
+      stages.push(split.input);
+      exits.set(split.input, split.output);
+    };
     if (style) {
       // Apple's incoming lanes: the song comes in through its filters
+      const lanes = withBassSwap(style, plan.bassSwapAt).incoming;
       const highpass = context.createBiquadFilter();
       highpass.type = 'highpass';
       const lowpass = context.createBiquadFilter();
       lowpass.type = 'lowpass';
-      const bass = context.createBiquadFilter();
-      bass.type = 'lowshelf';
-      bass.frequency.value = CROSSOVER_HZ;
       // Only the lanes a style has are scheduled: the rest must start open
       // (a biquad's default is 350 Hz, which muffles or thins the song)
       highpass.frequency.value = EFFECT_DEFAULTS.highpass;
       lowpass.frequency.value = EFFECT_DEFAULTS.lowpass;
       const uses = (param: EffectParam) =>
-        style.incoming.some((item) => item.param === param);
+        lanes.some((item) => item.param === param);
+      const bass = uses('bass') ? bassSplit(context) : undefined;
       const lowCut = uses('lowCut') ? isolator(context, 'highpass') : [];
       const highCut = uses('highCut') ? isolator(context, 'lowpass') : [];
-      inEq = usesEq(style.incoming) ? threeBandEq(context) : undefined;
-      stages.push(highpass, lowpass, bass, ...lowCut, ...highCut);
-      if (inEq) stages.push(inEq.input);
+      const inEq = usesEq(lanes) ? threeBandEq(context) : undefined;
+      stages.push(highpass, lowpass);
+      if (bass) pushSplit(bass);
+      stages.push(...lowCut, ...highCut);
+      if (inEq) pushSplit(inEq);
       stages.push(gain);
       scheduleLanes(
         {
           gain: gain.gain,
           highpass: highpass.frequency,
           lowpass: lowpass.frequency,
-          bass: bass.gain,
+          bass: bass?.level,
           lowCut: lowCut.map((node) => node.frequency),
           highCut: highCut.map((node) => node.frequency),
           ...inEq?.params,
         },
-        withBassSwap(style, plan.bassSwapAt).incoming,
+        lanes,
         mixAt,
         plan.duration,
         'incoming',
@@ -2303,21 +2396,18 @@ export class AutoMixEngine {
     if (plan.style === 'blend' && !style) {
       // The other half of the bass swap: no incoming bass until the old
       // song's bass goes out
-      const lowShelf = context.createBiquadFilter();
-      lowShelf.type = 'lowshelf';
-      lowShelf.frequency.value = CROSSOVER_HZ;
-      lowShelf.gain.value = -30;
+      const bass = bassSplit(context);
+      bass.level.value = 0;
       const swap = bassSwap(plan, mixAt);
-      lowShelf.gain.setValueAtTime(-30, swap.from);
-      lowShelf.gain.linearRampToValueAtTime(0, swap.to);
-      stages.push(lowShelf);
+      rampBass(bass.level, BASS_CUT_DB, 0, swap.from, swap.to);
+      pushSplit(bass);
     }
     if (!style) stages.push(gain);
     stages
-      // The EQ's bands come back together at its output
+      // A split's parts come back together at its output
       .reduce<AudioNode>((from, node) => {
         from.connect(node);
-        return inEq && node === inEq.input ? inEq.output : node;
+        return exits.get(node) ?? node;
       }, source)
       .connect(master)
       .connect(context.destination);
@@ -2519,7 +2609,9 @@ export class AutoMixEngine {
         for (const [name, given] of Object.entries(chain.fx)) {
           for (const param of Array.isArray(given) ? given : [given]) {
             param.cancelScheduledValues(mixAt);
-            param.setValueAtTime(EFFECT_DEFAULTS[name as EffectParam], mixAt);
+            // As the param takes it: a raw default would kill the bass
+            // (0 dB read as gain 0) and halve each EQ band (0.5)
+            param.setValueAtTime(neutralParamValue(name as EffectParam), mixAt);
           }
         }
         if (chain.repeat) {
@@ -3149,7 +3241,7 @@ export class AutoMixEngine {
     const { chain } = mix;
     for (const param of [
       chain.dry.gain,
-      chain.lowShelf?.gain,
+      chain.bass,
       chain.highpass?.frequency,
       chain.lowpass?.frequency,
     ]) {

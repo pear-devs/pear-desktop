@@ -265,12 +265,20 @@ export const EFFECT_STYLES: EffectStyle[] = [
  * one-knob DJ filter, all over the whole overlap. Most keep both songs at
  * full level and swap the bass at the midpoint. Spotify kills the low band
  * and swaps it in 1/64 of the window, which slams the new bass in; ours
- * turns the low shelf down 30 dB (like our own blends' swap) and ramps it
- * evenly in dB over a quarter of the window around the same point.
+ * takes the low band out (like our own blends' swap) evenly in dB over a
+ * quarter of the window around the same point, killed at the end of it.
  * Spotify's filter knob is geometric (low-pass 120 Hz to 16 kHz, high-pass
  * 20 Hz to 9 kHz). Style id = 100 + Spotify's preset id.
  */
-const BASS_CUT_DB = -30;
+/** How far a bass lane turns the low band down (dB) before it's killed */
+export const BASS_CUT_DB = -30;
+
+/**
+ * A bass lane's level (dB) as the low band's gain: down to BASS_CUT_DB it
+ * fades in dB, and at the cut it's gone (a band 30 dB down still carries
+ * the bassline on headphones and small speakers)
+ */
+export const bassGain = (db: number) => (db <= BASS_CUT_DB ? 0 : 10 ** (db / 20));
 const SWAP: [At, At] = [0.375, 0.625];
 type Side = { outgoing: Lane[]; incoming: Lane[] };
 
@@ -408,12 +416,20 @@ const fxLanes = (id: number): Lane[] => {
   return lanes;
 };
 
-/** One of Spotify's presets, exactly as its catalog defines it */
+/**
+ * Bass Swap's own EQ style (10) only swaps the low band in the window's last
+ * 1/256: over our 4-bar blends the old bass plays all the way through and
+ * there's no swap to hear. It gets the midpoint swap (4) the other bass-swap
+ * presets use; Bass Swap At End keeps its late swap, as its name says
+ */
+const EQ_OVERRIDES: Record<number, number> = { 3: 4 };
+
+/** One of Spotify's presets, as its catalog defines it (see EQ_OVERRIDES) */
 const catalogPreset = (id: number): EffectStyle => {
   const preset = PRESETS[id];
   const volumeStyle = VOLUME_STYLES[preset.volume];
   const filter = FILTER_STYLES[preset.filter];
-  const eq = catalogEq(preset.eq);
+  const eq = catalogEq(EQ_OVERRIDES[id] ?? preset.eq);
   const fx = FX_STYLES[preset.fx];
   return {
     id: 100 + id,
@@ -497,10 +513,15 @@ export const djHighpass = (raw: number) =>
 
 /** Raw lane values turned into what each AudioParam takes */
 const PARAM_MAP: Partial<Record<EffectParam, (raw: number) => number>> = {
+  bass: bassGain,
   eqLow: eqGain,
   eqMid: eqGain,
   eqHigh: eqGain,
 };
+
+/** A parameter's neutral value as its AudioParam takes it */
+export const neutralParamValue = (name: EffectParam) =>
+  PARAM_MAP[name]?.(EFFECT_DEFAULTS[name]) ?? EFFECT_DEFAULTS[name];
 
 export const ease = (curve: Curve, x: number) => {
   if (curve === 'linear' || curve === 'log') return x;
