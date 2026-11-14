@@ -8,7 +8,7 @@ export const DislikeButton = (props: DislikeButtonProps) => (
     <button
       aria-label="Dislike all"
       aria-pressed="false"
-      class="like-menu yt-spec-button-shape-next yt-spec-button-shape-next--text yt-spec-button-shape-next--mono yt-spec-button-shape-next--size-m yt-spec-button-shape-next--icon-button"
+      class="like-menu"
       data-filled="false"
       data-type="dislike"
       id="alldislike"
@@ -16,14 +16,14 @@ export const DislikeButton = (props: DislikeButtonProps) => (
     >
       <div
         aria-hidden="true"
-        class="yt-spec-button-shape-next__icon"
+        class="like-menu-icon"
         style={{
-          'color': 'var(--ytmusic-setting-item-toggle-active)',
+          'color': 'var(--ytmusic-setting-item-toggle-active, #3ea6ff)',
         }}
       >
         <div
           aria-hidden="true"
-          class="yt-spec-button-shape-next__icon"
+          class="like-menu-icon"
           style={{
             'color': 'white',
             'mask': 'linear-gradient(grey, grey)',
@@ -81,19 +81,6 @@ export const DislikeButton = (props: DislikeButtonProps) => (
           </svg>
         </div>
       </div>
-      <yt-touch-feedback-shape
-        style={{
-          'border-radius': 'inherit',
-        }}
-      >
-        <div
-          aria-hidden="true"
-          class="yt-spec-touch-feedback-shape yt-spec-touch-feedback-shape--touch-response"
-        >
-          <div class="yt-spec-touch-feedback-shape__stroke" />
-          <div class="yt-spec-touch-feedback-shape__fill" />
-        </div>
-      </yt-touch-feedback-shape>
     </button>
   </div>
 );

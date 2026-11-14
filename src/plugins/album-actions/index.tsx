@@ -5,6 +5,7 @@ import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 import { waitForElement } from '@/utils/wait-for-element';
 
+import style from './style.css?inline';
 import {
   DislikeButton,
   LikeButton,
@@ -34,6 +35,7 @@ export default createPlugin<
   config: {
     enabled: false,
   },
+  stylesheets: [style],
   renderer: {
     waiting: false,
     start() {
@@ -196,8 +198,6 @@ export default createPlugin<
       if (menuParent && !document.querySelector('.like-menu')) {
         const menu = document.createElement('div');
         menu.id = 'ytmd-album-action-buttons';
-        menu.className =
-          'action-buttons style-scope ytmusic-responsive-header-renderer';
 
         menuParent.insertBefore(
           menu,

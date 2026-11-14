@@ -1,0 +1,30 @@
+#ytmd-album-action-buttons {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.like-menu {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+}
+
+.like-menu:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.like-menu-icon {
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}

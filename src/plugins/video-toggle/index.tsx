@@ -163,9 +163,7 @@ export default createPlugin({
         ? (preciseVolumeMoveVolumeHud as (_: boolean) => void)
         : () => {};
 
-      const player = document.querySelector<
-        HTMLElement & { videoMode_: boolean }
-      >('ytmusic-player');
+      const player = document.querySelector<HTMLElement>('ytmusic-player');
       const video = document.querySelector<HTMLVideoElement>('video');
 
       const switchButtonContainer = document.createElement('div');
@@ -233,10 +231,10 @@ export default createPlugin({
       };
 
       const videoStarted = () => {
-        if (
-          api.getPlayerResponse().videoDetails.musicVideoType ===
-          'MUSIC_VIDEO_TYPE_ATV'
-        ) {
+        const videoDetails = api.getPlayerResponse()?.videoDetails;
+        if (!videoDetails) return;
+
+        if (videoDetails.musicVideoType === 'MUSIC_VIDEO_TYPE_ATV') {
           // Video doesn't exist -> switch to song mode
           setVideoState(false);
           // Hide toggle button
@@ -290,7 +288,7 @@ export default createPlugin({
 
       const observeThumbnail = () => {
         const playbackModeObserver = new MutationObserver((mutations) => {
-          if (!player?.videoMode_) {
+          if (!player?.hasAttribute('video-mode')) {
             return;
           }
 

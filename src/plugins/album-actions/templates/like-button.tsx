@@ -8,7 +8,7 @@ export const LikeButton = (props: LikeButtonProps) => (
     <button
       aria-label="Like all"
       aria-pressed="false"
-      class="like-menu yt-spec-button-shape-next yt-spec-button-shape-next--text yt-spec-button-shape-next--mono yt-spec-button-shape-next--size-m yt-spec-button-shape-next--icon-button"
+      class="like-menu"
       data-filled="false"
       data-type="like"
       id="alllike"
@@ -16,14 +16,14 @@ export const LikeButton = (props: LikeButtonProps) => (
     >
       <div
         aria-hidden="true"
-        class="yt-spec-button-shape-next__icon"
+        class="like-menu-icon"
         style={{
-          'color': 'var(--ytmusic-setting-item-toggle-active)',
+          'color': 'var(--ytmusic-setting-item-toggle-active, #3ea6ff)',
         }}
       >
         <div
           aria-hidden="true"
-          class="yt-spec-button-shape-next__icon"
+          class="like-menu-icon"
           style={{
             'color': 'white',
             'mask': 'linear-gradient(grey, grey)',
@@ -76,15 +76,6 @@ export const LikeButton = (props: LikeButtonProps) => (
           </svg>
         </div>
       </div>
-      <yt-touch-feedback-shape style={{ 'border-radius': 'inherit' }}>
-        <div
-          aria-hidden="true"
-          class="yt-spec-touch-feedback-shape yt-spec-touch-feedback-shape--touch-response"
-        >
-          <div class="yt-spec-touch-feedback-shape__stroke" />
-          <div class="yt-spec-touch-feedback-shape__fill" />
-        </div>
-      </yt-touch-feedback-shape>
     </button>
   </div>
 );

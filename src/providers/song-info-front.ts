@@ -332,6 +332,7 @@ export const setupSongInfo = (api: MusicPlayer) => {
 
   function sendSongInfo(videoData: VideoDataChangeValue) {
     const data = api.getPlayerResponse();
+    if (!data) return;
 
     let playerOverlay: PlayerOverlays | undefined;
 
