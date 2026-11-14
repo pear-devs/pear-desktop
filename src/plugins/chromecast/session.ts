@@ -7,6 +7,7 @@ import type { CastSessionSnapshot } from './session-types';
 
 const log = console;
 const HEARTBEAT_MS = 5000;
+const HEARTBEAT_TIMEOUT_MS = 15000;
 const LAUNCH_TIMEOUT_MS = 12000;
 const CONNECTION_NS = 'urn:x-cast:com.google.cast.tp.connection';
 const HEARTBEAT_NS = 'urn:x-cast:com.google.cast.tp.heartbeat';
@@ -30,6 +31,8 @@ export class CastDeviceSession extends EventEmitter {
   readonly handle: string;
   private client: Client;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private lastPongAt = 0;
+  private ended = false;
   private appId: string;
   private displayName: string;
   private receiverName: string;
@@ -57,6 +60,7 @@ export class CastDeviceSession extends EventEmitter {
       log.warn('client error', err);
       this.teardown('disconnected');
     });
+    this.client.on('close', () => this.teardown('disconnected'));
   }
 
   snapshot(): CastSessionSnapshot {
@@ -74,12 +78,19 @@ export class CastDeviceSession extends EventEmitter {
 
   connect(receiver: ReceiverEndpoint, launch = true): Promise<void> {
     return new Promise((resolve, reject) => {
+      const onStopped = () => {
+        clearTimeout(timer);
+        reject(new Error('Cast connection ended before launch completed'));
+      };
       const timer = setTimeout(() => {
+        this.off('stopped', onStopped);
         reject(new Error('launch timeout'));
         this.teardown('disconnected');
       }, LAUNCH_TIMEOUT_MS);
+      this.once('stopped', onStopped);
 
       this.client.connect({ host: receiver.host, port: receiver.port }, () => {
+        if (this.ended) return;
         const connection = this.makeChannel(
           'sender-0',
           'receiver-0',
@@ -96,8 +107,16 @@ export class CastDeviceSession extends EventEmitter {
           RECEIVER_NS,
         );
         connection.send({ type: 'CONNECT' });
+        this.lastPongAt = Date.now();
+        heartbeat.on('message', (raw) => {
+          if (asRecord(raw)?.type === 'PONG') this.lastPongAt = Date.now();
+        });
         heartbeat.send({ type: 'PING' });
         this.heartbeatTimer = setInterval(() => {
+          if (Date.now() - this.lastPongAt >= HEARTBEAT_TIMEOUT_MS) {
+            this.teardown('disconnected');
+            return;
+          }
           try {
             heartbeat.send({ type: 'PING' });
           } catch {
@@ -129,6 +148,7 @@ export class CastDeviceSession extends EventEmitter {
               this.teardown('stopped');
             } else if (!launch) {
               clearTimeout(timer);
+              this.off('stopped', onStopped);
               reject(new Error('No active matching Cast session'));
               this.teardown('disconnected');
             }
@@ -162,6 +182,7 @@ export class CastDeviceSession extends EventEmitter {
             transportConnect.send({ type: 'CONNECT' });
             this.status = 'connected';
             clearTimeout(timer);
+            this.off('stopped', onStopped);
             this.emitSnapshotIfChanged();
             resolve();
             return;
@@ -201,9 +222,13 @@ export class CastDeviceSession extends EventEmitter {
   }
 
   loadMedia(request: unknown): void {
+    const id = asRecord(request)?.requestId;
     this.sendMessage(MEDIA_NS, {
       type: 'LOAD',
-      requestId: this.nextRequestId(),
+      requestId:
+        typeof id === 'number' && Number.isSafeInteger(id) && id > 0
+          ? id
+          : this.nextRequestId(),
       media: asRecord(request)?.media ?? request,
       autoplay: asRecord(request)?.autoplay ?? true,
       currentTime: asRecord(request)?.currentTime ?? 0,
@@ -213,10 +238,14 @@ export class CastDeviceSession extends EventEmitter {
 
   queueLoad(request: unknown): void {
     const queue = asRecord(request);
+    const id = queue?.requestId;
     this.sendMessage(MEDIA_NS, {
       ...queue,
       type: 'QUEUE_LOAD',
-      requestId: this.nextRequestId(),
+      requestId:
+        typeof id === 'number' && Number.isSafeInteger(id) && id > 0
+          ? id
+          : this.nextRequestId(),
     });
   }
 
@@ -323,20 +352,19 @@ export class CastDeviceSession extends EventEmitter {
   }
 
   private teardown(status: CastSessionSnapshot['status']): void {
+    if (this.ended) return;
+    this.ended = true;
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
-    const was = this.status;
     this.status = status;
     try {
       this.client.close();
     } catch {
       /* ignore */
     }
-    if (was !== 'disconnected' && was !== 'stopped') {
-      this.emit('stopped');
-    }
+    this.emit('stopped', status);
   }
 }
 

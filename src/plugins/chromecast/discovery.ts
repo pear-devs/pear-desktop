@@ -78,12 +78,38 @@ export function startCastDiscovery(
   const byId = new Map<string, DiscoveredReceiver>();
   const browser = bonjour.find({ type: 'googlecast' }) as CastBrowser;
   const queryTimers: ReturnType<typeof setTimeout>[] = [];
+  let stopped = false;
+
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    for (const timer of queryTimers) clearTimeout(timer);
+    try {
+      browser.stop();
+    } catch {
+      /* ignore */
+    }
+    try {
+      bonjour.destroy();
+    } catch {
+      /* ignore */
+    }
+    byId.clear();
+  };
+
+  bonjour.server.mdns.on('error', (err: unknown) => {
+    if (stopped) return;
+    log.warn('discovery socket failed', err);
+    stop();
+    onChange([]);
+  });
 
   const emit = () => {
     onChange([...byId.values()]);
   };
 
   const query = () => {
+    if (stopped) return;
     try {
       browser.update?.();
     } catch {
@@ -122,24 +148,13 @@ export function startCastDiscovery(
     browser.start?.();
   } catch (err) {
     log.warn('discovery start failed', err);
+    stop();
   }
 
-  for (const delay of QUERY_BURST_MS) {
-    queryTimers.push(setTimeout(query, delay));
-  }
+  if (!stopped)
+    for (const delay of QUERY_BURST_MS) {
+      queryTimers.push(setTimeout(query, delay));
+    }
 
-  return () => {
-    for (const timer of queryTimers) clearTimeout(timer);
-    try {
-      browser.stop();
-    } catch {
-      /* ignore */
-    }
-    try {
-      bonjour.destroy();
-    } catch {
-      /* ignore */
-    }
-    byId.clear();
-  };
+  return stop;
 }

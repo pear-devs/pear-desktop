@@ -410,7 +410,7 @@
       "description": "Odtwarzaj YouTube Music na odbiornikach Google Cast",
       "dialog": {
         "cancel": "Anuluj",
-        "choose-device": "Wybierz urządzenie przesyłające",
+        "choose-device": "Wybierz urządzenie Cast",
         "no-devices": {
           "detail": "Sprawdź, czy ten komputer i odbiornik Cast znajdują się w tej samej sieci i czy w odbiorniku jest włączone przesyłanie.",
           "mac-detail": "W systemie macOS zezwól tej aplikacji na dostęp do sieci lokalnej w Ustawieniach systemu.",

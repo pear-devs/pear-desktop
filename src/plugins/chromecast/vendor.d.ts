@@ -45,6 +45,7 @@ declare module 'bonjour-service' {
   }
   class Bonjour {
     constructor();
+    server: { mdns: EventEmitter };
     find(options: { type: string }): BonjourBrowser;
     destroy(): void;
   }

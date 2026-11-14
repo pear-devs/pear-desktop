@@ -1,3 +1,4 @@
+import { copyFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -27,9 +28,23 @@ const resolveAlias = {
 export default defineConfig(({ mode }) => {
   const isDev = mode === 'development';
 
-  const mainAndPreloadExcludes = ['electron', 'custom-electron-prompt', ...builtinModules];
+  const mainAndPreloadExcludes = [
+    'electron',
+    'custom-electron-prompt',
+    ...builtinModules,
+  ];
   const mainConfig: MainViteConfig = {
     plugins: [
+      {
+        name: 'copy-cast-proto',
+        closeBundle() {
+          const castPackageEntry = fileURLToPath(import.meta.resolve('castv2'));
+          copyFileSync(
+            join(dirname(castPackageEntry), 'lib', 'cast_channel.proto'),
+            join(__dirname, 'dist', 'main', 'cast_channel.proto'),
+          );
+        },
+      },
       pluginLoader('backend'),
       viteResolve({
         'virtual:i18n': i18nImporter(),

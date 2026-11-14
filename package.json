@@ -18,7 +18,7 @@
     "postinstall": "pnpm install-electron",
     "test": "pnpm playwright test",
     "test:debug": "pnpm cross-env DEBUG=pw:*,-pw:test:protocol playwright test",
-    "build": "pnpm electron-vite build && node tools/copy-cast-proto.mjs",
+    "build": "pnpm electron-vite build",
     "vite:inspect": "pnpm clean && electron-vite build --mode development && pnpm exec serve .vite-inspect",
     "start": "pnpm electron-vite preview",
     "start:debug": "pnpm cross-env ELECTRON_ENABLE_LOGGING=1 pnpm start",

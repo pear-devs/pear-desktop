@@ -294,11 +294,17 @@ export class CastBackend {
         snapshot: session.snapshot(),
       }),
     );
-    session.on('stopped', () => {
+    session.on('stopped', (reason: CastSessionSnapshot['status']) => {
       this.sessions.delete(session.handle);
       this.receiverByHandle.delete(session.handle);
       this.emit({ type: 'stopped', handle: session.handle });
-      this.scheduleAutoReconnect(1000);
+      if (reason === 'stopped') {
+        store.set('plugins.chromecast.autoReconnectSuppressed', true);
+        if (this.retryTimer) clearTimeout(this.retryTimer);
+        this.retryTimer = null;
+      } else {
+        this.scheduleAutoReconnect(1000);
+      }
     });
     session.on('message', (namespace: string, data: string) => {
       this.emit({ type: 'message', handle: session.handle, namespace, data });
@@ -385,6 +391,7 @@ export class CastBackend {
     }
     if (request.op === 'leave') {
       const session = this.session(event, request.handle);
+      store.set('plugins.chromecast.autoReconnectSuppressed', true);
       session.leave();
       return;
     }

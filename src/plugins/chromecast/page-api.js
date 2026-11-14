@@ -25,13 +25,32 @@
   var apiConfig = null;
   var initialized = false;
   var autoResumeRequested = false;
-  var mediaRequestId = 1;
+  var mediaRequestId = 1000000000 + Math.floor(Math.random() * 100000000);
   var officialCast = null;
   var MEDIA_NS = 'urn:x-cast:com.google.cast.media';
 
   function nextMediaRequestId() {
     mediaRequestId += 1;
     return mediaRequestId;
+  }
+
+  function trackMediaRequest(session, id, success, error) {
+    var pending = session.__pendingMediaRequests;
+    var timer = window.setTimeout(function () {
+      settle(false, 'timeout');
+    }, 8000);
+    function settle(ok, result) {
+      if (!pending[id]) return;
+      delete pending[id];
+      window.clearTimeout(timer);
+      if (ok) {
+        if (success) success(result);
+      } else if (error) {
+        error(new CastError(ErrorCode.SESSION_ERROR, String(result)));
+      }
+    }
+    pending[id] = settle;
+    return settle;
   }
 
   function parseJson(data) {
@@ -118,6 +137,7 @@
     session.__mediaListeners = session.__mediaListeners || [];
     session.__mediaStatusListeners = session.__mediaStatusListeners || [];
     session.__messageListeners = session.__messageListeners || {};
+    session.__pendingMediaRequests = session.__pendingMediaRequests || {};
     if (!Array.isArray(session.media)) session.media = [];
 
     session.addUpdateListener = function (listener) {
@@ -201,52 +221,43 @@
     };
     function sendMediaLoad(kind, request, success, error) {
       var self = this;
-      var settled = false;
-      var expectedId =
-        kind === 'queue'
-          ? request &&
-            request.items &&
-            request.items[request.startIndex || 0] &&
-            request.items[request.startIndex || 0].media &&
-            request.items[request.startIndex || 0].media.contentId
-          : request && request.media && request.media.contentId;
-      function finishOk(media) {
-        if (settled) return;
-        settled = true;
-        self.__mediaStatusListeners = self.__mediaStatusListeners.filter(
-          function (fn) {
-            return fn !== onMedia;
-          },
-        );
-        if (success) success(media);
-      }
-      function finishErr(err) {
-        if (settled) return;
-        settled = true;
-        self.__mediaStatusListeners = self.__mediaStatusListeners.filter(
-          function (fn) {
-            return fn !== onMedia;
-          },
-        );
-        if (error)
-          error(new CastError(ErrorCode.LOAD_MEDIA_FAILED, String(err)));
-      }
-      function onMedia(media) {
-        if (expectedId && media.media?.contentId !== expectedId) return;
-        finishOk(media);
-      }
-      self.__mediaStatusListeners.push(onMedia);
+      var id = nextMediaRequestId();
+      var payload = Object.assign({}, request || {}, { requestId: id });
+      var settle = trackMediaRequest(
+        self,
+        id,
+        function (response) {
+          var status =
+            response.status &&
+            (response.status.find(function (item) {
+              return item.playerState !== 'IDLE';
+            }) ||
+              response.status[0]);
+          var media =
+            status &&
+            self.media.find(function (item) {
+              return item.mediaSessionId === status.mediaSessionId;
+            });
+          if (media && success) success(media);
+          else if (error)
+            error(
+              new CastError(
+                ErrorCode.LOAD_MEDIA_FAILED,
+                'Missing media status',
+              ),
+            );
+        },
+        function (err) {
+          if (error)
+            error(new CastError(ErrorCode.LOAD_MEDIA_FAILED, err.description));
+        },
+      );
       (kind === 'queue'
-        ? bridge.queueLoad(self.__ytmdHandle, request || {})
-        : bridge.loadMedia(self.__ytmdHandle, request || {})
-      )
-        .then(function () {
-          if (settled) return;
-          window.setTimeout(function () {
-            finishErr('timeout');
-          }, 8000);
-        })
-        .catch(finishErr);
+        ? bridge.queueLoad(self.__ytmdHandle, payload)
+        : bridge.loadMedia(self.__ytmdHandle, payload)
+      ).catch(function (err) {
+        settle(false, err);
+      });
     }
     session.loadMedia = function (request, success, error) {
       sendMediaLoad.call(this, 'load', request, success, error);
@@ -277,13 +288,17 @@
     function sendCmd(body, success, error) {
       body.requestId = nextMediaRequestId();
       body.mediaSessionId = media.mediaSessionId;
+      var session = sessions[handle];
+      if (!session) {
+        if (error)
+          error(new CastError(ErrorCode.SESSION_ERROR, 'Cast session ended'));
+        return;
+      }
+      var settle = trackMediaRequest(session, body.requestId, success, error);
       bridge
         .sendMessage(handle, MEDIA_NS, JSON.stringify(body))
-        .then(function () {
-          if (success) success();
-        })
         .catch(function (err) {
-          if (error) error(new CastError(ErrorCode.SESSION_ERROR, String(err)));
+          settle(false, err);
         });
     }
     media.play = function (customData, success, error) {
@@ -464,7 +479,41 @@
         ? status.playbackRate
         : media.playbackRate || 1;
     media.idleReason = status.idleReason || null;
-    media.supportedMediaCommands = status.supportedMediaCommands;
+    if (typeof status.supportedMediaCommands === 'number') {
+      var commands =
+        officialCast && officialCast.media && officialCast.media.MediaCommand;
+      var names = [
+        'PAUSE',
+        'SEEK',
+        'STREAM_VOLUME',
+        'STREAM_MUTE',
+        'SKIP_FORWARD',
+        'SKIP_BACKWARD',
+        'QUEUE_NEXT',
+        'QUEUE_PREV',
+        'QUEUE_SHUFFLE',
+        'SKIP_AD',
+        'QUEUE_REPEAT_ALL',
+        'QUEUE_REPEAT_ONE',
+        'EDIT_TRACKS',
+        'PLAYBACK_RATE',
+        'LIKE',
+        'DISLIKE',
+        'FOLLOW',
+        'UNFOLLOW',
+      ];
+      media.supportedMediaCommands = names
+        .filter(function (name, bit) {
+          return (
+            (status.supportedMediaCommands & (1 << bit)) !== 0 &&
+            commands &&
+            commands[name]
+          );
+        })
+        .map(function (name) {
+          return commands[name];
+        });
+    }
     media.customData = status.customData || null;
     media.repeatMode = status.repeatMode || media.repeatMode;
     media.activeTrackIds = status.activeTrackIds || null;
@@ -504,6 +553,9 @@
     (session.media || []).forEach(function (media) {
       fireList(media.__updateListeners, false);
     });
+    Object.keys(session.__pendingMediaRequests || {}).forEach(function (id) {
+      session.__pendingMediaRequests[id](false, 'Cast session ended');
+    });
     fireList(session.__updateListeners, false);
     delete sessions[handle];
     notifyCastSession();
@@ -539,7 +591,8 @@
         existing.playerState === 'IDLE' &&
         (existing.idleReason === 'FINISHED' ||
           existing.idleReason === 'ERROR' ||
-          existing.idleReason === 'CANCELLED');
+          existing.idleReason === 'CANCELLED' ||
+          existing.idleReason === 'INTERRUPTED');
       fireList(existing.__updateListeners, !idleDead);
       if (idleDead) {
         session.media = session.media.filter(function (item) {
@@ -553,7 +606,22 @@
   function applyMessage(handle, namespace, data) {
     var session = sessions[handle];
     if (!session) return;
-    if (namespace === MEDIA_NS) applyMediaStatus(session, data);
+    if (namespace === MEDIA_NS) {
+      applyMediaStatus(session, data);
+      var response = parseJson(data);
+      var id = response && response.requestId;
+      var settle = id && session.__pendingMediaRequests[id];
+      if (settle) {
+        if (response.type === 'MEDIA_STATUS') settle(true, response);
+        else if (
+          response.type === 'INVALID_PLAYER_STATE' ||
+          response.type === 'INVALID_REQUEST' ||
+          response.type === 'LOAD_FAILED' ||
+          response.type === 'LOAD_CANCELLED'
+        )
+          settle(false, response.type);
+      }
+    }
     var named = session.__messageListeners[namespace];
     if (named) {
       named.slice().forEach(function (fn) {
