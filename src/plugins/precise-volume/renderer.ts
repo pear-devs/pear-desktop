@@ -235,7 +235,7 @@ export const onPlayerApiReady = async (
   // Set new volume as tooltip for volume slider and icon + expanding slider (appears when window size is small)
   const tooltipTargets = [
     '#volume-slider',
-    '.volume.ytmusic-player-bar',
+    'yt-icon-button.volume',
     '#expand-volume-slider',
     '#expand-volume',
   ];

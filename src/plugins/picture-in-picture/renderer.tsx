@@ -65,6 +65,9 @@ export const onPlayerApiReady = async (
   const expandMenu = document.querySelector<HTMLElement>('#expanding-menu');
   const middleControls =
     document.querySelector<HTMLButtonElement>('.middle-controls');
+  const playerPage = document.querySelector<
+    HTMLElement & { playerPageOpen: boolean }
+  >('ytmusic-player-page');
   const togglePlayerPageButton = document.querySelector<HTMLButtonElement>(
     '.toggle-player-page-button',
   );
@@ -97,7 +100,7 @@ export const onPlayerApiReady = async (
         player.onDoubleClick = () => {};
 
         expandMenu?.addEventListener('mouseleave', mouseLeaveEventListener);
-        if (!appLayout?.hasAttribute('player-page-open')) {
+        if (!playerPage?.playerPageOpen) {
           togglePlayerPageButton?.click();
         }
 

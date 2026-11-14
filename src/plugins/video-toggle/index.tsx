@@ -163,7 +163,9 @@ export default createPlugin({
         ? (preciseVolumeMoveVolumeHud as (_: boolean) => void)
         : () => {};
 
-      const player = document.querySelector<HTMLElement>('ytmusic-player');
+      const player = document.querySelector<
+        HTMLElement & { videoMode: boolean }
+      >('ytmusic-player');
       const video = document.querySelector<HTMLVideoElement>('video');
 
       const switchButtonContainer = document.createElement('div');
@@ -288,7 +290,7 @@ export default createPlugin({
 
       const observeThumbnail = () => {
         const playbackModeObserver = new MutationObserver((mutations) => {
-          if (!player?.hasAttribute('video-mode')) {
+          if (!player?.videoMode) {
             return;
           }
 

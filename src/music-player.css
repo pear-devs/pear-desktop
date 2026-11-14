@@ -87,9 +87,3 @@ tp-yt-iron-dropdown,
 tp-yt-paper-dialog {
   app-region: no-drag;
 }
-
-.ytmd-menu-item {
-  cursor: pointer;
-  width: 18px;
-  height: 18px;
-}
