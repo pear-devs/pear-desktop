@@ -206,20 +206,23 @@ const LEAD_IN_MAX = 5;
 const LEAD_IN_DEFAULT = 3;
 
 /**
- * Auto blend length, as Spotify's own planner does it: beat-matched blends
- * are short, 4 bars, and 2 when the keys clash or the next song has to be
- * stretched a lot (over 48 pairs it never went past 4 bars)
+ * Auto blend length: 4 bars. Spotify drops to 2 bars when the keys clash or
+ * the next song is stretched a lot, but a 2-bar blend is over before the ear
+ * settles on it and lands as a lurch, so AutoMix never goes that short.
  */
 const AUTO_BLEND_BEATS = 16;
-const SHORT_BLEND_BEATS = 8;
-/** Stretch past which an auto blend is the short one */
-const SHORT_BLEND_STRETCH = 0.05;
+/**
+ * Shortest a blend may be squeezed to when its full length doesn't fit;
+ * past that another style is used instead. A shorter length the user picked
+ * themselves is still honoured.
+ */
+const MIN_BLEND_BEATS = 16;
 
 /** Blend length for a pair when it's left to AutoMix (see AUTO_BLEND_BEATS) */
-const autoBlendBeats = (from: TrackAnalysis, to: TrackAnalysis, clash: boolean) =>
-  clash || Math.abs(tempoRatio(from.bpm, to.bpm) - 1) > SHORT_BLEND_STRETCH
-    ? SHORT_BLEND_BEATS
-    : AUTO_BLEND_BEATS;
+const autoBlendBeats = () => AUTO_BLEND_BEATS;
+
+/** The fewest beats a blend asked for `blendBeats` may shrink to */
+const blendFloor = (blendBeats: number) => Math.min(blendBeats, MIN_BLEND_BEATS);
 
 /** What lowered a transition's confidence, for the UI to explain */
 export type ConfidenceNote =
@@ -703,8 +706,10 @@ const planBlend = (
   const rate = tempoRatio(from.bpm, to.bpm);
   if (!Number.isFinite(rate)) return null;
 
-  // The requested length if it fits, else the longest that does
-  for (let beats = options.blendBeats; beats >= 4; beats -= BAR_BEATS) {
+  // The requested length if it fits, else the longest that does (never
+  // under 4 bars unless asked for)
+  const floor = blendFloor(options.blendBeats);
+  for (let beats = options.blendBeats; beats >= floor; beats -= BAR_BEATS) {
     const duration = beats * from.beatPeriod;
     const latestStart = from.trailingSilenceStart - duration;
     // Start in the outro, but never so late that the blend runs past the end
@@ -779,7 +784,8 @@ const planEndingBlend = (
   const hit = finalHit(from);
   if (!Number.isFinite(rate) || hit === undefined) return null;
 
-  for (let beats = options.blendBeats; beats >= 4; beats -= BAR_BEATS) {
+  const floor = blendFloor(options.blendBeats);
+  for (let beats = options.blendBeats; beats >= floor; beats -= BAR_BEATS) {
     const duration = beats * from.beatPeriod;
     const mixOut = hit - duration;
     if (mixOut < options.earliestMixOut) continue;
@@ -1088,7 +1094,7 @@ export const planTransition = (
   // A blend length left to AutoMix is picked for this pair
   const autoBlend = options.blendBeats <= 0;
   if (options.blendBeats <= 0) {
-    options = { ...options, blendBeats: autoBlendBeats(from, to, clash) };
+    options = { ...options, blendBeats: autoBlendBeats() };
   }
   const gridsOk = hasBeatGrid(from) && hasBeatGrid(to);
   const stretchOk =
