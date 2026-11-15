@@ -24,8 +24,12 @@ import {
   type Lane,
 } from './effects';
 
-import type { AutoMixStatus, TransitionTimeline } from './engine';
-import type { TransitionPlan } from './planner';
+import type {
+  AutoMixStatus,
+  TimelineMark,
+  TransitionTimeline,
+} from './engine';
+import type { ConfidenceNote, TransitionPlan } from './planner';
 
 export interface TimelineProps {
   status: Accessor<AutoMixStatus>;
@@ -37,6 +41,33 @@ export interface TimelineProps {
   /** One line summing the plan up (bars, BPM, keys) */
   describe: (plan: TransitionPlan) => string;
 }
+
+/** What held a plan's confidence back, in words ("" when it says nothing) */
+export const confidenceNoteText = (note: ConfidenceNote) => {
+  switch (note.kind) {
+    case 'style':
+      return t(`plugins.automix.ui.confidence.style-${note.style}`);
+    case 'grid':
+      return t('plugins.automix.ui.confidence.grid');
+    case 'stretch':
+      return t('plugins.automix.ui.confidence.stretch', { percent: note.percent });
+    case 'keys':
+      return t(
+        note.diagonal
+          ? 'plugins.automix.ui.confidence.keys-diagonal'
+          : 'plugins.automix.ui.confidence.keys',
+        { from: note.from, to: note.to },
+      );
+    case 'vocals':
+      return t('plugins.automix.ui.confidence.vocals', { percent: note.percent });
+    case 'energy':
+      return note.softer && note.drop < 6
+        ? t('plugins.automix.ui.confidence.softer')
+        : t('plugins.automix.ui.confidence.energy', { drop: note.drop });
+    default:
+      return t('plugins.automix.ui.confidence.late');
+  }
+};
 
 /** How long the old song's final hit rings on (engine's ENDING_RING) */
 const ENDING_RING = 1.5;
@@ -239,6 +270,67 @@ const filterKnob = (p: FilterParams) => {
 const VOLUME_COLOR = '90, 220, 255';
 const EQ_COLOR = '255, 206, 64';
 const FILTER_COLOR = '190, 140, 255';
+const FX_COLOR = '120, 255, 170';
+const VOCAL_COLOR = '255, 120, 190';
+const CLASH_COLOR = '255, 72, 72';
+/** Below this (amplitude, about -15 dB) a song's vocals aren't heard over the other */
+const HEARD_VOCALS = 0.18;
+/** Shortest stretch of two singers at once worth marking, seconds */
+const MIN_CLASH = 0.25;
+
+/**
+ * Where both songs' singing is heard at once: their sung stretches
+ * overlapping, with both songs' mids (where a voice sits) still up through
+ * the transition's volume and filters
+ */
+const vocalClashes = (tl: TransitionTimeline): [number, number][] => {
+  const { plan } = tl;
+  const heard = (side: 'out' | 'in', time: number) => {
+    const levels = levelsAt(plan, time);
+    return (side === 'out' ? levels.out : levels.in) * filterGains(plan, side, time).mid;
+  };
+  const runs: [number, number][] = [];
+  for (const [a0, a1] of tl.outVocals) {
+    for (const [b0, b1] of tl.inVocals) {
+      const from = Math.max(a0, b0);
+      const to = Math.min(a1, b1);
+      let run: number | null = null;
+      for (let time = from; time <= to + 0.05; time += 0.05) {
+        const both =
+          time <= to && heard('out', time) > HEARD_VOCALS && heard('in', time) > HEARD_VOCALS;
+        if (both && run === null) run = time;
+        if (!both && run !== null) {
+          if (time - run >= MIN_CLASH) runs.push([run, time]);
+          run = null;
+        }
+      }
+    }
+  }
+  return runs.sort((a, b) => a[0] - b[0]);
+};
+
+/** How long an echo rings on once the old song is gone, seconds */
+const ECHO_TAIL = 2;
+
+/**
+ * How loud a style's echo / reverb is, 0..1 (its send through the effect's
+ * level). Once the old song is gone nothing more goes in, and what's there
+ * dies away over the reverb's tail (or an echo's)
+ */
+const fxLevelAt = (plan: TransitionPlan, time: number) => {
+  const style = styleOf(plan);
+  const x = time - plan.mixOut;
+  const d = Math.max(0.05, plan.duration);
+  if (!style || x < 0) return 0;
+  const level = (at: number) =>
+    laneLevel(style.outgoing, 'send', at, d, 0) * laneLevel(style.outgoing, 'wet', at, d, 0);
+  if (x <= d) return level(x);
+  const tail = style.reverb ?? ECHO_TAIL;
+  return level(d) * Math.exp(-(x - d) / (tail / 3));
+};
+
+const hasFx = (plan: TransitionPlan) =>
+  Boolean(styleOf(plan)?.outgoing.some((lane) => lane.param === 'send'));
 
 interface Layout {
   width: number;
@@ -361,6 +453,89 @@ const drawStatic = (
   bars(tl.outBars, layout.topY + half + (2 * dpr), false);
   bars(tl.inBars, layout.bottomY - half - (2 * dpr), true);
 
+  // Phrase starts: longer, brighter ticks (a blend comes in best on one)
+  const phrases = (times: number[], y: number, up: boolean) => {
+    ctx.save();
+    ctx.strokeStyle = `rgba(${accent}, 0.95)`;
+    ctx.lineWidth = 2 * dpr;
+    ctx.beginPath();
+    for (const time of times) {
+      const px = Math.round(x(time)) + 0.5;
+      ctx.moveTo(px, y);
+      ctx.lineTo(px, y + ((up ? -13 : 13) * dpr));
+    }
+    ctx.stroke();
+    ctx.restore();
+  };
+  phrases(tl.outPhrases, layout.topY + half + (2 * dpr), false);
+  phrases(tl.inPhrases, layout.bottomY - half - (2 * dpr), true);
+
+  // Where each song is sung: a strip along the lane's outer edge
+  const strip = (ranges: [number, number][], y: number) => {
+    ctx.fillStyle = `rgba(${VOCAL_COLOR}, 0.8)`;
+    for (const [a, b] of ranges) {
+      ctx.fillRect(x(a), y, Math.max(dpr, x(b) - x(a)), 3 * dpr);
+    }
+  };
+  strip(tl.outVocals, layout.topY - half);
+  strip(tl.inVocals, layout.bottomY + half - (3 * dpr));
+
+  // Two singers heard at once: a red wash across both lanes
+  const clashes = vocalClashes(tl);
+  for (const [a, b] of clashes) {
+    const from = x(a);
+    const span = Math.max(2 * dpr, x(b) - from);
+    ctx.fillStyle = `rgba(${CLASH_COLOR}, 0.14)`;
+    ctx.fillRect(from, 0, span, layout.axisY - (4 * dpr));
+    ctx.fillStyle = `rgba(${CLASH_COLOR}, 0.9)`;
+    ctx.fillRect(from, layout.topY + half + (4 * dpr), span, 3 * dpr);
+    ctx.fillRect(from, layout.bottomY - half - (7 * dpr), span, 3 * dpr);
+  }
+
+  // Points in each song (its intro ending, its bass coming in, its outro
+  // starting...): a dashed line through the lane, labelled
+  const marks = (
+    list: TimelineMark[],
+    top: number,
+    bottom: number,
+    labelY: number,
+    down: boolean,
+  ) => {
+    let lastRight = Number.NEGATIVE_INFINITY;
+    let row = 0;
+    ctx.save();
+    ctx.font = `600 ${9.5 * dpr}px 'YouTube Sans', Roboto, Arial, sans-serif`;
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'left';
+    for (const mark of [...list].sort((a, b) => a.time - b.time)) {
+      // The vocal the transition lands on has its own marker
+      if (mark.kind === 'vocal' && tl.vocal !== undefined && Math.abs(tl.vocal - mark.time) < 0.5) {
+        continue;
+      }
+      const px = Math.round(x(mark.time)) + 0.5;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
+      ctx.lineWidth = dpr;
+      ctx.setLineDash([2 * dpr, 3 * dpr]);
+      ctx.beginPath();
+      ctx.moveTo(px, top);
+      ctx.lineTo(px, bottom);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const text = t(`plugins.automix.ui.timeline.mark.${mark.kind}`);
+      const textWidth = ctx.measureText(text).width;
+      row = px < lastRight + (4 * dpr) ? (row + 1) % 2 : 0;
+      const y = labelY + ((down ? 1 : -1) * row * 13 * dpr);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.fillRect(px + (2 * dpr), y - dpr, textWidth + (6 * dpr), 12 * dpr);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.fillText(text, px + (5 * dpr), y);
+      lastRight = Math.max(lastRight, px + textWidth + (8 * dpr));
+    }
+    ctx.restore();
+  };
+  marks(tl.outMarks, layout.topY - half, layout.topY + half, layout.topY - half + (22 * dpr), true);
+  marks(tl.inMarks, layout.bottomY - half, layout.bottomY + half, layout.bottomY + half - (32 * dpr), false);
+
   // Volume curves
   const curve = (centre: number, pick: (l: { out: number; in: number }) => number, color: string) => {
     ctx.save();
@@ -382,6 +557,25 @@ const drawStatic = (
   };
   curve(layout.topY, (l) => l.out, `rgba(${VOLUME_COLOR}, 0.95)`);
   curve(layout.bottomY, (l) => l.in, `rgba(${VOLUME_COLOR}, 0.95)`);
+
+  // The old song's echo / reverb send (0 at the lane's bottom, full at its top)
+  if (hasFx(plan)) {
+    ctx.save();
+    ctx.strokeStyle = `rgba(${FX_COLOR}, 0.95)`;
+    ctx.lineWidth = 1.5 * dpr;
+    ctx.setLineDash([5 * dpr, 3 * dpr]);
+    ctx.beginPath();
+    const steps = Math.ceil(width / (2 * dpr));
+    for (let i = 0; i <= steps; i++) {
+      const px = (i / steps) * width;
+      const time = tl.start + ((px / width) * (tl.end - tl.start));
+      const y = layout.topY + half - (fxLevelAt(plan, time) * half * 2);
+      if (i === 0) ctx.moveTo(px, y);
+      else ctx.lineTo(px, y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
 
   // EQ (bass) and filter lines, centred on each lane: flat / open on the
   // centre line, a bass cut going down, a high-pass up and a low-pass down
@@ -429,7 +623,23 @@ const drawStatic = (
     ctx.stroke();
   }
   ctx.setLineDash([]);
-  label(t('plugins.automix.ui.timeline.mix'), mixX + (5 * dpr), 4 * dpr, `rgba(${accent}, 1)`);
+  const preset = plan.effect === undefined ? undefined : effectName(plan.effect);
+  label(
+    preset
+      ? `${t('plugins.automix.ui.timeline.mix')} · ${preset}`
+      : t('plugins.automix.ui.timeline.mix'),
+    mixX + (5 * dpr),
+    4 * dpr,
+    `rgba(${accent}, 1)`,
+  );
+  if (clashes.length > 0) {
+    label(
+      t('plugins.automix.ui.timeline.clash'),
+      x(clashes[0][0]) + (4 * dpr),
+      layout.topY + half - (12 * dpr),
+      `rgba(${CLASH_COLOR}, 1)`,
+    );
+  }
   if (tl.bassSwap) {
     label(
       t('plugins.automix.ui.timeline.bass'),
@@ -578,6 +788,28 @@ export const TimelinePanel = (props: TimelineProps & { close: () => void }) => {
   });
 
   const plan = () => timeline()?.plan;
+  // Each song's tempo and key, on its lane: the next one as played too
+  const bpm = (value: number) => t('plugins.automix.ui.timeline.bpm', { bpm: Math.round(value) });
+  const outInfo = (p: TransitionPlan) =>
+    [p.fromBpm > 0 ? bpm(p.fromBpm) : '', p.fromKey ?? ''].filter(Boolean).join(' · ');
+  const inInfo = (p: TransitionPlan) => {
+    const rate = p.rate || 1;
+    const tempo =
+      p.toBpm <= 0
+        ? ''
+        : Math.abs(rate - 1) < 0.0005
+          ? bpm(p.toBpm)
+          : t('plugins.automix.ui.timeline.played-at', {
+            bpm: Math.round(p.toBpm),
+            played: (p.toBpm * rate).toFixed(1),
+            percent: `${rate > 1 ? '+' : '−'}${(Math.abs(rate - 1) * 100).toFixed(1)}`,
+          });
+    return [tempo, p.toKey ?? ''].filter(Boolean).join(' · ');
+  };
+  const confidenceNotes = (p: TransitionPlan) =>
+    (p.confidenceNotes ?? []).map(confidenceNoteText).filter(Boolean);
+  const confidenceLevel = (value: number) =>
+    value >= 0.75 ? 'high' : value >= 0.5 ? 'mid' : 'low';
   const styleLabel = (p: TransitionPlan) => {
     const name = t(`plugins.automix.style.${p.style}`);
     const effect = p.effect === undefined ? undefined : effectName(p.effect);
@@ -629,6 +861,31 @@ export const TimelinePanel = (props: TimelineProps & { close: () => void }) => {
             <div class="automix-tl-chips">
               <span class="automix-tl-chip automix-tl-chip-style">{styleLabel(current())}</span>
               <span class="automix-tl-chip">{props.describe(current())}</span>
+              <Show when={timeline()?.keys}>
+                {(keys) => (
+                  <span class={`automix-tl-chip automix-tl-keys automix-tl-keys-${keys().relation}`}>
+                    {t(`plugins.automix.ui.timeline.keys.${keys().relation}`, {
+                      from: keys().from,
+                      to: keys().to,
+                    })}
+                  </span>
+                )}
+              </Show>
+              <Show when={current().confidence !== undefined}>
+                <span
+                  class={`automix-tl-chip automix-tl-confidence automix-tl-confidence-${confidenceLevel(current().confidence ?? 0)}`}
+                >
+                  <i class="automix-tl-meter">
+                    <i style={{ width: `${Math.round((current().confidence ?? 0) * 100)}%` }} />
+                  </i>
+                  {t('plugins.automix.ui.timeline.confidence', {
+                    percent: Math.round((current().confidence ?? 0) * 100),
+                  })}
+                </span>
+              </Show>
+              <For each={confidenceNotes(current())}>
+                {(note) => <span class="automix-tl-chip automix-tl-note">{note}</span>}
+              </For>
               <span class="automix-tl-chip automix-tl-clock">{clock()}</span>
             </div>
           )}
@@ -643,8 +900,18 @@ export const TimelinePanel = (props: TimelineProps & { close: () => void }) => {
             }
             when={plan()}
           >
-            <span class="automix-tl-lane-label automix-tl-lane-top">{t('plugins.automix.ui.timeline.now-playing')}</span>
-            <span class="automix-tl-lane-label automix-tl-lane-bottom">{t('plugins.automix.ui.timeline.up-next')}</span>
+            <span class="automix-tl-lane-label automix-tl-lane-top">
+              {t('plugins.automix.ui.timeline.now-playing')}
+              <Show when={plan() && outInfo(plan()!)}>
+                <span class="automix-tl-lane-info">{outInfo(plan()!)}</span>
+              </Show>
+            </span>
+            <span class="automix-tl-lane-label automix-tl-lane-bottom">
+              {t('plugins.automix.ui.timeline.up-next')}
+              <Show when={plan() && inInfo(plan()!)}>
+                <span class="automix-tl-lane-info">{inInfo(plan()!)}</span>
+              </Show>
+            </span>
           </Show>
           <canvas ref={canvas} />
         </div>
@@ -658,6 +925,13 @@ export const TimelinePanel = (props: TimelineProps & { close: () => void }) => {
                 <span><i class="automix-tl-line" style={{ 'background': `rgb(${EQ_COLOR})`, 'box-shadow': 'none' }} />{t('plugins.automix.ui.timeline.eq')}</span>
                 <span><i class="automix-tl-line" style={{ 'background': `rgb(${FILTER_COLOR})`, 'box-shadow': 'none' }} />{t('plugins.automix.ui.timeline.filter')}</span>
                 <span><i class="automix-tl-tick" />{t('plugins.automix.ui.timeline.bars')}</span>
+                <span><i class="automix-tl-tick automix-tl-tick-phrase" />{t('plugins.automix.ui.timeline.phrase')}</span>
+                <span><i class="automix-tl-mark" />{t('plugins.automix.ui.timeline.structure')}</span>
+                <span><i class="automix-tl-strip" style={{ background: `rgb(${VOCAL_COLOR})` }} />{t('plugins.automix.ui.timeline.sung')}</span>
+                <span><i class="automix-tl-strip" style={{ background: `rgb(${CLASH_COLOR})` }} />{t('plugins.automix.ui.timeline.clash-legend')}</span>
+                <Show when={plan() && hasFx(plan()!)}>
+                  <span><i class="automix-tl-line automix-tl-line-dashed" style={{ 'border-color': `rgb(${FX_COLOR})` }} />{t('plugins.automix.ui.timeline.fx')}</span>
+                </Show>
               </div>
               <div class="automix-tl-why">
                 <For each={props.hint().lines}>{(line) => <div>{line}</div>}</For>

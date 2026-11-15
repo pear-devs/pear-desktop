@@ -17,7 +17,7 @@ import {
 } from '@/plugins/album-color-theme/colors';
 
 import { effectById, effectName } from './effects';
-import { InfoButton, TimelinePanel } from './timeline';
+import { confidenceNoteText, InfoButton, TimelinePanel } from './timeline';
 
 import type { AutoMixPluginConfig } from './config';
 import type { AutoMixStatus, TransitionTimeline } from './engine';
@@ -52,31 +52,7 @@ const styleName = (plan: TransitionPlan) =>
 export const describeConfidence = (plan: TransitionPlan) => {
   if (plan.confidence === undefined) return undefined;
   const percent = Math.round(plan.confidence * 100);
-  const notes = (plan.confidenceNotes ?? []).slice(0, 2).map((note) => {
-    switch (note.kind) {
-      case 'style':
-        return t(`plugins.automix.ui.confidence.style-${note.style}`);
-      case 'grid':
-        return t('plugins.automix.ui.confidence.grid');
-      case 'stretch':
-        return t('plugins.automix.ui.confidence.stretch', { percent: note.percent });
-      case 'keys':
-        return t(
-          note.diagonal
-            ? 'plugins.automix.ui.confidence.keys-diagonal'
-            : 'plugins.automix.ui.confidence.keys',
-          { from: note.from, to: note.to },
-        );
-      case 'vocals':
-        return t('plugins.automix.ui.confidence.vocals', { percent: note.percent });
-      case 'energy':
-        return note.softer && note.drop < 6
-          ? t('plugins.automix.ui.confidence.softer')
-          : t('plugins.automix.ui.confidence.energy', { drop: note.drop });
-      default:
-        return t('plugins.automix.ui.confidence.late');
-    }
-  });
+  const notes = (plan.confidenceNotes ?? []).slice(0, 2).map(confidenceNoteText);
   return t('plugins.automix.ui.confidence.line', {
     percent,
     notes: notes.length ? ` · ${notes.join(', ')}` : '',

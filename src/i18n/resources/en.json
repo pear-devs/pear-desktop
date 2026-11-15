@@ -549,7 +549,32 @@
           "now-playing": "Now playing",
           "title": "AutoMix transition",
           "up-next": "Up next",
-          "vocals": "vocals"
+          "vocals": "vocals",
+          "bpm": "{{bpm}} BPM",
+          "played-at": "{{bpm}} BPM, played at {{played}} ({{percent}}%)",
+          "keys": {
+            "same": "Same key · {{from}}",
+            "compatible": "Keys blend · {{from}} → {{to}}",
+            "diagonal": "Diagonal key move · {{from}} → {{to}}",
+            "clash": "Keys clash · {{from}} → {{to}}",
+            "unsure": "Keys {{from}} → {{to}} · not sure"
+          },
+          "confidence": "Confidence {{percent}}%",
+          "mark": {
+            "start": "starts",
+            "intro": "intro ends",
+            "bass": "bass in",
+            "vocal": "vocals in",
+            "outro": "outro",
+            "fade": "ending fades",
+            "end": "ends"
+          },
+          "clash": "two singers",
+          "clash-legend": "Two singers at once",
+          "phrase": "Phrase starts",
+          "structure": "Song structure",
+          "sung": "Singing",
+          "fx": "Echo / reverb send"
         }
       }
     },

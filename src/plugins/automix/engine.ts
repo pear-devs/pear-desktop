@@ -24,6 +24,7 @@ import {
   type EffectStyle,
 } from './effects';
 import { bassSwapWindow } from './bass';
+import { keysClash, keysCompatible, keysDiagonal, type MusicalKey } from './key';
 import { alignKicks } from './kicks';
 import {
   planTransition,
@@ -132,7 +133,43 @@ export interface TransitionTimeline {
   bassSwap?: [number, number];
   /** Where the next song's first vocal line lands, on the timeline */
   vocal?: number;
+  /** Points in each song's structure, on the timeline */
+  outMarks: TimelineMark[];
+  inMarks: TimelineMark[];
+  /** Downbeats that start a phrase (Apple Music's structure marks) */
+  outPhrases: number[];
+  inPhrases: number[];
+  /** Where each song is sung (Apple Music), on the timeline */
+  outVocals: [number, number][];
+  inVocals: [number, number][];
+  /** The two keys at the mix point and how they sit together */
+  keys?: { from: string; to: string; relation: KeyRelation };
 }
+
+export type TimelineMarkKind = 'start' | 'intro' | 'bass' | 'vocal' | 'outro' | 'fade' | 'end';
+
+export interface TimelineMark {
+  time: number;
+  kind: TimelineMarkKind;
+}
+
+/**
+ * How two keys sit together: the same, next to each other on the Camelot
+ * wheel, a diagonal step (relative major / minor a fifth away), a clash, or
+ * one of them not clear enough to say
+ */
+export type KeyRelation = 'same' | 'compatible' | 'diagonal' | 'clash' | 'unsure';
+
+const keyRelation = (
+  a: MusicalKey | null | undefined,
+  b: MusicalKey | null | undefined,
+): KeyRelation => {
+  if (!a || !b) return 'unsure';
+  if (a.camelot === b.camelot) return 'same';
+  if (keysCompatible(a, b)) return 'compatible';
+  if (keysDiagonal(a, b)) return 'diagonal';
+  return keysClash(a, b) ? 'clash' : 'unsure';
+};
 
 /** Seconds of the songs shown either side of the transition */
 const TIMELINE_MARGIN = 14;
@@ -1216,9 +1253,71 @@ export class AutoMixEngine {
       ],
       vocal:
         plan.landsOnVocal === undefined ? undefined : toTimeline(plan.landsOnVocal),
+      ...this.structureOf(from.analysis, to?.analysis, toTimeline, within, start, end),
     };
     this.timelineCache = { key, value };
     return value;
+  }
+
+  /** Structure marks, phrases, vocals and keys of a pair, on the timeline */
+  private structureOf(
+    from: TrackAnalysis,
+    to: TrackAnalysis | undefined,
+    toTimeline: (time: number) => number,
+    within: (time: number) => boolean,
+    start: number,
+    end: number,
+  ) {
+    const marks = (
+      points: [TimelineMarkKind, number | undefined][],
+      map: (time: number) => number,
+    ): TimelineMark[] =>
+      points.flatMap(([kind, time]) =>
+        time === undefined || !Number.isFinite(time) || !within(map(time))
+          ? []
+          : [{ kind, time: map(time) }],
+      );
+    const sung = (track: TrackAnalysis, map: (time: number) => number) =>
+      (track.vocals ?? []).flatMap(({ start: from, end: to }): [number, number][] => {
+        const a = Math.max(start, map(from));
+        const b = Math.min(end, map(to));
+        return b > a ? [[a, b]] : [];
+      });
+    const same = (time: number) => time;
+    return {
+      outMarks: marks(
+        [
+          ['outro', from.outroStart],
+          // Only an ending that dies away before the song goes quiet
+          ['fade', from.decayPoint < from.trailingSilenceStart - 1 ? from.decayPoint : undefined],
+          ['end', from.trailingSilenceStart],
+        ],
+        same,
+      ),
+      inMarks: to
+        ? marks(
+          [
+            ['start', to.leadingSilenceEnd],
+            ['intro', to.introEnd],
+            ['bass', to.bassEntry],
+            ['vocal', to.vocalEntry],
+          ],
+          toTimeline,
+        )
+        : [],
+      outPhrases: (from.phrases ?? []).filter(within),
+      inPhrases: to ? (to.phrases ?? []).map(toTimeline).filter(within) : [],
+      outVocals: sung(from, same),
+      inVocals: to ? sung(to, toTimeline) : [],
+      keys:
+        from.end.key && to?.start.key
+          ? {
+            from: from.end.key.camelot,
+            to: to.start.key.camelot,
+            relation: keyRelation(from.end.key, to.start.key),
+          }
+          : undefined,
+    };
   }
 
   /** Where playback is on the current timeline (the outgoing song's seconds) */

@@ -659,7 +659,7 @@ ytmusic-player-bar.automix-mixing {
 
 .automix-tl-plot {
   position: relative;
-  height: 300px;
+  height: 340px;
   margin: 0 24px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -697,6 +697,15 @@ ytmusic-player-bar.automix-mixing {
 
 .automix-tl-lane-top {
   top: 10px;
+}
+
+/* BPM and key next to a lane's name */
+.automix-tl-lane-info {
+  margin-left: 8px;
+  color: var(--automix-text);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .automix-tl-lane-bottom {
@@ -757,6 +766,89 @@ ytmusic-player-bar.automix-mixing {
   width: 1px;
   height: 10px;
   background: rgba(255, 255, 255, 0.6);
+}
+
+.automix-tl-tick-phrase {
+  width: 2px;
+  height: 13px;
+  background: rgb(var(--automix-accent));
+}
+
+/* A song structure mark: a dashed line through the lane */
+.automix-tl-mark {
+  width: 0;
+  height: 12px;
+  border-left: 1px dashed rgba(255, 255, 255, 0.6);
+}
+
+.automix-tl-strip {
+  width: 14px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+.automix-tl-line-dashed {
+  height: 0 !important;
+  border-top: 2px dashed;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.automix-tl-keys-same,
+.automix-tl-keys-compatible {
+  border-color: rgba(110, 230, 140, 0.45);
+  color: rgb(150, 240, 170);
+}
+
+.automix-tl-keys-diagonal {
+  border-color: rgba(255, 206, 64, 0.45);
+  color: rgb(255, 216, 110);
+}
+
+.automix-tl-keys-clash {
+  border-color: rgba(255, 90, 90, 0.5);
+  color: rgb(255, 130, 130);
+}
+
+.automix-tl-confidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--automix-text);
+}
+
+.automix-tl-meter {
+  position: relative;
+  width: 42px;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.automix-tl-meter > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+  background: currentColor;
+}
+
+.automix-tl-confidence-high .automix-tl-meter > i {
+  background: rgb(110, 230, 140);
+}
+
+.automix-tl-confidence-mid .automix-tl-meter > i {
+  background: rgb(255, 206, 64);
+}
+
+.automix-tl-confidence-low .automix-tl-meter > i {
+  background: rgb(255, 100, 100);
+}
+
+/* What held the confidence back */
+.automix-tl-note {
+  border-style: dashed;
+  font-size: 11.5px;
 }
 
 .automix-tl-why {
