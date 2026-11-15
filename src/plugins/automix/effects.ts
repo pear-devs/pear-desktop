@@ -341,6 +341,8 @@ const compose = (...sides: Side[]): Side => {
  */
 const STEP_SECONDS: Partial<Record<EffectParam, number>> = { gain: 1.2 };
 const STEP_SECONDS_DEFAULT = 0.6;
+/** Steps this close to the window's start or end (a fraction of it) are at its edge */
+const EDGE_STEP = 0.01;
 
 /** A Spotify catalog curve as lanes on one parameter */
 const curveLanes = (param: EffectParam, curve: CatalogCurve): Lane[] => {
@@ -360,7 +362,17 @@ const curveLanes = (param: EffectParam, curve: CatalogCurve): Lane[] => {
     if (instant) {
       const centre = (x0 + x1) / 2;
       const curveKind = param === 'gain' ? (y1 > y0 ? 'out-0.5' : 'in-0.5') : 'linear';
-      lanes.push(lane(param, y0, y1, curveKind, [0, 1], [[centre, -soften / 2], [centre, soften / 2]]));
+      // A step at the window's very start or end moves inside it: centred,
+      // half of it would fall before the new song plays (and sort ahead of
+      // the start value, which then held all the way) or after the old song
+      // has stopped, cutting it off part way down
+      const place: [At, At] =
+        centre <= EDGE_STEP
+          ? [0, [0, soften]]
+          : centre >= 1 - EDGE_STEP
+            ? [[1, -soften], 1]
+            : [[centre, -soften / 2], [centre, soften / 2]];
+      lanes.push(lane(param, y0, y1, curveKind, [0, 1], place));
     } else {
       lanes.push(lane(param, y0, y1, 'linear', [0, 1], [x0, x1]));
     }
