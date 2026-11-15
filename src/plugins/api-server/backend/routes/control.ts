@@ -10,10 +10,12 @@ import {
 
 import { API_VERSION } from '../api-version';
 import {
+  AddSongsToPlaylistSchema,
   AddSongToQueueSchema,
   GoBackSchema,
   GoForwardScheme,
   MoveSongInQueueSchema,
+  PlaylistParamsSchema,
   QueueParamsSchema,
   SearchSchema,
   SeekSchema,
@@ -471,6 +473,38 @@ const routes = {
       },
     },
   }),
+  addSongsToPlaylist: createRoute({
+    method: 'post',
+    path: `/api/${API_VERSION}/playlists/{playlistId}/songs`,
+    summary: 'add songs to playlist',
+    description: 'Add one or more songs to a playlist',
+    request: {
+      params: PlaylistParamsSchema,
+      body: {
+        description: 'video ids of the songs to add',
+        content: {
+          'application/json': {
+            schema: AddSongsToPlaylistSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      204: {
+        description: 'Success',
+      },
+      500: {
+        description: 'Failed to add songs to playlist',
+        content: {
+          'application/json': {
+            schema: z.object({
+              error: z.string(),
+            }),
+          },
+        },
+      },
+    },
+  }),
   moveSongInQueue: createRoute({
     method: 'patch',
     path: `/api/${API_VERSION}/queue/{index}`,
@@ -831,6 +865,24 @@ export const register = (
 
     ctx.status(204);
     return ctx.body(null);
+  });
+  app.openapi(routes.addSongsToPlaylist, async (ctx) => {
+    const { playlistId } = ctx.req.valid('param');
+    const { videoIds } = ctx.req.valid('json');
+
+    try {
+      await controller.addSongsToPlaylist(playlistId, videoIds);
+      ctx.status(204);
+      return ctx.body(null);
+    } catch (error) {
+      ctx.status(500);
+      return ctx.json({
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to add songs to playlist',
+      });
+    }
   });
   app.openapi(routes.moveSongInQueue, (ctx) => {
     const index = Number(ctx.req.param('index'));
