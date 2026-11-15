@@ -574,7 +574,8 @@
           "phrase": "Phrase starts",
           "structure": "Song structure",
           "sung": "Singing",
-          "fx": "Echo / reverb send"
+          "fx": "Echo / reverb send",
+          "unplayed": "not played"
         }
       }
     },

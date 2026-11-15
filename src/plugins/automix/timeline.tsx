@@ -19,6 +19,7 @@ import {
   laneTimes,
   laneValue,
   styleOf,
+  timeIn,
   withBassSwap,
   type EffectParam,
   type Lane,
@@ -279,6 +280,23 @@ const HEARD_VOCALS = 0.18;
 const MIN_CLASH = 0.25;
 
 /**
+ * The stretch of each song that's actually played, on the timeline: the old
+ * song up to where it stops, the next one from where it's entered (its copy
+ * starts at mixIn on the mix point, and at its own start when that's later)
+ */
+const heardSpan = (plan: TransitionPlan) => {
+  const style = styleOf(plan);
+  const outUntil =
+    plan.style === 'cut'
+      ? plan.mixOut
+      : style?.outEnd !== undefined
+        ? timeIn(style.outEnd, plan.mixOut, plan.duration)
+        : plan.mixOut + plan.duration + (plan.holdOutgoing ? ENDING_RING : 0);
+  const inFrom = plan.mixOut + (Math.max(0, -plan.mixIn) / (plan.rate || 1));
+  return { outUntil, inFrom };
+};
+
+/**
  * Where both songs' singing is heard at once: their sung stretches
  * overlapping, with both songs' mids (where a voice sits) still up through
  * the transition's volume and filters
@@ -470,15 +488,57 @@ const drawStatic = (
   phrases(tl.outPhrases, layout.topY + half + (2 * dpr), false);
   phrases(tl.inPhrases, layout.bottomY - half - (2 * dpr), true);
 
-  // Where each song is sung: a strip along the lane's outer edge
-  const strip = (ranges: [number, number][], y: number) => {
+  // What's never played of each song: the old one after it's gone, the
+  // next one before where it's entered (a mix often skips its first second
+  // or two). Shaded, so nothing drawn there reads as something to hear
+  const heard = heardSpan(plan);
+  const unplayed = (from: number, to: number, top: number, bottom: number) => {
+    const left = Math.max(0, x(from));
+    const right = Math.min(width, x(to));
+    if (right - left < dpr) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(left, top, right - left, bottom - top);
+    ctx.clip();
+    ctx.fillStyle = 'rgba(6, 6, 10, 0.6)';
+    ctx.fillRect(left, top, right - left, bottom - top);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+    ctx.lineWidth = dpr;
+    ctx.beginPath();
+    for (let px = left - (bottom - top); px < right; px += 8 * dpr) {
+      ctx.moveTo(px, bottom);
+      ctx.lineTo(px + (bottom - top), top);
+    }
+    ctx.stroke();
+    if (right - left > 70 * dpr) {
+      ctx.font = `600 ${9.5 * dpr}px 'YouTube Sans', Roboto, Arial, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.fillText(
+        t('plugins.automix.ui.timeline.unplayed'),
+        (left + right) / 2,
+        (top + bottom) / 2,
+      );
+    }
+    ctx.restore();
+  };
+  unplayed(heard.outUntil, tl.end, layout.topY - half, layout.topY + half);
+  unplayed(tl.start, heard.inFrom, layout.bottomY - half, layout.bottomY + half);
+
+  // Where each song is sung, as far as it's heard: a strip along the lane's
+  // outer edge
+  const strip = (ranges: [number, number][], y: number, from: number, to: number) => {
     ctx.fillStyle = `rgba(${VOCAL_COLOR}, 0.8)`;
     for (const [a, b] of ranges) {
-      ctx.fillRect(x(a), y, Math.max(dpr, x(b) - x(a)), 3 * dpr);
+      const start = Math.max(a, from);
+      const end = Math.min(b, to);
+      if (end <= start) continue;
+      ctx.fillRect(x(start), y, Math.max(dpr, x(end) - x(start)), 3 * dpr);
     }
   };
-  strip(tl.outVocals, layout.topY - half);
-  strip(tl.inVocals, layout.bottomY + half - (3 * dpr));
+  strip(tl.outVocals, layout.topY - half, Number.NEGATIVE_INFINITY, heard.outUntil);
+  strip(tl.inVocals, layout.bottomY + half - (3 * dpr), heard.inFrom, Number.POSITIVE_INFINITY);
 
   // Two singers heard at once: a red wash across both lanes
   const clashes = vocalClashes(tl);
@@ -500,6 +560,7 @@ const drawStatic = (
     bottom: number,
     labelY: number,
     down: boolean,
+    played: (time: number) => boolean,
   ) => {
     let lastRight = Number.NEGATIVE_INFINITY;
     let row = 0;
@@ -513,6 +574,8 @@ const drawStatic = (
         continue;
       }
       const px = Math.round(x(mark.time)) + 0.5;
+      // A point in a part that's never played is shown faintly
+      ctx.globalAlpha = played(mark.time) ? 1 : 0.35;
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
       ctx.lineWidth = dpr;
       ctx.setLineDash([2 * dpr, 3 * dpr]);
@@ -533,8 +596,22 @@ const drawStatic = (
     }
     ctx.restore();
   };
-  marks(tl.outMarks, layout.topY - half, layout.topY + half, layout.topY - half + (22 * dpr), true);
-  marks(tl.inMarks, layout.bottomY - half, layout.bottomY + half, layout.bottomY + half - (32 * dpr), false);
+  marks(
+    tl.outMarks,
+    layout.topY - half,
+    layout.topY + half,
+    layout.topY - half + (22 * dpr),
+    true,
+    (time) => time <= heard.outUntil,
+  );
+  marks(
+    tl.inMarks,
+    layout.bottomY - half,
+    layout.bottomY + half,
+    layout.bottomY + half - (32 * dpr),
+    false,
+    (time) => time >= heard.inFrom,
+  );
 
   // Volume curves
   const curve = (centre: number, pick: (l: { out: number; in: number }) => number, color: string) => {
