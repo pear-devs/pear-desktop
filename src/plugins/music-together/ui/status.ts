@@ -8,7 +8,7 @@ import type { Permission, Profile } from '../types';
 export const createStatus = () => {
   const element = ElementFromHtml(statusHTML);
   const icon = document.querySelector<HTMLImageElement>(
-    'ytmusic-settings-button > tp-yt-paper-icon-button > tp-yt-iron-icon#icon img',
+    'ytmusic-settings-button img',
   );
 
   const profile = element.querySelector<HTMLImageElement>(

@@ -1,16 +1,12 @@
 import { runInContext } from 'node:vm';
 
-import {
-  BG,
-  base64ToU8,
-  buildURL,
-  getHeaders,
-  u8ToBase64,
-  type WebPoSignalOutput,
-} from 'bgutils-js';
+import { BotGuardClient, getChallenge } from 'bgutils-js/botguard';
+import { base64ToU8, buildURL, getHeaders, u8ToBase64 } from 'bgutils-js/utils';
 import { Platform, type Types } from 'youtubei.js';
 
 import { getNetFetchAsFetch } from './fetch';
+
+import type { WebPoSignalOutput } from 'bgutils-js/shared-types';
 
 // youtubei.js ships no JavaScript evaluator, and deciphering stream URLs needs one
 // https://ytjs.dev/guide/getting-started.html#providing-a-custom-javascript-interpreter
@@ -44,33 +40,28 @@ type PoTokenMinter = {
   close: () => Promise<void>;
 };
 
-const createPoTokenMinter = async (
-  visitorData: string,
-): Promise<PoTokenMinter> => {
+const createPoTokenMinter = async (): Promise<PoTokenMinter> => {
   const fetch = getNetFetchAsFetch();
   // BotGuard runs inside happy-dom's own VM context, so the main process globals stay untouched
-  const window = new (await import('happy-dom')).Window();
+  // BotGuard needs iframes, which happy-dom >= 21 no longer loads by default
+  const window = new (await import('happy-dom')).Window({
+    settings: { enableIframePageLoading: true },
+  });
 
   try {
-    const bgConfig = {
-      fetch,
-      globalObj: window,
-      identifier: visitorData,
-      requestKey,
-    };
-    const challenge = await BG.Challenge.create(bgConfig);
+    const challenge = await getChallenge({ requestKey, fetchFunction: fetch });
     const interpreterJavascript =
-      challenge?.interpreterJavascript
-        .privateDoNotAccessOrElseSafeScriptWrappedValue;
-    if (!challenge || !interpreterJavascript) {
+      challenge.interpreterJavascript
+        ?.privateDoNotAccessOrElseSafeScriptWrappedValue;
+    if (!interpreterJavascript) {
       throw new Error('Could not get the BotGuard challenge');
     }
 
     runInContext(interpreterJavascript, window);
-    const botguard = await BG.BotGuardClient.create({
+    const botguard = await BotGuardClient.create({
       program: challenge.program,
       globalName: challenge.globalName,
-      globalObj: window,
+      globalObject: window,
     });
 
     // Must come from the VM realm, BotGuard only fills arrays of its own realm
@@ -87,7 +78,7 @@ const createPoTokenMinter = async (
     ];
     const ttlMs = estimatedTtlSecs * 1000;
 
-    // BG.WebPoMinter rejects functions and Uint8Arrays from the VM realm (`instanceof` checks),
+    // WebPoMinter rejects functions and Uint8Arrays from the VM realm (`instanceof` checks),
     // so call the minter directly
     const mintCallback = await webPoSignalOutput[0]?.(
       base64ToU8(integrityToken),
@@ -114,45 +105,32 @@ const createPoTokenMinter = async (
   }
 };
 
-const createPoTokenMinterWithRetry = async (visitorData: string) => {
-  // BotGuard randomly fails to produce a minter (about half the time under happy-dom)
-  for (let attempt = 1; attempt < 5; attempt++) {
+const createPoTokenMinterWithRetry = async () => {
+  // BotGuard randomly fails to produce a minter (half the time or more under
+  // happy-dom), but an attempt only takes a fraction of a second
+  for (let attempt = 1; attempt < 10; attempt++) {
     try {
-      return await createPoTokenMinter(visitorData);
+      return await createPoTokenMinter();
     } catch {}
   }
 
-  return await createPoTokenMinter(visitorData);
+  return await createPoTokenMinter();
 };
 
-let cachedMinter:
-  | { visitorData: string; minter: Promise<PoTokenMinter> }
-  | undefined;
+let cachedMinter: Promise<PoTokenMinter> | undefined;
 
 /**
  * Mints a PO token bound to `identifier` (e.g. a video ID).
  * Stream URLs of the YTMUSIC client need one bound to the video ID, otherwise
  * googlevideo answers 403 past the first megabyte.
  */
-export const mintPoToken = async (
-  visitorData: string,
-  identifier: string,
-): Promise<string> => {
-  if (cachedMinter?.visitorData !== visitorData) {
-    cachedMinter?.minter.then(
-      (minter) => minter.close(),
-      () => {},
-    );
-    cachedMinter = {
-      visitorData,
-      minter: createPoTokenMinterWithRetry(visitorData),
-    };
-  }
+export const mintPoToken = async (identifier: string): Promise<string> => {
+  cachedMinter ??= createPoTokenMinterWithRetry();
 
   const current = cachedMinter;
   let minter;
   try {
-    minter = await current.minter;
+    minter = await current;
   } catch (error) {
     if (cachedMinter === current) cachedMinter = undefined;
     throw error;
@@ -164,5 +142,5 @@ export const mintPoToken = async (
 
   if (cachedMinter === current) cachedMinter = undefined;
   minter.close();
-  return await mintPoToken(visitorData, identifier);
+  return await mintPoToken(identifier);
 };

@@ -20,6 +20,15 @@ export type IStore = InstanceType<
 >;
 
 const migrations = {
+  '>=3.12.1'(store: IStore) {
+    // A removed lyrics provider can no longer be the preferred one.
+    const key = 'plugins.synced-lyrics.preferredProvider';
+    const preferred = store.get(key) as string | undefined;
+    const removedProviders = ['MusixMatch'];
+    if (preferred && removedProviders.includes(preferred)) {
+      store.delete(key);
+    }
+  },
   '>=3.12.0'(store: IStore) {
     const blockerConfig = store.get('plugins.adblocker') as TrackerBlockerConfig;
     if (blockerConfig) {

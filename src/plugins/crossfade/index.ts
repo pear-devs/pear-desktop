@@ -175,10 +175,7 @@ export default createPlugin<
 
     ipc.handle('audio-url', async (videoID: string) => {
       try {
-        const poToken = await mintPoToken(
-          yt.session.context.client.visitorData ?? '',
-          videoID,
-        );
+        const poToken = await mintPoToken(videoID);
         const info = await yt.getBasicInfo(videoID, {
           client: 'YTMUSIC',
           po_token: poToken,
