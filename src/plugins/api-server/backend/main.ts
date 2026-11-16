@@ -5,6 +5,7 @@ import { createServer as createHttpsServer } from 'node:https';
 import { serve, upgradeWebSocket } from '@hono/node-server';
 import { swaggerUI } from '@hono/swagger-ui';
 import { OpenAPIHono as Hono } from '@hono/zod-openapi';
+import { ipcMain } from 'electron';
 import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt';
 import { WebSocketServer } from 'ws';
@@ -14,6 +15,7 @@ import { registerCallback } from '@/providers/song-info';
 import { createBackend } from '@/utils';
 
 import { API_VERSION } from './api-version';
+import { requestFromRenderer } from './renderer-request';
 import { registerAuth, registerControl, registerWebsocket } from './routes';
 import { JWTPayloadSchema } from './scheme';
 
@@ -26,6 +28,8 @@ import type {
   VolumeState,
 } from '@/types/datahost-get-state';
 import type { MiddlewareHandler } from 'hono';
+
+const LIKE_STATUS_TIMEOUT_MS = 1000;
 
 export const backend = createBackend<BackendType, APIServerConfig>({
   async start(ctx) {
@@ -133,9 +137,12 @@ export const backend = createBackend<BackendType, APIServerConfig>({
       () => this.songInfo,
       () => this.currentRepeatMode,
       () =>
-        backendCtx.window.webContents.executeJavaScript(
-          'document.querySelector("#like-button-renderer")?.likeStatus',
-        ) as Promise<LikeType>,
+        requestFromRenderer<LikeType>(
+          ipcMain,
+          () => backendCtx.window.webContents.send('peard:get-like-status'),
+          'peard:get-like-status-response',
+          LIKE_STATUS_TIMEOUT_MS,
+        ),
       () => this.volumeState,
     );
     registerAuth(this.app, backendCtx);
