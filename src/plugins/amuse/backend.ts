@@ -3,19 +3,29 @@ import { type Context, Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { t } from 'i18next';
 
-import { registerCallback, type SongInfo } from '@/providers/song-info';
+import {
+  MediaType,
+  registerCallback,
+  type SongInfo,
+} from '@/providers/song-info';
 import { createBackend } from '@/utils';
 
 import type { AmuseSongInfo } from './types';
 
 const amusePort = 9863;
 
-const formatSongInfo = (info: SongInfo) => {
+const formatSongInfo = (
+  info: SongInfo,
+  isAdvertisement: boolean,
+  positionUpdatedAt: number,
+) => {
   const formattedSongInfo: AmuseSongInfo = {
+    apiVersion: 2,
     player: {
       hasSong: !!(info.artist && info.title),
       isPaused: info.isPaused ?? false,
       seekbarCurrentPosition: info.elapsedSeconds ?? 0,
+      positionUpdatedAt,
     },
     track: {
       duration: info.songDuration,
@@ -24,7 +34,12 @@ const formatSongInfo = (info: SongInfo) => {
       cover: info.imageSrc ?? '',
       url: info.url ?? '',
       id: info.videoId,
-      isAdvertisement: false,
+      isAdvertisement,
+      album: info.album ?? null,
+      // Before the first song the info is empty; keep the field in the response
+      mediaType: info.mediaType ?? MediaType.Audio,
+      // The provider uses '' when the URL has no playlist
+      playlistId: info.playlistId || null,
     },
   };
   return formattedSongInfo;
@@ -32,11 +47,32 @@ const formatSongInfo = (info: SongInfo) => {
 
 export default createBackend({
   currentSongInfo: {} as SongInfo,
+  // Reported by the renderer, the song info itself doesn't know about ads
+  isAdvertisement: false,
+  // When elapsedSeconds last changed, so clients can extrapolate the position
+  positionUpdatedAt: 0,
   app: null as Hono | null,
   server: null as ReturnType<typeof serve> | null,
-  start() {
+  start({ ipc }) {
+    ipc.on('peard:amuse-ad-state', (isAd: boolean) => {
+      this.isAdvertisement = isAd;
+    });
+    // Without this the song info only gets a new elapsed time on play, pause
+    // or seek, so seekbarCurrentPosition stood still while a song played
+    ipc.on('peard:player-api-loaded', () =>
+      ipc.send('peard:setup-time-changed-listener'),
+    );
+
     registerCallback((songInfo) => {
-      this.currentSongInfo = songInfo;
+      if (
+        songInfo.elapsedSeconds !== this.currentSongInfo.elapsedSeconds ||
+        songInfo.videoId !== this.currentSongInfo.videoId ||
+        songInfo.isPaused !== this.currentSongInfo.isPaused
+      ) {
+        this.positionUpdatedAt = Date.now();
+      }
+      // The provider reuses one object, keep a copy to compare against
+      this.currentSongInfo = { ...songInfo };
     });
 
     this.app = new Hono();
@@ -46,7 +82,14 @@ export default createBackend({
     );
 
     const queryAndApiHandler = (ctx: Context) => {
-      return ctx.json(formatSongInfo(this.currentSongInfo), 200);
+      return ctx.json(
+        formatSongInfo(
+          this.currentSongInfo,
+          this.isAdvertisement,
+          this.positionUpdatedAt,
+        ),
+        200,
+      );
     };
 
     this.app.get('/query', queryAndApiHandler);
