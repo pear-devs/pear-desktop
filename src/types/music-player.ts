@@ -152,7 +152,7 @@ export interface MusicPlayer {
   dispatchReduxAction: <Parameters extends unknown[], Return>(
     ...params: Parameters
   ) => Return;
-  getPlayerResponse: () => GetPlayerResponse;
+  getPlayerResponse: () => GetPlayerResponse | null;
   getHeartbeatResponse: <Parameters extends unknown[], Return>(
     ...params: Parameters
   ) => Return;

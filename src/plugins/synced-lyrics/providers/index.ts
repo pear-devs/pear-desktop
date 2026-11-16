@@ -5,7 +5,6 @@ import type { LyricResult } from '../types';
 export enum ProviderNames {
   YTMusic = 'YTMusic',
   LRCLib = 'LRCLib',
-  MusixMatch = 'MusixMatch',
   LyricsGenius = 'LyricsGenius',
   // Megalobiz = 'Megalobiz',
 }

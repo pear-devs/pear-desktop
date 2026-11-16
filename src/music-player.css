@@ -50,8 +50,8 @@ ytmusic-cast-button {
 }
 
 /* Make the logo un-draggable */
-ytmusic-nav-bar > div.left-content > a,
-ytmusic-nav-bar > div.left-content > a > picture > img {
+ytmusic-nav-bar > .left-content a,
+ytmusic-nav-bar > .left-content img {
   -webkit-user-drag: none;
 }
 

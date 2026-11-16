@@ -8,7 +8,7 @@ export const LikeButton = (props: LikeButtonProps) => (
     <button
       aria-label="Like all"
       aria-pressed="false"
-      class="like-menu yt-spec-button-shape-next yt-spec-button-shape-next--text yt-spec-button-shape-next--mono yt-spec-button-shape-next--size-m yt-spec-button-shape-next--icon-button"
+      class="like-menu ytSpecButtonShapeNextHost ytSpecButtonShapeNextText ytSpecButtonShapeNextMono ytSpecButtonShapeNextSizeM ytSpecButtonShapeNextIconButton"
       data-filled="false"
       data-type="like"
       id="alllike"
@@ -16,14 +16,14 @@ export const LikeButton = (props: LikeButtonProps) => (
     >
       <div
         aria-hidden="true"
-        class="yt-spec-button-shape-next__icon"
+        class="ytSpecButtonShapeNextIcon"
         style={{
           'color': 'var(--ytmusic-setting-item-toggle-active)',
         }}
       >
         <div
           aria-hidden="true"
-          class="yt-spec-button-shape-next__icon"
+          class="ytSpecButtonShapeNextIcon"
           style={{
             'color': 'white',
             'mask': 'linear-gradient(grey, grey)',
@@ -79,10 +79,10 @@ export const LikeButton = (props: LikeButtonProps) => (
       <yt-touch-feedback-shape style={{ 'border-radius': 'inherit' }}>
         <div
           aria-hidden="true"
-          class="yt-spec-touch-feedback-shape yt-spec-touch-feedback-shape--touch-response"
+          class="ytSpecTouchFeedbackShapeHost ytSpecTouchFeedbackShapeTouchResponse"
         >
-          <div class="yt-spec-touch-feedback-shape__stroke" />
-          <div class="yt-spec-touch-feedback-shape__fill" />
+          <div class="ytSpecTouchFeedbackShapeStroke" />
+          <div class="ytSpecTouchFeedbackShapeFill" />
         </div>
       </yt-touch-feedback-shape>
     </button>

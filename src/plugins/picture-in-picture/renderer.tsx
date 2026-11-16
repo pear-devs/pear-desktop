@@ -14,6 +14,7 @@ import { PictureInPictureButton } from './templates/picture-in-picture-button';
 import type { PictureInPicturePluginConfig } from './index';
 import type { RendererContext } from '@/types/contexts';
 import type { MusicPlayer } from '@/types/music-player';
+import type { PlayerController, PlayerElement } from '@/types/player-element';
 
 export const onPlayerApiReady = async (
   _: MusicPlayer,
@@ -65,17 +66,17 @@ export const onPlayerApiReady = async (
   const middleControls =
     document.querySelector<HTMLButtonElement>('.middle-controls');
   const playerPage = document.querySelector<
-    HTMLElement & { playerPageOpen_: boolean }
+    HTMLElement & { playerPageOpen: boolean }
   >('ytmusic-player-page');
   const togglePlayerPageButton = document.querySelector<HTMLButtonElement>(
     '.toggle-player-page-button',
   );
-  const fullScreenButton =
-    document.querySelector<HTMLButtonElement>('.fullscreen-button');
-  const player = document.querySelector<
-    HTMLVideoElement & { onDoubleClick_: (() => void) | undefined }
-  >('#player');
-  const onPlayerDblClick = player?.onDoubleClick_;
+  const playerController =
+    document.querySelector<PlayerElement>('#player')?.polymerController;
+  const player = playerController
+    ? (Object.getPrototypeOf(playerController) as PlayerController)
+    : null;
+  const onPlayerDblClick = player?.onDoubleClick;
   const mouseLeaveEventListener = () => middleControls?.click();
 
   const titleBar = document.querySelector<HTMLElement>(
@@ -96,14 +97,16 @@ export const onPlayerApiReady = async (
           'click',
           pipClickEventListener,
         );
-        player.onDoubleClick_ = () => {};
+        player.onDoubleClick = () => {};
 
         expandMenu?.addEventListener('mouseleave', mouseLeaveEventListener);
-        if (!playerPage?.playerPageOpen_) {
+        if (!playerPage?.playerPageOpen) {
           togglePlayerPageButton?.click();
         }
 
-        fullScreenButton?.click();
+        document
+          .querySelector<HTMLButtonElement>('.fullscreen-button')
+          ?.click();
         appLayout?.classList.add('pip');
         if (titleBar) {
           titleBar.style.display = 'none';
@@ -117,9 +120,14 @@ export const onPlayerApiReady = async (
           'click',
           pipClickEventListener,
         );
-        player.onDoubleClick_ = onPlayerDblClick;
+        player.onDoubleClick = onPlayerDblClick;
         expandMenu?.removeEventListener('mouseleave', mouseLeaveEventListener);
         exitFullScreenButton.click();
+        for (const bar of document.querySelectorAll<HTMLElement>(
+          'ytmusic-nav-bar, ytmusic-player-bar',
+        )) {
+          bar.style.removeProperty('visibility');
+        }
         appLayout?.classList.remove('pip');
         if (titleBar) {
           titleBar.style.display = 'flex';

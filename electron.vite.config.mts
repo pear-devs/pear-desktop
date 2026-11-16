@@ -64,7 +64,10 @@ export default defineConfig(({ mode }) => {
       externalizeDeps: false,
     },
     resolve: {
-      alias: resolveAlias,
+      alias: {
+        ...resolveAlias,
+        fflate: 'fflate/browser',
+      },
     },
   };
 
