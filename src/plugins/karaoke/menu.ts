@@ -1,7 +1,8 @@
-import { clipboard, dialog, type MenuItemConstructorOptions } from 'electron';
+import { dialog, type MenuItemConstructorOptions } from 'electron';
 
 import { t } from '@/i18n';
 
+import { showPhoneQr } from './phone-qr';
 import { getPhoneLink } from './phone-server';
 
 import type { KaraokePluginConfig, LyricsSize } from './types';
@@ -38,15 +39,15 @@ export const menu = async (
       enabled: config.phoneRemote,
       async click() {
         const link = getPhoneLink();
-        if (link) clipboard.writeText(link);
+        if (link) {
+          showPhoneQr(ctx.window, link);
+          return;
+        }
 
         await dialog.showMessageBox(ctx.window, {
           type: 'info',
           title: t('plugins.karaoke.menu.phone-link.label'),
-          message: link ?? t('plugins.karaoke.menu.phone-link.no-network'),
-          detail: link
-            ? t('plugins.karaoke.menu.phone-link.detail')
-            : undefined,
+          message: t('plugins.karaoke.menu.phone-link.no-network'),
         });
       },
     },

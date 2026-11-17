@@ -618,9 +618,10 @@
       },
       "menu": {
         "phone-link": {
-          "detail": "Copied. Open it on a phone on the same Wi-Fi. Anyone with this link on your network can control playback.",
+          "detail": "Link copied. Anyone with this link on your network can control playback.",
           "label": "Show phone link",
-          "no-network": "No home network was found."
+          "no-network": "No home network was found.",
+          "scan": "Scan with your phone camera (same Wi-Fi)"
         },
         "phone-remote": {
           "label": "Phone remote",
