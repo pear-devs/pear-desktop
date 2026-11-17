@@ -721,6 +721,17 @@
         "button": "Picture-in-picture"
       }
     },
+    "pitch-shifter": {
+      "description": "Change the key of any song without changing its speed. Adds a pitch slider to the song menu",
+      "menu": {
+        "reset": "Reset to Original Key",
+        "semitones": "Semitones"
+      },
+      "name": "Pitch Shifter",
+      "templates": {
+        "button": "Pitch"
+      }
+    },
     "playback-speed": {
       "description": "Listen fast, listen slow! Adds a slider that controls song speed",
       "name": "Playback Speed",
