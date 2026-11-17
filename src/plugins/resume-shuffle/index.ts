@@ -14,7 +14,7 @@ type ShuffleQueue = {
   shuffle(): void;
   store: {
     store: {
-      getState(): { queue: { items: unknown[] } };
+      getState(): { queue: { items: unknown[]; shuffleEnabled: boolean } };
       subscribe(callback: () => void): () => void;
     };
   };
@@ -24,10 +24,9 @@ const getQueue = () =>
   document.querySelector<HTMLElement & { queue?: ShuffleQueue }>('#queue')
     ?.queue;
 
-const isShuffled = () =>
-  (document
-    .querySelector<HTMLElement>('ytmusic-player-bar')
-    ?.attributes.getNamedItem('shuffle-on') ?? null) !== null;
+// Read from the queue's own state rather than the player bar, which newer versions of the player don't have
+const isShuffled = (queue: ShuffleQueue) =>
+  queue.store.store.getState().queue.shuffleEnabled;
 
 // The queue is filled asynchronously, so wait for it before shuffling
 // Returns a canceller, so a pending shuffle can't outlive the plugin
@@ -39,7 +38,7 @@ const shuffleWhenReady = (queue: ShuffleQueue) => {
     if (!store.getState().queue.items.length) return;
 
     unsubscribe?.();
-    if (!isShuffled()) queue.shuffle();
+    if (!isShuffled(queue)) queue.shuffle();
   };
 
   unsubscribe = store.subscribe(shuffle);
@@ -57,7 +56,7 @@ export default createPlugin<
   unknown,
   unknown,
   {
-    observer: MutationObserver | null;
+    unwatch: (() => void) | null;
     cancelShuffle: (() => void) | null;
     stopped: boolean;
   },
@@ -72,22 +71,27 @@ export default createPlugin<
     shuffled: false,
   },
   renderer: {
-    observer: null,
+    unwatch: null,
     cancelShuffle: null,
     stopped: false,
     async onPlayerApiReady(_api, { getConfig, setConfig }) {
       // Defensive: this can run again on plugin re-enable
-      this.observer?.disconnect();
+      this.unwatch?.();
       this.cancelShuffle?.();
       this.stopped = false;
 
-      const saveShuffleState = () => setConfig({ shuffled: isShuffled() });
+      // Without the queue there is nothing to save or restore, so a saved `shuffled: true` is left alone
+      const queue = getQueue();
+      if (!queue?.store.store) return;
 
-      const playerBar = document.querySelector('ytmusic-player-bar');
-      if (playerBar) {
-        this.observer = new MutationObserver(saveShuffleState);
-        this.observer.observe(playerBar, { attributeFilter: ['shuffle-on'] });
-      }
+      // The store notifies on every queue change, so only save when the shuffle state itself flips
+      let current = isShuffled(queue);
+      this.unwatch = queue.store.store.subscribe(() => {
+        const next = isShuffled(queue);
+        if (next === current) return;
+        current = next;
+        setConfig({ shuffled: current });
+      });
 
       const { shuffled } = await getConfig();
       // The plugin may have been disabled while awaiting the config
@@ -97,20 +101,18 @@ export default createPlugin<
         location.pathname === '/watch' &&
         shuffled &&
         window.mainConfig.get('options.resumeOnStart');
-      const queue = shouldRestore ? getQueue() : undefined;
 
-      if (queue?.store.store) {
+      if (shouldRestore) {
         this.cancelShuffle = shuffleWhenReady(queue);
-      } else if (!shouldRestore) {
-        // The observer above only reacts to changes, so record the initial state too
-        // Skipped when a restore was wanted but the queue was missing, so that a saved `shuffled: true` survives instead of being overwritten with false
-        saveShuffleState();
+      } else {
+        // The subscription above only reacts to changes, so record the initial state too
+        setConfig({ shuffled: current });
       }
     },
     stop() {
       this.stopped = true;
-      this.observer?.disconnect();
-      this.observer = null;
+      this.unwatch?.();
+      this.unwatch = null;
       this.cancelShuffle?.();
       this.cancelShuffle = null;
     },
