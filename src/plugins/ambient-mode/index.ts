@@ -152,6 +152,8 @@ export default createPlugin({
           blurCanvas.height = Math.floor(
             (newHeight / newWidth) * this.qualityRatio,
           );
+          // Resizing clears the canvas, and while paused no loop is running to fill it again
+          onSync();
 
           if (this.isFullscreen) blurCanvas.classList.add('fullscreen');
           else blurCanvas.classList.remove('fullscreen');
@@ -180,6 +182,8 @@ export default createPlugin({
         // Media events don't bubble, so they're only heard on the video itself; on the wrapper the effect kept redrawing while paused
         video.addEventListener('pause', onPause);
         video.addEventListener('play', onPlay);
+        // A seek while paused shows a new frame without a play event
+        video.addEventListener('seeked', onSync);
         // Draw the current frame once, so a paused video still gets its glow
         onSync();
         if (!video.paused) onPlay();
@@ -193,6 +197,7 @@ export default createPlugin({
 
           video.removeEventListener('pause', onPause);
           video.removeEventListener('play', onPlay);
+          video.removeEventListener('seeked', onSync);
 
           if (blurCanvas.isConnected) blurCanvas.remove();
         };
