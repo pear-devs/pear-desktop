@@ -1,6 +1,6 @@
 import { autoUpdate, offset, size } from '@floating-ui/dom';
 import { useFloating } from 'solid-floating-ui';
-import { createSignal, Match, Show, Switch } from 'solid-js';
+import { createSignal, Match, onMount, Show, Switch } from 'solid-js';
 import { type JSX } from 'solid-js/jsx-runtime';
 import { Portal } from 'solid-js/web';
 import { css } from 'solid-styled-components';
@@ -187,7 +187,10 @@ export const PanelItem = (props: PanelItemProps) => {
   const [anchor, setAnchor] = createSignal<HTMLElement | null>(null);
   const [child, setChild] = createSignal<HTMLElement | null>(null);
 
-  const position = useFloating(anchor, toolTip, {
+  const position = useFloating({
+    get elements() {
+      return { reference: anchor(), floating: toolTip() };
+    },
     whileElementsMounted: autoUpdate,
     placement: 'bottom-start',
     strategy: 'fixed',
@@ -372,7 +375,7 @@ export const PanelItem = (props: PanelItemProps) => {
         <Portal>
           <div
             class={popupStyle()}
-            ref={setToolTip}
+            ref={(element) => onMount(() => setToolTip(element))}
             style={{
               '--offset-x': `${position.x}px`,
               '--offset-y': `${position.y}px`,

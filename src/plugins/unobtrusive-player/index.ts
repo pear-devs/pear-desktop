@@ -1,7 +1,10 @@
 import { t } from '@/i18n';
+import { IconType } from '@/types/datahost-get-state';
 import { createPlugin } from '@/utils';
 
 import style from './style.css?inline';
+
+import type { MenuNavigationItemElement } from '@/types/menu-navigation-item-element';
 
 const handlePlay = (e: MouseEvent) => {
   if (!(e.target instanceof HTMLElement)) return;
@@ -25,17 +28,10 @@ const handlePlay = (e: MouseEvent) => {
   }
 
   // Shuffle play menu item handler
-  const shuffleIconPathData = (
-    document.querySelector('iron-iconset-svg[name="yt-sys-icons"] #shuffle')
-      ?.firstChild as SVGElement | null
-  )
-    ?.getAttribute('d')
-    ?.substring(0, 15);
-
   if (
-    e.target.closest(
-      `ytmusic-menu-navigation-item-renderer:has(yt-icon path[d^="${shuffleIconPathData}"])`,
-    )
+    e.target.closest<MenuNavigationItemElement>(
+      'ytmusic-menu-navigation-item-renderer',
+    )?.data?.icon?.iconType === IconType.MusicShuffle
   ) {
     document.body.classList.add('unobtrusive-player--did-play');
     return;
