@@ -109,6 +109,9 @@ test('checks the artist when both sides name one', () => {
 
 test('compares artists as whole names', () => {
   expect(isSameArtist(['Queen Latifah'], 'Queen')).toBe(false);
+  expect(isSameArtist(['ACDC'], 'AC/DC')).toBe(true);
+  expect(isSameArtist(['AC/DC'], 'ACDC')).toBe(true);
+  expect(isSameArtist(['AC/DC'], 'AC/DC')).toBe(true);
   expect(isSameArtist(['Queen'], 'Queen Latifah')).toBe(false);
   expect(isSameArtist(['Simon and Garfunkel'], 'Simon & Garfunkel')).toBe(true);
   expect(isSameArtist(['Guest'], 'Artist feat. Guest')).toBe(true);

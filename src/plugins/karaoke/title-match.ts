@@ -62,6 +62,11 @@ const artistNames = (artists: string) =>
     .filter(Boolean);
 
 const sharesArtist = (artists: string, others: string[]) => {
+  // The whole name first, so a band like "AC/DC" still matches a source that
+  // writes "ACDC", even though the split below would make "ac" and "dc".
+  const whole = normalize(artists);
+  if (whole && others.some((other) => normalize(other) === whole)) return true;
+
   const names = new Set(artistNames(artists));
   return others.flatMap(artistNames).some((name) => names.has(name));
 };
