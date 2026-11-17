@@ -161,21 +161,25 @@ export class StreamList {
       stream.duration !== null &&
       Math.abs(stream.duration - duration) < DURATION_TOLERANCE_SECONDS;
 
-    // A known stream the song already plays from wins while it still fits,
-    // even after it leaves the list, so another track of similar length never
-    // takes over.
-    if (current && matches(current)) return current;
-
-    // Otherwise the newest known stream of the song's length. This also lets
-    // the song's own stream replace an unknown fallback picked before it came.
     const newestFirst = [...this.streams].reverse();
-    const known = newestFirst.find(matches);
-    if (known) return known;
 
-    // A stream of unknown length is only a fallback, and never replaces a
-    // known stream already in use.
-    if (current) return current.duration === null ? current : null;
-    return newestFirst.find((stream) => stream.duration === null) ?? null;
+    // The stream the song already plays from wins while it still fits, so
+    // another track of similar length never takes over. If it left the list
+    // and the player opened the same header again, new audio goes to that
+    // newer copy, so follow it.
+    if (current && matches(current)) {
+      if (this.streams.includes(current)) return current;
+      return (
+        newestFirst.find((stream) =>
+          isSameHeader(stream.header, current.header),
+        ) ?? current
+      );
+    }
+
+    // Only streams of a known length are used. Nothing tells an ad of unknown
+    // length from a song of unknown length, so neither gets AI vocals, and the
+    // filter covers them instead.
+    return newestFirst.find(matches) ?? null;
   }
 
   describe() {

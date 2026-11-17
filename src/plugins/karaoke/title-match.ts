@@ -49,9 +49,15 @@ const SEPARATOR = /\s[-–—|]\s/;
 const CREDIT_SEPARATOR =
   /\s+(?:feat\.?|ft\.?|featuring|with|x|vs\.?)\s+|\s*[&,;/+]\s*|\s+(?:and)\s+/i;
 
+// Brackets in an artist credit hold more people, as in "Artist (feat. Guest)",
+// so they separate names rather than being removed.
 const artistNames = (artists: string) =>
-  removeBrackets(artists)
+  artists
+    .replaceAll(/[()[\]【】]/g, ' & ')
     .split(CREDIT_SEPARATOR)
+    .map((name) =>
+      name.trim().replace(/^(?:feat\.?|ft\.?|featuring|with)\s+/i, ''),
+    )
     .map(normalize)
     .filter(Boolean);
 

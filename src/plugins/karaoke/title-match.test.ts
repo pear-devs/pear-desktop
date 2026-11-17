@@ -112,6 +112,9 @@ test('compares artists as whole names', () => {
   expect(isSameArtist(['Queen'], 'Queen Latifah')).toBe(false);
   expect(isSameArtist(['Simon and Garfunkel'], 'Simon & Garfunkel')).toBe(true);
   expect(isSameArtist(['Guest'], 'Artist feat. Guest')).toBe(true);
+  expect(isSameArtist(['Guest'], 'Artist (feat. Guest)')).toBe(true);
+  expect(isSameArtist(['Artist'], 'Artist [with Guest]')).toBe(true);
+  expect(isSameArtist(['Someone'], 'Artist (feat. Guest)')).toBe(false);
   expect(isSameTitle('Right', ['Left - Right'], 'Leftfield')).toBe(false);
   expect(isSameTitle('Right', ['Artist & Guest - Right'], 'Artist')).toBe(true);
 });

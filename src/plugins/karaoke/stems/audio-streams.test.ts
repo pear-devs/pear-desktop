@@ -142,8 +142,8 @@ test('never lets a stream of unknown length replace the song', () => {
 
   expect(unknown.duration).toBeNull();
   expect(list.find(200)).toBe(song);
-  // With nothing of the right length, an unknown stream is still a fallback.
-  expect(list.find(30)).toBe(unknown);
+  // A stream of unknown length is never used, even with nothing else.
+  expect(list.find(30)).toBeNull();
 });
 
 test('keeps the song stream over a newer one of similar length', () => {
@@ -167,13 +167,22 @@ test('never swaps the song stream for one of unknown length', () => {
   expect(list.find(30, song)).toBeNull();
 });
 
-test('lets the song stream replace an unknown fallback picked before it', () => {
+test('waits for a stream of known length instead of an unknown one', () => {
   const list = new StreamList();
-  const fallback = list.open(new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 0x97]));
-  expect(list.find(200)).toBe(fallback);
+  list.open(new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 0x97]));
+  expect(list.find(200)).toBeNull();
 
   const song = list.open(header(200));
-  expect(list.find(200, fallback)).toBe(song);
-  // Once on the known stream, it stays there.
+  expect(list.find(200)).toBe(song);
   expect(list.find(200, song)).toBe(song);
+});
+
+test('follows the song stream when its header is opened again', () => {
+  const list = new StreamList();
+  const song = list.open(header(200));
+  list.clear();
+  const reopened = list.open(header(200));
+
+  expect(reopened).not.toBe(song);
+  expect(list.find(200, song)).toBe(reopened);
 });
