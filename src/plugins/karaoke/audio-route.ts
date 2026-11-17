@@ -31,12 +31,19 @@ export class AudioRoute {
   async engage({ audioContext, audioSource }: Compressor, amount: number) {
     this.isEngaged = true;
 
-    this.remover ??= createCenterRemover(
+    const pending = (this.remover ??= createCenterRemover(
       audioContext,
       amount,
       this.onMonoChange,
-    );
-    const remover = await this.remover;
+    ));
+    let remover: AudioWorkletNode;
+    try {
+      remover = await pending;
+    } catch (error) {
+      // Let a later entry try again instead of keeping the failure.
+      if (this.remover === pending) this.remover = null;
+      throw error;
+    }
 
     // Karaoke mode may have been left while the processor was loading.
     if (!this.isEngaged) return;

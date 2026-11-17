@@ -210,11 +210,25 @@ export class StemEngine {
       return song.has(blockStart, blockStart + SEGMENT_SAMPLES);
     };
 
+    let timeline = song.timeline;
+
     while (isCurrent()) {
       this.keepWindow(song, vocals);
       song.useStream(findStream(duration) ?? stream);
       await song.update();
       if (!isCurrent()) return;
+
+      // Separated blocks used audio placed with the old timeline.
+      if (song.timeline !== timeline) {
+        timeline = song.timeline;
+        log(`timeline changed for ${videoId}, separating again`);
+        this.doneBlocks = new Set();
+        vocals.clear();
+        this.player?.port.postMessage({
+          type: 'reset',
+          blockSamples: BLOCK_SAMPLES,
+        });
+      }
 
       const block = pickNextBlock(
         this.doneBlocks,

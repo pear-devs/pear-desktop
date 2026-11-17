@@ -18,40 +18,70 @@ const removeRecordingNote = (title: string) => {
     : title;
 };
 
-const removeDecorations = (title: string) =>
-  removeRecordingNote(
-    title
-      .replaceAll(/\([^)]*\)|\[[^\]]*\]|【[^】]*】/g, ' ')
-      .replace(/\s(?:feat|ft|featuring)\.?\s.*$/i, ' ')
-      .trim(),
+// Brackets that tell songs apart, such as "(Part 2)", are kept.
+const QUALIFIER =
+  /^\s*(?:part|pt\.?|vol\.?|volume|no\.?|chapter|act|movement|op\.?)\s*[\w.]+\s*$/i;
+
+const removeBrackets = (title: string) =>
+  title.replaceAll(
+    /\(([^)]*)\)|\[([^\]]*)\]|【([^】]*)】/g,
+    (whole, ...inner) =>
+      QUALIFIER.test(String(inner.find((part) => part !== undefined) ?? ''))
+        ? whole
+        : ' ',
   );
 
+const removeCredits = (title: string) =>
+  removeBrackets(title)
+    .replace(/\s(?:feat|ft|featuring)\.?\s.*$/i, ' ')
+    .trim();
+
+const SEPARATOR = /\s[-–—|]\s/;
+
 /** A lyrics result's title is a song title, so it is never split. */
-const lyricsForms = (title: string) =>
-  [title, removeDecorations(title)].map(normalize).filter(Boolean);
+const lyricsForms = (title: string) => {
+  const plain = removeCredits(title);
+  return [title, plain, removeRecordingNote(plain)]
+    .map(normalize)
+    .filter(Boolean);
+};
 
 /**
  * The forms a playing title can take. Video titles are often "Artist - Song", so
- * the part after the separator is the song. The part before it is the artist,
- * and is never compared on its own.
+ * the part after the separator is the song, taken before any recording note is
+ * removed ("Artist - Video" keeps "Video"). A form that is only the artist is
+ * never compared.
  */
-const songForms = (title: string) => {
-  const plain = removeDecorations(title);
-  const parts = plain.split(/\s[-–—|]\s/);
-  return [title, plain, parts.length > 1 ? parts.slice(1).join(' ') : '']
+const songForms = (title: string, artist: string) => {
+  const plain = removeCredits(title);
+  const parts = plain.split(SEPARATOR);
+  const songPart = parts.length > 1 ? parts.slice(1).join(' - ') : '';
+  const artistForm = normalize(artist);
+
+  return [
+    title,
+    plain,
+    removeRecordingNote(plain),
+    songPart,
+    removeRecordingNote(songPart),
+  ]
     .map(normalize)
-    .filter(Boolean);
+    .filter((form) => form && form !== artistForm);
 };
 
 /**
  * Whether a lyrics result is for this song. The titles must be equal once
  * decorations are removed, so "Love" does not match "Love Story".
  */
-export const isSameTitle = (lyricsTitle: string, songTitles: string[]) => {
+export const isSameTitle = (
+  lyricsTitle: string,
+  songTitles: string[],
+  artist = '',
+) => {
   const lyrics = lyricsForms(lyricsTitle);
   if (!lyrics.length) return false;
 
   return songTitles.some((title) =>
-    songForms(title).some((song) => lyrics.includes(song)),
+    songForms(title, artist).some((song) => lyrics.includes(song)),
   );
 };

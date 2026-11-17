@@ -19,12 +19,15 @@ export type LyricsState =
  */
 export const getLyricsState = (): LyricsState => {
   const candidates = [lyricsStore.provider, ...providerNames];
-  const { title, alternativeTitle } = getSongInfo();
+  const { title, alternativeTitle, artist } = getSongInfo();
   const songTitles = [title, alternativeTitle ?? ''];
 
   for (const provider of candidates) {
     const result = lyricsStore.lyrics[provider].data;
-    if (result?.lines?.length && isSameTitle(result.title, songTitles)) {
+    if (
+      result?.lines?.length &&
+      isSameTitle(result.title, songTitles, artist)
+    ) {
       return { status: 'ready', lines: result.lines };
     }
   }

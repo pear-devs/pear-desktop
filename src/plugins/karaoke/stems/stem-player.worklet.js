@@ -132,7 +132,8 @@ class StemPlayer extends AudioWorkletProcessor {
           this.interpolate(index, fraction, 'instrumentalRight', 'vocalsRight');
       }
 
-      if (this.isPlaying) this.position += this.step;
+      // Keep moving while fading out, so the fade is not one repeated sample.
+      if (this.isPlaying || this.level > 0) this.position += this.step;
     }
 
     const hasAudio = this.blocks.has(

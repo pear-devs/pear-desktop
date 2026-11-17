@@ -6,6 +6,14 @@ import type { AudioStream } from './audio-streams';
 
 type Range = { start: number; end: number };
 
+const clipRanges = (ranges: Range[], start: number, end: number) =>
+  ranges
+    .map((range) => ({
+      start: Math.max(range.start, start),
+      end: Math.min(range.end, end),
+    }))
+    .filter((range) => range.end > range.start);
+
 const decodeRun = async (header: Uint8Array, chunks: Uint8Array[]) => {
   const size = chunks.reduce((total, chunk) => total + chunk.length, 0);
   const bytes = new Uint8Array(header.length + size);
@@ -41,6 +49,13 @@ export class SongAudio {
   private last = Number.POSITIVE_INFINITY;
 
   private earlierRanges: Range[] = [];
+  private lastStream: AudioStream | null = null;
+  private lastRevision = 0;
+  /**
+   * Goes up when the current stream's timeline changes, so anything separated
+   * from audio placed with the old timeline must be computed again.
+   */
+  timeline = 0;
 
   constructor(
     private stream: AudioStream,
@@ -59,6 +74,12 @@ export class SongAudio {
     this.audio.setWindow(first, last);
     this.first = first;
     this.last = last;
+
+    // Dropped pages are no longer audio that has arrived.
+    const start = first * BLOCK_SAMPLES;
+    const end = (last + 1) * BLOCK_SAMPLES;
+    this.ranges = clipRanges(this.ranges, start, end);
+    this.earlierRanges = clipRanges(this.earlierRanges, start, end);
   }
 
   read(channel: 'left' | 'right', start: number, length: number) {
@@ -99,6 +120,11 @@ export class SongAudio {
   async update() {
     const stream = this.stream;
     const { revision, version } = stream;
+    if (stream === this.lastStream && revision !== this.lastRevision) {
+      this.timeline++;
+    }
+    this.lastStream = stream;
+    this.lastRevision = revision;
     const state = `${revision}:${version}:${this.first}-${this.last}`;
     if (state === this.decodedState) return;
 

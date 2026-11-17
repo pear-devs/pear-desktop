@@ -133,3 +133,15 @@ test('marks decodes as stale only when the offset changes', () => {
   stream.setTimeOffset(-0.05);
   expect(stream.revision).toBe(revision + 1);
 });
+
+test('never lets a stream of unknown length replace the song', () => {
+  const list = new StreamList();
+  const song = list.open(header(200));
+  // An EBML header with no duration, such as an ad or a preload.
+  const unknown = list.open(new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 0x99]));
+
+  expect(unknown.duration).toBeNull();
+  expect(list.find(200)).toBe(song);
+  // With nothing of the right length, an unknown stream is still a fallback.
+  expect(list.find(30)).toBe(unknown);
+});

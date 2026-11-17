@@ -109,7 +109,16 @@ const sendPhoneState = () => {
   const { title, alternativeTitle, artist, videoId } = getSongInfo();
   const lyrics = getLyricsState();
   const lines = lyrics.status === 'ready' ? lyrics.lines : [];
-  const linesKey = `${videoId}:${lines.length}`;
+  // The text is part of the key, so a better lyrics source replacing one with
+  // the same number of lines still reaches the phone.
+  let hash = 0;
+  for (const line of lines) {
+    for (let i = 0; i < line.text.length; i++) {
+      hash = Math.imul(hash, 31) + line.text.charCodeAt(i);
+    }
+    hash = Math.imul(hash, 31) + line.timeInMs;
+  }
+  const linesKey = `${videoId}:${lines.length}:${hash}`;
 
   if (linesKey !== phoneLinesKey) {
     phoneLinesKey = linesKey;
@@ -307,6 +316,8 @@ const enter = async () => {
     if (!isActive()) route.disengage();
     return;
   }
+  // The slider may have moved while the filter loaded.
+  route.setAmount(vocalReduction);
 
   // Without any captured audio, loading the song again provides some.
   if (!audio || (aiVocals && !hasStreams())) requestAudioNodes();
@@ -393,7 +404,11 @@ export const renderer = createRenderer<object, KaraokePluginConfig>({
     setLogSink((line) => ctx.ipc.send('karaoke:log', line));
     ctx.ipc.on('karaoke:model-progress', setModelProgress);
     ctx.ipc.on('karaoke:phone-command', onPhoneCommand);
-    applyConfig(await ctx.getConfig());
+    const run = currentRun;
+    const config = await ctx.getConfig();
+    // The plugin may have been stopped while the config loaded.
+    if (run !== currentRun) return;
+    applyConfig(config);
     document.addEventListener('peard:audio-can-play', onAudioCanPlay, {
       passive: true,
     });

@@ -52,15 +52,16 @@ test('applies a custom time scale', () => {
     0xd7,
     0xb1,
     0x83,
-    0x0f,
-    0x42,
-    0x40,
+    // 2,000,000 ns per tick, twice the default, so ignoring it would fail.
+    0x1e,
+    0x84,
+    0x80,
     0x44,
     0x89,
     0x88,
     ...float64(2000),
   ]);
-  expect(parseDuration(header)).toBeCloseTo(2);
+  expect(parseDuration(header)).toBeCloseTo(4);
 });
 
 test('copes with a missing duration', () => {

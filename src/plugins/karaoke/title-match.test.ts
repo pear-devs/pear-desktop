@@ -54,6 +54,24 @@ test('keeps a song title that only contains a recording word', () => {
   expect(isSameTitle('Live Forever', ['Oasis - Live Forever'])).toBe(true);
 });
 
+test('keeps a song title that is itself a recording word', () => {
+  expect(isSameTitle('Video', ['Artist - Video'], 'Artist')).toBe(true);
+  expect(isSameTitle('Artist', ['Artist - Video'], 'Artist')).toBe(false);
+});
+
+test('keeps part numbers that tell songs apart', () => {
+  expect(
+    isSameTitle('Another Brick in the Wall (Part 1)', [
+      'Pink Floyd - Another Brick in the Wall (Part 2)',
+    ]),
+  ).toBe(false);
+  expect(
+    isSameTitle('Another Brick in the Wall (Part 2)', [
+      'Pink Floyd - Another Brick in the Wall (Part 2) (Official Video)',
+    ]),
+  ).toBe(true);
+});
+
 test('does not treat empty titles as a match', () => {
   expect(isSameTitle('', [videoTitle])).toBe(false);
   expect(isSameTitle('...', [videoTitle])).toBe(false);

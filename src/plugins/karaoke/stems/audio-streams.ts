@@ -151,18 +151,22 @@ export class StreamList {
     return stream;
   }
 
-  /** The most recently opened stream that matches the length of the song. */
+  /**
+   * The most recently opened stream that matches the length of the song. A
+   * stream of unknown length is only used when none has the song's length, so
+   * an ad or preload whose length is unknown never replaces the song.
+   */
   find(duration: number) {
-    for (let i = this.streams.length - 1; i >= 0; i--) {
-      const stream = this.streams[i];
-      if (
-        stream.duration === null ||
-        Math.abs(stream.duration - duration) < DURATION_TOLERANCE_SECONDS
-      ) {
-        return stream;
-      }
-    }
-    return null;
+    const newestFirst = [...this.streams].reverse();
+    return (
+      newestFirst.find(
+        (stream) =>
+          stream.duration !== null &&
+          Math.abs(stream.duration - duration) < DURATION_TOLERANCE_SECONDS,
+      ) ??
+      newestFirst.find((stream) => stream.duration === null) ??
+      null
+    );
   }
 
   describe() {
