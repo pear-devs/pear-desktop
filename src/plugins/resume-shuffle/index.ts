@@ -58,7 +58,7 @@ export default createPlugin<
   {
     unwatch: (() => void) | null;
     cancelShuffle: (() => void) | null;
-    stopped: boolean;
+    generation: number;
   },
   ResumeShufflePluginConfig
 >({
@@ -73,12 +73,13 @@ export default createPlugin<
   renderer: {
     unwatch: null,
     cancelShuffle: null,
-    stopped: false,
+    generation: 0,
     async onPlayerApiReady(_api, { getConfig, setConfig }) {
       // Defensive: this can run again on plugin re-enable
       this.unwatch?.();
       this.cancelShuffle?.();
-      this.stopped = false;
+      // Counts starts and stops, so a start that resumes after a stop and another start can tell it is stale
+      const generation = ++this.generation;
 
       // Without the queue there is nothing to save or restore, so a saved `shuffled: true` is left alone
       const queue = getQueue();
@@ -94,8 +95,8 @@ export default createPlugin<
       });
 
       const { shuffled } = await getConfig();
-      // The plugin may have been disabled while awaiting the config
-      if (this.stopped) return;
+      // The plugin may have been disabled, or disabled and enabled again, while awaiting the config
+      if (generation !== this.generation) return;
 
       const shouldRestore =
         location.pathname === '/watch' &&
@@ -110,7 +111,7 @@ export default createPlugin<
       }
     },
     stop() {
-      this.stopped = true;
+      this.generation++;
       this.unwatch?.();
       this.unwatch = null;
       this.cancelShuffle?.();
