@@ -214,7 +214,9 @@ export class StemEngine {
 
     while (isCurrent()) {
       this.keepWindow(song, vocals);
-      song.useStream(findStream(duration) ?? stream);
+      song.useStream(
+        findStream(duration, song.currentStream) ?? song.currentStream,
+      );
       await song.update();
       if (!isCurrent()) return;
 

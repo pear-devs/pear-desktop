@@ -2,7 +2,7 @@ import { providerNames } from '@/plugins/synced-lyrics/providers';
 import { lyricsStore } from '@/plugins/synced-lyrics/renderer/store';
 import { getSongInfo } from '@/providers/song-info-front';
 
-import { isSameTitle } from './title-match';
+import { isSameArtist, isSameTitle } from './title-match';
 
 import type { TimedLine } from './timing';
 
@@ -24,9 +24,12 @@ export const getLyricsState = (): LyricsState => {
 
   for (const provider of candidates) {
     const result = lyricsStore.lyrics[provider].data;
+    // The artist check stops a same-titled song by someone else, which the
+    // store can still hold while this song's search is running.
     if (
       result?.lines?.length &&
-      isSameTitle(result.title, songTitles, artist)
+      isSameTitle(result.title, songTitles, artist) &&
+      isSameArtist(result.artists ?? [], artist)
     ) {
       return { status: 'ready', lines: result.lines };
     }

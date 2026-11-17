@@ -117,7 +117,10 @@ export const setCapturing = (value: boolean) => {
 
 export const hasStreams = () => !streams.isEmpty;
 
-export const findStream = (duration: number) => streams.find(duration);
+export const findStream = (
+  duration: number,
+  current: AudioStream | null = null,
+) => streams.find(duration, current);
 
 // The header arrives before plugins start, so this cannot wait for them.
 try {

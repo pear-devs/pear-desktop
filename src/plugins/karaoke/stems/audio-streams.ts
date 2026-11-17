@@ -156,8 +156,20 @@ export class StreamList {
    * stream of unknown length is only used when none has the song's length, so
    * an ad or preload whose length is unknown never replaces the song.
    */
-  find(duration: number) {
+  find(duration: number, current: AudioStream | null = null) {
+    const matches = (stream: AudioStream) =>
+      stream.duration !== null &&
+      Math.abs(stream.duration - duration) < DURATION_TOLERANCE_SECONDS;
+
+    // The stream the song already plays from wins while it still fits, even
+    // after it leaves the list, so another track of similar length never
+    // takes over. A known stream is never swapped for one of unknown length.
+    if (current && (matches(current) || current.duration === null)) {
+      return current;
+    }
+
     const newestFirst = [...this.streams].reverse();
+    if (current) return newestFirst.find(matches) ?? null;
     return (
       newestFirst.find(
         (stream) =>

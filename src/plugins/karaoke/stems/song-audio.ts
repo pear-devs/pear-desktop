@@ -69,6 +69,10 @@ export class SongAudio {
     return this.audio.length;
   }
 
+  get currentStream() {
+    return this.stream;
+  }
+
   /** Keeps blocks first..last. */
   setWindow(first: number, last: number) {
     this.audio.setWindow(first, last);

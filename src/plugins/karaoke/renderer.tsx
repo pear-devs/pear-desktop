@@ -88,7 +88,13 @@ const getAiStatusText = () => {
   return t(`plugins.karaoke.ai.${status}`);
 };
 
+// After AI vocals fail to start, wait before trying again rather than retrying
+// on every sync tick.
+const STEMS_RETRY_MS = 5000;
+let stemsRetryAt = 0;
+
 const stopStems = () => {
+  stemsRetryAt = 0;
   stemSession++;
   route.setStemMix(false, 0);
   engine?.dispose().catch(console.error);
@@ -227,9 +233,11 @@ const syncStems = () => {
   if (!(video && audio && playerApi && aiVocals)) return;
 
   if (!engine) {
+    if (Date.now() < stemsRetryAt) return;
     startStems(audio.audioContext).catch((error: unknown) => {
       console.error('[karaoke] AI vocals failed:', error);
       setStemStatus('failed');
+      stemsRetryAt = Date.now() + STEMS_RETRY_MS;
     });
     return;
   }

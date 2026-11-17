@@ -18,9 +18,9 @@ const removeRecordingNote = (title: string) => {
     : title;
 };
 
-// Brackets that tell songs apart, such as "(Part 2)", are kept.
+// Brackets that tell songs apart, such as "(Part 2)" or "(2)", are kept.
 const QUALIFIER =
-  /^\s*(?:part|pt\.?|vol\.?|volume|no\.?|chapter|act|movement|op\.?)\s*[\w.]+\s*$/i;
+  /^\s*(?:(?:part|pt\.?|vol\.?|volume|no\.?|chapter|act|movement|op\.?)\s*[\w.]+|[\d.]+)\s*$/i;
 
 const removeBrackets = (title: string) =>
   title.replaceAll(
@@ -60,7 +60,15 @@ const lyricsForms = (title: string) => {
 const songForms = (title: string, artist: string) => {
   const plain = removeCredits(title);
   const parts = plain.split(SEPARATOR);
-  const songPart = parts.length > 1 ? parts.slice(1).join(' - ') : '';
+  // The part after the dash is only the song when the part before it is the
+  // artist. Without the artist's name, any "A - B" title is taken as one.
+  const isArtistPrefix =
+    !artist ||
+    (parts.length > 1 &&
+      (normalize(parts[0]).includes(normalize(artist)) ||
+        normalize(artist).includes(normalize(parts[0]))));
+  const songPart =
+    parts.length > 1 && isArtistPrefix ? parts.slice(1).join(' - ') : '';
   const withoutNote = removeRecordingNote(plain);
 
   // "Artist - Video" without its note is just the artist, which is no title.
@@ -97,4 +105,16 @@ export const isSameTitle = (
   return songTitles.some((title) =>
     songForms(title, artist).some((song) => lyrics.includes(song)),
   );
+};
+
+/**
+ * Whether a lyrics result's artists include the playing artist. Either side may
+ * be missing, and then only the title decides. Names are compared by
+ * containment, because "Artist feat. Someone" still names the artist.
+ */
+export const isSameArtist = (lyricsArtists: string[], artist: string) => {
+  const playing = normalize(artist);
+  const named = lyricsArtists.map(normalize).filter(Boolean);
+  if (!playing || !named.length) return true;
+  return named.some((name) => name.includes(playing) || playing.includes(name));
 };

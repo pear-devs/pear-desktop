@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { isSameTitle } from './title-match';
+import { isSameArtist, isSameTitle } from './title-match';
 
 const videoTitle =
   'Rick Astley - Never Gonna Give You Up (Official Video) (4K Remaster)';
@@ -86,6 +86,25 @@ test('keeps full-width part numbers apart', () => {
   expect(
     isSameTitle('Song (Part ２)', ['Artist - Song (Part ２)'], 'Artist'),
   ).toBe(true);
+});
+
+test('keeps number-only brackets that tell songs apart', () => {
+  expect(isSameTitle('Song (1)', ['Artist - Song (2)'], 'Artist')).toBe(false);
+  expect(isSameTitle('Song (2)', ['Artist - Song (2)'], 'Artist')).toBe(true);
+});
+
+test('takes the part after the dash only when the artist is before it', () => {
+  expect(isSameTitle('Right', ['Left - Right'], 'Artist')).toBe(false);
+  expect(isSameTitle('Right', ['Artist - Right'], 'Artist')).toBe(true);
+  expect(isSameTitle('Left - Right', ['Left - Right'], 'Artist')).toBe(true);
+});
+
+test('checks the artist when both sides name one', () => {
+  expect(isSameArtist(['Someone Else'], 'Artist')).toBe(false);
+  expect(isSameArtist(['Artist', 'Guest'], 'Artist')).toBe(true);
+  expect(isSameArtist(['Artist feat. Guest'], 'Artist')).toBe(true);
+  expect(isSameArtist([], 'Artist')).toBe(true);
+  expect(isSameArtist(['Artist'], '')).toBe(true);
 });
 
 test('does not treat empty titles as a match', () => {
