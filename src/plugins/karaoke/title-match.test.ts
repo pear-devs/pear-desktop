@@ -49,6 +49,11 @@ test('matches a title with a trailing recording note', () => {
   expect(isSameTitle('Song Name - Live', ['Song Name'])).toBe(true);
 });
 
+test('keeps a song title that only contains a recording word', () => {
+  expect(isSameTitle('Video Games', ['Lana Del Rey - Video Games'])).toBe(true);
+  expect(isSameTitle('Live Forever', ['Oasis - Live Forever'])).toBe(true);
+});
+
 test('does not treat empty titles as a match', () => {
   expect(isSameTitle('', [videoTitle])).toBe(false);
   expect(isSameTitle('...', [videoTitle])).toBe(false);

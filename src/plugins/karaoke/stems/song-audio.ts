@@ -130,7 +130,13 @@ export class SongAudio {
         stream.header,
         chunks.map((chunk) => chunk.bytes),
       );
-      if (isStale()) return;
+      if (isStale()) {
+        // What is held was placed with the old timeline, so none of it counts
+        // as arrived until a fresh pass places it again.
+        this.ranges = [...this.earlierRanges];
+        this.decoded = new Map();
+        return;
+      }
 
       const { target, skip } = placeRun(chunks[0].startMs, stream.timeOffset);
       const length = Math.min(song.length - skip, this.length - target);

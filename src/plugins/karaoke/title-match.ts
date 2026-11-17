@@ -5,14 +5,26 @@ const normalize = (title: string) =>
     .replaceAll(/[^\p{L}\p{N}]/gu, '');
 
 // A trailing " - Remastered 2011" and the like describes the recording, not the song.
-const DECORATION =
-  /\s[-–—|]\s[^-–—|]*\b(?:remaster(?:ed)?|version|live|edit|mix|mono|stereo|official|video|audio|lyrics?|visualizer|hd|4k)\b[^-–—|]*$/i;
+const RECORDING_WORD =
+  /^(?:\d{4}|remaster(?:ed)?|version|live|edit|mix|remix|mono|stereo|official|music|video|audio|lyrics?|visualizer|hd|4k|radio|single|album)$/i;
+
+/** Removes a trailing part made only of recording words, such as " - Remastered 2011". */
+const removeRecordingNote = (title: string) => {
+  const match = /\s[-–—|]\s([^-–—|]+)$/.exec(title);
+  if (!match) return title;
+  const words = match[1].trim().split(/\s+/);
+  return words.every((word) => RECORDING_WORD.test(word))
+    ? title.slice(0, match.index)
+    : title;
+};
 
 const removeDecorations = (title: string) =>
-  title
-    .replaceAll(/\([^)]*\)|\[[^\]]*\]|【[^】]*】/g, ' ')
-    .replace(/\s(?:feat|ft|featuring)\.?\s.*$/i, ' ')
-    .replace(DECORATION, ' ');
+  removeRecordingNote(
+    title
+      .replaceAll(/\([^)]*\)|\[[^\]]*\]|【[^】]*】/g, ' ')
+      .replace(/\s(?:feat|ft|featuring)\.?\s.*$/i, ' ')
+      .trim(),
+  );
 
 /** A lyrics result's title is a song title, so it is never split. */
 const lyricsForms = (title: string) =>
