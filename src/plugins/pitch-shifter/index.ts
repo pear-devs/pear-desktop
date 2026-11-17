@@ -31,7 +31,7 @@ export default createPlugin({
   config: {
     enabled: false,
     semitones: 0,
-  } as PitchShifterPluginConfig,
+  },
   menu: async ({
     getConfig,
     setConfig,

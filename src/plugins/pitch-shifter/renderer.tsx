@@ -170,10 +170,11 @@ const mountSlider = () => {
 // The audio graph only exists once a track has loaded. When the plugin is
 // enabled mid-song, reload the current track in place to receive it.
 const ensureAudioContextLoad = (playerApi: MusicPlayer) => {
-  if (playerApi.getPlayerState() !== 1 || graph) return;
+  const videoDetails = playerApi.getPlayerResponse()?.videoDetails;
+  if (!videoDetails || playerApi.getPlayerState() !== 1 || graph) return;
 
   playerApi.loadVideoById(
-    playerApi.getPlayerResponse().videoDetails.videoId,
+    videoDetails.videoId,
     playerApi.getCurrentTime(),
     playerApi.getUserPlaybackQualityPreference(),
   );
