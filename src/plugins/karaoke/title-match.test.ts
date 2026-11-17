@@ -72,6 +72,22 @@ test('keeps part numbers that tell songs apart', () => {
   ).toBe(true);
 });
 
+test('matches a song that shares the artist name', () => {
+  expect(
+    isSameTitle('Bad Company', ['Bad Company - Bad Company'], 'Bad Company'),
+  ).toBe(true);
+  expect(isSameTitle('Bad Company', ['Bad Company'], 'Bad Company')).toBe(true);
+});
+
+test('keeps full-width part numbers apart', () => {
+  expect(
+    isSameTitle('Song (Part １)', ['Artist - Song (Part ２)'], 'Artist'),
+  ).toBe(false);
+  expect(
+    isSameTitle('Song (Part ２)', ['Artist - Song (Part ２)'], 'Artist'),
+  ).toBe(true);
+});
+
 test('does not treat empty titles as a match', () => {
   expect(isSameTitle('', [videoTitle])).toBe(false);
   expect(isSameTitle('...', [videoTitle])).toBe(false);

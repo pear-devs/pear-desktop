@@ -26,7 +26,12 @@ const removeBrackets = (title: string) =>
   title.replaceAll(
     /\(([^)]*)\)|\[([^\]]*)\]|【([^】]*)】/g,
     (whole, ...inner) =>
-      QUALIFIER.test(String(inner.find((part) => part !== undefined) ?? ''))
+      // NFKC turns full-width digits such as "１" into plain ones first.
+      QUALIFIER.test(
+        String(inner.find((part) => part !== undefined) ?? '').normalize(
+          'NFKC',
+        ),
+      )
         ? whole
         : ' ',
   );
@@ -56,17 +61,25 @@ const songForms = (title: string, artist: string) => {
   const plain = removeCredits(title);
   const parts = plain.split(SEPARATOR);
   const songPart = parts.length > 1 ? parts.slice(1).join(' - ') : '';
-  const artistForm = normalize(artist);
+  const withoutNote = removeRecordingNote(plain);
+
+  // "Artist - Video" without its note is just the artist, which is no title.
+  // A song that shares the artist's name still matches through songPart.
+  const isOnlyArtist =
+    parts.length > 1 &&
+    Boolean(artist) &&
+    normalize(withoutNote) === normalize(artist) &&
+    normalize(parts[0]) === normalize(artist);
 
   return [
     title,
     plain,
-    removeRecordingNote(plain),
+    isOnlyArtist ? '' : withoutNote,
     songPart,
     removeRecordingNote(songPart),
   ]
     .map(normalize)
-    .filter((form) => form && form !== artistForm);
+    .filter(Boolean);
 };
 
 /**
