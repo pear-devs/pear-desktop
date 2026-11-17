@@ -67,10 +67,11 @@ let unmountOverlay: (() => void) | null = null;
 // Enabling the plugin mid-song misses that song's `peard:audio-can-play` event.
 // Reloading the video at the same position fires it again.
 const requestAudioNodes = () => {
-  if (!playerApi) return;
+  const videoId = playerApi?.getPlayerResponse()?.videoDetails.videoId;
+  if (!playerApi || !videoId) return;
 
   playerApi.loadVideoById(
-    playerApi.getPlayerResponse().videoDetails.videoId,
+    videoId,
     playerApi.getCurrentTime(),
     playerApi.getUserPlaybackQualityPreference(),
   );
@@ -235,7 +236,7 @@ const syncStems = () => {
   }
 
   const useStems =
-    Boolean(videoId) &&
+    videoId !== undefined &&
     !isAdPlaying &&
     // The stems can only play at normal speed.
     video.playbackRate === 1 &&
