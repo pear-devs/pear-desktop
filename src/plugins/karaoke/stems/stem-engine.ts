@@ -1,5 +1,6 @@
 import { findStream } from './audio-tap';
 import { log } from './diagnostics';
+import { PagedAudio } from './paged-audio';
 import { Separator } from './separator';
 import { SongAudio } from './song-audio';
 import {
@@ -7,6 +8,7 @@ import {
   getBlockAt,
   getBlockCount,
   getOverlapWeight,
+  LOOKAHEAD_SECONDS,
   pickNextBlock,
   SEGMENT_SAMPLES,
 } from './stem-math';
@@ -35,18 +37,21 @@ type Ipc = RendererContext<KaraokePluginConfig>['ipc'];
 
 const GPU_RETRY_MS = 2000;
 
+// Only blocks near the playhead are held, here and in the stem player, so memory
+// stays the same however long the video is. A seek recomputes what was dropped.
+const BLOCKS_KEPT_BEHIND = 2;
+const BLOCKS_KEPT_AHEAD = 2;
+
+const VOCALS_LEFT = 0;
+const VOCALS_RIGHT = 1;
+const WEIGHTS = 2;
+
 const contextsWithPlayer = new WeakSet<BaseAudioContext>();
 
 const sleep = (ms: number) =>
   new Promise((resolve) => {
     setTimeout(resolve, ms);
   });
-
-const copySegment = (channel: Float32Array, start: number) => {
-  const segment = new Float32Array(SEGMENT_SAMPLES);
-  segment.set(channel.subarray(start, start + SEGMENT_SAMPLES));
-  return segment;
-};
 
 /** Separates the current song ahead of the playhead and feeds the stem player. */
 export class StemEngine {
@@ -197,11 +202,8 @@ export class StemEngine {
     const song = new SongAudio(stream, duration);
     this.song = song;
     log(`stream found for ${videoId}: ${stream.describe()}`);
-    const { left, right } = song;
     const blockCount = getBlockCount(song.length);
-    const vocalsLeft = new Float32Array(song.length);
-    const vocalsRight = new Float32Array(song.length);
-    const weights = new Float32Array(song.length);
+    const vocals = new PagedAudio(3, BLOCK_SAMPLES, song.length);
 
     const isAvailable = (block: number) => {
       const blockStart = block * BLOCK_SAMPLES;
@@ -209,8 +211,10 @@ export class StemEngine {
     };
 
     while (isCurrent()) {
+      this.keepWindow(song, vocals);
       song.useStream(findStream(duration) ?? stream);
       await song.update();
+      if (!isCurrent()) return;
 
       const block = pickNextBlock(
         this.doneBlocks,
@@ -224,21 +228,32 @@ export class StemEngine {
       }
 
       const start = block * BLOCK_SAMPLES;
-      const vocals = await separator.getVocals(
-        copySegment(left, start),
-        copySegment(right, start),
+      const separated = await separator.getVocals(
+        song.read('left', start, SEGMENT_SAMPLES),
+        song.read('right', start, SEGMENT_SAMPLES),
       );
       if (!isCurrent()) return;
 
-      const length = Math.min(SEGMENT_SAMPLES, left.length - start);
-      for (let i = 0; i < length; i++) {
-        const weight = getOverlapWeight(i, SEGMENT_SAMPLES);
-        vocalsLeft[start + i] += vocals.left[i] * weight;
-        vocalsRight[start + i] += vocals.right[i] * weight;
-        weights[start + i] += weight;
-      }
+      const weight = (i: number) => getOverlapWeight(i, SEGMENT_SAMPLES);
+      const length = Math.min(SEGMENT_SAMPLES, song.length - start);
+      vocals.add(
+        VOCALS_LEFT,
+        start,
+        separated.left.subarray(0, length),
+        weight,
+      );
+      vocals.add(
+        VOCALS_RIGHT,
+        start,
+        separated.right.subarray(0, length),
+        weight,
+      );
+      vocals.add(WEIGHTS, start, new Float32Array(length).fill(1), weight);
 
-      this.postBlock(block, { left, right, vocalsLeft, vocalsRight, weights });
+      // The window may have moved on while the GPU worked.
+      if (!vocals.holds(start, start + 1)) continue;
+
+      this.postBlock(block, song, vocals);
       this.doneBlocks.add(block);
       if (this.isCovering(videoId, this.playhead)) this.onStatus('ready');
 
@@ -259,35 +274,39 @@ export class StemEngine {
     throw new Error('The player did not provide any audio to read');
   }
 
-  private postBlock(
-    block: number,
-    song: {
-      left: Float32Array;
-      right: Float32Array;
-      vocalsLeft: Float32Array;
-      vocalsRight: Float32Array;
-      weights: Float32Array;
-    },
-  ) {
-    const start = block * BLOCK_SAMPLES;
-    const length = Math.min(BLOCK_SAMPLES, song.left.length - start);
+  /** Moves the held window to the playhead and drops blocks outside it. */
+  private keepWindow(song: SongAudio, vocals: PagedAudio) {
+    const first = Math.max(0, getBlockAt(this.playhead) - BLOCKS_KEPT_BEHIND);
+    const last =
+      getBlockAt(this.playhead + LOOKAHEAD_SECONDS) + BLOCKS_KEPT_AHEAD;
 
-    const vocalsLeft = new Float32Array(length);
-    const vocalsRight = new Float32Array(length);
+    song.setWindow(first, last);
+    vocals.setWindow(first, last);
+    for (const block of this.doneBlocks) {
+      if (block < first || block > last) this.doneBlocks.delete(block);
+    }
+    this.player?.port.postMessage({ type: 'keep', first, last });
+  }
+
+  private postBlock(block: number, song: SongAudio, vocals: PagedAudio) {
+    const start = block * BLOCK_SAMPLES;
+    const length = Math.min(BLOCK_SAMPLES, song.length - start);
+
+    const left = song.read('left', start, length);
+    const right = song.read('right', start, length);
+    const vocalsLeft = vocals.read(VOCALS_LEFT, start, length);
+    const vocalsRight = vocals.read(VOCALS_RIGHT, start, length);
+    const weights = vocals.read(WEIGHTS, start, length);
     const instrumentalLeft = new Float32Array(length);
     const instrumentalRight = new Float32Array(length);
 
     for (let i = 0; i < length; i++) {
-      const index = start + i;
-      const weight = song.weights[index];
-      const voiceLeft = weight > 0 ? song.vocalsLeft[index] / weight : 0;
-      const voiceRight = weight > 0 ? song.vocalsRight[index] / weight : 0;
-
-      vocalsLeft[i] = voiceLeft;
-      vocalsRight[i] = voiceRight;
+      const weight = weights[i];
+      vocalsLeft[i] = weight > 0 ? vocalsLeft[i] / weight : 0;
+      vocalsRight[i] = weight > 0 ? vocalsRight[i] / weight : 0;
       // Taking the vocals out of the original keeps everything else intact.
-      instrumentalLeft[i] = song.left[index] - voiceLeft;
-      instrumentalRight[i] = song.right[index] - voiceRight;
+      instrumentalLeft[i] = left[i] - vocalsLeft[i];
+      instrumentalRight[i] = right[i] - vocalsRight[i];
     }
 
     this.player?.port.postMessage(

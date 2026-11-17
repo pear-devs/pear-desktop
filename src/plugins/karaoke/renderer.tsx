@@ -293,10 +293,20 @@ const findNotice = async () => {
   return null;
 };
 
+// Bumped by every enter and exit, so an entry that was cancelled while it
+// waited for the audio route stops instead of finishing its setup.
+let entryGeneration = 0;
+
 const enter = async () => {
+  const generation = ++entryGeneration;
   setIsActive(true);
 
   if (audio) await route.engage(audio, vocalReduction);
+  if (generation !== entryGeneration) {
+    // Exit ran during the await, and the late engage undid its disengage.
+    if (!isActive()) route.disengage();
+    return;
+  }
 
   // Without any captured audio, loading the song again provides some.
   if (!audio || (aiVocals && !hasStreams())) requestAudioNodes();
@@ -306,6 +316,7 @@ const enter = async () => {
 };
 
 const exit = () => {
+  entryGeneration++;
   setIsActive(false);
   if (syncTimer !== null) clearInterval(syncTimer);
   syncTimer = null;

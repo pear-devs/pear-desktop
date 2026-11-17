@@ -67,6 +67,23 @@ export class AudioStream {
     this.duration = this.format.duration;
   }
 
+  /**
+   * Chunks are placed with the stream's offset, so audio kept from an earlier
+   * offset would land in the wrong place. Drop it; the player sends it again.
+   */
+  setTimeOffset(offset: number) {
+    if (offset === this.timeOffset) return;
+    this.timeOffset = offset;
+    if (this.chunks.size || this.pending.length) {
+      log(
+        `stream offset changed to ${offset}, dropping ${this.chunks.size} chunks`,
+      );
+      this.chunks.clear();
+      this.pending = new Uint8Array();
+      this.version++;
+    }
+  }
+
   append(bytes: Uint8Array) {
     // The player can abandon a chunk part way through, after a seek. What it
     // left behind must go, or everything after it would be misread.

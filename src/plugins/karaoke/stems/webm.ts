@@ -59,6 +59,34 @@ export const startsWithHeader = (bytes: Uint8Array) =>
 export const startsWithCluster = (bytes: Uint8Array) =>
   readId(bytes, 0)?.id === CLUSTER;
 
+const SEGMENT = 0x18538067;
+
+/**
+ * Where the first cluster starts, for a header that arrives joined to its first
+ * cluster. Walks the EBML header, then the segment's children, so bytes inside
+ * other elements are never mistaken for a cluster.
+ */
+export const findClusterStart = (bytes: Uint8Array) => {
+  let position = 0;
+  while (position < bytes.length) {
+    const id = readId(bytes, position);
+    if (!id) return bytes.length;
+    if (id.id === CLUSTER) return position;
+
+    const size = readSize(bytes, position + id.length);
+    if (!size) return bytes.length;
+    const body = position + id.length + size.length;
+
+    // Step into the segment, whose size may be unknown while it streams.
+    if (id.id === SEGMENT || size.value === null) {
+      position = body;
+      continue;
+    }
+    position = body + size.value;
+  }
+  return bytes.length;
+};
+
 /** Reads the duration in seconds from a stream's header, when it has one. */
 export const parseDuration = (header: Uint8Array) => {
   const view = new DataView(
@@ -73,8 +101,14 @@ export const parseDuration = (header: Uint8Array) => {
     const three = (header[i] << 16) | (header[i + 1] << 8) | header[i + 2];
     if (three === TIMECODE_SCALE) {
       const size = readSize(header, i + 3);
-      if (size?.value) {
-        scale = readUnsigned(header, i + 3 + size.length, size.value);
+      const start = i + 3 + (size?.length ?? 0);
+      // An unsigned integer is at most 8 bytes, and must fit in what arrived.
+      if (
+        size?.value &&
+        size.value <= 8 &&
+        start + size.value <= header.length
+      ) {
+        scale = readUnsigned(header, start, size.value) || scale;
       }
     }
 

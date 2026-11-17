@@ -32,6 +32,7 @@ let runtime: Promise<typeof Ort> | null = null;
 /** Runs the model, one segment at a time. */
 export class Separator {
   private lastRun: Promise<unknown> = Promise.resolve();
+  private isReleased = false;
 
   private constructor(
     private readonly ort: typeof Ort,
@@ -69,11 +70,17 @@ export class Separator {
 
   /** Returns the vocals of one segment of exactly TRAINING_SAMPLES samples. */
   getVocals(left: Float32Array, right: Float32Array) {
+    if (this.isReleased) {
+      return Promise.reject(new Error('The separator was released'));
+    }
     // The runtime forbids overlapping runs, and skipping a song can start a new
     // segment while the last song's segment is still on the GPU.
     const run = this.lastRun
       .catch(() => null)
-      .then(() => this.runSegment(left, right));
+      .then(() => {
+        if (this.isReleased) throw new Error('The separator was released');
+        return this.runSegment(left, right);
+      });
     this.lastRun = run;
     return run;
   }
@@ -137,14 +144,34 @@ export class Separator {
     return vocals;
   }
 
+  /**
+   * Frees the session once no run is using it. Freeing it during a run would pull
+   * the session out from under the GPU, so a slow run delays the release instead:
+   * this returns after RELEASE_WAIT_MS, and the release follows when it settles.
+   */
   async release() {
-    // A stuck run must not stop the session from being released.
-    await Promise.race([
-      this.lastRun.catch(() => null),
-      new Promise((resolve) => {
-        setTimeout(resolve, RELEASE_WAIT_MS);
+    if (this.isReleased) return;
+    this.isReleased = true;
+
+    const settled = this.lastRun.then(
+      () => true,
+      () => true,
+    );
+    const isSettled = await Promise.race([
+      settled,
+      new Promise<boolean>((resolve) => {
+        setTimeout(() => resolve(false), RELEASE_WAIT_MS);
       }),
     ]);
-    await this.session.release();
+
+    if (isSettled) {
+      await this.session.release();
+      return;
+    }
+    settled
+      .then(() => this.session.release())
+      .catch((error: unknown) => {
+        console.error('[karaoke] Could not release the model:', error);
+      });
   }
 }

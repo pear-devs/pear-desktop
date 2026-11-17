@@ -65,7 +65,9 @@ export const KaraokeOverlay = (props: KaraokeOverlayProps) => {
   let offsetVideoId: string | null = null;
 
   const nudge = (deltaMs: number) => {
-    const next = nudgeOffset(offsetMs(), deltaMs);
+    // The phone remote saves offsets too, so start from the stored value.
+    const base = offsetVideoId ? loadOffset(offsetVideoId) : offsetMs();
+    const next = nudgeOffset(base, deltaMs);
     setOffsetMs(next);
     if (offsetVideoId) saveOffset(offsetVideoId, next);
   };
@@ -77,10 +79,9 @@ export const KaraokeOverlay = (props: KaraokeOverlayProps) => {
     const state = getLyricsState();
 
     const songInfo = getSongInfo();
-    if (songInfo.videoId !== offsetVideoId) {
-      offsetVideoId = songInfo.videoId;
-      setOffsetMs(loadOffset(offsetVideoId));
-    }
+    if (songInfo.videoId !== offsetVideoId) offsetVideoId = songInfo.videoId;
+    // Read every frame so a nudge from the phone remote shows straight away.
+    setOffsetMs(loadOffset(offsetVideoId));
     const videoTimeInMs = (video?.currentTime ?? 0) * 1000;
     const timeInMs = videoTimeInMs - offsetMs();
 

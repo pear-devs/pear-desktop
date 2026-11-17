@@ -3,7 +3,7 @@ import { dialog, type MenuItemConstructorOptions } from 'electron';
 import { t } from '@/i18n';
 
 import { showPhoneQr } from './phone-qr';
-import { getPhoneLink } from './phone-server';
+import { getPhoneLink, isPhoneServerRunning } from './phone-server';
 
 import type { KaraokePluginConfig, LyricsSize } from './types';
 import type { MenuContext } from '@/types/contexts';
@@ -30,8 +30,9 @@ export const menu = async (
       toolTip: t('plugins.karaoke.menu.phone-remote.tooltip'),
       type: 'checkbox',
       checked: config.phoneRemote,
-      click(item) {
-        ctx.setConfig({ phoneRemote: item.checked });
+      async click(item) {
+        await ctx.setConfig({ phoneRemote: item.checked });
+        await ctx.refresh();
       },
     },
     {
@@ -39,15 +40,17 @@ export const menu = async (
       enabled: config.phoneRemote,
       async click() {
         const link = getPhoneLink();
-        if (link) {
+        if (link && isPhoneServerRunning()) {
           showPhoneQr(ctx.window, link);
           return;
         }
 
         await dialog.showMessageBox(ctx.window, {
-          type: 'info',
+          type: link ? 'error' : 'info',
           title: t('plugins.karaoke.menu.phone-link.label'),
-          message: t('plugins.karaoke.menu.phone-link.no-network'),
+          message: link
+            ? t('plugins.karaoke.menu.phone-link.not-running')
+            : t('plugins.karaoke.menu.phone-link.no-network'),
         });
       },
     },

@@ -621,6 +621,7 @@
           "detail": "Link copied. Anyone with this link on your network can control playback.",
           "label": "Show phone link",
           "no-network": "No home network was found.",
+          "not-running": "The phone remote is not running. Port 26539 may be in use by another program. Turn Phone remote off and on, or restart the app.",
           "scan": "Scan with your phone camera (same Wi-Fi)"
         },
         "phone-remote": {

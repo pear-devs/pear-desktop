@@ -24,6 +24,7 @@ const ACTIONS = new Set([
 export type PhoneLine = { t: number; d: number; x: string };
 
 let server: Server | null = null;
+let listening = false;
 let state: Record<string, unknown> = {};
 let lines: PhoneLine[] = [];
 
@@ -55,6 +56,8 @@ const isVirtualAdapter = (name: string) =>
 
 const isHomeAddress = (address: string) =>
   /^(?:192\.168\.|10\.|172\.(?:1[6-9]|2\d|3[01])\.)/.test(address);
+
+export const isPhoneServerRunning = () => listening;
 
 export const getPhoneLink = () => {
   const addresses = Object.entries(networkInterfaces()).flatMap(
@@ -88,7 +91,13 @@ export const startPhoneServer = (
   const key = getKey();
 
   server = createServer((request, response) => {
-    const url = new URL(request.url ?? '/', 'http://phone');
+    let url: URL;
+    try {
+      url = new URL(request.url ?? '/', 'http://phone');
+    } catch {
+      response.writeHead(400).end();
+      return;
+    }
 
     if (!hasKey(url.searchParams.get('k'), key)) {
       response.writeHead(403).end();
@@ -137,8 +146,12 @@ export const startPhoneServer = (
     }
   });
 
+  server.on('listening', () => {
+    listening = true;
+  });
   server.on('error', (error) => {
     console.error('[karaoke] Phone remote could not start:', error);
+    listening = false;
     server = null;
   });
   server.listen(PHONE_PORT, '0.0.0.0');
@@ -147,4 +160,5 @@ export const startPhoneServer = (
 export const stopPhoneServer = () => {
   server?.close();
   server = null;
+  listening = false;
 };

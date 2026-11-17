@@ -1,4 +1,5 @@
-import { placeRun, SOURCE_SAMPLE_RATE } from './stem-math';
+import { PagedAudio } from './paged-audio';
+import { BLOCK_SAMPLES, placeRun, SOURCE_SAMPLE_RATE } from './stem-math';
 import { groupIntoRuns } from './webm';
 
 import type { AudioStream } from './audio-streams';
@@ -21,12 +22,19 @@ const decodeRun = async (header: Uint8Array, chunks: Uint8Array[]) => {
   return await context.decodeAudioData(bytes.buffer);
 };
 
-/** The decoded song, filled in as the player receives it. */
+const LEFT = 0;
+const RIGHT = 1;
+
+/**
+ * The decoded song, filled in as the player receives it. Only a window of it is
+ * held (pages are blocks); moving the window decodes again what it now needs.
+ */
 export class SongAudio {
-  readonly left: Float32Array;
-  readonly right: Float32Array;
+  private readonly audio: PagedAudio;
   private ranges: Range[] = [];
   private decodedVersion = -1;
+  private decodedWindow = '';
+  private window = '';
 
   private earlierRanges: Range[] = [];
 
@@ -35,12 +43,21 @@ export class SongAudio {
     duration: number,
   ) {
     const samples = Math.ceil(duration * SOURCE_SAMPLE_RATE);
-    this.left = new Float32Array(samples);
-    this.right = new Float32Array(samples);
+    this.audio = new PagedAudio(2, BLOCK_SAMPLES, samples);
   }
 
   get length() {
-    return this.left.length;
+    return this.audio.length;
+  }
+
+  /** Keeps blocks first..last. */
+  setWindow(first: number, last: number) {
+    this.audio.setWindow(first, last);
+    this.window = `${first}-${last}`;
+  }
+
+  read(channel: 'left' | 'right', start: number, length: number) {
+    return this.audio.read(channel === 'left' ? LEFT : RIGHT, start, length);
   }
 
   /** Follows the player when it moves this song to a new stream. */
@@ -55,8 +72,9 @@ export class SongAudio {
   /** Decodes whatever has arrived since the last call. */
   async update() {
     const version = this.stream.version;
-    if (version === this.decodedVersion) return;
-    this.decodedVersion = version;
+    const window = this.window;
+    if (version === this.decodedVersion && window === this.decodedWindow)
+      return;
 
     const ranges: Range[] = [];
     for (const run of groupIntoRuns(this.stream.getChunks())) {
@@ -71,11 +89,14 @@ export class SongAudio {
 
       const left = song.getChannelData(0);
       const right = song.numberOfChannels > 1 ? song.getChannelData(1) : left;
-      this.left.set(left.subarray(skip, skip + length), target);
-      this.right.set(right.subarray(skip, skip + length), target);
+      this.audio.write(LEFT, target, left.subarray(skip, skip + length));
+      this.audio.write(RIGHT, target, right.subarray(skip, skip + length));
       ranges.push({ start: target, end: target + length });
     }
     this.ranges = [...this.earlierRanges, ...ranges];
+    // Only once decoding succeeded, so a failed version is tried again.
+    this.decodedVersion = version;
+    this.decodedWindow = window;
   }
 
   describe() {
@@ -84,14 +105,16 @@ export class SongAudio {
     const ranges = this.ranges
       .map((range) => `${seconds(range.start)}-${seconds(range.end)}`)
       .join(',');
-    return `length=${seconds(this.length)} ranges=${ranges}`;
+    return `length=${seconds(this.length)} ranges=${ranges} pages=${this.audio.pageCount}`;
   }
 
   /** Whether a stretch of the song has arrived, allowing for its last moments. */
   has(start: number, end: number) {
     const target = Math.min(end, this.length - SOURCE_SAMPLE_RATE);
-    return this.ranges.some(
-      (range) => range.start <= start && range.end >= target,
+    return (
+      this.ranges.some(
+        (range) => range.start <= start && range.end >= target,
+      ) && this.audio.holds(start, target)
     );
   }
 }

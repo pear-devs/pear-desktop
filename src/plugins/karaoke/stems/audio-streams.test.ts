@@ -107,3 +107,18 @@ test('reports when it is empty', () => {
   list.clear();
   expect(list.isEmpty).toBe(true);
 });
+
+test('drops kept audio when a repeated header moves the timeline', () => {
+  const list = new StreamList();
+  const stream = list.open(header(200));
+  stream.setTimeOffset(0);
+  stream.append(cluster(0));
+  const version = stream.version;
+
+  stream.setTimeOffset(0);
+  expect(stream.getChunks()).toHaveLength(1);
+
+  stream.setTimeOffset(-0.05);
+  expect(stream.getChunks()).toHaveLength(0);
+  expect(stream.version).toBeGreaterThan(version);
+});

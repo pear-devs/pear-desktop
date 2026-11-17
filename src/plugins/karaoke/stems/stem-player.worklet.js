@@ -40,6 +40,15 @@ class StemPlayer extends AudioWorkletProcessor {
         this.blocks.set(data.block, data);
         break;
       }
+      case 'keep': {
+        // Only blocks near the playhead are held, so memory does not grow with
+        // the length of the song.
+        for (const block of this.blocks.keys()) {
+          if (block < data.first || block > data.last)
+            this.blocks.delete(block);
+        }
+        break;
+      }
       case 'vocals': {
         this.vocalGain = data.gain;
         break;
@@ -76,10 +85,12 @@ class StemPlayer extends AudioWorkletProcessor {
     const block = this.blocks.get(Math.floor(index / this.blockSamples));
     if (!block || index < 0) return 0;
 
+    // The last block of a song is shorter than the rest.
     const offset = index % this.blockSamples;
-    return (
-      block[instrumentalKey][offset] + this.vocalGain * block[vocalsKey][offset]
-    );
+    const instrumental = block[instrumentalKey];
+    const vocals = block[vocalsKey];
+    if (offset >= instrumental.length || offset >= vocals.length) return 0;
+    return instrumental[offset] + this.vocalGain * vocals[offset];
   }
 
   // Catmull-Rom, because the song is at 44.1 kHz and the output may not be.

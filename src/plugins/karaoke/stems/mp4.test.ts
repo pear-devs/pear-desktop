@@ -146,3 +146,10 @@ test('finds where a joined header ends', () => {
   expect(findHeaderEnd(joined)).toBe(head.length);
   expect(findHeaderEnd(head)).toBe(head.length);
 });
+
+test('waits for a header split across appends', () => {
+  const head = header();
+  expect(findHeaderEnd(head.subarray(0, head.length - 4))).toBeNull();
+  expect(findHeaderEnd(head.subarray(0, 16))).toBeNull();
+  expect(findHeaderEnd(head)).toBe(head.length);
+});

@@ -28,6 +28,15 @@ test('checks the alternative title too', () => {
   );
 });
 
+test('rejects a different song whose title contains this one', () => {
+  expect(isSameTitle('Love', ['Love Story'])).toBe(false);
+  expect(isSameTitle('Love Story', ['Love'])).toBe(false);
+});
+
+test('matches a title with a trailing feat. credit', () => {
+  expect(isSameTitle('Song Name', ['Song Name feat. Someone'])).toBe(true);
+});
+
 test('does not treat empty titles as a match', () => {
   expect(isSameTitle('', [videoTitle])).toBe(false);
   expect(isSameTitle('...', [videoTitle])).toBe(false);

@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 import {
+  findClusterStart,
   groupIntoRuns,
   parseDuration,
   startsWithHeader,
@@ -109,4 +110,39 @@ test('groups unbroken audio, and splits at a seek', () => {
     at(10000, 15000),
   ]);
   expect(runs.map((run) => run.length)).toEqual([3, 1]);
+});
+
+test('ignores a timecode scale whose size runs past the header', () => {
+  // Declares a huge payload; reading it used to loop for a very long time.
+  const header = new Uint8Array([
+    0x2a, 0xd7, 0xb1, 0x01, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe,
+  ]);
+  expect(parseDuration(header)).toBeNull();
+});
+
+test('finds the first cluster after a header joined to it', () => {
+  const ebml = element([0x1a, 0x45, 0xdf, 0xa3], [0x42, 0x86, 0x81, 0x01]);
+  // A segment of unknown size, as streamed, holding info and then a cluster.
+  const info = element([0x15, 0x49, 0xa9, 0x66], [0x1f, 0x43, 0xb6, 0x75]);
+  const head = [
+    ...ebml,
+    0x18,
+    0x53,
+    0x80,
+    0x67,
+    0x01,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    0xff,
+    ...info,
+  ];
+  const joined = new Uint8Array([...head, ...cluster(0, 20)]);
+
+  // The cluster id inside `info` is part of its body, not a cluster.
+  expect(findClusterStart(joined)).toBe(head.length);
+  expect(findClusterStart(new Uint8Array(head))).toBe(head.length);
 });

@@ -3,7 +3,7 @@ export const SEGMENT_SAMPLES = 343980;
 /** Segments overlap by a quarter, so a block is the part unique to one segment. */
 export const BLOCK_SAMPLES = Math.floor(SEGMENT_SAMPLES * 0.75);
 
-const LOOKAHEAD_SECONDS = 60;
+export const LOOKAHEAD_SECONDS = 60;
 
 export const getBlockCount = (samples: number) =>
   Math.ceil(samples / BLOCK_SAMPLES);

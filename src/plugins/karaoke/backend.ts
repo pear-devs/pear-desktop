@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, statSync } from 'node:fs';
-import { appendFile, readFile, rm, writeFile } from 'node:fs/promises';
+import { appendFile, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { app, net } from 'electron';
@@ -25,6 +25,9 @@ const MODEL_FILE = 'htdemucs_embedded.onnx';
 const MODEL_SHA256 =
   'e5e425c17683f163a472462eb5f5a4ffcd11c31858d57fbd0833b012d8b88077';
 
+const isValidModel = (model: Buffer) =>
+  createHash('sha256').update(model).digest('hex') === MODEL_SHA256;
+
 const downloadModel = async (
   path: string,
   onProgress: (percent: number) => void,
@@ -48,10 +51,12 @@ const downloadModel = async (
   }
 
   const model = Buffer.concat(chunks);
-  const hash = createHash('sha256').update(model).digest('hex');
-  if (hash !== MODEL_SHA256) throw new Error('Model checksum did not match');
+  if (!isValidModel(model)) throw new Error('Model checksum did not match');
 
-  await writeFile(path, model);
+  // Write beside the cache and rename, so a crash never leaves a partial model.
+  const partial = `${path}.partial`;
+  await writeFile(partial, model);
+  await rename(partial, path);
   return model;
 };
 
@@ -60,7 +65,11 @@ const getModel = async (onProgress: (percent: number) => void) => {
   mkdirSync(folder, { recursive: true });
 
   const path = join(folder, MODEL_FILE);
-  if (existsSync(path)) return await readFile(path);
+  if (existsSync(path)) {
+    const cached = await readFile(path);
+    if (isValidModel(cached)) return cached;
+    await rm(path, { force: true });
+  }
   return await downloadModel(path, onProgress);
 };
 

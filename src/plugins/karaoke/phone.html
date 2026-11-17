@@ -376,10 +376,26 @@
         if (state) send('seek', ($('seek').value / 100) * state.duration);
       };
 
+      // One vocals request at a time, always ending with the latest value,
+      // so a slow early request can never land after a later one.
+      let vocalsInFlight = false;
+      let pendingVocals = null;
+      const sendVocals = async (value) => {
+        pendingVocals = value;
+        if (vocalsInFlight) return;
+        vocalsInFlight = true;
+        while (pendingVocals !== null) {
+          const next = pendingVocals;
+          pendingVocals = null;
+          await send('vocals', next);
+        }
+        vocalsInFlight = false;
+      };
+
       $('vocals').oninput = () => {
         isSettingVocals = true;
         $('vocalsValue').textContent = `${$('vocals').value}%`;
-        send('vocals', $('vocals').value / 100);
+        sendVocals($('vocals').value / 100);
       };
       $('vocals').onchange = () => {
         isSettingVocals = false;

@@ -94,15 +94,25 @@ export const startsWithFragment = (bytes: Uint8Array) => {
   return type === 'moof' || type === 'styp';
 };
 
-/** Where the media starts, for a header that arrives joined to its first fragment. */
+/**
+ * Where the media starts, for a header that arrives joined to its first fragment.
+ * Null while the header is still incomplete: a box runs past what has arrived,
+ * or `moov` has not arrived yet. The player may split a header across appends.
+ */
 export const findHeaderEnd = (bytes: Uint8Array) => {
   let position = 0;
+  let hasMovie = false;
   while (position < bytes.length) {
     const box = readBox(bytes, position, bytes.length);
-    if (!box || box.type === 'moof' || box.type === 'styp') return position;
+    if (!box) return null;
+    if (box.type === 'moof' || box.type === 'styp') {
+      return hasMovie ? position : null;
+    }
+    if (box.end > bytes.length) return null;
+    if (box.type === 'moov') hasMovie = true;
     position = box.end;
   }
-  return bytes.length;
+  return hasMovie ? bytes.length : null;
 };
 
 export const parseMp4Header = (header: Uint8Array): Mp4Info => {
