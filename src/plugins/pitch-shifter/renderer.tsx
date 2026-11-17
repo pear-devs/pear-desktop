@@ -95,10 +95,13 @@ const installGraph = (
     configurable: true,
     value: input,
   });
+  // Take over the source's direct connection to the output. If it has none,
+  // another plugin (Audio Compressor) routes it and reconnects to `input` on
+  // its own, so a direct connection here would play the song twice.
   try {
     source.disconnect(output);
+    source.connect(input);
   } catch {}
-  source.connect(input);
   input.connect(output);
   graph = { context, input, output, processorLoaded: false };
 
