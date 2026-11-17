@@ -165,10 +165,6 @@ export default createPlugin({
 
         /* hooking */
         let canvasInterval: NodeJS.Timeout | null = null;
-        canvasInterval = setInterval(
-          onSync,
-          Math.max(1, Math.ceil(1000 / this.buffer)),
-        );
 
         const onPause = () => {
           if (canvasInterval) clearInterval(canvasInterval);
@@ -181,8 +177,12 @@ export default createPlugin({
             Math.max(1, Math.ceil(1000 / this.buffer)),
           );
         };
-        songVideo.addEventListener('pause', onPause);
-        songVideo.addEventListener('play', onPlay);
+        // Media events don't bubble, so they're only heard on the video itself; on the wrapper the effect kept redrawing while paused
+        video.addEventListener('pause', onPause);
+        video.addEventListener('play', onPlay);
+        // Draw the current frame once, so a paused video still gets its glow
+        onSync();
+        if (!video.paused) onPlay();
 
         /* injecting */
         videoWrapper.prepend(blurCanvas);
@@ -191,8 +191,8 @@ export default createPlugin({
         return () => {
           if (canvasInterval) clearInterval(canvasInterval);
 
-          songVideo.removeEventListener('pause', onPause);
-          songVideo.removeEventListener('play', onPlay);
+          video.removeEventListener('pause', onPause);
+          video.removeEventListener('play', onPlay);
 
           if (blurCanvas.isConnected) blurCanvas.remove();
         };
