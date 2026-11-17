@@ -161,24 +161,21 @@ export class StreamList {
       stream.duration !== null &&
       Math.abs(stream.duration - duration) < DURATION_TOLERANCE_SECONDS;
 
-    // The stream the song already plays from wins while it still fits, even
-    // after it leaves the list, so another track of similar length never
-    // takes over. A known stream is never swapped for one of unknown length.
-    if (current && (matches(current) || current.duration === null)) {
-      return current;
-    }
+    // A known stream the song already plays from wins while it still fits,
+    // even after it leaves the list, so another track of similar length never
+    // takes over.
+    if (current && matches(current)) return current;
 
+    // Otherwise the newest known stream of the song's length. This also lets
+    // the song's own stream replace an unknown fallback picked before it came.
     const newestFirst = [...this.streams].reverse();
-    if (current) return newestFirst.find(matches) ?? null;
-    return (
-      newestFirst.find(
-        (stream) =>
-          stream.duration !== null &&
-          Math.abs(stream.duration - duration) < DURATION_TOLERANCE_SECONDS,
-      ) ??
-      newestFirst.find((stream) => stream.duration === null) ??
-      null
-    );
+    const known = newestFirst.find(matches);
+    if (known) return known;
+
+    // A stream of unknown length is only a fallback, and never replaces a
+    // known stream already in use.
+    if (current) return current.duration === null ? current : null;
+    return newestFirst.find((stream) => stream.duration === null) ?? null;
   }
 
   describe() {

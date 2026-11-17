@@ -43,6 +43,23 @@ const removeCredits = (title: string) =>
 
 const SEPARATOR = /\s[-–—|]\s/;
 
+// Splits "A feat. B & C" into the people it names, so names are compared
+// whole: "Artist feat. Guest" names "Artist", but "Queen Latifah" is not
+// "Queen" and "Leftfield" is not "Left".
+const CREDIT_SEPARATOR =
+  /\s+(?:feat\.?|ft\.?|featuring|with|x|vs\.?)\s+|\s*[&,;/+]\s*|\s+(?:and)\s+/i;
+
+const artistNames = (artists: string) =>
+  removeBrackets(artists)
+    .split(CREDIT_SEPARATOR)
+    .map(normalize)
+    .filter(Boolean);
+
+const sharesArtist = (artists: string, others: string[]) => {
+  const names = new Set(artistNames(artists));
+  return others.flatMap(artistNames).some((name) => names.has(name));
+};
+
 /** A lyrics result's title is a song title, so it is never split. */
 const lyricsForms = (title: string) => {
   const plain = removeCredits(title);
@@ -63,10 +80,7 @@ const songForms = (title: string, artist: string) => {
   // The part after the dash is only the song when the part before it is the
   // artist. Without the artist's name, any "A - B" title is taken as one.
   const isArtistPrefix =
-    !artist ||
-    (parts.length > 1 &&
-      (normalize(parts[0]).includes(normalize(artist)) ||
-        normalize(artist).includes(normalize(parts[0]))));
+    !artist || (parts.length > 1 && sharesArtist(parts[0], [artist]));
   const songPart =
     parts.length > 1 && isArtistPrefix ? parts.slice(1).join(' - ') : '';
   const withoutNote = removeRecordingNote(plain);
@@ -113,8 +127,7 @@ export const isSameTitle = (
  * containment, because "Artist feat. Someone" still names the artist.
  */
 export const isSameArtist = (lyricsArtists: string[], artist: string) => {
-  const playing = normalize(artist);
-  const named = lyricsArtists.map(normalize).filter(Boolean);
-  if (!playing || !named.length) return true;
-  return named.some((name) => name.includes(playing) || playing.includes(name));
+  const named = lyricsArtists.flatMap(artistNames);
+  if (!artistNames(artist).length || !named.length) return true;
+  return sharesArtist(artist, lyricsArtists);
 };

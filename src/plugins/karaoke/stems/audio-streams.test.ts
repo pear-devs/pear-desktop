@@ -166,3 +166,14 @@ test('never swaps the song stream for one of unknown length', () => {
   // A stream of the wrong length is no answer while a known one is in use.
   expect(list.find(30, song)).toBeNull();
 });
+
+test('lets the song stream replace an unknown fallback picked before it', () => {
+  const list = new StreamList();
+  const fallback = list.open(new Uint8Array([0x1a, 0x45, 0xdf, 0xa3, 0x97]));
+  expect(list.find(200)).toBe(fallback);
+
+  const song = list.open(header(200));
+  expect(list.find(200, fallback)).toBe(song);
+  // Once on the known stream, it stays there.
+  expect(list.find(200, song)).toBe(song);
+});

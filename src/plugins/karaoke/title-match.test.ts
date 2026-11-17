@@ -107,6 +107,15 @@ test('checks the artist when both sides name one', () => {
   expect(isSameArtist(['Artist'], '')).toBe(true);
 });
 
+test('compares artists as whole names', () => {
+  expect(isSameArtist(['Queen Latifah'], 'Queen')).toBe(false);
+  expect(isSameArtist(['Queen'], 'Queen Latifah')).toBe(false);
+  expect(isSameArtist(['Simon and Garfunkel'], 'Simon & Garfunkel')).toBe(true);
+  expect(isSameArtist(['Guest'], 'Artist feat. Guest')).toBe(true);
+  expect(isSameTitle('Right', ['Left - Right'], 'Leftfield')).toBe(false);
+  expect(isSameTitle('Right', ['Artist & Guest - Right'], 'Artist')).toBe(true);
+});
+
 test('does not treat empty titles as a match', () => {
   expect(isSameTitle('', [videoTitle])).toBe(false);
   expect(isSameTitle('...', [videoTitle])).toBe(false);
