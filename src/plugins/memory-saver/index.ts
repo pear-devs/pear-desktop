@@ -4,6 +4,7 @@ import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 
 import type { MusicPlayer } from '@/types/music-player';
+import type { QueueElement } from '@/types/queue';
 import type { VideoDataChanged } from '@/types/video-data-changed';
 
 const CHECK_INTERVAL_MS = 60_000;
@@ -23,10 +24,10 @@ export type MemorySaverPluginConfig = {
   thresholdMB: number;
 };
 
+// Read from the queue's own state rather than the player bar, which newer versions of the player don't have
 const isShuffled = () =>
-  (document
-    .querySelector<HTMLElement>('ytmusic-player-bar')
-    ?.attributes.getNamedItem('shuffle-on') ?? null) !== null;
+  document.querySelector<QueueElement>('#queue')?.queue?.store.store.getState()
+    .queue.shuffleEnabled ?? false;
 
 export default createPlugin<
   {
