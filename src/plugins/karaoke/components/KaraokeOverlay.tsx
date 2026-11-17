@@ -5,7 +5,7 @@ import { getSongInfo } from '@/providers/song-info-front';
 
 import {
   formatOffset,
-  loadOffset,
+  readStoredOffset,
   nudgeOffset,
   OFFSET_STEP_MS,
   saveOffset,
@@ -63,13 +63,16 @@ export const KaraokeOverlay = (props: KaraokeOverlayProps) => {
   const [currentLine, setCurrentLine] = createSignal<HTMLSpanElement>();
   let animationFrame = 0;
   let offsetVideoId: string | null = null;
+  // Once storage fails, the offset lives here until the song changes.
+  let isOffsetLocal = false;
 
   const nudge = (deltaMs: number) => {
     // The phone remote saves offsets too, so start from the stored value.
-    const base = offsetVideoId ? loadOffset(offsetVideoId) : offsetMs();
-    const next = nudgeOffset(base, deltaMs);
+    const stored =
+      offsetVideoId && !isOffsetLocal ? readStoredOffset(offsetVideoId) : null;
+    const next = nudgeOffset(stored ?? offsetMs(), deltaMs);
     setOffsetMs(next);
-    if (offsetVideoId) saveOffset(offsetVideoId, next);
+    isOffsetLocal = !(offsetVideoId && saveOffset(offsetVideoId, next));
   };
 
   const draw = () => {
@@ -79,9 +82,15 @@ export const KaraokeOverlay = (props: KaraokeOverlayProps) => {
     const state = getLyricsState();
 
     const songInfo = getSongInfo();
-    if (songInfo.videoId !== offsetVideoId) offsetVideoId = songInfo.videoId;
-    // Read every frame so a nudge from the phone remote shows straight away.
-    setOffsetMs(loadOffset(offsetVideoId));
+    if (songInfo.videoId !== offsetVideoId) {
+      offsetVideoId = songInfo.videoId;
+      isOffsetLocal = false;
+      setOffsetMs(readStoredOffset(offsetVideoId) ?? 0);
+    } else if (!isOffsetLocal) {
+      // Read every frame so a nudge from the phone remote shows straight away.
+      const stored = readStoredOffset(offsetVideoId);
+      if (stored !== null) setOffsetMs(stored);
+    }
     const videoTimeInMs = (video?.currentTime ?? 0) * 1000;
     const timeInMs = videoTimeInMs - offsetMs();
 

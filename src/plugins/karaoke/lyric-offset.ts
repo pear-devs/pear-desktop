@@ -23,11 +23,24 @@ export const loadOffset = (videoId: string) => {
   }
 };
 
+/** The stored offset, or null when storage could not be read. */
+export const readStoredOffset = (videoId: string) => {
+  try {
+    const value = Number(localStorage.getItem(storageKey(videoId)));
+    return Number.isFinite(value) ? value : 0;
+  } catch {
+    return null;
+  }
+};
+
+/** Whether the offset was stored. */
 export const saveOffset = (videoId: string, offsetMs: number) => {
   try {
     if (offsetMs === 0) localStorage.removeItem(storageKey(videoId));
     else localStorage.setItem(storageKey(videoId), String(offsetMs));
+    return true;
   } catch {
     // Storage can be unavailable. The offset still applies until the song ends.
+    return false;
   }
 };

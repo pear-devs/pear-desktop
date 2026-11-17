@@ -37,6 +37,18 @@ test('matches a title with a trailing feat. credit', () => {
   expect(isSameTitle('Song Name', ['Song Name feat. Someone'])).toBe(true);
 });
 
+test('does not match two songs by the same artist', () => {
+  expect(isSameTitle('Artist - First Song', ['Artist - Second Song'])).toBe(
+    false,
+  );
+  expect(isSameTitle('Artist', ['Artist - Second Song'])).toBe(false);
+});
+
+test('matches a title with a trailing recording note', () => {
+  expect(isSameTitle('Song Name', ['Song Name - Remastered 2011'])).toBe(true);
+  expect(isSameTitle('Song Name - Live', ['Song Name'])).toBe(true);
+});
+
 test('does not treat empty titles as a match', () => {
   expect(isSameTitle('', [videoTitle])).toBe(false);
   expect(isSameTitle('...', [videoTitle])).toBe(false);

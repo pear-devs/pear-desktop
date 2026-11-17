@@ -56,6 +56,8 @@ export class AudioStream {
   version = 0;
   /** Seconds the player shifts this stream by. AAC starts slightly early. */
   timeOffset = 0;
+  /** Goes up when kept audio is dropped, so decodes already running are stale. */
+  revision = 0;
   readonly duration: number | null;
   private readonly format: Format;
   private readonly chunks = new Map<number, Chunk>();
@@ -74,6 +76,7 @@ export class AudioStream {
   setTimeOffset(offset: number) {
     if (offset === this.timeOffset) return;
     this.timeOffset = offset;
+    this.revision++;
     if (this.chunks.size || this.pending.length) {
       log(
         `stream offset changed to ${offset}, dropping ${this.chunks.size} chunks`,

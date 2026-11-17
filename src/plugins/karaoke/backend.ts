@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { appendFile, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -54,9 +54,14 @@ const downloadModel = async (
   if (!isValidModel(model)) throw new Error('Model checksum did not match');
 
   // Write beside the cache and rename, so a crash never leaves a partial model.
-  const partial = `${path}.partial`;
-  await writeFile(partial, model);
-  await rename(partial, path);
+  // A name of its own per download, so two at once never share a file.
+  const partial = `${path}.${randomBytes(6).toString('hex')}.partial`;
+  try {
+    await writeFile(partial, model);
+    await rename(partial, path);
+  } finally {
+    await rm(partial, { force: true });
+  }
   return model;
 };
 

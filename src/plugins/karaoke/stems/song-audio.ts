@@ -1,6 +1,6 @@
 import { PagedAudio } from './paged-audio';
 import { BLOCK_SAMPLES, placeRun, SOURCE_SAMPLE_RATE } from './stem-math';
-import { groupIntoRuns } from './webm';
+import { type Chunk, groupIntoRuns } from './webm';
 
 import type { AudioStream } from './audio-streams';
 
@@ -25,16 +25,20 @@ const decodeRun = async (header: Uint8Array, chunks: Uint8Array[]) => {
 const LEFT = 0;
 const RIGHT = 1;
 
+// Decoding starts one chunk early, so the codec has settled by the window.
+const LEAD_CHUNKS = 1;
+
 /**
  * The decoded song, filled in as the player receives it. Only a window of it is
- * held (pages are blocks); moving the window decodes again what it now needs.
+ * held (pages are blocks), and only the audio that window needs is decoded.
  */
 export class SongAudio {
   private readonly audio: PagedAudio;
   private ranges: Range[] = [];
-  private decodedVersion = -1;
-  private decodedWindow = '';
-  private window = '';
+  private decoded = new Map<string, Range>();
+  private decodedState = '';
+  private first = 0;
+  private last = Number.POSITIVE_INFINITY;
 
   private earlierRanges: Range[] = [];
 
@@ -53,7 +57,8 @@ export class SongAudio {
   /** Keeps blocks first..last. */
   setWindow(first: number, last: number) {
     this.audio.setWindow(first, last);
-    this.window = `${first}-${last}`;
+    this.first = first;
+    this.last = last;
   }
 
   read(channel: 'left' | 'right', start: number, length: number) {
@@ -66,24 +71,68 @@ export class SongAudio {
 
     this.stream = stream;
     this.earlierRanges = this.ranges;
-    this.decodedVersion = -1;
+    this.decoded = new Map();
+    this.decodedState = '';
   }
 
-  /** Decodes whatever has arrived since the last call. */
+  /** The chunks of a run that the window needs, with a little lead-in. */
+  private chunksInWindow(run: Chunk[]) {
+    const offsetMs = this.stream.timeOffset * 1000;
+    const toMs = (samples: number) => (samples / SOURCE_SAMPLE_RATE) * 1000;
+    const startMs = toMs(this.first * BLOCK_SAMPLES) - offsetMs;
+    const endMs = toMs((this.last + 1) * BLOCK_SAMPLES) - offsetMs;
+
+    const firstIndex = run.findIndex((chunk) => chunk.endMs >= startMs);
+    if (firstIndex === -1) return [];
+    let lastIndex = run.length - 1;
+    while (lastIndex > firstIndex && run[lastIndex].startMs > endMs)
+      lastIndex--;
+    if (run[firstIndex].startMs > endMs) return [];
+
+    return run.slice(Math.max(0, firstIndex - LEAD_CHUNKS), lastIndex + 1);
+  }
+
+  /**
+   * Decodes what the window needs and has not been decoded yet. A decode that
+   * the stream invalidates while it runs is thrown away, and tried again later.
+   */
   async update() {
-    const version = this.stream.version;
-    const window = this.window;
-    if (version === this.decodedVersion && window === this.decodedWindow)
-      return;
+    const stream = this.stream;
+    const { revision, version } = stream;
+    const state = `${revision}:${version}:${this.first}-${this.last}`;
+    if (state === this.decodedState) return;
 
-    const ranges: Range[] = [];
-    for (const run of groupIntoRuns(this.stream.getChunks())) {
+    const isStale = () =>
+      stream !== this.stream || stream.revision !== revision;
+
+    const decoded = new Map<string, Range>();
+    for (const run of groupIntoRuns(stream.getChunks())) {
+      const chunks = this.chunksInWindow(run);
+      if (!chunks.length) continue;
+
+      const key = `${revision}:${chunks[0].startMs}:${chunks.at(-1)?.startMs}:${chunks.length}`;
+      const known = this.decoded.get(key);
+      // Only the part inside the window is ever held.
+      const windowStart = this.first * BLOCK_SAMPLES;
+      const windowEnd = (this.last + 1) * BLOCK_SAMPLES;
+      if (
+        known &&
+        this.audio.holds(
+          Math.max(known.start, windowStart),
+          Math.min(known.end, windowEnd),
+        )
+      ) {
+        decoded.set(key, known);
+        continue;
+      }
+
       const song = await decodeRun(
-        this.stream.header,
-        run.map((chunk) => chunk.bytes),
+        stream.header,
+        chunks.map((chunk) => chunk.bytes),
       );
+      if (isStale()) return;
 
-      const { target, skip } = placeRun(run[0].startMs, this.stream.timeOffset);
+      const { target, skip } = placeRun(chunks[0].startMs, stream.timeOffset);
       const length = Math.min(song.length - skip, this.length - target);
       if (length <= 0) continue;
 
@@ -91,12 +140,13 @@ export class SongAudio {
       const right = song.numberOfChannels > 1 ? song.getChannelData(1) : left;
       this.audio.write(LEFT, target, left.subarray(skip, skip + length));
       this.audio.write(RIGHT, target, right.subarray(skip, skip + length));
-      ranges.push({ start: target, end: target + length });
+      decoded.set(key, { start: target, end: target + length });
     }
-    this.ranges = [...this.earlierRanges, ...ranges];
-    // Only once decoding succeeded, so a failed version is tried again.
-    this.decodedVersion = version;
-    this.decodedWindow = window;
+
+    this.decoded = decoded;
+    this.ranges = [...this.earlierRanges, ...decoded.values()];
+    // Only once decoding succeeded, so a failed or stale pass is tried again.
+    this.decodedState = state;
   }
 
   describe() {
@@ -108,9 +158,15 @@ export class SongAudio {
     return `length=${seconds(this.length)} ranges=${ranges} pages=${this.audio.pageCount}`;
   }
 
-  /** Whether a stretch of the song has arrived, allowing for its last moments. */
+  /**
+   * Whether a stretch of the song has arrived. The song's last second may be
+   * missing, but audio must have arrived at the start of the stretch.
+   */
   has(start: number, end: number) {
-    const target = Math.min(end, this.length - SOURCE_SAMPLE_RATE);
+    const target = Math.max(
+      start + 1,
+      Math.min(end, this.length - SOURCE_SAMPLE_RATE),
+    );
     return (
       this.ranges.some(
         (range) => range.start <= start && range.end >= target,

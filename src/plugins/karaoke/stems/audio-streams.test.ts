@@ -122,3 +122,14 @@ test('drops kept audio when a repeated header moves the timeline', () => {
   expect(stream.getChunks()).toHaveLength(0);
   expect(stream.version).toBeGreaterThan(version);
 });
+
+test('marks decodes as stale only when the offset changes', () => {
+  const stream = new StreamList().open(header(200));
+  const revision = stream.revision;
+  stream.append(cluster(0));
+  stream.setTimeOffset(stream.timeOffset);
+  expect(stream.revision).toBe(revision);
+
+  stream.setTimeOffset(-0.05);
+  expect(stream.revision).toBe(revision + 1);
+});
