@@ -226,10 +226,8 @@ export const setupSongInfo = (api: MusicPlayer) => {
   });
 
   const playPausedHandler = (e: Event, status: string) => {
-    if (
-      e.target instanceof HTMLVideoElement &&
-      Math.round(e.target.currentTime) > 0
-    ) {
+    // A repeated track can start at zero; its playing event must clear the paused state.
+    if (e.target instanceof HTMLVideoElement) {
       window.ipcRenderer.send('peard:play-or-paused', {
         isPaused: status === 'pause',
         elapsedSeconds: Math.floor(e.target.currentTime),
