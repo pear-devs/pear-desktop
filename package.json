@@ -142,7 +142,7 @@
     "electron-builder-squirrel-windows": "26.18.0",
     "electron-devtools-installer": "4.0.0",
     "electron-vite": "6.0.0",
-    "eslint-plugin-perfectionist": "5.13.0",
+    "eslint-plugin-perfectionist": "5.14.0",
     "eslint-plugin-solid": "0.19.0",
     "glob": "14.0.6",
     "node-gyp": "13.1.0",
