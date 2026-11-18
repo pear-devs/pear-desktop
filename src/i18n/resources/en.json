@@ -751,6 +751,10 @@
         }
       }
     },
+    "prefer-song": {
+      "description": "Play the song instead of the music video when an album track is a video",
+      "name": "Prefer Song"
+    },
     "quality-changer": {
       "backend": {
         "dialog": {

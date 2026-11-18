@@ -1,6 +1,7 @@
 node_modules
 /dist
 /pack
+/test-results
 .vscode/settings.json
 .idea
 
