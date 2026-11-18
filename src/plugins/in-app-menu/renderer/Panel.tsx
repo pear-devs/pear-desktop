@@ -6,7 +6,14 @@ import {
   size,
 } from '@floating-ui/dom';
 import { useFloating } from 'solid-floating-ui';
-import { createSignal, type JSX, Show, splitProps, mergeProps } from 'solid-js';
+import {
+  createSignal,
+  type JSX,
+  Show,
+  splitProps,
+  mergeProps,
+  onMount,
+} from 'solid-js';
 import { Portal } from 'solid-js/web';
 import { css } from 'solid-styled-components';
 import { Transition } from 'solid-transition-group';
@@ -96,7 +103,10 @@ export const Panel = (props: PanelProps) => {
 
   const [panel, setPanel] = createSignal<HTMLElement | null>(null);
 
-  const position = useFloating(() => elements.anchor, panel, {
+  const position = useFloating({
+    get elements() {
+      return { reference: elements.anchor, floating: panel() };
+    },
     whileElementsMounted: autoUpdate,
     placement: local.placement as Placement,
     strategy: 'fixed',
@@ -159,7 +169,7 @@ export const Panel = (props: PanelProps) => {
             {...leftProps}
             class={panelStyle()}
             data-ytmd-sub-panel={true}
-            ref={setPanel}
+            ref={(element) => onMount(() => setPanel(element))}
             style={{
               '--offset-x': `${position.x}px`,
               '--offset-y': `${position.y}px`,

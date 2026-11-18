@@ -8,7 +8,7 @@ export const UnLikeButton = (props: UnLikeButtonProps) => (
     <button
       aria-label="Unlike all"
       aria-pressed="false"
-      class="like-menu yt-spec-button-shape-next yt-spec-button-shape-next--text yt-spec-button-shape-next--mono yt-spec-button-shape-next--size-m yt-spec-button-shape-next--icon-button"
+      class="like-menu ytSpecButtonShapeNextHost ytSpecButtonShapeNextText ytSpecButtonShapeNextMono ytSpecButtonShapeNextSizeM ytSpecButtonShapeNextIconButton"
       data-filled="true"
       data-type="like"
       id="allunlike"
@@ -16,14 +16,14 @@ export const UnLikeButton = (props: UnLikeButtonProps) => (
     >
       <div
         aria-hidden="true"
-        class="yt-spec-button-shape-next__icon"
+        class="ytSpecButtonShapeNextIcon"
         style={{
           'color': 'var(--ytmusic-setting-item-toggle-active)',
         }}
       >
         <div
           aria-hidden="true"
-          class="yt-spec-button-shape-next__icon"
+          class="ytSpecButtonShapeNextIcon"
           style={{
             'color': 'white',
             'mask': 'linear-gradient(grey, grey)',
@@ -93,10 +93,10 @@ export const UnLikeButton = (props: UnLikeButtonProps) => (
       >
         <div
           aria-hidden="true"
-          class="yt-spec-touch-feedback-shape yt-spec-touch-feedback-shape--touch-response"
+          class="ytSpecTouchFeedbackShapeHost ytSpecTouchFeedbackShapeTouchResponse"
         >
-          <div class="yt-spec-touch-feedback-shape__stroke" />
-          <div class="yt-spec-touch-feedback-shape__fill" />
+          <div class="ytSpecTouchFeedbackShapeStroke" />
+          <div class="ytSpecTouchFeedbackShapeFill" />
         </div>
       </yt-touch-feedback-shape>
     </button>

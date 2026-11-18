@@ -31,7 +31,7 @@ export const PictureInPictureButton = (props: PictureInPictureButtonProps) => (
             d="M418.5,139.4H232.4v139.8h186.1V139.4z M464.8,46.7H46.3C20.5,46.7,0,68.1,0,93.1v325.9
               c0,25.8,21.4,46.3,46.3,46.3h419.4c25.8,0,46.3-20.5,46.3-46.3V93.1C512,67.2,490.6,46.7,464.8,46.7z M464.8,418.9H46.3V92.2h419.4
               v326.8H464.8z"
-            fill="#aaaaaa"
+            fill="currentColor"
             id="XMLID_11_"
           />
         </g>

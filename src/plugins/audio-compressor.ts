@@ -96,10 +96,17 @@ const audioCanPlayHandler = ({
 };
 
 const ensureAudioContextLoad = (playerApi: MusicPlayer) => {
-  if (playerApi.getPlayerState() !== 1 || storage.lastContext) return;
+  const videoDetails = playerApi.getPlayerResponse()?.videoDetails;
+  if (
+    !videoDetails ||
+    playerApi.getPlayerState() !== 1 ||
+    storage.lastContext
+  ) {
+    return;
+  }
 
   playerApi.loadVideoById(
-    playerApi.getPlayerResponse().videoDetails.videoId,
+    videoDetails.videoId,
     playerApi.getCurrentTime(),
     playerApi.getUserPlaybackQualityPreference(),
   );

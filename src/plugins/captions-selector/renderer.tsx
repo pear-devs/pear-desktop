@@ -2,6 +2,7 @@ import { createSignal, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 
 import { t } from '@/i18n';
+import { createAddToToastAction } from '@/plugins/utils/renderer';
 import { createRenderer } from '@/utils';
 
 import { CaptionsSettingButton } from './templates/captions-settings-template';
@@ -125,22 +126,28 @@ export default createRenderer<
                   playerApi.setOption('captions', 'track', {
                     languageCode: newCaptions.languageCode,
                   });
-                  appApi?.toastService?.show(
-                    t('plugins.captions-selector.toast.caption-changed', {
-                      language: newCaptions.displayName,
-                    }),
+                  appApi?.handleAddToToastAction?.(
+                    createAddToToastAction(
+                      t('plugins.captions-selector.toast.caption-changed', {
+                        language: newCaptions.displayName,
+                      }),
+                    ),
                   );
                 } else {
                   playerApi.setOption('captions', 'track', {});
-                  appApi?.toastService?.show(
-                    t('plugins.captions-selector.toast.caption-disabled'),
+                  appApi?.handleAddToToastAction?.(
+                    createAddToToastAction(
+                      t('plugins.captions-selector.toast.caption-disabled'),
+                    ),
                   );
                 }
 
                 setTimeout(() => playerApi.playVideo());
               } else {
-                appApi?.toastService?.show(
-                  t('plugins.captions-selector.toast.no-captions'),
+                appApi?.handleAddToToastAction?.(
+                  createAddToToastAction(
+                    t('plugins.captions-selector.toast.no-captions'),
+                  ),
                 );
               }
             }}
