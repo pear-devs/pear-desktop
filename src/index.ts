@@ -206,7 +206,16 @@ const initHook = async (win: BrowserWindow) => {
     config.setPartial(`plugins.${name}`, obj, allPluginStubs[name].config),
   );
 
+  let stripMusicFromSharedLinks = config.get(
+    'options.stripMusicFromSharedLinks',
+  );
   config.watch((newValue, oldValue) => {
+    const enabled = config.get('options.stripMusicFromSharedLinks');
+    if (enabled !== stripMusicFromSharedLinks) {
+      stripMusicFromSharedLinks = enabled;
+      win.webContents.send('peard:strip-music-from-shared-links', enabled);
+    }
+
     const newPluginConfigList = (newValue?.plugins ?? {}) as Record<
       string,
       unknown
