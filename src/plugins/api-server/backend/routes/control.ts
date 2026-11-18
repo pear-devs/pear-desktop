@@ -10,6 +10,7 @@ import {
 
 import { API_VERSION } from '../api-version';
 import {
+  AddPlaylistToQueueSchema,
   AddSongToQueueSchema,
   GoBackSchema,
   GoForwardScheme,
@@ -471,6 +472,28 @@ const routes = {
       },
     },
   }),
+  addPlaylistToQueue: createRoute({
+    method: 'post',
+    path: `/api/${API_VERSION}/queue/playlist`,
+    summary: 'add playlist to queue',
+    description:
+      'Add all tracks of a playlist to the queue, optionally starting at a given track',
+    request: {
+      body: {
+        description: 'playlist id and optional starting video id',
+        content: {
+          'application/json': {
+            schema: AddPlaylistToQueueSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      204: {
+        description: 'Success',
+      },
+    },
+  }),
   moveSongInQueue: createRoute({
     method: 'patch',
     path: `/api/${API_VERSION}/queue/{index}`,
@@ -828,6 +851,13 @@ export const register = (
   app.openapi(routes.addSongToQueue, (ctx) => {
     const { videoId, insertPosition } = ctx.req.valid('json');
     controller.addSongToQueue(videoId, insertPosition);
+
+    ctx.status(204);
+    return ctx.body(null);
+  });
+  app.openapi(routes.addPlaylistToQueue, (ctx) => {
+    const { playlistId, videoId, insertPosition } = ctx.req.valid('json');
+    controller.addPlaylistToQueue(playlistId, videoId, insertPosition);
 
     ctx.status(204);
     return ctx.body(null);
