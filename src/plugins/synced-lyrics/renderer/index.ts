@@ -1,9 +1,11 @@
+import { getSongInfo } from '@/providers/song-info-front';
 import { createRenderer } from '@/utils';
 import { waitForElement } from '@/utils/wait-for-element';
 
 import { disposeReactiveRoot } from './reactive-root';
 import { setConfig, setCurrentTime } from './renderer';
 import { fetchLyrics } from './store';
+import { activeTrack, isCurrentTrack, setPlayer, syncTrack } from './track';
 import { selectors, tabStates } from './utils';
 
 import type { SyncedLyricsPluginConfig } from '../types';
@@ -16,6 +18,20 @@ export let netFetch: (
   url: string,
   init?: RequestInit,
 ) => Promise<[number, string, Record<string, string>]>;
+
+let fetchedGeneration = -1;
+const refreshLyrics = (info: SongInfo = getSongInfo()) => {
+  syncTrack();
+  const track = activeTrack();
+  if (
+    track.generation === fetchedGeneration ||
+    info.videoId !== track.videoId ||
+    !isCurrentTrack(track)
+  )
+    return;
+  fetchLyrics(info);
+  fetchedGeneration = track.generation;
+};
 
 export const renderer = createRenderer<
   {
@@ -47,17 +63,20 @@ export const renderer = createRenderer<
 
   async onPlayerApiReady(api: MusicPlayer) {
     _ytAPI = api;
+    setPlayer(api);
 
     api.addEventListener('videodatachange', this.videoDataChange);
 
     await this.videoDataChange();
   },
   async videoDataChange() {
+    refreshLyrics();
     if (!this.updateTimestampInterval) {
-      this.updateTimestampInterval = setInterval(
-        () => setCurrentTime((_ytAPI?.getCurrentTime() ?? 0) * 1000),
-        100,
-      );
+      this.updateTimestampInterval = setInterval(() => {
+        // Metadata and player readiness may arrive in either order.
+        refreshLyrics();
+        setCurrentTime((_ytAPI?.getCurrentTime() ?? 0) * 1000);
+      }, 100);
     }
 
     // prettier-ignore
@@ -81,11 +100,20 @@ export const renderer = createRenderer<
     setConfig(await ctx.getConfig());
 
     ctx.ipc.on('peard:update-song-info', (info: SongInfo) => {
-      fetchLyrics(info);
+      refreshLyrics(info);
     });
   },
 
   stop() {
+    _ytAPI?.removeEventListener('videodatachange', this.videoDataChange);
+    if (this.updateTimestampInterval)
+      clearInterval(
+        this.updateTimestampInterval as ReturnType<typeof setInterval>,
+      );
+    this.observer?.disconnect();
+    setPlayer(null);
+    _ytAPI = null;
+    fetchedGeneration = -1;
     disposeReactiveRoot();
   },
 });

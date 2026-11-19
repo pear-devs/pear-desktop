@@ -1,10 +1,9 @@
-import { createMemo, runWithOwner } from 'solid-js';
+import { batch, createEffect, createMemo, runWithOwner } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import { detect } from 'tinyld';
 
-import { getSongInfo } from '@/providers/song-info-front';
-
 import { reactiveOwner } from './reactive-root';
+import { activeTrack, isCurrentTrack } from './track';
 
 import {
   type ProviderName,
@@ -17,6 +16,8 @@ import type { LyricProvider, LyricResult } from '../types';
 import type { SongInfo } from '@/providers/song-info';
 
 type LyricsStore = {
+  videoId: string;
+  generation: number;
   provider: ProviderName;
   current: ProviderState;
   lyrics: Record<ProviderName, ProviderState>;
@@ -32,6 +33,8 @@ const initialData = () =>
   );
 
 export const [lyricsStore, setLyricsStore] = createStore<LyricsStore>({
+  videoId: '',
+  generation: 0,
   provider: providerNames[0],
   lyrics: initialData(),
   get current(): ProviderState {
@@ -39,40 +42,85 @@ export const [lyricsStore, setLyricsStore] = createStore<LyricsStore>({
   },
 });
 
-export const currentLyrics = runWithOwner(reactiveOwner, () =>
-  createMemo(() => {
-  const provider = lyricsStore.provider;
-  return lyricsStore.lyrics[provider];
-  }),
-)!;
+export const currentLyrics = runWithOwner(reactiveOwner, () => {
+  const current = createMemo(() => {
+    const provider = lyricsStore.provider;
+    return lyricsStore.lyrics[provider];
+  });
+  return current;
+})!;
 /**
  * Returns the best available provider result that has a detected language,
  * without requiring lyricsStore.provider to have been set by LyricsPicker.
  * Prefers the currently selected provider, then falls back to any done provider
  * with a language so that auto-skip works even when the lyrics panel is hidden.
  */
-export const bestLanguageResult = createMemo(() => {
-  const current = lyricsStore.lyrics[lyricsStore.provider];
-  if (current.state === 'done' && current.data?.language) return current;
+export const bestLanguageResult = runWithOwner(reactiveOwner, () => {
+  const best = createMemo(() => {
+    const track = activeTrack();
+    if (
+      lyricsStore.videoId !== track.videoId ||
+      lyricsStore.generation !== track.generation
+    )
+      return null;
+    const current = lyricsStore.lyrics[lyricsStore.provider];
+    if (current.state === 'done' && current.data?.language) return current;
 
-  for (const name of providerNames) {
-    const state = lyricsStore.lyrics[name];
-    if (state.state === 'done' && state.data?.language) return state;
-  }
+    for (const name of providerNames) {
+      const state = lyricsStore.lyrics[name];
+      if (state.state === 'done' && state.data?.language) return state;
+    }
 
-  return null;
-});
+    return null;
+  });
+  return best;
+})!;
 
 type VideoId = string;
 
 type SearchCacheData = Record<ProviderName, ProviderState>;
 interface SearchCache {
-  state: 'loading' | 'done';
+  videoId: string;
   data: SearchCacheData;
 }
 
 // TODO: Maybe use localStorage for the cache.
 const searchCache = new Map<VideoId, SearchCache>();
+let activeCache: SearchCache | undefined;
+
+runWithOwner(reactiveOwner, () =>
+  createEffect(() => {
+    const track = activeTrack();
+    if (lyricsStore.generation === track.generation) return;
+    activeCache = undefined;
+    setLyricsStore({
+      videoId: track.videoId,
+      generation: track.generation,
+      lyrics: initialData(),
+    });
+  }),
+);
+
+const publish = (cache: SearchCache) => {
+  const track = activeTrack();
+  if (
+    activeCache !== cache ||
+    cache.videoId !== track.videoId ||
+    !isCurrentTrack(track)
+  )
+    return;
+  batch(() => {
+    setLyricsStore('videoId', track.videoId);
+    setLyricsStore('generation', track.generation);
+    for (const name of providerNames) {
+      const state = cache.data[name];
+      setLyricsStore('lyrics', name, {
+        ...state,
+        data: state.data ? { ...state.data } : null,
+      });
+    }
+  });
+};
 
 /**
  * Detects the language of lyrics and adds it to the result.
@@ -112,40 +160,17 @@ const detectLyricsLanguage = (
   return result;
 };
 export const fetchLyrics = (info: SongInfo) => {
-  if (searchCache.has(info.videoId)) {
-    const cache = searchCache.get(info.videoId)!;
-
-    if (cache.state === 'loading') {
-      setTimeout(() => {
-        fetchLyrics(info);
-      });
-      return;
-    }
-
-    if (getSongInfo().videoId === info.videoId) {
-      setLyricsStore('lyrics', () => {
-        // weird bug with solid-js
-        return JSON.parse(JSON.stringify(cache.data)) as typeof cache.data;
-      });
-    }
-
-    return;
-  }
-
-  const cache: SearchCache = {
-    state: 'loading',
+  const track = activeTrack();
+  if (info.videoId !== track.videoId || !isCurrentTrack(track)) return;
+  const existing = searchCache.get(info.videoId);
+  const cache: SearchCache = existing ?? {
+    videoId: info.videoId,
     data: initialData(),
   };
-
+  activeCache = cache;
+  publish(cache);
+  if (existing) return;
   searchCache.set(info.videoId, cache);
-  if (getSongInfo().videoId === info.videoId) {
-    setLyricsStore('lyrics', () => {
-      // weird bug with solid-js
-      return JSON.parse(JSON.stringify(cache.data)) as typeof cache.data;
-    });
-  }
-
-  const tasks: Promise<void>[] = [];
 
   // prettier-ignore
   for (
@@ -156,86 +181,59 @@ export const fetchLyrics = (info: SongInfo) => {
     ) {
     const pCache = cache.data[providerName];
 
-    tasks.push(
-      provider
-        .search(info)
+    Promise.resolve()
+        .then(() => provider.search(info))
         .then((res) => {
+          if (cache.data[providerName] !== pCache) return;
           // Detect language from the lyrics result
           const resultWithLanguage = detectLyricsLanguage(res);
 
           pCache.state = 'done';
           pCache.data = resultWithLanguage;
 
-          if (getSongInfo().videoId === info.videoId) {
-            setLyricsStore('lyrics', (old) => {
-              return {
-                ...old,
-                [providerName]: {
-                  state: 'done',
-                  data: resultWithLanguage ? { ...resultWithLanguage } : null,
-                  error: null,
-                },
-              };
-            });
-          }
+          publish(cache);
         })
         .catch((error: Error) => {
+          if (cache.data[providerName] !== pCache) return;
           pCache.state = 'error';
           pCache.error = error;
 
           console.error(error);
 
-          if (getSongInfo().videoId === info.videoId) {
-            setLyricsStore('lyrics', (old) => {
-              return {
-                ...old,
-                [providerName]: { state: 'error', error, data: null },
-              };
-            });
-          }
-        }),
-    );
+          publish(cache);
+        });
   }
-
-  Promise.allSettled(tasks).then(() => {
-    cache.state = 'done';
-    searchCache.set(info.videoId, cache);
-  });
 };
 
 export const retrySearch = (provider: ProviderName, info: SongInfo) => {
-  setLyricsStore('lyrics', (old) => {
-    const pCache = {
-      state: 'fetching',
-      data: null,
-      error: null,
-    };
-
-    return {
-      ...old,
-      [provider]: pCache,
-    };
-  });
-
-  providers[provider]
-    .search(info)
+  const track = activeTrack();
+  const cache = activeCache;
+  if (!cache || info.videoId !== track.videoId || !isCurrentTrack(track))
+    return;
+  const pCache: ProviderState = {
+    state: 'fetching',
+    data: null,
+    error: null,
+  };
+  cache.data[provider] = pCache;
+  publish(cache);
+  Promise.resolve()
+    .then(() => providers[provider].search(info))
     .then((res) => {
+      if (cache.data[provider] !== pCache) return;
       // Detect language from the lyrics result
       const resultWithLanguage = detectLyricsLanguage(res);
 
-      setLyricsStore('lyrics', (old) => {
-        return {
-          ...old,
-          [provider]: { state: 'done', data: resultWithLanguage, error: null },
-        };
-      });
+      cache.data[provider] = {
+        state: 'done',
+        data: resultWithLanguage,
+        error: null,
+      };
+      if (isCurrentTrack(track)) publish(cache);
     })
-    .catch((error) => {
-      setLyricsStore('lyrics', (old) => {
-        return {
-          ...old,
-          [provider]: { state: 'error', data: null, error },
-        };
-      });
+    .catch((error: Error) => {
+      if (cache.data[provider] !== pCache) return;
+      cache.data[provider] = { state: 'error', data: null, error };
+      if (isCurrentTrack(track)) publish(cache);
     });
 };
