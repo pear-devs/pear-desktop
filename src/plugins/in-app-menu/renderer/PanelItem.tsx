@@ -198,7 +198,10 @@ export const PanelItem = (props: PanelItemProps) => {
   // does the equivalent by only handing floating-ui a real element
   // while toolTipOpen() is true, so autoUpdate starts/stops with
   // actual visibility instead of running unconditionally.
-  const position = useFloating(anchor, () => (toolTipOpen() ? toolTip() : null), {
+  const position = useFloating({
+    get elements() {
+      return { reference: anchor(), floating: toolTipOpen() ? toolTip() : null };
+    },
     whileElementsMounted: autoUpdate,
     placement: 'bottom-start',
     strategy: 'fixed',
