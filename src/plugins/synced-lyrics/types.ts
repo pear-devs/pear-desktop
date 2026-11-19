@@ -10,7 +10,6 @@ export type SyncedLyricsPluginConfig = {
   showLyricsEvenIfInexact: boolean;
   lineEffect: LineEffect;
   romanization: boolean;
-  useYTMLyricsWithoutProxy: boolean;
   convertChineseCharacter?:
     | 'simplifiedToTraditional'
     | 'traditionalToSimplified'

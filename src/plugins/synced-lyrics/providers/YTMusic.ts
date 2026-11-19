@@ -1,5 +1,3 @@
-import { config } from '../renderer/renderer';
-
 import type { LyricProvider, LyricResult, SearchSongInfo } from '../types';
 import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
 
@@ -126,11 +124,7 @@ export class YTMusic implements LyricProvider {
     });
   }
 
-  private fetchBrowse(browseId: string): Promise<BrowseData | null> {
-    if (config()?.useYTMLyricsWithoutProxy) {
-      return this.fetchBrowseDirect(browseId);
-    }
-
+  private fetchBrowse(browseId: string) {
     return fetch(this.PROXIED_ENDPOINT + 'browse?prettyPrint=false', {
       headers,
       method: 'POST',
@@ -139,22 +133,6 @@ export class YTMusic implements LyricProvider {
         context: { client },
       }),
     }).then((res) => res.json()) as Promise<BrowseData>;
-  }
-
-  // Calls YouTube Music's browse endpoint directly via the app's authenticated
-  // network manager, which injects the visitor/auth tokens that the request
-  // would otherwise be missing when called from regions where the unauthenticated
-  // call is geo-restricted.
-  private async fetchBrowseDirect(browseId: string): Promise<BrowseData | null> {
-    const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
-    if (!app) {
-      return null;
-    }
-
-    return await app.networkManager.fetch<BrowseData, { browseId: string }>(
-      '/browse?prettyPrint=false',
-      { browseId },
-    );
   }
 }
 

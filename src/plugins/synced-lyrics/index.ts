@@ -28,8 +28,7 @@ export default createPlugin<
     lineEffect: 'fancy',
     romanization: true,
     autoSkipLanguages: '',
-    autoDislikeSkippedLanguages: false,
-    useYTMLyricsWithoutProxy: false,
+    autoDislikeSkippedLanguages: false
   },
 
   menu,
