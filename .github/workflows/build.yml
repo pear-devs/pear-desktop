@@ -27,7 +27,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with:
-          version: 11
+          version: 12
           run_install: false
 
       - name: Setup NodeJS
@@ -92,6 +92,7 @@ jobs:
   release:
     permissions:
       contents: write
+      actions: write
     runs-on: ubuntu-latest
     name: Release Pear Desktop
     if: github.repository == 'pear-devs/pear-desktop' && github.ref == 'refs/heads/master'
@@ -104,7 +105,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
         with:
-          version: 11
+          version: 12
           run_install: false
 
       - name: Setup NodeJS
@@ -147,7 +148,7 @@ jobs:
         if: ${{ env.VERSION_HASH == '' }}
         uses: irongut/EditRelease@ccf529ad26dddf9996e7dd0f24ca5da4ea507cc2
         with:
-          token: ${{ secrets.GH_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           id: ${{ steps.get_draft_release.outputs.id }}
           draft: false
           prerelease: false
@@ -174,3 +175,10 @@ jobs:
           file_pattern: "changelog.md"
           commit_user_name: CI
           commit_user_email: th-ch@users.noreply.github.com
+
+      - name: Submit to winget
+        if: ${{ env.VERSION_HASH == '' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run winget-submission.yml -f tag_name="$VERSION_TAG"

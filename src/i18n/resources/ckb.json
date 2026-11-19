@@ -3,19 +3,20 @@
     "console": {
       "plugins": {
         "execute-failed": "شکستی هێنا لە جێبەجێکردنی پڵەگین{{pluginName}}::{{contextName}}",
-        "executed-at-ms": "پڵەگین{{pluginName}}::{{contextName}}جێبەجێکرا لە {{ms}}ms",
+        "executed-at-ms": "پڵەگینی{{pluginName}}::{{contextName}}جێبەجێکرا لە {{ms}}ms",
         "initialize-failed": "شکستی هێنا لە دەسپێکردنی پڵەگین \"{{pluginName}}\"",
         "load-all": "لەودکردنی هەموو پڵەگینەکان",
         "load-failed": "شکستی هێنا لە دەستپێکردنی پڵەگین \"{{pluginName}}\"",
-        "loaded": "پڵەگین \"{{pluginName}}\" دەستیپێکرد",
+        "loaded": "پڵەگینی \"{{pluginName}}\" دەستیپێکرد",
         "unload-failed": "شکستی هێنا لە وەستاندنی پڵەگین \"{{pluginName}}\"",
         "unloaded": "پڵەگین \"{{pluginName}}\" وەستێنرا"
       }
     }
   },
   "language": {
-    "local-name": "ئینگلیزی",
-    "name": "English"
+    "code": "کو",
+    "local-name": "کوردی سۆرانی",
+    "name": "Kurdish"
   },
   "main": {
     "console": {
@@ -23,7 +24,83 @@
         "dev-tools": "لەودکردن تەواوبوو. دێڤ توڵس کرایەوە"
       },
       "i18n": {
-        "loaded": "i18n دەستیپێکرد"
+        "loaded": "i18n لۆدە"
+      },
+      "second-instance": {
+        "receive-command": "\"فەرمانەکە لە پرۆتۆکۆڵەوە وەرگیراوە.\": \"{{command}}\""
+      },
+      "theme": {
+        "css-file-not-found": "فایلی CSS \"{{cssFile}}\" بوونی نیە، بەلاوەی دەنێین"
+      },
+      "unresponsive": {
+        "details": "هەڵەی بێوەڵام\n{error}"
+      },
+      "when-ready": {
+        "clearing-cache-after-20s": "خاوێنکردنەوەی کاشی ئەپ"
+      },
+      "window": {
+        "tried-to-render-offscreen": "ویندۆوەکە وەستی لە دەرەوەی شاشە بکرێتەوە، قەبارەی ویندۆو={{windowSize}}, قەبارەی شاشە={{displaySize}}، شوێن={{position}}"
+      }
+    },
+    "dialog": {
+      "hide-menu-enabled": {
+        "message": "شاردنەوەی مینیو چاڵاکە",
+        "title": "شاردنەوەی مینیو چاڵاککراوە"
+      },
+      "need-to-restart": {
+        "buttons": {
+          "later": "دواتر",
+          "restart-now": "ئێستا ڕیستارتی بکە"
+        },
+        "detail": "\"{{pluginName}}\" پڵەگینەکە ڕیستارتی دەوێت تا دەستبەکار بێت",
+        "message": "\"{{pluginName}}\" پێویستی بە ڕیستارتە",
+        "title": "پێویستە ڕیستارت بکرێت"
+      },
+      "unresponsive": {
+        "buttons": {
+          "quit": "لابردن",
+          "relaunch": "دووبارە کردنەوەی بەرنامە",
+          "wait": "چاوەڕوانبە"
+        },
+        "detail": "ببورن بۆ ئەم ناڕەحەتیانە! تکایە هەڵیبژێرە کە چی بکەین:",
+        "message": "ئەپڵیکەیشنەکە وەستاوە",
+        "title": "ویندۆو وەستاوە"
+      },
+      "update-available": {
+        "buttons": {
+          "disable": "ڕاگرتنی نوێبوونەوە",
+          "download": "داونڵۆد",
+          "ok": "باشە"
+        },
+        "detail": "ڤێرژنێکی نوێ بەردەستە و دەتوانرێت داونڵۆد بکرێت لە {{downloadLink}}",
+        "message": "ڤێرژنێکی نوێ بەردەستە",
+        "title": "نوێبوونەوە بەردەستە"
+      }
+    },
+    "menu": {
+      "about": "دەربارە",
+      "navigation": {
+        "label": "ڕێنیشاندەر",
+        "submenu": {
+          "copy-current-url": "کۆپی ئەم ڵینکە",
+          "go-back": "بگەڕێوە دواوە",
+          "go-forward": "بڕۆ دواتر",
+          "quit": "دەرچوون",
+          "restart": "ڕیستارتی ئەپ"
+        }
+      },
+      "options": {
+        "label": "ڕێکخستن",
+        "submenu": {
+          "advanced-options": {
+            "label": "ڕێکخستنی ورد",
+            "submenu": {
+              "auto-reset-app-cache": "کاشی ئەپ بەتاڵبکەوە کاتێک بەرنامەکە دەستپێدەکات",
+              "disable-hardware-acceleration": "hardware acceleration لەکاربخە",
+              "edit-config-json": "دەستکاریکردنی config.json"
+            }
+          }
+        }
       }
     }
   }

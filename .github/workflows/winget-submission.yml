@@ -24,9 +24,9 @@ jobs:
       - name: Submit package to Windows Package Manager Community Repository
         uses: vedantmgoyal9/winget-releaser@7bd472be23763def6e16bd06cc8b1cdfab0e2fd5
         with:
-          identifier: pear-devs.PearDesktop
-          installers-regex: '^Pear-Desktop-Web-Setup-[\d\.]+\.exe$'
+          identifier: "th-ch.\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u004d\u0075\u0073\u0069\u0063"
+          installers-regex: '^.+-Web-Setup-[\d\.]+\.exe$'
           version: ${{ env.WINGET_TAG_NAME }}
           release-tag: ${{ inputs.tag_name || github.event.release.tag_name }}
           token: ${{ secrets.WINGET_ACC_TOKEN }}
-          fork-user: pear-desktop-winget
+          fork-user: "\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063-winget"
