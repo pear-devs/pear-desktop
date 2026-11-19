@@ -1,10 +1,10 @@
-import { t } from '@/i18n';
+import style from './style.css?inline';
 import { createPlugin } from '@/utils';
+import { t } from '@/i18n';
 
-import { backend } from './backend';
 import { menu } from './menu';
 import { renderer } from './renderer';
-import style from './style.css?inline';
+import { backend } from './backend';
 
 import type { SyncedLyricsPluginConfig } from './types';
 
@@ -27,6 +27,8 @@ export default createPlugin<
     defaultTextString: '♪',
     lineEffect: 'fancy',
     romanization: true,
+    autoSkipLanguages: '',
+    autoDislikeSkippedLanguages: false
   },
 
   menu,

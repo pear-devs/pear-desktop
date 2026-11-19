@@ -9,6 +9,9 @@ import {
 } from 'solid-js';
 import { type VirtualizerHandle, VList } from 'virtua/solid';
 
+import { t } from '@/i18n';
+
+import { createAutoSkip } from './auto-skip';
 import {
   ErrorDisplay,
   LoadingKaomoji,
@@ -18,10 +21,18 @@ import {
 } from './components';
 import { LyricsPicker } from './components/LyricsPicker';
 import { reactiveOwner } from './reactive-root';
-import { currentLyrics } from './store';
+import { bestLanguageResult, currentLyrics } from './store';
+import {
+  activeTrack,
+  isCurrentTrack,
+  skipCurrentTrack,
+  syncTrack,
+} from './track';
 import { selectors } from './utils';
 
 import type { LineLyrics, SyncedLyricsPluginConfig } from '../types';
+import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
+import type { AppElement } from '@/types/queue';
 
 export const [isVisible, setIsVisible] = createSignal<boolean>(false);
 export const [config, setConfig] =
@@ -124,6 +135,63 @@ runWithOwner(reactiveOwner, () => {
         root.style.setProperty('--lyrics-active-offset', '0');
         break;
     }
+  });
+
+  // Evaluate live state on each tick, including after a debugger pause. IPC song
+  // metadata is intentionally not used to identify the action's target.
+  const autoSkip = createAutoSkip({
+    isCurrent: isCurrentTrack,
+    dislike: async (videoId) => {
+      const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
+      if (!app) throw new Error('Cannot dislike: music app is unavailable');
+      await app.networkManager.fetch('/like/dislike', { target: { videoId } });
+    },
+    skip: skipCurrentTrack,
+    notify: (language) => {
+      document
+        .querySelector<AppElement>('ytmusic-app')
+        ?.handleAddToToastAction({
+          addToToastAction: {
+            item: {
+              notificationTextRenderer: {
+                successResponseText: {
+                  simpleText: t('plugins.synced-lyrics.toast.auto-skip', {
+                    language: language.toUpperCase(),
+                  }),
+                },
+              },
+            },
+          },
+        });
+    },
+    onError: (error) =>
+      console.warn('Language auto-skip action failed:', error),
+  });
+
+  const updateAutoSkip = () => {
+    syncTrack();
+    const cfg = config();
+    const lyrics = bestLanguageResult();
+    const language = lyrics?.data?.language?.toLowerCase();
+    const skipLanguages = (cfg?.autoSkipLanguages ?? '')
+      .split(',')
+      .map((lang) => lang.trim().toLowerCase())
+      .filter(Boolean);
+    autoSkip.update(
+      cfg?.enabled && language && skipLanguages.includes(language)
+        ? {
+            ...activeTrack(),
+            language,
+            dislike: cfg.autoDislikeSkippedLanguages,
+          }
+        : null,
+      Date.now(),
+    );
+  };
+  const autoSkipInterval = setInterval(updateAutoSkip, 100);
+  onCleanup(() => {
+    clearInterval(autoSkipInterval);
+    autoSkip.cancel();
   });
 });
 
