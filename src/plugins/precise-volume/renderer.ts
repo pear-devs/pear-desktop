@@ -69,7 +69,7 @@ export const onPlayerApiReady = async (
       if (!(await window.mainConfig.plugins.isEnabled('video-toggle'))) {
         // Video-toggle handles hud positioning on its own
         const videoMode = () =>
-          api.getPlayerResponse().videoDetails?.musicVideoType !==
+          api.getPlayerResponse()?.videoDetails?.musicVideoType !==
           'MUSIC_VIDEO_TYPE_ATV';
         $('video')?.addEventListener('peard:src-changed', () =>
           moveVolumeHud(videoMode()),
@@ -235,7 +235,7 @@ export const onPlayerApiReady = async (
   // Set new volume as tooltip for volume slider and icon + expanding slider (appears when window size is small)
   const tooltipTargets = [
     '#volume-slider',
-    'tp-yt-paper-icon-button.volume',
+    'yt-icon-button.volume',
     '#expand-volume-slider',
     '#expand-volume',
   ];

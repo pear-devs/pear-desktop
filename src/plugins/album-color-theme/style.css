@@ -52,10 +52,6 @@ ytmusic-app-layout
   --yt-endpoint-visited-color: rgba(255, 255, 255, 0.5) !important;
 }
 
-.icon.ytmusic-menu-navigation-item-renderer {
-  color: rgba(255, 255, 255, 0.5) !important;
-}
-
 .menu.ytmusic-player-bar {
   --iron-icon-fill-color: rgba(255, 255, 255, 0.5) !important;
 }
@@ -71,6 +67,14 @@ ytmusic-player-bar {
 .volume-slider.ytmusic-player-bar,
 .expand-volume-slider.ytmusic-player-bar {
   --paper-slider-container-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+body {
+  background: var(--ytmusic-background) !important;
+}
+
+ytmusic-multi-page-menu-renderer {
+  background: var(--yt-sys-color-baseline--menu-background) !important;
 }
 
 /* fix background image */

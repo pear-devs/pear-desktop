@@ -3,7 +3,9 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { Mutex } from 'async-mutex';
-import { BG, type BgConfig } from 'bgutils-js';
+import { BotGuardClient, getChallenge } from 'bgutils-js/botguard';
+import { buildURL, getHeaders } from 'bgutils-js/utils';
+import { WebPoMinter } from 'bgutils-js/webpo';
 import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
 import is from 'electron-is';
 import filenamify from 'filenamify';
@@ -65,6 +67,12 @@ import {
 import type { DownloaderPluginConfig } from '../index';
 import type { BackendContext } from '@/types/contexts';
 import type { GetPlayerResponse } from '@/types/get-player-response';
+import type {
+  FetchFunction,
+  IBotguardClientSideBgChallenge,
+  IntegrityTokenData,
+  WebPoSignalOutput,
+} from 'bgutils-js/shared-types';
 
 type CustomSongInfo = SongInfo & { trackId?: string };
 
@@ -427,6 +435,7 @@ const setupSession = async () => {
         width,
         height,
         console,
+        settings: { enableIframePageLoading: true },
       });
       const document = window.document;
 
@@ -442,10 +451,10 @@ const setupSession = async () => {
         requestKey,
       };
 
-      const bgChallenge = await BG.Challenge.create(bgConfig);
+      const bgChallenge = await getChallenge({ requestKey, fetchFunction });
       const interpreterJavascript =
-        bgChallenge?.interpreterJavascript
-          .privateDoNotAccessOrElseSafeScriptWrappedValue;
+        bgChallenge.interpreterJavascript
+          ?.privateDoNotAccessOrElseSafeScriptWrappedValue;
 
       if (interpreterJavascript) {
         // This is a workaround to run the interpreterJavascript code
@@ -453,15 +462,14 @@ const setupSession = async () => {
         // oxlint-disable-next-line typescript/no-implied-eval,typescript/no-unsafe-call
         new Function(interpreterJavascript)();
 
-        const poTokenResult = await BG.PoToken.generate({
-          program: bgChallenge.program,
-          globalName: bgChallenge.globalName,
-          bgConfig,
-        }).finally(() => {
+        yt.session.po_token = await generatePoToken(
+          fetchFunction,
+          requestKey,
+          visitorData,
+          bgChallenge,
+        ).finally(() => {
           cleanUp(globalThis);
         });
-
-        yt.session.po_token = poTokenResult.poToken;
       } else {
         cleanUp(globalThis);
       }
