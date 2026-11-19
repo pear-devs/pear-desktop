@@ -148,11 +148,21 @@ runWithOwner(reactiveOwner, () => {
     },
     skip: skipCurrentTrack,
     notify: (language) => {
-      document.querySelector<AppElement>('ytmusic-app')?.toastService?.show(
-        t('plugins.synced-lyrics.toast.auto-skip', {
-          language: language.toUpperCase(),
-        }),
-      );
+      document
+        .querySelector<AppElement>('ytmusic-app')
+        ?.handleAddToToastAction({
+          addToToastAction: {
+            item: {
+              notificationTextRenderer: {
+                successResponseText: {
+                  simpleText: t('plugins.synced-lyrics.toast.auto-skip', {
+                    language: language.toUpperCase(),
+                  }),
+                },
+              },
+            },
+          },
+        });
     },
     onError: (error) =>
       console.warn('Language auto-skip action failed:', error),

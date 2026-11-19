@@ -134,9 +134,10 @@ const detectLyricsLanguage = (
   try {
     // Extract text from either plain lyrics or synced lines
     let textToAnalyze = '';
+    const plainLyrics = result.lyrics?.trim();
 
-    if (result.lyrics) {
-      textToAnalyze = result.lyrics.trim();
+    if (plainLyrics) {
+      textToAnalyze = plainLyrics;
     } else if (result.lines && result.lines.length > 0) {
       textToAnalyze = result.lines
         .map((line) => line.text)
@@ -229,11 +230,11 @@ export const retrySearch = (provider: ProviderName, info: SongInfo) => {
         data: resultWithLanguage,
         error: null,
       };
-      if (isCurrentTrack(track)) publish(cache);
+      publish(cache);
     })
     .catch((error: Error) => {
       if (cache.data[provider] !== pCache) return;
       cache.data[provider] = { state: 'error', data: null, error };
-      if (isCurrentTrack(track)) publish(cache);
+      publish(cache);
     });
 };
