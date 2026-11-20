@@ -596,6 +596,7 @@
     "in-app-menu": {
       "description": "Gives menu-bars a fancy, dark or album-color look",
       "menu": {
+        "hide-bar-when-collapsed": "Hide bar when menu is collapsed (backtick to show)",
         "hide-dom-window-controls": "Hide DOM window controls"
       },
       "name": "In-App Menu"

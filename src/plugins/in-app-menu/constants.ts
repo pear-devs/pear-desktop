@@ -1,6 +1,7 @@
 export interface InAppMenuConfig {
   enabled: boolean;
   hideDOMWindowControls: boolean;
+  hideBarWhenCollapsed: boolean;
 }
 export const defaultInAppMenuConfig: InAppMenuConfig = {
   enabled:
@@ -12,4 +13,5 @@ export const defaultInAppMenuConfig: InAppMenuConfig = {
       !window.navigator?.userAgent?.toLowerCase().includes('linux')) ||
       (typeof global !== 'undefined' && global.process?.platform !== 'linux')),
   hideDOMWindowControls: false,
+  hideBarWhenCollapsed: false,
 };

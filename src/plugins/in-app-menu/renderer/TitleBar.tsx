@@ -182,6 +182,7 @@ export type TitleBarProps = {
   ipc: RendererContext<InAppMenuConfig>['ipc'];
   isMacOS?: boolean;
   enableController?: boolean;
+  hideWhenCollapsed?: boolean;
   initialCollapsed?: boolean;
 };
 export const TitleBar = (props: TitleBarProps) => {
@@ -326,8 +327,9 @@ export const TitleBar = (props: TitleBarProps) => {
   return (
     <nav
       class={titleStyle()}
+      data-hidden={props.hideWhenCollapsed && collapsed()}
       data-macos={props.isMacOS}
-      data-show={mouseY() < 32}
+      data-show={mouseY() < 32 || (props.hideWhenCollapsed && !collapsed())}
       data-ytmd-main-panel={true}
       id={'ytmd-title-bar-main-panel'}
     >
