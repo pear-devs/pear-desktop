@@ -1,0 +1,35 @@
+/* Waveform Seekbar — a SoundCloud-style waveform that stands in for the player-bar
+   progress slider. The canvas is position:fixed and glued to the top edge of
+   ytmusic-player-bar by JS, so it sits ABOVE the bar's controls with both anchored
+   to the bottom of the window. We never override the player bar's own positioning
+   (doing so unpins it from the bottom and it scrolls away with the page). */
+
+ytmusic-player-bar.waveform-seekbar-active #progress-bar {
+  /* Keep it in the tree (YT still drives it) but hide it; our canvas replaces it.
+     visibility:hidden also removes it from the tab order and the accessibility tree, so a
+     keyboard/screen-reader user can't land on an invisible second seek control. */
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+#waveform-seekbar {
+  position: fixed;
+  height: var(--waveform-seekbar-height, 48px);
+  cursor: pointer;
+  /* <ytmusic-app> is static / z-index:auto, so it creates NO stacking context and our
+     body-level fixed canvas shares YTM's root stacking context. The app chrome sits low —
+     sidebar (app-drawer) and player bar at z-index 4, nav bar at 5 — while the toast and ⋮
+     context menu are overlays far above. z-index 5 puts the waveform just over the sidebar
+     (so it's not clipped on the left) yet still below those overlays, so it sits cleanly
+     behind them and never steals their clicks. */
+  z-index: 5;
+  display: block;
+  background: transparent;
+}
+
+/* Visible focus for keyboard users operating the waveform as a slider. */
+#waveform-seekbar:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+}
