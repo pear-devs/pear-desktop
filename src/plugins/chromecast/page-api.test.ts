@@ -9,6 +9,10 @@ type TestSession = {
   media: Array<{
     supportedMediaCommands: string[];
     getStatus: (success: () => void) => void;
+    pause: (
+      success: () => void,
+      error: (failure: { code: string }) => void,
+    ) => void;
     playerState: string;
   }>;
 };
@@ -47,6 +51,7 @@ test('Cast callbacks wait for the matching receiver reply', async () => {
   };
   const window = {
     __ytmdCastBridge: bridge,
+    __ytmdCastConnected: false,
     chrome: { cast },
     setInterval: () => 1,
     clearInterval: () => {},
@@ -158,4 +163,21 @@ test('Cast callbacks wait for the matching receiver reply', async () => {
     }),
   });
   expect(session.media).toHaveLength(1);
+
+  let secondRejected = false;
+  session.media[0].pause(
+    () => {},
+    () => {
+      throw new Error('page callback failed');
+    },
+  );
+  session.media[0].pause(
+    () => {},
+    () => {
+      secondRejected = true;
+    },
+  );
+  onEvent({ type: 'stopped', handle: snapshot.handle });
+  expect(secondRejected).toBe(true);
+  expect(window.__ytmdCastConnected).toBe(false);
 });

@@ -295,10 +295,17 @@ export class CastBackend {
       }),
     );
     session.on('stopped', (reason: CastSessionSnapshot['status']) => {
+      const receiverId = this.receiverByHandle.get(session.handle);
+      const saved = this.savedReceiver();
       this.sessions.delete(session.handle);
       this.receiverByHandle.delete(session.handle);
       this.emit({ type: 'stopped', handle: session.handle });
-      if (reason === 'stopped') {
+      if (
+        reason === 'stopped' &&
+        saved !== null &&
+        saved.id === receiverId &&
+        saved.appId === session.snapshot().appId
+      ) {
         store.set('plugins.chromecast.autoReconnectSuppressed', true);
         if (this.retryTimer) clearTimeout(this.retryTimer);
         this.retryTimer = null;

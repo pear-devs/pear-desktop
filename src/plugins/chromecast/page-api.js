@@ -554,7 +554,11 @@
       fireList(media.__updateListeners, false);
     });
     Object.keys(session.__pendingMediaRequests || {}).forEach(function (id) {
-      session.__pendingMediaRequests[id](false, 'Cast session ended');
+      try {
+        session.__pendingMediaRequests[id](false, 'Cast session ended');
+      } catch (_e) {
+        /* A page callback must not interrupt session cleanup. */
+      }
     });
     fireList(session.__updateListeners, false);
     delete sessions[handle];
