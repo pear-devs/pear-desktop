@@ -56,6 +56,37 @@ export default createPlugin({
     'hideDurationLeft': false,
     'statusDisplayType': StatusDisplayType.Details,
   } as DiscordPluginConfig,
+  settings: [
+    {
+      type: 'switch',
+      key: 'autoReconnect',
+      label: () => t('plugins.discord.settings.auto-reconnect'),
+    },
+    {
+      type: 'switch',
+      key: 'activityTimeoutEnabled',
+      label: () => t('plugins.discord.settings.activity-timeout-enabled'),
+    },
+    {
+      type: 'slider',
+      key: 'activityTimeoutTime',
+      label: () => t('plugins.discord.settings.activity-timeout-time'),
+      min: 1,
+      max: 60,
+      unit: 'min',
+      scale: 60 * 1000,
+    },
+    {
+      type: 'switch',
+      key: 'hideGitHubButton',
+      label: () => t('plugins.discord.settings.hide-github-button'),
+    },
+    {
+      type: 'switch',
+      key: 'hideDurationLeft',
+      label: () => t('plugins.discord.settings.hide-duration-left'),
+    },
+  ],
   menu: onMenu,
   backend,
 });
