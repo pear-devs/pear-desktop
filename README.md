@@ -309,3 +309,13 @@ MIT © [pear-devs](https://github.com/pear-devs/pear-desktop)
 
 If `Hide Menu` option is on - you can show the menu with the <kbd>alt</kbd> key (or <kbd>\`</kbd> [backtick] if using
 the in-app-menu plugin)
+
+### How do I hide the whole menu bar on Linux?
+
+Enable **In-App Menu**, then enable **Plugins > In-App Menu > Hide bar when menu is collapsed**.
+Use **Options > Hide Menu** to start with the bar hidden after restarting.
+Press the backtick key to show or hide the bar while the app is focused.
+This also hides the window buttons and drag area until the bar is shown again.
+With this option enabled, a bar shown in fullscreen stays visible until hidden with backtick.
+If the shortcut is unavailable on your keyboard layout, close the app, set
+`plugins.in-app-menu.hideBarWhenCollapsed` to `false` in your `config.json`, and restart.

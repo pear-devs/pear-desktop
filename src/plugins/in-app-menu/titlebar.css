@@ -3,6 +3,14 @@
   --menu-bar-height: 32px;
 }
 
+:root:has(#ytmd-title-bar-main-panel[data-hidden='true']) {
+  --menu-bar-height: 0px;
+}
+
+#ytmd-title-bar-main-panel[data-hidden='true'] {
+  display: none;
+}
+
 /* original style */
 ytmusic-app-layout {
   overflow: auto scroll;

@@ -15,6 +15,15 @@ export const onMenu = async ({
   if (is.linux()) {
     return [
       {
+        label: t('plugins.in-app-menu.menu.hide-bar-when-collapsed'),
+        type: 'checkbox',
+        checked: config.hideBarWhenCollapsed,
+        click(item) {
+          config.hideBarWhenCollapsed = item.checked;
+          setConfig(config);
+        },
+      },
+      {
         label: t('plugins.in-app-menu.menu.hide-dom-window-controls'),
         type: 'checkbox',
         checked: config.hideDOMWindowControls,
