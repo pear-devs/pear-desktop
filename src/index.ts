@@ -3,6 +3,7 @@ import path from 'node:path';
 import url from 'node:url';
 
 import ErrorHtmlAsset from '@assets/error.html?asset';
+import musicPlayerIcon from '@assets/icon.png?asset&asarUnpack';
 import {
   enhanceWebRequest,
   type BetterSession,
@@ -51,6 +52,8 @@ import { setupSongInfo } from '@/providers/song-info';
 import { setUpTray } from '@/tray';
 import { LoggerPrefix } from '@/utils';
 import { isTesting } from '@/utils/testing';
+
+import packageJson from '../package.json';
 
 import type { PluginConfig } from '@/types/plugins';
 
@@ -180,6 +183,16 @@ if (process.platform === 'win32') {
 } else if (process.platform === 'darwin') {
   icon = 'assets/generated/icons/mac/icon.icns';
 }
+
+// Without this, Electron's default About panel shows the raw app id instead of a proper name, and no icon.
+app.setAboutPanelOptions({
+  applicationName: APPLICATION_NAME,
+  applicationVersion: app.getVersion(),
+  version: app.getVersion(),
+  iconPath: musicPlayerIcon,
+  copyright: `Copyright (c) ${packageJson.author.name} <${packageJson.author.email}> (${packageJson.author.url})`,
+  website: packageJson.author.url,
+});
 
 function onClosed() {
   // Dereference the window
