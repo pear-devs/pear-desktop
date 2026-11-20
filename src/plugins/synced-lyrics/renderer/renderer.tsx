@@ -41,7 +41,11 @@ runWithOwner(reactiveOwner, () => {
         root.style.setProperty('--lyrics-padding', '2rem');
         root.style.setProperty(
           '--lyrics-animations',
-          'lyrics-glow var(--lyrics-glow-duration) forwards, lyrics-wobble var(--lyrics-wobble-duration) forwards',
+          'lyrics-wobble var(--lyrics-wobble-duration) forwards',
+        );
+        root.style.setProperty(
+          '--lyrics-word-glow',
+          '0 0 1.5rem var(--glow-color)',
         );
 
         root.style.setProperty('--lyrics-inactive-font-weight', '700');
@@ -66,6 +70,7 @@ runWithOwner(reactiveOwner, () => {
         root.style.setProperty('--lyrics-width', '83%');
         root.style.setProperty('--lyrics-padding', '0');
         root.style.setProperty('--lyrics-animations', 'none');
+        root.style.setProperty('--lyrics-word-glow', '0 0 0 var(--glow-color)');
 
         root.style.setProperty('--lyrics-inactive-font-weight', '400');
         root.style.setProperty('--lyrics-inactive-opacity', '0.33');
@@ -89,6 +94,7 @@ runWithOwner(reactiveOwner, () => {
         root.style.setProperty('--lyrics-width', '100%');
         root.style.setProperty('--lyrics-padding', '0');
         root.style.setProperty('--lyrics-animations', 'none');
+        root.style.setProperty('--lyrics-word-glow', '0 0 0 var(--glow-color)');
 
         root.style.setProperty('--lyrics-inactive-font-weight', '400');
         root.style.setProperty('--lyrics-inactive-opacity', '0.33');
@@ -112,6 +118,7 @@ runWithOwner(reactiveOwner, () => {
         root.style.setProperty('--lyrics-width', '100%');
         root.style.setProperty('--lyrics-padding', '0');
         root.style.setProperty('--lyrics-animations', 'none');
+        root.style.setProperty('--lyrics-word-glow', '0 0 0 var(--glow-color)');
 
         root.style.setProperty('--lyrics-inactive-font-weight', '400');
         root.style.setProperty('--lyrics-inactive-opacity', '0.33');
