@@ -222,8 +222,11 @@ export default createPlugin({
     }
 
     if (config.mediaVolumeKeys) {
-      if (volumeUp !== 'VolumeUp') register('VolumeUp', true);
-      if (volumeDown !== 'VolumeDown') register('VolumeDown', false);
+      // Leave a media key alone if the user already assigned it to either
+      // custom shortcut (registering it again would replace that callback).
+      const customKeys = new Set([volumeUp, volumeDown]);
+      if (!customKeys.has('VolumeUp')) register('VolumeUp', true);
+      if (!customKeys.has('VolumeDown')) register('VolumeDown', false);
     }
   },
 
