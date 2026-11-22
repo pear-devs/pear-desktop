@@ -180,6 +180,15 @@ export const onPlayerApiReady = async (
       }
     });
 
+    // tp-yt-paper-slider fires 'change' only for user interaction. Drop the
+    // cached value from recent programmatic steps so the next wheel or key
+    // step starts from the position the user picked, however small the move.
+    for (const selector of ['#volume-slider', '#expand-volume-slider']) {
+      $(selector)?.addEventListener('change', () => {
+        recentVolume = undefined;
+      });
+    }
+
     const slider = $('#volume-slider');
     if (!slider) return;
 
