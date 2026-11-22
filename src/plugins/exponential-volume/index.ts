@@ -12,6 +12,20 @@ export default createPlugin({
   },
   renderer: {
     onPlayerApiReady(playerApi) {
+      // Re-apply the player's volume to the media elements through the patched
+      // setter. The player may already have set the element volume linearly
+      // before this patch was installed, and playerApi.setVolume() with an
+      // unchanged value does not touch the element again, so the music would
+      // play louder than the slider shows until the slider was moved.
+      const applyVolumeToMedia = (playerApi: MusicPlayer) => {
+        const level = Math.min(Math.max(playerApi.getVolume() / 100, 0), 1);
+        for (const media of document.querySelectorAll<HTMLMediaElement>(
+          'video, audio',
+        )) {
+          media.volume = level;
+        }
+      };
+
       const syncVolume = (playerApi: MusicPlayer) => {
         if (playerApi.getPlayerState() === 3) {
           setTimeout(() => syncVolume(playerApi), 0);
@@ -19,6 +33,7 @@ export default createPlugin({
         }
 
         playerApi.setVolume(playerApi.getVolume());
+        applyVolumeToMedia(playerApi);
       };
 
       // "fix volume ratio 0.4" by Marco Pfeiffer
@@ -59,6 +74,7 @@ export default createPlugin({
           propertyDescriptor?.set?.call(this, lowVolume);
         },
       });
+      applyVolumeToMedia(playerApi);
       syncVolume(playerApi);
     },
   },
