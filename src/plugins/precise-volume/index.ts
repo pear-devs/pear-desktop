@@ -171,16 +171,40 @@ export default createPlugin({
   async backend({ getConfig, ipc }) {
     const config = await getConfig();
 
-    if (config.globalShortcuts?.volumeUp) {
-      globalShortcut.register(config.globalShortcuts.volumeUp, () =>
-        ipc.send('changeVolume', true),
-      );
+    // Older configs can contain the literal string "undefined" for an unset
+    // shortcut. Registering that (or any invalid accelerator) throws, which
+    // used to abort registration of the remaining shortcuts.
+    const isValidAccelerator = (accelerator: unknown): accelerator is string =>
+      typeof accelerator === 'string' &&
+      accelerator.trim() !== '' &&
+      accelerator !== 'undefined' &&
+      accelerator !== 'null';
+
+    const register = (accelerator: string, toIncrease: boolean) => {
+      try {
+        const ok = globalShortcut.register(accelerator, () =>
+          ipc.send('changeVolume', toIncrease),
+        );
+        if (!ok) {
+          console.warn(
+            `[precise-volume] Could not register global shortcut "${accelerator}" (already in use?)`,
+          );
+        }
+      } catch (error) {
+        console.warn(
+          `[precise-volume] Invalid global shortcut "${accelerator}"`,
+          error,
+        );
+      }
+    };
+
+    const { volumeUp, volumeDown } = config.globalShortcuts ?? {};
+    if (isValidAccelerator(volumeUp)) {
+      register(volumeUp, true);
     }
 
-    if (config.globalShortcuts?.volumeDown) {
-      globalShortcut.register(config.globalShortcuts.volumeDown, () =>
-        ipc.send('changeVolume', false),
-      );
+    if (isValidAccelerator(volumeDown)) {
+      register(volumeDown, false);
     }
   },
 
