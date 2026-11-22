@@ -92,8 +92,11 @@ const applyToSinks = (targets: Iterable<AudioSink>) =>
     const devices = await getOutputDevices();
     const sinkId = resolveSinkId(options?.output, options?.devices, devices);
     for (const sink of [...targets]) {
+      // Paused media elements are dropped so finished ones are not kept alive;
+      // the play() hook registers them again when they resume.
       if (
-        (sink instanceof HTMLMediaElement && capturedElements.has(sink)) ||
+        (sink instanceof HTMLMediaElement &&
+          (capturedElements.has(sink) || sink.paused)) ||
         (sink instanceof AudioContext && sink.state === 'closed')
       ) {
         sinks.delete(sink);
@@ -125,30 +128,22 @@ const updateDeviceList = async (
 ) => {
   const newDevices = await getOutputDevices();
   const config = await context.getConfig();
-  // Persist the remapped ID so the menu shows the right device.
-  let output = config.output;
-  if (output && !(output in newDevices)) {
-    output = resolveSinkId(output, config.devices, newDevices) || output;
-  }
   // Device change events fire often (Bluetooth, virtual cables, monitors
   // waking up). Only write the config when something actually changed, since
   // every write also runs onConfigChange below. The saved list also holds
   // devices that are gone, so only compare the current ones.
   if (
-    output === config.output &&
     Object.entries(newDevices).every(
       ([id, label]) => config.devices?.[id] === label,
     )
   ) {
     return;
   }
-  // Only send what changed: a full config read before a menu selection would
-  // otherwise write the old output back over it.
-  await context.setConfig(
-    output === config.output
-      ? { devices: newDevices }
-      : { devices: newDevices, output },
-  );
+  // Only the device list is written. The saved output is left as the user
+  // picked it, even if its ID went stale: resolveSinkId and the menu map it to
+  // the current device by name, and writing it here could overwrite a menu
+  // selection saved while this refresh was running.
+  await context.setConfig({ devices: newDevices });
 };
 
 const NativeAudioContext = window.AudioContext;
@@ -184,8 +179,11 @@ export const renderer = createRenderer<
       }
     };
     HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+      // play() clears `paused` synchronously, so the element is tracked as
+      // playing (paused elements are pruned in applyToSinks).
+      const result = nativePlay.call(this);
       if (!capturedElements.has(this)) trackSink(this);
-      return nativePlay.call(this);
+      return result;
     };
   },
 
