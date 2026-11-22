@@ -24,6 +24,11 @@ export type PreciseVolumePluginConfig = {
     volumeDown: string;
   };
   /**
+   * Use the keyboard's media volume keys (VolumeUp / VolumeDown, e.g. a volume
+   * knob) to change the app volume instead of the system volume
+   */
+  mediaVolumeKeys: boolean;
+  /**
    * Plugin save volume between session here
    */
   savedVolume: number | undefined;
@@ -41,6 +46,7 @@ export default createPlugin({
       volumeUp: '',
       volumeDown: '',
     },
+    mediaVolumeKeys: false,
     savedVolume: undefined,
   } as PreciseVolumePluginConfig,
   stylesheets: [hudStyle],
@@ -162,6 +168,14 @@ export default createPlugin({
         click: (item) => promptGlobalShortcuts(config, item),
       },
       {
+        label: t('plugins.precise-volume.menu.media-volume-keys'),
+        type: 'checkbox',
+        checked: Boolean(config.mediaVolumeKeys),
+        click(item) {
+          changeOptions({ mediaVolumeKeys: item.checked }, config);
+        },
+      },
+      {
         label: t('plugins.precise-volume.menu.custom-volume-steps'),
         click: () => promptVolumeSteps(config),
       },
@@ -205,6 +219,11 @@ export default createPlugin({
 
     if (isValidAccelerator(volumeDown)) {
       register(volumeDown, false);
+    }
+
+    if (config.mediaVolumeKeys) {
+      if (volumeUp !== 'VolumeUp') register('VolumeUp', true);
+      if (volumeDown !== 'VolumeDown') register('VolumeDown', false);
     }
   },
 
