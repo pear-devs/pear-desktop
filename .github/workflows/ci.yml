@@ -1,0 +1,63 @@
+
+name: CI
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24.x"
+
+jobs:
+  validate:
+    name: Validate Pearum Desktop
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+        with:
+          version: 11
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint, format and typecheck
+        run: pnpm check
+
+      - name: Build
+        run: pnpm build
+
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y xvfb
+
+      - name: Run tests
+        shell: bash
+        env:
+          XDG_CONFIG_HOME: ${{ runner.temp }}/pearum-tests/config
+          XDG_CACHE_HOME: ${{ runner.temp }}/pearum-tests/cache
+          XDG_DATA_HOME: ${{ runner.temp }}/pearum-tests/data
+        run: |
+          xvfb-run --auto-servernum --server-args='-screen 0 1280x1024x24' pnpm test
