@@ -63,9 +63,10 @@ export const setupRepeatChangedListener = singleton(() => {
       ).__dataHost.getState().queue.repeatMode,
     );
   });
-  repeatObserver.observe(document.querySelector('#right-controls .repeat')!, {
-    attributeFilter: ['title'],
-  });
+  const repeatTarget = document.querySelector('#right-controls .repeat');
+  if (repeatTarget) {
+    repeatObserver.observe(repeatTarget, { attributeFilter: ['title'] });
+  }
 
   // Emit the initial value as well; as it's persistent between launches.
   // provided by App
@@ -185,7 +186,9 @@ export const setupAutoPlayChangedListener = singleton(() => {
     window.ipcRenderer.send('peard:autoplay-changed');
   });
 
-  observer.observe(autoplaySlider!, {
+  if (!autoplaySlider) return;
+
+  observer.observe(autoplaySlider, {
     attributes: true,
     childList: false,
     subtree: false,
@@ -242,6 +245,17 @@ export const setupSongInfo = (api: MusicPlayer) => {
     pause: (e: Event) => playPausedHandler(e, 'pause'),
   };
 
+  let playPausedVideo: HTMLVideoElement | undefined;
+  const attachPlayPausedListeners = () => {
+    const video = document.querySelector<HTMLVideoElement>('video');
+    if (!video || video === playPausedVideo) return;
+
+    for (const status of ['playing', 'pause'] as const) {
+      video.addEventListener(status, playPausedHandlers[status]);
+    }
+    playPausedVideo = video;
+  };
+
   const videoEventDispatcher = async (
     name: string,
     videoData: VideoDataChangeValue,
@@ -278,10 +292,8 @@ export const setupSongInfo = (api: MusicPlayer) => {
       const video = document.querySelector<HTMLVideoElement>('video');
       video?.dispatchEvent(srcChangedEvent);
 
-      for (const status of ['playing', 'pause'] as const) {
-        // for fix issue that pause event not fired
-        video?.addEventListener(status, playPausedHandlers[status]);
-      }
+      // for fix issue that pause event not fired
+      attachPlayPausedListeners();
 
       clearVideoTimeout(videoData.videoId);
       waitingEvent.add(videoData.videoId);
@@ -298,13 +310,11 @@ export const setupSongInfo = (api: MusicPlayer) => {
     }
   });
 
+  attachPlayPausedListeners();
+
   const video = document.querySelector('video');
 
   if (video) {
-    for (const status of ['playing', 'pause'] as const) {
-      video.addEventListener(status, playPausedHandlers[status]);
-    }
-
     if (!isNaN(video.duration)) {
       const {
         title,

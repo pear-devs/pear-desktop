@@ -17,14 +17,14 @@ const createContext = (
 ): MenuContext<PluginConfig> => ({
   getConfig: async () =>
     deepmerge(
-      (await allPlugins())[id].config ?? { enabled: false },
+      (await allPlugins())[id]?.config ?? { enabled: false },
       config.get(`plugins.${id}`) ?? {},
     ) as PluginConfig,
   setConfig: async (newConfig) => {
     config.setPartial(
       `plugins.${id}`,
       newConfig,
-      (await allPlugins())[id].config,
+      (await allPlugins())[id]?.config,
     );
   },
   window: win,

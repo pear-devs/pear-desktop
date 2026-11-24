@@ -103,14 +103,16 @@ const migrations = {
         };
       }
 
-      scrobblerConfig.scrobblers.lastfm = {
-        enabled: lastfmConfig.enabled,
-        token: lastfmConfig.token,
-        sessionKey: lastfmConfig.session_key,
-        apiRoot: lastfmConfig.api_root,
-        apiKey: lastfmConfig.api_key,
-        secret: lastfmConfig.secret,
-      };
+      if (!scrobblerConfig.scrobblers.lastfm) {
+        scrobblerConfig.scrobblers.lastfm = {
+          enabled: lastfmConfig.enabled,
+          token: lastfmConfig.token,
+          sessionKey: lastfmConfig.session_key,
+          apiRoot: lastfmConfig.api_root,
+          apiKey: lastfmConfig.api_key,
+          secret: lastfmConfig.secret,
+        };
+      }
       store.set('plugins.scrobbler', scrobblerConfig);
       store.delete('plugins.lastfm');
     }

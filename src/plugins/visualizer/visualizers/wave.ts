@@ -27,6 +27,11 @@ class WaveVisualizer extends Visualizer {
           animation.type as keyof typeof this.visualizer.animations
         ];
 
+      if (typeof TargetVisualizer !== 'function') {
+        console.warn('Unknown wave animation', animation.type);
+        continue;
+      }
+
       this.visualizer.addAnimation(
         new TargetVisualizer(animation.config as never), // Magic of Typescript
       );

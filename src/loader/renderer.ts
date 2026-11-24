@@ -52,9 +52,6 @@ export const forceUnloadRendererPlugin = async (id: string) => {
     ctx: 'renderer',
     context: createContext(id),
   });
-  if (plugin?.stylesheets) {
-    document.querySelector(`style#plugin-${id}`)?.remove();
-  }
   if (hasStopped || (hasStopped === null && plugin?.renderer)) {
     console.log(
       LoggerPrefix,
@@ -97,6 +94,15 @@ export const forceLoadRendererPlugin = async (id: string) => {
       document.adoptedStyleSheets = [
         ...document.adoptedStyleSheets,
         ...styleSheetList,
+      ];
+
+      unregisterStyleMap[id] = [
+        () => {
+          const toRemove = new Set(styleSheetList);
+          document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+            (sheet) => !toRemove.has(sheet),
+          );
+        },
       ];
     }
 

@@ -26,6 +26,8 @@ const roundToTwo = (n: number) => Math.round(n * 1e2) / 1e2;
 
 const [speed, setSpeed] = createSignal(1);
 const sliderContainer = document.createElement('div');
+let popupObserver: MutationObserver | null = null;
+let disposeSlider: (() => void) | null = null;
 
 export const onPlayerApiReady = () => {
   const observePopupContainer = () => {
@@ -38,7 +40,8 @@ export const onPlayerApiReady = () => {
       setSpeed(speed());
     };
 
-    render(
+    disposeSlider?.();
+    disposeSlider = render(
       () => (
         <PlaybackSpeedSlider
           onImmediateValueChanged={(e) => {
@@ -81,7 +84,8 @@ export const onPlayerApiReady = () => {
       sliderContainer,
     );
 
-    const observer = new MutationObserver(() => {
+    popupObserver?.disconnect();
+    popupObserver = new MutationObserver(() => {
       const menu = getSongMenu();
 
       if (
@@ -96,7 +100,7 @@ export const onPlayerApiReady = () => {
 
     const popupContainer = document.querySelector('ytmusic-popup-container');
     if (popupContainer) {
-      observer.observe(popupContainer, {
+      popupObserver.observe(popupContainer, {
         childList: true,
         subtree: true,
       });
@@ -106,6 +110,8 @@ export const onPlayerApiReady = () => {
   const observeVideo = () => {
     const video = document.querySelector<HTMLVideoElement>('video');
     if (video) {
+      video.removeEventListener('ratechange', forcePlaybackRate);
+      video.removeEventListener('peard:src-changed', forcePlaybackRate);
       video.addEventListener('ratechange', forcePlaybackRate);
       video.addEventListener('peard:src-changed', forcePlaybackRate);
     }
@@ -121,5 +127,10 @@ export const onUnload = () => {
     video.removeEventListener('ratechange', forcePlaybackRate);
     video.removeEventListener('peard:src-changed', forcePlaybackRate);
   }
-  getSongMenu()?.removeChild(sliderContainer);
+
+  popupObserver?.disconnect();
+  popupObserver = null;
+  disposeSlider?.();
+  disposeSlider = null;
+  sliderContainer.remove();
 };

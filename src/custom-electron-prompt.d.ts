@@ -88,6 +88,8 @@ declare module 'custom-electron-prompt' {
             ? string[]
             : never;
 
+  type Type = 'input' | 'select' | 'counter' | 'multiInput' | 'keybind';
+
   const prompt: <T extends Type>(
     options?: PromptOptions<T> & { type: T },
     parent?: BrowserWindow,

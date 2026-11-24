@@ -15,6 +15,7 @@ export const waitForElement = <T extends Element>(
     const interval = setInterval(() => {
       if (maxRetry > 0 && retryCount >= maxRetry) {
         clearInterval(interval);
+        resolve(null as unknown as T);
         return;
       }
       const elem = document.querySelector<T>(selector);

@@ -198,12 +198,12 @@ const initHook = async (win: BrowserWindow) => {
     'peard:get-config',
     (_, id: string) =>
       deepmerge(
-        allPluginStubs[id].config ?? { enabled: false },
+        allPluginStubs[id]?.config ?? { enabled: false },
         config.get(`plugins.${id}`) ?? {},
       ) as PluginConfig,
   );
   ipcMain.handle('peard:set-config', (_, name: string, obj: object) =>
-    config.setPartial(`plugins.${name}`, obj, allPluginStubs[name].config),
+    config.setPartial(`plugins.${name}`, obj, allPluginStubs[name]?.config),
   );
 
   config.watch((newValue, oldValue) => {
@@ -220,9 +220,12 @@ const initHook = async (win: BrowserWindow) => {
       const isEqual = deepEqual(oldPluginConfigList[id], newPluginConfig);
 
       if (!isEqual) {
+        const stub = allPluginStubs[id];
+        if (!stub) return;
+
         const oldConfig = oldPluginConfigList[id] as PluginConfig;
         const config = deepmerge(
-          allPluginStubs[id].config ?? { enabled: false },
+          stub.config ?? { enabled: false },
           newPluginConfig ?? {},
         ) as PluginConfig;
 
@@ -403,10 +406,10 @@ async function createMainWindow() {
     const scaledY = windowY;
 
     if (
-      scaledX + (scaledWidth / 2) < display.bounds.x - 8 || // Left
-      scaledX + (scaledWidth / 2) > display.bounds.x + display.bounds.width || // Right
+      scaledX + scaledWidth / 2 < display.bounds.x - 8 || // Left
+      scaledX + scaledWidth / 2 > display.bounds.x + display.bounds.width || // Right
       scaledY < display.bounds.y - 8 || // Top
-      scaledY + (scaledHeight / 2) > display.bounds.y + display.bounds.height // Bottom
+      scaledY + scaledHeight / 2 > display.bounds.y + display.bounds.height // Bottom
     ) {
       // Window is offscreen
       if (is.dev()) {
@@ -594,6 +597,8 @@ app.once('browser-window-created', (_event, win) => {
       if (is.dev()) {
         console.log(log);
       }
+
+      if (!isMainFrame) return;
 
       if (
         errorCode !== -3 &&

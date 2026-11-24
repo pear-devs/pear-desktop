@@ -47,16 +47,20 @@ export interface SongInfo {
 
 // Grab the native image using the src
 export const getImage = async (src: string): Promise<Electron.NativeImage> => {
-  const result = await net.fetch(src);
-  const output = nativeImage.createFromBuffer(
-    Buffer.from(await result.arrayBuffer()),
-  );
-  if (output.isEmpty() && !src.endsWith('.jpg') && src.includes('.jpg')) {
-    // Fix hidden webp files (https://github.com/pear-devs/pear-desktop/issues/315)
-    return getImage(src.slice(0, src.lastIndexOf('.jpg') + 4));
-  }
+  try {
+    const result = await net.fetch(src);
+    const output = nativeImage.createFromBuffer(
+      Buffer.from(await result.arrayBuffer()),
+    );
+    if (output.isEmpty() && !src.endsWith('.jpg') && src.includes('.jpg')) {
+      // Fix hidden webp files (https://github.com/pear-devs/pear-desktop/issues/315)
+      return getImage(src.slice(0, src.lastIndexOf('.jpg') + 4));
+    }
 
-  return output;
+    return output;
+  } catch {
+    return nativeImage.createEmpty();
+  }
 };
 
 const handleData = async (
@@ -99,7 +103,7 @@ const handleData = async (
     }
     // Used for options.resumeOnStart
     config.set('url', microformat.urlCanonical);
-    songInfo.alternativeTitle = microformat.linkAlternates.find(
+    songInfo.alternativeTitle = microformat.linkAlternates?.find(
       (link) => link.title,
     )?.title;
     songInfo.tags = Array.isArray(microformat.tags) ? microformat.tags : [];
@@ -116,6 +120,8 @@ const handleData = async (
     songInfo.videoId = videoDetails.videoId;
     songInfo.album = videoDetails.album; // Will be undefined if video exist
 
+    const videoOwnerName = microformat?.pageOwnerDetails?.name;
+
     switch (videoDetails?.musicVideoType) {
       case 'MUSIC_VIDEO_TYPE_ATV':
         songInfo.mediaType = MediaType.Audio;
@@ -129,10 +135,11 @@ const handleData = async (
       case 'MUSIC_VIDEO_TYPE_PODCAST_EPISODE':
         songInfo.mediaType = MediaType.PodcastEpisode;
         // HACK: Podcast's participant is not the artist
-        if (!config.get('options.usePodcastParticipantAsArtist')) {
-          songInfo.artist = cleanupName(
-            data.microformat.microformatDataRenderer.pageOwnerDetails.name,
-          );
+        if (
+          !config.get('options.usePodcastParticipantAsArtist') &&
+          videoOwnerName
+        ) {
+          songInfo.artist = cleanupName(videoOwnerName);
         }
         break;
       default:
@@ -140,13 +147,12 @@ const handleData = async (
         // HACK: This is a workaround for "podcast" types where "musicVideoType" doesn't exist. Google :facepalm:
         if (
           !config.get('options.usePodcastParticipantAsArtist') &&
+          videoOwnerName &&
           (data.responseContext.serviceTrackingParams
             ?.at(0)
             ?.params?.find((it) => it.key === 'ipcc')?.value ?? '1') != '0'
         ) {
-          songInfo.artist = cleanupName(
-            data.microformat.microformatDataRenderer.pageOwnerDetails.name,
-          );
+          songInfo.artist = cleanupName(videoOwnerName);
         }
         break;
     }
@@ -154,11 +160,14 @@ const handleData = async (
     const thumbnails = videoDetails.thumbnail?.thumbnails;
     songInfo.imageSrc = thumbnails?.at(-1)?.url?.split('?')?.at(0);
 
-    if (
-      songInfo.imageSrc &&
-      !(await net.fetch(songInfo.imageSrc, { method: 'HEAD' })).ok
-    ) {
-      songInfo.imageSrc = thumbnails.at(-1)?.url;
+    if (songInfo.imageSrc) {
+      try {
+        if (!(await net.fetch(songInfo.imageSrc, { method: 'HEAD' })).ok) {
+          songInfo.imageSrc = thumbnails.at(-1)?.url;
+        }
+      } catch {
+        // Network failures are handled by getImage below.
+      }
     }
 
     if (songInfo.imageSrc) songInfo.image = await getImage(songInfo.imageSrc);
