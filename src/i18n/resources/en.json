@@ -497,6 +497,15 @@
         }
       }
     },
+    "dj-transitions": {
+      "description": "DJ-style transitions between songs: equal-power fades with a bass swap",
+      "menu": {
+        "bass-swap": "Bass swap",
+        "fade-length": "Fade length",
+        "seconds": "{{seconds}} seconds"
+      },
+      "name": "DJ Transitions"
+    },
     "do-not-track": {
       "description": "Block all tracking out of the box",
       "menu": {
