@@ -162,7 +162,7 @@
                 "force-show": "Mostrar sempre",
                 "hide": "Ocultar",
                 "label": "Botões \"Gosto\"",
-                "swap": "Inverter ordem dos botões Gosto"
+                "swap": "Trocar a ordem dos botões de like"
               },
               "remove-upgrade-button": "Remover botão \"Upgrade\"",
               "theme": {
@@ -218,13 +218,6 @@
     "ad-speedup": {
       "description": "Se um anúncio for reproduzido, silencia o áudio e define a velocidade de reprodução para 16x",
       "name": "Acelerador de anúncios"
-    },
-    "adblocker": {
-      "description": "Bloquear anúncios e monitorização",
-      "menu": {
-        "blocker": "Bloqueador"
-      },
-      "name": "Bloqueador de anúncios"
     },
     "album-actions": {
       "description": "Adiciona os botões \"Anular Não gosto\", \"Não gosto\", \"Gosto\" e \"Não gosto\" para aplicar a todas as músicas de uma lista de reprodução ou álbum",
@@ -323,7 +316,7 @@
           "label": "Nome do anfitrião"
         },
         "https": {
-          "label": "HTTPS e Certificados",
+          "label": "HTTPS e certificados",
           "submenu": {
             "cert": {
               "dialogTitle": "Selecionar arquivo do certificado HTTPS",
@@ -503,6 +496,13 @@
           "title": "Definir tempo de inatividade"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Começar a bloquear a monitorização",
+      "menu": {
+        "blocker": "Bloqueador"
+      },
+      "name": "Não rastrear"
     },
     "downloader": {
       "backend": {
@@ -943,9 +943,14 @@
           "label": "Tipo",
           "submenu": {
             "acrylic": "Acrílico",
+            "content": "Conteúdo",
+            "fullscreen-ui": "Interface em tela cheia",
             "mica": "Mica",
             "none": "Nada",
-            "tabbed": "Separadores"
+            "tabbed": "Separadores",
+            "under-page": "Sub Página",
+            "under-window": "Sub Janela",
+            "window": "Janela"
           }
         }
       },
@@ -980,7 +985,7 @@
           }
         }
       },
-      "name": "Alternância de vídeo",
+      "name": "Alternar vídeo",
       "templates": {
         "button-song": "Música",
         "button-video": "Vídeo"

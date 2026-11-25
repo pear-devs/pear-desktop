@@ -1,17 +1,3 @@
-<div align="center" markdown="1">
-   <sup>Special thanks to:</sup>
-   <br>
-   <br>
-   <a href="https://go.warp.dev/pear-desktop">
-      <img alt="Warp sponsorship" width="400" src="https://github.com/user-attachments/assets/8307ea56-e872-494a-8a9c-de0e296a06ed" />
-   </a>
-
-### [Warp, built for coding with multiple AI agents](https://go.warp.dev/pear-desktop)
-[Available for macOS, Linux, & Windows](https://go.warp.dev/pear-desktop)<br>
-
-</div>
-<hr>
-
 <div align="center">
 
 # :pear: Pear Desktop
@@ -130,7 +116,6 @@ winget install pear-devs.pear-desktop
 
 - Download the `*.nsis.7z` file for _your device architecture_ in [release page](https://github.com/pear-devs/pear-desktop/releases/latest).
   - `x64` for 64-bit Windows
-  - `ia32` for 32-bit Windows
   - `arm64` for ARM64 Windows
 - Download installer in release page. (`*-Setup.exe`)
 - Place them in the **same directory**.

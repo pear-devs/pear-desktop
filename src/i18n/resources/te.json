@@ -52,6 +52,66 @@
         "buttons": {
           "later": "తర్వాత",
           "restart-now": "ఇప్పుడే రీస్టార్ట్ చేయండి"
+        },
+        "message": "\"{{pluginName}}\" మరల రీస్టార్ట్ అవసరం",
+        "title": "రీస్టార్ట్ అవసరం"
+      },
+      "unresponsive": {
+        "buttons": {
+          "wait": "వేచి ఉండండి"
+        }
+      },
+      "update-available": {
+        "buttons": {
+          "download": "డౌన్లోడ్",
+          "ok": "ఓకే"
+        }
+      }
+    },
+    "menu": {
+      "about": "గురించి",
+      "navigation": {
+        "submenu": {
+          "copy-current-url": "ప్రస్తుత యూ‌ఆర్‌ఎల్ కాపీ చెయ్యండి",
+          "go-back": "వెనక్కి వెళ్లండి",
+          "go-forward": "ముందుకు వెళ్లండి",
+          "quit": "నిష్క్రమించండి"
+        }
+      },
+      "options": {
+        "submenu": {
+          "advanced-options": {
+            "submenu": {
+              "set-proxy": {
+                "label": "ప్రాక్సీ సెట్ చేయండి",
+                "prompt": {
+                  "label": "ప్రాక్సీ అడ్రస్ నమోదు చేయండి: (డిసేబుల్ చేయడానికి ఖాళీగా ఉంచండి)",
+                  "placeholder": "ఉదాహరణ: SOCKS5://127.0.0.1:9999",
+                  "title": "ప్రాక్సీ సెట్ చేయండి"
+                }
+              }
+            }
+          },
+          "always-on-top": "ఎప్పుడూ పైభాగంలో ఉంచండి",
+          "auto-update": "ఆటో అప్డేట్",
+          "start-at-login": "లాగిన్ అప్పుడు ప్రారంభించండి",
+          "starting-page": {
+            "unset": "అన్‌సెట్ చేయండి"
+          },
+          "tray": {
+            "label": "ట్రే",
+            "submenu": {
+              "disabled": "ఆపివేయబడింది"
+            }
+          },
+          "visual-tweaks": {
+            "submenu": {
+              "like-buttons": {
+                "label": "లైక్ బటన్",
+                "swap": "లైక్ బటన్‌ల క్రమాన్ని మార్చండి"
+              }
+            }
+          }
         }
       }
     }

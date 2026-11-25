@@ -150,6 +150,13 @@
           "visual-tweaks": {
             "label": "Vizualni popravki",
             "submenu": {
+              "custom-window-title": {
+                "label": "Naslovno okno po meri",
+                "prompt": {
+                  "label": "Vnesite poljubno ime okna: (pustite prazno da onemogočite)",
+                  "placeholder": "Primer:{{applicationName}}"
+                }
+              },
               "like-buttons": {
                 "default": "Privzeto",
                 "force-show": "Prisilno pokaži",
@@ -210,13 +217,6 @@
     "ad-speedup": {
       "description": "Če se predvaja oglas se zvok utišja. Prav tako se hitrost predvajanja nastavi na 16 krat",
       "name": "Pospeševanje oglasov"
-    },
-    "adblocker": {
-      "description": "Izklopi vse oglase in sledenje",
-      "menu": {
-        "blocker": "Blokator"
-      },
-      "name": "Blokator reklam"
     },
     "album-actions": {
       "description": "Doda Undislike, Dislike, Like, in Unlike gumbe vsem glasbam v seznamu predvajanja ali albumu",

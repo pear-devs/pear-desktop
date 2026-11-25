@@ -14,6 +14,8 @@
     }
   },
   "language": {
+    "code": "sq",
+    "local-name": "Shqip",
     "name": "Emri i gjuhës në anglisht. p.sh. japonisht, koreanisht, anglisht, rusisht"
   },
   "main": {
@@ -52,7 +54,261 @@
           "restart-now": "Rinisni Tani"
         },
         "detail": "\"{{pluginName}}\" kërkon një restart që të hyjë në fuqi",
-        "message": "\"{{pluginName}}\" kerkon restart"
+        "message": "\"{{pluginName}}\" kerkon restart",
+        "title": "Kërkohet Rinisja"
+      },
+      "unresponsive": {
+        "buttons": {
+          "quit": "Dil",
+          "relaunch": "Rinis",
+          "wait": "Prit"
+        },
+        "detail": "Na vjen keq për shqetësimin! Ju lutemi zgjidhni çfarë të bëhet:",
+        "message": "Aplikacioni nuk përgjigjet",
+        "title": "Dritarja nuk përgjigjet"
+      },
+      "update-available": {
+        "buttons": {
+          "disable": "Çaktivizo përditësimet",
+          "download": "Shkarko",
+          "ok": "Mirë"
+        },
+        "detail": "Një version i ri është i gatshëm dhe mund të shkarkohet në {{downloadLink}}",
+        "message": "Një version i ri është i gatshëm",
+        "title": "Një përditësim është i gatshëm"
+      }
+    },
+    "menu": {
+      "about": "Rreth",
+      "navigation": {
+        "label": "Navigacion",
+        "submenu": {
+          "copy-current-url": "Kopjo URL-në",
+          "go-back": "Kthehu",
+          "go-forward": "Përpara",
+          "quit": "Dil",
+          "restart": "Rinis Aplikacionin"
+        }
+      },
+      "options": {
+        "label": "Opsionet",
+        "submenu": {
+          "advanced-options": {
+            "label": "Opsionet e avancuara",
+            "submenu": {
+              "auto-reset-app-cache": "Rivendos cache-in e aplikacionit kur fillon",
+              "disable-hardware-acceleration": "Çaktivizo shpejtësimin e hardware-it",
+              "edit-config-json": "Modifiko config.json",
+              "override-user-agent": "Zëvendëso User-Agent-in",
+              "restart-on-config-changes": "Rinis kur ndryshojnë konfigurimet",
+              "set-proxy": {
+                "label": "Cakto proxy-në",
+                "prompt": {
+                  "label": "Vendos adresen e proxy-it: (bosh per çaktivizim)",
+                  "placeholder": "Shembull: SOCKS5://127.0.0.1:9999",
+                  "title": "Vendos proxy-in"
+                }
+              },
+              "toggle-dev-tools": "Aktivizo/Çaktivizo DevTools"
+            }
+          },
+          "always-on-top": "Gjithmonë në krye",
+          "auto-update": "Përditësim Automatik",
+          "hide-menu": {
+            "dialog": {
+              "message": "Menu-ja do të fshihet në nisjen tjetër, përdor [Alt] për ta shfaqur (ose [`] nëse jeni në menu-në)",
+              "title": "Fshehja e menu-së është aktivizuar"
+            },
+            "label": "Fshih menu-në"
+          },
+          "language": {
+            "dialog": {
+              "message": "Gjuha do të ndryshojë pas rinisjes",
+              "title": "Gjuha u ndryshua"
+            },
+            "label": "Gjuhë",
+            "submenu": {
+              "to-help-translate": "Dëshironi të ndihmoni me përkthimin? Kilkoni këtu"
+            }
+          },
+          "resume-on-start": "Vazhdo këngën e fundit kur aplikacioni fillon",
+          "single-instance-lock": "Kyçja e një instance të vetme",
+          "start-at-login": "Fillo në hyrje",
+          "starting-page": {
+            "label": "Faqe fillimi",
+            "unset": "Çpërcakto"
+          },
+          "tray": {
+            "label": "Zona e sistemit",
+            "submenu": {
+              "disabled": "E çaktivizuar",
+              "enabled-and-hide-app": "Aktivizuar dhe fshih dritaren",
+              "enabled-and-show-app": "Aktivizuar dhe shfaq dritaren",
+              "play-pause-on-click": "Luaj/Pezo me klikim"
+            }
+          },
+          "visual-tweaks": {
+            "label": "Ndryshime vizuale",
+            "submenu": {
+              "custom-window-title": {
+                "label": "Titull i personalizuar i dritares",
+                "prompt": {
+                  "label": "Fut titullin e personalizuar të dritares: (lëre bosh për çaktivizim)",
+                  "placeholder": "Shembull: {{applicationName}}"
+                }
+              },
+              "like-buttons": {
+                "default": "Parazgjedhjet",
+                "force-show": "Forco shfaqjen",
+                "hide": "Fshih",
+                "label": "Butonat e pëlqimit",
+                "swap": "Ndërro rendin e butonave të pëlqimit"
+              },
+              "remove-upgrade-button": "Hiq butonin e përmirësimit",
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "Anulo",
+                    "remove": "Hiq"
+                  },
+                  "remove-theme": "A jeni të sigurt që doni ta hiqni temën e personalizuar?",
+                  "remove-theme-message": "Kjo do të heqë temën e personalizuar"
+                },
+                "label": "Tema",
+                "submenu": {
+                  "import-css-file": "Importo skedar CSS të personalizuar",
+                  "no-theme": "Pa temë"
+                }
+              }
+            }
+          }
+        }
+      },
+      "plugins": {
+        "enabled": "Aktivizuar",
+        "label": "Plugins",
+        "new": "E RE"
+      },
+      "view": {
+        "label": "Shiko",
+        "submenu": {
+          "force-reload": "Rifresko me forcë",
+          "reload": "Rifresko",
+          "reset-zoom": "Madhësia aktuale",
+          "toggle-fullscreen": "Ndërro ekranin e plotë",
+          "zoom-in": "Zmadho",
+          "zoom-out": "Zvogëlo"
+        }
+      }
+    },
+    "tray": {
+      "next": "Tjetër",
+      "play-pause": "Luaj/Pezo",
+      "previous": "Para",
+      "quit": "Dil",
+      "restart": "Rinis Aplikacionin",
+      "show": "Shfaq dritaren",
+      "tooltip": {
+        "default": "{{applicationName}}",
+        "with-song-info": "{{applicationName}}: {{artist}} - {{title}}"
+      }
+    }
+  },
+  "plugins": {
+    "ad-speedup": {
+      "description": "Nëse luan një reklamë, e hesht zërin dhe e vendos shpejtësinë e luajtjes në 16x",
+      "name": "Përshpejtimi i reklamave"
+    },
+    "album-actions": {
+      "description": "Shton butonat \"Nuk më pëlqen\", \"Nuk e pëlqej\", \"Pëlqej\" dhe \"E pëlqej\" për t'i zbatuar këto në të gjitha këngët në një playlist ose album",
+      "name": "Veprimet e albumit"
+    },
+    "album-color-theme": {
+      "description": "Aplikon një temë dinamike dhe efekte vizuale bazuar në paletën e ngjyrave të albumit",
+      "menu": {
+        "color-mix-ratio": {
+          "label": "Raporti i përzierjes së ngjyrave",
+          "submenu": {
+            "percent": "{{ratio}}%"
+          }
+        },
+        "enable-seekbar": "Aktivizo tematizimin e shiritit"
+      },
+      "name": "Tema e ngjyrave të albumit"
+    },
+    "ambient-mode": {
+      "description": "Aplikon një efekt ndriçimi duke hedhur ngjyra të buta nga videoja, në sfondin e ekranit tuaj",
+      "menu": {
+        "blur-amount": {
+          "label": "Sasia e turbullimit",
+          "submenu": {
+            "pixels": "{{blurAmount}} pikselë"
+          }
+        },
+        "buffer": {
+          "label": "Bufer",
+          "submenu": {
+            "buffer": "{{buffer}}"
+          }
+        },
+        "opacity": {
+          "label": "Opaciteti",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "quality": {
+          "label": "Kualiteti",
+          "submenu": {
+            "pixels": "{{quality}} pikselë"
+          }
+        },
+        "size": {
+          "label": "Madhësia",
+          "submenu": {
+            "percent": "{{size}}%"
+          }
+        },
+        "smoothness-transition": {
+          "label": "Tranzicion i lëmuar",
+          "submenu": {
+            "during": "Gjatë {{interpolationTime}} s"
+          }
+        },
+        "use-fullscreen": {
+          "label": "Duke përdorur ekranin e plotë"
+        }
+      },
+      "name": "Modaliteti Ambient"
+    },
+    "amuse": {
+      "description": "Shton mbështetje për {{applicationName}} te widget-i \"Now Playing\" i Amuse nga 6K Labs",
+      "name": "Amuse",
+      "response": {
+        "query": "Serveri API i Amuse është në punë. Përdor GET /query për të marrë informacionin e këngës."
+      }
+    },
+    "api-server": {
+      "description": "Shton një server API për të kontrolluar luajtësin",
+      "dialog": {
+        "request": {
+          "buttons": {
+            "allow": "Lejo",
+            "deny": "Refuzo"
+          },
+          "message": "Të lejohet {{ID}} ({{origin}}) të ketë akses në API?",
+          "title": "Kërkesë autorizimi API"
+        }
+      },
+      "menu": {
+        "auth-strategy": {
+          "label": "Strategjia e autorizimit",
+          "submenu": {
+            "auth-at-first": {
+              "label": "Autorizo në kërkesën e parë"
+            }
+          }
+        }
       }
     }
   }

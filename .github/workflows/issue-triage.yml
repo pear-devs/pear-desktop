@@ -1,0 +1,123 @@
+name: AI Issue Triage
+
+on:
+  issues:
+    types: [opened]
+  # Manual re-trigger: an org member comments "/triage" on any issue.
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+jobs:
+  triage:
+    name: Triage issue
+    runs-on: ubuntu-latest
+    # Job-level (not workflow-level) so runs skipped by the `if` below never join
+    # the group — otherwise any comment would cancel an in-progress triage before
+    # the `if` is evaluated.
+    concurrency:
+      group: issue-triage-${{ github.event.issue.number }}
+      cancel-in-progress: true
+    # Run when:
+    #  - a non-bot opens a new issue, OR
+    #  - an org member (author_association OWNER/MEMBER) comments "/triage" on an
+    #    issue (not a PR). author_association is set by GitHub and cannot be forged.
+    if: >-
+      ${{
+        (github.event_name == 'issues' && github.event.issue.user.type != 'Bot') ||
+        (github.event_name == 'issue_comment' &&
+         !github.event.issue.pull_request &&
+         contains(github.event.comment.body, '/triage') &&
+         (github.event.comment.author_association == 'OWNER' ||
+          github.event.comment.author_association == 'MEMBER') &&
+         github.event.comment.user.type != 'Bot')
+      }}
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      # The action expects to run inside a git checkout; a shallow one suffices.
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Run triage agent
+        # anthropics/claude-code-action v1.0.181
+        uses: anthropics/claude-code-action@44423bdec74b97d67543eb16c110546762c110b2
+        env:
+          # Point Claude Code at DeepSeek's Anthropic-compatible endpoint.
+          ANTHROPIC_BASE_URL: https://api.deepseek.com/anthropic
+          ANTHROPIC_AUTH_TOKEN: ${{ secrets.DEEPSEEK_API_KEY }}
+          ANTHROPIC_MODEL: deepseek-v4-flash
+          ANTHROPIC_SMALL_FAST_MODEL: deepseek-v4-flash
+          # Authenticates the `gh` CLI the agent uses for GitHub operations.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          anthropic_api_key: ${{ secrets.DEEPSEEK_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Minimal, auditable toolset. No close/lock/delete is possible.
+          claude_args: |
+            --model deepseek-v4-flash
+            --allowedTools "Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh search issues:*),Bash(gh issue edit:*),Bash(gh issue comment:*)"
+          prompt: |
+            You are an issue-triage bot for the GitHub repo ${{ github.repository }}.
+            Act on issue #${{ github.event.issue.number }} only. Use the `gh` CLI for all
+            GitHub operations. Be conservative: when unsure, do nothing.
+
+            First, read the issue:
+              gh issue view ${{ github.event.issue.number }} --json number,title,body,labels
+
+            TASK 1 — Title.
+            The bug/feature templates ship placeholder titles "[Bug]: " and
+            "[Feature Request]: ". Decide if the current title is bad:
+              - empty placeholder: the title, trimmed, equals exactly "[Bug]:" or
+                "[Feature Request]:" (nothing meaningful after the colon), OR
+              - low-quality/vague (e.g. "it doesn't work", "bug", "help").
+            If the title is bad, write a concise (<= 70 chars) descriptive title derived
+            from the body. PRESERVE the existing bracket prefix ("[Bug]:" or
+            "[Feature Request]:") if present, and append the summary after it, e.g.
+            "[Bug]: Crash when enabling Album Color Theme on Linux".
+            Apply it with:
+              gh issue edit ${{ github.event.issue.number }} --title "<new title>"
+            If the title is already good, leave it unchanged and do not run edit.
+
+            TASK 2 — Duplicate detection.
+            Search OPEN issues for a near-identical existing report. Prefer the same
+            labels (bug issues use "bug", features use "enhancement"). Examples:
+              gh issue list --state open --limit 50 --json number,title,labels
+              gh search issues --repo ${{ github.repository }} --state open "<keywords>"
+            ONLY if you are 100% certain this issue duplicates one specific existing
+            open issue #<n> (and #<n> is not this issue), do BOTH:
+              gh issue edit ${{ github.event.issue.number }} --add-label "duplicate"
+              gh issue comment ${{ github.event.issue.number }} --body "Possible duplicate of #<n>."
+            If you are not 100% certain, do nothing for this task.
+            NEVER close, lock, or reassign the issue.
+
+            TASK 3 — Completeness (bug issues only; skip for feature requests).
+            The bug form renders each field as a "### <label>" section header followed
+            by the answer. Required sections: "Pear Desktop (Application) Version",
+            "What operating system are you using?", "Operating System Version",
+            "What CPU architecture are you using?", "Reproduction steps",
+            "Expected Behavior", "Actual Behavior", "Enabled plugins".
+            A section counts as EMPTY if its content is blank, "_No response_", or
+            clearly low-effort ("n/a", "none", "idk", "-"). If ANY required section is
+            empty, do BOTH (one comment only):
+              gh issue edit ${{ github.event.issue.number }} --add-label "need more information"
+              gh issue comment ${{ github.event.issue.number }} --body "Thanks for the report! Please fill in the following required section(s) so we can investigate: <list them>."
+            If all required sections are filled, do nothing for this task.
+
+            TASK 4 — Area label.
+            Add AT MOST the clearly-applicable labels from this EXACT allowlist (these
+            already exist — never create new labels): electron-issue,
+            official-youtube-music-issue, documentation, plugin request, question.
+            Guidance: "electron-issue" = an Electron/runtime crash unrelated to app
+            code; "official-youtube-music-issue" = a bug reproducible on
+            music.youtube.com itself; "plugin request" = asks for a new plugin or new
+            plugin functionality; "documentation" = docs/README; "question" = a support
+            question, not a bug/request. Apply only when confident, else none:
+              gh issue edit ${{ github.event.issue.number }} --add-label "<label>"
+
+            When done, print a one-line summary of what you changed (or "no changes").

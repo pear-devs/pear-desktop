@@ -109,7 +109,7 @@
                   "title": "Nastavtiť proxy"
                 }
               },
-              "toggle-dev-tools": "Prepnúť DevTools"
+              "toggle-dev-tools": "Zobraziť/skryť DevTools"
             }
           },
           "always-on-top": "Vždy na vrchu",
@@ -194,7 +194,7 @@
         "submenu": {
           "force-reload": "Nasilu obnoviť",
           "reload": "Obnoviť",
-          "reset-zoom": "Ozajstná veľkosť",
+          "reset-zoom": "Originálna veľkosť",
           "toggle-fullscreen": "Prepnúť režim Celej Obrazovky",
           "zoom-in": "Priblížiť",
           "zoom-out": "Oddialiť"
@@ -218,13 +218,6 @@
     "ad-speedup": {
       "description": "Ak sa spustí reklama, stlmí sa zvuk a nastaví sa rýchlosť prehrávania na 16x",
       "name": "Zrýchľovač reklám"
-    },
-    "adblocker": {
-      "description": "Blokovať všetky reklamy a sledovania hneď od začiatku",
-      "menu": {
-        "blocker": "Blokovač"
-      },
-      "name": "Blokovač reklám"
     },
     "album-actions": {
       "description": "Pridáva Undislike, Dislike, Like, a Unlike tlačítka k aplikovaniu tohto ku všetkým pesničkám v zozname pesničiek alebo albume",
@@ -503,6 +496,13 @@
           "title": "Nastaviť časový limit nečinnosti"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Automaticky blokovať všetky sledovače",
+      "menu": {
+        "blocker": "Blokovanie"
+      },
+      "name": "Nesledovať"
     },
     "downloader": {
       "backend": {
@@ -861,7 +861,7 @@
           "tooltip": "Konvertovať Čínsky znak na Tradičný alebo Zjednodušený"
         },
         "default-text-string": {
-          "label": "Predvolený charakter medzi textami",
+          "label": "Predvolený znak medzi časťami textu",
           "tooltip": "Vyberte predvolený znak na použitie pre medzeru medzi textami"
         },
         "line-effect": {
@@ -943,9 +943,14 @@
           "label": "Typ",
           "submenu": {
             "acrylic": "Acrylické",
+            "content": "Kontent",
+            "fullscreen-ui": "UI na celú obrazovku",
             "mica": "Mica",
             "none": "Žiadne/y",
-            "tabbed": "Tabnutý"
+            "tabbed": "Tabnutý",
+            "under-page": "Pod stránkou",
+            "under-window": "Pod oknom",
+            "window": "Okno"
           }
         }
       },

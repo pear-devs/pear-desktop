@@ -1,4 +1,11 @@
-import { type DataConnection, Peer, type PeerError } from 'peerjs';
+import {
+  type BaseConnectionErrorType,
+  type DataConnection,
+  type DataConnectionErrorType,
+  Peer,
+  type PeerError,
+  PeerErrorType,
+} from 'peerjs';
 
 import type { Permission, Profile, VideoData } from './types';
 
@@ -36,10 +43,21 @@ export type ConnectionListener = (
   conn: DataConnection | null,
 ) => void;
 export type ConnectionMode = 'host' | 'guest' | 'disconnected';
+
+const RECOVERABLE_PEER_ERRORS = new Set([
+  PeerErrorType.Network,
+  PeerErrorType.ServerError,
+  PeerErrorType.SocketError,
+  PeerErrorType.SocketClosed,
+]);
+
 export class Connection {
   private peer: Peer;
   private _mode: ConnectionMode = 'disconnected';
   private connections: Record<string, DataConnection> = {};
+
+  private isDestroyed = false;
+  private isReconnecting = false;
 
   private waitOpen: PromiseUtil<string> = {} as PromiseUtil<string>;
   private listeners: ConnectionListener[] = [];
@@ -78,41 +96,45 @@ export class Connection {
     });
 
     this.peer.on('open', (id) => {
-      this._mode = 'host';
+      if (this._mode === 'disconnected') this._mode = 'host';
       this.waitOpen.resolve(id);
     });
+
     this.peer.on('connection', async (conn) => {
       this._mode = 'host';
-      await this.registerConnection(conn);
-    });
-    this.peer.on('close', () => {
-      for (const listener of this.listeners) {
-        listener({ type: 'CONNECTION_CLOSED', payload: null }, null);
+      try {
+        await this.registerConnection(conn);
+      } catch {
+        // ignore
       }
-      this.listeners = [];
-
-      this.connectionListeners.forEach((listener) => listener());
-      this.connectionListeners = [];
-      this.connections = {};
-
-      this.peer.disconnect();
-      this.peer.destroy();
     });
-    this.peer.on('error', (err) => {
-      if (err.type === 'network') {
-        setTimeout(() => {
-          try {
-            this.peer.reconnect();
-          } catch {}
-        }, 10000);
+
+    this.peer.on('disconnected', async () => {
+      if (this.isDestroyed) return;
+      console.warn('Music Together: lost server connection, reconnecting...');
+      await this.reconnectLoop();
+    });
+
+    this.peer.on('close', () => this.cleanup());
+
+    this.peer.on('error', async (err) => {
+      if (!this.isDestroyed && RECOVERABLE_PEER_ERRORS.has(err.type)) {
+        console.warn('Music Together: recoverable peer error', err.type);
+        await this.reconnectLoop();
+        return;
+      }
+      if (err.type === 'peer-unavailable') return;
+      if (err.type === 'unavailable-id') {
+        console.warn(
+          'Music Together: id no longer available, staying on existing connections.',
+        );
+        this.isReconnecting = false;
         return;
       }
 
+      console.error('Music Together: fatal peer error', err);
       this.waitOpen.reject(err);
-      this.connectionListeners.forEach((listener) => listener());
       this.disconnect();
-
-      console.trace(err);
     });
   }
 
@@ -126,27 +148,38 @@ export class Connection {
     const conn = this.peer.connect(id, {
       reliable: true,
     });
-    await this.registerConnection(conn);
+
+    const unavailable = new Promise<never>((_, reject) => {
+      const onError = (err: PeerError<`${PeerErrorType}`>) => {
+        if (err.type === 'peer-unavailable') {
+          this.peer.off('error', onError);
+          reject(err);
+        }
+      };
+      this.peer.on('error', onError);
+      conn.once('open', () => this.peer.off('error', onError));
+      conn.once('close', () => this.peer.off('error', onError));
+    });
+
+    await Promise.race([this.registerConnection(conn), unavailable]);
     return conn;
   }
 
   disconnect() {
-    if (this._mode === 'disconnected') throw new Error('Already disconnected');
+    if (this.isDestroyed) return;
 
+    this.isDestroyed = true;
+    this.isReconnecting = false;
     this._mode = 'disconnected';
+
     this.getConnections().forEach((conn) =>
       conn.close({
         flush: true,
       }),
     );
-    this.connections = {};
-    this.connectionListeners = [];
-    for (const listener of this.listeners) {
-      listener({ type: 'CONNECTION_CLOSED', payload: null }, null);
-    }
-    this.listeners = [];
-    this.peer.disconnect();
-    this.peer.destroy();
+
+    if (!this.peer.destroyed) this.peer.destroy();
+    else this.cleanup();
   }
 
   /* utils */
@@ -185,15 +218,46 @@ export class Connection {
   }
 
   /* privates */
+  private async reconnectLoop() {
+    if (this.isDestroyed || this.isReconnecting || this.peer.destroyed) return;
+    this.isReconnecting = true;
+
+    let attempt = 0;
+    while (
+      !this.isDestroyed &&
+      this.peer.disconnected &&
+      !this.peer.destroyed
+    ) {
+      attempt += 1;
+      const factor = 2 ** (attempt - 1);
+      const backoff = Math.min(30_000, 1_000 * factor);
+      console.warn(`Music Together: reconnect attempt ${attempt}...`);
+      try {
+        this.peer.reconnect();
+      } catch (err) {
+        console.error('Music Together: reconnect() threw', err);
+      }
+      await new Promise<void>((resolve) => setTimeout(resolve, backoff));
+    }
+
+    this.isReconnecting = false;
+  }
+
+  private cleanup() {
+    this._mode = 'disconnected';
+    this.connections = {};
+
+    for (const listener of this.listeners) {
+      listener({ type: 'CONNECTION_CLOSED', payload: null }, null);
+    }
+    this.listeners = [];
+
+    this.connectionListeners.forEach((listener) => listener());
+    this.connectionListeners = [];
+  }
+
   private async registerConnection(conn: DataConnection) {
     return new Promise<DataConnection>((resolve, reject) => {
-      this.peer.once('error', (err) => {
-        reject(err);
-        this.connectionListeners.forEach((listener) => listener());
-
-        this.disconnect();
-      });
-
       conn.on('open', () => {
         this.connections[conn.connectionId] = conn;
         resolve(conn);
@@ -218,12 +282,7 @@ export class Connection {
       });
 
       const onClose = (
-        err?: PeerError<
-          | 'not-open-yet'
-          | 'message-too-big'
-          | 'negotiation-failed'
-          | 'connection-closed'
-        >,
+        err?: PeerError<`${DataConnectionErrorType | BaseConnectionErrorType}`>,
       ) => {
         if (conn.open) {
           conn.close();

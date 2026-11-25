@@ -162,7 +162,7 @@
                 "force-show": "Zeigen erzwungen",
                 "hide": "Versteckt",
                 "label": "Gefällt mir-Knopf",
-                "swap": "Gefällt mir-Knopf Reihenfolge ändern"
+                "swap": "Reihenfolge der Like-Buttons tauschen"
               },
               "remove-upgrade-button": "Upgrade-Schaltfläche entfernen",
               "theme": {
@@ -171,8 +171,8 @@
                     "cancel": "Abbrechen",
                     "remove": "Entfernen"
                   },
-                  "remove-theme": "Sind Sie sich sicher, dass Sie das benutzerdefinierte Aussehen ändern wollen?",
-                  "remove-theme-message": "Dies wird das benutzerdefinierte Aussehen löschen"
+                  "remove-theme": "Sind Sie sicher, dass Sie das benutzerdefinierte Design entfernen möchten?",
+                  "remove-theme-message": "Dies entfernt das benutzerdefinierte Design"
                 },
                 "label": "Thema",
                 "submenu": {
@@ -218,13 +218,6 @@
     "ad-speedup": {
       "description": "Wenn eine Werbung spielt, stummt es das Audio und setzt die Wiedergabegeschwindigkeit auf 16x",
       "name": "Werbungsbeschleunigung"
-    },
-    "adblocker": {
-      "description": "Blockiere jegliche Werbung und Tracker",
-      "menu": {
-        "blocker": "Abfangmethode"
-      },
-      "name": "Werbeblocker"
     },
     "album-actions": {
       "description": "Fügt Undislike, Dislike, Like und Unlike-Knöpfe hinzu, welche sich auf alle Lieder in einer Playlist oder Album auswirken",
@@ -414,7 +407,7 @@
       }
     },
     "clock": {
-      "description": "Füge eine Uhr der Navigationsleiste hinzu",
+      "description": "Füge eine Uhr zur Navigationsleiste hinzu",
       "menu": {
         "format": {
           "24-hour-format": "24-Stunden Format",
@@ -458,7 +451,7 @@
       "name": "Benutzerdefiniertes Ausgabegerät",
       "prompt": {
         "device-selector": {
-          "label": "Wähle das Ausgabegerät, welches benutzt werden soll",
+          "label": "Wähle das Ausgabegerät, das genutzt werden soll",
           "title": "Wähle ein Ausgabegerät"
         }
       }
@@ -503,6 +496,13 @@
           "title": "Inaktivitätstimeout setzen"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Blockiert jegliches Tracking",
+      "menu": {
+        "blocker": "Blocker"
+      },
+      "name": "Verhindere Tracking"
     },
     "downloader": {
       "backend": {
@@ -786,8 +786,8 @@
         "listenbrainz": {
           "token": "ListenBrainz-Benutzer-Token eintragen"
         },
-        "scrobble-alternative-artist": "Benutze Alternative Künstler",
-        "scrobble-alternative-title": "Nutze alternative Titel",
+        "scrobble-alternative-artist": "Alternative Künstler verwenden",
+        "scrobble-alternative-title": "Alternative Titel verwenden",
         "scrobble-other-media": "Andere Medien scrobbeln"
       },
       "name": "Scrobbler",
@@ -838,7 +838,7 @@
     "synced-lyrics": {
       "description": "Bietet synchronisierte Liedtexte zu Songs, verwendet Anbieter wie LRClib.",
       "errors": {
-        "fetch": "⚠️ - \tBeim Abrufen des Liedtexts ist ein Fehler aufgetreten. \n\tBitte versuchen Sie es später nochmal.",
+        "fetch": "⚠️ \tBeim Abrufen des Liedtexts ist ein Fehler aufgetreten.\n\tBitte versuchen Sie es später erneut.",
         "not-found": "⚠️ Kein Text für diesen Song gefunden."
       },
       "menu": {
@@ -891,9 +891,9 @@
           "tooltip": "Auf die Millisekunde genau berechnen, wann die nächste Zeile angezeigt werden soll (Kann Einfluss auf die Leistung haben)"
         },
         "preferred-provider": {
-          "label": "bevorzugter Anbieter",
+          "label": "Bevorzugter Anbieter",
           "none": {
-            "label": "Nichts",
+            "label": "Keiner",
             "tooltip": "Kein bevorzugter Anbieter"
           },
           "tooltip": "Standardanbieter auswählen"
@@ -904,7 +904,7 @@
         },
         "show-lyrics-even-if-inexact": {
           "label": "Songtext anzeigen, auch wenn er ungenau ist",
-          "tooltip": "Die Erweiterung sucht mit anderen Suchparameter nochmals, wenn der Song nicht gefunden wurde.\nEs kann sein, dass das Ergebnis von der zweiten Anfrage nicht genau ist."
+          "tooltip": "Wenn das Lied nicht gefunden wird, versucht das Plugin es erneut mit anderen Suchparametern.\nEs kann sein, dass die Ergebnisse des zweiten Versuchs ungenau sind."
         },
         "show-time-codes": {
           "label": "Zeitkodierungen anzeigen",
@@ -917,7 +917,7 @@
         "normal": "Songtext neu laden"
       },
       "warnings": {
-        "duration-mismatch": "⚠️ - Es kann sein, dass die Synchronization nicht stimmt, da die Songdauer nicht übereinstimmt.",
+        "duration-mismatch": "⚠️ - Der Songtext ist möglicherweise nicht synchron, weil die Dauer nicht übereinstimmt.",
         "inexact": "⚠️ - Es ist möglich, dass der Songtext für diesen Song nicht übereinstimmt.",
         "instrumental": "⚠️ - Das ist ein instrumentales Lied"
       }
@@ -943,9 +943,14 @@
           "label": "Typ",
           "submenu": {
             "acrylic": "Acryl",
+            "content": "Inhalte",
+            "fullscreen-ui": "Vollbild-Benutzeroberfläche",
             "mica": "Mica",
             "none": "Nichts",
-            "tabbed": "Mit Registerkarten"
+            "tabbed": "Mit Registerkarten",
+            "under-page": "Unter-Seite",
+            "under-window": "Unter-Fenster",
+            "window": "Fenster"
           }
         }
       },
@@ -956,7 +961,7 @@
       "name": "Tuna OBS"
     },
     "unobtrusive-player": {
-      "description": "Verhindert das Aufpoppen des Spielers während ein Song gespielt wird",
+      "description": "Verhindert, dass der Player beim Abspielen eines Songs in den Vordergrund springt",
       "name": "Unauffälliger Player"
     },
     "video-toggle": {

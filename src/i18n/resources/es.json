@@ -2,9 +2,9 @@
   "common": {
     "console": {
       "plugins": {
-        "execute-failed": "Error al ejecutar el complemento {{pluginName}}::{{contextName}}",
-        "executed-at-ms": "Complemento {{pluginName}}::{{contextName}} se ejecutó en {{ms}}ms",
-        "initialize-failed": "Error al inicializar el complemento \"{{pluginName}}\"",
+        "execute-failed": "Error en executar el complement {{pluginName}}::{{contextName}}",
+        "executed-at-ms": "Complement {{pluginName}}::{{contextName}} executat a {{ms}}ms",
+        "initialize-failed": "Error en inicializar el complement \"{{pluginName}}\"",
         "load-all": "Cargando todos los complementos",
         "load-failed": "Error al cargar el complemento \"{{pluginName}}\"",
         "loaded": "Complementos \"{{pluginName}}\" cargados",
@@ -218,13 +218,6 @@
     "ad-speedup": {
       "description": "Si se reproduce un anuncio, silencia el audio y fija la velocidad de reproducción en 16x",
       "name": "Aumento de la velocidad de anuncios"
-    },
-    "adblocker": {
-      "description": "Bloquear todos los anuncios y el rastreo por defecto",
-      "menu": {
-        "blocker": "Bloqueador"
-      },
-      "name": "Bloqueador de anuncios"
     },
     "album-actions": {
       "description": "Añade los botones \"Quitar no me gusta\", \"No me gusta\", \"Me gusta\" y \"Quitar me gusta\" para aplicarlos a todas las canciones de una lista de reproducción o un álbum",
@@ -503,6 +496,13 @@
           "title": "Establecer tiempo de inactividad"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Bloquea todo el rastreo de forma predeterminada",
+      "menu": {
+        "blocker": "Bloqueador"
+      },
+      "name": "No rastrear"
     },
     "downloader": {
       "backend": {
@@ -943,9 +943,14 @@
           "label": "Tipo",
           "submenu": {
             "acrylic": "Acrílico",
+            "content": "Contenido",
+            "fullscreen-ui": "Interfaz en pantalla completa",
             "mica": "Mica",
             "none": "Ninguno",
-            "tabbed": "Con pestañas"
+            "tabbed": "Con pestañas",
+            "under-page": "Pié de pagina",
+            "under-window": "Debajo de ventana",
+            "window": "Ventana"
           }
         }
       },

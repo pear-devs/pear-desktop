@@ -4,11 +4,11 @@
       "plugins": {
         "execute-failed": "外掛 {{pluginName}} 無法執行::{{contextName}}",
         "executed-at-ms": "外掛 {{pluginName}}::{{contextName}} 用了 {{ms}} 毫秒來執行",
-        "initialize-failed": "初始化外掛「{{pluginName}}」失敗",
+        "initialize-failed": "初始化外掛 \"{{pluginName}}\" 失敗",
         "load-all": "正在載入所有外掛",
-        "load-failed": "載入外掛「{{pluginName}}」失敗",
+        "load-failed": "載入外掛 \"{{pluginName}}\" 失敗",
         "loaded": "外掛「{{pluginName}}」已載入",
-        "unload-failed": "移除外掛「{{pluginName}}」失敗",
+        "unload-failed": "移除外掛 \"{{pluginName}}\" 失敗",
         "unloaded": "外掛「{{pluginName}}」已移除"
       }
     }
@@ -36,7 +36,7 @@
         "details": "沒有回應錯誤！\n{{error}}"
       },
       "when-ready": {
-        "clearing-cache-after-20s": "清理程式的快取資料"
+        "clearing-cache-after-20s": "清除應用程式快取中"
       },
       "window": {
         "tried-to-render-offscreen": "視窗正嘗試在螢幕外繪製，視窗大小 = {{windowSize}}，螢幕大小 = {{displaySize}}，位置 = {{position}}"
@@ -53,14 +53,14 @@
           "later": "稍後",
           "restart-now": "立即重啟"
         },
-        "detail": "外掛 \"{{pluginName}}\" 需要重啟應用才會生效",
+        "detail": "外掛 \"{{pluginName}}\" 需重啟應用後才會生效",
         "message": "\"{{pluginName}}\" 需要重啟應用",
-        "title": "需要重啟應用"
+        "title": "需要重新啟動應用程式"
       },
       "unresponsive": {
         "buttons": {
           "quit": "離開",
-          "relaunch": "重啟應用",
+          "relaunch": "重啟應用程式",
           "wait": "稍等"
         },
         "detail": "造成不便我們深表歉意！請選擇動作:",
@@ -71,7 +71,7 @@
         "buttons": {
           "disable": "停用新版本通知",
           "download": "前往下載",
-          "ok": "略過"
+          "ok": "忽略"
         },
         "detail": "新版本已經推出，前往下載 {{downloadLink}}",
         "message": "有新版本可用",
@@ -87,7 +87,7 @@
           "go-back": "返回上一頁",
           "go-forward": "前往下一頁",
           "quit": "退出",
-          "restart": "重啟應用"
+          "restart": "重啟應用程式"
         }
       },
       "options": {
@@ -100,16 +100,16 @@
               "disable-hardware-acceleration": "關閉硬體加速",
               "edit-config-json": "編輯 config.json",
               "override-user-agent": "覆寫使用者代理",
-              "restart-on-config-changes": "設定變更時自動重啟應用",
+              "restart-on-config-changes": "設定變更時自動重啟應用程式",
               "set-proxy": {
                 "label": "設定代理伺服器",
                 "prompt": {
-                  "label": "輸入代理伺服器位置：（留空以停用本設定）",
-                  "placeholder": "例: SOCKS5://127.0.0.1:9999",
+                  "label": "輸入代理伺服器位址：（留空以停用本設定）",
+                  "placeholder": "範例: SOCKS5://127.0.0.1:9999",
                   "title": "設定代理伺服器"
                 }
               },
-              "toggle-dev-tools": "開發人員工具"
+              "toggle-dev-tools": "切換開發人員工具"
             }
           },
           "always-on-top": "最上層顯示",
@@ -153,8 +153,8 @@
               "custom-window-title": {
                 "label": "自訂窗口標題",
                 "prompt": {
-                  "label": "輸入自訂視窗標題: (留空將其停用)",
-                  "placeholder": "例如: {{applicationName}}"
+                  "label": "輸入自訂視窗標題: (留空以停用)",
+                  "placeholder": "範例: {{applicationName}}"
                 }
               },
               "like-buttons": {
@@ -172,7 +172,7 @@
                     "remove": "確定移除"
                   },
                   "remove-theme": "確定要移除自訂主題嗎？",
-                  "remove-theme-message": "這將會移除自訂主題"
+                  "remove-theme-message": "這會移除自訂主題"
                 },
                 "label": "主題",
                 "submenu": {
@@ -205,7 +205,7 @@
       "next": "下一首",
       "play-pause": "播放／暫停",
       "previous": "上一首",
-      "quit": "關閉",
+      "quit": "結束",
       "restart": "重新啟動應用程式",
       "show": "顯示視窗",
       "tooltip": {
@@ -218,13 +218,6 @@
     "ad-speedup": {
       "description": "使用 16 倍速播放及靜音來跳過廣告片段",
       "name": "加速略過"
-    },
-    "adblocker": {
-      "description": "阻擋所有廣告",
-      "menu": {
-        "blocker": "阻擋方式"
-      },
-      "name": "廣告攔截器"
     },
     "album-actions": {
       "description": "新增支援對整個播放清單或專輯\"喜歡／不喜歡\"\"取消喜歡／取消不喜歡\"的按鈕",
@@ -323,7 +316,7 @@
           "label": "主機名稱"
         },
         "https": {
-          "label": "HTTPS 及 憑證",
+          "label": "HTTPS & 憑證",
           "submenu": {
             "cert": {
               "dialogTitle": "選擇憑證檔案",
@@ -377,7 +370,7 @@
           "title": "Proxy 主機名稱"
         },
         "port": {
-          "label": "本地 Proxy 伺服器連接埠（需要重啟應用）：",
+          "label": "本地 Proxy 伺服器連接埠 (需要重啟應用程式):",
           "title": "Proxy 連接埠"
         }
       }
@@ -503,6 +496,13 @@
           "title": "設定閒置狀態時長"
         }
       }
+    },
+    "do-not-track": {
+      "description": "啟動時阻擋所有追蹤",
+      "menu": {
+        "blocker": "內容阻擋器"
+      },
+      "name": "請勿追蹤"
     },
     "downloader": {
       "backend": {
@@ -943,9 +943,14 @@
           "label": "樣式",
           "submenu": {
             "acrylic": "壓克力(Acrylic)",
+            "content": "內容",
+            "fullscreen-ui": "全螢幕界面",
             "mica": "雲母(Mica)",
             "none": "無",
-            "tabbed": "分頁式(Tabbed)"
+            "tabbed": "分頁式(Tabbed)",
+            "under-page": "在頁面底下",
+            "under-window": "在視窗底下",
+            "window": "視窗"
           }
         }
       },

@@ -219,13 +219,6 @@
       "description": "Si une publicité apparaît, le son est coupé et la vitesse de lecture est réglée sur 16x",
       "name": "Accélérer les publicités"
     },
-    "adblocker": {
-      "description": "Bloquer toutes les annonces et le suivi par défaut",
-      "menu": {
-        "blocker": "Bloqueur"
-      },
-      "name": "Bloqueur de publicités"
-    },
     "album-actions": {
       "description": "Ajoute les boutons Dislike, Undislike, Like, et Unlike à appliquer sur toutes les chansons dans un playlist ou un album.",
       "name": "Actions d'Album"
@@ -503,6 +496,13 @@
           "title": "Définir le délai d'inactivité"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Bloque tous les traqueurs par défaut",
+      "menu": {
+        "blocker": "Bloqueur"
+      },
+      "name": "Ne pas traquer"
     },
     "downloader": {
       "backend": {
@@ -943,9 +943,14 @@
           "label": "Type",
           "submenu": {
             "acrylic": "Acrylique",
+            "content": "Contenu",
+            "fullscreen-ui": "Interface plein écran",
             "mica": "Mica",
             "none": "Aucun",
-            "tabbed": "À onglets"
+            "tabbed": "À onglets",
+            "under-page": "Sous la page",
+            "under-window": "Sous la fenêtre",
+            "window": "Fenêtre"
           }
         }
       },

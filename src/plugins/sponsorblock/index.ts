@@ -1,13 +1,12 @@
 import is from 'electron-is';
 
+import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 
 import { sortSegments } from './segments';
 
-import { t } from '@/i18n';
-
-import type { GetPlayerResponse } from '@/types/get-player-response';
 import type { Segment, SkipSegment } from './types';
+import type { GetPlayerResponse } from '@/types/get-player-response';
 
 export type SponsorBlockPluginConfig = {
   enabled: boolean;

@@ -1,12 +1,12 @@
 import { createEffect, createMemo, createSignal, Show } from 'solid-js';
 
+import { config } from '../renderer';
 import {
   canonicalize,
   convertChineseCharacter,
   romanize,
   simplifyUnicode,
 } from '../utils';
-import { config } from '../renderer';
 
 interface PlainLyricsProps {
   line: string;

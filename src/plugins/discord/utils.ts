@@ -1,10 +1,10 @@
-import { HANGUL_FILLER } from './constants';
-
 import { APPLICATION_NAME } from '@/i18n';
 
-import type { GatewayActivityButton } from 'discord-api-types/v10';
-import type { SongInfo } from '@/providers/song-info';
+import { HANGUL_FILLER } from './constants';
+
 import type { DiscordPluginConfig } from './index';
+import type { SongInfo } from '@/providers/song-info';
+import type { GatewayActivityButton } from 'discord-api-types/v10';
 
 /**
  * Truncates a string to a specified length, adding ellipsis if truncated.
@@ -25,8 +25,11 @@ export const truncateString = (str: string, length: number): string => {
  * @param fallback - A fallback string to use if the input is empty or whitespace. Defaults to 'undefined'.
  * @returns The sanitized string, compliant with Discord's requirements.
  */
-export function sanitizeActivityText(input: string | undefined, fallback: string = 'undefined'): string {
-  const text = (input && input.trim()) ? input.trim() : fallback.trim();
+export function sanitizeActivityText(
+  input: string | undefined,
+  fallback: string = 'undefined',
+): string {
+  const text = input && input.trim() ? input.trim() : fallback.trim();
   let safeString = truncateString(text, 128);
 
   if (safeString.length === 0) {

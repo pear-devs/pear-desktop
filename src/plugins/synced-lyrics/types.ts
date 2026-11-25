@@ -1,5 +1,5 @@
-import type { SongInfo } from '@/providers/song-info';
 import type { ProviderName } from './providers';
+import type { SongInfo } from '@/providers/song-info';
 
 export type SyncedLyricsPluginConfig = {
   enabled: boolean;

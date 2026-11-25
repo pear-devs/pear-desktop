@@ -161,7 +161,8 @@
                 "default": "Alapértelmezett",
                 "force-show": "Megjelenítés kényszerítése",
                 "hide": "Elrejtése",
-                "label": "Reakció gombok"
+                "label": "Reakció gombok",
+                "swap": "A reakció gombok sorrendjének megcserélése"
               },
               "remove-upgrade-button": "Előfizetés gombjának eltávolítása",
               "theme": {
@@ -218,13 +219,6 @@
       "description": "Ha egy hirdetés elindul, elnémítja a hangot, és a lejátszási sebességet 16x-ra állítja",
       "name": "Hirdetésgyorsítás"
     },
-    "adblocker": {
-      "description": "Alapértelmezetten minden hirdetés és nyomkövetés blokkolása",
-      "menu": {
-        "blocker": "Blokkolási módszer"
-      },
-      "name": "Reklámblokkoló"
-    },
     "album-actions": {
       "description": "Hozzáadja a Tetszik, Nem tetszik és ezek visszavonására szolgáló gombokat, hogy ezeket az összes dalra alkalmazhasd egy lejátszási listán vagy albumban",
       "name": "Album műveletek"
@@ -237,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Keresősáv színezésének engedélyezése"
       },
       "name": "Album színtéma"
     },
@@ -320,6 +315,22 @@
         "hostname": {
           "label": "Kiszolgáló név"
         },
+        "https": {
+          "label": "HTTPS és tanúsítványok",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "HTTPS tanúsítványfájl kiválasztása",
+              "label": "Tanúsítványfájl (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "HTTPS engedélyezése"
+            },
+            "key": {
+              "dialogTitle": "HTTPS privát kulcsfájl kiválasztása",
+              "label": "Privát kulcsfájl (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
@@ -341,6 +352,7 @@
       "name": "Hangtömörítő"
     },
     "auth-proxy-adapter": {
+      "description": "Hitelesítési proxy szolgáltatások használatának támogatása",
       "menu": {
         "disable": "Proxy adapder kikapcsolása",
         "enable": "Proxy adapter bekapcsolása",
@@ -351,6 +363,7 @@
           "label": "Port"
         }
       },
+      "name": "Auth Proxy Adapter",
       "prompt": {
         "hostname": {
           "label": "Adjon meg egy hosztnevet a lokális proxy szerverhez (újraindítást igényel):",
@@ -393,6 +406,17 @@
         "no-captions": "Nincsenek elérhető feliratok ehhez a dalhoz"
       }
     },
+    "clock": {
+      "description": "Óra hozzáadása a navigációs sávhoz",
+      "menu": {
+        "format": {
+          "24-hour-format": "24 órás időformátum",
+          "display-seconds": "Másodpercek megjelenítése",
+          "label": "Formátum"
+        }
+      },
+      "name": "Óra"
+    },
     "compact-sidebar": {
       "description": "Mindig becsukva tartja a bal oldali savót, ahol a Kezdőlap. Felfedezés, Könyvtár és egyebek láthatók. (Amit bármikor ki lehet nyitni)",
       "name": "Kompakt oldalsáv"
@@ -420,6 +444,7 @@
       }
     },
     "custom-output-device": {
+      "description": "Egyéni kimeneti hangeszköz beállítása a zenékhez",
       "menu": {
         "device-selector": "Eszköz kiválasztása"
       },
@@ -458,8 +483,8 @@
         "set-status-display-type": {
           "label": "Tevékenység szöveg",
           "submenu": {
-            "artist": "Hallgatja: {artist}",
             "application": "Hallgatja: {{applicationName}}",
+            "artist": "Hallgatja: {artist}",
             "title": "Hallgatja: {song title}"
           }
         }
@@ -471,6 +496,13 @@
           "title": "Inaktivitási időkorlát beállítása"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Minden nyomkövetés letiltása alapértelmezetten",
+      "menu": {
+        "blocker": "Blokkoló"
+      },
+      "name": "Nyomkövetés tiltása"
     },
     "downloader": {
       "backend": {
@@ -730,7 +762,12 @@
         }
       },
       "description": "Lehetővé teszi a videó minőségének megváltoztatását egy gombbal a videó fedvényen",
-      "name": "Videóminőség módosító"
+      "name": "Videóminőség módosító",
+      "renderer": {
+        "quality-settings-button": {
+          "label": "Minőségbeállítások megnyitása"
+        }
+      }
     },
     "scrobbler": {
       "description": "Scrobbling támogatás hozzáadása (pl. last.fm, ListenBrainz)",
@@ -749,6 +786,7 @@
         "listenbrainz": {
           "token": "Add meg a ListenBrainz felhasználói tokenedet"
         },
+        "scrobble-alternative-artist": "Alternatív előadók használata",
         "scrobble-alternative-title": "Alternatív címek használata",
         "scrobble-other-media": "Más média scrobbelése"
       },
@@ -804,6 +842,24 @@
         "not-found": "⚠️ - Ehhez a dalhoz nem található dalszöveg."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Kínai írásjelek átalakítása",
+          "submenu": {
+            "disabled": {
+              "label": "kikapcsolva",
+              "tooltip": "Kínai írásjelek átalakításának kikapcsolása"
+            },
+            "simplified-to-traditional": {
+              "label": "Egyszerűsített kínairól hagyományosra",
+              "tooltip": "Egyszerűsített kínai átalakítása hagyományos kínaira"
+            },
+            "traditional-to-simplified": {
+              "label": "Hagyományosról egyszerűsítettre",
+              "tooltip": "Hagyományos kínai írásjelek átalakítása egyszerűsített kínaira"
+            }
+          },
+          "tooltip": "Kínai írásjelek átalakítása hagyományosra vagy egyszerűsítettre"
+        },
         "default-text-string": {
           "label": "Alapértelmezett karakter a dalszövegek között",
           "tooltip": "Válassza ki az alapértelmezett karaktert, amelyet a dalszövegek közötti szünethez használni szeretne"
@@ -833,6 +889,14 @@
         "precise-timing": {
           "label": "Dalszöveg tökéletes szinkronizálása",
           "tooltip": "Számítsa ki az aktuális sor megjelenítésének idejét ezredmásodperc pontossággal (ez kis mértékben befolyásolhatja a teljesítményt)"
+        },
+        "preferred-provider": {
+          "label": "Előnyben részesített szolgáltató",
+          "none": {
+            "label": "Nincs",
+            "tooltip": "Nincs előnyben részesített szolgáltató"
+          },
+          "tooltip": "Alapértelmezett szolgáltató kiválasztása"
         },
         "romanization": {
           "label": "Latin betűs szöveg",
@@ -866,6 +930,32 @@
       "description": "macOS felhasználók számára hozzáad egy widgetet a TouchBar-hoz",
       "name": "TouchBar"
     },
+    "transparent-player": {
+      "description": "Átlátszóvá teszi az alkalmazás ablakát",
+      "menu": {
+        "opacity": {
+          "label": "Átlátszóság",
+          "submenu": {
+            "percent": "{{opacity}}%"
+          }
+        },
+        "type": {
+          "label": "Típus",
+          "submenu": {
+            "acrylic": "Akril",
+            "content": "Tartalom",
+            "fullscreen-ui": "Teljes képernyős felület",
+            "mica": "Mica",
+            "none": "Nincs",
+            "tabbed": "Tabbed",
+            "under-page": "Oldal alatt",
+            "under-window": "Ablak alatt",
+            "window": "Ablak"
+          }
+        }
+      },
+      "name": "Áttetsző lejátszó"
+    },
     "tuna-obs": {
       "description": "Integráció az OBS Tuna pluginjával",
       "name": "Tuna OBS"
@@ -897,7 +987,8 @@
       },
       "name": "Videó váltó",
       "templates": {
-        "button-song": "Zeneszám"
+        "button-song": "Zeneszám",
+        "button-video": "Videó"
       }
     },
     "visualizer": {

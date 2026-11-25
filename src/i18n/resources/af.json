@@ -1,0 +1,108 @@
+{
+  "common": {
+    "console": {
+      "plugins": {
+        "execute-failed": "Kon nie inprop {{pluginName}}::{{contextName}} uitvoer nie",
+        "executed-at-ms": "Inprop {{pluginName}}::{{contextName}} uitgevoer teen {{ms}}ms",
+        "initialize-failed": "Kon nie invoegtoepassing \"{{pluginName}}\" inisialiseer nie",
+        "load-all": "Laai tans alle inproppe",
+        "loaded": "Inprop \"{{pluginName}}\" gelaai"
+      }
+    }
+  },
+  "language": {
+    "local-name": "Die plaaslike naam van die taal.\n\ne.g. 日本語, 한국어, English, Русский",
+    "name": "Engelse naam van die taal.\n\ne.g. Japanese, Korean, English, Russian"
+  },
+  "main": {
+    "console": {
+      "did-finish-load": {
+        "dev-tools": "Klaar gelaai. Devtools oopgemaak"
+      },
+      "i18n": {
+        "loaded": "i18n gelaai"
+      },
+      "unresponsive": {
+        "details": "Onreagerende fout\n{{error}}"
+      },
+      "when-ready": {
+        "clearing-cache-after-20s": "Besig om cachegeheue skoon te maak"
+      },
+      "window": {
+        "tried-to-render-offscreen": "Venster het probeer om die beeld van die skerm af te vertoon, vensterGrootte={{windowSize}}, skermGrootte={{displaySize}}, posisie={{position}}"
+      }
+    },
+    "dialog": {
+      "hide-menu-enabled": {
+        "detail": "Kieslys is verborge, gebruik 'Alt' om dit te wys (of 'Escape' as die  In-Toep Kieslys gebruik word)",
+        "message": "Wegsteek Kieslys is aangesit",
+        "title": "Wegsteek Kieslys Aangesit"
+      },
+      "need-to-restart": {
+        "buttons": {
+          "later": "Later",
+          "restart-now": "Herbegin nou"
+        },
+        "detail": "{{pluginName}} Inprop benodig n herbegin om n uitwerking te he",
+        "message": "{{pluginName}} moet herbegin",
+        "title": "Herbegin is vereis"
+      },
+      "unresponsive": {
+        "buttons": {
+          "quit": "Bedank",
+          "relaunch": "Herbegin",
+          "wait": "Wag"
+        },
+        "detail": "Ons is jammer vir die ongerief! kies asseblief wat om te doen:",
+        "message": "Die applikasie is onreagerend",
+        "title": "Venster Onreagerend"
+      },
+      "update-available": {
+        "buttons": {
+          "disable": "Deaktiveer Bywerkings",
+          "download": "Laai af",
+          "ok": "Ok"
+        },
+        "detail": "n Nuwe weergawe is beskikbaar en kan afgelaai word by {{downloadLink}}",
+        "message": "n Nuwe weergawe is beskikbaar",
+        "title": "Bywerking Beskikbaar"
+      }
+    },
+    "menu": {
+      "about": "Inligting",
+      "navigation": {
+        "label": "Navigasie",
+        "submenu": {
+          "copy-current-url": "Kopieer huidige skakel (URL)",
+          "go-back": "Gaan terug",
+          "go-forward": "Gaan voort",
+          "quit": "Gaan uit",
+          "restart": "Herbegin Toep"
+        }
+      },
+      "options": {
+        "label": "Opsies",
+        "submenu": {
+          "advanced-options": {
+            "label": "Gevorderde opsies",
+            "submenu": {
+              "auto-reset-app-cache": "Stel Toep cachegeheue terug wanneer toep begin"
+            }
+          },
+          "visual-tweaks": {
+            "submenu": {
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "Kanselleer",
+                    "remove": "Verwyder"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

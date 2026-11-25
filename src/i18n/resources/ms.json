@@ -161,7 +161,8 @@
                 "default": "Lalai",
                 "force-show": "Paksa pamer",
                 "hide": "Sembunyi",
-                "label": "Butang suka"
+                "label": "Butang suka",
+                "swap": "Tukar susunan butang Suka"
               },
               "remove-upgrade-button": "Buang butang naik taraf",
               "theme": {
@@ -218,13 +219,6 @@
       "description": "Jika iklan dimainkan, ia meredamkan audio dan menetapkan kelajuan main semula kepada 16x",
       "name": "Kelajuan Iklan"
     },
-    "adblocker": {
-      "description": "Sekat semua iklan dan penjejakan di luar kotak",
-      "menu": {
-        "blocker": "Penyekat"
-      },
-      "name": "Penyekat Iklan"
-    },
     "album-actions": {
       "description": "Menambah butang Suka dan Tidak Suka pada semua lagu dalam senarai main atau album",
       "name": "Tindakan Album"
@@ -237,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Benarkan penyesuaian tema bar carian"
       },
       "name": "Tema Warna Album"
     },
@@ -320,6 +315,22 @@
         "hostname": {
           "label": "Nama perumah"
         },
+        "https": {
+          "label": "HTTPS & Sijil",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Pilih fail sijil HTTPS",
+              "label": "Fail sijil (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Dayakan HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Pilih fail kunci peribadi HTTPS",
+              "label": "Fail kunci peribadi (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
@@ -395,6 +406,17 @@
         "no-captions": "Tiada sarikata untuk lagu ini"
       }
     },
+    "clock": {
+      "description": "Tambah jam pada bar navigasi",
+      "menu": {
+        "format": {
+          "24-hour-format": "Format 24 jam",
+          "display-seconds": "Paparkan saat",
+          "label": "Format"
+        }
+      },
+      "name": "Jam"
+    },
     "compact-sidebar": {
       "description": "Sentiasa tetapkan bar sisi dalam mod padat",
       "name": "Bar Sisi Padat"
@@ -461,8 +483,8 @@
         "set-status-display-type": {
           "label": "Teks status",
           "submenu": {
-            "artist": "Sedang mendengar {artist}",
             "application": "Mendengar {{applicationName}}",
+            "artist": "Sedang mendengar {artist}",
             "title": "Sedang mendengar {tajuk lagu}"
           }
         }
@@ -474,6 +496,13 @@
           "title": "Tetapkan tamat masa tidak aktif"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Sekat semua penjejakan secara lalai",
+      "menu": {
+        "blocker": "Penyekat"
+      },
+      "name": "Jangan Jejak"
     },
     "downloader": {
       "backend": {
@@ -557,10 +586,12 @@
             "bass-booster": "Penggalak bass"
           }
         }
-      }
+      },
+      "name": "Penyama Bunyi"
     },
     "exponential-volume": {
-      "description": "Menjadikan gelangsar kelantangan eksponen supaya lebih mudah memilih kelantangan yang lebih rendah."
+      "description": "Menjadikan gelangsar kelantangan eksponen supaya lebih mudah memilih kelantangan yang lebih rendah.",
+      "name": "volum eksponen"
     },
     "in-app-menu": {
       "description": "Memberi bar menu rupa yang mewah, gelap atau warna album",
@@ -625,8 +656,77 @@
     "navigation": {
       "name": "Navigasi"
     },
+    "no-google-login": {
+      "name": "Tiada Log masuk Google"
+    },
     "notifications": {
+      "description": "Papar notifikasi apabila lagu mula bermain( notifikasi interaktif tersedia di Windows)",
+      "menu": {
+        "interactive": "Notifikasi Interaktif",
+        "interactive-settings": {
+          "label": "Tetapan Interaktif",
+          "submenu": {
+            "hide-button-text": "Sorokkan butang teks",
+            "refresh-on-play-pause": "Segarkan butang Main/Jeda",
+            "tray-controls": "Buka/Tutup pada klik dulang"
+          }
+        },
+        "priority": "Utamakan Notifikasi",
+        "toast-style": "Notifikasi Toast",
+        "unpause-notification": "Papar notifikasi apabila dinyahjeda"
+      },
       "name": "Notifikasi"
+    },
+    "performance-improvement": {
+      "description": "Tingkatkan prestasi dengan menghidupkan skrip experimental",
+      "name": "Penambahbaikkan prestasi [Beta]"
+    },
+    "picture-in-picture": {
+      "description": "Benarkan untuk tukar aplikasi kepada mod tingkap",
+      "menu": {
+        "always-on-top": "Sentiasa berada diatas",
+        "hotkey": {
+          "label": "kekunci pintas",
+          "prompt": {
+            "keybind-options": {
+              "hotkey": "Kekunci Pintas"
+            },
+            "label": "Pilih satu Kekunci Pintas untuk menogol mod tingkap",
+            "title": "Kekunci Pintas mod tingkap"
+          }
+        },
+        "save-window-position": "Simpan posisi Tingkap",
+        "save-window-size": "Simpan Saiz Tingkap",
+        "use-native-pip": "Guna pelayar asli mod tingkap"
+      },
+      "name": "Mod tingkap",
+      "templates": {
+        "button": "Pemain mini"
+      }
+    },
+    "playback-speed": {
+      "description": "Dengar laju, Dengar perlahan! Tambah peluncur yang mengawal kelajuan lagu",
+      "name": "Kelajuan Musik",
+      "templates": {
+        "button": "Laju"
+      }
+    },
+    "precise-volume": {
+      "description": "Kawal kelantangan dengan tepat menggunakan roda tetikus/kekunci pintas, dilengkapi HUD khas dan langkah pelarasan kelantangan yang boleh diubah suai",
+      "menu": {
+        "arrows-shortcuts": "Kawalan panah pepintas tempatan",
+        "custom-volume-steps": "set langkah pelarasan kelantangan",
+        "global-shortcuts": "Global Kekunci Pintas"
+      },
+      "name": "Kelantangan tepat",
+      "prompt": {
+        "global-shortcuts": {
+          "keybind-options": {
+            "decrease": "Mengurangkan Kelantangan",
+            "increase": "Menaikan Kelantangan"
+          }
+        }
+      }
     },
     "scrobbler": {
       "dialog": {

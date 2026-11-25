@@ -1,16 +1,44 @@
-import Store from 'electron-store';
+import { blockers } from '@/plugins/do-not-track/types';
+import { DefaultPresetList, type Preset } from '@/plugins/downloader/types';
 
 import { defaultConfig as defaults } from './defaults';
 
-import { DefaultPresetList, type Preset } from '@/plugins/downloader/types';
-
+import type { TrackerBlockerConfig } from '@/plugins/do-not-track';
 import type { SyncedLyricsPluginConfig } from '@/plugins/synced-lyrics/types';
+
+// HACK: electron-store is ESM, but rolldown has a bug that prevents it from being imported properly in CommonJS context, so we have to use require here
+/* oxlint-disable typescript/no-require-imports */
+const Store = (
+  require('electron-store') as {
+    default: typeof import('electron-store').default;
+  }
+).default;
+/* oxlint-enable typescript/no-require-imports */
 
 export type IStore = InstanceType<
   typeof import('conf').default<Record<string, unknown>>
 >;
 
 const migrations = {
+  '>=3.12.1'(store: IStore) {
+    // A removed lyrics provider can no longer be the preferred one.
+    const key = 'plugins.synced-lyrics.preferredProvider';
+    const preferred = store.get(key) as string | undefined;
+    const removedProviders = ['MusixMatch'];
+    if (preferred && removedProviders.includes(preferred)) {
+      store.delete(key);
+    }
+  },
+  '>=3.12.0'(store: IStore) {
+    const blockerConfig = store.get('plugins.adblocker') as TrackerBlockerConfig;
+    if (blockerConfig) {
+      if (!Object.values(blockers).includes(blockerConfig.blocker)) {
+        blockerConfig.blocker = blockers.InPlayer;
+      }
+      store.set('plugins.do-not-track', blockerConfig);
+      store.delete('plugins.adblocker');
+    }
+  },
   '>=3.10.0'(store: IStore) {
     const lyricGeniusConfig = store.get('plugins.lyrics-genius') as
       | {
@@ -234,7 +262,7 @@ const migrations = {
     }
 
     // Include custom options
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // oxlint-disable-next-line typescript/no-explicit-any
     const plugins: Record<string, any> = {
       adblocker: {
         enabled: true,
@@ -249,7 +277,7 @@ const migrations = {
     };
 
     for (const enabledPlugin of enabledPlugins) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      // oxlint-disable-next-line typescript/no-unsafe-assignment
       plugins[enabledPlugin] = {
         ...plugins[enabledPlugin],
         enabled: true,
@@ -267,4 +295,4 @@ export const store = new Store({
   },
   clearInvalidConfig: false,
   migrations,
-}) as Store & IStore;
+});

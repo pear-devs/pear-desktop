@@ -1,16 +1,14 @@
+import { createSignal, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 
-import { createSignal, Show } from 'solid-js';
-
-import forceHideStyle from './force-hide.css?inline';
-import buttonSwitcherStyle from './button-switcher.css?inline';
-
-import { createPlugin } from '@/utils';
-import { moveVolumeHud as preciseVolumeMoveVolumeHud } from '@/plugins/precise-volume/renderer';
-import { type ThumbnailElement } from '@/types/get-player-response';
 import { t } from '@/i18n';
 import { type MenuTemplate } from '@/menu';
+import { moveVolumeHud as preciseVolumeMoveVolumeHud } from '@/plugins/precise-volume/renderer';
+import { type ThumbnailElement } from '@/types/get-player-response';
+import { createPlugin } from '@/utils';
 
+import buttonSwitcherStyle from './button-switcher.css?inline';
+import forceHideStyle from './force-hide.css?inline';
 import { VideoSwitchButton } from './templates/video-switch-button';
 
 export type VideoTogglePluginConfig = {
@@ -166,7 +164,7 @@ export default createPlugin({
         : () => {};
 
       const player = document.querySelector<
-        HTMLElement & { videoMode_: boolean }
+        HTMLElement & { videoMode: boolean }
       >('ytmusic-player');
       const video = document.querySelector<HTMLVideoElement>('video');
 
@@ -235,10 +233,10 @@ export default createPlugin({
       };
 
       const videoStarted = () => {
-        if (
-          api.getPlayerResponse().videoDetails.musicVideoType ===
-          'MUSIC_VIDEO_TYPE_ATV'
-        ) {
+        const videoDetails = api.getPlayerResponse()?.videoDetails;
+        if (!videoDetails) return;
+
+        if (videoDetails.musicVideoType === 'MUSIC_VIDEO_TYPE_ATV') {
           // Video doesn't exist -> switch to song mode
           setVideoState(false);
           // Hide toggle button
@@ -292,7 +290,7 @@ export default createPlugin({
 
       const observeThumbnail = () => {
         const playbackModeObserver = new MutationObserver((mutations) => {
-          if (!player?.videoMode_) {
+          if (!player?.videoMode) {
             return;
           }
 

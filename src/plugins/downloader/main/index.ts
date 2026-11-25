@@ -1,28 +1,29 @@
+import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { randomBytes } from 'node:crypto';
 
+import { Mutex } from 'async-mutex';
+import { BotGuardClient, getChallenge } from 'bgutils-js/botguard';
+import { buildURL, getHeaders } from 'bgutils-js/utils';
+import { WebPoMinter } from 'bgutils-js/webpo';
 import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
+import is from 'electron-is';
+import filenamify from 'filenamify';
+import lazyVar from 'lazy-var';
+import NodeID3 from 'node-id3';
 import {
   Innertube,
   UniversalCache,
   Utils,
   YTNodes,
   Platform,
+  type YT,
+  type YTMusic,
+  type Types,
 } from '\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js';
-import is from 'electron-is';
-import filenamify from 'filenamify';
-import { Mutex } from 'async-mutex';
-import * as NodeID3 from 'node-id3';
-import { BG, type BgConfig } from 'bgutils-js';
-import { lazy } from 'lazy-var';
 
-import {
-  cropMaxWidth,
-  getFolder,
-  sendFeedback as sendFeedback_,
-  setBadge,
-} from './utils';
+import { t } from '@/i18n';
+import { getNetFetchAsFetch } from '@/plugins/utils/main';
 import {
   registerCallback,
   cleanupName,
@@ -31,25 +32,29 @@ import {
   type SongInfo,
   SongInfoEvent,
 } from '@/providers/song-info';
-import { getNetFetchAsFetch } from '@/plugins/utils/main';
-import { t } from '@/i18n';
+
+import {
+  cropMaxWidth,
+  getFolder,
+  sendFeedback as sendFeedback_,
+  setBadge,
+} from './utils';
 
 import { DefaultPresetList, type Preset, VideoFormatList } from '../types';
 
 import type { DownloaderPluginConfig } from '../index';
 import type { BackendContext } from '@/types/contexts';
 import type { GetPlayerResponse } from '@/types/get-player-response';
-import type { FormatOptions } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/types';
-import type { VideoInfo } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/\u0079\u006f\u0075\u0074\u0075\u0062\u0065';
-import type { PlayerErrorMessage } from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/nodes';
 import type {
-  TrackInfo,
-  Playlist,
-} from 'node_modules/\u0079\u006f\u0075\u0074\u0075\u0062\u0065i.js/dist/src/parser/ytmusic';
+  FetchFunction,
+  IBotguardClientSideBgChallenge,
+  IntegrityTokenData,
+  WebPoSignalOutput,
+} from 'bgutils-js/shared-types';
 
 type CustomSongInfo = SongInfo & { trackId?: string };
 
-const ffmpeg = lazy(async () =>
+const ffmpeg = lazyVar.lazy(async () =>
   (await import('@ffmpeg.wasm/main')).createFFmpeg({
     log: false,
     logger() {}, // Console.log,
@@ -58,25 +63,74 @@ const ffmpeg = lazy(async () =>
 );
 const ffmpegMutex = new Mutex();
 
-Platform.shim.eval = async (data: Types.BuildScriptResult, env: Record<string, Types.VMPrimative>) => {
+Platform.shim.eval = (
+  data: Types.BuildScriptResult,
+  env: Record<string, Types.VMPrimative>,
+) => {
   const properties = [];
 
-  if(env.n) {
-    properties.push(`n: exportedVars.nFunction("${env.n}")`)
+  if (env.n) {
+    properties.push(`n: exportedVars.nFunction("${env.n}")`);
   }
 
   if (env.sig) {
-    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`)
+    properties.push(`sig: exportedVars.sigFunction("${env.sig}")`);
   }
 
   const code = `${data.output}\nreturn { ${properties.join(', ')} }`;
 
+  // oxlint-disable-next-line typescript/no-unsafe-return,typescript/no-implied-eval,typescript/no-unsafe-call
   return new Function(code)();
-}
+};
 
 let yt: Innertube;
 let win: BrowserWindow;
 let playingUrl: string;
+
+const generatePoToken = async (
+  fetchFunction: FetchFunction,
+  requestKey: string,
+  identifier: string,
+  { program, globalName }: IBotguardClientSideBgChallenge,
+) => {
+  const botguard = await BotGuardClient.create({
+    program,
+    globalName,
+    globalObject: globalThis,
+  });
+
+  const webPoSignalOutput: WebPoSignalOutput = [];
+  const botguardResponse = await botguard.snapshot({ webPoSignalOutput });
+
+  const integrityTokenResponse = await fetchFunction(buildURL('GenerateIT'), {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify([requestKey, botguardResponse]),
+  });
+  const [
+    integrityToken,
+    estimatedTtlSecs,
+    mintRefreshThreshold,
+    websafeFallbackToken,
+  ] = (await integrityTokenResponse.json()) as [
+    IntegrityTokenData['integrityToken'],
+    IntegrityTokenData['estimatedTtlSecs'],
+    IntegrityTokenData['mintRefreshThreshold'],
+    IntegrityTokenData['websafeFallbackToken'],
+  ];
+
+  const webPoMinter = await WebPoMinter.create(
+    {
+      integrityToken,
+      estimatedTtlSecs,
+      mintRefreshThreshold,
+      websafeFallbackToken,
+    },
+    webPoSignalOutput,
+  );
+
+  return webPoMinter.mintAsWebsafeString(identifier);
+};
 
 const isPremium = async () => {
   // If signed out, it is understood as non-premium
@@ -109,7 +163,7 @@ const sendError = (error: Error, source?: string) => {
   const songNameMessage = source ? `\nin ${source}` : '';
   const cause = error.cause
     ? `\n\n${
-        // eslint-disable-next-line @typescript-eslint/no-base-to-string,@typescript-eslint/restrict-template-expressions
+        // oxlint-disable-next-line typescript/no-base-to-string,typescript/restrict-template-expressions
         error.cause instanceof Error ? error.cause.toString() : error.cause
       }`
     : '';
@@ -169,6 +223,7 @@ export const onMainLoad = async ({
         width,
         height,
         console,
+        settings: { enableIframePageLoading: true },
       });
       const document = window.document;
 
@@ -177,33 +232,27 @@ export const onMainLoad = async ({
         document,
       });
 
-      const bgConfig: BgConfig = {
-        fetch: getNetFetchAsFetch(),
-        globalObj: globalThis,
-        identifier: visitorData,
-        requestKey,
-      };
+      const fetchFunction = getNetFetchAsFetch();
 
-      const bgChallenge = await BG.Challenge.create(bgConfig);
+      const bgChallenge = await getChallenge({ requestKey, fetchFunction });
       const interpreterJavascript =
-        bgChallenge?.interpreterJavascript
-          .privateDoNotAccessOrElseSafeScriptWrappedValue;
+        bgChallenge.interpreterJavascript
+          ?.privateDoNotAccessOrElseSafeScriptWrappedValue;
 
       if (interpreterJavascript) {
         // This is a workaround to run the interpreterJavascript code
         // Maybe there is a better way to do this (e.g. https://github.com/Siubaak/sval ?)
-        // eslint-disable-next-line @typescript-eslint/no-implied-eval,@typescript-eslint/no-unsafe-call
+        // oxlint-disable-next-line typescript/no-implied-eval,typescript/no-unsafe-call
         new Function(interpreterJavascript)();
 
-        const poTokenResult = await BG.PoToken.generate({
-          program: bgChallenge.program,
-          globalName: bgChallenge.globalName,
-          bgConfig,
-        }).finally(() => {
+        yt.session.po_token = await generatePoToken(
+          fetchFunction,
+          requestKey,
+          visitorData,
+          bgChallenge,
+        ).finally(() => {
           cleanUp(globalThis);
         });
-
-        yt.session.po_token = poTokenResult.poToken;
       } else {
         cleanUp(globalThis);
       }
@@ -229,8 +278,8 @@ export const onConfigChange = (newConfig: DownloaderPluginConfig) => {
 
 export async function downloadSong(
   url: string,
-  playlistFolder: string | undefined = undefined,
-  trackId: string | undefined = undefined,
+  playlistFolder?: string ,
+  trackId?: string ,
   increasePlaylistProgress: (value: number) => void = () => {},
 ) {
   let resolvedName;
@@ -250,8 +299,8 @@ export async function downloadSong(
 
 export async function downloadSongFromId(
   id: string,
-  playlistFolder: string | undefined = undefined,
-  trackId: string | undefined = undefined,
+  playlistFolder?: string ,
+  trackId?: string ,
   increasePlaylistProgress: (value: number) => void = () => {},
 ) {
   let resolvedName;
@@ -328,8 +377,8 @@ async function downloadSongUnsafe(
   isId: boolean,
   idOrUrl: string,
   setName: (name: string) => void,
-  playlistFolder: string | undefined = undefined,
-  trackId: string | undefined = undefined,
+  playlistFolder?: string ,
+  trackId?: string ,
   increasePlaylistProgress: (value: number) => void = () => {},
 ) {
   const sendFeedback = (message: unknown, progress?: number) => {
@@ -354,7 +403,7 @@ async function downloadSongUnsafe(
       );
   }
 
-  let info: TrackInfo | VideoInfo = await yt.music.getInfo(id);
+  let info: YTMusic.TrackInfo | YT.VideoInfo = await yt.music.getInfo(id);
 
   if (!info) {
     throw new Error(
@@ -377,7 +426,7 @@ async function downloadSongUnsafe(
   setName(name);
 
   let playabilityStatus = info.playability_status;
-  let bypassedResult = null;
+  let bypassedResult: YT.VideoInfo;
   if (playabilityStatus?.status === 'LOGIN_REQUIRED') {
     // Try to bypass the age restriction
     bypassedResult = await getAndroidTvInfo(id);
@@ -394,7 +443,7 @@ async function downloadSongUnsafe(
 
   if (playabilityStatus?.status === 'UNPLAYABLE') {
     const errorScreen =
-      playabilityStatus.error_screen as PlayerErrorMessage | null;
+      playabilityStatus.error_screen as YTNodes.PlayerErrorMessage | null;
     throw new Error(
       `[${playabilityStatus.status}] ${errorScreen?.reason.text}: ${errorScreen?.subreason.text}`,
     );
@@ -410,7 +459,7 @@ async function downloadSongUnsafe(
     presetSetting = DefaultPresetList['mp3 (256kbps)'];
   }
 
-  const downloadOptions: FormatOptions = {
+  const downloadOptions: Types.FormatOptions = {
     type: (await isPremium()) ? 'audio' : 'video+audio', // Audio, video or video+audio
     quality: 'best', // Best, bestefficiency, 144p, 240p, 480p, 720p and so on.
     format: 'any', // Media container format
@@ -421,8 +470,7 @@ async function downloadSongUnsafe(
   let targetFileExtension: string;
   if (!presetSetting?.extension) {
     targetFileExtension =
-      VideoFormatList.find((it) => it.itag === format.itag)?.container ??
-      'mp3';
+      VideoFormatList.find((it) => it.itag === format.itag)?.container ?? 'mp3';
   } else {
     targetFileExtension = presetSetting?.extension ?? 'mp3';
   }
@@ -556,7 +604,7 @@ async function iterableStreamToProcessedUint8Array(
           }),
           ratio,
         );
-        increasePlaylistProgress(0.15 + ratio * 0.85);
+        increasePlaylistProgress(0.15 + (ratio * 0.85));
       });
 
       const safeVideoNameWithExtension = `${safeVideoName}.${extension}`;
@@ -656,7 +704,7 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
     }),
   );
   sendFeedback(t('plugins.downloader.backend.feedback.getting-playlist-info'));
-  let playlist: Playlist;
+  let playlist: YTMusic.Playlist;
   const items: YTNodes.MusicResponsiveListItem[] = [];
   try {
     playlist = await yt.music.getPlaylist(playlistId);
@@ -780,7 +828,7 @@ export async function downloadPlaylist(givenUrl?: string | URL) {
 
   const increaseProgress = (itemPercentage: number) => {
     const currentProgress = (counter - 1) / (items.length ?? 1);
-    const newProgress = currentProgress + progressStep * itemPercentage;
+    const newProgress = currentProgress + (progressStep * itemPercentage);
     win.setProgressBar(newProgress);
   };
 
@@ -850,10 +898,12 @@ const getPlaylistID = (aURL?: URL): string | null | undefined => {
 };
 
 const getVideoId = (url: URL | string): string | null => {
-  return new URL(url).searchParams.get('v');
+  const parsedUrl = URL.parse(url);
+  if (!parsedUrl) return null;
+  return parsedUrl.searchParams.get('v');
 };
 
-const getMetadata = (info: TrackInfo): CustomSongInfo => ({
+const getMetadata = (info: YTMusic.TrackInfo): CustomSongInfo => ({
   videoId: info.basic_info.id!,
   title: cleanupName(info.basic_info.title!),
   artist: cleanupName(info.basic_info.author!),
@@ -868,7 +918,7 @@ const getMetadata = (info: TrackInfo): CustomSongInfo => ({
 });
 
 // This is used to bypass age restrictions
-const getAndroidTvInfo = async (id: string): Promise<VideoInfo> => {
+const getAndroidTvInfo = async (id: string): Promise<YT.VideoInfo> => {
   // GetInfo 404s with the bypass, so we use getBasicInfo instead
   // that's fine as we only need the streaming data
   return await yt.getBasicInfo(id, {

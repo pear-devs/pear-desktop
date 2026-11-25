@@ -1,10 +1,10 @@
-import style from './style.css?inline';
+import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 
 import { onConfigChange, onMainLoad } from './main';
 import { onMenu } from './menu';
 import { onPlayerApiReady } from './renderer';
-import { t } from '@/i18n';
+import style from './style.css?inline';
 
 export type PictureInPicturePluginConfig = {
   'enabled': boolean;

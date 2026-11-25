@@ -42,8 +42,8 @@ export const LRC = {
         const { minutes, seconds, centiseconds } = match;
         const milliseconds = match.centiseconds.padEnd(3, '0');
         const timeInMs =
-          parseInt(minutes) * 60 * 1000 +
-          parseInt(seconds) * 1000 +
+          ((parseInt(minutes) * 60) * 1000) +
+          (parseInt(seconds) * 1000) +
           parseInt(milliseconds);
 
         timestamps.push({
@@ -75,8 +75,8 @@ export const LRC = {
         const { minutes, seconds, centiseconds, word } = groups!;
         const milliseconds = centiseconds.padEnd(3, '0');
         const timeInMs =
-          parseInt(minutes) * 60 * 1000 +
-          parseInt(seconds) * 1000 +
+          ((parseInt(minutes) * 60) * 1000) +
+          (parseInt(seconds) * 1000) +
           parseInt(milliseconds);
 
         return { timeInMs, word };

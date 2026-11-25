@@ -219,13 +219,6 @@
       "description": "Se viene riprodotto un annuncio, l'audio viene disattivato e viene impostata la velocità di riproduzione su 16x",
       "name": "Accelerazione ad"
     },
-    "adblocker": {
-      "description": "Blocca tutti gli annunci e i tracker",
-      "menu": {
-        "blocker": "Blocco"
-      },
-      "name": "Ad blocker"
-    },
     "album-actions": {
       "description": "Aggiunge i pulsanti Undislike, Dislike, Like e Unlike a tutti i brani di una playlist o di un album",
       "name": "Azioni album"
@@ -239,7 +232,7 @@
             "percent": "{{ratio}}%"
           }
         },
-        "enable-seekbar": "Abilita tematizzazione della seekbar"
+        "enable-seekbar": "Abilita tematizzazione della barra di regolazione"
       },
       "name": "Tema abbinato a colore album"
     },
@@ -503,6 +496,13 @@
           "title": "Imposta il timeout di inattività"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Disabilita tutti i tracker all'avvio",
+      "menu": {
+        "blocker": "Blocker"
+      },
+      "name": "Non tracciare"
     },
     "downloader": {
       "backend": {
@@ -842,6 +842,24 @@
         "not-found": "⚠️ Nessun testo trovato per questa canzone."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Convertire i caratteri Cinesi",
+          "submenu": {
+            "disabled": {
+              "label": "Disabilitato",
+              "tooltip": "Disabilita conversione caretteri Cinesi"
+            },
+            "simplified-to-traditional": {
+              "label": "Semplificato al Tradizionale",
+              "tooltip": "Converti Cinese Semplificato in Cinese Tradizionale"
+            },
+            "traditional-to-simplified": {
+              "label": "Da Tradizionale a Semplificato",
+              "tooltip": "Converti Cinese Tradizionale a Cinese Semplificato"
+            }
+          },
+          "tooltip": "Converti carettere Cinese da Tradizionale a Semplificato"
+        },
         "default-text-string": {
           "label": "Carattere predefinito tra i testi",
           "tooltip": "Scegliere il carattere predefinito da utilizzare per l'intervallo tra i testi"
@@ -925,9 +943,12 @@
           "label": "Tipo",
           "submenu": {
             "acrylic": "Acrilico",
+            "content": "Contenuto",
+            "fullscreen-ui": "Schermo intero",
             "mica": "Mica",
             "none": "Nessuno",
-            "tabbed": "In scheda"
+            "tabbed": "In scheda",
+            "window": "Finestra"
           }
         }
       },

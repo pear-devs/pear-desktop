@@ -28,12 +28,10 @@ win:
     - target: nsis-web
       arch:
         - x64
-        - ia32
         - arm64
     - target: portable
       arch:
         - x64
-        - ia32
         - arm64
   compression: maximum
 nsisWeb:
@@ -41,15 +39,15 @@ nsisWeb:
 linux:
   icon: assets/generated/icons/png
   category: AudioVideo
+  syncDesktopName: true
   desktop:
     entry:
-      StartupWMClass: "com.github.th_ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u005f\u006d\u0075\u0073\u0069\u0063"
+      StartupWMClass: "com.github.th-ch.\u0079\u006f\u0075\u0074\u0075\u0062\u0065\u002d\u006d\u0075\u0073\u0069\u0063"
   target:
     - target: AppImage
       arch:
         - x64
         - arm64
-        - armv7l
     - target: flatpak
       arch:
         - x64
@@ -57,7 +55,6 @@ linux:
       arch:
         - x64
         - arm64
-        - armv7l
     - target: rpm
       arch:
         - x64
@@ -69,12 +66,10 @@ linux:
       arch:
         - x64
         - arm64
-        - armv7l
     - target: tar.gz
       arch:
         - x64
         - arm64
-        - armv7l
 appImage:
   description: "\u0059\u006f\u0075\u0054\u0075\u0062\u0065\u0020\u004d\u0075\u0073\u0069\u0063 Desktop App bundled with custom plugins"
   category: AudioVideo

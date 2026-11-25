@@ -7,7 +7,7 @@
   & svg {
     width: 24px;
     height: 24px;
-    fill: rgba(255, 255, 255, .5);
+    fill: rgba(255, 255, 255, 0.5);
   }
 
   &:hover svg:hover {
@@ -22,7 +22,7 @@
 }
 
 .music-together-divider {
-  background-color: rgba(255, 255, 255, .15);
+  background-color: rgba(255, 255, 255, 0.15);
 }
 .music-together-divider.horizontal {
   width: 100%;
@@ -55,7 +55,6 @@
 }
 
 .music-together-spinner {
-
 }
 
 .music-together-popup {
@@ -78,7 +77,10 @@
     cursor: pointer;
   }
   &:hover {
-    background-color: var(--ytmusic-menu-item-hover-background-color, rgba(255,255,255,0.05));
+    background-color: var(
+      --ytmusic-menu-item-hover-background-color,
+      rgba(255, 255, 255, 0.05)
+    );
   }
 }
 
@@ -134,7 +136,7 @@
   width: 100%;
 
   font-size: 14px;
-  color: rgba(255, 255, 255, .5);
+  color: rgba(255, 255, 255, 0.5);
   text-align: center;
 }
 

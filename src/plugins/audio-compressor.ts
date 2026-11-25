@@ -1,6 +1,6 @@
-import { createPlugin } from '@/utils';
 import { t } from '@/i18n';
 import { type MusicPlayer } from '@/types/music-player';
+import { createPlugin } from '@/utils';
 
 const lazySafeTry = (...fns: (() => void)[]) => {
   for (const fn of fns) {
@@ -96,10 +96,17 @@ const audioCanPlayHandler = ({
 };
 
 const ensureAudioContextLoad = (playerApi: MusicPlayer) => {
-  if (playerApi.getPlayerState() !== 1 || storage.lastContext) return;
+  const videoDetails = playerApi.getPlayerResponse()?.videoDetails;
+  if (
+    !videoDetails ||
+    playerApi.getPlayerState() !== 1 ||
+    storage.lastContext
+  ) {
+    return;
+  }
 
   playerApi.loadVideoById(
-    playerApi.getPlayerResponse().videoDetails.videoId,
+    videoDetails.videoId,
     playerApi.getCurrentTime(),
     playerApi.getUserPlaybackQualityPreference(),
   );

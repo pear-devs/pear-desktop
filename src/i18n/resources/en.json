@@ -219,13 +219,6 @@
       "description": "If an ad play it mutes the audio and sets playback speed to 16x",
       "name": "Ad Speedup"
     },
-    "adblocker": {
-      "description": "Block all ads and tracking out of the box",
-      "menu": {
-        "blocker": "Blocker"
-      },
-      "name": "Ad Blocker"
-    },
     "album-actions": {
       "description": "Adds Undislike, Dislike, Like, and Unlike buttons to apply this to all songs in a playlist or album",
       "name": "Album Actions"
@@ -503,6 +496,13 @@
           "title": "Set inactivity timeout"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Block all tracking out of the box",
+      "menu": {
+        "blocker": "Blocker"
+      },
+      "name": "Do Not Track"
     },
     "downloader": {
       "backend": {
@@ -944,8 +944,13 @@
           "label": "Type",
           "submenu": {
             "acrylic": "Acrylic",
+            "content": "Content",
+            "fullscreen-ui": "Fullscreen UI",
             "mica": "Mica",
             "tabbed": "Tabbed",
+            "under-page": "Under Page",
+            "under-window": "Under Window",
+            "window": "Window",
             "none": "None"
           }
         }
