@@ -3,8 +3,7 @@
  * Sophisticated Media Volume Fading
  *
  * Requires browser support for:
- * - HTMLMediaElement
- * - requestAnimationFrame()
+ * - HTMLMediaElement (or anything else with a 0…1 `volume`)
  * - ES6
  *
  * Does not depend on any third-party library.
@@ -30,6 +29,15 @@ type VolumeLogger = <Params extends unknown[]>(
   message: string,
   ...args: Params
 ) => void;
+/** What a fader controls: a media element, or a gain applied elsewhere. */
+export interface VolumeControl {
+  volume: number;
+}
+
+// Fades run on a timer: requestAnimationFrame stops while the page is hidden
+// (minimized window), which left the video stuck at volume 0
+const UPDATE_INTERVAL_MS = 10;
+
 interface VolumeFaderOptions {
   /**
    * logging `function(stuff, …)` for execution information (default: no logging)
@@ -63,7 +71,7 @@ interface VolumeFade {
 
 // Main class
 export class VolumeFader {
-  private readonly media: HTMLMediaElement;
+  private readonly media: VolumeControl;
   private readonly logger: VolumeLogger | null;
   private scale: {
     internalToVolume: (level: number) => number;
@@ -72,23 +80,24 @@ export class VolumeFader {
   private fadeDuration: number = 1000;
   private active: boolean = false;
   private fade: VolumeFade | undefined;
+  private timer: ReturnType<typeof setTimeout> | undefined;
 
   /**
    * VolumeFader Constructor
    *
-   * @param media {HTMLMediaElement} - audio or video element to be controlled
+   * @param media {VolumeControl} - media element (or gain) to be controlled
    * @param options {Object} - an object with optional settings
    * @throws {TypeError} if options.initialVolume or options.fadeDuration are invalid
    *
    */
-  constructor(media: HTMLMediaElement, options: VolumeFaderOptions) {
-    // Passed media element of correct type?
-    if (media instanceof HTMLMediaElement) {
+  constructor(media: VolumeControl, options: VolumeFaderOptions) {
+    // Passed something with a volume?
+    if (media && typeof media.volume === 'number') {
       // Save reference to media element
       this.media = media;
     } else {
       // Abort and throw an exception
-      throw new TypeError('Media element expected!');
+      throw new TypeError('Media element or volume control expected!');
     }
 
     // Make sure options is an object
@@ -214,6 +223,7 @@ export class VolumeFader {
   stop() {
     // Set fader to be inactive
     this.active = false;
+    clearTimeout(this.timer);
 
     // Return instance for chaining
     return this;
@@ -293,9 +303,11 @@ export class VolumeFader {
 
   /**
    * Internal: Update media volume.
-   * (calls itself through requestAnimationFrame)
+   * (calls itself through a timer)
    */
   updateVolume() {
+    clearTimeout(this.timer);
+
     // Fader active and fade available to process?
     if (this.active && this.fade) {
       // Get current time
@@ -316,7 +328,7 @@ export class VolumeFader {
         this.media.volume = this.scale.internalToVolume(level);
 
         // Schedule next update
-        window.requestAnimationFrame(this.updateVolume.bind(this));
+        this.timer = setTimeout(() => this.updateVolume(), UPDATE_INTERVAL_MS);
       } else {
         // Log end of fade
         this.logger?.('Fade to ' + String(this.fade.volume.end) + ' complete.');
