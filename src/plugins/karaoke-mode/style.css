@@ -1,0 +1,112 @@
+#karaoke-mode {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-end: 8px;
+}
+
+#karaoke-mode .karaoke-mode-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ytmusic-text-primary, #fff);
+  cursor: pointer;
+}
+
+#karaoke-mode .karaoke-mode-button:hover {
+  background: hsla(0, 0%, 100%, 0.1);
+}
+
+#karaoke-mode .karaoke-mode-button svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+/* Karaoke not active (original mix playing): grey, struck-through icon */
+#karaoke-mode.inactive .karaoke-mode-button {
+  color: var(--ytmusic-text-secondary, #aaa);
+}
+
+#karaoke-mode.inactive .karaoke-mode-slider {
+  opacity: 0.5;
+}
+
+#karaoke-mode.inactive .karaoke-mode-button svg {
+  background: linear-gradient(
+    135deg,
+    transparent 46%,
+    currentColor 46%,
+    currentColor 54%,
+    transparent 54%
+  );
+  border-radius: 2px;
+}
+
+#karaoke-mode[data-state='error'] .karaoke-mode-button {
+  color: #ff6b6b;
+}
+
+/* Status dot on the button's corner */
+#karaoke-mode .karaoke-mode-button {
+  position: relative;
+}
+
+#karaoke-mode .karaoke-mode-status {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 9px;
+  height: 9px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  /* idle: not separated yet */
+  border: 2px solid #777;
+  background: #000;
+}
+
+#karaoke-mode[data-state='working'] .karaoke-mode-status {
+  border-color: #ffb300;
+  border-top-color: transparent;
+  animation: karaoke-mode-spin 0.8s linear infinite;
+}
+
+#karaoke-mode[data-state='ready'] .karaoke-mode-status {
+  border-color: #000;
+  background: #43d17a;
+}
+
+#karaoke-mode[data-state='error'] .karaoke-mode-status {
+  border-color: #000;
+  background: #ff6b6b;
+}
+
+/* Percentage next to the slider while separating */
+#karaoke-mode .karaoke-mode-progress {
+  min-width: 3ch;
+  font-size: 12px;
+  color: #ffb300;
+  font-variant-numeric: tabular-nums;
+}
+
+#karaoke-mode .karaoke-mode-progress:empty {
+  display: none;
+}
+
+#karaoke-mode .karaoke-mode-slider {
+  width: 72px;
+  accent-color: var(--ytmusic-text-primary, #fff);
+  cursor: pointer;
+}
+
+@keyframes karaoke-mode-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
