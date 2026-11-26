@@ -10,6 +10,9 @@ export type SyncedLyricsPluginConfig = {
   showLyricsEvenIfInexact: boolean;
   lineEffect: LineEffect;
   romanization: boolean;
+  bigRomanization: boolean;
+  /** Wider lyrics panel and much bigger lyrics */
+  bigLyrics?: boolean;
   convertChineseCharacter?:
     | 'simplifiedToTraditional'
     | 'traditionalToSimplified'

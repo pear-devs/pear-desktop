@@ -154,6 +154,27 @@ export const menu = async (
       },
     },
     {
+      label: t('plugins.synced-lyrics.menu.big-romanization.label'),
+      toolTip: t('plugins.synced-lyrics.menu.big-romanization.tooltip'),
+      type: 'checkbox',
+      checked: config.bigRomanization,
+      click(item) {
+        ctx.setConfig({
+          bigRomanization: item.checked,
+        });
+      },
+    },
+    {
+      label: t('plugins.synced-lyrics.menu.big-lyrics.label'),
+      toolTip: t('plugins.synced-lyrics.menu.big-lyrics.tooltip'),
+      type: 'checkbox',
+      checked: config.bigLyrics ?? false,
+      click(item) {
+        ctx.setConfig({ bigLyrics: item.checked });
+      },
+    },
+
+    {
       label: t('plugins.synced-lyrics.menu.convert-chinese-character.label'),
       toolTip: t(
         'plugins.synced-lyrics.menu.convert-chinese-character.tooltip',

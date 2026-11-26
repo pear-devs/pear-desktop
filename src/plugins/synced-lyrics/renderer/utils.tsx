@@ -12,7 +12,8 @@ import { detect } from 'tinyld';
 
 import { waitForElement } from '@/utils/wait-for-element';
 
-import { LyricsRenderer, setIsVisible } from './renderer';
+import { config, LyricsRenderer, setIsVisible } from './renderer';
+import { createMemo } from 'solid-js';
 
 export const selectors = {
   head: '#tabsContent > .tab-header:nth-of-type(2)',
@@ -262,3 +263,13 @@ export const romanize = async (line: string) => {
 
   return line;
 };
+
+export const createShowRomanization = (
+  text: () => string,
+  romanization: () => string
+) =>
+  createMemo(
+    () =>
+      !!config()?.romanization &&
+      simplifyUnicode(text()) !== simplifyUnicode(romanization())
+  );

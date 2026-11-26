@@ -9,7 +9,7 @@ import {
   canonicalize,
   convertChineseCharacter,
   romanize,
-  simplifyUnicode,
+  createShowRomanization,
 } from '../utils';
 
 interface SyncedLineProps {
@@ -103,6 +103,8 @@ export const SyncedLine = (props: SyncedLineProps) => {
     });
   });
 
+  const showRomanization = createShowRomanization(text, romanization);
+
   return (
     <Show fallback={<EmptyLine {...props} />} when={text()}>
       <div
@@ -132,9 +134,14 @@ export const SyncedLine = (props: SyncedLineProps) => {
                 'important',
               );
             }}
-            style={{ 'display': 'flex', 'flex-direction': 'column' }}
+            style={{
+              'display': 'flex',
+              'flex-direction': 'column',
+              '--lyrics-original-scale':
+                showRomanization() && config()?.bigRomanization ? '0.7' : '1',
+            }}
           >
-            <span>
+            <span class="original">
               <For each={text().split(' ')}>
                 {(word, index) => {
                   return (
@@ -155,12 +162,7 @@ export const SyncedLine = (props: SyncedLineProps) => {
               </For>
             </span>
 
-            <Show
-              when={
-                config()?.romanization &&
-                simplifyUnicode(text()) !== simplifyUnicode(romanization())
-              }
-            >
+            <Show when={showRomanization()}>
               <span class="romaji">
                 <For each={romanization().split(' ')}>
                   {(word, index) => {
