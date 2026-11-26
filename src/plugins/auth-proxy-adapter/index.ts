@@ -11,6 +11,20 @@ export default createPlugin({
   restartNeeded: true,
   config: defaultAuthProxyConfig,
   addedVersion: '3.10.X',
+  settings: [
+    {
+      type: 'text',
+      key: 'hostname',
+      label: () => t('plugins.auth-proxy-adapter.menu.hostname.label'),
+    },
+    {
+      type: 'number',
+      key: 'port',
+      label: () => t('plugins.auth-proxy-adapter.menu.port.label'),
+      min: 0,
+      max: 65535,
+    },
+  ],
   menu: onMenu,
   backend,
 });

@@ -21,6 +21,27 @@ export default createPlugin({
     output: 'default',
     devices: {},
   } as CustomOutputPluginConfig,
+  settings: [
+    {
+      type: 'select',
+      variant: 'dropdown',
+      key: 'output',
+      label: () => t('plugins.custom-output-device.menu.device-selector'),
+      restartNeeded: true,
+      options: async () => {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        return [
+          { value: 'default', label: () => 'Default' },
+          ...devices
+            .filter((d) => d.kind === 'audiooutput' && d.deviceId !== 'default')
+            .map((d) => ({
+              value: d.deviceId,
+              label: () => d.label || d.deviceId,
+            })),
+        ];
+      },
+    },
+  ],
   menu: ({ setConfig, getConfig, window }) => {
     const promptDeviceSelector = async () => {
       const options = await getConfig();
