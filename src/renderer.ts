@@ -310,7 +310,10 @@ async function onApiLoaded() {
   );
 
   const video = document.querySelector('video')!;
-  const audioContext = new AudioContext();
+  // Chromium's AVFoundation output requires playback latency for Spatial Audio.
+  const audioContext = new AudioContext({
+    latencyHint: window.electronIs.osx() ? 'playback' : 'interactive',
+  });
   const audioSource = audioContext.createMediaElementSource(video);
   audioSource.connect(audioContext.destination);
 
