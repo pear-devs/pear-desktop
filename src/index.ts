@@ -104,9 +104,23 @@ app.commandLine.appendSwitch('ozone-platform-hint', 'auto');
 // OverlayScrollbar: Required for overlay scrollbars
 // UseOzonePlatform: Required for Wayland support
 // WaylandWindowDecorations: Required for Wayland decorations
+const enabledFeatures = [
+  ...app.commandLine.getSwitchValue('enable-features').split(','),
+  'OverlayScrollbar',
+  'SharedArrayBuffer',
+  'UseOzonePlatform',
+  'WaylandWindowDecorations',
+];
+
+// AVFoundation exposes Spatial Audio controls for compatible headphones.
+// Reliable switching in third-party apps requires macOS 27 or later.
+if (is.macOS() && Number.parseInt(process.getSystemVersion(), 10) >= 27) {
+  enabledFeatures.push('MacAVFoundationPlayback');
+}
+
 app.commandLine.appendSwitch(
   'enable-features',
-  'OverlayScrollbar,SharedArrayBuffer,UseOzonePlatform,WaylandWindowDecorations',
+  [...new Set(enabledFeatures.filter(Boolean))].join(','),
 );
 
 // Disable Fluent Scrollbar (for OverlayScrollbar)
