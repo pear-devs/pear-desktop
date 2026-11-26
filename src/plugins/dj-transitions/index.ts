@@ -18,6 +18,8 @@ export type DjTransitionsPluginConfig = {
   fadeSeconds: number;
   /** Cut the low end during the transition and swap it back on the next track. */
   bassSwap: boolean;
+  /** Show the liquid-glass card while songs are being mixed. */
+  animation: boolean;
 };
 
 const FADE_LENGTHS = [3, 5, 8, 10, 12];
@@ -30,8 +32,10 @@ export default createPlugin({
     enabled: false,
     fadeSeconds: 8,
     bassSwap: true,
+    animation: true,
   },
   menu: async ({
+    window,
     getConfig,
     setConfig,
   }: MenuContext<DjTransitionsPluginConfig>): Promise<MenuTemplate> => {
@@ -56,6 +60,20 @@ export default createPlugin({
         checked: config.bassSwap,
         click(item) {
           setConfig({ bassSwap: item.checked });
+        },
+      },
+      {
+        label: t('plugins.dj-transitions.menu.animation'),
+        type: 'checkbox',
+        checked: config.animation,
+        click(item) {
+          setConfig({ animation: item.checked });
+        },
+      },
+      {
+        label: t('plugins.dj-transitions.menu.preview'),
+        click() {
+          window.webContents.send('dj-transitions:preview');
         },
       },
     ];

@@ -25,6 +25,12 @@ const CONTROLLER = String.raw`(() => {
   const player = () => document.querySelector('#movie_player');
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const median = (xs) => { const s = [...xs].sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
+  // Wall-clock ms at which audio for context time t is heard (as outputWallMs in beat.ts).
+  const outWall = (t) => {
+    const ts = st.ctx.getOutputTimestamp();
+    if (ts.performanceTime > 0) return performance.timeOrigin + ts.performanceTime + (t - ts.contextTime) * 1000;
+    return performance.timeOrigin + performance.now() + (t - st.ctx.currentTime) * 1000;
+  };
 
   const ensure = () => {
     const v = document.querySelector('video');
@@ -70,7 +76,7 @@ const CONTROLLER = String.raw`(() => {
       const lo = e.inputBuffer.getChannelData(0);
       const hi = e.inputBuffer.getChannelData(1);
       const offset = player().getCurrentTime() - st.ctx.currentTime;
-      rec.blocks.push({ ctx: e.playbackTime, off: offset, i: rec.low.length });
+      rec.blocks.push({ ctx: e.playbackTime, off: offset, i: rec.low.length, wall: outWall(e.playbackTime) });
       for (let f = 0; f < BLOCK / FRAME; f++) {
         let l = 0;
         let h = 0;
@@ -96,7 +102,7 @@ const CONTROLLER = String.raw`(() => {
   // running through a stall while the song doesn't, which would stretch the
   // rhythm, so the song/audio clock offset is logged per block and only the
   // longest stretch where it stays steady is used.
-  const record = async (seconds) => {
+  const record = async (seconds, minSeconds = 5) => {
     // Own buffer per recording: an overlapping job (fast skips) can replace
     // st.rec, but must not wipe this one.
     const rec = { low: [], high: [], blocks: [] };
@@ -118,11 +124,12 @@ const CONTROLLER = String.raw`(() => {
     const dt = FRAME / st.ctx.sampleRate;
     const from = seg[0].i;
     const to = seg[seg.length - 1].i + BLOCK / FRAME;
-    if ((to - from) * dt < 5) return null;
+    if ((to - from) * dt < minSeconds) return null;
     return {
       low: rec.low.slice(from, to),
       high: rec.high.slice(from, to),
       t0: seg[0].ctx + median(seg.map((b) => b.off)),
+      wallT0: median(seg.map((b) => b.wall - ((b.i - from) * dt * 1000))),
       dt,
       stalls: blocks.length - seg.length,
     };
@@ -270,7 +277,11 @@ const CONTROLLER = String.raw`(() => {
     return true;
   };
 
-  window.__djHidden = { prepare, scanTail, park, start, setRate, time, release };
+  // A short recording of what this player sends to the speakers, for the
+  // handoff check by ear (see audibleOffset in beat.ts).
+  const capture = (seconds) => record(seconds, 1.5);
+
+  window.__djHidden = { prepare, scanTail, park, start, setRate, time, release, capture };
   return true;
 })()`;
 
@@ -354,6 +365,7 @@ const HANDLERS = [
   'release',
   'cancel',
   'queue-next',
+  'capture',
 ] as const;
 
 export default createBackend({
@@ -419,7 +431,11 @@ export default createBackend({
     );
 
     handle('dj-transitions:rate', (rate: number) =>
-      run<boolean>(`window.__djHidden.setRate(${Number(rate)})`),
+      run<boolean>(`window.__djHidden?.setRate(${Number(rate)}) ?? false`),
+    );
+
+    handle('dj-transitions:capture', (seconds: number) =>
+      run(`window.__djHidden.capture(${Number(seconds)})`),
     );
 
     handle('dj-transitions:time', () =>

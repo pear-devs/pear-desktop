@@ -246,6 +246,84 @@ export const alignBars = (a: BarTemplate, b: BarTemplate) => {
   return b.anchor + ((best / BINS) * b.bar);
 };
 
+/*
+ * Checking two players by ear.
+ *
+ * Song-time clocks can agree while the audio doesn't: time-stretching
+ * (playbackRate with pitch preserved) and output buffering delay what's
+ * heard. So the handoff compares what each player actually sends to the
+ * speakers: frames stamped with their speaker (wall-clock) time via
+ * AudioContext.getOutputTimestamp(), cross-correlated by onset strength.
+ * NOTE: backend.ts stamps the hidden player's frames the same way.
+ */
+
+export type WallEnvelope = {
+  low: number[];
+  high: number[];
+  wallT0: number; // wall-clock ms when frame 0 reaches the speakers
+  dt: number; // seconds per frame
+};
+
+/** Wall-clock ms at which audio scheduled for context time `t` is heard. */
+export const outputWallMs = (ctx: AudioContext, t: number) => {
+  const ts = ctx.getOutputTimestamp();
+  if (ts.contextTime !== undefined && ts.performanceTime !== undefined && ts.performanceTime > 0) {
+    return performance.timeOrigin + ts.performanceTime + ((t - ts.contextTime) * 1000);
+  }
+  return performance.timeOrigin + performance.now() + ((t - ctx.currentTime) * 1000);
+};
+
+/**
+ * How far `a` is heard behind `b` (ms; negative = ahead), for two
+ * recordings of the same music, and how clearly that stands out.
+ */
+export const audibleOffset = (a: WallEnvelope, b: WallEnvelope, maxLagMs = 300) => {
+  const asEnv = (w: WallEnvelope): Envelope => ({ low: w.low, high: w.high, t0: 0, dt: w.dt });
+  const oa = onsetStrength(asEnv(a));
+  const ob = onsetStrength(asEnv(b));
+  const dtMs = a.dt * 1000;
+  const base = (a.wallT0 - b.wallT0) / dtMs; // b's frame heard with a's frame 0
+  const maxLag = Math.round(maxLagMs / dtMs);
+  const scores: number[] = [];
+  for (let lag = -maxLag; lag <= maxLag; lag++) {
+    let s = 0;
+    let n = 0;
+    for (let i = 0; i < oa.length; i++) {
+      const j = Math.round(i + base + lag);
+      if (j < 0 || j >= ob.length) continue;
+      s += oa[i] * ob[j];
+      n++;
+    }
+    scores.push(n > 50 ? s / n : -Infinity);
+  }
+  // Drums repeat every beat or half-beat, so a lag one hi-hat away can score
+  // nearly as well as the true one. The clocks already put the players within
+  // tens of ms, so prefer small offsets (Gaussian prior, σ = 80 ms).
+  const prior = (k: number) => Math.exp(-0.5 * ((((k - maxLag) * dtMs) / 80) ** 2));
+  let best = 0;
+  for (let k = 1; k < scores.length; k++) {
+    if (scores[k] * prior(k) > scores[best] * prior(best)) best = k;
+  }
+  if (!Number.isFinite(scores[best])) return null;
+  const finite = scores.filter(Number.isFinite);
+  const mean = finite.reduce((x, y) => x + y, 0) / finite.length;
+  const std =
+    Math.sqrt(finite.reduce((x, y) => x + ((y - mean) ** 2), 0) / finite.length) || 1e-12;
+  // Parabolic refinement around the peak.
+  const left = scores[best - 1];
+  const right = scores[best + 1];
+  let delta = 0;
+  if (Number.isFinite(left) && Number.isFinite(right)) {
+    const denom = left - (2 * scores[best]) + right;
+    if (denom !== 0) delta = clampNumber((0.5 * (left - right)) / denom, -0.5, 0.5);
+  }
+  const lag = best - maxLag + delta;
+  // a's frame i matches b's frame i + base + lag: a hears it -lag frames later.
+  return { offsetMs: -lag * dtMs, clarity: (scores[best] - mean) / std };
+};
+
+const clampNumber = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
+
 /**
  * Continuously measures both bands of a source, timestamped in song time.
  * `getSongTime` must return the player's per-song clock.
@@ -256,6 +334,8 @@ export class EnvelopeRecorder {
   private ctxT0 = 0; // audio-clock time of frame 0
   private readonly dt: number;
   private offsets: number[] = [];
+  private dropped = 0; // frames trimmed from the front since the last reset
+  private wallBases: number[] = []; // speaker wall-clock ms of absolute frame 0
   private readonly nodes: AudioNode[];
   private readonly processor: ScriptProcessorNode;
 
@@ -301,6 +381,11 @@ export class EnvelopeRecorder {
     }
     if (this.low.length === 0) this.ctxT0 = e.playbackTime;
 
+    // When this block reaches the speakers, in wall-clock ms.
+    const absIndex = this.dropped + this.low.length;
+    this.wallBases.push(outputWallMs(this.ctx, e.playbackTime) - (absIndex * this.dt * 1000));
+    if (this.wallBases.length > 64) this.wallBases.shift();
+
     for (let f = 0; f < BLOCK / FRAME; f++) {
       let l = 0;
       let h = 0;
@@ -320,6 +405,7 @@ export class EnvelopeRecorder {
       this.low.splice(0, drop);
       this.high.splice(0, drop);
       this.ctxT0 += drop * this.dt;
+      this.dropped += drop;
     }
   };
 
@@ -327,6 +413,36 @@ export class EnvelopeRecorder {
     this.low = [];
     this.high = [];
     this.offsets = [];
+    this.dropped = 0;
+    this.wallBases = [];
+  }
+
+  /** For diagnostics: the wall-clock span currently recorded. */
+  describeWall() {
+    if (!this.wallBases.length) return 'main has no recording';
+    const dtMs = this.dt * 1000;
+    const base = median(this.wallBases);
+    const from = base + (this.dropped * dtMs);
+    return `main ${from.toFixed(0)}–${(from + (this.low.length * dtMs)).toFixed(0)}`;
+  }
+
+  /**
+   * The recorded frames heard (at the speakers) between wall-clock times
+   * startMs and endMs, for comparing against another player by ear.
+   */
+  wallWindow(startMs: number, endMs: number): WallEnvelope | null {
+    if (!this.wallBases.length || !this.low.length) return null;
+    const dtMs = this.dt * 1000;
+    const base = median(this.wallBases);
+    const k0 = Math.max(0, Math.ceil((startMs - base) / dtMs) - this.dropped);
+    const k1 = Math.min(this.low.length, Math.floor((endMs - base) / dtMs) - this.dropped);
+    if (k1 - k0 < 10) return null;
+    return {
+      low: this.low.slice(k0, k1),
+      high: this.high.slice(k0, k1),
+      wallT0: base + ((this.dropped + k0) * dtMs),
+      dt: this.dt,
+    };
   }
 
   /** The last `seconds` of envelope, timestamped in song time. */
