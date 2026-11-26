@@ -11,10 +11,14 @@ export let defaultTrustedTypePolicy: Pick<
 
 export const registerWindowDefaultTrustedTypePolicy = () => {
   if (window.trustedTypes && window.trustedTypes.createPolicy) {
-    defaultTrustedTypePolicy = window.trustedTypes.createPolicy('default', {
-      createHTML: (input) => input,
-      createScriptURL: (input) => input,
-      createScript: (input) => input,
-    });
+    try {
+      defaultTrustedTypePolicy = window.trustedTypes.createPolicy('default', {
+        createHTML: (input) => input,
+        createScriptURL: (input) => input,
+        createScript: (input) => input,
+      });
+    } catch {
+      // A default policy may already exist; renderer handles a missing policy.
+    }
   }
 };

@@ -283,7 +283,13 @@ async function onApiLoaded() {
 
   window.ipcRenderer.on(
     'peard:search',
-    async (_, query: string, params?: string, continuation?: string) => {
+    async (
+      _,
+      query: string,
+      params?: string,
+      continuation?: string,
+      id?: string,
+    ) => {
       const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
       const searchBox =
         document.querySelector<SearchBoxElement>('ytmusic-search-box');
@@ -305,7 +311,7 @@ async function onApiLoaded() {
         suggestStats: searchBox.getSearchboxStats(),
       });
 
-      window.ipcRenderer.send('peard:search-results', result);
+      window.ipcRenderer.send('peard:search-results', result, id);
     },
   );
 

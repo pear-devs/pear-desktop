@@ -1,8 +1,9 @@
 {
   "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false
+  },
   "exclude": ["./dist"],
-  "include": [
-    "playwright.config.ts",
-    "./tests/**/*"
-  ]
+  "include": ["playwright.config.ts", "./tests/**/*"]
 }

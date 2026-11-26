@@ -15,14 +15,14 @@ const loadedPluginMap: Record<
 const createContext = (id: string): PreloadContext<PluginConfig> => ({
   getConfig: async () =>
     deepmerge(
-      (await allPlugins())[id].config ?? { enabled: false },
+      (await allPlugins())[id]?.config ?? { enabled: false },
       config.get(`plugins.${id}`) ?? {},
     ) as PluginConfig,
   setConfig: async (newConfig) => {
     config.setPartial(
       `plugins.${id}`,
       newConfig,
-      (await allPlugins())[id].config,
+      (await allPlugins())[id]?.config,
     );
   },
 });
@@ -85,15 +85,15 @@ export const loadAllPreloadPlugins = async () => {
 
   for (const [pluginId, pluginDef] of Object.entries(await preloadPlugins())) {
     const config = deepmerge(
-      pluginDef.config ?? { enable: false },
+      pluginDef.config ?? { enabled: false },
       pluginConfigs[pluginId] ?? {},
     );
 
     if (config.enabled) {
-      forceLoadPreloadPlugin(pluginId);
+      await forceLoadPreloadPlugin(pluginId);
     } else {
       if (loadedPluginMap[pluginId]) {
-        forceUnloadPreloadPlugin(pluginId);
+        await forceUnloadPreloadPlugin(pluginId);
       }
     }
   }

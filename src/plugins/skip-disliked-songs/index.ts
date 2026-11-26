@@ -7,6 +7,7 @@ export default createPlugin<
   unknown,
   {
     observer?: MutationObserver;
+    stopRequested?: boolean;
     start(): void;
     stop(): void;
   }
@@ -16,14 +17,20 @@ export default createPlugin<
   restartNeeded: false,
   renderer: {
     start() {
+      this.stopRequested = false;
       waitForElement<HTMLElement>('#like-button-renderer').then(
         (dislikeBtn) => {
+          if (this.stopRequested || !dislikeBtn) return;
+
+          let lastStatus = dislikeBtn.getAttribute('like-status');
           this.observer = new MutationObserver(() => {
-            if (dislikeBtn?.getAttribute('like-status') == 'DISLIKE') {
+            const status = dislikeBtn.getAttribute('like-status');
+            if (status === 'DISLIKE' && lastStatus !== 'DISLIKE') {
               document
                 .querySelector<HTMLButtonElement>('yt-icon-button.next-button')
                 ?.click();
             }
+            lastStatus = status;
           });
           this.observer.observe(dislikeBtn, {
             attributes: true,
@@ -34,7 +41,9 @@ export default createPlugin<
       );
     },
     stop() {
+      this.stopRequested = true;
       this.observer?.disconnect();
+      this.observer = undefined;
     },
   },
 });

@@ -1,29 +1,34 @@
 // This is used for to control the songs
+import { randomUUID } from 'node:crypto';
+
 import { type BrowserWindow, ipcMain } from 'electron';
 
 import { LikeType } from '@/types/datahost-get-state';
 
 // see protocol-handler.ts
-type ArgsType<T> = T | string[] | undefined;
+type ArgsType<T> = T | string | string[] | undefined;
 
 const parseNumberFromArgsType = (args: ArgsType<number>) => {
-  if (typeof args === 'number') {
-    return args;
-  } else if (Array.isArray(args)) {
-    return Number(args[0]);
-  } else {
-    return null;
+  const value = typeof args === 'object' && args !== null ? args[0] : args;
+  if (typeof value === 'number') {
+    return value;
   }
+  if (typeof value === 'string') {
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
 };
 
 const parseBooleanFromArgsType = (args: ArgsType<boolean>) => {
-  if (typeof args === 'boolean') {
-    return args;
-  } else if (Array.isArray(args)) {
-    return args[0] === 'true';
-  } else {
-    return null;
+  const value = typeof args === 'object' && args !== null ? args[0] : args;
+  if (typeof value === 'boolean') {
+    return value;
   }
+  if (typeof value === 'string') {
+    return value === 'true';
+  }
+  return null;
 };
 
 const parseStringFromArgsType = (args: ArgsType<string>) => {
@@ -49,7 +54,7 @@ export const getSongControls = (win: BrowserWindow) => {
     seekTo: (seconds: ArgsType<number>) => {
       const secondsNumber = parseNumberFromArgsType(seconds);
       if (secondsNumber !== null) {
-        win.webContents.send('peard:seek-to', seconds);
+        win.webContents.send('peard:seek-to', secondsNumber);
       }
     },
     goBack: (seconds: ArgsType<number>) => {
@@ -61,7 +66,7 @@ export const getSongControls = (win: BrowserWindow) => {
     goForward: (seconds: ArgsType<number>) => {
       const secondsNumber = parseNumberFromArgsType(seconds);
       if (secondsNumber !== null) {
-        win.webContents.send('peard:seek-by', seconds);
+        win.webContents.send('peard:seek-by', secondsNumber);
       }
     },
     requestShuffleInformation: () => {
@@ -71,14 +76,14 @@ export const getSongControls = (win: BrowserWindow) => {
     switchRepeat: (n: ArgsType<number> = 1) => {
       const repeat = parseNumberFromArgsType(n);
       if (repeat !== null) {
-        win.webContents.send('peard:switch-repeat', n);
+        win.webContents.send('peard:switch-repeat', repeat);
       }
     },
     // General
     setVolume: (volume: ArgsType<number>) => {
       const volumeNumber = parseNumberFromArgsType(volume);
       if (volumeNumber !== null) {
-        win.webContents.send('peard:update-volume', volume);
+        win.webContents.send('peard:update-volume', volumeNumber);
       }
     },
     setFullscreen: (isFullscreen: ArgsType<boolean>) => {
@@ -139,12 +144,27 @@ export const getSongControls = (win: BrowserWindow) => {
     },
     clearQueue: () => win.webContents.send('peard:clear-queue'),
 
-    search: (query: string, params?: string, continuation?: string) =>
-      new Promise((resolve) => {
-        ipcMain.once('peard:search-results', (_, result) => {
-          resolve(result as string);
-        });
-        win.webContents.send('peard:search', query, params, continuation);
-      }),
+    search: (query: string, params?: string, continuation?: string) => {
+      const id = randomUUID();
+      return new Promise<unknown>((resolve, reject) => {
+        const handler = (
+          _: Electron.IpcMainEvent,
+          result: string,
+          resultId?: string,
+        ) => {
+          if (resultId !== id) return;
+          clearTimeout(timeout);
+          ipcMain.removeListener('peard:search-results', handler);
+          resolve(result);
+        };
+        const timeout = setTimeout(() => {
+          ipcMain.removeListener('peard:search-results', handler);
+          reject(new Error('Search request timed out'));
+        }, 30_000);
+
+        ipcMain.on('peard:search-results', handler);
+        win.webContents.send('peard:search', query, params, continuation, id);
+      });
+    },
   };
 };

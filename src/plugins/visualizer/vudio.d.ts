@@ -26,7 +26,7 @@ declare module 'vudio/umd/vudio' {
     constructor(
       audio: HTMLAudioElement | MediaStream,
       canvas: HTMLCanvasElement,
-      options: VudioOptions = {},
+      options?: VudioOptions,
     );
 
     dance(): void;

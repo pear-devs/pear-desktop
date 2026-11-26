@@ -353,11 +353,11 @@ export const mainMenuTemplate = async (
                   ),
                   type: 'normal',
                   async click() {
-                    const { filePaths } = await dialog.showOpenDialog({
+                    const { canceled, filePaths } = await dialog.showOpenDialog({
                       filters: [{ name: 'CSS Files', extensions: ['css'] }],
                       properties: ['openFile', 'multiSelections'],
                     });
-                    if (filePaths) {
+                    if (!canceled && filePaths.length) {
                       config.set('options.themes', filePaths);
                       innerRefreshMenu();
                     }

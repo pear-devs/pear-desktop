@@ -39,7 +39,7 @@ declare module 'butterchurn' {
     ): Record<string, WebAssembly.Global>;
     static base64ToArrayBuffer(base64: string): ArrayBuffer;
     loadPreset(presetMap: unknown, blendTime?: number): Promise<void>;
-    async loadWASMPreset(preset: unknown, blendTime: number): Promise<void>;
+    loadWASMPreset(preset: unknown, blendTime: number): Promise<void>;
     loadJSPreset(preset: unknown, blendTime: number): void;
     loadExtraImages(imageData: unknown): void;
     setRendererSize(

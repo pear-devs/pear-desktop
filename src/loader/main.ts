@@ -13,6 +13,11 @@ const loadedPluginMap: Record<
   string,
   PluginDef<unknown, unknown, unknown>
 > = {};
+const pluginIpcHandlers: Record<string, Set<string>> = {};
+const pluginIpcListeners: Record<
+  string,
+  Array<{ event: string; listener: (...args: unknown[]) => void }>
+> = {};
 
 const createContext = (
   id: string,
@@ -20,14 +25,14 @@ const createContext = (
 ): BackendContext<PluginConfig> => ({
   getConfig: async () =>
     deepmerge(
-      (await allPlugins())[id].config ?? { enabled: false },
+      (await allPlugins())[id]?.config ?? { enabled: false },
       config.get(`plugins.${id}`) ?? {},
     ) as PluginConfig,
   setConfig: async (newConfig) => {
     config.setPartial(
       `plugins.${id}`,
       newConfig,
-      (await allPlugins())[id].config,
+      (await allPlugins())[id]?.config,
     );
   },
 
@@ -36,14 +41,18 @@ const createContext = (
       win.webContents.send(event, ...args);
     },
     handle: (event: string, listener: CallableFunction) => {
+      ipcMain.removeHandler(event);
       // oxlint-disable-next-line typescript/no-unsafe-return,typescript/no-unsafe-call
       ipcMain.handle(event, (_, ...args: unknown[]) => listener(...args));
+      (pluginIpcHandlers[id] ??= new Set()).add(event);
     },
     on: (event: string, listener: CallableFunction) => {
-      ipcMain.on(event, (_, ...args: unknown[]) => {
+      const wrapped = (_: unknown, ...args: unknown[]) => {
         // oxlint-disable-next-line typescript/no-unsafe-call
         listener(...args);
-      });
+      };
+      ipcMain.on(event, wrapped);
+      (pluginIpcListeners[id] ??= []).push({ event, listener: wrapped });
     },
     removeHandler: (event: string) => {
       ipcMain.removeHandler(event);
@@ -72,6 +81,17 @@ export const forceUnloadMainPlugin = async (
         plugin.backend)
     ) {
       delete loadedPluginMap[id];
+
+      for (const event of pluginIpcHandlers[id] ?? []) {
+        ipcMain.removeHandler(event);
+      }
+      delete pluginIpcHandlers[id];
+
+      for (const { event, listener } of pluginIpcListeners[id] ?? []) {
+        ipcMain.removeListener(event, listener);
+      }
+      delete pluginIpcListeners[id];
+
       console.log(
         LoggerPrefix,
         t('common.console.plugins.unloaded', { pluginName: id }),

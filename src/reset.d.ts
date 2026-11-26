@@ -28,7 +28,6 @@ declare global {
      * Internal variable (Last interaction time)
      */
     _lact: number;
-    navigation: Navigation;
     download: () => void;
     togglePictureInPicture: () => void;
     reload: () => void;

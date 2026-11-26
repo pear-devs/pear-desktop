@@ -20,7 +20,9 @@ class ButterchurnVisualizer extends Visualizer {
   ) {
     super(audioSource, audioNode);
 
-    const preset = ButterchurnPresets[config.butterchurn.preset];
+    const preset =
+      ButterchurnPresets[config.butterchurn.preset] ??
+      Object.values(ButterchurnPresets)[0];
     const renderVisualizer = () => {
       if (this.destroyed) return;
       this.visualizer.render();
@@ -31,7 +33,9 @@ class ButterchurnVisualizer extends Visualizer {
       width: canvas.width,
       height: canvas.height,
     });
-    this.visualizer.loadPreset(preset, config.butterchurn.blendTimeInSeconds);
+    if (preset) {
+      this.visualizer.loadPreset(preset, config.butterchurn.blendTimeInSeconds);
+    }
     this.visualizer.connectAudio(audioNode);
 
     // Start animation request loop. Do not use setInterval!
