@@ -337,6 +337,8 @@ export class EnvelopeRecorder {
   private dropped = 0; // frames trimmed from the front since the last reset
   private wallBases: number[] = []; // speaker wall-clock ms of absolute frame 0
   private readonly nodes: AudioNode[];
+  private readonly source: AudioNode;
+  private readonly filters: AudioNode[];
   private readonly processor: ScriptProcessorNode;
 
   constructor(
@@ -361,6 +363,8 @@ export class EnvelopeRecorder {
 
     source.connect(lowpass);
     source.connect(highpass);
+    this.source = source;
+    this.filters = [lowpass, highpass];
     lowpass.connect(merger, 0, 0);
     highpass.connect(merger, 0, 1);
     merger.connect(this.processor);
@@ -464,6 +468,14 @@ export class EnvelopeRecorder {
 
   disconnect() {
     this.processor.onaudioprocess = null;
+    // Only our two taps on the source, not its route to the speakers.
+    for (const filter of this.filters) {
+      try {
+        this.source.disconnect(filter);
+      } catch {
+        // already gone
+      }
+    }
     for (const node of this.nodes) {
       try {
         node.disconnect();

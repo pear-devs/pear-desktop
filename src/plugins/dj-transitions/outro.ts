@@ -70,7 +70,10 @@ export const findOutro = (scan: TailScan): Outro | null => {
   const musicEnd = Math.min(scan.length, level[endIndex].t + 0.3);
 
   let startIndex = endIndex;
-  while (startIndex > 0 && level[startIndex - 1].db < OUTRO_DB) startIndex--;
+  // Only a quiet ending is an outro: a loud final hit must not be mixed over.
+  if (level[endIndex].db < OUTRO_DB) {
+    while (startIndex > 0 && level[startIndex - 1].db < OUTRO_DB) startIndex--;
+  }
   // No quiet stretch (song ends at full energy): the outro is the end.
   const outroStart = startIndex === endIndex ? musicEnd : level[startIndex].t;
 

@@ -205,25 +205,39 @@ const CONTROLLER = String.raw`(() => {
       const points = [];
       const end = Math.min(length, from + songSeconds);
       const deadline = Date.now() + ((songSeconds / rate) * 1000) + 8000;
+      let complete = false;
       while (Date.now() < deadline) {
         await sleep(80);
-        if (idNow() !== expectedId || st.video.ended) break;
+        if (idNow() !== expectedId) break;
+        if (st.video.ended) {
+          complete = true;
+          break;
+        }
         const t = p.getCurrentTime();
-        if (t >= end - 0.05) break;
+        if (t >= end - 0.05) {
+          complete = true;
+          break;
+        }
         if (!st.video.paused && !st.video.seeking) points.push([t, rms()]);
       }
       st.video.playbackRate = 1;
-      return points;
+      return { points, complete };
     };
 
     const body = await sample(length * 0.4, 8);
     const tail = await sample(Math.max(0, length - tailSeconds), tailSeconds);
     p.pauseVideo();
+    // A scan that stalled or switched songs would put the "end of the music"
+    // where the scan stopped, not where the song ends: don't use it.
+    const lastSampled = tail.points.length ? tail.points[tail.points.length - 1][0] : 0;
+    if (!tail.complete || lastSampled < length - 3) {
+      return { ok: false, reason: 'tail scan incomplete', length, body: [], tail: [] };
+    }
     return {
       ok: true,
       length,
-      body: body.map((x) => x[1]),
-      tail,
+      body: body.points.map((x) => x[1]),
+      tail: tail.points,
     };
   };
 
@@ -235,7 +249,30 @@ const CONTROLLER = String.raw`(() => {
     return p.getCurrentTime();
   };
 
-  const start = (fadeSeconds, bassSwap, swapAt, rate) => {
+  // Start the incoming song and confirm it's really playing before reporting
+  // success: if it stalls (buffering), the renderer must not fade out the
+  // main player into silence.
+  const start = async (fadeSeconds, bassSwap, swapAt, rate) => {
+    const p = player();
+    st.gain.gain.cancelScheduledValues(st.ctx.currentTime);
+    st.gain.gain.setValueAtTime(0, st.ctx.currentTime);
+    st.video.preservesPitch = true;
+    st.video.playbackRate = rate;
+    const from = p.getCurrentTime();
+    p.playVideo();
+    const until = Date.now() + 2000;
+    let playing = false;
+    while (Date.now() < until) {
+      await sleep(20);
+      if (!st.video.paused && p.getCurrentTime() > from + 0.02) {
+        playing = true;
+        break;
+      }
+    }
+    if (!playing) {
+      p.pauseVideo();
+      return false;
+    }
     const now = st.ctx.currentTime;
     const n = 256;
     const curve = new Float32Array(n);
@@ -249,9 +286,6 @@ const CONTROLLER = String.raw`(() => {
       st.shelf.gain.setValueAtTime(BASS_CUT_DB, now + Math.max(0, swapAt - 0.06));
       st.shelf.gain.linearRampToValueAtTime(0, now + swapAt);
     }
-    st.video.preservesPitch = true;
-    st.video.playbackRate = rate;
-    player().playVideo();
     return true;
   };
 
@@ -291,6 +325,9 @@ const SCAN_RATE = 2; // tail scan playback speed (muted)
 
 let hidden: BrowserWindow | null = null;
 let preparedId: string | null = null;
+/** Bumped by every load of the hidden window, so a slow release from an
+ *  earlier transition can't blank a song loaded after it. */
+let generation = 0;
 
 const getHidden = (main: BrowserWindow) => {
   if (hidden && !hidden.isDestroyed()) return hidden;
@@ -379,6 +416,7 @@ export default createBackend({
 
     handle('dj-transitions:prepare', (videoId: string) =>
       guarded(async () => {
+        generation++;
         const win = getHidden(window);
         win.webContents.setAudioMuted(true);
         preparedId = null;
@@ -395,6 +433,7 @@ export default createBackend({
 
     handle('dj-transitions:scan-tail', (videoId: string) =>
       guarded(async () => {
+        generation++;
         const win = getHidden(window);
         win.webContents.setAudioMuted(true);
         preparedId = null;
@@ -424,9 +463,11 @@ export default createBackend({
       ) => {
         if (preparedId !== videoId) return false;
         hidden?.webContents.setAudioMuted(false);
-        return run<boolean>(
+        const started = await run<boolean>(
           `window.__djHidden.start(${Number(fadeSeconds)}, ${Boolean(bassSwap)}, ${Number(swapAt)}, ${Number(rate)})`,
-        );
+        ).catch(() => false);
+        if (!started) hidden?.webContents.setAudioMuted(true);
+        return started;
       },
     );
 
@@ -445,10 +486,12 @@ export default createBackend({
     );
 
     handle('dj-transitions:release', async (seconds: number) => {
+      const mine = generation;
       try {
         await run(`window.__djHidden?.release(${Number(seconds)})`);
       } finally {
-        cleanup();
+        // Only if nothing new was loaded meanwhile.
+        if (mine === generation) cleanup();
       }
       return true;
     });

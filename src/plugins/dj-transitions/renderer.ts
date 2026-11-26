@@ -151,6 +151,8 @@ let overlapStartedAtRemaining = 0;
 let handoffStartedAtRemaining = 0;
 let handoffFromSongId: string | null = null;
 let fadeOutStartedAtRemaining = 0;
+/** A paused single-player fade-out is holding the volume down. */
+let heldFade = false;
 let timer: ReturnType<typeof setTimeout> | undefined;
 
 let nextOnset = 0;
@@ -161,6 +163,13 @@ let nextTemplate: BarTemplate | null = null;
 let plan: BeatPlan | null = null;
 let planState: 'none' | 'planning' | 'planned' | 'plain' = 'none';
 let startScheduled = false;
+/**
+ * Each transition attempt gets a number; anything asynchronous (a late
+ * preparation, plan, rate change or sync step) only applies its result while
+ * its attempt is still the current one. Bumped by resetTransition.
+ */
+let attempt = 0;
+let syncingAttempt = -1;
 let rampStarted = false;
 /** Rate the main player should hold (YouTube Music resets it otherwise). */
 let mainRate = 1;
@@ -200,6 +209,7 @@ const setParamNow = (param: AudioParam, value: number, now: number) => {
 /** Back to normal playback (full volume, full bass), quickly but click-free. */
 const restore = (seconds = RESTORE_SECONDS) => {
   clearTimeout(timer);
+  heldFade = false;
   if (!audioContext || !gain || !shelf) return;
   const now = audioContext.currentTime;
   holdParam(gain.gain, now);
@@ -334,17 +344,29 @@ const getNextSong = (): { id: string; fromAutoplay: boolean } | null => {
     return pick(candidate, true);
   };
 
-  let index = q.selectedItemIndex;
-  if (playingId && queueItemVideoId(items[index]) !== playingId) {
+  const isPlaying = (item: unknown, exact: boolean) => {
+    const id = queueItemVideoId(item) ?? null;
+    return exact ? id === playingId : isSameSong(id, playingId ?? null);
+  };
+  const nearestPlaying = (exact: boolean) => {
     let best = -1;
     items.forEach((item, i) => {
       if (
-        queueItemVideoId(item) === playingId &&
+        isPlaying(item, exact) &&
         (best < 0 || Math.abs(i - q.selectedItemIndex) < Math.abs(best - q.selectedItemIndex))
       ) {
         best = i;
       }
     });
+    return best;
+  };
+
+  let index = q.selectedItemIndex;
+  if (playingId && !isPlaying(items[index], false)) {
+    // The exact ID first, then a queued song whose music-video version is
+    // what's playing.
+    let best = nearestPlaying(true);
+    if (best < 0) best = nearestPlaying(false);
     // Not in the queue at all: it's playing from autoplay, so the next song
     // comes from autoplay too (selectedItemIndex is stale then).
     if (best < 0) return fromAutoplay();
@@ -469,6 +491,7 @@ const waitForPlayback = (timeoutMs: number) =>
   });
 
 const resetTransition = () => {
+  attempt++;
   clearTimeout(handoffGrace);
   nextSongId = null;
   nextGrid = null;
@@ -557,11 +580,14 @@ const scanOutro = async (songId: string) => {
 const prepareNext = (songId: string, nextId: string, scan: boolean) => {
   phase = 'preparing';
   nextSongId = nextId;
+  const mine = ++attempt;
+  const current = () =>
+    attempt === mine && phase === 'preparing' && currentSongId === songId;
 
   // If the hidden player stops responding, don't wait forever.
   clearTimeout(prepareTimeout);
   prepareTimeout = setTimeout(() => {
-    if (phase === 'preparing' && currentSongId === songId) {
+    if (current()) {
       abort('hidden player took too long, using single-player fade', 'idle');
       fallbackSongId = songId;
     }
@@ -569,7 +595,7 @@ const prepareNext = (songId: string, nextId: string, scan: boolean) => {
 
   (scan ? scanOutro(songId) : Promise.resolve())
     .then(() => {
-      if (phase !== 'preparing' || currentSongId !== songId) {
+      if (!current()) {
         throw new Error('superseded');
       }
       log('preparing next song in hidden player', nextId);
@@ -582,7 +608,7 @@ const prepareNext = (songId: string, nextId: string, scan: boolean) => {
         onset?: number;
         body?: Envelope | null;
       };
-      if (phase !== 'preparing' || currentSongId !== songId) return;
+      if (!current()) return;
       if (r.ok) {
         phase = 'ready';
         nextOnset = r.onset ?? 0;
@@ -599,7 +625,7 @@ const prepareNext = (songId: string, nextId: string, scan: boolean) => {
       }
     })
     .catch((error: unknown) => {
-      if (currentSongId !== songId || phase !== 'preparing') return;
+      if (!current()) return;
       log('hidden player failed, using single-player fade', error);
       phase = 'idle';
       resetTransition();
@@ -611,6 +637,7 @@ const prepareNext = (songId: string, nextId: string, scan: boolean) => {
 const makePlan = async (song: SongPos) => {
   if (!recorder || !config) return;
   planState = 'planning';
+  const mine = attempt;
   const fade = config.fadeSeconds;
   const envA = recorder.window(20);
   const gridA = analyzeBeats(envA);
@@ -661,8 +688,9 @@ const makePlan = async (song: SongPos) => {
   }
 
   // Line up the two bar patterns: `anchorB` (incoming song time) sits at the
-  // same place in the bar as `anchorA` (current song time).
-  const templateA = barTemplate(envA, periodA);
+  // same place in the bar as `anchorA` (current song time). Anchored on a
+  // detected beat, so the start and the bass swap land on beats.
+  const templateA = barTemplate(envA, periodA, gridA.phase);
   const anchorA = templateA.anchor;
   const anchorB = alignBars(templateA, nextTemplate);
   const barB = 4 * periodB;
@@ -670,17 +698,18 @@ const makePlan = async (song: SongPos) => {
   // Bar line (from the anchor) nearest where the blend should start — the
   // outro if one was found — that still fits before the end. If that's
   // already passed, the next bar line; a beat line if no whole bar fits.
+  // Never earlier than MAX_EARLY before the end.
   const barA = 4 * periodA;
   const latest = blendEnd(song) - overlap;
   const target = blendTarget(song, overlap);
-  const soonest = song.position + 1;
+  const earliest = Math.max(song.position + 1, song.length - MAX_EARLY);
   const at = (b: number) => anchorA + (b * periodA);
   let beat = Math.round((target - anchorA) / barA) * 4;
-  while (beat > 0 && at(beat) > latest) beat -= 4;
-  if (at(beat) < soonest) beat = Math.ceil((soonest - anchorA) / barA) * 4;
-  if (at(beat) > latest) beat = Math.ceil((soonest - anchorA) / periodA);
+  while (at(beat) > latest) beat -= 4;
+  if (at(beat) < earliest) beat = Math.ceil((earliest - anchorA) / barA) * 4;
+  if (at(beat) > latest) beat = Math.ceil((earliest - anchorA) / periodA);
   const startA = at(beat);
-  if (startA < soonest || startA > latest + 0.001) {
+  if (startA < earliest - 0.001 || startA > latest + 0.001) {
     return plain('too close to the end');
   }
 
@@ -693,7 +722,9 @@ const makePlan = async (song: SongPos) => {
   const parked = (await ipc!
     .invoke('dj-transitions:park', startB)
     .catch(() => null)) as number | null;
-  if (parked === null || phase !== 'ready') return plain('could not park');
+  // Superseded while parking (song changed, aborted): leave state alone.
+  if (attempt !== mine || phase !== 'ready') return;
+  if (parked === null) return plain('could not park');
 
   // If the park landed a little off the beat, start that much earlier/later.
   const parkShift = (startB - parked) / rate;
@@ -738,11 +769,13 @@ const makePlan = async (song: SongPos) => {
 
 /** Keep the incoming song's beats on the current song's grid. */
 const beatLock = async (p: BeatPlan) => {
+  const mine = attempt;
+  const current = () => attempt === mine && phase === 'overlap';
   let first = true;
   let n = 0;
-  while (phase === 'overlap') {
+  while (current()) {
     await sleep(LOCK_INTERVAL);
-    if (phase !== 'overlap') break;
+    if (!current()) break;
     let h: HiddenTime;
     try {
       h = await hiddenTime();
@@ -766,6 +799,8 @@ const beatLock = async (p: BeatPlan) => {
     }
 
     const nudge = clamp(errA / 0.75, -LOCK_MAX_NUDGE, LOCK_MAX_NUDGE);
+    // The overlap may have ended while we waited for the hidden player.
+    if (!current()) break;
     await setHiddenRate(p.rate * p.rateA * (1 - nudge));
   }
 };
@@ -781,12 +816,13 @@ const easeSecondsFor = (from: number) =>
  */
 const easeHiddenRate = async (from: number) => {
   if (Math.abs(1 - from) < 1e-4) return;
+  const mine = attempt;
   const seconds = easeSecondsFor(from);
   const t0 = performance.now();
   for (;;) {
     await sleep(100);
-    // Stop if the handoff was cancelled (the hidden player is gone).
-    if (phase !== 'handoff') return;
+    // Stop if the handoff was cancelled or superseded.
+    if (attempt !== mine || phase !== 'handoff') return;
     const k = Math.min(1, (performance.now() - t0) / (seconds * 1000));
     const s = k * k * (3 - (2 * k)); // smoothstep
     await setHiddenRate(from + ((1 - from) * s));
@@ -837,6 +873,7 @@ const startOverlap = async (seconds: number, remaining: number) => {
   // drifting against each other overlap as little as possible.
   const swapAt = p ? p.swapAt / rateA : seconds * PLAIN_BASS_SWAP;
   const hiddenRate = p ? p.rate * rateA : 1;
+  const mine = attempt;
 
   const started = (await ipc!
     .invoke(
@@ -848,10 +885,11 @@ const startOverlap = async (seconds: number, remaining: number) => {
       hiddenRate,
     )
     .catch(() => false)) as boolean;
-  if (phase !== 'overlap') return;
+  if (attempt !== mine || phase !== 'overlap') return;
   if (!started) {
-    log('hidden player did not start, using single-player fade');
-    phase = 'idle';
+    // Undo everything the blend set up (tempo ramp, gain, bass) and let the
+    // single-player fade take over at the end.
+    abort('hidden player did not start playing, using single-player fade', 'idle');
     fallbackSongId = currentSongId;
     return;
   }
@@ -991,16 +1029,30 @@ const heardOffsetMs = async () => {
 
 /** Main player is on the next song (at gain 0): line it up, then swap. */
 const syncAndSwap = async () => {
+  // One sync per handoff: the settle timer and a song-change event can both
+  // try to start it.
+  if (syncingAttempt === attempt) return;
+  syncingAttempt = attempt;
+  const mine = attempt;
+  const expected = nextSongId;
   clearTimeout(timer);
   const p = getPlayer();
   if (!p || !video || !audioContext || !gain) return;
+  // Still this handoff, with the main player on the next song (or its video
+  // version)? Checked after every wait, so a skip mid-sync can't make us seek
+  // or switch the wrong song.
+  const owns = () =>
+    attempt === mine &&
+    phase === 'handoff' &&
+    isSameSong(readSong()?.id ?? null, expected);
 
   try {
     await easing; // hidden must be back at rate 1 before we line up
+    if (!owns()) return;
 
     // Seek to where the hidden player will be once the seek lands, folding
-    // each attempt's measured error into the next seek's lead. (Nudging the
-    // main player's playback rate instead proved unreliable: YouTube's player
+    // each try's measured error into the next seek's lead. (Nudging the main
+    // player's playback rate instead proved unreliable: YouTube's player
     // sometimes ignores it or jumps by 150+ ms. Seeks land within ~30 ms.)
     //
     // Then check by ear: the clocks can agree while the audio doesn't (e.g.
@@ -1011,23 +1063,28 @@ const syncAndSwap = async () => {
     let diff = Infinity;
     let heard: number | null = null;
     for (let round = 0; round < HEARD_ROUNDS; round++) {
-      for (let attempt = 0; attempt < SYNC_SEEKS; attempt++) {
-        p.seekTo((await hiddenNow()) + lead);
+      for (let seekNo = 0; seekNo < SYNC_SEEKS; seekNo++) {
+        const aim = (await hiddenNow()) + lead;
+        if (!owns()) return;
+        p.seekTo(aim);
         await waitForPlayback(3000);
         await sleep(200);
-        diff = p.getCurrentTime() - (await hiddenNow()) - target;
-        log(`sync seek ${attempt + 1}: main is ${(diff * 1000).toFixed(0)} ms off`);
+        const hiddenAt = await hiddenNow();
+        if (!owns()) return;
+        diff = p.getCurrentTime() - hiddenAt - target;
+        log(`sync seek ${seekNo + 1}: main is ${(diff * 1000).toFixed(0)} ms off`);
         if (Math.abs(diff) < SYNC_TOLERANCE) break;
         lead -= diff;
       }
-      if (phase !== 'handoff') return;
       heard = await heardOffsetMs();
+      if (!owns()) return;
       if (heard === null) {
         // Often one player was momentarily silent (still buffering after its
         // seek, or a beatless moment): listen once more before giving up.
         await sleep(500);
-        if (phase !== 'handoff') return;
+        if (!owns()) return;
         heard = await heardOffsetMs();
+        if (!owns()) return;
       }
       if (heard === null) {
         log('audio check: inconclusive, switching quickly to be safe');
@@ -1046,7 +1103,7 @@ const syncAndSwap = async () => {
         : `synced to ${heard.toFixed(0)} ms by ear`,
     );
 
-    if (phase !== 'handoff') return;
+    if (!owns()) return;
     // Verified in sync by ear: short equal-power crossfade (same audio,
     // inaudible). Not verified, or still off: a very quick swap, so any
     // offset is a tiny jump rather than an echo (the clocks alone have been
@@ -1059,14 +1116,18 @@ const syncAndSwap = async () => {
     await releaseHidden(fade);
     log('handoff complete');
   } catch (error) {
+    if (attempt !== mine) return;
     log('sync failed, switching straight to the main player', error);
     restore(0.5);
     releaseHidden(0.5);
   } finally {
-    setMainRate(1);
-    if (phase === 'handoff') {
-      phase = 'idle';
-      resetTransition();
+    // A superseded sync leaves shared state to whoever replaced it.
+    if (attempt === mine) {
+      setMainRate(1);
+      if (phase === 'handoff') {
+        phase = 'idle';
+        resetTransition();
+      }
     }
   }
 };
@@ -1075,6 +1136,7 @@ const syncAndSwap = async () => {
 // Single-player fallback
 
 const startFadeOut = (seconds: number) => {
+  heldFade = false;
   if (!audioContext || !gain || !shelf || !config) return;
   const now = audioContext.currentTime;
   const from = gain.gain.value;
@@ -1161,7 +1223,14 @@ const onSongChange = (id: string) => {
         // the handoff and let it settle.
         clearTimeout(timer);
         phase = 'handoff';
+        // Same setup as handoff(): main silent and at normal speed. It is
+        // already past the outgoing song, so no seek-back baseline applies.
+        if (audioContext && gain && shelf) {
+          setParamNow(gain.gain, 0, audioContext.currentTime);
+          setParamNow(shelf.gain, 0, audioContext.currentTime);
+        }
         setMainRate(1);
+        handoffFromSongId = null;
         easing = plan ? easeHiddenRate(plan.rate * plan.rateA) : Promise.resolve();
         waitForNextSongToSettle(id);
       } else {
@@ -1227,6 +1296,12 @@ const onReady = (song: SongPos, remaining: number) => {
       whenCurrentSongReaches(p.fireAt, () => {
         const now = readSong();
         if (phase !== 'ready' || !now) return;
+        // The queue may have changed since the blend was planned.
+        const upcoming = getNextSongId();
+        if (upcoming && !isSameSong(upcoming, nextSongId)) {
+          abort(`next song changed to ${upcoming} just before the blend`, 'idle');
+          return;
+        }
         startOverlap(p.overlap, now.length - now.position);
       });
     }
@@ -1289,7 +1364,14 @@ const onTimeUpdate = () => {
         return;
       }
       // Too late to prepare, or the hidden player failed: single-player fade.
-      if (remaining <= fade && remaining > 0.3) startFadeOut(remaining);
+      // Only if a song follows: the last song in the queue plays out in full.
+      if (
+        remaining <= fade &&
+        remaining > 0.3 &&
+        (fallbackSongId === song.id || getNextSongId())
+      ) {
+        startFadeOut(remaining);
+      }
       return;
     }
     case 'ready':
@@ -1317,6 +1399,17 @@ const onTimeUpdate = () => {
   }
 };
 
+/** A seek by the listener (the plugin only seeks during a handoff). */
+const onSeeking = () => {
+  if (phase === 'overlap') {
+    abort('seeked during the blend', 'idle');
+  } else if (phase === 'fading-out' || heldFade) {
+    // A fade (running or paused) belongs to the old position.
+    phase = 'idle';
+    restore();
+  }
+};
+
 const onPause = () => {
   if (!audioContext || !gain || !shelf) return;
   if (phase !== 'idle' && phase !== 'done') {
@@ -1324,10 +1417,20 @@ const onPause = () => {
   }
   if (phase === 'overlap') {
     abort('paused during overlap');
+  } else if (phase === 'handoff') {
+    // The hidden player is what you hear now, so pausing must stop it. Song
+    // changes can fire a brief pause, so only act if it stays paused.
+    const mine = attempt;
+    setTimeout(() => {
+      if (attempt === mine && phase === 'handoff' && video?.paused) {
+        abort('paused during handoff');
+      }
+    }, 600);
   } else if (phase === 'fading-out') {
     const now = audioContext.currentTime;
     holdParam(gain.gain, now);
     holdParam(shelf.gain, now);
+    heldFade = true;
     phase = 'idle'; // timeupdate resumes the fade from the held level
   } else if (phase === 'fading-in') {
     phase = 'idle';
@@ -1348,16 +1451,19 @@ const onPause = () => {
  * can only get one MediaElementSource ever, so they're remembered.
  */
 const sources = new WeakMap<HTMLMediaElement, MediaElementAudioSourceNode>();
+const failedElements = new WeakSet<HTMLMediaElement>();
 let elementWatch: ReturnType<typeof setInterval> | undefined;
 
 const attachHandlers = (el: HTMLMediaElement) => {
   el.addEventListener('timeupdate', onTimeUpdate, { passive: true });
+  el.addEventListener('seeking', onSeeking, { passive: true });
   el.addEventListener('pause', onPause, { passive: true });
   el.addEventListener('ratechange', holdMainRate, { passive: true });
 };
 
 const detachHandlers = (el: HTMLMediaElement) => {
   el.removeEventListener('timeupdate', onTimeUpdate);
+  el.removeEventListener('seeking', onSeeking);
   el.removeEventListener('pause', onPause);
   el.removeEventListener('ratechange', holdMainRate);
 };
@@ -1374,8 +1480,11 @@ const followVideoElement = () => {
     try {
       source = audioContext.createMediaElementSource(live);
     } catch (error) {
-      log('video element was replaced but could not be re-routed', error);
-      clearInterval(elementWatch);
+      // Keep watching (a later element may work); log each element once.
+      if (!failedElements.has(live)) {
+        failedElements.add(live);
+        log('video element was replaced but could not be re-routed', error);
+      }
       return;
     }
     sources.set(live, source);

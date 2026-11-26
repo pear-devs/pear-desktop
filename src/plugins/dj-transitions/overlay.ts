@@ -330,7 +330,6 @@ const CSS = `
 let sheet: CSSStyleSheet | null = null;
 let current: HTMLElement | null = null;
 let hideTimer: ReturnType<typeof setTimeout> | undefined;
-let removeTimer: ReturnType<typeof setTimeout> | undefined;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -405,20 +404,40 @@ const tint = (track: TrackInfo, which: 'from' | 'to') => {
   return img;
 };
 
-/** Remove the card now (e.g. the blend was cancelled). */
+/** Cards fading out, each removed by its own timer (or right away). */
+const fading = new Map<HTMLElement, ReturnType<typeof setTimeout>>();
+
+const removeFading = () => {
+  for (const [node, removal] of fading) {
+    clearTimeout(removal);
+    node.remove();
+  }
+  fading.clear();
+};
+
+/**
+ * Hide the card: fade it out, or remove it now (`immediately`, e.g. the plugin
+ * is stopping or a new card replaces it — cards still fading go too).
+ */
 export const hideTransitionVisual = (immediately = false) => {
   clearTimeout(hideTimer);
-  clearTimeout(removeTimer);
   const node = current;
   current = null;
-  if (!node) return;
   if (immediately) {
-    node.remove();
+    node?.remove();
+    removeFading();
     return;
   }
+  if (!node) return;
   node.classList.add('hide');
   node.classList.remove('show');
-  removeTimer = setTimeout(() => node.remove(), 800);
+  fading.set(
+    node,
+    setTimeout(() => {
+      node.remove();
+      fading.delete(node);
+    }, 800),
+  );
 };
 
 export const showTransitionVisual = (visual: TransitionVisual) => {
