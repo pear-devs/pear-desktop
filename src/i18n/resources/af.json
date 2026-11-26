@@ -11,8 +11,8 @@
     }
   },
   "language": {
-    "local-name": "Die plaaslike naam van die taal.\n\ne.g. 日本語, 한국어, English, Русский",
-    "name": "Engelse naam van die taal.\n\ne.g. Japanese, Korean, English, Russian"
+    "local-name": "Afrikaans",
+    "name": "Afrikaans"
   },
   "main": {
     "console": {
@@ -34,7 +34,7 @@
     },
     "dialog": {
       "hide-menu-enabled": {
-        "detail": "Kieslys is verborge, gebruik 'Alt' om dit te wys (of 'Escape' as die  In-Toep Kieslys gebruik word)",
+        "detail": "Kieslys is versteek, gebruik 'Alt' om dit te wys (of 'Escape' as die In-Toep Kieslys gebruik word)",
         "message": "Wegsteek Kieslys is aangesit",
         "title": "Wegsteek Kieslys Aangesit"
       },
@@ -91,6 +91,10 @@
           },
           "visual-tweaks": {
             "submenu": {
+              "custom-window-title": {
+                "label": "Pasgemaakte venstertitel"
+              },
+              "remove-upgrade-button": "Verwyder opgraderingsknoppie",
               "theme": {
                 "dialog": {
                   "button": {
