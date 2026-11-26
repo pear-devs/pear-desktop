@@ -23,38 +23,22 @@ export type QueueAPI = {
   autoPlaying?: boolean;
 };
 
-export type ToastElement = HTMLElement & {
-  autoFitOnAttach: boolean;
-  duration: number;
-  expandSizingTargetForScrollbars: boolean;
-  horizontalAlign: 'left' | 'right' | 'center';
-  importPath?: unknown;
-  label: string;
-  noAutoFocus: boolean;
-  noCancelOnEscKey: boolean;
-  noCancelOnOutsideClick: boolean;
-  noIronAnnounce: boolean;
-  restoreFocusOnClose: boolean;
-  root: ToastElement;
-  rootPath: string;
-  sizingTarget: ToastElement;
-  verticalAlign: 'bottom' | 'top' | 'center';
+export type AddToToastAction = {
+  addToToastAction: {
+    item: {
+      notificationTextRenderer: {
+        successResponseText: { simpleText: string };
+      };
+    };
+  };
 };
-
-export interface ToastService {
-  attached: boolean;
-  displaying: boolean;
-  messageQueue: string[];
-  toastElement: ToastElement;
-  show: (message: string) => void;
-}
 
 export type AppElement = HTMLElement & AppAPI;
 export type AppAPI = {
   queue: QueueAPI;
   playerApi: MusicPlayer;
 
-  toastService: ToastService;
+  handleAddToToastAction(action: AddToToastAction): void;
 
   // TODO: Add more
 };

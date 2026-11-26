@@ -3,7 +3,9 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { Mutex } from 'async-mutex';
-import { BG, type BgConfig } from 'bgutils-js';
+import { BotGuardClient, getChallenge } from 'bgutils-js/botguard';
+import { buildURL, getHeaders } from 'bgutils-js/utils';
+import { WebPoMinter } from 'bgutils-js/webpo';
 import { app, type BrowserWindow, dialog, ipcMain } from 'electron';
 import is from 'electron-is';
 import filenamify from 'filenamify';
@@ -43,6 +45,12 @@ import { DefaultPresetList, type Preset, VideoFormatList } from '../types';
 import type { DownloaderPluginConfig } from '../index';
 import type { BackendContext } from '@/types/contexts';
 import type { GetPlayerResponse } from '@/types/get-player-response';
+import type {
+  FetchFunction,
+  IBotguardClientSideBgChallenge,
+  IntegrityTokenData,
+  WebPoSignalOutput,
+} from 'bgutils-js/shared-types';
 
 type CustomSongInfo = SongInfo & { trackId?: string };
 
@@ -78,6 +86,51 @@ Platform.shim.eval = (
 let yt: Innertube;
 let win: BrowserWindow;
 let playingUrl: string;
+
+const generatePoToken = async (
+  fetchFunction: FetchFunction,
+  requestKey: string,
+  identifier: string,
+  { program, globalName }: IBotguardClientSideBgChallenge,
+) => {
+  const botguard = await BotGuardClient.create({
+    program,
+    globalName,
+    globalObject: globalThis,
+  });
+
+  const webPoSignalOutput: WebPoSignalOutput = [];
+  const botguardResponse = await botguard.snapshot({ webPoSignalOutput });
+
+  const integrityTokenResponse = await fetchFunction(buildURL('GenerateIT'), {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify([requestKey, botguardResponse]),
+  });
+  const [
+    integrityToken,
+    estimatedTtlSecs,
+    mintRefreshThreshold,
+    websafeFallbackToken,
+  ] = (await integrityTokenResponse.json()) as [
+    IntegrityTokenData['integrityToken'],
+    IntegrityTokenData['estimatedTtlSecs'],
+    IntegrityTokenData['mintRefreshThreshold'],
+    IntegrityTokenData['websafeFallbackToken'],
+  ];
+
+  const webPoMinter = await WebPoMinter.create(
+    {
+      integrityToken,
+      estimatedTtlSecs,
+      mintRefreshThreshold,
+      websafeFallbackToken,
+    },
+    webPoSignalOutput,
+  );
+
+  return webPoMinter.mintAsWebsafeString(identifier);
+};
 
 const isPremium = async () => {
   // If signed out, it is understood as non-premium
@@ -170,6 +223,7 @@ export const onMainLoad = async ({
         width,
         height,
         console,
+        settings: { enableIframePageLoading: true },
       });
       const document = window.document;
 
@@ -178,17 +232,12 @@ export const onMainLoad = async ({
         document,
       });
 
-      const bgConfig: BgConfig = {
-        fetch: getNetFetchAsFetch(),
-        globalObj: globalThis,
-        identifier: visitorData,
-        requestKey,
-      };
+      const fetchFunction = getNetFetchAsFetch();
 
-      const bgChallenge = await BG.Challenge.create(bgConfig);
+      const bgChallenge = await getChallenge({ requestKey, fetchFunction });
       const interpreterJavascript =
-        bgChallenge?.interpreterJavascript
-          .privateDoNotAccessOrElseSafeScriptWrappedValue;
+        bgChallenge.interpreterJavascript
+          ?.privateDoNotAccessOrElseSafeScriptWrappedValue;
 
       if (interpreterJavascript) {
         // This is a workaround to run the interpreterJavascript code
@@ -196,15 +245,14 @@ export const onMainLoad = async ({
         // oxlint-disable-next-line typescript/no-implied-eval,typescript/no-unsafe-call
         new Function(interpreterJavascript)();
 
-        const poTokenResult = await BG.PoToken.generate({
-          program: bgChallenge.program,
-          globalName: bgChallenge.globalName,
-          bgConfig,
-        }).finally(() => {
+        yt.session.po_token = await generatePoToken(
+          fetchFunction,
+          requestKey,
+          visitorData,
+          bgChallenge,
+        ).finally(() => {
           cleanUp(globalThis);
         });
-
-        yt.session.po_token = poTokenResult.poToken;
       } else {
         cleanUp(globalThis);
       }
