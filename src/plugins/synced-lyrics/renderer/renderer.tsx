@@ -137,6 +137,13 @@ runWithOwner(reactiveOwner, () => {
   });
 });
 
+/** Removes the big lyrics layout state from the page (on plugin stop). */
+export const clearBigLyricsLayout = () => {
+  const root = document.documentElement;
+  root.classList.remove('synced-lyrics-big');
+  root.style.removeProperty('--lyrics-font-scale');
+};
+
 type LyricsRendererChild =
   | { kind: 'LyricsPicker' }
   | { kind: 'LoadingKaomoji' }

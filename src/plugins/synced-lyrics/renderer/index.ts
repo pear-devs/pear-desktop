@@ -2,7 +2,7 @@ import { createRenderer } from '@/utils';
 import { waitForElement } from '@/utils/wait-for-element';
 
 import { disposeReactiveRoot } from './reactive-root';
-import { setConfig, setCurrentTime } from './renderer';
+import { clearBigLyricsLayout, setConfig, setCurrentTime } from './renderer';
 import { fetchLyrics } from './store';
 import { selectors, tabStates } from './utils';
 
@@ -87,5 +87,6 @@ export const renderer = createRenderer<
 
   stop() {
     disposeReactiveRoot();
+    clearBigLyricsLayout();
   },
 });
