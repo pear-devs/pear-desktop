@@ -311,7 +311,14 @@ async function onApiLoaded() {
 
   const video = document.querySelector('video')!;
   const audioContext = new AudioContext();
-  const audioSource = audioContext.createMediaElementSource(video);
+  const mediaSource = audioContext.createMediaElementSource(video);
+  // video → mixGate → audioSource (bus) → destination
+  // Plugins tap `audioSource`, so anything else fed into the bus (e.g. the
+  // vocal-volume stems) also goes through their effects. `mixGate` lets a
+  // plugin silence the original mix while it plays its own version.
+  const mixGate = audioContext.createGain();
+  const audioSource = audioContext.createGain();
+  mediaSource.connect(mixGate).connect(audioSource);
   audioSource.connect(audioContext.destination);
 
   for (const [id, plugin] of Object.entries(getAllLoadedRendererPlugins())) {
@@ -336,6 +343,7 @@ async function onApiLoaded() {
         detail: {
           audioContext,
           audioSource,
+          mixGate,
         },
       }),
     );

@@ -600,6 +600,49 @@
       },
       "name": "In-App Menu"
     },
+    "karaoke-mode": {
+      "description": "Turn the vocals down (or up) with a slider next to the volume. Separates each song with Demucs (needs demucs and yt-dlp installed).",
+      "name": "Karaoke Mode",
+      "toggle": "Toggle karaoke",
+      "status": {
+        "idle": "Not separated yet",
+        "downloading": "Downloading audio…",
+        "separating": "Separating vocals…",
+        "cached": "Already separated",
+        "ready": "Vocals separated",
+        "error": "Separation failed: {{message}}"
+      },
+      "menu": {
+        "separate-always": {
+          "label": "Separate every song",
+          "tooltip": "Separate each song as it starts, so karaoke is ready right away. When off, a song is only separated when you click the karaoke icon"
+        },
+        "allow-mute": {
+          "label": "Allow muting vocals completely",
+          "tooltip": "Let the slider go down to 0%. Below 10% the gaps Demucs leaves where the vocals were become audible"
+        },
+        "model": {
+          "label": "Demucs model",
+          "tooltip": "Fine-tuned is cleaner but about 4× slower",
+          "submenu": {
+            "htdemucs": "htdemucs (fast)",
+            "htdemucs_ft": "htdemucs_ft (fine-tuned)"
+          }
+        },
+        "clear-cache": {
+          "label": "Clear separated stems",
+          "tooltip": "Delete all cached vocal and instrumental stems"
+        }
+      },
+      "state": {
+        "on": "Karaoke on: vocals at {{volume}}%",
+        "off": "Karaoke off: original mix"
+      },
+      "hint": {
+        "turn-on": "Click the icon to turn karaoke on",
+        "turn-off": "Click the icon to hear the original. Double-click the slider for 100% vocals"
+      }
+    },
     "lumiastream": {
       "description": "Adds Lumia Stream support",
       "name": "Lumia Stream [Beta]"

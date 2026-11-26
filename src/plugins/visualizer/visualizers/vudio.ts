@@ -9,7 +9,7 @@ class VudioVisualizer extends Visualizer {
 
   constructor(
     _audioContext: AudioContext,
-    audioSource: MediaElementAudioSourceNode,
+    audioSource: AudioNode,
     canvas: HTMLCanvasElement,
     audioNode: GainNode,
     stream: MediaStream,
