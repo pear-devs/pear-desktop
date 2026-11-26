@@ -888,6 +888,10 @@
           "label": "Big romanized lyrics",
           "tooltip": "Make romanized lyrics bigger, and kanji, hangul, etc. smaller"
         },
+        "big-lyrics": {
+          "label": "Big lyrics layout",
+          "tooltip": "Make the lyrics panel wider and the lyrics much bigger"
+        },
         "show-lyrics-even-if-inexact": {
           "label": "Show lyrics even if inexact",
           "tooltip": "If the song is not found, the plugin tries again with a different search query.\nThe result from the second attempt may not be exact."

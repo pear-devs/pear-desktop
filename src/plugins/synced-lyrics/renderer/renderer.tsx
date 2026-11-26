@@ -128,6 +128,12 @@ runWithOwner(reactiveOwner, () => {
       '--lyrics-romaji-scale',
       config()?.bigRomanization ? '1' : '0.7',
     );
+
+    // Big lyrics layout: scale the lyrics and widen the panel
+    // (the panel width lives in style.css, keyed on this class)
+    const bigLyrics = !!config()?.bigLyrics;
+    root.classList.toggle('synced-lyrics-big', bigLyrics);
+    root.style.setProperty('--lyrics-font-scale', bigLyrics ? '1.6' : '1');
   });
 });
 

@@ -85,7 +85,8 @@
   & .text-lyrics > .romaji {
     color: var(--ytmusic-text-secondary) !important;
     font-size: calc(
-      var(--lyrics-font-size) * var(--lyrics-romaji-scale)
+      var(--lyrics-font-size) * var(--lyrics-font-scale, 1) *
+        var(--lyrics-romaji-scale)
     ) !important;
     font-style: italic !important;
   }
@@ -106,7 +107,9 @@
 
 .text-lyrics {
   font-family: var(--lyrics-font-family) !important;
-  font-size: var(--lyrics-font-size) !important;
+  font-size: calc(
+    var(--lyrics-font-size) * var(--lyrics-font-scale, 1)
+  ) !important;
   font-weight: var(--lyrics-inactive-font-weight) !important;
   line-height: var(--lyrics-line-height) !important;
   padding-top: var(--lyrics-padding);
@@ -132,14 +135,16 @@
 
   & > .original {
     font-size: calc(
-      var(--lyrics-font-size) * var(--lyrics-original-scale)
+      var(--lyrics-font-size) * var(--lyrics-font-scale, 1) *
+        var(--lyrics-original-scale)
     ) !important;
   }
 
   & > .romaji {
     color: var(--ytmusic-text-secondary) !important;
     font-size: calc(
-      var(--lyrics-font-size) * var(--lyrics-romaji-scale)
+      var(--lyrics-font-size) * var(--lyrics-font-scale, 1) *
+        var(--lyrics-romaji-scale)
     ) !important;
     font-style: italic !important;
   }
@@ -282,4 +287,20 @@ div:has(> .lyrics-picker) {
 .lyrics-picker mdui-icon-check-circle,
 .lyrics-picker mdui-icon-warning {
   font-size: 24px;
+}
+
+/* Big lyrics layout (menu toggle): widen the side panel while the Lyrics tab
+   is open. YouTube Music sizes it with this variable (36-40% on wide
+   windows) and caps it at 800px; narrow layouts already use 100%. */
+@media (min-width: 936px) {
+  html.synced-lyrics-big
+    ytmusic-player-page:has(
+      #tab-renderer[page-type='MUSIC_PAGE_TYPE_TRACK_LYRICS']
+    ) {
+    --ytmusic-player-page-side-panel-width: 55%;
+
+    & #side-panel {
+      max-width: none;
+    }
+  }
 }
