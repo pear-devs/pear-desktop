@@ -9,7 +9,7 @@ class WaveVisualizer extends Visualizer {
 
   constructor(
     audioContext: AudioContext,
-    audioSource: MediaElementAudioSourceNode,
+    audioSource: AudioNode,
     canvas: HTMLCanvasElement,
     audioNode: GainNode,
     _stream: MediaStream,
@@ -18,7 +18,11 @@ class WaveVisualizer extends Visualizer {
     super(audioSource, audioNode);
 
     this.visualizer = new Wave(
-      { context: audioContext, source: audioSource },
+      {
+        context: audioContext,
+        // Wave only calls .connect() on it, so any AudioNode works
+        source: audioSource as MediaElementAudioSourceNode,
+      },
       canvas,
     );
     for (const animation of config.wave.animations) {

@@ -25,15 +25,14 @@ const createCompressorNode = (
 };
 
 class Storage {
-  lastSource: MediaElementAudioSourceNode | null = null;
+  lastSource: AudioNode | null = null;
   lastContext: AudioContext | null = null;
   lastCompressor: DynamicsCompressorNode | null = null;
 
-  connected: WeakMap<MediaElementAudioSourceNode, DynamicsCompressorNode> =
-    new WeakMap();
+  connected: WeakMap<AudioNode, DynamicsCompressorNode> = new WeakMap();
 
   connectToCompressor = (
-    source: MediaElementAudioSourceNode | null = null,
+    source: AudioNode | null = null,
     audioContext: AudioContext | null = null,
     compressor: DynamicsCompressorNode | null = null,
   ): boolean => {

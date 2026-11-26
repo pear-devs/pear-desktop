@@ -9,8 +9,11 @@ import type { trustedTypes } from 'trusted-types';
 
 declare global {
   interface Compressor {
-    audioSource: MediaElementAudioSourceNode;
+    /** Shared audio bus: tap it to process what the player outputs. */
+    audioSource: AudioNode;
     audioContext: AudioContext;
+    /** Gain on the original <video> audio before the bus (1 = audible). */
+    mixGate: GainNode;
   }
 
   interface DocumentEventMap {

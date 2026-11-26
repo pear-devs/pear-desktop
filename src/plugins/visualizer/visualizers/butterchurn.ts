@@ -12,7 +12,7 @@ class ButterchurnVisualizer extends Visualizer {
 
   constructor(
     audioContext: AudioContext,
-    audioSource: MediaElementAudioSourceNode,
+    audioSource: AudioNode,
     canvas: HTMLCanvasElement,
     audioNode: GainNode,
     _stream: MediaStream,

@@ -60,7 +60,7 @@ export type VisualizerPluginConfig = {
 type RenderProps = {
   visualizerInstance: Visualizer | null;
   audioContext: AudioContext | null;
-  audioSource: MediaElementAudioSourceNode | null;
+  audioSource: AudioNode | null;
   observer: ResizeObserver | null;
 };
 
