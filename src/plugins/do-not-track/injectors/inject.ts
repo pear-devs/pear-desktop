@@ -34,6 +34,9 @@ export const inject = (contextBridge: ContextBridge): void => {
   injected = true;
   {
     const pruner = (o: PrunableResponse): PrunableResponse => {
+      // Every JSON.parse / Response.json result passes through here, and
+      // `delete` throws on null (`JSON.parse('null')`)
+      if (o === null || typeof o !== 'object') return o;
       delete o.playerAds;
       delete o.adPlacements;
       delete o.adSlots;
