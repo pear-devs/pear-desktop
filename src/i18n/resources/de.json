@@ -514,6 +514,14 @@
             "message": "Argh! Entschuldigung, herunterladen fehlgeschlagen…",
             "title": "Fehler beim Herunterladen!"
           },
+          "folder-already-exists": {
+            "buttons": {
+              "cancel": "Abbrechen",
+              "continue": "Trotzdem herunterladen"
+            },
+            "message": "Dieser Playlist-Ordner existiert bereits",
+            "title": "Ordner existiert bereits"
+          },
           "start-download-playlist": {
             "buttons": {
               "ok": "OK"
@@ -541,6 +549,7 @@
           "playlist-is-empty": "Playlist ist leer",
           "playlist-is-mix-or-private": "Fehler beim Sammeln der Playlist-Informationen: stelle sicher, dass es keine private oder \"Mixed for you\"-Playlist ist\n\n{{error}}",
           "preparing-file": "Bereite Datei vor…",
+          "retrying-failed": "Wiederhole {{count}} fehlgeschlagene Downloads…",
           "saving": "Speichere…",
           "trying-to-get-playlist-id": "Versuche Playlist-ID zu bekommen: {{playlistId}}",
           "video-id-not-found": "Video nicht gefunden",
@@ -550,28 +559,70 @@
       "description": "Lädt MP3-/Original-Audio direkt von der Schnittstelle herunter",
       "menu": {
         "choose-download-folder": "Downloadordner wählen",
+        "custom-preset": {
+          "extension": "Dateiendung (leer = Quellformat behalten)",
+          "ffmpeg-args": "FFmpeg-Argumente (durch Leerzeichen getrennt)",
+          "label": "Eigenes Preset konfigurieren",
+          "title": "Eigenes Preset"
+        },
         "download-finish-settings": {
           "label": "Song am Ende runterladen",
           "prompt": {
-            "last-percent": "Nach x Prozent",
-            "last-seconds": "Letzten x Sekunden",
-            "title": "Konfiguriere wann runtergeladen werden soll"
+            "description": "Lädt den Song herunter, den du gerade hörst. Der Download startet, sobald der gewählte Auslöser erreicht ist.",
+            "folder": "Zielordner (leer = Standard-Download-Ordner)",
+            "last-percent": "Gespielte Prozent",
+            "last-seconds": "Sekunden vor dem Ende",
+            "mode": "Auslöser",
+            "mode-percent": "Nach einem Teil des Songs",
+            "mode-seconds": "Kurz vor Ende des Songs",
+            "title": "Automatischer Download"
           },
           "submenu": {
-            "advanced": "Erweitert",
+            "choose-folder": "Zielordner wählen…",
             "enabled": "Aktiviert",
-            "mode": "Zeitmodus",
-            "percent": "Prozent",
-            "seconds": "Sekunden"
+            "settings": "Einstellungen…"
           }
         },
         "download-playlist": "Wiedergabeliste herunterladen",
+        "playlist-max-items": {
+          "description": "Maximale Anzahl Songs pro Playlist-Download (0 = kein Limit)",
+          "label": "Playlist-Limit",
+          "title": "Playlist-Limit"
+        },
         "presets": "Voreinstellungen",
+        "show-progress": "Download-Fortschritt anzeigen",
         "skip-existing": "Vorhandene Dateien überspringen"
       },
       "name": "Downloader",
       "renderer": {
-        "can-not-update-progress": "Fortschritt kann nicht aktualisiert werden"
+        "can-not-update-progress": "Fortschritt kann nicht aktualisiert werden",
+        "panel": {
+          "actions": {
+            "cancel": "Download abbrechen",
+            "clear": "Abgeschlossene entfernen",
+            "collapse": "Einklappen",
+            "dismiss": "Aus Liste entfernen",
+            "expand": "Ausklappen",
+            "retry": "Erneut versuchen"
+          },
+          "active": "{{count}} aktiv",
+          "automatic": "Auto",
+          "idle": "Fertig",
+          "playlist": "{{title}} ({{index}}/{{size}})",
+          "status": {
+            "cancelled": "Abgebrochen",
+            "converting": "Wird konvertiert…",
+            "done": "Fertig",
+            "downloading": "Wird heruntergeladen…",
+            "error": "Fehlgeschlagen",
+            "preparing": "Wird vorbereitet…",
+            "queued": "In Warteschlange",
+            "saving": "Wird gespeichert…",
+            "skipped": "Übersprungen (existiert bereits)",
+            "tagging": "Tags werden geschrieben…"
+          },
+          "title": "Downloads"
+        }
       },
       "templates": {
         "button": "Herunterladen"
