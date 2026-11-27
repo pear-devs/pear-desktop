@@ -5,54 +5,49 @@ import { Visualizer } from './visualizer';
 
 import type { VisualizerPluginConfig } from '../index';
 
-class ButterchurnVisualizer extends Visualizer<Butterchurn> {
-  name = 'butterchurn';
-
-  visualizer: ReturnType<typeof Butterchurn.createVisualizer>;
-  private readonly renderingFrequencyInMs: number;
+class ButterchurnVisualizer extends Visualizer {
+  private readonly visualizer: ReturnType<typeof Butterchurn.createVisualizer>;
+  private destroyed: boolean = false;
+  private animFrameHandle: number | null;
 
   constructor(
     audioContext: AudioContext,
     audioSource: MediaElementAudioSourceNode,
-    visualizerContainer: HTMLElement,
     canvas: HTMLCanvasElement,
     audioNode: GainNode,
-    stream: MediaStream,
-    options: VisualizerPluginConfig,
+    _stream: MediaStream,
+    config: VisualizerPluginConfig,
   ) {
-    super(
-      audioContext,
-      audioSource,
-      visualizerContainer,
-      canvas,
-      audioNode,
-      stream,
-      options,
-    );
+    super(audioSource, audioNode);
+
+    const preset = ButterchurnPresets[config.butterchurn.preset];
+    const renderVisualizer = () => {
+      if (this.destroyed) return;
+      this.visualizer.render();
+      this.animFrameHandle = requestAnimationFrame(renderVisualizer);
+    };
 
     this.visualizer = Butterchurn.createVisualizer(audioContext, canvas, {
       width: canvas.width,
       height: canvas.height,
     });
-
-    const preset = ButterchurnPresets[options.butterchurn.preset];
-    this.visualizer.loadPreset(preset, options.butterchurn.blendTimeInSeconds);
-
+    this.visualizer.loadPreset(preset, config.butterchurn.blendTimeInSeconds);
     this.visualizer.connectAudio(audioNode);
 
-    this.renderingFrequencyInMs = options.butterchurn.renderingFrequencyInMs;
+    // Start animation request loop. Do not use setInterval!
+    this.animFrameHandle = requestAnimationFrame(renderVisualizer);
   }
 
   resize(width: number, height: number) {
     this.visualizer.setRendererSize(width, height);
   }
 
-  render() {
-    const renderVisualizer = () => {
-      requestAnimationFrame(renderVisualizer);
-      this.visualizer.render();
-    };
-    setTimeout(renderVisualizer, this.renderingFrequencyInMs);
+  destroy() {
+    if (this.animFrameHandle) cancelAnimationFrame(this.animFrameHandle);
+    this.destroyed = true;
+    try {
+      this.audioSource.disconnect(this.audioNode);
+    } catch {}
   }
 }
 

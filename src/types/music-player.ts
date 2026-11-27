@@ -1,8 +1,8 @@
 // TODO: fully type definitions for music-player
 
-import type { VideoDetails } from './video-details';
 import type { GetPlayerResponse } from './get-player-response';
 import type { PlayerAPIEvents } from './player-api-events';
+import type { VideoDetails } from './video-details';
 import type { WatchNextResponse } from '@/types/music-player-desktop-internal';
 
 export interface MusicPlayer {
@@ -152,7 +152,7 @@ export interface MusicPlayer {
   dispatchReduxAction: <Parameters extends unknown[], Return>(
     ...params: Parameters
   ) => Return;
-  getPlayerResponse: () => GetPlayerResponse;
+  getPlayerResponse: () => GetPlayerResponse | null;
   getHeartbeatResponse: <Parameters extends unknown[], Return>(
     ...params: Parameters
   ) => Return;

@@ -1,15 +1,16 @@
 import { Client as DiscordClient } from '@xhayper/discord-rpc';
-import { dev } from 'electron-is';
 import { ActivityType } from 'discord-api-types/v10';
+import is from 'electron-is';
 
 import { t } from '@/i18n';
 import { LoggerPrefix } from '@/utils';
+
 import { clientId, PROGRESS_THROTTLE_MS, TimerKey } from './constants';
 import { TimerManager } from './timer-manager';
 import {
   buildDiscordButtons,
   padHangulFields,
-  truncateString,
+  sanitizeActivityText,
   isSeek,
 } from './utils';
 
@@ -22,7 +23,7 @@ export class DiscordService {
   /**
    * Discord RPC client instance.
    */
-  rpc = new DiscordClient({ clientId });
+  rpc!: DiscordClient;
   /**
    * Indicates if the service is ready to send activity updates.
    */
@@ -62,8 +63,23 @@ export class DiscordService {
     this.mainWindow = mainWindow;
     this.autoReconnect = config?.autoReconnect ?? true; // Default autoReconnect to true
 
+    this.initializeRpc();
+  }
+
+  private initializeRpc() {
+    if (this.rpc) {
+      try {
+        this.rpc.destroy();
+      } catch {
+        // ignored
+      }
+      this.rpc.removeAllListeners();
+    }
+
+    this.rpc = new DiscordClient({ clientId });
+
     this.rpc.on('connected', () => {
-      if (dev()) {
+      if (is.dev()) {
         console.log(LoggerPrefix, t('plugins.discord.backend.connected'));
       }
       this.refreshCallbacks.forEach((cb) => cb());
@@ -99,13 +115,15 @@ export class DiscordService {
     const activityInfo: SetActivity = {
       type: ActivityType.Listening,
       statusDisplayType: config.statusDisplayType,
-      details: truncateString(songInfo.alternativeTitle ?? songInfo.title, 128), // Song title
+      details: sanitizeActivityText(
+        songInfo.alternativeTitle ?? songInfo.title,
+      ), // Song title
       detailsUrl: songInfo.url ?? undefined,
-      state: truncateString(songInfo.tags?.at(0) ?? songInfo.artist, 128), // Artist name
+      state: sanitizeActivityText(songInfo.tags?.at(0) ?? songInfo.artist), // Artist name
       stateUrl: songInfo.artistUrl,
       largeImageKey: songInfo.imageSrc ?? undefined,
       largeImageText: songInfo.album
-        ? truncateString(songInfo.album, 128)
+        ? sanitizeActivityText(songInfo.album)
         : undefined,
       buttons: buildDiscordButtons(config, songInfo),
     };
@@ -118,10 +136,10 @@ export class DiscordService {
       songInfo.songDuration > 0 &&
       typeof songInfo.elapsedSeconds === 'number'
     ) {
-      const songStartTime = Date.now() - songInfo.elapsedSeconds * 1000;
+      const songStartTime = Date.now() - (songInfo.elapsedSeconds * 1000);
       activityInfo.startTimestamp = Math.floor(songStartTime / 1000);
       activityInfo.endTimestamp = Math.floor(
-        (songStartTime + songInfo.songDuration * 1000) / 1000,
+        (songStartTime + (songInfo.songDuration * 1000)) / 1000,
       );
     }
 
@@ -159,7 +177,7 @@ export class DiscordService {
     this.lastSongInfo = undefined;
     this.lastProgressUpdate = 0;
     this.timerManager.clearAll();
-    if (dev()) {
+    if (is.dev()) {
       console.log(LoggerPrefix, t('plugins.discord.backend.disconnected'));
     }
   }
@@ -192,6 +210,7 @@ export class DiscordService {
               resolve();
             })
             .catch(() => {
+              this.initializeRpc();
               this.connectRecursive();
             });
         },
@@ -217,7 +236,7 @@ export class DiscordService {
    */
   connect(showErrorDialog = false): void {
     if (this.rpc.isConnected) {
-      if (dev()) {
+      if (is.dev()) {
         console.log(
           LoggerPrefix,
           t('plugins.discord.backend.already-connected'),
@@ -236,6 +255,9 @@ export class DiscordService {
       this.resetInfo();
 
       if (this.autoReconnect) {
+        // For some reason @xhayper/discord-rpc leaves a dangling listener on connection failure
+        // so we destroy and recreate the RPC client before reconnecting.
+        this.initializeRpc();
         this.connectRecursive();
       } else if (showErrorDialog && this.mainWindow) {
         // connection failed
@@ -250,12 +272,11 @@ export class DiscordService {
     this.autoReconnect = false;
     this.timerManager.clear(TimerKey.DiscordConnectRetry);
     this.timerManager.clear(TimerKey.ClearActivity);
-    if (this.rpc.isConnected) {
-      try {
-        this.rpc.destroy();
-      } catch {
-        // ignored
-      }
+    try {
+      this.rpc.removeAllListeners();
+      this.rpc.destroy();
+    } catch {
+      // ignored
     }
     this.resetInfo(); // Reset internal state
   }

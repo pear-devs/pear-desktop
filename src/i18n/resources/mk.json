@@ -1,0 +1,121 @@
+{
+  "common": {
+    "console": {
+      "plugins": {
+        "initialize-failed": "Грешка при иницијализирање на приклучокот \"{{pluginName}}\"",
+        "load-all": "Се вчитуваат сите приклучоци",
+        "load-failed": "Грешка при вчитување на приклучокот \"{{pluginName}}\"",
+        "loaded": "Приклучокот \"{{pluginName}}\" е вчитан",
+        "unload-failed": "Грешка при деактивирање на приклучокот \"{{pluginName}}\"",
+        "unloaded": "Приклучокот \"{{pluginName}}\" е деактивиран"
+      }
+    }
+  },
+  "language": {
+    "code": "mk",
+    "local-name": "Македонски",
+    "name": "Macedonian"
+  },
+  "main": {
+    "console": {
+      "i18n": {
+        "loaded": "i18n е вчитано"
+      },
+      "theme": {
+        "css-file-not-found": "CSS-датотеката \"{{cssFile}}\" не постои, се игнорира"
+      },
+      "when-ready": {
+        "clearing-cache-after-20s": "Се чисти кеш-меморијата на апликацијата"
+      }
+    },
+    "dialog": {
+      "need-to-restart": {
+        "buttons": {
+          "later": "Подоцна",
+          "restart-now": "Рестартирај Сега"
+        }
+      },
+      "unresponsive": {
+        "buttons": {
+          "quit": "Откажи",
+          "relaunch": "Рестартиран",
+          "wait": "Почекај"
+        },
+        "title": "Прозорецот не реагира"
+      },
+      "update-available": {
+        "buttons": {
+          "disable": "Оневозможи Ажурирања",
+          "download": "Преземи"
+        }
+      }
+    },
+    "menu": {
+      "navigation": {
+        "label": "Навигација",
+        "submenu": {
+          "go-back": "Врати се назад",
+          "go-forward": "Оди напред",
+          "quit": "Излез",
+          "restart": "Рестартирај Ја Апликацијата"
+        }
+      },
+      "options": {
+        "label": "Опции",
+        "submenu": {
+          "language": {
+            "dialog": {
+              "message": "Јазикот ќе се промени по рестартирањето",
+              "title": "Јазикот е променет"
+            },
+            "label": "Јазик"
+          },
+          "tray": {
+            "submenu": {
+              "play-pause-on-click": "Пушти/Паузирај со клик"
+            }
+          },
+          "visual-tweaks": {
+            "submenu": {
+              "custom-window-title": {
+                "prompt": {
+                  "placeholder": "Пример:{{applicationName}}"
+                }
+              },
+              "theme": {
+                "dialog": {
+                  "button": {
+                    "cancel": "Откажи",
+                    "remove": "Отстрани"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "plugins": {
+        "label": "Приклучоци",
+        "new": "НОВО"
+      }
+    }
+  },
+  "plugins": {
+    "video-toggle": {
+      "menu": {
+        "align": {
+          "label": "Порамнување",
+          "submenu": {
+            "left": "Лево",
+            "middle": "Средина",
+            "right": "Десно"
+          }
+        }
+      },
+      "templates": {
+        "button-song": "Песна",
+        "button-video": "Видео"
+      }
+    }
+  }
+}

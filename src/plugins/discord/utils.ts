@@ -1,10 +1,10 @@
-import { HANGUL_FILLER } from './constants';
-
 import { APPLICATION_NAME } from '@/i18n';
 
-import type { GatewayActivityButton } from 'discord-api-types/v10';
-import type { SongInfo } from '@/providers/song-info';
+import { HANGUL_FILLER } from './constants';
+
 import type { DiscordPluginConfig } from './index';
+import type { SongInfo } from '@/providers/song-info';
+import type { GatewayActivityButton } from 'discord-api-types/v10';
 
 /**
  * Truncates a string to a specified length, adding ellipsis if truncated.
@@ -18,6 +18,30 @@ export const truncateString = (str: string, length: number): string => {
   }
   return str;
 };
+
+/**
+ * Sanitizes a string for Discord Rich Presence activity, ensuring it meets length requirements.
+ * @param input - The string to sanitize.
+ * @param fallback - A fallback string to use if the input is empty or whitespace. Defaults to 'undefined'.
+ * @returns The sanitized string, compliant with Discord's requirements.
+ */
+export function sanitizeActivityText(
+  input: string | undefined,
+  fallback: string = 'undefined',
+): string {
+  const text = input && input.trim() ? input.trim() : fallback.trim();
+  let safeString = truncateString(text, 128);
+
+  if (safeString.length === 0) {
+    return fallback;
+  }
+
+  if (safeString.length < 2) {
+    safeString = safeString.padEnd(2, '⠀'); // change if necessary
+  }
+
+  return safeString;
+}
 
 /**
  * Builds the array of buttons for the Discord Rich Presence activity.

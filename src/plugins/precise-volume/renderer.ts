@@ -1,5 +1,3 @@
-import { type PreciseVolumePluginConfig } from './index';
-
 import { debounce } from '@/providers/decorators';
 import {
   getPlayerApi,
@@ -7,6 +5,8 @@ import {
   listenToPlayerVideo,
   setPrecisePlayerVolume,
 } from '@/providers/player';
+
+import { type PreciseVolumePluginConfig } from './index';
 
 import type { RendererContext } from '@/types/contexts';
 import type { MusicPlayer } from '@/types/music-player';
@@ -246,7 +246,7 @@ export const onPlayerApiReady = async (
   // Set new volume as tooltip for volume slider and icon + expanding slider (appears when window size is small)
   const tooltipTargets = [
     '#volume-slider',
-    'tp-yt-paper-icon-button.volume',
+    'yt-icon-button.volume',
     '#expand-volume-slider',
     '#expand-volume',
   ];

@@ -1,17 +1,3 @@
-<div align="center" markdown="1">
-   <sup>Special thanks to:</sup>
-   <br>
-   <br>
-   <a href="https://go.warp.dev/pear-desktop">
-      <img alt="Warp sponsorship" width="400" src="https://github.com/user-attachments/assets/8307ea56-e872-494a-8a9c-de0e296a06ed" />
-   </a>
-
-### [Warp, built for coding with multiple AI agents](https://go.warp.dev/pear-desktop)
-[Available for macOS, Linux, & Windows](https://go.warp.dev/pear-desktop)<br>
-
-</div>
-<hr>
-
 <div align="center">
 
 # :pear: Pear Desktop
@@ -51,6 +37,7 @@
 - [Translation](#translation)
 - [Download](#download)
   - [Arch Linux](#arch-linux)
+  - [Solus](#solus)
   - [MacOS](#macos)
   - [Windows](#windows)
     - [How to install without a network connection? (in Windows)](#how-to-install-without-a-network-connection-in-windows)
@@ -69,7 +56,7 @@
 
 You can help with translation on [Hosted Weblate](https://bit.ly/48n5YF7).
 
-<a href="https://bit.ly/48n5YF7/">
+<a href="https://bit.ly/48n5YF7">
   <img src="https://bit.ly/4q83L6S" alt="translation status" />
   <img src="https://bit.ly/4h3zBxo" alt="translation status 2" />
 </a>
@@ -84,12 +71,18 @@ latest version.
 Install the [`pear-desktop`](https://aur.archlinux.org/packages/pear-desktop) package from the AUR. For AUR installation instructions, take a look at
 this [wiki page](https://wiki.archlinux.org/index.php/Arch_User_Repository#Installing_packages).
 
-### macOS
-
-You can install the app using Homebrew (see the [cask definition](https://github.com/pear-devs/pear-desktop-homebrew)):
+### [Solus](https://getsol.us/)
 
 ```bash
-brew install pear-devs/pear-desktop
+sudo eopkg install pear-desktop
+```
+
+### macOS
+
+You can install the app using Homebrew (see the [cask definition](https://github.com/pear-devs/homebrew-pear)):
+
+```bash
+brew install pear-devs/pear/pear-desktop
 ```
 
 If you install the app manually and get an error "is damaged and can’t be opened." when launching the app, run the following in the Terminal:
@@ -123,7 +116,6 @@ winget install pear-devs.pear-desktop
 
 - Download the `*.nsis.7z` file for _your device architecture_ in [release page](https://github.com/pear-devs/pear-desktop/releases/latest).
   - `x64` for 64-bit Windows
-  - `ia32` for 32-bit Windows
   - `arm64` for ARM64 Windows
 - Download installer in release page. (`*-Setup.exe`)
 - Place them in the **same directory**.
@@ -143,6 +135,10 @@ cd pear-desktop
 pnpm install --frozen-lockfile
 pnpm dev
 ```
+
+Instead of installing pnpm on your system, you can also use [devcontainers](https://containers.dev/). You can use devcontainers either as a development environment in VS Code, or as a way to easily build the project without installing dependencies on your host system.
+
+Note that this has it's own limitations (for example, GUI doesn't work on, at least some, Linux hosts).
 
 ## Build your own plugins
 
@@ -278,6 +274,16 @@ export default createPlugin({
 
 Builds the app for macOS, Linux, and Windows,
 using [electron-builder](https://github.com/electron-userland/electron-builder).
+
+### Building in devcontainer
+
+1. Clone the repo;
+2. Open the folder in VS Code;
+3. Reopen in container when prompted;
+4. Run `pnpm build` as above (choosing the desired target);
+5. Collect the built files from the `dist` folder.
+
+Since devcontainer uses a mount for the workspace, the built files will be available on the host system as well.
 
 ## Production Preview
 

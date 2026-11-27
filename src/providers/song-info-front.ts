@@ -1,3 +1,9 @@
+import {
+  LikeType,
+  type GetState,
+  type VolumeState,
+} from '@/types/datahost-get-state';
+
 import { singleton } from './decorators';
 import {
   getPlayerVolume,
@@ -7,20 +13,13 @@ import {
   PRECISE_VOLUME_UPDATED,
 } from './player';
 
-import {
-  LikeType,
-  type GetState,
-  type VolumeState,
-} from '@/types/datahost-get-state';
-
+import type { SongInfo } from './song-info';
 import type { MusicPlayer } from '@/types/music-player';
 import type {
   AlbumDetails,
   PlayerOverlays,
   VideoDataChangeValue,
 } from '@/types/player-api-events';
-
-import type { SongInfo } from './song-info';
 import type { VideoDataChanged } from '@/types/video-data-changed';
 
 const DATAUPDATED_FALLBACK_TIMEOUT_MS = 1500;
@@ -265,7 +264,7 @@ export const setupSongInfo = singleton(() => {
   const videoEventDispatcher = async (
     name: string,
     videoData: VideoDataChangeValue,
-    // eslint-disable-next-line @typescript-eslint/require-await
+    // oxlint-disable-next-line typescript/require-await
   ) =>
     document.dispatchEvent(
       new CustomEvent<VideoDataChanged>('videodatachange', {

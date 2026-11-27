@@ -1,6 +1,5 @@
-import { type BrowserWindow, ipcMain, nativeImage, net } from 'electron';
-
 import { Mutex } from 'async-mutex';
+import { type BrowserWindow, ipcMain, nativeImage, net } from 'electron';
 
 import * as config from '@/config';
 
@@ -94,7 +93,7 @@ const handleData = async (
     songInfo.uploadDate = microformat.uploadDate;
     songInfo.url = microformat.urlCanonical?.split('&')[0];
     songInfo.playlistId =
-      new URL(microformat.urlCanonical).searchParams.get('list') ?? '';
+      URL.parse(microformat.urlCanonical)?.searchParams?.get('list') ?? '';
     if (microformat.pageOwnerDetails?.externalChannelId) {
       songInfo.artistUrl = `https://music.\u0079\u006f\u0075\u0074\u0075\u0062\u0065.com/channel/${microformat.pageOwnerDetails.externalChannelId}`;
     }

@@ -218,13 +218,6 @@
       "description": "Ja reklāma atskaņojas, tad skaņa izlēdzas, un ātrums pārslēdzas uz 16x",
       "name": "Reklāmu paātrinājums"
     },
-    "adblocker": {
-      "description": "Bloķēt visas reklāmas un trekerus uzreiz pēc instalēšanas",
-      "menu": {
-        "blocker": "Bloķētājs"
-      },
-      "name": "Reklāmu bloķētājs"
-    },
     "album-actions": {
       "description": "Pievieno Undislike, Dislike, Like, un Unlike pogas lai izdarītu to visām dziesmām Mūzikas sarakstā vai albumā",
       "name": "Darbības ar Albumu"

@@ -22,9 +22,9 @@ export const getPlayerVideo = () => findPlayerVideo(getPlayerApi());
 
 const getPlayerBarState = () =>
   document
-    .querySelector<
-      HTMLElement & { getState?: () => GetState }
-    >('ytmusic-player-bar')
+    .querySelector<HTMLElement & { getState?: () => GetState }>(
+      'ytmusic-player-bar',
+    )
     ?.getState?.()?.player;
 
 let preciseVolume: {

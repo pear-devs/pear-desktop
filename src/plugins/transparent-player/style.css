@@ -11,7 +11,9 @@
 }
 
 body.transparent-background-color {
-  background-color: var(--ytmd-transparent-player-transparent-background) !important;
+  background-color: var(
+    --ytmd-transparent-player-transparent-background
+  ) !important;
 }
 
 body.transparent-player-backdrop-filter {
@@ -25,7 +27,9 @@ body.transparent-player-backdrop-filter {
   #search-page {
     #tabs {
       &.stuck {
-        backdrop-filter: var(--ytmd-transparent-player-backdrop-blur) !important;
+        backdrop-filter: var(
+          --ytmd-transparent-player-backdrop-blur
+        ) !important;
       }
     }
   }
@@ -51,7 +55,9 @@ body.transparent-player {
     #layout {
       #nav-bar-background,
       #player-bar-background {
-        background: var(--ytmd-transparent-player-transparent-background-dark) !important;
+        background: var(
+          --ytmd-transparent-player-transparent-background-dark
+        ) !important;
       }
 
       #mini-guide-background {
@@ -77,7 +83,9 @@ body.transparent-player {
       #search-page {
         #tabs {
           &.stuck {
-            background: var(--ytmd-transparent-player-transparent-background) !important;
+            background: var(
+              --ytmd-transparent-player-transparent-background
+            ) !important;
           }
         }
       }

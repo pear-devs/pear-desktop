@@ -1,5 +1,5 @@
-import type { SongInfo } from '@/providers/song-info';
 import type { ProviderName } from './providers';
+import type { SongInfo } from '@/providers/song-info';
 
 export type SyncedLyricsPluginConfig = {
   enabled: boolean;
@@ -10,6 +10,10 @@ export type SyncedLyricsPluginConfig = {
   showLyricsEvenIfInexact: boolean;
   lineEffect: LineEffect;
   romanization: boolean;
+  convertChineseCharacter?:
+    | 'simplifiedToTraditional'
+    | 'traditionalToSimplified'
+    | 'disabled';
 };
 
 export type LineLyricsStatus = 'previous' | 'current' | 'upcoming';

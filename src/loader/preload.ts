@@ -1,11 +1,9 @@
 import { deepmerge } from 'deepmerge-ts';
 import { allPlugins, preloadPlugins } from 'virtual:plugins';
 
-import { LoggerPrefix, startPlugin, stopPlugin } from '@/utils';
-
 import * as config from '@/config';
-
 import { t } from '@/i18n';
+import { LoggerPrefix, startPlugin, stopPlugin } from '@/utils';
 
 import type { PreloadContext } from '@/types/contexts';
 import type { PluginConfig, PluginDef } from '@/types/plugins';

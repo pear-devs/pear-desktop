@@ -1,9 +1,10 @@
-import { render } from 'solid-js/web';
 import { createSignal, Show } from 'solid-js';
+import { render } from 'solid-js/web';
 
+import { t } from '@/i18n';
+import { createAddToToastAction } from '@/plugins/utils/renderer';
 import { getPlayerApi, listenToPlayerVideo } from '@/providers/player';
 import { createRenderer } from '@/utils';
-import { t } from '@/i18n';
 
 import { CaptionsSettingButton } from './templates/captions-settings-template';
 
@@ -130,15 +131,19 @@ export default createRenderer<
                   api.setOption('captions', 'track', {
                     languageCode: newCaptions.languageCode,
                   });
-                  appApi?.toastService?.show(
-                    t('plugins.captions-selector.toast.caption-changed', {
-                      language: newCaptions.displayName,
-                    }),
+                  appApi?.handleAddToToastAction?.(
+                    createAddToToastAction(
+                      t('plugins.captions-selector.toast.caption-changed', {
+                        language: newCaptions.displayName,
+                      }),
+                    ),
                   );
                 } else {
                   api.setOption('captions', 'track', {});
-                  appApi?.toastService?.show(
-                    t('plugins.captions-selector.toast.caption-disabled'),
+                  appApi?.handleAddToToastAction?.(
+                    createAddToToastAction(
+                      t('plugins.captions-selector.toast.caption-disabled'),
+                    ),
                   );
                 }
 
@@ -146,8 +151,10 @@ export default createRenderer<
                   if (api === getPlayerApi()) api.playVideo();
                 });
               } else {
-                appApi?.toastService?.show(
-                  t('plugins.captions-selector.toast.no-captions'),
+                appApi?.handleAddToToastAction?.(
+                  createAddToToastAction(
+                    t('plugins.captions-selector.toast.no-captions'),
+                  ),
                 );
               }
             }}

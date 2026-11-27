@@ -1,5 +1,5 @@
-import { dialog } from 'electron';
 import prompt from 'custom-electron-prompt';
+import { dialog } from 'electron';
 
 import { t } from '@/i18n';
 import promptOptions from '@/providers/prompt-options';
@@ -10,8 +10,8 @@ import {
   defaultAPIServerConfig,
 } from './config';
 
-import type { MenuContext } from '@/types/contexts';
 import type { MenuTemplate } from '@/menu';
+import type { MenuContext } from '@/types/contexts';
 
 export const onMenu = async ({
   getConfig,

@@ -1,0 +1,12 @@
+{
+  "common": {
+    "console": {
+      "plugins": {
+        "execute-failed": "Плагины толорор кыаҕа суох {{pluginName}}::{{contextName}}",
+        "executed-at-ms": "Плагин {{pluginName}}::{{contextName}} толоруллубут {{ms}}мс",
+        "initialize-failed": "\"{{pluginName}}\" плагины инициализациялааһын кыаллыбата",
+        "load-all": "Плагиннары загрузкалыбыт"
+      }
+    }
+  }
+}

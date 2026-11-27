@@ -1,6 +1,5 @@
-import { render } from 'solid-js/web';
-
 import { createSignal, Show } from 'solid-js';
+import { render } from 'solid-js/web';
 
 import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
@@ -158,7 +157,7 @@ export default createPlugin<
             case 'dislike':
               if (size > 0) {
                 setShowDislike(true);
-                setDislikeMaskSize(`100% ${100 - (size / listsLength) * 100}%`);
+                setDislikeMaskSize(`100% ${100 - ((size / listsLength) * 100)}%`);
               } else {
                 setShowDislike(false);
               }
@@ -167,7 +166,7 @@ export default createPlugin<
               if (size > 0) {
                 setShowUnDislike(true);
                 setUnDislikeMaskSize(
-                  `100% ${100 - (size / listsLength) * 100}%`,
+                  `100% ${100 - ((size / listsLength) * 100)}%`,
                 );
               } else {
                 setShowUnDislike(false);
@@ -176,7 +175,7 @@ export default createPlugin<
             case 'like':
               if (size > 0) {
                 setShowLike(true);
-                setLikeMaskSize(`100% ${100 - (size / listsLength) * 100}%`);
+                setLikeMaskSize(`100% ${100 - ((size / listsLength) * 100)}%`);
               } else {
                 setShowLike(false);
               }
@@ -184,7 +183,7 @@ export default createPlugin<
             case 'unlike':
               if (size > 0) {
                 setShowUnLike(true);
-                setUnLikeMaskSize(`100% ${100 - (size / listsLength) * 100}%`);
+                setUnLikeMaskSize(`100% ${100 - ((size / listsLength) * 100)}%`);
               } else {
                 setShowUnLike(false);
               }

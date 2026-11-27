@@ -1,16 +1,14 @@
 import i18next from 'i18next';
-
 import { setTheme } from 'mdui/functions/setTheme.js';
 import 'mdui/mdui.css';
 import 'mdui';
 
-import { startingPages } from './providers/extracted-data';
+import { loadI18n, setLanguage, t as i18t } from '@/i18n';
 import {
-  getPlayerApi,
-  getPlayerVideo,
-  observePlayer,
-} from './providers/player';
-import { setupSongInfo } from './providers/song-info-front';
+  defaultTrustedTypePolicy,
+  registerWindowDefaultTrustedTypePolicy,
+} from '@/utils/trusted-types';
+
 import {
   createContext,
   forceLoadRendererPlugin,
@@ -19,19 +17,19 @@ import {
   getLoadedRendererPlugin,
   loadAllRendererPlugins,
 } from './loader/renderer';
-
-import { loadI18n, setLanguage, t as i18t } from '@/i18n';
-
+import { startingPages } from './providers/extracted-data';
 import {
-  defaultTrustedTypePolicy,
-  registerWindowDefaultTrustedTypePolicy,
-} from '@/utils/trusted-types';
+  getPlayerApi,
+  getPlayerVideo,
+  observePlayer,
+} from './providers/player';
+import { setupSongInfo } from './providers/song-info-front';
 
-import type { PluginConfig } from '@/types/plugins';
 import type { MusicPlayer } from '@/types/music-player';
-import type { QueueElement } from '@/types/queue';
-import type { QueueResponse } from '@/types/music-player-desktop-internal';
 import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
+import type { QueueResponse } from '@/types/music-player-desktop-internal';
+import type { PluginConfig } from '@/types/plugins';
+import type { QueueElement } from '@/types/queue';
 import type { SearchBoxElement } from '@/types/search-box-element';
 
 setTheme('dark');
@@ -98,9 +96,9 @@ async function onApiLoaded() {
   );
   window.ipcRenderer.on('peard:shuffle', () => {
     document
-      .querySelector<
-        HTMLElement & { queue: { shuffle: () => void } }
-      >('ytmusic-player-bar')
+      .querySelector<HTMLElement & { queue: { shuffle: () => void } }>(
+        'ytmusic-player-bar',
+      )
       ?.queue.shuffle();
   });
 
@@ -130,17 +128,17 @@ async function onApiLoaded() {
   window.ipcRenderer.on('peard:switch-repeat', (_, repeat = 1) => {
     for (let i = 0; i < repeat; i++) {
       document
-        .querySelector<
-          HTMLElement & { onRepeatButtonClick: () => void }
-        >('ytmusic-player-bar')
+        .querySelector<HTMLElement & { onRepeatButtonClick: () => void }>(
+          'ytmusic-player-bar',
+        )
         ?.onRepeatButtonClick();
     }
   });
   window.ipcRenderer.on('peard:update-volume', (_, volume: number) => {
     document
-      .querySelector<
-        HTMLElement & { updateVolume: (volume: number) => void }
-      >('ytmusic-player-bar')
+      .querySelector<HTMLElement & { updateVolume: (volume: number) => void }>(
+        'ytmusic-player-bar',
+      )
       ?.updateVolume(volume);
   });
 
@@ -179,9 +177,9 @@ async function onApiLoaded() {
 
   window.ipcRenderer.on('peard:toggle-mute', (_) => {
     document
-      .querySelector<
-        HTMLElement & { onVolumeClick: () => void }
-      >('ytmusic-player-bar')
+      .querySelector<HTMLElement & { onVolumeClick: () => void }>(
+        'ytmusic-player-bar',
+      )
       ?.onVolumeClick();
   });
 
@@ -409,29 +407,34 @@ async function onApiLoaded() {
 
     document.head.appendChild(style);
   }
+
+  // Swap like button order
+  if (window.mainConfig.get('options.swapLikeButtonsOrder')) {
+    const style = document.createElement('style');
+    style.textContent = `
+      #like-button-renderer {
+        display: inline-flex;
+        flex-direction: row-reverse;
+      }`;
+
+    document.head.appendChild(style);
+  }
 }
 
-/**
- * Original still using ES5, so we need to define custom elements using ES5 style
- */
 const definePearTransElements = () => {
-  const PearTrans = function () {};
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  PearTrans.prototype = Object.create(HTMLElement.prototype);
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-  PearTrans.prototype.connectedCallback = function () {
-    const that = this as HTMLElement;
-    const key = that.getAttribute('key');
-    if (key) {
-      const targetHtml = i18t(key);
-      (that.innerHTML as string | TrustedHTML) = defaultTrustedTypePolicy
-        ? defaultTrustedTypePolicy.createHTML(targetHtml)
-        : targetHtml;
-    }
-  };
   customElements.define(
     'pear-trans',
-    PearTrans as unknown as CustomElementConstructor,
+    class extends HTMLElement {
+      connectedCallback() {
+        const key = this.getAttribute('key');
+        if (key) {
+          const targetHtml = i18t(key);
+          (this.innerHTML as string | TrustedHTML) = defaultTrustedTypePolicy
+            ? defaultTrustedTypePolicy.createHTML(targetHtml)
+            : targetHtml;
+        }
+      }
+    },
   );
 };
 

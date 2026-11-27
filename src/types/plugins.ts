@@ -1,11 +1,10 @@
-import type { MusicPlayer } from '@/types/music-player';
-
 import type {
   BackendContext,
   MenuContext,
   PreloadContext,
   RendererContext,
 } from './contexts';
+import type { MusicPlayer } from '@/types/music-player';
 
 type Author = string;
 

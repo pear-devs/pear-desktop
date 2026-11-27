@@ -15,7 +15,7 @@
   margin: var(--ytmusic-menu-item-icon_-_margin);
   fill: var(--ytmusic-menu-item-icon_-_fill);
   stroke: var(--iron-icon-stroke-color, none);
-  width: var(--iron-icon-width, 24px);
-  height: var(--iron-icon-height, 24px);
+  width: var(--iron-icon-width, 18px);
+  height: var(--iron-icon-height, 18px);
   animation: var(--iron-icon_-_animation);
 }

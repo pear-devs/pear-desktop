@@ -161,7 +161,8 @@
                 "default": "Výchozí",
                 "force-show": "Vynutit zobrazení",
                 "hide": "Skrýt",
-                "label": "Like tlačítka"
+                "label": "Like tlačítka",
+                "swap": "Prohodit pořadí tlačítek To se mi líbí"
               },
               "remove-upgrade-button": "Odebrat upgrade tlačítko",
               "theme": {
@@ -218,13 +219,6 @@
       "description": "Pokud se přehraje reklama tak ztlumí zvuk a nastaví rychlost přehrávání na 16x",
       "name": "Zrychlovač Reklam"
     },
-    "adblocker": {
-      "description": "Blokuje všechny reklamy a sledování ihned od začátku",
-      "menu": {
-        "blocker": "Blokátor"
-      },
-      "name": "Blokátor reklam"
-    },
     "album-actions": {
       "description": "Přidává Undislike, Dislike, Like, a Unlike tlačítka k aplikování tohoto ke všem písničkám v seznamu písniček nebo albumu",
       "name": "Možnosti Alba"
@@ -237,7 +231,8 @@
           "submenu": {
             "percent": "{{ratio}}%"
           }
-        }
+        },
+        "enable-seekbar": "Povolit stylování časové osy"
       },
       "name": "Motiv podle barvy Alba"
     },
@@ -320,6 +315,22 @@
         "hostname": {
           "label": "Hostname"
         },
+        "https": {
+          "label": "HTTPS a Certifikáty",
+          "submenu": {
+            "cert": {
+              "dialogTitle": "Zvolit soubor certifikátu HTTPS",
+              "label": "Soubor certifikátu (.crt/.pem)"
+            },
+            "enable-https": {
+              "label": "Povolit HTTPS"
+            },
+            "key": {
+              "dialogTitle": "Zvolit soubor soukromého HTTPS klíče",
+              "label": "Soubor soukromého klíče (.key/.pem)"
+            }
+          }
+        },
         "port": {
           "label": "Port"
         }
@@ -395,6 +406,17 @@
         "no-captions": "K této skladbě nejsou titulky dostupné"
       }
     },
+    "clock": {
+      "description": "Přidat hodiny na navigační řádek",
+      "menu": {
+        "format": {
+          "24-hour-format": "24 hodinový formát",
+          "display-seconds": "Zobrazit vteřiny",
+          "label": "Formát"
+        }
+      },
+      "name": "Hodiny"
+    },
     "compact-sidebar": {
       "description": "Vždy nastavit postranní panel do kompaktního režimu",
       "name": "Kompaktní postranní panel"
@@ -461,8 +483,8 @@
         "set-status-display-type": {
           "label": "Text statusu",
           "submenu": {
-            "artist": "Poslouchám: {artist}",
             "application": "Poslouchám {{applicationName}}",
+            "artist": "Poslouchám: {artist}",
             "title": "Poslouchám {song title}"
           }
         }

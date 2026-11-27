@@ -1,11 +1,8 @@
+import { createSignal, Show } from 'solid-js';
 import { render } from 'solid-js/web';
 
-import { createSignal, Show } from 'solid-js';
-
-import forceHideStyle from './force-hide.css?inline';
-import buttonSwitcherStyle from './button-switcher.css?inline';
-
-import { createPlugin } from '@/utils';
+import { t } from '@/i18n';
+import { type MenuTemplate } from '@/menu';
 import { moveVolumeHud as preciseVolumeMoveVolumeHud } from '@/plugins/precise-volume/renderer';
 import {
   getPlayerApi,
@@ -13,9 +10,10 @@ import {
   listenToPlayerVideo,
 } from '@/providers/player';
 import { type ThumbnailElement } from '@/types/get-player-response';
-import { t } from '@/i18n';
-import { type MenuTemplate } from '@/menu';
+import { createPlugin } from '@/utils';
 
+import buttonSwitcherStyle from './button-switcher.css?inline';
+import forceHideStyle from './force-hide.css?inline';
 import { VideoSwitchButton } from './templates/video-switch-button';
 
 export type VideoTogglePluginConfig = {
@@ -171,7 +169,7 @@ export default createPlugin({
         : () => {};
 
       const player = document.querySelector<
-        HTMLElement & { videoMode_: boolean }
+        HTMLElement & { videoMode: boolean }
       >('ytmusic-player');
 
       const switchButtonContainer = document.createElement('div');
@@ -298,7 +296,7 @@ export default createPlugin({
 
       const observeThumbnail = () => {
         const playbackModeObserver = new MutationObserver((mutations) => {
-          if (!player?.videoMode_) {
+          if (!player?.videoMode) {
             return;
           }
 

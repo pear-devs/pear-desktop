@@ -161,7 +161,8 @@
                 "default": "Padrão",
                 "force-show": "Forçar exibir",
                 "hide": "Ocultar",
-                "label": "Botões de 'Curtir'"
+                "label": "Botões de 'Curtir'",
+                "swap": "Inverter ordem dos botões de curtir"
               },
               "remove-upgrade-button": "Remover botão de atualização",
               "theme": {
@@ -217,13 +218,6 @@
     "ad-speedup": {
       "description": "Se um anúncio for reproduzido, ele silencia o áudio e define a velocidade de reprodução para 16x",
       "name": "Acelerador de Anúncios"
-    },
-    "adblocker": {
-      "description": "Bloqueio de todos os anúncios e rastreamentos imediatamente",
-      "menu": {
-        "blocker": "Bloqueador"
-      },
-      "name": "Bloqueador de Anúncios"
     },
     "album-actions": {
       "description": "Adiciona botões Remover Não curtir, Não curtir, Curtir e Remover Curtir para aplicar em todas as músicas em uma lista ou álbum",
@@ -412,6 +406,17 @@
         "no-captions": "Sem legendas disponíveis para essa música"
       }
     },
+    "clock": {
+      "description": "Adicionar relógio na barra de navegação",
+      "menu": {
+        "format": {
+          "24-hour-format": "Formato 24 horas",
+          "display-seconds": "Mostrar segundos",
+          "label": "Formato"
+        }
+      },
+      "name": "Relógio"
+    },
     "compact-sidebar": {
       "description": "Sempre definir a barra lateral no modo compacto",
       "name": "Barra lateral compacta"
@@ -484,13 +489,20 @@
           }
         }
       },
-      "name": "Rich Presence do Discord",
+      "name": "Presença Marcante no Discord",
       "prompt": {
         "set-inactivity-timeout": {
-          "label": "Digite o tempo de inatividade em segundos:",
+          "label": "Insira o tempo limite de inatividade em segundos:",
           "title": "Definir tempo limite de inatividade"
         }
       }
+    },
+    "do-not-track": {
+      "description": "Bloqueia todo o rastreamento imediatamente",
+      "menu": {
+        "blocker": "Bloqueador"
+      },
+      "name": "Não rastrear"
     },
     "downloader": {
       "backend": {
@@ -830,6 +842,24 @@
         "not-found": "⚠️ Nenhuma letra encontrada para esta música."
       },
       "menu": {
+        "convert-chinese-character": {
+          "label": "Converter caracteres Chineses",
+          "submenu": {
+            "disabled": {
+              "label": "Desativado",
+              "tooltip": "Desativar conversão de caracteres Chineses"
+            },
+            "simplified-to-traditional": {
+              "label": "Simplificado para Tradicional",
+              "tooltip": "Converter Chinês Simplificado para Chinês Tradicional"
+            },
+            "traditional-to-simplified": {
+              "label": "Tradicional para Simplificado",
+              "tooltip": "Converter Chinês Tradicional para Chinês Simplificado"
+            }
+          },
+          "tooltip": "Converter caractere Chinês para Tradicional ou Simplificado"
+        },
         "default-text-string": {
           "label": "Caractere padrão entre letras",
           "tooltip": "Escolha o caractere padrão a ser usado para o intervalo entre as letras"
@@ -913,9 +943,14 @@
           "label": "Tipo",
           "submenu": {
             "acrylic": "Acrílico",
+            "content": "Conteúdo",
+            "fullscreen-ui": "Interface em tela cheia",
             "mica": "Mica",
             "none": "Nenhum",
-            "tabbed": "Em abas"
+            "tabbed": "Em abas",
+            "under-page": "Abaixo da página",
+            "under-window": "Abaixo da janela",
+            "window": "Janela"
           }
         }
       },

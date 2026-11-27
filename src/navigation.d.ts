@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* oxlint-disable typescript/no-explicit-any */
 
 interface NavigationOptions {
   info: any;
@@ -45,6 +45,7 @@ interface NavigationEventsMap {
   navigatesuccess: NavigateEvent;
 }
 
+// oxlint-disable-next-line no-redeclare
 interface Navigation extends EventTarget {
   entries(): Array<NavigationHistoryEntry>;
   readonly currentEntry?: NavigationHistoryEntry;

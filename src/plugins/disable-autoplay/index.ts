@@ -1,9 +1,8 @@
+import { t } from '@/i18n';
 import { createPlugin } from '@/utils';
 
-import { t } from '@/i18n';
-
-import type { VideoDataChanged } from '@/types/video-data-changed';
 import type { MusicPlayer } from '@/types/music-player';
+import type { VideoDataChanged } from '@/types/video-data-changed';
 
 export type DisableAutoPlayPluginConfig = {
   enabled: boolean;
