@@ -1,6 +1,17 @@
 import { singleton } from './decorators';
+import {
+  getPlayerVolume,
+  getPlayerVideo,
+  listenToPlayerVideo,
+  observePlayer,
+  PRECISE_VOLUME_UPDATED,
+} from './player';
 
-import { LikeType, type GetState } from '@/types/datahost-get-state';
+import {
+  LikeType,
+  type GetState,
+  type VolumeState,
+} from '@/types/datahost-get-state';
 
 import type { MusicPlayer } from '@/types/music-player';
 import type {
@@ -25,13 +36,10 @@ window.ipcRenderer.on(
 );
 
 // Used because 'loadeddata' or 'loadedmetadata' weren't firing on song start for some users (https://github.com/pear-devs/pear-desktop/issues/473)
-const srcChangedEvent = new CustomEvent('peard:src-changed');
 
 export const setupSeekedListener = singleton(() => {
-  document.querySelector('video')?.addEventListener('seeked', (v) => {
-    if (v.target instanceof HTMLVideoElement) {
-      window.ipcRenderer.send('peard:seeked', v.target.currentTime);
-    }
+  listenToPlayerVideo('seeked', (video) => {
+    window.ipcRenderer.send('peard:seeked', video.currentTime);
   });
 });
 
@@ -115,34 +123,34 @@ export const setupLikeChangedListener = singleton(() => {
   }
 });
 
-export const setupVolumeChangedListener = singleton((api: MusicPlayer) => {
-  const updateVolume = () => {
-    const playerBar = document.querySelector<
-      HTMLElement & { getState?: () => GetState }
-    >('ytmusic-player-bar');
-    // The player bar reports volume on the same scale as its updateVolume method.
-    const playerState = playerBar?.getState?.()?.player;
+export const setupVolumeChangedListener = singleton(() => {
+  let pendingPreciseReport: VolumeState | undefined;
+
+  const updateVolume = (precise = false) => {
+    const volume = getPlayerVolume();
+    if (!volume) return;
+
+    // The native event can follow the explicit Precise Volume notification.
+    const previous = pendingPreciseReport;
+    pendingPreciseReport = undefined;
+    if (
+      !precise &&
+      previous?.state === volume.state &&
+      previous.isMuted === volume.isMuted
+    ) {
+      return;
+    }
 
     try {
-      window.ipcRenderer.send('peard:volume-changed', {
-        state: playerState?.volume ?? api.getVolume(),
-        isMuted: playerState?.muted ?? api.isMuted(),
-      });
-    } catch (e) {
-      console.error('Failed to send volume change IPC:', e);
+      window.ipcRenderer.send('peard:volume-changed', volume);
+      if (precise) pendingPreciseReport = volume;
+    } catch (error) {
+      console.error('Failed to send volume change IPC:', error);
     }
   };
 
-  // Capture the non-bubbling event so replacement videos are covered too.
-  document.addEventListener(
-    'volumechange',
-    (event) => {
-      if (event.target instanceof HTMLVideoElement) {
-        updateVolume();
-      }
-    },
-    { capture: true },
-  );
+  listenToPlayerVideo('volumechange', () => updateVolume());
+  document.addEventListener(PRECISE_VOLUME_UPDATED, () => updateVolume(true));
   updateVolume();
 });
 
@@ -209,7 +217,7 @@ export const setupAutoPlayChangedListener = singleton(() => {
   });
 });
 
-export const setupSongInfo = (api: MusicPlayer) => {
+export const setupSongInfo = singleton(() => {
   window.ipcRenderer.on('peard:setup-time-changed-listener', () => {
     setupTimeChangedListener();
   });
@@ -223,7 +231,7 @@ export const setupSongInfo = (api: MusicPlayer) => {
   });
 
   window.ipcRenderer.on('peard:setup-volume-changed-listener', () => {
-    setupVolumeChangedListener(api);
+    setupVolumeChangedListener();
   });
 
   window.ipcRenderer.on('peard:setup-shuffle-changed-listener', () => {
@@ -242,22 +250,17 @@ export const setupSongInfo = (api: MusicPlayer) => {
     setupSeekedListener();
   });
 
-  const playPausedHandler = (e: Event, status: string) => {
-    if (
-      e.target instanceof HTMLVideoElement &&
-      Math.round(e.target.currentTime) > 0
-    ) {
+  const reportPlayState = (video: HTMLVideoElement, isPaused: boolean) => {
+    if (Math.round(video.currentTime) > 0) {
       window.ipcRenderer.send('peard:play-or-paused', {
-        isPaused: status === 'pause',
-        elapsedSeconds: Math.floor(e.target.currentTime),
+        isPaused,
+        elapsedSeconds: Math.floor(video.currentTime),
       });
     }
   };
 
-  const playPausedHandlers = {
-    playing: (e: Event) => playPausedHandler(e, 'playing'),
-    pause: (e: Event) => playPausedHandler(e, 'pause'),
-  };
+  listenToPlayerVideo('playing', (video) => reportPlayState(video, false));
+  listenToPlayerVideo('pause', (video) => reportPlayState(video, true));
 
   const videoEventDispatcher = async (
     name: string,
@@ -282,9 +285,32 @@ export const setupSongInfo = (api: MusicPlayer) => {
     }
   };
 
+  let playerApi: MusicPlayer | null = null;
+  let trackId: string | undefined;
+  let lastSourceChange: { video: HTMLVideoElement; id: string } | undefined;
+
+  const notifySourceChange = (
+    video: HTMLVideoElement | null,
+    id: string | undefined,
+    fromObserver = false,
+  ) => {
+    if (!video || !id) return;
+    if (
+      fromObserver &&
+      lastSourceChange?.video === video &&
+      lastSourceChange.id === id
+    ) {
+      return;
+    }
+
+    // Deliver native dataloaded events even for a replay of the same track.
+    lastSourceChange = { video, id };
+    video.dispatchEvent(new CustomEvent('peard:src-changed'));
+  };
+
   // Name = "dataloaded" and abit later "dataupdated"
   // Sometimes "dataupdated" is not fired, so we need to fallback to "dataloaded"
-  api.addEventListener('videodatachange', (name, videoData) => {
+  const onVideoDataChange = (name: string, videoData: VideoDataChangeValue) => {
     videoEventDispatcher(name, videoData);
 
     if (name === 'dataupdated' && waitingEvent.has(videoData.videoId)) {
@@ -292,13 +318,8 @@ export const setupSongInfo = (api: MusicPlayer) => {
       clearVideoTimeout(videoData.videoId);
       sendSongInfo(videoData);
     } else if (name === 'dataloaded') {
-      const video = document.querySelector<HTMLVideoElement>('video');
-      video?.dispatchEvent(srcChangedEvent);
-
-      for (const status of ['playing', 'pause'] as const) {
-        // for fix issue that pause event not fired
-        video?.addEventListener(status, playPausedHandlers[status]);
-      }
+      trackId = videoData.videoId;
+      notifySourceChange(getPlayerVideo(), trackId);
 
       clearVideoTimeout(videoData.videoId);
       waitingEvent.add(videoData.videoId);
@@ -313,42 +334,45 @@ export const setupSongInfo = (api: MusicPlayer) => {
 
       waitingTimeouts.set(videoData.videoId, timeoutId);
     }
+  };
+
+  observePlayer((api, video) => {
+    if (api !== playerApi) {
+      playerApi?.removeEventListener('videodatachange', onVideoDataChange);
+      for (const timeout of waitingTimeouts.values()) {
+        clearTimeout(timeout);
+      }
+      waitingTimeouts.clear();
+      waitingEvent.clear();
+
+      trackId = undefined;
+      playerApi = api;
+      api?.addEventListener('videodatachange', onVideoDataChange);
+    }
+    if (!api || !video) return;
+
+    // Read the API snapshot if dataloaded happened before we could subscribe.
+    const snapshot = trackId ? undefined : api.getVideoData?.();
+    const id = trackId ?? snapshot?.video_id;
+    notifySourceChange(video, id, true);
+
+    if (!snapshot || !id || Number.isNaN(video.duration)) return;
+    trackId = id;
+    sendSongInfo({
+      title: snapshot.title,
+      author: snapshot.author,
+      videoId: id,
+      playlistId: snapshot.list,
+      isUpcoming: false,
+      lengthSeconds: video.duration,
+      loading: true,
+      ['\u0079\u0074\u006d\u0064WatchNextResponse']: api.getWatchNextResponse(),
+    } satisfies VideoDataChangeValue);
   });
 
-  const video = document.querySelector('video');
-
-  if (video) {
-    for (const status of ['playing', 'pause'] as const) {
-      video.addEventListener(status, playPausedHandlers[status]);
-    }
-
-    if (!isNaN(video.duration)) {
-      const {
-        title,
-        author,
-        video_id: videoId,
-        list: playlistId,
-      } = api.getVideoData();
-
-      const watchNextResponse = api.getWatchNextResponse();
-
-      sendSongInfo({
-        title,
-        author,
-        videoId,
-        playlistId,
-
-        isUpcoming: false,
-        lengthSeconds: video.duration,
-        loading: true,
-
-        ['\u0079\u0074\u006d\u0064WatchNextResponse']: watchNextResponse,
-      } satisfies VideoDataChangeValue);
-    }
-  }
-
   function sendSongInfo(videoData: VideoDataChangeValue) {
-    const data = api.getPlayerResponse();
+    const data = playerApi?.getPlayerResponse();
+    if (!data) return;
 
     let playerOverlay: PlayerOverlays | undefined;
 
@@ -371,4 +395,4 @@ export const setupSongInfo = (api: MusicPlayer) => {
 
     window.ipcRenderer.send('peard:video-src-changed', data);
   }
-};
+});

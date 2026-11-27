@@ -3,6 +3,7 @@ import { render } from 'solid-js/web';
 import { createSignal } from 'solid-js';
 
 import { getSongMenu } from '@/providers/dom-elements';
+import { listenToPlayerVideo } from '@/providers/player';
 
 import { PlaybackSpeedSlider } from './components/slider';
 import { t } from '@/i18n';
@@ -15,12 +16,9 @@ import {
 const MIN_PLAYBACK_SPEED = 0.07;
 const MAX_PLAYBACK_SPEED = 16;
 
-const forcePlaybackRate = (e: Event) => {
-  if (e.target instanceof HTMLVideoElement) {
-    const videoElement = e.target;
-    if (videoElement.playbackRate !== speed()) {
-      videoElement.playbackRate = speed();
-    }
+const forcePlaybackRate = (video: HTMLVideoElement) => {
+  if (video.playbackRate !== speed()) {
+    video.playbackRate = speed();
   }
 };
 
@@ -28,8 +26,10 @@ const roundToTwo = (n: number) => Math.round(n * 1e2) / 1e2;
 
 const [speed, setSpeed] = createSignal(1);
 const sliderContainer = document.createElement('div');
+let removeVideoListeners: (() => void) | undefined;
 
 export const onPlayerApiReady = () => {
+  removeVideoListeners?.();
   const observePopupContainer = () => {
     const updatePlayBackSpeed = () => {
       const videoElement = document.querySelector<HTMLVideoElement>('video');
@@ -105,23 +105,24 @@ export const onPlayerApiReady = () => {
     }
   };
 
-  const observeVideo = () => {
-    const video = document.querySelector<HTMLVideoElement>('video');
-    if (video) {
-      video.addEventListener('ratechange', forcePlaybackRate);
-      video.addEventListener('peard:src-changed', forcePlaybackRate);
-    }
-  };
-
   observePopupContainer();
-  observeVideo();
+  const removePlaybackRateListener = listenToPlayerVideo(
+    'ratechange',
+    forcePlaybackRate,
+  );
+  const removeSourceListener = listenToPlayerVideo(
+    'peard:src-changed',
+    forcePlaybackRate,
+  );
+
+  removeVideoListeners = () => {
+    removePlaybackRateListener();
+    removeSourceListener();
+  };
 };
 
 export const onUnload = () => {
-  const video = document.querySelector<HTMLVideoElement>('video');
-  if (video) {
-    video.removeEventListener('ratechange', forcePlaybackRate);
-    video.removeEventListener('peard:src-changed', forcePlaybackRate);
-  }
+  removeVideoListeners?.();
+  removeVideoListeners = undefined;
   getSongMenu()?.removeChild(sliderContainer);
 };

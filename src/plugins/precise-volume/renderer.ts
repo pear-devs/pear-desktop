@@ -1,6 +1,12 @@
 import { type PreciseVolumePluginConfig } from './index';
 
 import { debounce } from '@/providers/decorators';
+import {
+  getPlayerApi,
+  getPlayerVideo,
+  listenToPlayerVideo,
+  setPrecisePlayerVolume,
+} from '@/providers/player';
 
 import type { RendererContext } from '@/types/contexts';
 import type { MusicPlayer } from '@/types/music-player';
@@ -9,27 +15,27 @@ function $<E extends Element = Element>(selector: string) {
   return document.querySelector<E>(selector);
 }
 
-let api: MusicPlayer;
-
 export const moveVolumeHud = debounce((showVideo: boolean) => {
   const volumeHud = $<HTMLElement>('#volumeHud');
   if (!volumeHud) {
     return;
   }
 
-  volumeHud.style.top = showVideo
-    ? `${($('ytmusic-player')!.clientHeight - $('video')!.clientHeight) / 2}px`
-    : '0';
+  const player = $('ytmusic-player');
+  const video = getPlayerVideo();
+  volumeHud.style.top =
+    showVideo && player && video
+      ? `${(player.clientHeight - video.clientHeight) / 2}px`
+      : '0';
 }, 250);
 
 let options: PreciseVolumePluginConfig;
 
 export const onPlayerApiReady = async (
-  playerApi: MusicPlayer,
+  _playerApi: MusicPlayer,
   context: RendererContext<PreciseVolumePluginConfig>,
 ) => {
   options = await context.getConfig();
-  api = playerApi;
 
   // Without this function it would rewrite config 20 time when volume change by 20
   const writeOptions = debounce(() => {
@@ -50,7 +56,7 @@ export const onPlayerApiReady = async (
       // Set saved volume as tooltip
       setTooltip(options.savedVolume);
 
-      if (api.getVolume() !== options.savedVolume) {
+      if (getPlayerApi()?.getVolume() !== options.savedVolume) {
         setVolume(options.savedVolume);
       }
     }
@@ -68,12 +74,12 @@ export const onPlayerApiReady = async (
       setupVideoPlayerOnwheel();
       if (!(await window.mainConfig.plugins.isEnabled('video-toggle'))) {
         // Video-toggle handles hud positioning on its own
-        const videoMode = () =>
-          api.getPlayerResponse().videoDetails?.musicVideoType !==
-          'MUSIC_VIDEO_TYPE_ATV';
-        $('video')?.addEventListener('peard:src-changed', () =>
-          moveVolumeHud(videoMode()),
-        );
+        listenToPlayerVideo('peard:src-changed', () => {
+          const details = getPlayerApi()?.getPlayerResponse()?.videoDetails;
+          if (details) {
+            moveVolumeHud(details.musicVideoType !== 'MUSIC_VIDEO_TYPE_ATV');
+          }
+        });
       }
     }
   }
@@ -183,7 +189,9 @@ export const onPlayerApiReady = async (
   }
 
   function setVolume(value: number) {
-    api.setVolume(value);
+    const api = getPlayerApi();
+    if (!api) return;
+    setPrecisePlayerVolume(api, value);
     // Save the new volume
     saveVolume(value);
 
@@ -200,6 +208,9 @@ export const onPlayerApiReady = async (
 
   /** If (toIncrease = false) then volume decrease */
   function changeVolume(toIncrease: boolean) {
+    const api = getPlayerApi();
+    if (!api) return;
+
     // Apply volume change if valid
     const steps = Number(options.steps || 1);
     setVolume(

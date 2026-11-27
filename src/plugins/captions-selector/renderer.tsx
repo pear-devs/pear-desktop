@@ -1,6 +1,7 @@
 import { render } from 'solid-js/web';
 import { createSignal, Show } from 'solid-js';
 
+import { getPlayerApi, listenToPlayerVideo } from '@/providers/player';
 import { createRenderer } from '@/utils';
 import { t } from '@/i18n';
 
@@ -35,31 +36,34 @@ export default createRenderer<
   {
     captionsSettingsButton?: HTMLElement;
     captionTrackList: LanguageOptions[] | null;
-    api: MusicPlayer | null;
+    removeSourceListener?: () => void;
     config: CaptionsSelectorConfig | null;
     videoChangeListener: () => void;
   },
   CaptionsSelectorConfig
 >({
   captionTrackList: null,
-  api: null,
   config: null,
   videoChangeListener() {
+    const api = getPlayerApi();
+    if (!api) return;
     if (this.config?.disableCaptions) {
-      setTimeout(() => this.api!.unloadModule('captions'), 100);
+      setTimeout(() => {
+        if (api === getPlayerApi()) api.unloadModule('captions');
+      }, 100);
       setHidden(true);
       return;
     }
 
-    this.api!.loadModule('captions');
+    api.loadModule('captions');
 
     setTimeout(() => {
-      this.captionTrackList =
-        this.api!.getOption('captions', 'tracklist') ?? [];
+      if (api !== getPlayerApi()) return;
+      this.captionTrackList = api.getOption('captions', 'tracklist') ?? [];
 
-      if (this.config!.autoload && this.config!.lastCaptionsCode) {
-        this.api?.setOption('captions', 'track', {
-          languageCode: this.config!.lastCaptionsCode,
+      if (this.config?.autoload && this.config.lastCaptionsCode) {
+        api.setOption('captions', 'track', {
+          languageCode: this.config.lastCaptionsCode,
         });
       }
 
@@ -70,19 +74,16 @@ export default createRenderer<
     this.config = await getConfig();
   },
   stop() {
-    this.api?.unloadModule('captions');
-    document
-      .querySelector('video')
-      ?.removeEventListener('peard:src-changed', this.videoChangeListener);
+    getPlayerApi()?.unloadModule('captions');
+    this.removeSourceListener?.();
+    this.removeSourceListener = undefined;
     if (this.captionsSettingsButton) {
       document
         .querySelector('.right-controls-buttons')
         ?.removeChild(this.captionsSettingsButton);
     }
   },
-  onPlayerApiReady(playerApi, { ipc, setConfig }) {
-    this.api = playerApi;
-
+  onPlayerApiReady(_playerApi: MusicPlayer, { ipc, setConfig }) {
     render(
       () => (
         <Show when={!hidden()}>
@@ -92,8 +93,12 @@ export default createRenderer<
               const appApi = document.querySelector<AppElement>('ytmusic-app');
 
               if (this.captionTrackList?.length) {
-                const currentCaptionTrack =
-                  playerApi.getOption<LanguageOptions>('captions', 'track');
+                const api = getPlayerApi();
+                if (!api) return;
+                const currentCaptionTrack = api.getOption<LanguageOptions>(
+                  'captions',
+                  'track',
+                );
 
                 let currentIndex = currentCaptionTrack
                   ? this.captionTrackList.indexOf(
@@ -115,14 +120,14 @@ export default createRenderer<
                   captionLabels,
                   currentIndex,
                 )) as number;
-                if (currentIndex === null) {
+                if (currentIndex === null || api !== getPlayerApi()) {
                   return;
                 }
 
                 const newCaptions = this.captionTrackList[currentIndex];
                 setConfig({ lastCaptionsCode: newCaptions?.languageCode });
                 if (newCaptions) {
-                  playerApi.setOption('captions', 'track', {
+                  api.setOption('captions', 'track', {
                     languageCode: newCaptions.languageCode,
                   });
                   appApi?.toastService?.show(
@@ -131,13 +136,15 @@ export default createRenderer<
                     }),
                   );
                 } else {
-                  playerApi.setOption('captions', 'track', {});
+                  api.setOption('captions', 'track', {});
                   appApi?.toastService?.show(
                     t('plugins.captions-selector.toast.caption-disabled'),
                   );
                 }
 
-                setTimeout(() => playerApi.playVideo());
+                setTimeout(() => {
+                  if (api === getPlayerApi()) api.playVideo();
+                });
               } else {
                 appApi?.toastService?.show(
                   t('plugins.captions-selector.toast.no-captions'),
@@ -152,11 +159,12 @@ export default createRenderer<
     );
 
     this.captionTrackList =
-      this.api.getOption<LanguageOptions[]>('captions', 'tracklist') ?? [];
+      getPlayerApi()?.getOption<LanguageOptions[]>('captions', 'tracklist') ??
+      [];
 
-    document
-      .querySelector('video')
-      ?.addEventListener('peard:src-changed', this.videoChangeListener);
+    this.removeSourceListener = listenToPlayerVideo('peard:src-changed', () => {
+      this.videoChangeListener();
+    });
   },
   onConfigChange(newConfig) {
     this.config = newConfig;
