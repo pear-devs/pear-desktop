@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <title>YTM-Immersion</title>
+  <style>
+    /* 拡張機能のページなので、YouTube Music 側の style.css は効かない。
+       設定パネルと同じ見え方に寄せつつ、ここだけで完結させる。 */
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f6f7;
+      --card: #ffffff;
+      --fg: #1a1a1c;
+      --muted: #6b6b73;
+      --line: rgba(0, 0, 0, 0.1);
+      --accent: #ff0033;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #131315;
+        --card: #1d1d20;
+        --fg: #f2f2f4;
+        --muted: #9a9aa2;
+        --line: rgba(255, 255, 255, 0.12);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 40px 16px 64px;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans",
+        "Noto Sans JP", "Yu Gothic UI", Roboto, sans-serif;
+      line-height: 1.7;
+    }
+
+    main {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 6px;
+      letter-spacing: 0.01em;
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0 0 28px;
+    }
+
+    .providers {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 12px;
+    }
+
+    .group+.group {
+      margin-top: 28px;
+    }
+
+    .group-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 2px;
+    }
+
+    .group-note {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 12px;
+    }
+
+    .provider {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px 18px;
+    }
+
+    .provider-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .provider-head input {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      flex: none;
+      cursor: pointer;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 1px 8px;
+      margin-left: auto;
+      flex: none;
+    }
+
+    .desc {
+      margin: 8px 0 0 30px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .hosts {
+      margin: 6px 0 0 30px;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      opacity: 0.75;
+      word-break: break-all;
+    }
+
+    .note {
+      margin: 28px 0 0;
+      padding: 16px 18px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .note strong {
+      color: var(--fg);
+      font-weight: 600;
+    }
+
+    #status {
+      min-height: 20px;
+      margin: 18px 0 0;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    /* ── 設定パネルに差し込まれた時(?embed=1) ─────────────────
+       options.js が <html class="embed"> を付ける。
+       設定パネル(style.css の #ytm-settings-panel)は常に暗いので、
+       OS の配色に関わらず暗色で固定し、トグルもパネルのものに揃える。
+       color-scheme は iframe 要素の側(style.css)と必ず揃えること。
+       食い違うと Chrome が iframe の裏に不透明な背景を敷く。 */
+    @font-face {
+      font-family: "InterVariable";
+      src: url("assets/fonts/InterVariable.woff2") format("woff2");
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+
+    /* overflow: hidden は、高さが合うまでの間に縦のスクロールバーが出て
+       横幅が変わり、測り直しが続くのを防ぐため */
+    html.embed {
+      overflow: hidden;
+      color-scheme: dark;
+      --fg: rgba(255, 255, 255, 0.9);
+      --muted: rgba(255, 255, 255, 0.45);
+      --line: rgba(255, 255, 255, 0.06);
+      --acc: #ff2d55;
+      background: transparent;
+    }
+
+    .embed body {
+      padding: 0;
+      background: transparent;
+      font-family: 'SF Pro Display', 'InterVariable', 'Noto Sans JP', sans-serif;
+      line-height: 1.5;
+    }
+
+    .embed main {
+      max-width: none;
+    }
+
+    /* 見出しと説明は、差し込み先の行が出している */
+    .embed h1,
+    .embed .lead {
+      display: none;
+    }
+
+    .embed .group+.group {
+      margin-top: 18px;
+    }
+
+    .embed .group-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.6);
+      margin: 0 2px 2px;
+    }
+
+    .embed .group-note {
+      font-size: 11px;
+      line-height: 1.5;
+      margin: 0 2px 8px;
+    }
+
+    .embed .providers {
+      gap: 0;
+      background: rgba(0, 0, 0, 0.22);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .embed .provider {
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 0;
+      padding: 12px 14px;
+      transition: background 0.15s ease;
+    }
+
+    .embed .provider:last-child {
+      border-bottom: none;
+    }
+
+    .embed .provider:hover {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    .embed .provider-head {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--fg);
+      line-height: 1.45;
+    }
+
+    /* 許可の有無はトグルの状態で分かるので、バッジは出さない */
+    .embed .badge {
+      display: none;
+    }
+
+    /* トグルは右端に寄せる(設定パネルの他の行と同じ並び)。
+       形と寸法は style.css の .settings-panel input[type="checkbox"] と同じ。 */
+    .embed .provider-head input {
+      order: 3;
+      margin-left: auto;
+      appearance: none;
+      -webkit-appearance: none;
+      width: 44px;
+      height: 26px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 13px;
+      position: relative;
+      outline: none;
+      transition: background 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s, box-shadow 0.25s;
+    }
+
+    .embed .provider-head input:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .embed .provider-head input:focus-visible {
+      box-shadow: 0 0 0 3px rgba(255, 45, 85, 0.4);
+    }
+
+    .embed .provider-head input:checked {
+      background: var(--acc);
+      border-color: transparent;
+    }
+
+    .embed .provider-head input:checked:hover {
+      filter: brightness(1.1);
+    }
+
+    .embed .provider-head input::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+      transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .embed .provider-head input:checked::after {
+      transform: translateX(18px);
+    }
+
+    /* 許可のダイアログに答えるまでの間 */
+    .embed .provider-head input:disabled {
+      opacity: 0.5;
+      cursor: progress;
+    }
+
+    .embed .desc {
+      margin: 4px 56px 0 0;
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+
+    .embed .hosts {
+      margin: 3px 56px 0 0;
+      font-size: 10.5px;
+      opacity: 0.6;
+    }
+
+    .embed #status {
+      min-height: 0;
+      margin: 10px 2px 0;
+      font-size: 11.5px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .embed #status:empty {
+      display: none;
+    }
+
+    .embed .note {
+      margin: 10px 2px 0;
+      padding: 0;
+      background: none;
+      border: none;
+      border-radius: 0;
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .embed .note strong {
+      color: rgba(255, 255, 255, 0.7);
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    <h1 id="title">歌詞ソース</h1>
+    <p class="lead" id="lead"></p>
+
+    <section class="group">
+      <h2 class="group-title" id="group-builtin-title"></h2>
+      <p class="group-note" id="group-builtin-note"></p>
+      <ul class="providers" id="providers-builtin"></ul>
+    </section>
+
+    <section class="group">
+      <h2 class="group-title" id="group-extra-title"></h2>
+      <p class="group-note" id="group-extra-note"></p>
+      <ul class="providers" id="providers"></ul>
+    </section>
+
+    <p id="status" role="status" aria-live="polite"></p>
+
+    <div class="note">
+      <p id="note-privacy" style="margin:0"></p>
+    </div>
+  </main>
+
+  <!-- 通信先の定義を extra-providers.js から読むのでモジュールで読み込む -->
+  <script type="module" src="js/options.js"></script>
+</body>
+
+</html>
