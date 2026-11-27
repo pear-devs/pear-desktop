@@ -184,8 +184,17 @@ export const romanizeJapanese = async (line: string) =>
     mode: 'spaced',
   }) ?? line;
 
+type HanjaApi = {
+  translate: (text: string, mode: 'SUBSTITUTION') => string;
+};
+
+const hanjaModule = hanja as HanjaApi | { default: HanjaApi };
+const hanjaTranslate = (
+  'translate' in hanjaModule ? hanjaModule : hanjaModule.default
+).translate;
+
 export const romanizeHangul = (line: string) =>
-  esHangulRomanize(hanja.translate(line, 'SUBSTITUTION'));
+  esHangulRomanize(hanjaTranslate(line, 'SUBSTITUTION'));
 
 export const romanizeChinese = (line: string) => {
   return line.replaceAll(/[\u4E00-\u9FFF]+/g, (match) => {
