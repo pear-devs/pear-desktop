@@ -7,15 +7,13 @@ import renderer, {
   type LanguageOptions,
 } from './renderer';
 
-import type { MusicPlayer } from '@/types/music-player';
-
 export default createPlugin<
   unknown,
   unknown,
   {
     captionsSettingsButton?: HTMLElement;
     captionTrackList: LanguageOptions[] | null;
-    api: MusicPlayer | null;
+    removeSourceListener?: () => void;
     config: CaptionsSelectorConfig | null;
     videoChangeListener: () => void;
   },

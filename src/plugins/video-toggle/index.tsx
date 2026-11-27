@@ -4,6 +4,11 @@ import { render } from 'solid-js/web';
 import { t } from '@/i18n';
 import { type MenuTemplate } from '@/menu';
 import { moveVolumeHud as preciseVolumeMoveVolumeHud } from '@/plugins/precise-volume/renderer';
+import {
+  getPlayerApi,
+  getPlayerVideo,
+  listenToPlayerVideo,
+} from '@/providers/player';
 import { type ThumbnailElement } from '@/types/get-player-response';
 import { createPlugin } from '@/utils';
 
@@ -151,7 +156,7 @@ export default createPlugin({
         }
       }
     },
-    async onPlayerApiReady(api, { getConfig }) {
+    async onPlayerApiReady(_api, { getConfig }) {
       const [showButton, setShowButton] = createSignal(true);
 
       const config = await getConfig();
@@ -166,7 +171,6 @@ export default createPlugin({
       const player = document.querySelector<
         HTMLElement & { videoMode: boolean }
       >('ytmusic-player');
-      const video = document.querySelector<HTMLVideoElement>('video');
 
       const switchButtonContainer = document.createElement('div');
       switchButtonContainer.id = 'ytmd-video-toggle-switch-button-container';
@@ -191,7 +195,8 @@ export default createPlugin({
 
       const forceThumbnail = (img: HTMLImageElement) => {
         const thumbnails: ThumbnailElement[] =
-          api?.getPlayerResponse()?.videoDetails?.thumbnail?.thumbnails ?? [];
+          getPlayerApi()?.getPlayerResponse()?.videoDetails?.thumbnail
+            ?.thumbnails ?? [];
         if (thumbnails && thumbnails.length > 0) {
           const thumbnail = thumbnails.at(-1)?.url.split('?')[0];
           if (thumbnail) img.src = thumbnail;
@@ -222,6 +227,7 @@ export default createPlugin({
           document.querySelector<HTMLElement>('#song-image')!.style.display =
             showVideo ? 'none' : 'block';
 
+          const video = getPlayerVideo();
           if (showVideo && video && !video.style.top) {
             video.style.top = `${
               (player.clientHeight - video.clientHeight) / 2
@@ -233,7 +239,7 @@ export default createPlugin({
       };
 
       const videoStarted = () => {
-        const videoDetails = api.getPlayerResponse()?.videoDetails;
+        const videoDetails = getPlayerApi()?.getPlayerResponse()?.videoDetails;
         if (!videoDetails) return;
 
         if (videoDetails.musicVideoType === 'MUSIC_VIDEO_TYPE_ATV') {
@@ -320,10 +326,13 @@ export default createPlugin({
           playerSelector.prepend(switchButtonContainer);
           setVideoState(!config.hideVideo);
           forcePlaybackMode();
-          if (video) {
+          const prepareVideo = (video: HTMLVideoElement) => {
             video.style.height = 'auto';
-          }
-          video?.addEventListener('peard:src-changed', videoStarted);
+            videoStarted();
+          };
+          listenToPlayerVideo('peard:src-changed', prepareVideo);
+          const video = getPlayerVideo();
+          if (video) video.style.height = 'auto';
           observeThumbnail();
           videoStarted();
           switch (config.align) {

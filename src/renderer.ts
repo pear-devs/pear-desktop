@@ -18,6 +18,11 @@ import {
   loadAllRendererPlugins,
 } from './loader/renderer';
 import { startingPages } from './providers/extracted-data';
+import {
+  getPlayerApi,
+  getPlayerVideo,
+  observePlayer,
+} from './providers/player';
 import { setupSongInfo } from './providers/song-info-front';
 
 import type { MusicPlayer } from '@/types/music-player';
@@ -29,25 +34,19 @@ import type { SearchBoxElement } from '@/types/search-box-element';
 
 setTheme('dark');
 
-let api: (Element & MusicPlayer) | null = null;
 let isPluginLoaded = false;
 let isApiLoaded = false;
 let firstDataLoaded = false;
 
 registerWindowDefaultTrustedTypePolicy();
 
-async function listenForApiLoad() {
-  if (!isApiLoaded) {
-    api = document.querySelector('#movie_player');
-    if (api) {
-      await onApiLoaded();
-
-      return;
-    }
-  }
-}
-
 async function onApiLoaded() {
+  if (isApiLoaded) return;
+  const api = getPlayerApi();
+  const video = getPlayerVideo();
+  if (!api || !video) return;
+  isApiLoaded = true;
+
   // Workaround for macOS traffic lights
   {
     let osType = 'Unknown';
@@ -79,17 +78,22 @@ async function onApiLoaded() {
       ?.click();
   });
   window.ipcRenderer.on('peard:play', (_) => {
-    api?.playVideo();
+    getPlayerApi()?.playVideo();
   });
   window.ipcRenderer.on('peard:pause', (_) => {
-    api?.pauseVideo();
+    getPlayerApi()?.pauseVideo();
   });
   window.ipcRenderer.on('peard:toggle-play', (_) => {
-    if (api?.getPlayerState() === 2) api?.playVideo();
-    else api?.pauseVideo();
+    const player = getPlayerApi();
+    if (player?.getPlayerState() === 2) player.playVideo();
+    else player?.pauseVideo();
   });
-  window.ipcRenderer.on('peard:seek-to', (_, t: number) => api!.seekTo(t));
-  window.ipcRenderer.on('peard:seek-by', (_, t: number) => api!.seekBy(t));
+  window.ipcRenderer.on('peard:seek-to', (_, t: number) =>
+    getPlayerApi()?.seekTo(t),
+  );
+  window.ipcRenderer.on('peard:seek-by', (_, t: number) =>
+    getPlayerApi()?.seekBy(t),
+  );
   window.ipcRenderer.on('peard:shuffle', () => {
     document
       .querySelector<HTMLElement & { queue: { shuffle: () => void } }>(
@@ -309,7 +313,6 @@ async function onApiLoaded() {
     },
   );
 
-  const video = document.querySelector('video')!;
   const audioContext = new AudioContext();
   const audioSource = audioContext.createMediaElementSource(video);
   audioSource.connect(audioContext.destination);
@@ -318,7 +321,7 @@ async function onApiLoaded() {
     if (typeof plugin.renderer !== 'function') {
       await plugin.renderer?.onPlayerApiReady?.call(
         plugin.renderer,
-        api!,
+        api,
         createContext(id),
       );
     }
@@ -456,6 +459,7 @@ const main = async () => {
   });
   window.ipcRenderer.on('plugin:enable', async (_event, id: string) => {
     await forceLoadRendererPlugin(id);
+    const api = getPlayerApi();
     if (api) {
       const plugin = getLoadedRendererPlugin(id);
       if (plugin && typeof plugin.renderer !== 'function') {
@@ -479,7 +483,7 @@ const main = async () => {
   );
 
   // Wait for complete load of the api
-  await listenForApiLoad();
+  await onApiLoaded();
 
   // Blocks the "Are You Still There?" popup by setting the last active time to Date.now every 15min
   setInterval(() => (window._lact = Date.now()), 900_000);
@@ -504,35 +508,29 @@ const initObserver = async () => {
     }
   });
 
-  const observer = new MutationObserver(() => {
-    const playerApi = document.querySelector<Element & MusicPlayer>(
-      '#movie_player',
-    );
-    if (playerApi) {
-      observer.disconnect();
+  setupSongInfo();
 
-      // Inject song-info provider
-      setupSongInfo(playerApi);
-      const dataLoadedListener = (name: string) => {
-        if (!firstDataLoaded && name === 'dataloaded') {
-          firstDataLoaded = true;
-          playerApi.removeEventListener('videodatachange', dataLoadedListener);
-        }
-      };
-      playerApi.addEventListener('videodatachange', dataLoadedListener);
-
-      if (isPluginLoaded && !isApiLoaded) {
-        api = playerApi;
-        isApiLoaded = true;
-
-        onApiLoaded();
-      }
+  let trackListenerApi: MusicPlayer | null = null;
+  const onFirstTrack = (name: string) => {
+    if (name === 'dataloaded') {
+      firstDataLoaded = true;
+      trackListenerApi?.removeEventListener('videodatachange', onFirstTrack);
+      trackListenerApi = null;
     }
-  });
+  };
 
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
+  observePlayer((api, video) => {
+    if (!firstDataLoaded && api !== trackListenerApi) {
+      trackListenerApi?.removeEventListener('videodatachange', onFirstTrack);
+      trackListenerApi = api;
+      trackListenerApi?.addEventListener('videodatachange', onFirstTrack);
+    }
+
+    if (api && video && isPluginLoaded) {
+      onApiLoaded().catch((error: unknown) => {
+        console.error('Failed to initialize the player API:', error);
+      });
+    }
   });
 };
 
