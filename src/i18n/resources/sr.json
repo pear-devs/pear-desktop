@@ -628,6 +628,7 @@
       "name": "Music Together [Beta]",
       "toast": {
         "add-song-failed": "Dodavanje pesme nije uspelo",
+        "song-added": "Додато у заједнички ред за репродукцију",
         "closed": "'Music Together' je zatvorena",
         "disconnected": "Veza sa 'Music Together' je prekinuta",
         "host-failed": "Pokretanje 'Music Together' kao domaćin (host) nije uspelo",

@@ -647,6 +647,7 @@
       "name": "Music Together [Beta]",
       "toast": {
         "add-song-failed": "Song hinzufügen gescheitert",
+        "song-added": "Zur gemeinsamen Warteschlange hinzugefügt",
         "closed": "Music Together geschlossen",
         "disconnected": "Verbindung zu Music Together getrennt",
         "host-failed": "Hosten von Music Together gescheitert",

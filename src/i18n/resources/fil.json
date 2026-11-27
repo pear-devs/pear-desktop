@@ -635,6 +635,7 @@
       "name": "Music Together [Beta]",
       "toast": {
         "add-song-failed": "Nabigong magdagdag ng kanta",
+        "song-added": "Naidagdag sa pinagsasaluhang pila ng playback",
         "closed": "Nakasara ang Music Together",
         "disconnected": "Nakadiskonekta ang Music Together",
         "host-failed": "Nabigong mag-host ng Music Together",

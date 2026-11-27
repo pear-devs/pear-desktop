@@ -169,6 +169,23 @@
     }
   },
   "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "പാട്ട് ചേർക്കാനായില്ല",
+        "song-added": "പങ്കിട്ട പ്ലേബാക്ക് ക്യൂവിൽ ചേർത്തു",
+        "closed": "Music Together അടച്ചു",
+        "disconnected": "Music Together-ലേക്കുള്ള ബന്ധം വിച്ഛേദിച്ചു",
+        "host-failed": "Music Together സെഷൻ തുടങ്ങാനായില്ല",
+        "id-copied": "ഹോസ്റ്റ് ഐഡി ക്ലിപ്പ്ബോർഡിലേക്ക് പകർത്തി",
+        "id-copy-failed": "ഹോസ്റ്റ് ഐഡി ക്ലിപ്പ്ബോർഡിലേക്ക് പകർത്താനായില്ല",
+        "join-failed": "Music Together-ൽ ചേരാനായില്ല",
+        "joined": "Music Together-ൽ ചേർന്നു",
+        "permission-changed": "Music Together-ലെ അനുമതി “{{permission}}” എന്നതിലേക്ക് മാറ്റി",
+        "remove-song-failed": "പാട്ട് നീക്കം ചെയ്യാനായില്ല",
+        "user-connected": "{{name}} Music Together-ൽ ചേർന്നു",
+        "user-disconnected": "{{name}} Music Together-ൽ നിന്ന് പുറത്തുപോയി"
+      }
+    },
     "video-toggle": {
       "menu": {
         "align": {

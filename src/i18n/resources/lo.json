@@ -647,6 +647,7 @@
       "name": "Music Together [Beta]",
       "toast": {
         "add-song-failed": "ເພີ່ມເພງບໍ່ສຳເລັດ",
+        "song-added": "ເພີ່ມໃສ່ຄິວຫຼິ້ນຮ່ວມແລ້ວ",
         "closed": "ປິດ Music Together ແລ້ວ",
         "disconnected": "ຕັດການເຊື່ອມຕໍ່ Music Together ແລ້ວ",
         "host-failed": "ບໍ່ສາມາດສ້າງຫ້ອງ Music Together ໄດ້",

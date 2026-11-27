@@ -627,6 +627,7 @@
       "name": "Music Together [بتا]",
       "toast": {
         "add-song-failed": "افزودن آهنگ با شکست مواجه شد",
+        "song-added": "به صف مشترک پخش اضافه شد",
         "closed": "بسته شد Music Together",
         "disconnected": "Music Together قطع اتصال",
         "host-failed": "با شکست مواجه شد Music Together میزبانی",

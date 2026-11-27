@@ -310,6 +310,23 @@
           }
         }
       }
+    },
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Kënga nuk mund të shtohej",
+        "song-added": "U shtua te radha e përbashkët e luajtjes",
+        "closed": "Music Together u mbyll",
+        "disconnected": "Lidhja me Music Together u ndërpre",
+        "host-failed": "Nuk mund të nisej një seancë e Music Together",
+        "id-copied": "ID-ja e organizatorit u kopjua në kujtesën e përkohshme",
+        "id-copy-failed": "ID-ja e organizatorit nuk mund të kopjohej në kujtesën e përkohshme",
+        "join-failed": "Nuk mund të bashkoheshe me Music Together",
+        "joined": "U bashkove me Music Together",
+        "permission-changed": "Leja e Music Together u ndryshua në «{{permission}}»",
+        "remove-song-failed": "Kënga nuk mund të hiqej",
+        "user-connected": "{{name}} u bashkua me Music Together",
+        "user-disconnected": "{{name}} u largua nga Music Together"
+      }
     }
   }
 }

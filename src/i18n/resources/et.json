@@ -586,9 +586,18 @@
       "name": "Muusika üheskoos [beeta]",
       "toast": {
         "add-song-failed": "Loo lisamine ebaõnnestus",
+        "song-added": "Lisatud ühisesse esitusjärjekorda",
         "closed": "Muusika üheskoos on suletud",
         "disconnected": "Muusika üheskoos on lahti ühendatud",
-        "remove-song-failed": "Loo eemaldamine ebaõnnestus"
+        "host-failed": "Muusika üheskoos seansi käivitamine ebaõnnestus",
+        "id-copied": "Hosti ID kopeeriti lõikelauale",
+        "id-copy-failed": "Hosti ID kopeerimine lõikelauale ebaõnnestus",
+        "join-failed": "Muusika üheskoos seansiga liitumine ebaõnnestus",
+        "joined": "Liitusid Muusika üheskoos seansiga",
+        "permission-changed": "Muusika üheskoos luba muudeti valikuks „{{permission}}“",
+        "remove-song-failed": "Loo eemaldamine ebaõnnestus",
+        "user-connected": "{{name}} liitus Muusika üheskoos seansiga",
+        "user-disconnected": "{{name}} lahkus Muusika üheskoos seansilt"
       }
     },
     "navigation": {

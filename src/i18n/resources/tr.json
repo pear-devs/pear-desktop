@@ -647,6 +647,7 @@
       "name": "Birlikte Müzik [Beta]",
       "toast": {
         "add-song-failed": "Şarkı eklenirken bir hata meydana geldi",
+        "song-added": "Ortak oynatma sırasına eklendi",
         "closed": "Birlikte Müzik kapatıldı",
         "disconnected": "Birlikte Müzik bağlantı kesildi",
         "host-failed": "Birlikte Müzik sunucusu kurulamadı",

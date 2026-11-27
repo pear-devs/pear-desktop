@@ -8,5 +8,24 @@
         "load-all": "Плагиннары загрузкалыбыт"
       }
     }
+  },
+  "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Ырыаны эбэр сатаммата",
+        "song-added": "Бииргэ туттуллар ырыа очуоратыгар эбилиннэ",
+        "closed": "Music Together сабылынна",
+        "disconnected": "Music Together кытта ситим быһынна",
+        "host-failed": "Music Together сессиятын саҕалыыр сатаммата",
+        "id-copied": "Хост ID-та көһөрүү буферыгар көһөрүлүннэ",
+        "id-copy-failed": "Хост ID-тын көһөрүү буферыгар көһөрөр сатаммата",
+        "join-failed": "Music Together-га холбонор сатаммата",
+        "joined": "Music Together-га холбоннуҥ",
+        "permission-changed": "Music Together көҥүлэ «{{permission}}» буолан уларыйда",
+        "remove-song-failed": "Ырыаны соттор сатаммата",
+        "user-connected": "{{name}} Music Together-га холбонно",
+        "user-disconnected": "{{name}} Music Together-ттан таҕыста"
+      }
+    }
   }
 }

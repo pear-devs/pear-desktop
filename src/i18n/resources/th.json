@@ -647,6 +647,7 @@
       "name": "Music Together [เบต้า]",
       "toast": {
         "add-song-failed": "เพิ่มเพลงล้มเหลว",
+        "song-added": "เพิ่มลงในคิวเล่นร่วมกันแล้ว",
         "closed": "ปิด Music Together แล้ว",
         "disconnected": "การฟังเพลงร่วมกัน ถูกตัดการเชื่อมต่อแล้ว",
         "host-failed": "มีปัญหาสำหรับโฮสต์ฟังเพลงร่วมกัน",

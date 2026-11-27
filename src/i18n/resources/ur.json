@@ -216,6 +216,23 @@
     "ad-speedup": {
       "description": "اگر کوئی اشتہار چلے تو آواز بند کرکے پلے بیک کی رفتار 16 گناہ کردیں",
       "name": "اشتہار کی رفتار"
+    },
+    "music-together": {
+      "toast": {
+        "add-song-failed": "گانا شامل نہیں کیا جا سکا",
+        "song-added": "پلے بیک کی مشترکہ قطار میں شامل کر دیا گیا",
+        "closed": "Music Together بند ہو گیا",
+        "disconnected": "Music Together سے رابطہ منقطع ہو گیا",
+        "host-failed": "Music Together سیشن شروع نہیں کیا جا سکا",
+        "id-copied": "میزبان کی آئی ڈی کلپ بورڈ پر کاپی ہو گئی",
+        "id-copy-failed": "میزبان کی آئی ڈی کلپ بورڈ پر کاپی نہیں ہو سکی",
+        "join-failed": "Music Together میں شامل نہیں ہو سکے",
+        "joined": "Music Together میں شامل ہو گئے",
+        "permission-changed": "Music Together کی اجازت «{{permission}}» پر تبدیل کر دی گئی",
+        "remove-song-failed": "گانا ہٹایا نہیں جا سکا",
+        "user-connected": "{{name}} Music Together میں شامل ہوئے",
+        "user-disconnected": "{{name}} Music Together سے نکل گئے"
+      }
     }
   }
 }

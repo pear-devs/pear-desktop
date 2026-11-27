@@ -304,6 +304,23 @@
         "disable": "Desabilitar adaptador Proxy",
         "enable": "Habilitar adaptador Proxy"
       }
+    },
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Non se puido engadir a canción",
+        "song-added": "Engadido á cola compartida",
+        "closed": "Pechouse Music Together",
+        "disconnected": "Music Together desconectouse",
+        "host-failed": "Non se puido iniciar unha sesión de Music Together",
+        "id-copied": "O ID do anfitrión copiouse no portapapeis",
+        "id-copy-failed": "Non se puido copiar o ID do anfitrión no portapapeis",
+        "join-failed": "Non se puido unir á sesión de Music Together",
+        "joined": "Unícheste á sesión de Music Together",
+        "permission-changed": "O permiso de Music Together cambiou a «{{permission}}»",
+        "remove-song-failed": "Non se puido quitar a canción",
+        "user-connected": "{{name}} uniuse á sesión de Music Together",
+        "user-disconnected": "{{name}} saíu da sesión de Music Together"
+      }
     }
   }
 }

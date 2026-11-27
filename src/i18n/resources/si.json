@@ -207,5 +207,22 @@
     }
   },
   "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "ගීතය එක් කළ නොහැකි විය",
+        "song-added": "හවුල් ධාවන පෝලිමට එක් කරන ලදී",
+        "closed": "Music Together වසා දැමිණි",
+        "disconnected": "Music Together සම්බන්ධතාව විසන්ධි විය",
+        "host-failed": "Music Together සැසියක් ආරම්භ කළ නොහැකි විය",
+        "id-copied": "සත්කාරක හැඳුනුම පසුරු පුවරුවට පිටපත් කරන ලදී",
+        "id-copy-failed": "සත්කාරක හැඳුනුම පසුරු පුවරුවට පිටපත් කළ නොහැකි විය",
+        "join-failed": "Music Together වෙත එක් විය නොහැකි විය",
+        "joined": "Music Together වෙත එක් විය",
+        "permission-changed": "Music Together අවසරය “{{permission}}” ලෙස වෙනස් කරන ලදී",
+        "remove-song-failed": "ගීතය ඉවත් කළ නොහැකි විය",
+        "user-connected": "{{name}} Music Together වෙත එක් විය",
+        "user-disconnected": "{{name}} Music Together වෙතින් ඉවත් විය"
+      }
+    }
   }
 }

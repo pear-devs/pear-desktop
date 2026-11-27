@@ -640,6 +640,7 @@
       "name": "Hudba Spolu [Beta]",
       "toast": {
         "add-song-failed": "Selhalo přidání písničky",
+        "song-added": "Přidáno do sdílené fronty",
         "closed": "Hudba Spolu zavřena",
         "disconnected": "Hudba Spolu odpojena",
         "host-failed": "Selhalo hostování Hudby Spolu",

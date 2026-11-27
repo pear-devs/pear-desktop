@@ -647,6 +647,7 @@
       "name": "Słuchanie razem [Beta]",
       "toast": {
         "add-song-failed": "Wystąpił błąd z dodaniem muzyki",
+        "song-added": "Dodano do wspólnej kolejki odtwarzania",
         "closed": "Host słuchania razem został zamknięty pomyślnie",
         "disconnected": "Pomyślnie rozłączono z hosta słuchania razem",
         "host-failed": "Wystąpił błąd z hostem słuchania razem",

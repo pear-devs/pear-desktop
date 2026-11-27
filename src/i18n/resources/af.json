@@ -108,5 +108,24 @@
         }
       }
     }
+  },
+  "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Kon nie die liedjie byvoeg nie",
+        "song-added": "By die gedeelde afspeelwaglys gevoeg",
+        "closed": "Music Together is gesluit",
+        "disconnected": "Music Together is ontkoppel",
+        "host-failed": "Kon nie ’n Music Together-sessie aanbied nie",
+        "id-copied": "Gasheer-ID na die knipbord gekopieer",
+        "id-copy-failed": "Kon nie die gasheer-ID na die knipbord kopieer nie",
+        "join-failed": "Kon nie by Music Together aansluit nie",
+        "joined": "By Music Together aangesluit",
+        "permission-changed": "Music Together se toestemming is verander na “{{permission}}”",
+        "remove-song-failed": "Kon nie die liedjie verwyder nie",
+        "user-connected": "{{name}} het by Music Together aangesluit",
+        "user-disconnected": "{{name}} het Music Together verlaat"
+      }
+    }
   }
 }

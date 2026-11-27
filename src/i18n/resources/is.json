@@ -535,6 +535,7 @@
       "name": "Tónlist Saman [Prófunarútgáfa]",
       "toast": {
         "add-song-failed": "Mistókst að bæta við lagi",
+        "song-added": "Bætt við sameiginlegu spilunarröðina",
         "closed": "Tónlist Saman lokað",
         "disconnected": "Tónlist Saman aftengt",
         "host-failed": "Mistókst að hýsa Tónlist Saman",

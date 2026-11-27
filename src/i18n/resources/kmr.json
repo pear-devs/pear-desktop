@@ -1,1 +1,21 @@
-{}
+{
+  "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Zêdekirina stranê bi ser neket",
+        "song-added": "Li rêza lêdanê ya hevpar hat zêdekirin",
+        "closed": "Music Together hat girtin",
+        "disconnected": "Pêwendiya bi Music Together re qut bû",
+        "host-failed": "Destpêkirina rûniştina Music Together bi ser neket",
+        "id-copied": "Nasnameya mêvandar li panoyê hat kopîkirin",
+        "id-copy-failed": "Kopîkirina nasnameya mêvandar li panoyê bi ser neket",
+        "join-failed": "Tevlîbûna Music Together bi ser neket",
+        "joined": "Tu tevlî Music Together bûyî",
+        "permission-changed": "Destûra Music Together bû «{{permission}}»",
+        "remove-song-failed": "Rakirina stranê bi ser neket",
+        "user-connected": "{{name}} tevlî Music Together bû",
+        "user-disconnected": "{{name}} ji Music Together derket"
+      }
+    }
+  }
+}

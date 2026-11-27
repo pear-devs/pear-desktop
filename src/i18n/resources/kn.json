@@ -3,5 +3,24 @@
     "code": "kn",
     "local-name": "ಕನ್ನಡ",
     "name": "Kannada"
+  },
+  "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "ಹಾಡನ್ನು ಸೇರಿಸಲಾಗಲಿಲ್ಲ",
+        "song-added": "ಹಂಚಿದ ಪ್ಲೇಬ್ಯಾಕ್ ಸರತಿಗೆ ಸೇರಿಸಲಾಗಿದೆ",
+        "closed": "Music Together ಮುಚ್ಚಲಾಗಿದೆ",
+        "disconnected": "Music Together ಸಂಪರ್ಕ ಕಡಿತಗೊಂಡಿದೆ",
+        "host-failed": "Music Together ಅಧಿವೇಶನವನ್ನು ಪ್ರಾರಂಭಿಸಲಾಗಲಿಲ್ಲ",
+        "id-copied": "ಹೋಸ್ಟ್ ಐಡಿಯನ್ನು ಕ್ಲಿಪ್‌ಬೋರ್ಡ್‌ಗೆ ನಕಲಿಸಲಾಗಿದೆ",
+        "id-copy-failed": "ಹೋಸ್ಟ್ ಐಡಿಯನ್ನು ಕ್ಲಿಪ್‌ಬೋರ್ಡ್‌ಗೆ ನಕಲಿಸಲಾಗಲಿಲ್ಲ",
+        "join-failed": "Music Together ಸೇರಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ",
+        "joined": "Music Together ಸೇರಿದ್ದೀರಿ",
+        "permission-changed": "Music Together ಅನುಮತಿಯನ್ನು “{{permission}}” ಗೆ ಬದಲಾಯಿಸಲಾಗಿದೆ",
+        "remove-song-failed": "ಹಾಡನ್ನು ತೆಗೆದುಹಾಕಲಾಗಲಿಲ್ಲ",
+        "user-connected": "{{name}} Music Together ಸೇರಿದ್ದಾರೆ",
+        "user-disconnected": "{{name}} Music Together ನಿಂದ ನಿರ್ಗಮಿಸಿದ್ದಾರೆ"
+      }
+    }
   }
 }

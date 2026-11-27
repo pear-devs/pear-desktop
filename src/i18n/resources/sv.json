@@ -647,6 +647,7 @@
       "name": "Music Together [Beta]",
       "toast": {
         "add-song-failed": "Det gick inte att lägga till låten",
+        "song-added": "Tillagt i den delade uppspelningskön",
         "closed": "Music Together stängdes",
         "disconnected": "Anslutningen till Music Together bröts",
         "host-failed": "Det gick inte att starta Music Together som värd",
