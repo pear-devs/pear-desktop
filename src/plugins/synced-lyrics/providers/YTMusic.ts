@@ -39,7 +39,9 @@ export class YTMusic implements LyricProvider {
     const { browseId } = lyricsTab?.tabRenderer?.endpoint?.browseEndpoint ?? {};
     if (!browseId) return null;
 
-    const { contents } = await this.fetchBrowse(browseId);
+    const browseData = await this.fetchBrowse(browseId);
+    if (!browseData) return null;
+    const { contents } = browseData;
     if (!contents) return null;
 
     /*
