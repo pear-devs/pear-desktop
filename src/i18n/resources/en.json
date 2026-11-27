@@ -781,14 +781,23 @@
       },
       "menu": {
         "lastfm": {
-          "api-settings": "Last.fm API Settings"
+          "api-settings": "Last.fm API Settings",
+          "now-playing": "Send now playing",
+          "love-on-like": "Love on like",
+          "timing": "Scrobble timing"
         },
         "listenbrainz": {
-          "token": "Enter ListenBrainz user token"
+          "token": "Enter ListenBrainz user token",
+          "now-playing": "Send now playing",
+          "love-on-like": "Love on like",
+          "timing": "Scrobble timing"
         },
         "scrobble-alternative-title": "Use alternative titles",
         "scrobble-alternative-artist": "Use alternative artists",
-        "scrobble-other-media": "Scrobble other media"
+        "scrobble-other-media": "Scrobble other media",
+        "metadata-cleanup": "Clean up metadata",
+        "parse-title": "Parse artist from title",
+        "custom-regex": "Custom cleanup regex"
       },
       "name": "Scrobbler",
       "prompt": {
@@ -801,6 +810,16 @@
             "label": "Enter your ListenBrainz user token:",
             "title": "ListenBrainz token"
           }
+        },
+        "custom-regex": {
+          "label": "Regex removed from title/artist/album:",
+          "title": "Custom cleanup regex"
+        },
+        "timing": {
+          "title": "Scrobble timing",
+          "min-duration": "Minimum song duration (seconds)",
+          "delay-percent": "Scrobble at (% of track)",
+          "delay-seconds": "Scrobble after at most (seconds)"
         }
       }
     },
