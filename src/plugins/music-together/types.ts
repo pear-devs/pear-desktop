@@ -5,6 +5,7 @@ export type Profile = {
   thumbnail: string;
 };
 export type VideoData = {
+  entryId: string;
   videoId: string;
   ownerId: string;
 };

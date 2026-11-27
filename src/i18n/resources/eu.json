@@ -25,5 +25,24 @@
         "loaded": "i18n'a kargatuta"
       }
     }
+  },
+  "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Ezin izan da abestia gehitu",
+        "song-added": "Partekatutako erreprodukzio-ilarara gehitu da",
+        "closed": "Music Together itxi da",
+        "disconnected": "Music Together-eko konexioa eten da",
+        "host-failed": "Ezin izan da Music Together saioa sortu",
+        "id-copied": "Anfitrioiaren IDa arbelean kopiatu da",
+        "id-copy-failed": "Ezin izan da anfitrioiaren IDa arbelean kopiatu",
+        "join-failed": "Ezin izan da Music Together saioan sartu",
+        "joined": "Music Together saioan sartu zara",
+        "permission-changed": "Music Together-en baimena «{{permission}}» aukerara aldatu da",
+        "remove-song-failed": "Ezin izan da abestia kendu",
+        "user-connected": "{{name}} Music Together saioan sartu da",
+        "user-disconnected": "{{name}} Music Together saiotik irten da"
+      }
+    }
   }
 }

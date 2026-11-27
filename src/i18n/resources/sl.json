@@ -542,11 +542,18 @@
       "name": "Gkasba Skupaj [Beta]",
       "toast": {
         "add-song-failed": "Skladba ni bila dodana",
+        "song-added": "Dodano v skupno čakalno vrsto predvajanja",
         "closed": "Glasba Skupaj zaprto",
         "disconnected": "Gkasba Skupaj odklopljena",
         "host-failed": "Gkasba Skupaj nisem mogel gostiti",
         "id-copied": "Host ID je kopiran v odložišče",
-        "id-copy-failed": "Host ID ni bilo mogoče kopirati"
+        "id-copy-failed": "Host ID ni bilo mogoče kopirati",
+        "join-failed": "Pridružitev seji Glasba Skupaj ni uspela",
+        "joined": "Pridružitev seji Glasba Skupaj je uspela",
+        "permission-changed": "Dovoljenje za Glasba Skupaj je spremenjeno na »{{permission}}«",
+        "remove-song-failed": "Skladbe ni bilo mogoče odstraniti",
+        "user-connected": "{{name}} se pridružuje seji Glasba Skupaj",
+        "user-disconnected": "{{name}} zapušča sejo Glasba Skupaj"
       }
     }
   }

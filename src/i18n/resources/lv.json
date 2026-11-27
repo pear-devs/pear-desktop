@@ -610,9 +610,18 @@
       "name": "Mūzika Kopā [Beta]",
       "toast": {
         "add-song-failed": "Neizdevās pievienot dziesmu",
+        "song-added": "Pievienots kopīgajai atskaņošanas rindai",
         "closed": "Mūzika Kopā slēgta",
         "disconnected": "Mūzika Kopā atvienota",
-        "host-failed": "Neizdevās uzsākt Mūziku Kopā"
+        "host-failed": "Neizdevās uzsākt Mūziku Kopā",
+        "id-copied": "Vadītāja ID nokopēts starpliktuvē",
+        "id-copy-failed": "Neizdevās nokopēt vadītāja ID starpliktuvē",
+        "join-failed": "Neizdevās pievienoties Mūzika Kopā sesijai",
+        "joined": "Izdevās pievienoties Mūzika Kopā sesijai",
+        "permission-changed": "Mūzika Kopā atļauja mainīta uz “{{permission}}”",
+        "remove-song-failed": "Neizdevās noņemt dziesmu",
+        "user-connected": "{{name}} pievienojās Mūzika Kopā sesijai",
+        "user-disconnected": "{{name}} pameta Mūzika Kopā sesiju"
       }
     }
   }

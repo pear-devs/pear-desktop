@@ -266,6 +266,23 @@
           "downloading": "Preuzimanje…"
         }
       }
+    },
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Dodavanje pjesme nije uspjelo",
+        "song-added": "Dodano u zajednički red za reprodukciju",
+        "closed": "Music Together je zatvoren",
+        "disconnected": "Veza s Music Together je prekinuta",
+        "host-failed": "Pokretanje sesije Music Together nije uspjelo",
+        "id-copied": "ID domaćina kopiran je u međuspremnik",
+        "id-copy-failed": "Kopiranje ID-a domaćina u međuspremnik nije uspjelo",
+        "join-failed": "Pridruživanje sesiji Music Together nije uspjelo",
+        "joined": "Pridružili ste se sesiji Music Together",
+        "permission-changed": "Dozvola za Music Together promijenjena je u „{{permission}}“",
+        "remove-song-failed": "Uklanjanje pjesme nije uspjelo",
+        "user-connected": "{{name}} se pridružuje sesiji Music Together",
+        "user-disconnected": "{{name}} napušta sesiju Music Together"
+      }
     }
   }
 }

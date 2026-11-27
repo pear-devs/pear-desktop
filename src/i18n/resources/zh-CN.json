@@ -647,6 +647,7 @@
       "name": "一起听 [测试]",
       "toast": {
         "add-song-failed": "添加歌曲失败",
+        "song-added": "已添加到共享播放队列",
         "closed": "一起听已关闭",
         "disconnected": "一起听已断开连接",
         "host-failed": "发起一起听失败",

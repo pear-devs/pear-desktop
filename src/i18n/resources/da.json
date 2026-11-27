@@ -322,6 +322,23 @@
         "advanced": "Avanceret"
       },
       "name": "Fade [Beta]"
+    },
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Kunne ikke tilføje sangen",
+        "song-added": "Føjet til den fælles afspilningskø",
+        "closed": "Music Together blev lukket",
+        "disconnected": "Forbindelsen til Music Together blev afbrudt",
+        "host-failed": "Kunne ikke starte en Music Together-session",
+        "id-copied": "Værtens id blev kopieret til udklipsholderen",
+        "id-copy-failed": "Kunne ikke kopiere værtens id til udklipsholderen",
+        "join-failed": "Kunne ikke deltage i Music Together",
+        "joined": "Du deltager nu i Music Together",
+        "permission-changed": "Tilladelsen i Music Together blev ændret til “{{permission}}”",
+        "remove-song-failed": "Kunne ikke fjerne sangen",
+        "user-connected": "{{name}} deltager nu i Music Together",
+        "user-disconnected": "{{name}} forlod Music Together"
+      }
     }
   }
 }

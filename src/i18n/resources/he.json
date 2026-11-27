@@ -640,11 +640,18 @@
       "name": "Music Together [בטא]",
       "toast": {
         "add-song-failed": "נכשל בהוספת השיר",
+        "song-added": "הפריט נוסף לתור ההשמעה המשותף",
         "closed": "Music Together נסגר",
         "disconnected": "Music Together נותק",
         "host-failed": "נכשל באירוח Music Together",
         "id-copied": "מזהה מארח הועתק ללוח",
-        "id-copy-failed": "נכשל בהעתקת מזהה המארח ללוח"
+        "id-copy-failed": "נכשל בהעתקת מזהה המארח ללוח",
+        "join-failed": "ההצטרפות ל־Music Together נכשלה",
+        "joined": "הצטרפת ל־Music Together",
+        "permission-changed": "ההרשאה ב־Music Together שונתה ל־״{{permission}}״",
+        "remove-song-failed": "הסרת השיר נכשלה",
+        "user-connected": "{{name}} הצטרף/ה ל־Music Together",
+        "user-disconnected": "{{name}} עזב/ה את Music Together"
       }
     }
   }

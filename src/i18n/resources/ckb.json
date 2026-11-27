@@ -103,5 +103,24 @@
         }
       }
     }
+  },
+  "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "زیادکردنی گۆرانی سەرکەوتوو نەبوو",
+        "song-added": "زیاد کرا بۆ ڕیزی هاوبەشی لێدان",
+        "closed": "Music Together داخرا",
+        "disconnected": "پەیوەندی لەگەڵ Music Together پچڕا",
+        "host-failed": "دروستکردنی دانیشتنی Music Together سەرکەوتوو نەبوو",
+        "id-copied": "ناسنامەی خانەخوێ لە تەختەی لەبەرگرتنەوە لەبەرگیراوە",
+        "id-copy-failed": "لەبەرگرتنەوەی ناسنامەی خانەخوێ بۆ تەختەی لەبەرگرتنەوە سەرکەوتوو نەبوو",
+        "join-failed": "بەشداربوون لە Music Together سەرکەوتوو نەبوو",
+        "joined": "بەشداریت لە Music Together کرد",
+        "permission-changed": "مۆڵەتی Music Together گۆڕدرا بۆ «{{permission}}»",
+        "remove-song-failed": "لابردنی گۆرانی سەرکەوتوو نەبوو",
+        "user-connected": "{{name}} بەشداری Music Together کرد",
+        "user-disconnected": "{{name}} لە Music Together چووە دەرەوە"
+      }
+    }
   }
 }

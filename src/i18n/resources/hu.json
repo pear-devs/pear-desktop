@@ -647,6 +647,7 @@
       "name": "Zene együtt [Béta]",
       "toast": {
         "add-song-failed": "Sikertelen volt a dal hozzáadása",
+        "song-added": "Hozzáadva a megosztott lejátszási sorhoz",
         "closed": "Zene együtt bezárva",
         "disconnected": "Kapcsolat megszakadt a Music Together-el",
         "host-failed": "Sikertelen volt a Zene együtt indítása",

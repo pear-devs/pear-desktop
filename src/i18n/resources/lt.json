@@ -643,6 +643,7 @@
       "name": "„Muzika Kartu“ [Beta]",
       "toast": {
         "add-song-failed": "Nepavyko pridėti dainos",
+        "song-added": "Pridėta prie bendros atkūrimo eilės",
         "closed": "„Muzika Kartu“ uždaryta",
         "disconnected": "„Muzika Kartu“ atsijungė",
         "host-failed": "Nepavyko surengti „Muzika Kartu“",

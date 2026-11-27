@@ -1,1 +1,21 @@
-{}
+{
+  "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "មិនអាចបន្ថែមបទចម្រៀងបានទេ",
+        "song-added": "បានបញ្ចូលទៅក្នុងជួរចាក់រួម",
+        "closed": "Music Together ត្រូវបានបិទ",
+        "disconnected": "ការតភ្ជាប់ទៅ Music Together ត្រូវបានផ្ដាច់",
+        "host-failed": "មិនអាចបង្កើតវគ្គ Music Together បានទេ",
+        "id-copied": "បានចម្លងលេខសម្គាល់ម្ចាស់បន្ទប់ទៅក្តារតម្បៀតខ្ទាស់",
+        "id-copy-failed": "មិនអាចចម្លងលេខសម្គាល់ម្ចាស់បន្ទប់ទៅក្តារតម្បៀតខ្ទាស់បានទេ",
+        "join-failed": "មិនអាចចូលរួម Music Together បានទេ",
+        "joined": "បានចូលរួម Music Together",
+        "permission-changed": "សិទ្ធិនៅក្នុង Music Together ត្រូវបានប្តូរទៅជា «{{permission}}»",
+        "remove-song-failed": "មិនអាចលុបបទចម្រៀងចេញបានទេ",
+        "user-connected": "{{name}} បានចូលរួម Music Together",
+        "user-disconnected": "{{name}} បានចាកចេញពី Music Together"
+      }
+    }
+  }
+}

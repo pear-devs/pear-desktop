@@ -647,6 +647,7 @@
       "name": "共享音樂 [Beta]",
       "toast": {
         "add-song-failed": "歌曲加入失敗",
+        "song-added": "已加入共用播放佇列",
         "closed": "關閉共享音樂",
         "disconnected": "共享音樂已斷開連線",
         "host-failed": "發起共享音樂失敗",

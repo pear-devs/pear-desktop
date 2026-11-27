@@ -611,6 +611,7 @@
       "name": "Music Together [Бета]",
       "toast": {
         "add-song-failed": "Неуспешно добавяне на песен",
+        "song-added": "Добавено към споделената опашка за възпроизвеждане",
         "closed": "Music Together е затворена",
         "disconnected": "Music Together е прекъсната",
         "host-failed": "Неуспешно хостване на Music Together",

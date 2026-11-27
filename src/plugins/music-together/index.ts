@@ -1,4 +1,5 @@
 import prompt from 'custom-electron-prompt';
+import { app, type BrowserWindow, type Event as ElectronEvent } from 'electron';
 
 import { t } from '@/i18n';
 import { createAddToToastAction } from '@/plugins/utils/renderer';
@@ -6,25 +7,21 @@ import promptOptions from '@/providers/prompt-options';
 import { createPlugin } from '@/utils';
 import { waitForElement } from '@/utils/wait-for-element';
 
-import { Connection, type ConnectionEventUnion } from './connection';
+import { Connection } from './connection';
 import { Queue } from './queue';
+import { Session } from './session';
 import style from './style.css?inline';
 import settingHTML from './templates/setting.html?raw';
-import {
-  getDefaultProfile,
-  type Permission,
-  type Profile,
-  type VideoData,
-} from './types';
+import { getDefaultProfile, type Permission, type Profile } from './types';
 import { createGuestPopup } from './ui/guest';
 import { createHostPopup } from './ui/host';
 import { createSettingPopup } from './ui/setting';
 
-import type { RendererContext } from '@/types/contexts';
+import type { RemoveFailure } from './session-protocol';
+import type { ItemPlaylistPanelVideoRenderer } from '@/types/datahost-get-state';
 import type { MusicPlayer } from '@/types/music-player';
 import type { AppElement } from '@/types/queue';
 import type { VideoDataChanged } from '@/types/video-data-changed';
-import type { DataConnection } from 'peerjs';
 
 type RawAccountData = {
   accountName: {
@@ -33,24 +30,72 @@ type RawAccountData = {
   accountPhoto: {
     thumbnails: { url: string; width: number; height: number }[];
   };
-  settingsEndpoint: unknown;
-  manageAccountTitle: unknown;
-  trackingParams: string;
   channelHandle: {
     runs: { text: string }[];
   };
 };
 
+type WatchEndpoint = {
+  watchEndpoint?: { videoId?: string; playlistId?: string; params?: string };
+  watchPlaylistEndpoint?: { playlistId?: string; params?: string };
+};
+
+type MusicActionElement = HTMLElement & {
+  state?: string;
+  data?: {
+    playNavigationEndpoint?: WatchEndpoint;
+    serviceEndpoint?: {
+      removeFromQueueEndpoint?: unknown;
+      queueAddEndpoint?: {
+        queueTarget?: { videoId?: string; playlistId?: string };
+        queueInsertPosition?: string;
+      };
+    };
+  };
+};
+
+type JoinPrompt = { token: string; window: BrowserWindow };
+
+const hasWatchTarget = (endpoint?: WatchEndpoint) =>
+  Boolean(endpoint?.watchEndpoint || endpoint?.watchPlaylistEndpoint);
+
+const findMusicAction = (
+  path: EventTarget[],
+  matches: (node: MusicActionElement) => boolean,
+) =>
+  path.find(
+    (target): target is MusicActionElement =>
+      target instanceof HTMLElement && matches(target),
+  );
+
+const dismissMusicMenu = (item?: HTMLElement) => {
+  item?.closest('tp-yt-iron-dropdown')?.dispatchEvent(
+    new KeyboardEvent('keydown', {
+      key: 'Escape',
+      bubbles: true,
+      composed: true,
+    }),
+  );
+};
+
 export default createPlugin<
-  unknown,
+  {
+    joinPrompt?: JoinPrompt;
+    closeJoinPrompt: () => void;
+  },
   unknown,
   {
     connection?: Connection;
-    ipc?: RendererContext<never>['ipc'];
     api: AppElement | null;
     queue?: Queue;
     playerApi?: MusicPlayer;
-    showPrompt: (title: string, label: string) => Promise<string>;
+    pluginLifecycleToken?: string;
+    pendingJoinPrompt?: string;
+    showPrompt: (
+      token: string,
+      title: string,
+      label: string,
+    ) => Promise<string | null>;
     popups: {
       host: ReturnType<typeof createHostPopup>;
       guest: ReturnType<typeof createGuestPopup>;
@@ -62,16 +107,18 @@ export default createPlugin<
       spinner: HTMLElement;
     };
     stateInterval?: number;
-    updateNext: boolean;
-    ignoreChange: boolean;
-    rollbackInjector?: () => void;
+    session?: Session;
     me?: Omit<Profile, 'id'>;
     profiles: Record<string, Profile>;
     permission: Permission;
-    videoChangeListener: (
-      event: CustomEvent<VideoDataChanged>,
-    ) => Promise<void>;
-    videoStateChangeListener: () => Promise<void>;
+    videoChangeListener: (event: CustomEvent<VideoDataChanged>) => void;
+    videoStateChangeListener: () => void;
+    seekListener: (event: Event) => void;
+    handlePlaybackNavigation: (event: Event) => void;
+    handleGuestQueueMenu: (event: Event) => boolean;
+    handleGuestQueueTrack: (event: Event) => boolean;
+    handleGuestPlayerControls: (event: Event) => boolean;
+    showRemoveFailure: (reason: RemoveFailure) => void;
     onHost: () => Promise<boolean>;
     onJoin: () => Promise<boolean>;
     onStop: () => void;
@@ -89,19 +136,62 @@ export default createPlugin<
     enabled: false,
   },
   stylesheets: [style],
-  backend({ ipc }) {
-    ipc.handle('music-together:prompt', async (title: string, label: string) =>
-      prompt({
-        title,
-        label,
-        type: 'input',
-        ...promptOptions(),
-      }),
-    );
+  backend: {
+    start({ ipc }) {
+      ipc.handle(
+        'music-together:prompt',
+        (token: string, title: string, label: string) => {
+          if (this.joinPrompt) return null;
+
+          const options = {
+            title,
+            label,
+            type: 'input' as const,
+            ...promptOptions(),
+          };
+          let pending: JoinPrompt | undefined;
+          const captureWindow = (
+            _event: ElectronEvent,
+            window: BrowserWindow,
+          ) => {
+            pending = { token, window };
+            this.joinPrompt = pending;
+          };
+
+          // The prompt library creates its window synchronously but only returns the input promise.
+          app.prependOnceListener('browser-window-created', captureWindow);
+          try {
+            return prompt(options).then(
+              (id) => {
+                if (this.joinPrompt === pending) this.joinPrompt = undefined;
+                return id;
+              },
+              (error: unknown) => {
+                if (this.joinPrompt === pending) this.closeJoinPrompt();
+                throw error;
+              },
+            );
+          } finally {
+            app.off('browser-window-created', captureWindow);
+          }
+        },
+      );
+      ipc.handle('music-together:close-prompt', (token: string) => {
+        if (this.joinPrompt?.token === token) this.closeJoinPrompt();
+      });
+    },
+    closeJoinPrompt() {
+      const pending = this.joinPrompt;
+      this.joinPrompt = undefined;
+      if (pending && !pending.window.isDestroyed()) pending.window.close();
+    },
+    stop({ ipc }) {
+      ipc.removeHandler('music-together:prompt');
+      ipc.removeHandler('music-together:close-prompt');
+      this.closeJoinPrompt();
+    },
   },
   renderer: {
-    updateNext: false,
-    ignoreChange: false,
     permission: 'playlist',
     popups: {} as {
       host: ReturnType<typeof createHostPopup>;
@@ -114,83 +204,309 @@ export default createPlugin<
       spinner: HTMLElement;
     },
     profiles: {},
-    showPrompt: () => Promise.resolve(''),
+    showPrompt: () => Promise.resolve(null),
     api: null,
 
-    /* events */
-    async videoChangeListener(event: CustomEvent<VideoDataChanged>) {
-      if (event.detail.name === 'dataloaded' || this.updateNext) {
-        if (this.connection?.mode === 'host') {
-          const videoList: VideoData[] =
-            this.queue?.flatItems.map(
-              (it, index) =>
-                ({
-                  videoId: it!.videoId,
-                  ownerId:
-                    this.queue?.videoList[index]?.ownerId ??
-                    this.connection!.id,
-                }) satisfies VideoData,
-            ) ?? [];
-
-          this.queue?.setVideoList(videoList, false);
-          this.queue?.syncQueueOwner();
-          await this.connection.broadcast('SYNC_QUEUE', {
-            videoList,
-          });
-
-          this.updateNext = event.detail.name === 'dataloaded';
-        }
+    videoChangeListener(event) {
+      if (
+        event.detail.name === 'dataloaded' ||
+        event.detail.name === 'dataupdated'
+      ) {
+        this.session?.onPlayerChange(event.detail.name === 'dataloaded');
       }
     },
 
-    async videoStateChangeListener() {
-      if (this.connection?.mode !== 'guest') return;
-      if (this.ignoreChange) return;
-      if (this.permission !== 'all') return;
-
-      const state = this.playerApi?.getPlayerState();
-      if (state !== 1 && state !== 2) return;
-
-      await this.connection.broadcast('SYNC_PROGRESS', {
-        // progress: this.playerApi?.getCurrentTime(),
-        state: this.playerApi?.getPlayerState(),
-        // index: this.queue?.selectedIndex ?? 0,
-      });
+    videoStateChangeListener() {
+      this.session?.onPlayPause();
     },
 
-    /* connection */
+    seekListener(event) {
+      if (event.target instanceof HTMLVideoElement) this.session?.onSeek();
+    },
+
+    handlePlaybackNavigation(event) {
+      const mode = this.connection?.mode;
+      if (!mode || mode === 'disconnected') return;
+
+      const path = event.composedPath();
+      let endpoint: WatchEndpoint | undefined;
+      let action: MusicActionElement | undefined;
+      if (event.type === 'yt-action') {
+        const detail = (
+          event as CustomEvent<{
+            actionName?: string;
+            args?: [WatchEndpoint, ...unknown[]];
+          }>
+        ).detail;
+        if (
+          detail?.actionName !== 'yt-watch-endpoint' &&
+          detail?.actionName !== 'yt-watch-playlist-endpoint'
+        )
+          return;
+        endpoint = detail.args?.[0];
+      } else if (event.type === 'yt-navigate') {
+        const detail = (
+          event as CustomEvent<{
+            endpoint?: WatchEndpoint;
+            musicEndpoint?: WatchEndpoint;
+          }>
+        ).detail;
+        endpoint = hasWatchTarget(detail?.endpoint)
+          ? detail?.endpoint
+          : detail?.musicEndpoint;
+      } else if (event.type === 'click') {
+        if (
+          mode === 'guest' &&
+          (this.handleGuestPlayerControls(event) ||
+            this.handleGuestQueueMenu(event) ||
+            this.handleGuestQueueTrack(event))
+        )
+          return;
+
+        action = findMusicAction(path, (element) =>
+          hasWatchTarget(element.data?.playNavigationEndpoint),
+        );
+        endpoint = action?.data?.playNavigationEndpoint;
+        if (!endpoint) {
+          if (
+            mode !== 'guest' ||
+            this.permission !== 'host-only' ||
+            !path.some(
+              (element) =>
+                element instanceof HTMLAnchorElement &&
+                element.origin === location.origin &&
+                element.pathname === '/watch',
+            )
+          )
+            return;
+        } else if (
+          this.permission !== 'host-only' &&
+          action?.state === 'playing' &&
+          !(
+            endpoint.watchEndpoint?.playlistId ??
+            endpoint.watchPlaylistEndpoint?.playlistId
+          )?.startsWith('RD')
+        ) {
+          return;
+        }
+      } else {
+        return;
+      }
+
+      if (this.queue?.containsEventPath(path)) return;
+      if (mode === 'host') {
+        if (hasWatchTarget(endpoint)) {
+          this.session?.onHostNavigation(
+            endpoint?.watchEndpoint?.videoId,
+            endpoint?.watchEndpoint?.playlistId ??
+              endpoint?.watchPlaylistEndpoint?.playlistId,
+          );
+        }
+        return;
+      }
+
+      const videoId = endpoint?.watchEndpoint?.videoId;
+      const playlistId =
+        endpoint?.watchEndpoint?.playlistId ??
+        endpoint?.watchPlaylistEndpoint?.playlistId;
+      const params =
+        endpoint?.watchEndpoint?.params ??
+        endpoint?.watchPlaylistEndpoint?.params;
+      if (
+        !videoId &&
+        !playlistId &&
+        !(event.type === 'click' && this.permission === 'host-only')
+      )
+        return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (this.permission === 'host-only') {
+        this.api?.handleAddToToastAction?.(
+          createAddToToastAction(
+            t('plugins.music-together.menu.permission.host-only'),
+          ),
+        );
+      } else {
+        this.session?.command({
+          kind: 'navigate',
+          ...(videoId ? { videoId } : {}),
+          ...(playlistId ? { playlistId } : {}),
+          ...(params ? { params } : {}),
+        });
+      }
+      dismissMusicMenu(action);
+    },
+
+    handleGuestPlayerControls(event) {
+      const control = event
+        .composedPath()
+        .find(
+          (target): target is HTMLElement =>
+            target instanceof HTMLElement &&
+            target.matches(
+              'ytmusic-player-bar #play-pause-button, ytmusic-player-bar .next-button',
+            ),
+        );
+      if (!control) return false;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (control.id === 'play-pause-button') {
+        if (this.permission === 'all') this.session?.toggleGuestPlayback();
+      } else if (this.permission !== 'host-only') {
+        this.session?.command({ kind: 'next' });
+      }
+      return true;
+    },
+
+    handleGuestQueueTrack(event) {
+      const path = event.composedPath();
+      if (
+        (this.queue?.handlesNativeSelection &&
+          this.permission !== 'host-only') ||
+        !this.queue?.containsEventPath(path)
+      )
+        return false;
+      const items = this.queue.flatItems;
+      const row = path.find(
+        (
+          target,
+        ): target is HTMLElement & { data: ItemPlaylistPanelVideoRenderer } =>
+          target instanceof HTMLElement &&
+          'data' in target &&
+          items.some((item) => item && item === target.data),
+      );
+      if (!row) return false;
+      const playButton = findMusicAction(path, (node) =>
+        hasWatchTarget(node.data?.playNavigationEndpoint),
+      );
+      const clickedTrack =
+        playButton ||
+        event.target === row ||
+        path.some(
+          (target) =>
+            target instanceof HTMLAnchorElement &&
+            target.origin === location.origin &&
+            target.pathname === '/watch',
+        );
+      if (
+        !clickedTrack ||
+        (playButton?.state === 'playing' && this.permission === 'all')
+      )
+        return false;
+
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (this.permission === 'host-only') {
+        this.api?.handleAddToToastAction?.(
+          createAddToToastAction(
+            t('plugins.music-together.menu.permission.host-only'),
+          ),
+        );
+      } else {
+        const index = items.indexOf(row.data);
+        const entry = this.queue?.videoList[index];
+        if (entry && entry.videoId === row.data?.videoId) {
+          this.session?.command({ kind: 'select', entryId: entry.entryId });
+        }
+      }
+      return true;
+    },
+
+    handleGuestQueueMenu(event) {
+      const item = findMusicAction(event.composedPath(), (node) => {
+        const endpoint = node.data?.serviceEndpoint;
+        return Boolean(
+          endpoint?.queueAddEndpoint ||
+          (this.permission === 'host-only' &&
+            endpoint?.removeFromQueueEndpoint),
+        );
+      });
+      if (
+        this.permission === 'host-only' &&
+        item?.data?.serviceEndpoint?.removeFromQueueEndpoint
+      ) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        this.showRemoveFailure('permission');
+        dismissMusicMenu(item);
+        return true;
+      }
+      const endpoint = item?.data?.serviceEndpoint?.queueAddEndpoint;
+      const videoId = endpoint?.queueTarget?.videoId;
+      const playlistId = endpoint?.queueTarget?.playlistId;
+      const position = endpoint?.queueInsertPosition;
+      if (
+        (!videoId && !playlistId) ||
+        (position !== 'INSERT_AFTER_CURRENT_VIDEO' &&
+          position !== 'INSERT_AT_END')
+      ) {
+        return false;
+      }
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (this.permission === 'host-only') {
+        this.api?.handleAddToToastAction?.(
+          createAddToToastAction(
+            t('plugins.music-together.menu.permission.host-only'),
+          ),
+        );
+      } else {
+        this.session?.command({
+          kind: 'queue-media',
+          ...(videoId ? { videoId } : { playlistId: playlistId! }),
+          placement: position === 'INSERT_AFTER_CURRENT_VIDEO' ? 'next' : 'end',
+        });
+      }
+      dismissMusicMenu(item);
+      return true;
+    },
+
+    showRemoveFailure(reason) {
+      this.api?.handleAddToToastAction?.(
+        createAddToToastAction(
+          t(
+            reason === 'permission'
+              ? 'plugins.music-together.menu.permission.host-only'
+              : 'plugins.music-together.toast.remove-song-failed',
+          ),
+        ),
+      );
+    },
+
     async onHost() {
-      this.connection = new Connection();
-      const wait = await this.connection.waitForReady().catch(() => null);
-      if (!wait) return false;
-
-      if (!this.me) this.me = getDefaultProfile(this.connection.id);
-
+      if (!this.playerApi || this.connection) return false;
+      if (!this.queue?.isReady) {
+        this.queue = new Queue((id) => this.profiles[id]);
+        if (!this.queue.isReady) return false;
+      }
+      const connection = new Connection();
+      this.connection = connection;
+      if (!(await connection.waitForReady().catch(() => null))) {
+        if (this.connection === connection) this.onStop();
+        return false;
+      }
+      if (this.connection !== connection) return false;
+      this.me ??= getDefaultProfile(connection.id);
       this.profiles = {};
-      this.putProfile(this.connection.id, {
-        id: this.connection.id,
-        ...this.me,
-      });
+      this.putProfile(connection.id, { ...this.me, id: connection.id });
 
-      this.queue?.setOwner({
-        id: this.connection.id,
-        ...this.me,
-      });
-      const rawItems =
-        this.queue?.flatItems?.map(
-          (it) =>
-            ({
-              videoId: it!.videoId,
-              ownerId: this.connection!.id,
-            }) satisfies VideoData,
-        ) ?? [];
-      this.queue?.setVideoList(rawItems, false);
-      this.queue?.syncQueueOwner();
-      this.queue?.initQueue();
-      this.queue?.injection();
+      const session = new Session(
+        connection,
+        this.queue,
+        this.playerApi,
+        () => this.permission,
+        (permission) => {
+          this.permission = permission;
+        },
+        (reason) => this.showRemoveFailure(reason),
+      );
+      this.session = session;
+      session.start();
 
-      this.connection.onConnections((connection) => {
-        if (!connection) {
+      connection.onConnections((peer) => {
+        if (this.connection !== connection) return;
+        if (!peer) {
           this.api?.handleAddToToastAction?.(
             createAddToToastAction(
               t('plugins.music-together.toast.disconnected'),
@@ -199,473 +515,187 @@ export default createPlugin<
           this.onStop();
           return;
         }
-
-        if (!connection.open) {
+        if (!peer.open && this.profiles[peer.peer]) {
           this.api?.handleAddToToastAction?.(
             createAddToToastAction(
               t('plugins.music-together.toast.user-disconnected', {
-                name: this.profiles[connection.peer]?.name,
+                name: this.profiles[peer.peer].name,
               }),
             ),
           );
-          this.putProfile(connection.peer, undefined);
+          this.putProfile(peer.peer, undefined);
+          connection.broadcast('SYNC_PROFILE', {
+            profiles: this.profiles,
+          });
         }
       });
 
-      const listener = async (
-        event: ConnectionEventUnion,
-        conn?: DataConnection | null,
-      ) => {
-        this.ignoreChange = true;
-
-        switch (event.type) {
-          case 'CLEAR_QUEUE': {
-            if (conn && this.permission === 'host-only') {
-              await this.connection?.broadcast('SYNC_QUEUE', {
-                videoList: this.queue?.videoList ?? [],
-              });
-              return;
-            }
-
-            this.queue?.clear();
-            await this.connection?.broadcast('CLEAR_QUEUE', null);
-            break;
-          }
-          case 'SET_INDEX': {
-            this.queue?.setIndex(event.payload.index);
-            await this.connection?.broadcast('SET_INDEX', {
-              index: event.payload.index,
-            });
-            break;
-          }
-          case 'ADD_SONGS': {
-            if (conn && this.permission === 'host-only') {
-              await this.connection?.broadcast('SYNC_QUEUE', {
-                videoList: this.queue?.videoList ?? [],
-              });
-              return;
-            }
-
-            const videoList: VideoData[] = event.payload.videoList.map(
-              (it) => ({
-                ...it,
-                ownerId: it.ownerId ?? conn?.peer ?? this.connection!.id,
-              }),
-            );
-
-            await this.queue?.addVideos(videoList, event.payload.index);
-            await this.connection?.broadcast(
-              'ADD_SONGS',
-              {
-                ...event.payload,
-                videoList,
-              },
-              event.after,
-            );
-
-            const afterevent = event.after?.at(0);
-            if (afterevent?.type === 'SET_INDEX') {
-              this.queue?.setIndex(afterevent.payload.index);
-            }
-
-            break;
-          }
-          case 'REMOVE_SONG': {
-            if (conn && this.permission === 'host-only') {
-              await this.connection?.broadcast('SYNC_QUEUE', {
-                videoList: this.queue?.videoList ?? [],
-              });
-              return;
-            }
-
-            this.queue?.removeVideo(event.payload.index);
-            await this.connection?.broadcast('REMOVE_SONG', event.payload);
-            break;
-          }
-          case 'MOVE_SONG': {
-            if (conn && this.permission === 'host-only') {
-              await this.connection?.broadcast('SYNC_QUEUE', {
-                videoList: this.queue?.videoList ?? [],
-              });
-              break;
-            }
-
-            this.queue?.moveItem(
-              event.payload.fromIndex,
-              event.payload.toIndex,
-            );
-            await this.connection?.broadcast('MOVE_SONG', event.payload);
-            break;
-          }
-          case 'IDENTIFY': {
-            if (!event.payload || !conn) {
-              console.warn(
-                'Music Together [Host]: Received "IDENTIFY" event without payload or connection',
-              );
-              break;
-            }
-
+      connection.on((event, peer) => {
+        if (!peer?.open || this.connection !== connection) return;
+        if (event.type === 'IDENTIFY') {
+          const profile = event.payload?.profile;
+          if (
+            !profile ||
+            typeof profile.name !== 'string' ||
+            typeof profile.thumbnail !== 'string' ||
+            typeof profile.handleId !== 'string'
+          )
+            return;
+          const joined = !this.profiles[peer.peer];
+          this.putProfile(peer.peer, { ...profile, id: peer.peer });
+          if (joined) {
             this.api?.handleAddToToastAction?.(
               createAddToToastAction(
                 t('plugins.music-together.toast.user-connected', {
-                  name: event.payload.profile.name,
+                  name: profile.name,
                 }),
               ),
             );
-            this.putProfile(conn.peer, event.payload.profile);
-            break;
           }
-          case 'SYNC_PROFILE': {
-            await this.connection?.broadcast('SYNC_PROFILE', {
-              profiles: this.profiles,
-            });
-
-            break;
-          }
-          case 'PERMISSION': {
-            await this.connection?.broadcast('PERMISSION', this.permission);
-            this.popups.guest.setPermission(this.permission);
-            this.popups.host.setPermission(this.permission);
-            this.popups.setting.setPermission(this.permission);
-            break;
-          }
-          case 'SYNC_QUEUE': {
-            await this.connection?.broadcast('SYNC_QUEUE', {
-              videoList: this.queue?.videoList ?? [],
-            });
-            break;
-          }
-          case 'SYNC_PROGRESS': {
-            let permissionLevel = 0;
-            if (this.permission === 'all') permissionLevel = 2;
-            if (this.permission === 'playlist') permissionLevel = 1;
-            if (this.permission === 'host-only') permissionLevel = 0;
-            if (!conn) permissionLevel = 3;
-
-            if (permissionLevel >= 2) {
-              if (typeof event.payload?.progress === 'number') {
-                const currentTime = this.playerApi?.getCurrentTime() ?? 0;
-                if (Math.abs(event.payload.progress - currentTime) > 3)
-                  this.playerApi?.seekTo(event.payload.progress);
-              }
-              if (this.playerApi?.getPlayerState() !== event.payload?.state) {
-                if (event.payload?.state === 2) this.playerApi?.pauseVideo();
-                if (event.payload?.state === 1) this.playerApi?.playVideo();
-              }
-            }
-            if (permissionLevel >= 1) {
-              if (typeof event.payload?.index === 'number') {
-                const nowIndex = this.queue?.selectedIndex ?? 0;
-
-                if (nowIndex !== event.payload.index) {
-                  this.queue?.setIndex(event.payload.index);
-                }
-              }
-            }
-
-            break;
-          }
-          case 'CONNECTION_CLOSED': {
-            this.queue?.off(listener);
-            break;
-          }
-          default: {
-            console.warn('Music Together [Host]: Unknown Event', event);
-            break;
-          }
+          connection.broadcast('SYNC_PROFILE', {
+            profiles: this.profiles,
+          });
+          session.publishState(peer);
+        } else if (event.type === 'PING' && Number.isFinite(event.payload)) {
+          connection.send(peer, 'PONG', event.payload);
+        } else if (event.type === 'REQUEST_STATE') {
+          session.publishState(peer);
+        } else if (event.type === 'COMMAND') {
+          session.command(event.payload, peer);
         }
-
-        if (event.after) {
-          const now = event.after.shift();
-          if (now) {
-            now.after = event.after;
-            await listener(now, conn);
-          }
-        }
-      };
-      this.connection.on(listener);
-      this.queue?.on(listener);
-
-      setTimeout(() => {
-        this.ignoreChange = false;
-      }, 16); // wait 1 frame
+      });
       return true;
     },
 
     async onJoin() {
-      this.connection = new Connection();
-      const wait = await this.connection.waitForReady().catch(() => null);
-      if (!wait) return false;
+      const token = this.pluginLifecycleToken;
+      if (
+        !token ||
+        this.pendingJoinPrompt ||
+        !this.queue ||
+        !this.playerApi ||
+        this.connection
+      ) return false;
 
-      this.profiles = {};
+      if (!this.queue?.isReady) {
+        this.queue = new Queue((id) => this.profiles[id]);
+        if (!this.queue.isReady) return false;
+      }
 
+      this.pendingJoinPrompt = token;
       const id = await this.showPrompt(
+        token,
         t('plugins.music-together.name'),
         t('plugins.music-together.dialog.enter-host'),
-      );
-      if (typeof id !== 'string') return false;
+      ).catch(() => null);
+      if (token !== this.pluginLifecycleToken) return false;
+      this.pendingJoinPrompt = undefined;
+      if (typeof id !== 'string' || !id.trim() || this.connection) return false;
 
-      const connection = await this.connection.connect(id).catch(() => false);
-      if (!connection) return false;
-      this.connection.onConnections((connection) => {
-        if (!connection?.open) {
+      const connection = new Connection();
+      this.connection = connection;
+      const ready = await connection.waitForReady().catch(() => null);
+      const host =
+        ready && this.connection === connection
+          ? await connection.connect(id.trim()).catch(() => null)
+          : null;
+      if (!host?.open || this.connection !== connection) {
+        if (this.connection === connection) this.onStop();
+        return false;
+      }
+
+      this.profiles = {};
+      this.permission = 'host-only';
+      this.popups.guest.setPermission(this.permission);
+      this.popups.setting.setPermission(this.permission);
+
+      const session = new Session(
+        connection,
+        this.queue,
+        this.playerApi,
+        () => this.permission,
+        (permission) => {
+          this.permission = permission;
+          this.popups.guest.setPermission(permission);
+          this.popups.host.setPermission(permission);
+          this.popups.setting.setPermission(permission);
+          const permissionLabel = t(
+            `plugins.music-together.menu.permission.${this.permission}`,
+          );
           this.api?.handleAddToToastAction?.(
             createAddToToastAction(
-              t('plugins.music-together.toast.disconnected'),
+              t('plugins.music-together.toast.permission-changed', {
+                permission: permissionLabel,
+              }),
             ),
           );
-          this.onStop();
-        }
-      });
-
-      let resolveIgnore: number | null = null;
-      const queueListener = async (event: ConnectionEventUnion) => {
-        this.ignoreChange = true;
-        switch (event.type) {
-          case 'CLEAR_QUEUE': {
-            await this.connection?.broadcast('CLEAR_QUEUE', null);
-            break;
-          }
-          case 'SET_INDEX': {
-            await this.connection?.broadcast('SET_INDEX', {
-              index: event.payload.index,
-            });
-            break;
-          }
-          case 'ADD_SONGS': {
-            await this.connection?.broadcast(
-              'ADD_SONGS',
-              {
-                ...event.payload,
-                videoList: event.payload.videoList.map((it) => ({
-                  ...it,
-                  ownerId: it.ownerId ?? this.connection!.id,
-                })),
-              },
-              event.after,
-            );
-            break;
-          }
-          case 'REMOVE_SONG': {
-            await this.connection?.broadcast('REMOVE_SONG', event.payload);
-            break;
-          }
-          case 'MOVE_SONG': {
-            await this.connection?.broadcast('MOVE_SONG', event.payload);
-            break;
-          }
-          case 'SYNC_PROGRESS': {
-            if (this.permission === 'host-only')
-              await this.connection?.broadcast('SYNC_QUEUE', undefined);
-            else
-              await this.connection?.broadcast('SYNC_PROGRESS', event.payload);
-            break;
-          }
-        }
-
-        if (typeof resolveIgnore === 'number') clearTimeout(resolveIgnore);
-        resolveIgnore = window.setTimeout(() => {
-          this.ignoreChange = false;
-        }, 16); // wait 1 frame
-      };
-      const listener = async (event: ConnectionEventUnion) => {
-        this.ignoreChange = true;
-        switch (event.type) {
-          case 'CLEAR_QUEUE': {
-            this.queue?.clear();
-            break;
-          }
-          case 'SET_INDEX': {
-            this.queue?.setIndex(event.payload.index);
-            break;
-          }
-          case 'ADD_SONGS': {
-            const videoList: VideoData[] = event.payload.videoList.map(
-              (it) => ({
-                ...it,
-                ownerId: it.ownerId ?? this.connection!.id,
-              }),
-            );
-
-            await this.queue?.addVideos(videoList, event.payload.index);
-
-            const afterevent = event.after?.at(0);
-            if (afterevent?.type === 'SET_INDEX') {
-              this.queue?.setIndex(afterevent.payload.index);
-            }
-
-            break;
-          }
-          case 'REMOVE_SONG': {
-            this.queue?.removeVideo(event.payload.index);
-            break;
-          }
-          case 'MOVE_SONG': {
-            this.queue?.moveItem(
-              event.payload.fromIndex,
-              event.payload.toIndex,
-            );
-            break;
-          }
-          case 'IDENTIFY': {
-            console.warn(
-              'Music Together [Guest]: Received "IDENTIFY" event from guest',
-            );
-            break;
-          }
-          case 'SYNC_QUEUE': {
-            if (Array.isArray(event.payload?.videoList)) {
-              await this.queue?.setVideoList(event.payload.videoList);
-            }
-            break;
-          }
-          case 'SYNC_PROFILE': {
-            if (!event.payload) {
-              console.warn(
-                'Music Together [Guest]: Received "SYNC_PROFILE" event without payload',
-              );
-              break;
-            }
-
-            Object.entries(event.payload.profiles).forEach(([id, profile]) => {
-              this.putProfile(id, profile);
-            });
-            break;
-          }
-          case 'SYNC_PROGRESS': {
-            if (typeof event.payload?.progress === 'number') {
-              const currentTime = this.playerApi?.getCurrentTime() ?? 0;
-              if (Math.abs(event.payload.progress - currentTime) > 3)
-                this.playerApi?.seekTo(event.payload.progress);
-            }
-            if (this.playerApi?.getPlayerState() !== event.payload?.state) {
-              if (event.payload?.state === 2) this.playerApi?.pauseVideo();
-              if (event.payload?.state === 1) this.playerApi?.playVideo();
-            }
-            if (typeof event.payload?.index === 'number') {
-              const nowIndex = this.queue?.selectedIndex ?? 0;
-
-              if (nowIndex !== event.payload.index) {
-                this.queue?.setIndex(event.payload.index);
-              }
-            }
-            break;
-          }
-          case 'PERMISSION': {
-            if (!event.payload) {
-              console.warn(
-                'Music Together [Guest]: Received "PERMISSION" event without payload',
-              );
-              break;
-            }
-
-            this.permission = event.payload;
-            this.popups.guest.setPermission(this.permission);
-            this.popups.host.setPermission(this.permission);
-            this.popups.setting.setPermission(this.permission);
-
-            const permissionLabel = t(
-              `plugins.music-together.menu.permission.${this.permission}`,
-            );
-
-            this.api?.handleAddToToastAction?.(
-              createAddToToastAction(
-                t('plugins.music-together.toast.permission-changed', {
-                  permission: permissionLabel,
-                }),
-              ),
-            );
-            break;
-          }
-          case 'CONNECTION_CLOSED': {
-            this.queue?.off(queueListener);
-            break;
-          }
-          default: {
-            console.warn('Music Together [Guest]: Unknown Event', event);
-            break;
-          }
-        }
-
-        if (typeof resolveIgnore === 'number') clearTimeout(resolveIgnore);
-        resolveIgnore = window.setTimeout(() => {
-          this.ignoreChange = false;
-        }, 16); // wait 1 frame
-      };
-
-      this.connection.on(listener);
-      this.queue?.on(queueListener);
-
-      if (!this.me) this.me = getDefaultProfile(this.connection.id);
-      this.queue?.injection();
-      this.queue?.setOwner({
-        id: this.connection.id,
-        ...this.me,
-      });
-
-      const progress = Array.from(
-        document.querySelectorAll<
-          HTMLElement & {
-            _update: (...args: unknown[]) => void;
-          }
-        >('tp-yt-paper-progress'),
-      );
-      const rollbackList = progress.map((progress) => {
-        const original = progress._update;
-        progress._update = (...args) => {
-          const now = args[0];
-
-          if (this.permission === 'all' && typeof now === 'number') {
-            const currentTime = this.playerApi?.getCurrentTime() ?? 0;
-            if (Math.abs(now - currentTime) > 3)
-              this.connection?.broadcast('SYNC_PROGRESS', {
-                progress: now,
-                state: this.playerApi?.getPlayerState(),
-              });
-          }
-
-          original.call(progress, ...args);
-        };
-
-        return () => {
-          progress._update = original;
-        };
-      });
-      this.rollbackInjector = () => {
-        rollbackList.forEach((rollback) => rollback());
-      };
-
-      await this.connection.broadcast('IDENTIFY', {
-        profile: {
-          id: this.connection.id,
-          handleId: this.me.handleId,
-          name: this.me.name,
-          thumbnail: this.me.thumbnail,
         },
+        (reason) => this.showRemoveFailure(reason),
+      );
+      this.session = session;
+      session.start();
+      let finishJoin!: (joined: boolean) => void;
+      const initialState = new Promise<boolean>((resolve) => {
+        finishJoin = resolve;
       });
-
-      await this.connection.broadcast('SYNC_PROFILE', undefined);
-      await this.connection.broadcast('PERMISSION', undefined);
-
-      this.queue?.clear();
-      this.queue?.syncQueueOwner();
-      this.queue?.initQueue();
-
-      await this.connection.broadcast('SYNC_QUEUE', undefined);
-
-      return true;
+      const joinTimeout = window.setTimeout(() => finishJoin(false), 15_000);
+      connection.onConnections((peer) => {
+        if (peer?.open) return;
+        finishJoin(false);
+        if (this.connection !== connection) return;
+        this.api?.handleAddToToastAction?.(
+          createAddToToastAction(
+            t('plugins.music-together.toast.disconnected'),
+          ),
+        );
+        this.onStop();
+      });
+      connection.on((event, peer) => {
+        if (peer !== host || this.connection !== connection) return;
+        if (event.type === 'SESSION_STATE') {
+          session.receive(event.payload).then((applied) => {
+            if (applied && Array.isArray(event.payload?.queue))
+              finishJoin(true);
+          });
+        }
+        if (event.type === 'PONG') session.receivePong(event.payload);
+        if (event.type === 'QUEUE_REMOVE_FAILED')
+          this.showRemoveFailure(event.payload);
+        if (event.type === 'QUEUE_ADD_RESULT') {
+          this.api?.handleAddToToastAction?.(
+            createAddToToastAction(
+              t(
+                event.payload
+                  ? 'plugins.music-together.toast.song-added'
+                  : 'plugins.music-together.toast.add-song-failed',
+              ),
+            ),
+          );
+        }
+        if (event.type === 'SYNC_PROFILE' && event.payload?.profiles) {
+          this.profiles = event.payload.profiles;
+          this.popups.host.setUsers(Object.values(this.profiles));
+          this.popups.guest.setUsers(Object.values(this.profiles));
+          this.queue?.syncQueueOwner();
+        }
+      });
+      this.me ??= getDefaultProfile(connection.id);
+      session.tick();
+      await connection.broadcast('IDENTIFY', {
+        profile: { ...this.me, id: connection.id },
+      });
+      const joined = await initialState;
+      clearTimeout(joinTimeout);
+      if (!joined && this.connection === connection) this.onStop();
+      return joined && this.connection === connection;
     },
 
     onStop() {
-      if (this.connection?.mode !== 'disconnected') {
-        this.connection?.disconnect();
-      }
-      this.queue?.rollbackInjection();
-      this.queue?.removeQueueOwner();
-      if (this.rollbackInjector) {
-        this.rollbackInjector();
-        this.rollbackInjector = undefined;
-      }
+      const connection = this.connection;
+      this.connection = undefined;
+      this.session?.stop();
+      this.session = undefined;
+      connection?.disconnect();
 
       this.profiles = {};
       this.popups.host.setUsers(Object.values(this.profiles));
@@ -742,9 +772,11 @@ export default createPlugin<
     /* hooks */
 
     start({ ipc }) {
-      this.ipc = ipc;
-      this.showPrompt = (title: string, label: string) =>
-        ipc.invoke('music-together:prompt', title, label) as Promise<string>;
+      this.pluginLifecycleToken = crypto.randomUUID();
+      this.showPrompt = (token, title, label) =>
+        ipc.invoke('music-together:prompt', token, title, label) as Promise<
+          string | null
+        >;
       this.api = document.querySelector<AppElement>('ytmusic-app');
 
       /* setup */
@@ -773,14 +805,7 @@ export default createPlugin<
       };
 
       this.stateInterval = window.setInterval(() => {
-        if (this.connection?.mode !== 'host') return;
-        const index = this.queue?.selectedIndex ?? 0;
-
-        this.connection.broadcast('SYNC_PROGRESS', {
-          progress: this.playerApi?.getCurrentTime(),
-          state: this.playerApi?.getPlayerState(),
-          index,
-        });
+        this.session?.tick();
       }, 1000);
 
       /* UI */
@@ -820,7 +845,7 @@ export default createPlugin<
             else if (this.permission === 'playlist') this.permission = 'all';
             else if (this.permission === 'host-only')
               this.permission = 'playlist';
-            this.connection?.broadcast('PERMISSION', this.permission);
+            this.session?.publishState();
 
             hostPopup.setPermission(this.permission);
             guestPopup.setPermission(this.permission);
@@ -893,9 +918,12 @@ export default createPlugin<
           }
 
           if (id === 'music-together-join') {
+            const token = this.pluginLifecycleToken;
+            if (!token || this.pendingJoinPrompt) return;
             settingPopup.dismiss();
             this.showSpinner();
             const result = await this.onJoin();
+            if (token !== this.pluginLifecycleToken) return;
             this.hideSpinner();
 
             if (result) {
@@ -933,13 +961,7 @@ export default createPlugin<
       this.initMyProfile();
     },
     onPlayerApiReady(playerApi) {
-      this.queue = new Queue({
-        owner: {
-          id: this.connection?.id ?? '',
-          ...this.me!,
-        },
-        getProfile: (id) => this.profiles[id],
-      });
+      this.queue = new Queue((id) => this.profiles[id]);
       this.playerApi = playerApi;
 
       this.playerApi.addEventListener(
@@ -947,8 +969,21 @@ export default createPlugin<
         this.videoStateChangeListener,
       );
       document.addEventListener('videodatachange', this.videoChangeListener);
+      document.addEventListener('seeked', this.seekListener, true);
+      for (const event of ['click', 'yt-navigate', 'yt-action']) {
+        window.addEventListener(event, this.handlePlaybackNavigation, true);
+      }
     },
-    stop() {
+    stop({ ipc }) {
+      const pendingPrompt = this.pendingJoinPrompt;
+      this.pluginLifecycleToken = undefined;
+      this.pendingJoinPrompt = undefined;
+      if (pendingPrompt) {
+        ipc
+          .invoke('music-together:close-prompt', pendingPrompt)
+          .catch(() => null);
+      }
+
       const dividers = Array.from(
         document.querySelectorAll('.music-together-divider'),
       );
@@ -963,6 +998,10 @@ export default createPlugin<
           'onStateChange',
           this.videoStateChangeListener,
         );
+      document.removeEventListener('seeked', this.seekListener, true);
+      for (const event of ['click', 'yt-navigate', 'yt-action']) {
+        window.removeEventListener(event, this.handlePlaybackNavigation, true);
+      }
       if (this.videoChangeListener)
         document.removeEventListener(
           'videodatachange',

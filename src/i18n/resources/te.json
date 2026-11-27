@@ -115,5 +115,24 @@
         }
       }
     }
+  },
+  "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "పాటను చేర్చలేకపోయాము",
+        "song-added": "భాగస్వామ్య ప్లేబ్యాక్ క్యూలో చేర్చబడింది",
+        "closed": "Music Together మూసివేయబడింది",
+        "disconnected": "Music Together కనెక్షన్ తెగిపోయింది",
+        "host-failed": "Music Together సెషన్‌ను ప్రారంభించలేకపోయాము",
+        "id-copied": "హోస్ట్ ఐడీ క్లిప్‌బోర్డ్‌కు కాపీ చేయబడింది",
+        "id-copy-failed": "హోస్ట్ ఐడీని క్లిప్‌బోర్డ్‌కు కాపీ చేయలేకపోయాము",
+        "join-failed": "Music Together‌లో చేరలేకపోయాము",
+        "joined": "Music Together‌లో చేరారు",
+        "permission-changed": "Music Together అనుమతి “{{permission}}”కి మార్చబడింది",
+        "remove-song-failed": "పాటను తీసివేయలేకపోయాము",
+        "user-connected": "{{name}} Music Together‌లో చేరారు",
+        "user-disconnected": "{{name}} Music Together నుండి నిష్క్రమించారు"
+      }
+    }
   }
 }

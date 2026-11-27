@@ -11,5 +11,24 @@
         "unload-failed": "Pluginta mana uraykachiyta atirqanchu \"{{pluginName}}\""
       }
     }
+  },
+  "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Takita yapayta mana atikurqachu",
+        "song-added": "Rakisqa suyay sinruman yapasqa",
+        "closed": "Music Together wisq'akurqan",
+        "disconnected": "Music Together tinkisqa p'itikurqan",
+        "host-failed": "Music Together tantanakuyta qallariyta mana atikurqachu",
+        "id-copied": "Kamarichiqpa ID nisqanta iskaychana waqaychanaman mirachikurqan",
+        "id-copy-failed": "Kamarichiqpa ID nisqanta iskaychana waqaychanaman mirachiyta mana atikurqachu",
+        "join-failed": "Music Together-man hukllakuyta mana atikurqachu",
+        "joined": "Music Together-man hukllakurqanki",
+        "permission-changed": "Music Together-pa saqiyqa «{{permission}}»-man tikrakurqan",
+        "remove-song-failed": "Takita hurquyta mana atikurqachu",
+        "user-connected": "{{name}} Music Together-man hukllakurqan",
+        "user-disconnected": "{{name}} Music Together-manta lluqsirqan"
+      }
+    }
   }
 }

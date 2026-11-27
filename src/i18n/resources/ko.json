@@ -647,6 +647,7 @@
       "name": "Music Together [베타]",
       "toast": {
         "add-song-failed": "노래 추가 실패",
+        "song-added": "공유 재생 대기열에 추가되었습니다",
         "closed": "Music Together가 닫혔습니다",
         "disconnected": "Music Together 연결이 끊어졌습니다",
         "host-failed": "Music Together를 열 수 없습니다",

@@ -647,6 +647,7 @@
       "name": "Musik Bersama [Beta]",
       "toast": {
         "add-song-failed": "Gagal untuk menambahkan lagu",
+        "song-added": "Ditambahkan ke antrean pemutaran bersama",
         "closed": "Musik Bersama ditutup",
         "disconnected": "Musik Bersama terputus",
         "host-failed": "Gagal untuk memulai Musik Bersama",

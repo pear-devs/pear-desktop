@@ -647,6 +647,7 @@
       "name": "Music Together [ベータ]",
       "toast": {
         "add-song-failed": "曲の追加に失敗しました",
+        "song-added": "共有キューに追加しました",
         "closed": "Music Together が閉じられました",
         "disconnected": "Music Together が切断されました",
         "host-failed": "Music Together のホストに失敗しました",

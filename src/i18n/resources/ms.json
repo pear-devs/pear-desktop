@@ -646,11 +646,18 @@
       "name": "Music Together [Beta]",
       "toast": {
         "add-song-failed": "Gagal menambah lagu",
+        "song-added": "Ditambahkan ke baris gilir main balik yang dikongsi",
         "closed": "Music Together ditutup",
         "disconnected": "Music Together terputus",
         "host-failed": "Gagal untuk menjadi hos Music Together",
         "id-copied": "ID hos disalin ke papan keratan",
-        "id-copy-failed": "Gagal menyalin ID Hos ke papan keratan"
+        "id-copy-failed": "Gagal menyalin ID Hos ke papan keratan",
+        "join-failed": "Gagal menyertai Music Together",
+        "joined": "Telah menyertai Music Together",
+        "permission-changed": "Kebenaran Music Together ditukar kepada “{{permission}}”",
+        "remove-song-failed": "Gagal mengalih keluar lagu",
+        "user-connected": "{{name}} telah menyertai Music Together",
+        "user-disconnected": "{{name}} telah meninggalkan Music Together"
       }
     },
     "navigation": {

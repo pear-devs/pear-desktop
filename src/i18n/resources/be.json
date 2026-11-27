@@ -50,5 +50,24 @@
         }
       }
     }
+  },
+  "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Не ўдалося дадаць песню",
+        "song-added": "Дададзена ў агульную чаргу прайгравання",
+        "closed": "Music Together зачынена",
+        "disconnected": "Сувязь з Music Together перарваная",
+        "host-failed": "Не ўдалося стварыць сеанс Music Together",
+        "id-copied": "ID вядучага скапіяваны ў буфер абмену",
+        "id-copy-failed": "Не ўдалося скапіяваць ID вядучага ў буфер абмену",
+        "join-failed": "Не ўдалося далучыцца да Music Together",
+        "joined": "Вы далучыліся да Music Together",
+        "permission-changed": "Дазвол Music Together зменены на «{{permission}}»",
+        "remove-song-failed": "Не ўдалося выдаліць песню",
+        "user-connected": "{{name}} далучыўся да Music Together",
+        "user-disconnected": "{{name}} пакінуў Music Together"
+      }
+    }
   }
 }

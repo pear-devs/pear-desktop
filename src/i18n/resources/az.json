@@ -219,6 +219,23 @@
           "label": "Sahib adı"
         }
       }
+    },
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Mahnını əlavə etmək mümkün olmadı",
+        "song-added": "Ortaq oxutma növbəsinə əlavə edildi",
+        "closed": "Music Together bağlandı",
+        "disconnected": "Music Together bağlantısı kəsildi",
+        "host-failed": "Music Together sessiyasını başlatmaq mümkün olmadı",
+        "id-copied": "Aparıcının ID-si mübadilə buferinə kopyalandı",
+        "id-copy-failed": "Aparıcının ID-sini mübadilə buferinə kopyalamaq mümkün olmadı",
+        "join-failed": "Music Together sessiyasına qoşulmaq mümkün olmadı",
+        "joined": "Music Together sessiyasına qoşuldunuz",
+        "permission-changed": "Music Together icazəsi “{{permission}}” olaraq dəyişdirildi",
+        "remove-song-failed": "Mahnını silmək mümkün olmadı",
+        "user-connected": "{{name}} Music Together sessiyasına qoşuldu",
+        "user-disconnected": "{{name}} Music Together sessiyasından ayrıldı"
+      }
     }
   }
 }

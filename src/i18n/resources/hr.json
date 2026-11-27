@@ -628,6 +628,7 @@
       "name": "Glazba Zajedno [Beta]",
       "toast": {
         "add-song-failed": "Neuspješno dodavanje pjesme",
+        "song-added": "Dodano u zajednički red za reprodukciju",
         "closed": "Glazba Zajedno je zatvorena",
         "disconnected": "Glazba Zajedno je odspojena",
         "host-failed": "Neuspješno hostanje Glazbe Zajedno",

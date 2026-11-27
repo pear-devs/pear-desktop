@@ -647,6 +647,7 @@
       "name": "Music Samen [Beta]",
       "toast": {
         "add-song-failed": "Toevoegen van nummer mislukt",
+        "song-added": "Toegevoegd aan de gedeelde afspeelwachtrij",
         "closed": "Music Samen gesloten",
         "disconnected": "Music Samen verbroken",
         "host-failed": "Hosten van Music Samen mislukt",

@@ -632,6 +632,7 @@
       "name": "Music Together [Beta]",
       "toast": {
         "add-song-failed": "Adăugarea piesei a eșuat",
+        "song-added": "Adăugat la coada de redare partajată",
         "closed": "Music Together închis",
         "disconnected": "Music Together deconectat",
         "host-failed": "Nu s-a reușit găzduirea Music Together",

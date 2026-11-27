@@ -1,16 +1,17 @@
+import type { QueueItem } from '@/types/datahost-get-state';
 import type { MusicPlayerAppElement } from '@/types/music-player-app-element';
 import type { QueueElement } from '@/types/queue';
 
 type QueueRendererResponse = {
   queueDatas: {
-    content: unknown;
+    content: QueueItem;
   }[];
   responseContext: unknown;
   trackingParams: string;
 };
 
 export const getMusicQueueRenderer = async (
-  videoIds: string[],
+  target: { videoIds: string[] } | { playlistId: string },
 ): Promise<QueueRendererResponse | null> => {
   const queue = document.querySelector<QueueElement>('#queue');
   const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
@@ -21,12 +22,9 @@ export const getMusicQueueRenderer = async (
 
   return await app.networkManager.fetch<
     QueueRendererResponse,
-    {
-      queueContextParams: string;
-      videoIds: string[];
-    }
+    { queueContextParams: string } & typeof target
   >('/music/get_queue', {
     queueContextParams: store.getState().queue.queueContextParams,
-    videoIds,
+    ...target,
   });
 };

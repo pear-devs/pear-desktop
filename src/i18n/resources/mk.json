@@ -101,6 +101,23 @@
     }
   },
   "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Песната не можеше да се додаде",
+        "song-added": "Додадено во заедничкиот ред за репродукција",
+        "closed": "Music Together е затворен",
+        "disconnected": "Врската со Music Together е прекината",
+        "host-failed": "Не можеше да се започне сесија на Music Together",
+        "id-copied": "ID на домаќинот е копиран во привремената меморија",
+        "id-copy-failed": "ID на домаќинот не можеше да се копира во привремената меморија",
+        "join-failed": "Не можевте да се придружите на Music Together",
+        "joined": "Се придруживте на Music Together",
+        "permission-changed": "Дозволата на Music Together е сменета во „{{permission}}“",
+        "remove-song-failed": "Песната не можеше да се отстрани",
+        "user-connected": "{{name}} се придружи на Music Together",
+        "user-disconnected": "{{name}} го напушти Music Together"
+      }
+    },
     "video-toggle": {
       "menu": {
         "align": {

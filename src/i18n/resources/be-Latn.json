@@ -7,5 +7,24 @@
         "initialize-failed": "Pamyłka padčas inicyjalizacyi dadatku \"{{pluginName}}\""
       }
     }
+  },
+  "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Nie ŭdałosia dadać pieśniu",
+        "song-added": "Dadadziena ŭ ahulnuju čarhu prajhravańnia",
+        "closed": "Music Together začyniena",
+        "disconnected": "Suviaź z Music Together pierarvanaja",
+        "host-failed": "Nie ŭdałosia stvaryć sieans Music Together",
+        "id-copied": "ID viadučaha skapijavany ŭ bufier abmienu",
+        "id-copy-failed": "Nie ŭdałosia skapijavać ID viadučaha ŭ bufier abmienu",
+        "join-failed": "Nie ŭdałosia dałučycca da Music Together",
+        "joined": "Dałučyŭsia da Music Together",
+        "permission-changed": "Dazvoł Music Together zmienieny na «{{permission}}»",
+        "remove-song-failed": "Nie ŭdałosia vydalić pieśniu",
+        "user-connected": "{{name}} dałučyŭsia da Music Together",
+        "user-disconnected": "{{name}} pakinuŭ Music Together"
+      }
+    }
   }
 }

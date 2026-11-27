@@ -647,6 +647,7 @@
       "name": "Music Together [Thử nghiệm]",
       "toast": {
         "add-song-failed": "Thêm bài hát thất bại",
+        "song-added": "Đã thêm vào hàng đợi phát chung",
         "closed": "Đã đóng Music Together",
         "disconnected": "Đã ngắt kết nối Music Together",
         "host-failed": "Không thể tổ chức Music Together",

@@ -647,6 +647,7 @@
       "name": "Music Together [Beta]",
       "toast": {
         "add-song-failed": "Failed to add song",
+        "song-added": "Added to the shared queue",
         "closed": "Music Together closed",
         "disconnected": "Music Together disconnected",
         "host-failed": "Failed to host Music Together",

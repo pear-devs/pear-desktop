@@ -413,6 +413,23 @@
         "fetched-lyrics": "Henter sangtekster for Genius"
       }
     },
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Kunne ikke legge til sangen",
+        "song-added": "Lagt til i den delte avspillingskøen",
+        "closed": "Music Together ble lukket",
+        "disconnected": "Tilkoblingen til Music Together ble brutt",
+        "host-failed": "Kunne ikke starte en Music Together-økt",
+        "id-copied": "Verts-ID-en ble kopiert til utklippstavlen",
+        "id-copy-failed": "Kunne ikke kopiere verts-ID-en til utklippstavlen",
+        "join-failed": "Kunne ikke bli med i Music Together",
+        "joined": "Du ble med i Music Together",
+        "permission-changed": "Tillatelsen i Music Together ble endret til «{{permission}}»",
+        "remove-song-failed": "Kunne ikke fjerne sangen",
+        "user-connected": "{{name}} ble med i Music Together",
+        "user-disconnected": "{{name}} forlot Music Together"
+      }
+    },
     "navigation": {
       "description": "Direkte integrering av neste/tilbake-navigasjonspilene i grensesnittet, som din favorittnettleser",
       "name": "Navigasjon"

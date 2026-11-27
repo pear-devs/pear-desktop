@@ -591,6 +591,7 @@
       "name": "Music Together [Beta]",
       "toast": {
         "add-song-failed": "Απέτυχε η προσθήκη τραγουδιού",
+        "song-added": "Προστέθηκε στην κοινόχρηστη ουρά",
         "closed": "Το Music Together έκλεισε",
         "disconnected": "Το Music Together αποσυνδέθηκε",
         "host-failed": "Απέτυχε να φιλοξενήσει το Μουσική Μαζί",

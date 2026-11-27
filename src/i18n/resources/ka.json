@@ -581,6 +581,7 @@
       "name": "Music Together [ბეტა]",
       "toast": {
         "add-song-failed": "სიმღერის დამატება ვერ მოხერხდა",
+        "song-added": "დაემატა საერთო დაკვრის რიგს",
         "closed": "Music Together-ის ორგანიზატორი დაიხურა",
         "disconnected": "Music Together-ის კავშირი გათიშულია",
         "host-failed": "Music Together-ის გამოცხადება ვერ მოხერხდა",

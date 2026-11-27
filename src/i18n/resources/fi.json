@@ -590,6 +590,7 @@
       "name": "Music Together [Beta]",
       "toast": {
         "add-song-failed": "Kappaleen lisääminen epäonnistui",
+        "song-added": "Lisätty yhteiseen toistojonoon",
         "closed": "Music Together suljettu",
         "disconnected": "\"Music Together\" yhteys katkaistu",
         "host-failed": "Music Together -istunnon isännöinti epäonnistui",

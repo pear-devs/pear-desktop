@@ -647,6 +647,7 @@
       "name": "Music Together [Beta]",
       "toast": {
         "add-song-failed": "Nepodarilo sa pridať skladbu",
+        "song-added": "Pridané do zdieľaného frontu prehrávania",
         "closed": "Music Together ukončené",
         "disconnected": "Music Together odpojené",
         "host-failed": "Nepodarilo sa hosťovať Music Together",

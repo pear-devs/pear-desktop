@@ -1,1 +1,21 @@
-{}
+{
+  "plugins": {
+    "music-together": {
+      "toast": {
+        "add-song-failed": "Әнді қосу мүмкін болмады",
+        "song-added": "Ортақ ойнату кезегіне қосылды",
+        "closed": "Music Together жабылды",
+        "disconnected": "Music Together байланысы үзілді",
+        "host-failed": "Music Together сеансын бастау мүмкін болмады",
+        "id-copied": "Хост идентификаторы алмасу буферіне көшірілді",
+        "id-copy-failed": "Хост идентификаторын алмасу буферіне көшіру мүмкін болмады",
+        "join-failed": "Music Together сеансына қосылу мүмкін болмады",
+        "joined": "Music Together сеансына қосылдыңыз",
+        "permission-changed": "Music Together рұқсаты «{{permission}}» болып өзгертілді",
+        "remove-song-failed": "Әнді алып тастау мүмкін болмады",
+        "user-connected": "{{name}} Music Together сеансына қосылды",
+        "user-disconnected": "{{name}} Music Together сеансынан шықты"
+      }
+    }
+  }
+}
