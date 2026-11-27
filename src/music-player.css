@@ -87,3 +87,11 @@ tp-yt-iron-dropdown,
 tp-yt-paper-dialog {
   app-region: no-drag;
 }
+
+/* Hidden hover/tap overlays: will-change makes long lists slow to layerize */
+.ytSpecTouchFeedbackShapeStroke,
+.ytSpecTouchFeedbackShapeFill,
+yt-interaction > .stroke,
+yt-interaction > .fill {
+  will-change: auto !important;
+}
