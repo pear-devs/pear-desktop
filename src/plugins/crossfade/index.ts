@@ -183,10 +183,44 @@ export default createPlugin<
     onConfigChange(newConfig) {
       this.config = newConfig;
     },
-    onPlayerApiReady() {
+    onPlayerApiReady(playerApi) {
       let transitionAudio: Howl; // Howler audio used to fade out the current music
       let firstVideo = true;
       let waitForTransition: Promise<unknown>;
+      // The video element the listeners below are attached to. They must only be
+      // attached once, otherwise every song adds another 'play' handler and the
+      // later handlers read the volume the first one just set to 0, fading the
+      // song in to silence.
+      let attachedVideo: HTMLVideoElement | undefined;
+      let videoFader: VolumeFader | undefined;
+      let transitionTriggered = false;
+
+      // The volume the player wants (the slider value), as a 0…1 level. Reading
+      // video.volume instead is unreliable because it may be mid-fade (or 0).
+      const getTargetVolume = () =>
+        Math.min(Math.max(playerApi.getVolume() / 100, 0), 1);
+
+      const fadeInVideo = (video: HTMLVideoElement) => {
+        videoFader?.stop();
+        videoFader = undefined;
+
+        const duration = Number(this.config?.fadeInDuration ?? 0);
+        if (!(duration > 0)) {
+          video.volume = getTargetVolume();
+          return;
+        }
+
+        video.volume = 0;
+        videoFader = new VolumeFader(video, {
+          fadeScaling: this.config?.fadeScaling,
+          fadeDuration: duration,
+        });
+        videoFader.fadeTo(getTargetVolume(), () => {
+          // Land on the latest slider value in case it changed during the fade
+          video.volume = getTargetVolume();
+          videoFader = undefined;
+        });
+      };
 
       const getStreamURL = async (videoID: string): Promise<string> =>
         this.ipc?.invoke('audio-url', videoID) as Promise<string>;
@@ -234,50 +268,56 @@ export default createPlugin<
         syncVideoWithTransitionAudio();
       };
 
-      const syncVideoWithTransitionAudio = () => {
-        const video = document.querySelector('video')!;
-
-        const videoFader = new VolumeFader(video, {
-          fadeScaling: this.config?.fadeScaling,
-          fadeDuration: this.config?.fadeInDuration,
-        });
-
-        transitionAudio.play();
-        transitionAudio.seek(video.currentTime);
+      const attachVideoListeners = (video: HTMLVideoElement) => {
+        if (attachedVideo === video) {
+          return;
+        }
+        attachedVideo = video;
 
         video.addEventListener('seeking', () => {
-          transitionAudio.seek(video.currentTime);
+          transitionAudio?.seek(video.currentTime);
         });
 
         video.addEventListener('pause', () => {
-          transitionAudio.pause();
+          transitionAudio?.pause();
         });
 
         video.addEventListener('play', () => {
-          transitionAudio.play();
-          transitionAudio.seek(video.currentTime);
+          if (transitionAudio) {
+            transitionAudio.play();
+            transitionAudio.seek(video.currentTime);
+          }
 
-          // Fade in
-          const videoVolume = video.volume;
-          video.volume = 0;
-          videoFader.fadeTo(videoVolume);
+          fadeInVideo(video);
         });
 
         // Exit just before the end for the transition
-        const transitionBeforeEnd = () => {
+        video.addEventListener('timeupdate', () => {
           if (
+            !transitionTriggered &&
             video.currentTime >=
               video.duration - (this.config?.secondsBeforeEnd ?? 0) &&
             isReadyToCrossfade()
           ) {
-            video.removeEventListener('timeupdate', transitionBeforeEnd);
+            transitionTriggered = true;
 
             // Go to next video - XXX: does not support "repeat 1" mode
             document.querySelector<HTMLButtonElement>('.next-button')?.click();
           }
-        };
+        });
+      };
 
-        video.addEventListener('timeupdate', transitionBeforeEnd);
+      const syncVideoWithTransitionAudio = () => {
+        const video = document.querySelector('video');
+        if (!video) {
+          return;
+        }
+
+        transitionTriggered = false;
+        attachVideoListeners(video);
+
+        transitionAudio.play();
+        transitionAudio.seek(video.currentTime);
       };
 
       const crossfade = (cb: () => void) => {
@@ -300,8 +340,15 @@ export default createPlugin<
         });
 
         // Fade out the music
+        videoFader?.stop();
+        videoFader = undefined;
         video.volume = 0;
         fader.fadeOut(() => {
+          // If the next song started without a 'play' event, nothing faded it
+          // back in and it would stay silent until the slider was touched.
+          if (!video.paused && !videoFader && video.volume === 0) {
+            fadeInVideo(video);
+          }
           resolveTransition();
           cb();
         });
