@@ -29,6 +29,12 @@ import type { SearchBoxElement } from '@/types/search-box-element';
 
 setTheme('dark');
 
+type PlayerBarController = {
+  centerPlayerBar: () => void;
+  hostElement?: HTMLElement;
+  viewportSize?: number;
+};
+
 let api: (Element & MusicPlayer) | null = null;
 let isPluginLoaded = false;
 let isApiLoaded = false;
@@ -59,6 +65,38 @@ async function onApiLoaded() {
       osType = 'Linux';
     }
     document.documentElement.setAttribute('data-os', osType);
+  }
+
+  // YTM re-centers the player bar by clearing the widths of the left/right
+  // controls and setting them again in the next animation frame. It does this
+  // on every video data change, which can fire several times in a row while a
+  // song is playing. When that runs from a frame callback (timers do with the
+  // Performance Improvement plugin), a frame gets painted with the widths
+  // cleared, so the song title and like buttons jump left and back.
+  // Doing the clear, measure and set in one go means no frame sees the gap.
+  {
+    const playerBar = document.querySelector<
+      HTMLElement &
+        PlayerBarController & { polymerController?: PlayerBarController }
+    >('ytmusic-player-bar');
+    const controller = playerBar?.polymerController ?? playerBar;
+    if (controller && typeof controller.centerPlayerBar === 'function') {
+      controller.centerPlayerBar = function (this: PlayerBarController) {
+        const host = this.hostElement ?? playerBar;
+        const left = host?.querySelector<HTMLElement>('#left-controls');
+        const right = host?.querySelector<HTMLElement>('#right-controls');
+        if (!left || !right) return;
+
+        left.style.width = '';
+        right.style.width = '';
+        // Same exceptions as YTM: these viewport sizes don't center the bar
+        if (this.viewportSize === -3 || this.viewportSize === -4) return;
+
+        const width = `${Math.max(left.offsetWidth, right.offsetWidth)}px`;
+        left.style.width = width;
+        right.style.width = width;
+      };
+    }
   }
 
   // Workaround for #2459
@@ -310,7 +348,13 @@ async function onApiLoaded() {
   );
 
   const video = document.querySelector('video')!;
-  const audioContext = new AudioContext();
+  // Every song is routed through this context (createMediaElementSource), so
+  // its output buffer size decides how much renderer jank playback can absorb.
+  // The default 'interactive' hint asks for the smallest buffer the device
+  // allows (~10 ms on WASAPI shared mode), which shows up as occasional clicks
+  // and dropouts, especially on virtual devices like VB-Audio / VoiceMeeter.
+  // Nothing here needs low latency, so ask for a playback-sized buffer.
+  const audioContext = new AudioContext({ latencyHint: 'playback' });
   const audioSource = audioContext.createMediaElementSource(video);
   audioSource.connect(audioContext.destination);
 
