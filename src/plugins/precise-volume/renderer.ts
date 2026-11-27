@@ -24,6 +24,44 @@ export const moveVolumeHud = debounce((showVideo: boolean) => {
 
 let options: PreciseVolumePluginConfig;
 
+const newSliderSelector =
+  'ytmusic-miniplayer .ytMusicMiniPlayerVolumePopup input[type="range"]';
+
+/**
+ * Script that applies the saved volume as soon as the player exists.
+ * Injected from the preload: YTM can start playing at its default (full)
+ * volume well before the renderer plugins and onPlayerApiReady are loaded.
+ */
+export const restoreVolumeScript = (volume: number) => `(() => {
+  const apply = () => {
+    const player = document.querySelector('#movie_player');
+    if (typeof player?.setVolume !== 'function') return false;
+    player.setVolume(${volume});
+    return true;
+  };
+  if (apply()) return;
+  const finish = () => {
+    if (!apply()) return;
+    observer.disconnect();
+    document.removeEventListener('play', finish, true);
+  };
+  // MutationObserver instead of polling: timers can be throttled during startup
+  const observer = new MutationObserver(finish);
+  observer.observe(document, { childList: true, subtree: true });
+  // In case the player API shows up without a later DOM mutation:
+  // apply when playback starts at the latest (media events don't bubble, so capture)
+  document.addEventListener('play', finish, true);
+})(); 0`;
+
+let onNewSliderChange: ((event: Event) => void) | undefined;
+
+/** Remove the new UI's slider listener (plugin disabled or re-initialized) */
+export const removeNewSliderListener = () => {
+  if (!onNewSliderChange) return;
+  document.removeEventListener('change', onNewSliderChange, true);
+  onNewSliderChange = undefined;
+};
+
 export const onPlayerApiReady = async (
   playerApi: MusicPlayer,
   context: RendererContext<PreciseVolumePluginConfig>,
@@ -52,6 +90,9 @@ export const onPlayerApiReady = async (
 
       if (api.getVolume() !== options.savedVolume) {
         setVolume(options.savedVolume);
+      } else {
+        // Already applied by the preload, but the new UI's slider still shows YTM's default
+        updateVolumeSlider();
       }
     }
 
@@ -130,7 +171,10 @@ export const onPlayerApiReady = async (
 
   /** Add onwheel event to play bar and also track if play bar is hovered */
   function setupPlaybar() {
-    const playerbar = $<HTMLElement>('ytmusic-player-bar');
+    // YTM's newer UI replaced ytmusic-player-bar with ytmusic-miniplayer
+    const playerbar =
+      $<HTMLElement>('ytmusic-player-bar') ??
+      $<HTMLElement>('ytmusic-miniplayer');
     if (!playerbar) return;
 
     playerbar.addEventListener('wheel', (event) => {
@@ -149,6 +193,24 @@ export const onPlayerApiReady = async (
     });
 
     setupSliderObserver();
+    setupNewSliderListener();
+  }
+
+  /** Save volume when the newer UI's native range slider is manually changed */
+  function setupNewSliderListener() {
+    // Re-enabling the plugin calls onPlayerApiReady again; don't stack listeners
+    removeNewSliderListener();
+    onNewSliderChange = (event) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.matches(newSliderSelector)) return;
+
+      const volume = Number((target as HTMLInputElement).value);
+      setTooltip(volume);
+      saveVolume(volume);
+    };
+    // The slider is re-rendered inside a hover popup, so listen on the document.
+    // Capture phase, in case YTM stops propagation on the slider itself
+    document.addEventListener('change', onNewSliderChange, true);
   }
 
   /** Save volume + Update the volume tooltip when volume-slider is manually changed */
@@ -209,6 +271,7 @@ export const onPlayerApiReady = async (
     );
   }
 
+  /** Move the volume sliders (old and new UI) to the saved volume */
   function updateVolumeSlider() {
     const savedVolume = options.savedVolume ?? 0;
     // Slider value automatically rounds to multiples of 5
@@ -219,6 +282,16 @@ export const onPlayerApiReady = async (
           savedVolume > 0 && savedVolume < 5 ? 5 : savedVolume,
         );
       }
+    }
+
+    // The newer UI's slider doesn't follow api.setVolume() on its own
+    const newSlider = $<HTMLInputElement>(newSliderSelector);
+    if (newSlider) {
+      newSlider.value = String(savedVolume);
+      newSlider.style.setProperty(
+        '--yt-slider-shape-gradient-percent',
+        `${savedVolume}%`,
+      );
     }
   }
 
