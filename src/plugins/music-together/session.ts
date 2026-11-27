@@ -435,42 +435,39 @@ export class Session {
       this.guestNavigation === pending &&
       (!this.queue.rawItems.length ||
         this.queue.rawItems === pending.initialItems);
-    try {
-      if (!canCommit()) return false;
-      let recovered = false;
-      if (pending.playlistId) {
-        recovered = await this.queue.setPlaylist(
-          pending.playlistId,
-          pending.ownerId,
-          canCommit,
-        );
-      } else if (pending.videoId) {
-        const entry = {
-          entryId: crypto.randomUUID(),
-          videoId: pending.videoId,
-          ownerId: pending.ownerId,
-        };
-        recovered = await this.queue.setVideoList([entry], canCommit);
-      }
-      if (!recovered) return false;
-      const entries = this.queue.videoList;
-      const entry =
-        entries.find((item) => item.videoId === pending.videoId) ?? entries[0];
-      if (!entry) return false;
-      this.hostNavigation = undefined;
-      if (!this.isLoaded(entry)) {
-        this.player.loadVideoById(
-          entry.videoId,
-          0,
-          this.player.getUserPlaybackQualityPreference(),
-        );
-      } else if (this.player.getPlayerState() !== 1) {
-        this.player.playVideo();
-      }
-      return true;
-    } finally {
-      if (this.guestNavigation === pending) this.guestNavigation = undefined;
+    if (!canCommit()) return false;
+    let recovered = false;
+    if (pending.playlistId) {
+      recovered = await this.queue.setPlaylist(
+        pending.playlistId,
+        pending.ownerId,
+        canCommit,
+      );
+    } else if (pending.videoId) {
+      const entry = {
+        entryId: crypto.randomUUID(),
+        videoId: pending.videoId,
+        ownerId: pending.ownerId,
+      };
+      recovered = await this.queue.setVideoList([entry], canCommit);
     }
+    if (!recovered) return false;
+    const entries = this.queue.videoList;
+    const entry =
+      entries.find((item) => item.videoId === pending.videoId) ?? entries[0];
+    if (!entry) return false;
+    this.guestNavigation = undefined;
+    this.hostNavigation = undefined;
+    if (!this.isLoaded(entry)) {
+      this.player.loadVideoById(
+        entry.videoId,
+        0,
+        this.player.getUserPlaybackQualityPreference(),
+      );
+    } else if (this.player.getPlayerState() !== 1) {
+      this.player.playVideo();
+    }
+    return true;
   }
 
   tick() {
@@ -821,9 +818,9 @@ export class Session {
   onSeek() {
     if (!this.active) return;
     if (this.connection.mode === 'host') {
+      const pending = this.hostSeek;
       this.enqueue(async () => {
-        const pending = this.hostSeek;
-        this.hostSeek = undefined;
+        if (this.hostSeek === pending) this.hostSeek = undefined;
         if (
           !pending ||
           Math.abs(this.player.getCurrentTime() - pending.position) > 1
