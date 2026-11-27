@@ -6,6 +6,7 @@ import {
 
 import { singleton } from './decorators';
 import {
+  getPlayerApi,
   getPlayerVolume,
   getPlayerVideo,
   listenToPlayerVideo,
@@ -291,11 +292,11 @@ export const setupSongInfo = singleton(() => {
   const notifySourceChange = (
     video: HTMLVideoElement | null,
     id: string | undefined,
-    fromObserver = false,
+    fromSnapshot = false,
   ) => {
     if (!video || !id) return;
     if (
-      fromObserver &&
+      fromSnapshot &&
       lastSourceChange?.video === video &&
       lastSourceChange.id === id
     ) {
@@ -348,8 +349,16 @@ export const setupSongInfo = singleton(() => {
       playerApi = api;
       api?.addEventListener('videodatachange', onVideoDataChange);
     }
-    if (!api || !video) return;
+    if (api && video) publishSongInfoSnapshot(api, video);
+  });
 
+  listenToPlayerVideo('loadedmetadata', (video) => {
+    if (!trackId && playerApi && playerApi === getPlayerApi()) {
+      publishSongInfoSnapshot(playerApi, video);
+    }
+  });
+
+  function publishSongInfoSnapshot(api: MusicPlayer, video: HTMLVideoElement) {
     // Read the API snapshot if dataloaded happened before we could subscribe.
     const snapshot = trackId ? undefined : api.getVideoData?.();
     const id = trackId ?? snapshot?.video_id;
@@ -367,7 +376,7 @@ export const setupSongInfo = singleton(() => {
       loading: true,
       ['\u0079\u0074\u006d\u0064WatchNextResponse']: api.getWatchNextResponse(),
     } satisfies VideoDataChangeValue);
-  });
+  }
 
   function sendSongInfo(videoData: VideoDataChangeValue) {
     const data = playerApi?.getPlayerResponse();
