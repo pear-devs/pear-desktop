@@ -600,6 +600,10 @@
       },
       "name": "In-App Menu"
     },
+    "independent-audio": {
+      "description": "Experimental PCM capture with independent local listening gain.",
+      "name": "Independent Audio Monitoring"
+    },
     "lumiastream": {
       "description": "Adds Lumia Stream support",
       "name": "Lumia Stream [Beta]"
