@@ -9,14 +9,34 @@ import { registerMPRIS } from './mpris';
 import type { ShortcutMappingType, ShortcutsPluginConfig } from './index';
 import type { BackendContext } from '@/types/contexts';
 
+// Older configs can contain the literal string "undefined" for an unset
+// shortcut. Electron throws a TypeError for that (or any invalid accelerator),
+// which used to abort registration of every shortcut after it.
+const isValidAccelerator = (accelerator: unknown): accelerator is string =>
+  typeof accelerator === 'string' &&
+  accelerator.trim() !== '' &&
+  accelerator !== 'undefined' &&
+  accelerator !== 'null';
+
 function _registerGlobalShortcut(
   webContents: Electron.WebContents,
   shortcut: string,
   action: (webContents: Electron.WebContents) => void,
 ) {
-  globalShortcut.register(shortcut, () => {
-    action(webContents);
-  });
+  if (!isValidAccelerator(shortcut)) return;
+  try {
+    if (
+      !globalShortcut.register(shortcut, () => {
+        action(webContents);
+      })
+    ) {
+      console.warn(
+        `[shortcuts] Could not register global shortcut "${shortcut}" (already in use?)`,
+      );
+    }
+  } catch (error) {
+    console.warn(`[shortcuts] Invalid global shortcut "${shortcut}"`, error);
+  }
 }
 
 function _registerLocalShortcut(
@@ -24,9 +44,14 @@ function _registerLocalShortcut(
   shortcut: string,
   action: (webContents: Electron.WebContents) => void,
 ) {
-  registerElectronLocalShortcut(win, shortcut, () => {
-    action(win.webContents);
-  });
+  if (!isValidAccelerator(shortcut)) return;
+  try {
+    registerElectronLocalShortcut(win, shortcut, () => {
+      action(win.webContents);
+    });
+  } catch (error) {
+    console.warn(`[shortcuts] Invalid local shortcut "${shortcut}"`, error);
+  }
 }
 
 export const onMainLoad = async ({
@@ -63,7 +88,7 @@ export const onMainLoad = async ({
       // HACK: _action is detected as string, but it's actually a key of ShortcutMappingType
       const action = _action as keyof ShortcutMappingType;
 
-      if (!container[action]) {
+      if (!isValidAccelerator(container[action])) {
         continue; // Action accelerator is empty
       }
 
