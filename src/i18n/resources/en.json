@@ -236,6 +236,10 @@
       },
       "name": "Album Color Theme"
     },
+    "always-show-volume-slider": {
+      "name": "Always Show Volume Slider",
+      "description": "Keeps the volume slider visible and draggable instead of only showing it on hover."
+    },
     "ambient-mode": {
       "description": "Applies a lighting effect by casting gentle colors from the video, into your screen’s background",
       "menu": {
