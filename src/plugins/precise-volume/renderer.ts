@@ -50,9 +50,10 @@ export const onPlayerApiReady = async (
       // Set saved volume as tooltip
       setTooltip(options.savedVolume);
 
-      if (api.getVolume() !== options.savedVolume) {
-        setVolume(options.savedVolume);
-      }
+      // Always sync, even when the player already reports this volume: the
+      // player bar's own state may still hold YouTube Music's stored value.
+      applyVolume(options.savedVolume);
+      updateVolumeSlider();
     }
 
     setupPlaybar();
@@ -133,11 +134,18 @@ export const onPlayerApiReady = async (
     const playerbar = $<HTMLElement>('ytmusic-player-bar');
     if (!playerbar) return;
 
-    playerbar.addEventListener('wheel', (event) => {
-      event.preventDefault();
-      // Event.deltaY < 0 means wheel-up
-      changeVolume(event.deltaY < 0);
-    });
+    // Capture phase + stopPropagation: YouTube Music has its own ±10 wheel
+    // handler on the volume control, which would otherwise also fire.
+    playerbar.addEventListener(
+      'wheel',
+      (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        // Event.deltaY < 0 means wheel-up
+        changeVolume(event.deltaY < 0);
+      },
+      { capture: true, passive: false },
+    );
 
     // Keep track of mouse position for showVolumeSlider()
     playerbar.addEventListener('mouseenter', () => {
@@ -172,6 +180,15 @@ export const onPlayerApiReady = async (
       }
     });
 
+    // tp-yt-paper-slider fires 'change' only for user interaction. Drop the
+    // cached value from recent programmatic steps so the next wheel or key
+    // step starts from the position the user picked, however small the move.
+    for (const selector of ['#volume-slider', '#expand-volume-slider']) {
+      $(selector)?.addEventListener('change', () => {
+        recentVolume = undefined;
+      });
+    }
+
     const slider = $('#volume-slider');
     if (!slider) return;
 
@@ -182,8 +199,53 @@ export const onPlayerApiReady = async (
     });
   }
 
+  /**
+   * Set the volume through the player bar component when possible. Calling only
+   * api.setVolume() changes the audio but leaves the player bar's own volume
+   * state (and the volume YouTube Music persists between launches) on the old
+   * value, so the slider could later be re-rendered at a different position
+   * than what is actually playing, and touching it made the volume jump.
+   */
+  //
+  // NOTE: YouTube Music now maps the slider position to the player volume
+  // through its own curve (flag "music_web_enable_exponential_volume_control"),
+  // e.g. slider 80 = player volume 55. So the slider value and
+  // api.getVolume() are on different scales. This plugin works in slider
+  // values (what the user sees, and what savedVolume stores) and lets the
+  // player bar convert them. Mixing the two scales made the slider jump when
+  // touched and made scrolling up move the volume down.
+  let recentVolume: number | undefined;
+  const forgetRecentVolume = debounce(() => {
+    recentVolume = undefined;
+  }, 500);
+
+  function applyVolume(value: number) {
+    recentVolume = value;
+    forgetRecentVolume();
+    const playerBar = $<HTMLElement & { updateVolume?: (v: number) => void }>(
+      'ytmusic-player-bar',
+    );
+    if (typeof playerBar?.updateVolume === 'function') {
+      playerBar.updateVolume(value);
+    } else {
+      api.setVolume(value);
+    }
+  }
+
+  /** Current volume in slider units (falls back to the player volume) */
+  function getCurrentVolume(): number {
+    // The player bar re-renders asynchronously; during fast scrolling use the
+    // value we just set so consecutive steps add up.
+    if (recentVolume !== undefined) return recentVolume;
+    const playerBar = $<HTMLElement & { volume?: number | string }>(
+      'ytmusic-player-bar',
+    );
+    const sliderVolume = Number(playerBar?.volume);
+    return Number.isFinite(sliderVolume) ? sliderVolume : api.getVolume();
+  }
+
   function setVolume(value: number) {
-    api.setVolume(value);
+    applyVolume(value);
     // Save the new volume
     saveVolume(value);
 
@@ -202,10 +264,11 @@ export const onPlayerApiReady = async (
   function changeVolume(toIncrease: boolean) {
     // Apply volume change if valid
     const steps = Number(options.steps || 1);
+    const current = getCurrentVolume();
     setVolume(
       toIncrease
-        ? Math.min(api.getVolume() + steps, 100)
-        : Math.max(api.getVolume() - steps, 0),
+        ? Math.min(current + steps, 100)
+        : Math.max(current - steps, 0),
     );
   }
 
