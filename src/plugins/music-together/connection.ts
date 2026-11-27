@@ -7,28 +7,28 @@ import {
   PeerErrorType,
 } from 'peerjs';
 
-import type { Permission, Profile, VideoData } from './types';
+import type {
+  RemoveFailure,
+  SessionCommand,
+  SessionState,
+} from './session-protocol';
+import type { Profile } from './types';
 
 export type ConnectionEventMap = {
-  CLEAR_QUEUE: null;
-  ADD_SONGS: { videoList: VideoData[]; index?: number };
-  REMOVE_SONG: { index: number };
-  MOVE_SONG: { fromIndex: number; toIndex: number };
-  SET_INDEX: { index: number };
-  IDENTIFY: { profile: Profile } | undefined;
-  SYNC_PROFILE: { profiles: Record<string, Profile> } | undefined;
-  SYNC_QUEUE: { videoList: VideoData[] } | undefined;
-  SYNC_PROGRESS:
-    | { progress?: number; state?: number; index?: number }
-    | undefined;
-  PERMISSION: Permission | undefined;
-  CONNECTION_CLOSED: null;
+  COMMAND: SessionCommand;
+  QUEUE_ADD_RESULT: boolean;
+  QUEUE_REMOVE_FAILED: RemoveFailure;
+  REQUEST_STATE: null;
+  PING: number;
+  PONG: number;
+  SESSION_STATE: SessionState;
+  IDENTIFY: { profile: Profile };
+  SYNC_PROFILE: { profiles: Record<string, Profile> };
 };
 export type ConnectionEventUnion = {
   [Event in keyof ConnectionEventMap]: {
     type: Event;
     payload: ConnectionEventMap[Event];
-    after?: ConnectionEventUnion[];
   };
 }[keyof ConnectionEventMap];
 
@@ -40,7 +40,7 @@ type PromiseUtil<T> = {
 
 export type ConnectionListener = (
   event: ConnectionEventUnion,
-  conn: DataConnection | null,
+  conn: DataConnection,
 ) => void;
 export type ConnectionMode = 'host' | 'guest' | 'disconnected';
 
@@ -101,7 +101,10 @@ export class Connection {
     });
 
     this.peer.on('connection', async (conn) => {
-      this._mode = 'host';
+      if (this._mode !== 'host') {
+        conn.close();
+        return;
+      }
       try {
         await this.registerConnection(conn);
       } catch {
@@ -140,7 +143,7 @@ export class Connection {
 
   /* public */
   async waitForReady() {
-    return this.waitOpen.promise;
+    return this.withTimeout(this.waitOpen.promise);
   }
 
   async connect(id: string) {
@@ -148,21 +151,25 @@ export class Connection {
     const conn = this.peer.connect(id, {
       reliable: true,
     });
+    if (!conn) throw new Error('Music Together: peer server disconnected');
 
+    let onError!: (err: PeerError<`${PeerErrorType}`>) => void;
     const unavailable = new Promise<never>((_, reject) => {
-      const onError = (err: PeerError<`${PeerErrorType}`>) => {
-        if (err.type === 'peer-unavailable') {
-          this.peer.off('error', onError);
-          reject(err);
-        }
+      onError = (err) => {
+        if (err.type === 'peer-unavailable') reject(err);
       };
-      this.peer.on('error', onError);
-      conn.once('open', () => this.peer.off('error', onError));
-      conn.once('close', () => this.peer.off('error', onError));
     });
-
-    await Promise.race([this.registerConnection(conn), unavailable]);
-    return conn;
+    this.peer.on('error', onError);
+    try {
+      return await this.withTimeout(
+        Promise.race([this.registerConnection(conn), unavailable]),
+      );
+    } catch (error) {
+      conn.close();
+      throw error;
+    } finally {
+      this.peer.off('error', onError);
+    }
   }
 
   disconnect() {
@@ -195,15 +202,25 @@ export class Connection {
     return Object.values(this.connections);
   }
 
+  public async send<Event extends keyof ConnectionEventMap>(
+    conn: DataConnection,
+    type: Event,
+    payload: ConnectionEventMap[Event],
+  ) {
+    if (!conn.open) return;
+    try {
+      await conn.send({ type, payload });
+    } catch (error) {
+      console.warn('Music Together: Could not send message', error);
+    }
+  }
+
   public async broadcast<Event extends keyof ConnectionEventMap>(
     type: Event,
     payload: ConnectionEventMap[Event],
-    after?: ConnectionEventUnion[],
   ) {
     await Promise.all(
-      this.getConnections().map(
-        (conn) => conn.send({ type, payload, after }) ?? Promise.resolve(),
-      ),
+      this.getConnections().map((conn) => this.send(conn, type, payload)),
     );
   }
 
@@ -218,6 +235,21 @@ export class Connection {
   }
 
   /* privates */
+  private async withTimeout<T>(operation: Promise<T>) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const promise = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error('Music Together: connection timed out')),
+        15_000,
+      );
+    });
+    try {
+      return await Promise.race([operation, promise]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   private async reconnectLoop() {
     if (this.isDestroyed || this.isReconnecting || this.peer.destroyed) return;
     this.isReconnecting = true;
@@ -244,12 +276,10 @@ export class Connection {
   }
 
   private cleanup() {
+    this.waitOpen.reject(new Error('Music Together: connection closed'));
     this._mode = 'disconnected';
     this.connections = {};
 
-    for (const listener of this.listeners) {
-      listener({ type: 'CONNECTION_CLOSED', payload: null }, null);
-    }
     this.listeners = [];
 
     this.connectionListeners.forEach((listener) => listener());
@@ -281,23 +311,16 @@ export class Connection {
         });
       });
 
+      let closed = false;
       const onClose = (
         err?: PeerError<`${DataConnectionErrorType | BaseConnectionErrorType}`>,
       ) => {
-        if (conn.open) {
-          conn.close();
-        }
-
+        if (closed) return;
+        closed = true;
+        if (conn.open) conn.close();
         delete this.connections[conn.connectionId];
-
-        if (err) {
-          if (err.type === 'connection-closed') {
-            this.connectionListeners.forEach((listener) => listener());
-          }
-          reject(err);
-        } else {
-          this.connectionListeners.forEach((listener) => listener(conn));
-        }
+        reject(err ?? new Error('Music Together: data channel closed'));
+        this.connectionListeners.forEach((listener) => listener(conn));
       };
       conn.on('error', onClose);
       conn.on('close', onClose);
