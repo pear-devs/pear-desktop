@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#070002" />
+    <title>Karaoke Remote</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: max(16px, env(safe-area-inset-top)) 16px
+          max(16px, env(safe-area-inset-bottom));
+        background: radial-gradient(circle at 50% 35%, #3a0910, #070002 70%);
+        color: #fff1f2;
+        font-family: system-ui, -apple-system, Roboto, sans-serif;
+        overflow: hidden;
+      }
+      header {
+        min-height: 44px;
+      }
+      #title {
+        font-size: 17px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #artist {
+        margin-top: 2px;
+        font-size: 14px;
+        color: #c4a0a4;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      main {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 18px;
+        text-align: center;
+      }
+      #beats {
+        height: 12px;
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+      }
+      #beats span {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #ff1a2e;
+        opacity: 0;
+      }
+      #beats span.lit {
+        opacity: 1;
+      }
+      #current {
+        margin: 0;
+        min-height: 1.2em;
+        font-size: clamp(30px, 9vw, 56px);
+        font-weight: 700;
+        line-height: 1.2;
+      }
+      #sweep {
+        --progress: 0%;
+        background-image: linear-gradient(
+          to right,
+          #ff3b4b var(--progress),
+          #fff var(--progress)
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+      #sweep.rtl {
+        background-image: linear-gradient(
+          to left,
+          #ff3b4b var(--progress),
+          #fff var(--progress)
+        );
+      }
+      #next {
+        margin: 0;
+        min-height: 1.2em;
+        font-size: clamp(18px, 5.5vw, 30px);
+        font-weight: 500;
+        color: rgb(255 255 255 / 55%);
+      }
+      #message {
+        margin: 0;
+        font-size: 18px;
+        color: #c4a0a4;
+      }
+      .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .row span {
+        font-size: 13px;
+        color: #c4a0a4;
+        font-variant-numeric: tabular-nums;
+      }
+      .row .name {
+        min-width: 52px;
+        color: #fff1f2;
+      }
+      input[type='range'] {
+        flex: 1;
+        min-width: 0;
+        height: 32px;
+        accent-color: #ff1a2e;
+      }
+      #controls {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 18px;
+      }
+      button {
+        border: 0;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        font-size: 22px;
+        background: #1c0407;
+        color: #fff1f2;
+        touch-action: manipulation;
+      }
+      button:active {
+        background: #3a0910;
+      }
+      #play {
+        width: 76px;
+        height: 76px;
+        font-size: 30px;
+        background: #ff1a2e;
+      }
+      #tools {
+        display: flex;
+        gap: 8px;
+      }
+      #tools button {
+        flex: 1;
+        width: auto;
+        height: 44px;
+        border-radius: 22px;
+        font-size: 14px;
+      }
+      #karaoke.on {
+        background: #ff1a2e;
+      }
+      #offline {
+        display: none;
+        padding: 8px;
+        border-radius: 8px;
+        background: #5a0b14;
+        font-size: 14px;
+        text-align: center;
+      }
+      #offline.show {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="offline">Can't reach your PC. Trying again…</div>
+    <header>
+      <div id="title">Connecting…</div>
+      <div id="artist"></div>
+    </header>
+    <main>
+      <div id="beats" aria-hidden="true">
+        <span data-beat="3"></span><span data-beat="2"></span
+        ><span data-beat="1"></span>
+      </div>
+      <p id="current" dir="auto"><span id="sweep"></span></p>
+      <p id="next" dir="auto"></p>
+      <p id="message"></p>
+    </main>
+    <div class="row">
+      <span id="elapsed">0:00</span>
+      <input
+        id="seek"
+        type="range"
+        min="0"
+        max="100"
+        value="0"
+        aria-label="Position"
+      />
+      <span id="total">0:00</span>
+    </div>
+    <div class="row">
+      <span class="name">Vocals</span>
+      <input
+        id="vocals"
+        type="range"
+        min="0"
+        max="100"
+        value="0"
+        aria-label="Vocals"
+      />
+      <span id="vocalsValue">0%</span>
+    </div>
+    <div id="controls">
+      <button id="previous" aria-label="Previous">⏮</button>
+      <button id="play" aria-label="Play or pause">▶</button>
+      <button id="skip" aria-label="Next">⏭</button>
+    </div>
+    <div id="tools">
+      <button id="earlier">Lyrics earlier</button>
+      <button id="karaoke">Karaoke</button>
+      <button id="later">Lyrics later</button>
+    </div>
+
+    <script>
+      const key = new URLSearchParams(location.search).get('k') ?? '';
+      const $ = (id) => document.getElementById(id);
+      const MS_PER_CHARACTER = 200;
+      const OFFSET_STEP_MS = 250;
+
+      let state = null;
+      let receivedAt = 0;
+      let lines = [];
+      let linesKey = '';
+      let isSeeking = false;
+      let isSettingVocals = false;
+      let heldVocalsUntil = 0;
+
+      const send = (action, value) =>
+        fetch(`/control?k=${encodeURIComponent(key)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, value }),
+        }).catch(() => null);
+
+      const clock = (seconds) => {
+        const whole = Math.max(0, Math.floor(seconds || 0));
+        return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`;
+      };
+
+      const poll = async () => {
+        try {
+          const response = await fetch(`/state?k=${encodeURIComponent(key)}`, {
+            cache: 'no-store',
+          });
+          if (!response.ok) throw new Error(String(response.status));
+          state = await response.json();
+          receivedAt = performance.now();
+          $('offline').classList.remove('show');
+
+          if (state.linesKey !== linesKey) {
+            const lyrics = await fetch(`/lyrics?k=${encodeURIComponent(key)}`, {
+              cache: 'no-store',
+            });
+            lines = await lyrics.json();
+            linesKey = state.linesKey;
+          }
+          showState();
+        } catch {
+          $('offline').classList.add('show');
+        }
+        setTimeout(poll, 500);
+      };
+
+      const showState = () => {
+        $('title').textContent = state.title || 'Nothing playing';
+        $('artist').textContent = state.artist || '';
+        $('play').textContent = state.paused ? '▶' : '⏸';
+        $('karaoke').classList.toggle('on', state.karaoke);
+        $('total').textContent = clock(state.duration);
+        if (!isSettingVocals && performance.now() > heldVocalsUntil) {
+          $('vocals').value = Math.round(state.vocalLevel * 100);
+          $('vocalsValue').textContent = `${$('vocals').value}%`;
+        }
+      };
+
+      const nowSeconds = () => {
+        if (!state) return 0;
+        const moved =
+          state.paused || state.ad
+            ? 0
+            : (performance.now() - receivedAt) / 1000;
+        return state.time + moved;
+      };
+
+      const lineIndex = (ms) => {
+        for (let i = lines.length - 1; i >= 0; i--)
+          if (lines[i].t <= ms) return i;
+        return -1;
+      };
+
+      const progress = (line, ms) => {
+        const estimate = line.x.length * MS_PER_CHARACTER;
+        const span = line.d > 0 ? Math.min(line.d, estimate) : estimate;
+        return span > 0 ? Math.min(1, Math.max(0, (ms - line.t) / span)) : 1;
+      };
+
+      const draw = () => {
+        requestAnimationFrame(draw);
+        if (!state) return;
+
+        const seconds = nowSeconds();
+        $('elapsed').textContent = clock(seconds);
+        if (!isSeeking && state.duration > 0)
+          $('seek').value = (seconds / state.duration) * 100;
+
+        let message = '';
+        if (state.ad) message = 'Lyrics will start after the ad.';
+        else if (!lines.length)
+          message = state.lyricsMessage || 'No synced lyrics for this song.';
+        $('message').textContent = message;
+
+        const ms = seconds * 1000 - (state.offsetMs || 0);
+        const index = message ? -1 : lineIndex(ms);
+        const line = lines[index];
+        const singing = !message && index >= 0 && line.x;
+        const upcoming = message
+          ? null
+          : lines.slice(index + 1).find((it) => it.x);
+
+        if ($('sweep').textContent !== (singing ? line.x : '')) {
+          $('sweep').textContent = singing ? line.x : '';
+          $('sweep').classList.toggle(
+            'rtl',
+            /[֐-ࣿ]/.test($('sweep').textContent),
+          );
+        }
+        if (singing)
+          $('sweep').style.setProperty(
+            '--progress',
+            `${progress(line, ms) * 100}%`,
+          );
+        $('next').textContent = upcoming ? upcoming.x : '';
+
+        const beats =
+          !singing && upcoming ? Math.ceil((upcoming.t - ms) / 1000) : 0;
+        for (const dot of $('beats').children) {
+          dot.classList.toggle(
+            'lit',
+            beats > 0 && beats <= 3 && beats >= Number(dot.dataset.beat),
+          );
+        }
+      };
+
+      $('play').onclick = () => send('toggle-play');
+      $('previous').onclick = () => send('previous');
+      $('skip').onclick = () => send('next');
+      $('karaoke').onclick = () => send('toggle-karaoke');
+      $('earlier').onclick = () => send('nudge-lyrics', -OFFSET_STEP_MS);
+      $('later').onclick = () => send('nudge-lyrics', OFFSET_STEP_MS);
+
+      $('seek').oninput = () => {
+        isSeeking = true;
+      };
+      $('seek').onchange = () => {
+        isSeeking = false;
+        if (state) send('seek', ($('seek').value / 100) * state.duration);
+      };
+
+      // One vocals request at a time, always ending with the latest value,
+      // so a slow early request can never land after a later one.
+      let vocalsInFlight = false;
+      let pendingVocals = null;
+      const sendVocals = async (value) => {
+        pendingVocals = value;
+        if (vocalsInFlight) return;
+        vocalsInFlight = true;
+        while (pendingVocals !== null) {
+          const next = pendingVocals;
+          pendingVocals = null;
+          await send('vocals', next);
+        }
+        vocalsInFlight = false;
+      };
+
+      $('vocals').oninput = () => {
+        isSettingVocals = true;
+        $('vocalsValue').textContent = `${$('vocals').value}%`;
+        sendVocals($('vocals').value / 100);
+      };
+      $('vocals').onchange = () => {
+        isSettingVocals = false;
+        heldVocalsUntil = performance.now() + 1500;
+      };
+
+      poll();
+      draw();
+    </script>
+  </body>
+</html>
