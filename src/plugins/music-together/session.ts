@@ -27,7 +27,11 @@ export class Session {
   private seekRevision = 0;
   private appliedSeekRevision = -1;
   private appliedEntryId?: string;
-  private expectedSeek?: { entryId: string; position: number };
+  private expectedSeek?: {
+    entryId: string;
+    position: number;
+    expiresAt: number;
+  };
   private expectedPlayerStates = new Map<number, number>();
   private selectingEntry?: { entryId: string; startedAt: number };
   private guestControlsSettleUntil = 0;
@@ -559,8 +563,8 @@ export class Session {
     else await this.connection.broadcast('SESSION_STATE', state);
   }
 
-  receive(state: SessionState) {
-    if (!this.active || !state || state.sequence <= this.sequence) return;
+  async receive(state: SessionState): Promise<boolean> {
+    if (!this.active || !state || state.sequence <= this.sequence) return false;
     // Targeted snapshots can leave gaps in the publication sequence.
     // The queue revision tells a guest when it needs a new queue.
     this.sequence = state.sequence;
@@ -583,11 +587,11 @@ export class Session {
     }
     if (state.permission !== this.getPermission())
       this.setPermission(state.permission);
-    this.reconcileGuest();
+    return this.reconcileGuest();
   }
 
-  private reconcileGuest() {
-    if (!this.active || !this.latest) return;
+  private async reconcileGuest(): Promise<boolean> {
+    if (!this.active || !this.latest) return false;
     if (!this.syncingPlayback) {
       this.syncingPlayback = true;
       try {
@@ -596,17 +600,19 @@ export class Session {
         this.syncingPlayback = false;
       }
     }
-    if (this.reconciling) return;
+    if (this.reconciling) return false;
     this.reconciling = true;
     const latest = this.latest;
-    this.applyState(latest)
-      .catch((error: unknown) => {
-        console.warn('Music Together: Could not synchronize guest', error);
-      })
-      .finally(() => {
-        this.reconciling = false;
-        if (this.latest !== latest) this.reconcileGuest();
-      });
+    try {
+      await this.applyState(latest);
+      return this.active && this.latest === latest;
+    } catch (error) {
+      console.warn('Music Together: Could not synchronize guest', error);
+      return false;
+    } finally {
+      this.reconciling = false;
+      if (this.latest !== latest) await this.reconcileGuest();
+    }
   }
 
   private async applyState({ state }: NonNullable<Session['latest']>) {
@@ -697,7 +703,11 @@ export class Session {
     if (error > (explicitSeek ? 0.1 : 0.75)) {
       const duration = this.player.getDuration();
       const target = duration > 0 ? Math.min(position, duration) : position;
-      this.expectedSeek = { entryId: playback.entryId, position: target };
+      this.expectedSeek = {
+        entryId: playback.entryId,
+        position: target,
+        expiresAt: now + 2000,
+      };
       this.player.seekTo(target);
     }
     const currentState = this.player.getPlayerState();
@@ -822,14 +832,23 @@ export class Session {
       });
       return;
     }
+    const entry = this.queue.videoList[this.queue.selectedIndex];
+    const position = this.player.getCurrentTime();
+    const expected = this.expectedSeek;
+    if (expected && performance.now() >= expected.expiresAt)
+      this.expectedSeek = undefined;
+    else if (
+      expected?.entryId === entry?.entryId &&
+      Math.abs(position - expected.position) < 1
+    ) {
+      this.expectedSeek = undefined;
+      return;
+    }
     if (
       this.syncingPlayback ||
       performance.now() < this.guestControlsSettleUntil
     )
       return;
-    const entry = this.queue.videoList[this.queue.selectedIndex];
-    const position = this.player.getCurrentTime();
-    const expected = this.expectedSeek;
     if (
       !entry ||
       this.guestMediaRequest ||
@@ -840,11 +859,6 @@ export class Session {
     )
       return;
     this.expectedSeek = undefined;
-    if (
-      expected?.entryId === entry.entryId &&
-      Math.abs(position - expected.position) < 1
-    )
-      return;
     if (this.getPermission() === 'all') {
       this.command({ kind: 'playback', entryId: entry.entryId, position });
     } else {

@@ -116,6 +116,10 @@ export class Queue {
     this.queue = document.querySelector<QueueElement>('#queue')!;
   }
 
+  get isReady() {
+    return Boolean(this.queue?.queue?.store?.store);
+  }
+
   get handlesNativeSelection() {
     return this.rollbackSelection !== undefined;
   }

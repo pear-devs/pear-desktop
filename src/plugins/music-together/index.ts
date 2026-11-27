@@ -1,4 +1,5 @@
 import prompt from 'custom-electron-prompt';
+import { app, type BrowserWindow, type Event as ElectronEvent } from 'electron';
 
 import { t } from '@/i18n';
 import { createAddToToastAction } from '@/plugins/utils/renderer';
@@ -53,6 +54,8 @@ type MusicActionElement = HTMLElement & {
   };
 };
 
+type JoinPrompt = { token: string; window: BrowserWindow };
+
 const hasWatchTarget = (endpoint?: WatchEndpoint) =>
   Boolean(endpoint?.watchEndpoint || endpoint?.watchPlaylistEndpoint);
 
@@ -76,14 +79,23 @@ const dismissMusicMenu = (item?: HTMLElement) => {
 };
 
 export default createPlugin<
-  unknown,
+  {
+    joinPrompt?: JoinPrompt;
+    closeJoinPrompt: () => void;
+  },
   unknown,
   {
     connection?: Connection;
     api: AppElement | null;
     queue?: Queue;
     playerApi?: MusicPlayer;
-    showPrompt: (title: string, label: string) => Promise<string>;
+    pluginLifecycleToken?: string;
+    pendingJoinPrompt?: string;
+    showPrompt: (
+      token: string,
+      title: string,
+      label: string,
+    ) => Promise<string | null>;
     popups: {
       host: ReturnType<typeof createHostPopup>;
       guest: ReturnType<typeof createGuestPopup>;
@@ -124,15 +136,60 @@ export default createPlugin<
     enabled: false,
   },
   stylesheets: [style],
-  backend({ ipc }) {
-    ipc.handle('music-together:prompt', async (title: string, label: string) =>
-      prompt({
-        title,
-        label,
-        type: 'input',
-        ...promptOptions(),
-      }),
-    );
+  backend: {
+    start({ ipc }) {
+      ipc.handle(
+        'music-together:prompt',
+        (token: string, title: string, label: string) => {
+          if (this.joinPrompt) return null;
+
+          const options = {
+            title,
+            label,
+            type: 'input' as const,
+            ...promptOptions(),
+          };
+          let pending: JoinPrompt | undefined;
+          const captureWindow = (
+            _event: ElectronEvent,
+            window: BrowserWindow,
+          ) => {
+            pending = { token, window };
+            this.joinPrompt = pending;
+          };
+
+          // The prompt library creates its window synchronously but only returns the input promise.
+          app.prependOnceListener('browser-window-created', captureWindow);
+          try {
+            return prompt(options).then(
+              (id) => {
+                if (this.joinPrompt === pending) this.joinPrompt = undefined;
+                return id;
+              },
+              (error: unknown) => {
+                if (this.joinPrompt === pending) this.closeJoinPrompt();
+                throw error;
+              },
+            );
+          } finally {
+            app.off('browser-window-created', captureWindow);
+          }
+        },
+      );
+      ipc.handle('music-together:close-prompt', (token: string) => {
+        if (this.joinPrompt?.token === token) this.closeJoinPrompt();
+      });
+    },
+    closeJoinPrompt() {
+      const pending = this.joinPrompt;
+      this.joinPrompt = undefined;
+      if (pending && !pending.window.isDestroyed()) pending.window.close();
+    },
+    stop({ ipc }) {
+      ipc.removeHandler('music-together:prompt');
+      ipc.removeHandler('music-together:close-prompt');
+      this.closeJoinPrompt();
+    },
   },
   renderer: {
     permission: 'playlist',
@@ -147,7 +204,7 @@ export default createPlugin<
       spinner: HTMLElement;
     },
     profiles: {},
-    showPrompt: () => Promise.resolve(''),
+    showPrompt: () => Promise.resolve(null),
     api: null,
 
     videoChangeListener(event) {
@@ -418,7 +475,11 @@ export default createPlugin<
     },
 
     async onHost() {
-      if (!this.queue || !this.playerApi || this.connection) return false;
+      if (!this.playerApi || this.connection) return false;
+      if (!this.queue?.isReady) {
+        this.queue = new Queue((id) => this.profiles[id]);
+        if (!this.queue.isReady) return false;
+      }
       const connection = new Connection();
       this.connection = connection;
       if (!(await connection.waitForReady().catch(() => null))) {
@@ -507,11 +568,24 @@ export default createPlugin<
     },
 
     async onJoin() {
-      if (!this.queue || !this.playerApi || this.connection) return false;
+      const token = this.pluginLifecycleToken;
+      if (
+        !token ||
+        this.pendingJoinPrompt ||
+        !this.queue ||
+        !this.playerApi ||
+        this.connection
+      )
+        return false;
+
+      this.pendingJoinPrompt = token;
       const id = await this.showPrompt(
+        token,
         t('plugins.music-together.name'),
         t('plugins.music-together.dialog.enter-host'),
-      );
+      ).catch(() => null);
+      if (token !== this.pluginLifecycleToken) return false;
+      this.pendingJoinPrompt = undefined;
       if (typeof id !== 'string' || !id.trim() || this.connection) return false;
 
       const connection = new Connection();
@@ -575,8 +649,10 @@ export default createPlugin<
       connection.on((event, peer) => {
         if (peer !== host || this.connection !== connection) return;
         if (event.type === 'SESSION_STATE') {
-          session.receive(event.payload);
-          if (Array.isArray(event.payload?.queue)) finishJoin(true);
+          session.receive(event.payload).then((applied) => {
+            if (applied && Array.isArray(event.payload?.queue))
+              finishJoin(true);
+          });
         }
         if (event.type === 'PONG') session.receivePong(event.payload);
         if (event.type === 'QUEUE_REMOVE_FAILED')
@@ -692,8 +768,11 @@ export default createPlugin<
     /* hooks */
 
     start({ ipc }) {
-      this.showPrompt = (title: string, label: string) =>
-        ipc.invoke('music-together:prompt', title, label) as Promise<string>;
+      this.pluginLifecycleToken = crypto.randomUUID();
+      this.showPrompt = (token, title, label) =>
+        ipc.invoke('music-together:prompt', token, title, label) as Promise<
+          string | null
+        >;
       this.api = document.querySelector<AppElement>('ytmusic-app');
 
       /* setup */
@@ -835,9 +914,12 @@ export default createPlugin<
           }
 
           if (id === 'music-together-join') {
+            const token = this.pluginLifecycleToken;
+            if (!token || this.pendingJoinPrompt) return;
             settingPopup.dismiss();
             this.showSpinner();
             const result = await this.onJoin();
+            if (token !== this.pluginLifecycleToken) return;
             this.hideSpinner();
 
             if (result) {
@@ -888,7 +970,16 @@ export default createPlugin<
         window.addEventListener(event, this.handlePlaybackNavigation, true);
       }
     },
-    stop() {
+    stop({ ipc }) {
+      const pendingPrompt = this.pendingJoinPrompt;
+      this.pluginLifecycleToken = undefined;
+      this.pendingJoinPrompt = undefined;
+      if (pendingPrompt) {
+        ipc
+          .invoke('music-together:close-prompt', pendingPrompt)
+          .catch(() => null);
+      }
+
       const dividers = Array.from(
         document.querySelectorAll('.music-together-divider'),
       );
