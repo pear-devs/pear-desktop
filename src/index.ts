@@ -48,6 +48,7 @@ import {
   setupProtocolHandler,
 } from '@/providers/protocol-handler';
 import { setupSongInfo } from '@/providers/song-info';
+import { setupCloseToHide } from '@/providers/window-close';
 import { setUpTray } from '@/tray';
 import { LoggerPrefix } from '@/utils';
 import { isTesting } from '@/utils/testing';
@@ -876,19 +877,8 @@ app.whenReady().then(async () => {
     app.dock?.hide();
   }
 
-  let forceQuit = false;
-  app.on('before-quit', () => {
-    forceQuit = true;
-  });
-
   if (is.macOS() || config.get('options.tray')) {
-    mainWindow.on('close', (event) => {
-      // Hide the window instead of quitting (quit is available in tray options)
-      if (!forceQuit) {
-        event.preventDefault();
-        mainWindow!.hide();
-      }
-    });
+    setupCloseToHide(app, mainWindow);
   }
 });
 
