@@ -24,6 +24,11 @@ export type PreciseVolumePluginConfig = {
     volumeDown: string;
   };
   /**
+   * Use the keyboard's media volume keys (VolumeUp / VolumeDown, e.g. a volume
+   * knob) to change the app volume instead of the system volume
+   */
+  mediaVolumeKeys: boolean;
+  /**
    * Plugin save volume between session here
    */
   savedVolume: number | undefined;
@@ -41,6 +46,7 @@ export default createPlugin({
       volumeUp: '',
       volumeDown: '',
     },
+    mediaVolumeKeys: false,
     savedVolume: undefined,
   } as PreciseVolumePluginConfig,
   stylesheets: [hudStyle],
@@ -162,6 +168,14 @@ export default createPlugin({
         click: (item) => promptGlobalShortcuts(config, item),
       },
       {
+        label: t('plugins.precise-volume.menu.media-volume-keys'),
+        type: 'checkbox',
+        checked: Boolean(config.mediaVolumeKeys),
+        click(item) {
+          changeOptions({ mediaVolumeKeys: item.checked }, config);
+        },
+      },
+      {
         label: t('plugins.precise-volume.menu.custom-volume-steps'),
         click: () => promptVolumeSteps(config),
       },
@@ -171,16 +185,48 @@ export default createPlugin({
   async backend({ getConfig, ipc }) {
     const config = await getConfig();
 
-    if (config.globalShortcuts?.volumeUp) {
-      globalShortcut.register(config.globalShortcuts.volumeUp, () =>
-        ipc.send('changeVolume', true),
-      );
+    // Older configs can contain the literal string "undefined" for an unset
+    // shortcut. Registering that (or any invalid accelerator) throws, which
+    // used to abort registration of the remaining shortcuts.
+    const isValidAccelerator = (accelerator: unknown): accelerator is string =>
+      typeof accelerator === 'string' &&
+      accelerator.trim() !== '' &&
+      accelerator !== 'undefined' &&
+      accelerator !== 'null';
+
+    const register = (accelerator: string, toIncrease: boolean) => {
+      try {
+        const ok = globalShortcut.register(accelerator, () =>
+          ipc.send('changeVolume', toIncrease),
+        );
+        if (!ok) {
+          console.warn(
+            `[precise-volume] Could not register global shortcut "${accelerator}" (already in use?)`,
+          );
+        }
+      } catch (error) {
+        console.warn(
+          `[precise-volume] Invalid global shortcut "${accelerator}"`,
+          error,
+        );
+      }
+    };
+
+    const { volumeUp, volumeDown } = config.globalShortcuts ?? {};
+    if (isValidAccelerator(volumeUp)) {
+      register(volumeUp, true);
     }
 
-    if (config.globalShortcuts?.volumeDown) {
-      globalShortcut.register(config.globalShortcuts.volumeDown, () =>
-        ipc.send('changeVolume', false),
-      );
+    if (isValidAccelerator(volumeDown)) {
+      register(volumeDown, false);
+    }
+
+    if (config.mediaVolumeKeys) {
+      // Leave a media key alone if the user already assigned it to either
+      // custom shortcut (registering it again would replace that callback).
+      const customKeys = new Set([volumeUp, volumeDown]);
+      if (!customKeys.has('VolumeUp')) register('VolumeUp', true);
+      if (!customKeys.has('VolumeDown')) register('VolumeDown', false);
     }
   },
 

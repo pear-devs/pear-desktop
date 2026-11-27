@@ -733,7 +733,8 @@
       "menu": {
         "arrows-shortcuts": "Local Arrow-keys Controls",
         "custom-volume-steps": "Set Custom Volume Steps",
-        "global-shortcuts": "Global Hotkeys"
+        "global-shortcuts": "Global Hotkeys",
+        "media-volume-keys": "Use Keyboard Volume Keys/Knob for App Volume"
       },
       "name": "Precise Volume",
       "prompt": {
