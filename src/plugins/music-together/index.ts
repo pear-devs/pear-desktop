@@ -575,8 +575,12 @@ export default createPlugin<
         !this.queue ||
         !this.playerApi ||
         this.connection
-      )
-        return false;
+      ) return false;
+
+      if (!this.queue?.isReady) {
+        this.queue = new Queue((id) => this.profiles[id]);
+        if (!this.queue.isReady) return false;
+      }
 
       this.pendingJoinPrompt = token;
       const id = await this.showPrompt(

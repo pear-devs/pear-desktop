@@ -605,7 +605,9 @@ export class Session {
     const latest = this.latest;
     try {
       await this.applyState(latest);
-      return this.active && this.latest === latest;
+      return (
+        this.active && this.guestQueueRevision === latest.state.queueRevision
+      );
     } catch (error) {
       console.warn('Music Together: Could not synchronize guest', error);
       return false;
@@ -838,7 +840,8 @@ export class Session {
     if (expected && performance.now() >= expected.expiresAt)
       this.expectedSeek = undefined;
     else if (
-      expected?.entryId === entry?.entryId &&
+      expected &&
+      expected.entryId === entry?.entryId &&
       Math.abs(position - expected.position) < 1
     ) {
       this.expectedSeek = undefined;
