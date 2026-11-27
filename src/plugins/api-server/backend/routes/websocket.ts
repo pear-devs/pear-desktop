@@ -28,7 +28,16 @@ enum DataTypes {
   VolumeChanged = 'VOLUME_CHANGED',
   RepeatChanged = 'REPEAT_CHANGED',
   ShuffleChanged = 'SHUFFLE_CHANGED',
+  Spectrum = 'SPECTRUM',
 }
+
+export type SpectrumData = {
+  /** Log-spaced frequency bands, each 0-255. */
+  bands: number[];
+  /** Highest band value in this frame, 0-255. */
+  peak: number;
+  timestamp: number;
+};
 
 type PlayerState = {
   song?: SongInfo;
@@ -51,11 +60,20 @@ export const register = (
   let lastSongInfo: SongInfo | undefined = undefined;
 
   const sockets = new Set<WSContext<WebSocketLike>>();
+  // Spectrum is high-frequency, so it's opt-in per socket.
+  const spectrumSockets = new Set<WSContext<WebSocketLike>>();
 
   const send = (type: DataTypes, state: Partial<PlayerState>) => {
     sockets.forEach((socket) =>
       socket.send(JSON.stringify({ type, ...state })),
     );
+  };
+
+  const sendSpectrum = (data: SpectrumData) => {
+    if (spectrumSockets.size == 0) return;
+
+    const payload = JSON.stringify({ type: DataTypes.Spectrum, ...data });
+    spectrumSockets.forEach((socket) => socket.send(payload));
   };
 
   const createPlayerState = ({
@@ -126,6 +144,10 @@ export const register = (
     send(DataTypes.ShuffleChanged, { shuffle });
   });
 
+  ipc.on('peard:audio-spectrum', (data: SpectrumData) => {
+    sendSpectrum(data);
+  });
+
   app.openapi(
     createRoute({
       method: 'get',
@@ -163,14 +185,22 @@ export const register = (
 
           try {
             const payload = await verify(token, config.secret, 'HS256');
-            const parsedPayload = await JWTPayloadSchema.safeParseAsync(payload);
+            const parsedPayload =
+              await JWTPayloadSchema.safeParseAsync(payload);
 
-            if (!parsedPayload.success || !config.authorizedClients.includes(parsedPayload.data.id)) {
+            if (
+              !parsedPayload.success ||
+              !config.authorizedClients.includes(parsedPayload.data.id)
+            ) {
               ws.close(1008, 'Unauthorized');
               return;
             }
           } catch (err) {
-            console.error(LoggerPrefix, 'WebSocket authentication failed:', err);
+            console.error(
+              LoggerPrefix,
+              'WebSocket authentication failed:',
+              err,
+            );
             ws.close(1008, 'Unauthorized');
             return;
           }
@@ -191,8 +221,29 @@ export const register = (
         );
       },
 
+      onMessage(event, ws) {
+        // Clients opt in/out of the spectrum stream:
+        //   { "type": "SUBSCRIBE_SPECTRUM" } / { "type": "UNSUBSCRIBE_SPECTRUM" }
+        if (typeof event.data != 'string') return;
+        const raw = event.data;
+
+        let message: { type?: string } | undefined;
+        try {
+          message = JSON.parse(raw) as { type?: string };
+        } catch {
+          return;
+        }
+
+        if (message?.type == 'SUBSCRIBE_SPECTRUM') {
+          spectrumSockets.add(ws);
+        } else if (message?.type == 'UNSUBSCRIBE_SPECTRUM') {
+          spectrumSockets.delete(ws);
+        }
+      },
+
       onClose(_, ws) {
         sockets.delete(ws);
+        spectrumSockets.delete(ws);
       },
     })) as (ctx: Context, next: Next) => Promise<Response>,
   );
