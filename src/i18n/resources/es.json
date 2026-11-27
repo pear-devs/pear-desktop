@@ -567,7 +567,8 @@
         },
         "download-playlist": "Descargar lista de reproducción",
         "presets": "Ajustes preestablecidos",
-        "skip-existing": "Saltar archivos existentes"
+        "skip-existing": "Saltar archivos existentes",
+        "max-parallel-downloads": "Descargas simultáneas"
       },
       "name": "Gestor de descargas",
       "renderer": {
