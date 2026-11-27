@@ -117,83 +117,33 @@ export const setupLikeChangedListener = singleton(() => {
 
 export const setupVolumeChangedListener = singleton((api: MusicPlayer) => {
   const updateVolume = () => {
-    // Queries the current player bar state to check if it's muted and what the volume is
-    // Specifically, it uses the *current* player bar execution context for the API
-    // This avoids the stale 'api' reference issue
     const playerBar = document.querySelector<
-      HTMLElement & {
-        getState: () => GetState;
-      }
+      HTMLElement & { getState?: () => GetState }
     >('ytmusic-player-bar');
-
-    // Fallback to provided api if available, but playerBar is preferred for freshness
-    const playerState = playerBar?.getState().player;
-    const state = playerState?.muted
-      ? 0
-      : (playerState?.volume ?? api.getVolume());
-    const isMuted = playerState?.muted ?? api.isMuted();
+    // The player bar reports volume on the same scale as its updateVolume method.
+    const playerState = playerBar?.getState?.()?.player;
 
     try {
       window.ipcRenderer.send('peard:volume-changed', {
-        state,
-        isMuted,
+        state: playerState?.volume ?? api.getVolume(),
+        isMuted: playerState?.muted ?? api.isMuted(),
       });
     } catch (e) {
       console.error('Failed to send volume change IPC:', e);
     }
   };
 
-  let currentVideo: HTMLVideoElement | null = null;
-
-  const attachListener = (video: HTMLVideoElement) => {
-    // Avoid attaching multiple listeners to the same video element
-    if (currentVideo === video) {
-      return;
-    }
-
-    // Detach listener from previous video element, if any
-    if (currentVideo) {
-      currentVideo.removeEventListener('volumechange', updateVolume);
-    }
-
-    currentVideo = video;
-    // We attach the listener to the video element to know WHEN to update
-    video.addEventListener('volumechange', updateVolume);
-  };
-
-  const video = document.querySelector('video');
-  if (video) {
-    attachListener(video);
-    updateVolume(); // Initial sync
-  } else {
-    updateVolume(); // Send whatever we have
-  }
-
-  // Note: This observer is intentionally not disconnected as it needs to run for the lifetime
-  // of the application. The singleton decorator ensures this setup only runs once.
-  const observer = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        if (node instanceof HTMLVideoElement) {
-          attachListener(node);
-          updateVolume();
-        }
+  // Capture the non-bubbling event so replacement videos are covered too.
+  document.addEventListener(
+    'volumechange',
+    (event) => {
+      if (event.target instanceof HTMLVideoElement) {
+        updateVolume();
       }
-    }
-  });
-
-  // Observe the player container instead of document.body for better performance.
-  // We only watch for HTMLVideoElement additions within the player area.
-  const playerContainer =
-    document.querySelector('ytmusic-player-bar') ||
-    document.querySelector('#player');
-
-  if (playerContainer) {
-    observer.observe(playerContainer, {
-      childList: true,
-      subtree: true,
-    });
-  }
+    },
+    { capture: true },
+  );
+  updateVolume();
 });
 
 export const setupShuffleChangedListener = singleton(() => {
