@@ -115,6 +115,26 @@ export const getSongControls = (win: BrowserWindow) => {
         queueInsertPosition,
       );
     },
+    addPlaylistToQueue: (
+      playlistId: string,
+      videoId: string | undefined,
+      queueInsertPosition: string,
+    ) => {
+      const playlistIdValue = parseStringFromArgsType(playlistId);
+      if (playlistIdValue === null) return;
+
+      const videoIdValue = videoId
+        ? parseStringFromArgsType(videoId)
+        : undefined;
+      if (videoIdValue === null) return;
+
+      win.webContents.send(
+        'peard:add-playlist-to-queue',
+        playlistIdValue,
+        videoIdValue,
+        queueInsertPosition,
+      );
+    },
     moveSongInQueue: (
       fromIndex: ArgsType<number>,
       toIndex: ArgsType<number>,
