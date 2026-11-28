@@ -190,7 +190,7 @@ async function onApiLoaded() {
 
   window.ipcRenderer.on(
     'peard:add-to-queue',
-    (_, videoId: string, queueInsertPosition: string) => {
+    (_, videoId: string, queueInsertPosition: string, insertIndex?: number,) => {
       const queue = document.querySelector<QueueElement>('#queue');
       const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
       if (!app) return;
@@ -198,10 +198,14 @@ async function onApiLoaded() {
       const store = queue?.queue.store.store;
       if (!store) return;
 
+      const hasCustomIndex = typeof insertIndex === 'number';
+
       app.networkManager
         .fetch('/music/get_queue', {
           queueContextParams: store.getState().queue.queueContextParams,
-          queueInsertPosition,
+          queueInsertPosition: hasCustomIndex
+            ? 'INSERT_AFTER_CURRENT_VIDEO'
+            : queueInsertPosition,
           videoIds: [videoId],
         })
         .then((result) => {
@@ -213,21 +217,29 @@ async function onApiLoaded() {
           ) {
             const queueItems = store.getState().queue.items;
             const queueItemsLength = queueItems.length ?? 0;
+
+            let index: number;
+            if (hasCustomIndex) {
+              index = Math.min(Math.max(insertIndex, 0), queueItemsLength);
+            } else if (queueInsertPosition === 'INSERT_AFTER_CURRENT_VIDEO') {
+              index =
+                queueItems.findIndex(
+                  (it) =>
+                    (
+                      it.playlistPanelVideoRenderer ||
+                      it.playlistPanelVideoWrapperRenderer?.primaryRenderer
+                        .playlistPanelVideoRenderer
+                    )?.selected,
+                ) + 1 || queueItemsLength;
+            } else {
+              index = queueItemsLength;
+            }
+
             queue?.dispatch({
               type: 'ADD_ITEMS',
               payload: {
                 nextQueueItemId: store.getState().queue.nextQueueItemId,
-                index:
-                  queueInsertPosition === 'INSERT_AFTER_CURRENT_VIDEO'
-                    ? queueItems.findIndex(
-                        (it) =>
-                          (
-                            it.playlistPanelVideoRenderer ||
-                            it.playlistPanelVideoWrapperRenderer
-                              ?.primaryRenderer.playlistPanelVideoRenderer
-                          )?.selected,
-                      ) + 1 || queueItemsLength
-                    : queueItemsLength,
+                index,
                 items: result.queueDatas
                   .map((it) =>
                     typeof it === 'object' && it && 'content' in it
