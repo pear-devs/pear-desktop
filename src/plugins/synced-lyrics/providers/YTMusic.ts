@@ -105,7 +105,7 @@ export class YTMusic implements LyricProvider {
   }
 
   // RATE LIMITED (2 req per sec)
-  private PROXIED_ENDPOINT = 'https://ytmbrowseproxy.zvz.be/';
+  private PROXIED_ENDPOINT = 'https://a-ytmbrowseproxy.zvz.be/';
 
   private fetchNext(videoId: string) {
     const app = document.querySelector<MusicPlayerAppElement>('ytmusic-app');
