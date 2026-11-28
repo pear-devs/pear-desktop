@@ -454,10 +454,10 @@ const routes = {
     method: 'post',
     path: `/api/${API_VERSION}/queue`,
     summary: 'add song to queue',
-    description: 'Add a song to the queue',
+    description: 'Add a song to the queue. If "index" is set (zero-based), the song is inserted at that position (or at the end if the index is beyond the queue length) and "insertPosition" is ignored.',
     request: {
       body: {
-        description: 'video id of the song to add',
+        description: 'video id of the song to add and optional queue index',
         content: {
           'application/json': {
             schema: AddSongToQueueSchema,
@@ -826,8 +826,8 @@ export const register = (
   });
 
   app.openapi(routes.addSongToQueue, (ctx) => {
-    const { videoId, insertPosition } = ctx.req.valid('json');
-    controller.addSongToQueue(videoId, insertPosition);
+    const { videoId, insertPosition, index } = ctx.req.valid('json');
+    controller.addSongToQueue(videoId, insertPosition, index);
 
     ctx.status(204);
     return ctx.body(null);

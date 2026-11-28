@@ -105,14 +105,19 @@ export const getSongControls = (win: BrowserWindow) => {
       });
     },
     // Queue
-    addSongToQueue: (videoId: string, queueInsertPosition: string) => {
+    addSongToQueue: (videoId: string, queueInsertPosition: string, index?: ArgsType<number>,) => {
       const videoIdValue = parseStringFromArgsType(videoId);
       if (videoIdValue === null) return;
+
+      const indexValue = parseNumberFromArgsType(index);
 
       win.webContents.send(
         'peard:add-to-queue',
         videoIdValue,
         queueInsertPosition,
+        indexValue !== null && Number.isInteger(indexValue) && indexValue >= 0
+          ? indexValue
+          : undefined,
       );
     },
     moveSongInQueue: (
